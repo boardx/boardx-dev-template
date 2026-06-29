@@ -42,7 +42,7 @@ phases:
     slug: room-chat
     name: Room-Chat (P4 补全)
     goal: "房间内聊天：创建/列表打开/发消息/删除（room 核心在 phase-04；room 文件/Studio/Survey 入口在能力阶段点亮）"
-    status: not_started
+    status: in_progress  # F01-F04 线程 CRUD passing；F05 发消息 blocked-on p9
     depends_on: ["04"]
   - id: "p5"
     slug: board

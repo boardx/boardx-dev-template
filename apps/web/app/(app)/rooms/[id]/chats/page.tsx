@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 interface Chat {
   id: number | string;
   name: string;
+  creator_user_id: number | string;
   creator_email: string;
   updated_at: string;
 }
@@ -28,6 +29,8 @@ export default function RoomChatsPage() {
   const router = useRouter();
   const roomId = params.id;
   const [chats, setChats] = useState<Chat[]>([]);
+  const [myId, setMyId] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -38,7 +41,15 @@ export default function RoomChatsPage() {
     if (res.status === 401) return setError("请先登录"), setLoading(false);
     if (res.status === 403) return setError("你不是该房间成员"), setLoading(false);
     setChats((await res.json()).chats ?? []);
+    const s = await (await fetch("/api/auth/session")).json();
+    setMyId(s.user ? String(s.user.id) : null);
     setLoading(false);
+  }
+
+  async function remove(id: number | string) {
+    await fetch(`/api/rooms/${roomId}/chats/${id}`, { method: "DELETE" });
+    setConfirmingId(null);
+    await load();
   }
 
   useEffect(() => {
@@ -86,20 +97,52 @@ export default function RoomChatsPage() {
           {groups.map((g) => (
             <div key={g.bucket} className="flex flex-col gap-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{g.bucket}</p>
-              {g.items.map((c) => (
-                <a
-                  key={String(c.id)}
-                  data-testid={`chat-${c.id}`}
-                  href={`/rooms/${roomId}/chats/${c.id}`}
-                  className={cn(
-                    "flex items-center justify-between rounded-lg border bg-card px-4 py-3 shadow-sm",
-                    "transition-all duration-200 hover:shadow-md hover:border-border/70"
-                  )}
-                >
-                  <span className="text-sm font-medium text-foreground">{c.name}</span>
-                  <span className="text-xs text-muted-foreground">{c.creator_email}</span>
-                </a>
-              ))}
+              {g.items.map((c) => {
+                const mine = myId !== null && String(c.creator_user_id) === myId;
+                return (
+                  <div
+                    key={String(c.id)}
+                    data-testid={`chat-${c.id}`}
+                    className={cn(
+                      "flex items-center gap-2 rounded-lg border bg-card px-4 py-3 shadow-sm",
+                      "transition-all duration-200 hover:shadow-md hover:border-border/70"
+                    )}
+                  >
+                    <a href={`/rooms/${roomId}/chats/${c.id}`} className="flex flex-1 items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">{c.name}</span>
+                      <span className="text-xs text-muted-foreground">{c.creator_email}</span>
+                    </a>
+                    {mine &&
+                      (confirmingId === String(c.id) ? (
+                        <span className="flex items-center gap-1">
+                          <span data-testid={`del-confirm-text-${c.id}`} className="text-xs text-destructive">
+                            删除「{c.name}」？
+                          </span>
+                          <Button
+                            data-testid={`del-confirm-${c.id}`}
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => remove(c.id)}
+                          >
+                            删除
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setConfirmingId(null)}>
+                            取消
+                          </Button>
+                        </span>
+                      ) : (
+                        <Button
+                          data-testid={`del-${c.id}`}
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setConfirmingId(String(c.id))}
+                        >
+                          删除
+                        </Button>
+                      ))}
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>

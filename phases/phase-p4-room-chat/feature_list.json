@@ -61,16 +61,16 @@
       "area": "room-chat",
       "title": "删除房间聊天线程",
       "user_visible_behavior": "归属当前用户的线程卡片显示更多菜单，选 Delete 弹确认框（有名称则说明含线程名）；确认后标记删除中并从列表隐藏、DELETE /api/rooms/:id/chats/:chatId 删除；若正打开该线程则返回 Chat 列表；Cancel 不删除；非归属者无删除入口/403。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "claude",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/room-chat-delete.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F04.verify.log @ 2026-06-29T20:11:31.317Z",
       "notes": "uc-room-chat-004。删除权限按线程 creator_id。"
     },
     {
