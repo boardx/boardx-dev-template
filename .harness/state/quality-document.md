@@ -22,6 +22,23 @@
 1. 拍一份本快照。2. 移除一个 harness 组件。3. 跑基准。4. 再拍快照。
 5. 评级没降→该组件多余,可移除;降了→恢复。记录每次结论。
 
+## 流程审计（2026-06-30）：harness 流程保真度 + 已加防护
+
+**结论**：骨架原则基本守住，但有 3 类系统性偏差（两类反复发作），均因**缺强制闸门**。
+
+偏差与根因：
+1. **流程顺序违规**：phase-04 曾跳过 feature_list/issue 直接写码（用户发现）。根因：无强制。
+2. **需求非权威**：phase-04/05 臆造 use case（用户发现"不反映真实需求"）。根因：feature 未溯源 `phases/requirements`。
+3. **本地 passing≠无回归（反复）**：`verify:base` 不含 e2e/build，跨阶段回归(change-password)、生产构建错(useSearchParams Suspense) 只有 CI 抓到。根因：本地门控弱于 CI。
+4. **lockfile 漂移（反复）**：本机 pnpm 8.5.1 静默把 lockfile 写回 6.0，CI 红 2-3 次。根因：无守卫。
+5. **巨量误提交**：`git add -A` 卷入 oldcode 5620 文件，push 卡死。根因：未 gitignore + add -A。
+
+已落地的强制防护（git hooks + 脚本，init.sh 自动安装）：
+- **`pnpm verify:full`**（scripts/verify-full.sh）：本地镜像 CI = verify:base + web build + 有 docker 时全量 e2e。
+- **pre-push hook**：push 前自动跑 verify:full（跳过 `git push --no-verify`）。挡住 #3。
+- **pre-commit hook 三防线**：active-features.json / **lockfile 必须 9.0** / oldcode 或 >800 文件阻断。挡住 #4 #5。
+- 待补（流程顺序 #1#2）：feature schema 加 `requirements_ref`；`claim` 拒绝空 verification（强制契约先行）。
+
 ## 候选改进 / 待办
 - [ ] **#4 统一权限配置源（延后）**：`.claude/settings.json` 与 `.codex/config.toml`
   目前各自手维护同一份 allow/deny 命令清单(约 13 行)，存在配置漂移风险。
