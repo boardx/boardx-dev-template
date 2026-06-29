@@ -52,9 +52,52 @@ export async function getBoard(boardId: number): Promise<Board | undefined> {
   return rows[0];
 }
 
-/** 房间内全部白板，最新在前。 */
-export async function listBoardsInRoom(roomId: number): Promise<Board[]> {
-  return query<Board>(`SELECT ${BOARD_COLS} FROM boards WHERE room_id = $1 ORDER BY id DESC`, [roomId]);
+/** 房间内白板，最新在前；可选按名称（ILIKE）过滤。 */
+export async function listBoardsInRoom(roomId: number, q?: string): Promise<Board[]> {
+  const params: unknown[] = [roomId];
+  let nameClause = "";
+  if (q && q.trim()) {
+    params.push(`%${q.trim()}%`);
+    nameClause = ` AND name ILIKE $${params.length}`;
+  }
+  return query<Board>(
+    `SELECT ${BOARD_COLS} FROM boards WHERE room_id = $1${nameClause} ORDER BY id DESC`,
+    params
+  );
+}
+
+/** 记录一次访问（upsert，刷新 visited_at），供「最近访问」排序。 */
+export async function recordBoardVisit(boardId: number, userId: number): Promise<void> {
+  await query(
+    `INSERT INTO board_visits (user_id, board_id, visited_at) VALUES ($1, $2, now())
+     ON CONFLICT (user_id, board_id) DO UPDATE SET visited_at = now()`,
+    [userId, boardId]
+  );
+}
+
+/** 用户最近访问且仍可见的白板，按访问时间倒序；可选名称过滤。 */
+export async function listRecentBoards(userId: number, q?: string): Promise<Board[]> {
+  const params: unknown[] = [userId];
+  let nameClause = "";
+  if (q && q.trim()) {
+    params.push(`%${q.trim()}%`);
+    nameClause = ` AND b.name ILIKE $${params.length}`;
+  }
+  return query<Board>(
+    `SELECT b.id, b.room_id, b.team_id, b.name, b.cover, b.category, b.description,
+            b.visibility, b.owner_user_id, b.created_at, b.updated_at
+     FROM board_visits v
+     JOIN boards b ON b.id = v.board_id
+     JOIN rooms r ON r.id = b.room_id
+     LEFT JOIN room_members rm ON rm.room_id = r.id AND rm.user_id = $1
+     LEFT JOIN team_members tm ON tm.team_id = r.team_id AND tm.user_id = $1
+     WHERE v.user_id = $1
+       AND (b.visibility = 'public' OR r.owner_user_id = $1 OR rm.user_id IS NOT NULL
+            OR (r.visibility = 'team' AND tm.user_id IS NOT NULL)
+            OR (b.visibility = 'team' AND tm.user_id IS NOT NULL))${nameClause}
+     ORDER BY v.visited_at DESC`,
+    params
+  );
 }
 
 /**

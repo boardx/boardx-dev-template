@@ -43,14 +43,15 @@ export default function RoomBoardsPage() {
   const [boards, setBoards] = useState<Board[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
+  const [q, setQ] = useState("");
   const [error, setError] = useState("");
   const [createError, setCreateError] = useState("");
   const [showForm, setShowForm] = useState(false);
 
-  async function load() {
+  async function load(search = "") {
     setLoading(true);
     setError("");
-    const res = await fetch(`/api/rooms/${roomId}/boards`);
+    const res = await fetch(`/api/rooms/${roomId}/boards${search ? `?q=${encodeURIComponent(search)}` : ""}`);
     if (res.status === 401) {
       setError("请先登录");
       setLoading(false);
@@ -81,7 +82,7 @@ export default function RoomBoardsPage() {
     if (res.status === 201) {
       setName("");
       setShowForm(false);
-      await load();
+      await load(q);
     } else {
       const d = await res.json().catch(() => ({}));
       setCreateError(d.error ?? "创建失败");
@@ -131,24 +132,45 @@ export default function RoomBoardsPage() {
         </form>
       )}
 
+      {/* 搜索栏 */}
+      <div className="flex gap-2">
+        <Input
+          data-testid="search"
+          placeholder="搜索白板名称…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && load(q)}
+        />
+        <Button data-testid="search-btn" variant="secondary" onClick={() => load(q)}>
+          搜索
+        </Button>
+      </div>
+
       {loading ? (
         <BoardSkeleton />
       ) : boards.length === 0 ? (
-        <EmptyState onCreate={() => setShowForm(true)} />
+        q ? (
+          <p data-testid="no-match" className="py-12 text-center text-sm text-muted-foreground">
+            没有匹配「{q}」的白板
+          </p>
+        ) : (
+          <EmptyState onCreate={() => setShowForm(true)} />
+        )
       ) : (
         <ul data-testid="board-list" className="flex flex-col gap-2">
           {boards.map((b) => (
-            <li
-              key={String(b.id)}
-              data-testid={`board-${b.id}`}
-              className={cn(
-                "flex items-center justify-between rounded-lg border bg-card px-4 py-3",
-                "text-card-foreground shadow-sm",
-                "transition-all duration-200 hover:shadow-md hover:border-border/70 cursor-pointer"
-              )}
-            >
-              <span className="text-sm font-medium text-foreground">{b.name}</span>
-              <Badge variant="muted">{b.visibility}</Badge>
+            <li key={String(b.id)} data-testid={`board-${b.id}`}>
+              <a
+                href={`/boards/${b.id}`}
+                className={cn(
+                  "flex items-center justify-between rounded-lg border bg-card px-4 py-3",
+                  "text-card-foreground shadow-sm",
+                  "transition-all duration-200 hover:shadow-md hover:border-border/70 cursor-pointer"
+                )}
+              >
+                <span className="text-sm font-medium text-foreground">{b.name}</span>
+                <Badge variant="muted">{b.visibility}</Badge>
+              </a>
             </li>
           ))}
         </ul>

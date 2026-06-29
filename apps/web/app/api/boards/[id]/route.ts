@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getBoard, canViewRoom, boardRole } from "@repo/data";
+import { getBoard, canViewRoom, boardRole, recordBoardVisit } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -20,6 +20,9 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     board.visibility === "public"
   );
   if (!role) return NextResponse.json({ error: "无权限" }, { status: 403 });
+
+  // 记录最近访问（供 F03 最近列表排序）
+  await recordBoardVisit(boardId, user.id);
 
   return NextResponse.json({ board, role });
 }

@@ -43,16 +43,16 @@
       "area": "board",
       "title": "列表 / 搜索 / 最近访问",
       "user_visible_behavior": "GET /api/boards?roomId=&q=&scope=recent 返回当前房间/团队或最近访问的白板，前端展示卡片列表、搜索框（按名称过滤）、创建入口；无白板或无匹配显示空状态；打开白板写入最近访问记录用于排序。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "claude",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-list-search.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-06-29T19:01:52.502Z",
       "notes": "uc-board-003。最近访问记录（board_visits: user_id/board_id/visited_at）供本 phase 列表与 p2 Home F05 复用。"
     },
     {
