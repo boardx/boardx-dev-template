@@ -1,9 +1,11 @@
 "use client";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ResetPasswordPage() {
-  // useSearchParams 需包在 Suspense 边界内，否则生产构建 prerender 报错
   return (
     <Suspense fallback={null}>
       <ResetPasswordInner />
@@ -42,23 +44,28 @@ function ResetPasswordInner() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 p-8">
-      <h1 className="text-2xl font-bold">设置新密码</h1>
-      {done ? (
-        <p data-testid="done" className="text-green-700">密码已重置，请用新密码登录。</p>
-      ) : (
-        <form onSubmit={submit} className="flex flex-col gap-3">
-          <input data-testid="next" type="password" placeholder="新密码（≥6）" className="rounded border px-3 py-2"
-            value={next} onChange={(e) => setNext(e.target.value)} />
-          <input data-testid="confirm" type="password" placeholder="确认新密码" className="rounded border px-3 py-2"
-            value={confirm} onChange={(e) => setConfirm(e.target.value)} />
-          {error && <p data-testid="err-form" className="text-sm text-red-600">{error}</p>}
-          <button data-testid="submit" disabled={submitting}
-            className="rounded bg-neutral-900 px-4 py-2 text-white disabled:opacity-50">
-            {submitting ? "提交中…" : "设置密码"}
-          </button>
-        </form>
-      )}
+    <main className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="text-2xl">设置新密码</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {done ? (
+            <p data-testid="done" className="text-sm text-success">密码已重置，请用新密码登录。</p>
+          ) : (
+            <form onSubmit={submit} className="flex flex-col gap-3">
+              <Input data-testid="next" type="password" placeholder="新密码（≥6）"
+                value={next} onChange={(e) => setNext(e.target.value)} />
+              <Input data-testid="confirm" type="password" placeholder="确认新密码"
+                value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+              {error && <p data-testid="err-form" className="text-sm text-destructive">{error}</p>}
+              <Button data-testid="submit" type="submit" disabled={submitting} className="w-full">
+                {submitting ? "提交中…" : "设置密码"}
+              </Button>
+            </form>
+          )}
+        </CardContent>
+      </Card>
     </main>
   );
 }

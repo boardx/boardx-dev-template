@@ -1,6 +1,9 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -27,35 +30,43 @@ export default function RegisterPage() {
     setErrors(data.errors ?? { _: data.error ?? "注册失败" });
   }
 
+  const err = (k: string) =>
+    errors[k] ? <p data-testid={`err-${k}`} className="text-sm text-destructive">{errors[k]}</p> : null;
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 p-8">
-      <h1 className="text-2xl font-bold">注册 BoardX</h1>
-      <form onSubmit={submit} className="flex flex-col gap-3">
-        <input data-testid="firstName" placeholder="名 First name" className="rounded border px-3 py-2"
-          value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
-        {errors.firstName && <p data-testid="err-firstName" className="text-sm text-red-600">{errors.firstName}</p>}
-        <input data-testid="lastName" placeholder="姓 Last name" className="rounded border px-3 py-2"
-          value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
-        {errors.lastName && <p data-testid="err-lastName" className="text-sm text-red-600">{errors.lastName}</p>}
-        <input data-testid="email" type="email" placeholder="邮箱 Email" className="rounded border px-3 py-2"
-          value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-        {errors.email && <p data-testid="err-email" className="text-sm text-red-600">{errors.email}</p>}
-        <input data-testid="password" type="password" placeholder="密码 Password（≥6）" className="rounded border px-3 py-2"
-          value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-        {errors.password && <p data-testid="err-password" className="text-sm text-red-600">{errors.password}</p>}
-        <label className="flex items-center gap-2 text-sm">
-          <input data-testid="agreeTerms" type="checkbox" checked={form.agreeTerms}
-            onChange={(e) => setForm({ ...form, agreeTerms: e.target.checked })} />
-          我同意服务条款和隐私政策
-        </label>
-        {errors.agreeTerms && <p data-testid="err-agreeTerms" className="text-sm text-red-600">{errors.agreeTerms}</p>}
-        {errors._ && <p data-testid="err-form" className="text-sm text-red-600">{errors._}</p>}
-        <button data-testid="submit" disabled={submitting}
-          className="rounded bg-neutral-900 px-4 py-2 text-white disabled:opacity-50">
-          {submitting ? "提交中…" : "注册"}
-        </button>
-      </form>
-      <a href="/login" className="text-sm text-blue-600">已有账号？登录</a>
+    <main className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="text-2xl">注册 BoardX</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={submit} className="flex flex-col gap-3">
+            <Input data-testid="firstName" placeholder="名 First name"
+              value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
+            {err("firstName")}
+            <Input data-testid="lastName" placeholder="姓 Last name"
+              value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
+            {err("lastName")}
+            <Input data-testid="email" type="email" placeholder="邮箱 Email"
+              value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            {err("email")}
+            <Input data-testid="password" type="password" placeholder="密码 Password（≥6）"
+              value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+            {err("password")}
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <input data-testid="agreeTerms" type="checkbox" className="h-4 w-4 accent-primary"
+                checked={form.agreeTerms} onChange={(e) => setForm({ ...form, agreeTerms: e.target.checked })} />
+              我同意服务条款和隐私政策
+            </label>
+            {err("agreeTerms")}
+            {errors._ && <p data-testid="err-form" className="text-sm text-destructive">{errors._}</p>}
+            <Button data-testid="submit" type="submit" disabled={submitting} className="w-full">
+              {submitting ? "提交中…" : "注册"}
+            </Button>
+          </form>
+          <a href="/login" className="mt-4 block text-sm text-foreground underline-offset-4 hover:underline">已有账号？登录</a>
+        </CardContent>
+      </Card>
     </main>
   );
 }

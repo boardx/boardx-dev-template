@@ -1,6 +1,12 @@
 "use client";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 type Section = "personal" | "security" | "settings";
 const CANDIDATE_AVATARS = ["seed:a1", "seed:b2", "seed:c3", "seed:d4"];
@@ -18,7 +24,6 @@ function AccountCenter() {
   const initial = (useSearchParams().get("section") as Section) || "personal";
   const [section, setSection] = useState<Section>(initial);
 
-  // 未登录跳登录（uc-profile-001）
   useEffect(() => {
     void (async () => {
       const { user } = await (await fetch("/api/auth/session")).json();
@@ -27,22 +32,31 @@ function AccountCenter() {
   }, [router]);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-4 p-8">
+    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-5 p-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">账号中心</h1>
-        <a href="/" data-testid="back-workspace" className="text-sm text-blue-600">返回工作区</a>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">账号中心</h1>
+        <a href="/" data-testid="back-workspace" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">返回工作区</a>
       </div>
-      <nav className="flex gap-2 border-b">
+      <nav className="flex gap-1 border-b border-border">
         {(["personal", "security", "settings"] as Section[]).map((s) => (
           <button key={s} data-testid={`tab-${s}`} onClick={() => setSection(s)}
-            className={`px-3 py-2 text-sm ${section === s ? "border-b-2 border-neutral-900 font-medium" : "text-neutral-500"}`}>
+            className={cn(
+              "px-3 py-2 text-sm transition-colors",
+              section === s
+                ? "border-b-2 border-primary font-medium text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            )}>
             {s === "personal" ? "Personal info" : s === "security" ? "Security" : "Settings"}
           </button>
         ))}
       </nav>
-      {section === "personal" && <PersonalInfo />}
-      {section === "security" && <Security router={router} />}
-      {section === "settings" && <Settings />}
+      <Card>
+        <CardContent className="pt-6">
+          {section === "personal" && <PersonalInfo />}
+          {section === "security" && <Security router={router} />}
+          {section === "settings" && <Settings />}
+        </CardContent>
+      </Card>
     </main>
   );
 }
@@ -58,11 +72,11 @@ function PersonalInfo() {
     void (async () => {
       const p = (await (await fetch("/api/profile")).json()).profile;
       if (p) { setDisplayName(p.displayName ?? ""); setAvatar(p.avatar ?? ""); }
-      setLoaded(true); // 加载完成后再渲染输入，避免覆盖用户输入
+      setLoaded(true);
     })();
   }, []);
 
-  if (!loaded) return <section data-testid="section-personal"><p>加载中…</p></section>;
+  if (!loaded) return <section data-testid="section-personal"><p className="text-sm text-muted-foreground">加载中…</p></section>;
 
   async function save() {
     setError(""); setSaved(false);
@@ -77,21 +91,19 @@ function PersonalInfo() {
 
   return (
     <section data-testid="section-personal" className="flex flex-col gap-3">
-      <label className="text-sm">显示名</label>
-      <input data-testid="display-name" className="rounded border px-3 py-2"
-        value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-      <div className="text-sm">当前头像：<span data-testid="avatar-preview" className="font-mono">{avatar || "(默认)"}</span></div>
-      <div className="flex gap-2">
+      <Label htmlFor="display-name">显示名</Label>
+      <Input id="display-name" data-testid="display-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+      <p className="text-sm text-foreground">当前头像：<span data-testid="avatar-preview" className="font-mono text-muted-foreground">{avatar || "(默认)"}</span></p>
+      <div className="flex flex-wrap items-center gap-2">
         {CANDIDATE_AVATARS.map((a, i) => (
-          <button key={a} data-testid={`avatar-opt-${i}`} onClick={() => setAvatar(a)}
-            className={`rounded border px-2 py-1 text-xs ${avatar === a ? "border-neutral-900" : ""}`}>{a}</button>
+          <Button key={a} data-testid={`avatar-opt-${i}`} type="button" size="sm"
+            variant={avatar === a ? "default" : "outline"} onClick={() => setAvatar(a)}>{a}</Button>
         ))}
-        <button data-testid="avatar-generate" onClick={() => setAvatar("seed:gen" + Date.now())}
-          className="rounded bg-neutral-200 px-2 py-1 text-xs">AI generate</button>
+        <Button data-testid="avatar-generate" type="button" size="sm" variant="secondary" onClick={() => setAvatar("seed:gen" + Date.now())}>AI generate</Button>
       </div>
-      {error && <p data-testid="err" className="text-sm text-red-600">{error}</p>}
-      {saved && <p data-testid="saved" className="text-sm text-green-700">已保存</p>}
-      <button data-testid="save-personal" onClick={save} className="self-start rounded bg-neutral-900 px-4 py-2 text-white">Save personal info</button>
+      {error && <p data-testid="err" className="text-sm text-destructive">{error}</p>}
+      {saved && <p data-testid="saved" className="text-sm text-success">已保存</p>}
+      <Button data-testid="save-personal" type="button" className="self-start" onClick={save}>Save personal info</Button>
     </section>
   );
 }
@@ -113,17 +125,14 @@ function Security({ router }: { router: ReturnType<typeof useRouter> }) {
   }
   return (
     <section data-testid="section-security" className="flex flex-col gap-3">
-      <p className="text-sm text-neutral-600">修改密码会使现有会话失效，需要重新登录。</p>
-      {done ? <p data-testid="done" className="text-green-700">密码已更新，请重新登录。</p> : (
+      <p className="text-sm text-muted-foreground">修改密码会使现有会话失效，需要重新登录。</p>
+      {done ? <p data-testid="done" className="text-sm text-success">密码已更新，请重新登录。</p> : (
         <form onSubmit={submit} className="flex flex-col gap-3">
-          <input data-testid="current" type="password" placeholder="当前密码" className="rounded border px-3 py-2"
-            value={form.current} onChange={(e) => setForm({ ...form, current: e.target.value })} />
-          <input data-testid="next" type="password" placeholder="新密码（≥6）" className="rounded border px-3 py-2"
-            value={form.next} onChange={(e) => setForm({ ...form, next: e.target.value })} />
-          <input data-testid="confirm" type="password" placeholder="确认新密码" className="rounded border px-3 py-2"
-            value={form.confirm} onChange={(e) => setForm({ ...form, confirm: e.target.value })} />
-          {error && <p data-testid="err-sec" className="text-sm text-red-600">{error}</p>}
-          <button data-testid="submit-security" className="self-start rounded bg-neutral-900 px-4 py-2 text-white">Update password</button>
+          <Input data-testid="current" type="password" placeholder="当前密码" value={form.current} onChange={(e) => setForm({ ...form, current: e.target.value })} />
+          <Input data-testid="next" type="password" placeholder="新密码（≥6）" value={form.next} onChange={(e) => setForm({ ...form, next: e.target.value })} />
+          <Input data-testid="confirm" type="password" placeholder="确认新密码" value={form.confirm} onChange={(e) => setForm({ ...form, confirm: e.target.value })} />
+          {error && <p data-testid="err-sec" className="text-sm text-destructive">{error}</p>}
+          <Button data-testid="submit-security" type="submit" className="self-start">Update password</Button>
         </form>
       )}
     </section>
@@ -142,8 +151,7 @@ function Settings() {
       setLoaded(true);
     })();
   }, []);
-
-  if (!loaded) return <section data-testid="section-settings"><p>加载中…</p></section>;
+  if (!loaded) return <section data-testid="section-settings"><p className="text-sm text-muted-foreground">加载中…</p></section>;
   async function save() {
     setSaved(false);
     const res = await fetch("/api/profile/settings", {
@@ -154,19 +162,19 @@ function Settings() {
   }
   return (
     <section data-testid="section-settings" className="flex flex-col gap-3">
-      <label className="text-sm">AI 模型偏好</label>
-      <select data-testid="ai-model" className="rounded border px-3 py-2" value={aiModel} onChange={(e) => setAiModel(e.target.value)}>
+      <Label htmlFor="ai-model">AI 模型偏好</Label>
+      <Select id="ai-model" data-testid="ai-model" value={aiModel} onChange={(e) => setAiModel(e.target.value)}>
         <option value="claude-opus-4-8">claude-opus-4-8</option>
         <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
         <option value="claude-haiku-4-5">claude-haiku-4-5</option>
-      </select>
-      <label className="text-sm">默认隐私级别</label>
-      <select data-testid="default-privacy" className="rounded border px-3 py-2" value={defaultPrivacy} onChange={(e) => setDefaultPrivacy(e.target.value)}>
+      </Select>
+      <Label htmlFor="default-privacy">默认隐私级别</Label>
+      <Select id="default-privacy" data-testid="default-privacy" value={defaultPrivacy} onChange={(e) => setDefaultPrivacy(e.target.value)}>
         <option value="private">私有</option>
         <option value="team">团队可见</option>
-      </select>
-      {saved && <p data-testid="saved-settings" className="text-sm text-green-700">已保存</p>}
-      <button data-testid="save-settings" onClick={save} className="self-start rounded bg-neutral-900 px-4 py-2 text-white">Save settings</button>
+      </Select>
+      {saved && <p data-testid="saved-settings" className="text-sm text-success">已保存</p>}
+      <Button data-testid="save-settings" type="button" className="self-start" onClick={save}>Save settings</Button>
     </section>
   );
 }
