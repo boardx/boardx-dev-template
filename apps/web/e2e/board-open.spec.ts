@@ -20,8 +20,8 @@ test("属主打开白板：标题 + owner 角色 + 画布/缩放占位 + 编辑�
   await page.goto(`/boards/${board.id}`);
   await expect(page.getByTestId("board-title")).toHaveText("Open Me");
   await expect(page.getByTestId("board-role")).toHaveText("owner");
-  await expect(page.getByTestId("canvas-placeholder")).toBeVisible();
-  await expect(page.getByTestId("zoom-minimap-placeholder")).toBeVisible();
+  await expect(page.getByTestId("canvas-viewport")).toBeVisible();
+  await expect(page.getByTestId("zoom-control")).toBeVisible();
   await expect(page.getByTestId("board-edit-entry")).toBeVisible();
 });
 

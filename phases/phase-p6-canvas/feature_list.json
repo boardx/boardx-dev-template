@@ -91,16 +91,16 @@
       "area": "canvas",
       "title": "画布平移 / 缩放 / 导航 + 缩放控制条与小地图",
       "user_visible_behavior": "在 Board 画布可拖拽平移、滚轮/触控板缩放、空格拖动；右下角缩放控制条显示当前缩放百分比，支持放大/缩小/适应内容/重置 100%；小地图显示画布概览与当前视口，点击/拖动小地图跳转视口。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "02",
+      "owner": "claude",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/canvas-pan-zoom.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F05.verify.log @ 2026-06-29T20:47:32.047Z",
       "notes": "uc-canvas-001 + uc-canvas-006。视口变换为纯前端状态（无需落库），含 viewport 变换单测。",
       "source_use_cases": [
         "phases/requirements/canvas/uc-canvas-001-pan-zoom-navigate.md",

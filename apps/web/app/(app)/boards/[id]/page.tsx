@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { BoardTimer } from "@/components/board/timer";
 import { BoardHelpGuide } from "@/components/board/help-guide";
+import { CanvasViewport } from "@/components/board/canvas-viewport";
 
 interface Board {
   id: number | string;
@@ -373,22 +374,8 @@ export default function BoardPage() {
         </form>
       )}
 
-      {/* 画布容器占位（真实画布编辑在 p6） */}
-      <div className="relative flex-1 overflow-hidden bg-muted/30">
-        <div
-          data-testid="canvas-placeholder"
-          className="flex h-full items-center justify-center text-sm text-muted-foreground"
-        >
-          画布区域（p6 接入编辑能力）
-        </div>
-        {/* 缩放 / 小地图入口占位（真实在 p6） */}
-        <div
-          data-testid="zoom-minimap-placeholder"
-          className="absolute bottom-4 right-4 flex items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-xs text-muted-foreground shadow-sm"
-        >
-          100% · 小地图
-        </div>
-      </div>
+      {/* 画布视口（P6 F05：平移/缩放/缩放条/小地图） */}
+      <CanvasViewport />
     </div>
   );
 }
