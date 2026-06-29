@@ -1,8 +1,17 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function ResetPasswordPage() {
+  // useSearchParams 需包在 Suspense 边界内，否则生产构建 prerender 报错
+  return (
+    <Suspense fallback={null}>
+      <ResetPasswordInner />
+    </Suspense>
+  );
+}
+
+function ResetPasswordInner() {
   const router = useRouter();
   const token = useSearchParams().get("token") ?? "";
   const [next, setNext] = useState("");
