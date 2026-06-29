@@ -1,0 +1,185 @@
+{
+  "phase": "p5",
+  "features": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "area": "board",
+      "title": "创建 Board",
+      "user_visible_behavior": "在有权限的房间内点「创建白板」：POST /api/rooms/:id/boards {name?} 创建白板并落库（201，默认名/空名给默认标题），列表立即出现该白板卡片（名称/封面占位/最近编辑信息）；非房间成员 403。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/board-create.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-board-001。新增 boards 表（room_id/team_id/name/cover/category/description/visibility/owner_id/created_at/updated_at）。依赖 phase-04 room 权限。"
+    },
+    {
+      "id": "F02",
+      "priority": 2,
+      "area": "board",
+      "title": "打开 Board（容器壳）",
+      "user_visible_behavior": "GET /api/boards/:id 返回白板元数据与当前用户角色（无权 403 / 公开可读除外）；/boards/:id 渲染加载态、白板标题、画布容器占位、Header 占位、缩放/小地图入口占位；只读角色隐藏/禁用编辑入口。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/board-open.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-board-002。本期只做「打开容器壳 + 权限/角色解析」；真实画布编辑 blocked-on p6、Header 功能 blocked-on p7、实时协作 blocked-on p8。"
+    },
+    {
+      "id": "F03",
+      "priority": 3,
+      "area": "board",
+      "title": "列表 / 搜索 / 最近访问",
+      "user_visible_behavior": "GET /api/boards?roomId=&q=&scope=recent 返回当前房间/团队或最近访问的白板，前端展示卡片列表、搜索框（按名称过滤）、创建入口；无白板或无匹配显示空状态；打开白板写入最近访问记录用于排序。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/board-list-search.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-board-003。最近访问记录（board_visits: user_id/board_id/visited_at）供本 phase 列表与 p2 Home F05 复用。"
+    },
+    {
+      "id": "F04",
+      "priority": 4,
+      "area": "board",
+      "title": "收藏 / 取消收藏 Board",
+      "user_visible_behavior": "卡片星标：未收藏悬停出现、已收藏常亮；POST/DELETE /api/boards/:id/favorite 切换收藏并持久化（每用户独立）；收藏视图/筛选只显示已收藏白板；刷新后保持。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/board-favorite.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-board-004。新增 board_favorites（user_id/board_id）。"
+    },
+    {
+      "id": "F05",
+      "priority": 5,
+      "area": "board",
+      "title": "更新 Board 元信息",
+      "user_visible_behavior": "卡片更多菜单或 Board Header 标题输入框可改名称，并支持编辑标签/类别/描述、上传/移除封面；PATCH /api/boards/:id 校验权限后更新并回显；无管理权限的菜单项禁用 / 接口 403。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/board-metadata.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-board-005。封面图上传依赖文件存储；本期可先用 URL/占位，真实 S3/R2 在 files 能力阶段接入。Header 内改名入口与 p7 共用同一 PATCH。"
+    },
+    {
+      "id": "F06",
+      "priority": 6,
+      "area": "board",
+      "title": "复制 Board",
+      "user_visible_behavior": "卡片更多菜单选「复制」：POST /api/boards/:id/duplicate 在同房间创建副本（名称带副本后缀），复制元信息与画布内容快照（无内容时仅复制空白板）；副本出现在列表；无权限 403。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/board-duplicate.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-board-007。画布内容复制依赖 p6 item 模型；本期复制白板元信息+已有 item 行（phase-p6-canvas 的 items 表）。"
+    },
+    {
+      "id": "F07",
+      "priority": 7,
+      "area": "board",
+      "title": "移动 Board 到其他房间",
+      "user_visible_behavior": "更多菜单选「移动到另一个房间」：列出当前用户有管理权限的目标房间，POST /api/boards/:id/move {targetRoomId} 校验源/目标权限后改 room_id；移动后白板从原列表消失、出现在目标房间；无管理权限 403。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/board-move.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-board-006。需源房间管理权限 + 目标房间成员/管理权限双校验。"
+    },
+    {
+      "id": "F08",
+      "priority": 8,
+      "area": "board",
+      "title": "删除 Board",
+      "user_visible_behavior": "更多菜单选「删除」弹确认框；确认后 DELETE /api/boards/:id 删除白板及其 item/收藏/最近访问关联，卡片从列表移除；Cancel 不删除；无权限 403。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/board-delete.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-board-008。级联清理 items/favorites/visits。"
+    },
+    {
+      "id": "F09",
+      "priority": 9,
+      "area": "board",
+      "title": "Board 可见范围（访问级别数据 + API）",
+      "user_visible_behavior": "Board 有访问级别字段（public / team / room）；PATCH /api/boards/:id/visibility 仅 Room Owner/Admin 可改，其他人接口 403 / 面板下拉禁用；访问级别决定 GET /api/boards/:id 对非成员/匿名的放行与否。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/board-visibility.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-board-access-001。分享面板 UI（标题/复制链接/二维码）在 p7 header F-share 点亮；本期落地访问级别数据模型与授权判定，供 F02/F10 使用。"
+    },
+    {
+      "id": "F10",
+      "priority": 10,
+      "area": "board",
+      "title": "通过公开链接查看/加入 Board",
+      "user_visible_behavior": "打开公开链接：访问级别允许时匿名/非成员可进入只读查看（加载态、可查看内容、在线状态占位）；不允许时提示需登录/加入；已登录用户可按策略加入协作身份（写 board/room 成员记录）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/board-public-access.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-board-access-002。依赖 F09 访问级别；只读渲染复用 F02 容器壳；在线状态 blocked-on p8。"
+    }
+  ]
+}

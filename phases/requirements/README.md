@@ -20,11 +20,15 @@ Use Case 细化规范见：[BoardX Use Case 细化规范](./use-case-specificati
 
 ## 当前目录覆盖
 
-当前 `docs/cn/use-cases` 下共有 168 个 `uc-*.md`，按目录统计如下：
+当前 `phases/requirements` 下共有 169 个 `uc-*.md`，按目录统计如下。
+
+本目录是 BoardX 全量 Use Case 库；阶段目录 `phases/phase-*/requirements/` 可以复制其中的子集作为阶段快照，也可以放未细化的原始需求草稿。阶段交付的权威状态仍以对应 `feature_list.json` 为准。若阶段快照与本目录同名文件同时存在，必须保持内容一致，或在阶段 README 中明确说明差异原因。
+
+`oldcode/` 是旧系统实现参考，不属于 Use Case 输入；该目录已在 `.gitignore` 中排除，不应被 requirement-author 或统计脚本递归读取。
 
 ## AI Ready 状态
 
-当前 168 个 Use Case 已按 AI Ready 口径完成一轮细化：
+当前 169 个 Use Case 已按 AI Ready 口径完成一轮细化：
 
 - `interface-operation-inventory.md` 作为全系统界面索引，记录当前产品路由界面数量、每个界面的主要可见内容、可执行操作和操作后的可见结果。
 - 每个文件都包含完整模板字段：Actor、目标、系统边界、前端入口、前置条件、触发条件、主流程、备选流程、异常流程、权限与可见性、后置条件、不包含、业务规则。
@@ -53,7 +57,7 @@ Use Case 细化规范见：[BoardX Use Case 细化规范](./use-case-specificati
 | `invite/` | 2 | 接受邀请链接、邀请好友 |
 | `knowledge-base/` | 4 | 上传、列表下载、删除、在 AI 上下文中使用文件 |
 | `presentations/` | 2 | 生成与修订演示文稿 |
-| `profile/` | 4 | 查看与编辑资料、用户菜单、个人 Memory |
+| `profile/` | 5 | 查看与编辑资料、用户菜单、个人 Memory、账号设置 |
 | `room/` | 7 | 创建、查看搜索、成员邀请管理、更新删除、文件、Studio、问卷 |
 | `room-chat/` | 4 | 创建、列表打开、发送消息、删除聊天 |
 | `share/` | 1 | 查看共享聊天 |

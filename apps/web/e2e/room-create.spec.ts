@@ -7,6 +7,7 @@ test("创建房间后出现在列表", async ({ page }) => {
     data: { firstName: "A", lastName: "B", email: uniq(), password: "secret123", agreeTerms: true },
   });
   await page.goto("/rooms");
+  await page.getByTestId("show-create").click();
   await page.getByTestId("room-name").fill("My First Room");
   await page.getByTestId("create").click();
   await expect(page.getByTestId("room-list")).toContainText("My First Room");
