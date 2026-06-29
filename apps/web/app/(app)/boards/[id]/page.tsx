@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { BoardTimer } from "@/components/board/timer";
+import { BoardHelpGuide } from "@/components/board/help-guide";
 
 interface Board {
   id: number | string;
@@ -159,7 +160,8 @@ export default function BoardPage() {
   const canEdit = role === "owner" || role === "editor";
 
   return (
-    <div className="flex h-[80vh] flex-col">
+    <div className="relative flex h-[80vh] flex-col">
+      <BoardHelpGuide />
       {/* Header 占位（真实 Header 功能在 p7） */}
       <header
         data-testid="board-header"

@@ -60,7 +60,7 @@ phases:
     slug: board-shell
     name: Board 壳 (P7)
     goal: "Board UI 壳：header(标题/分享/计时器/导出…) + board-menu(各组件创建入口) + context-menu(层级/分组/锁定) + local-workspace"
-    status: not_started
+    status: in_progress  # 干净子集 F04计时器/F05设置/F07帮助 passing；统计F06/备份F08 依赖 board-keyed items blocked-on p6；board-menu/context-menu/F01撤销重做 依赖 p6
     depends_on: ["p6"]
   - id: "p8"
     slug: collaboration
