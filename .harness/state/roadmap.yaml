@@ -1,34 +1,101 @@
 # roadmap.yaml — 所有阶段(phase=项目)的单一来源
-# new-phase 脚本读写本文件;每个阶段会在 phases/ 下 scaffold 一个目录。
+# 逻辑分阶段与依赖见 phases/ROADMAP.md（从真实需求 phases/requirements 推导，168 用例/22 模块）。
+# 已建 phase 03/04/05 保留目录名；goal 已按真实需求修正。06+ 为规划阶段（按需 new-phase scaffold）。
 project: boardx-dev-template
 phases:
   - id: "01"
     slug: foundation
     name: Foundation
-    goal: "搭好 monorepo 骨架、harness 控制平面与基础验证回路"
+    goal: "harness 控制平面与基础验证回路（元层，非产品功能）"
     status: in_progress
     depends_on: []
-  - id: "02"
-    slug: agent-runtime
-    name: Agent Runtime
-    goal: "实现 orchestrator + agent-core 的最小推理回路"
-    status: not_started
-    depends_on: ["01"]
   - id: "03"
     slug: fullstack-skeleton
-    name: fullstack-skeleton
-    goal: "用 web/data/workflow 三个小 feature 验证 harness 流程在全栈代码库上端到端可行且有质量"
+    name: 基础设施 (P0)
+    goal: "全栈基础设施：web/data/queue/worker/infra（CAP-WEB/DATA/WORKFLOW）"
     status: not_started
-    depends_on: []
+    depends_on: ["01"]
   - id: "04"
     slug: identity-and-spaces
-    name: identity-and-spaces
-    goal: "用户身份与协作空间：auth / identity / team / room"
+    name: Auth+Team+Room 核心 (P1/P3/P4 核心)
+    goal: "账号身份+协作空间核心：auth/team核心/room核心。需补 profile/common/home/room-chat 及高级入口（见 ROADMAP.md）"
     status: not_started
-    depends_on: []
+    depends_on: ["03"]
   - id: "05"
     slug: canvas
-    name: canvas
-    goal: "Canvas：房间内的板内容（命令运行时 + 增删改 item + 持久化 + 渲染）"
+    name: Board 基础起点 (P5 部分)
+    goal: "Board 基础雏形（便签 item 命令运行时）。需重做为真实 board/ 生命周期（创建/打开/列表/收藏/复制/移动/删除）"
     status: not_started
-    depends_on: []
+    depends_on: ["04"]
+  - id: "06"
+    slug: profile-common
+    name: Profile & Common (P1 补全)
+    goal: "个人资料/用户菜单/个人 Memory + 全局搜索/语言/主题/反馈"
+    status: not_started
+    depends_on: ["04"]
+  - id: "07"
+    slug: home-workspace
+    name: Home 工作台 (P2)
+    goal: "首页工作台：Dashboard/最近 Board/Agent 搜索与快速对话/推荐/Onboarding"
+    status: not_started
+    depends_on: ["04"]
+  - id: "08"
+    slug: board-canvas-widgets
+    name: Canvas & 组件 (P6)
+    goal: "白板画布编辑核心：canvas + widgets(便签/形状/文本/连接线/图片…) + widget-menu"
+    status: not_started
+    depends_on: ["05"]
+  - id: "09"
+    slug: board-shell
+    name: Board 壳 (P7)
+    goal: "Board UI 壳：header/board-menu/context-menu/local-workspace"
+    status: not_started
+    depends_on: ["08"]
+  - id: "10"
+    slug: realtime-collaboration
+    name: 实时协作 (P8)
+    goal: "多人实时协作：board/collaboration + 在线状态/光标（CAP-COLLAB，Yjs+Redis fanout）"
+    status: not_started
+    depends_on: ["08"]
+  - id: "11"
+    slug: ava-chat
+    name: AVA / Chat (P9)
+    goal: "AVA 对话：线程/消息/Deep Research/附件/语音/建议动作 + 公开分享（CAP-AI）"
+    status: not_started
+    depends_on: ["04"]
+  - id: "12"
+    slug: knowledge-base
+    name: 知识库 (P10)
+    goal: "个人/Team 知识库：上传/列表下载/删除/在 AI 上下文引用（CAP-FILE+AI）"
+    status: not_started
+    depends_on: ["11"]
+  - id: "13"
+    slug: ai-store
+    name: AI Store (P11)
+    goal: "AI Store：浏览/创建维护/订阅使用/收藏/共享/审核精选（Team→平台审核流）"
+    status: not_started
+    depends_on: ["11"]
+  - id: "14"
+    slug: survey
+    name: 问卷 (P13)
+    goal: "问卷：创建/管理/答题/报告/模板/发布下线（Respondent=访客）"
+    status: not_started
+    depends_on: ["04"]
+  - id: "15"
+    slug: credits-billing
+    name: 积分 & 计费 (P14)
+    goal: "钱包/购买积分/积分记录 + 升级计划/扫码支付（Payment）"
+    status: not_started
+    depends_on: ["04"]
+  - id: "16"
+    slug: studio-presentations
+    name: Studio & 演示 (P12)
+    goal: "Studio 生成 Artifact + 演示文稿生成与修订（AI+FILE）"
+    status: not_started
+    depends_on: ["08", "11"]
+  - id: "17"
+    slug: admin
+    name: Admin 后台 (P15)
+    goal: "后台管理：首页/用户/Team/AI Store 审核与精选（SysAdmin 横切）"
+    status: not_started
+    depends_on: ["13"]
