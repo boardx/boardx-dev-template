@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "e2e": "playwright test",
-    "lint": "echo 'lint: ok'"
+    "lint": "bash scripts/lint-design.sh"
   },
   "dependencies": {
     "@repo/auth": "workspace:*",
@@ -20,7 +20,10 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.2"
+    "tailwind-merge": "^2.5.2",
+    "class-variance-authority": "^0.7.1",
+    "tailwindcss-animate": "^1.0.7",
+    "lucide-react": "^0.544.0"
   },
   "devDependencies": {
     "typescript": "*",

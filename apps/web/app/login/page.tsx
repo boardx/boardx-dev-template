@@ -1,6 +1,9 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,23 +31,28 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 p-8">
-      <h1 className="text-2xl font-bold">登录 BoardX</h1>
-      <form onSubmit={submit} className="flex flex-col gap-3">
-        <input data-testid="email" type="email" placeholder="邮箱 Email" className="rounded border px-3 py-2"
-          value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-        <input data-testid="password" type="password" placeholder="密码 Password" className="rounded border px-3 py-2"
-          value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-        {error && <p data-testid="err-form" className="text-sm text-red-600">{error}</p>}
-        <button data-testid="submit" disabled={submitting}
-          className="rounded bg-neutral-900 px-4 py-2 text-white disabled:opacity-50">
-          {submitting ? "提交中…" : "登录"}
-        </button>
-      </form>
-      <div className="flex justify-between text-sm">
-        <a href="/forgot-password" className="text-blue-600">忘记密码？</a>
-        <a href="/register" className="text-blue-600">创建账号</a>
-      </div>
+    <main className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="text-2xl">登录 BoardX</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={submit} className="flex flex-col gap-3">
+            <Input data-testid="email" type="email" placeholder="邮箱 Email"
+              value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <Input data-testid="password" type="password" placeholder="密码 Password"
+              value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+            {error && <p data-testid="err-form" className="text-sm text-destructive">{error}</p>}
+            <Button data-testid="submit" type="submit" disabled={submitting} className="w-full">
+              {submitting ? "提交中…" : "登录"}
+            </Button>
+          </form>
+          <div className="mt-4 flex justify-between text-sm">
+            <a href="/forgot-password" className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">忘记密码？</a>
+            <a href="/register" className="text-foreground underline-offset-4 hover:underline">创建账号</a>
+          </div>
+        </CardContent>
+      </Card>
     </main>
   );
 }

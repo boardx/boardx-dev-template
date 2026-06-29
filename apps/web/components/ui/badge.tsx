@@ -1,28 +1,27 @@
 import type { HTMLAttributes } from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
-type Variant = "default" | "success" | "muted";
+// 语义 token 徽章（黑白灰主题）。
+const badgeVariants = cva(
+  "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground",
+        secondary: "bg-secondary text-secondary-foreground",
+        success: "bg-success text-success-foreground",
+        destructive: "bg-destructive text-destructive-foreground",
+        outline: "border border-border text-foreground",
+        muted: "bg-muted text-muted-foreground",
+      },
+    },
+    defaultVariants: { variant: "default" },
+  }
+);
 
-const variants: Record<Variant, string> = {
-  default: "bg-neutral-900 text-white",
-  success: "bg-green-600 text-white",
-  muted: "bg-neutral-200 text-neutral-700",
-};
+export interface BadgeProps extends HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {}
 
-export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
-  variant?: Variant;
-}
-
-// 最小 shadcn 风格组件（cn + variant），证明 UI 栈贯通。
-export function Badge({ className, variant = "default", ...props }: BadgeProps) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-3 py-1 text-sm font-medium",
-        variants[variant],
-        className
-      )}
-      {...props}
-    />
-  );
+export function Badge({ className, variant, ...props }: BadgeProps) {
+  return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
 }
