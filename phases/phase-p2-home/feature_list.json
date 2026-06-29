@@ -7,16 +7,16 @@
       "area": "home-page",
       "title": "Home 工作台壳与欢迎区",
       "user_visible_behavior": "已登录访问 /home 先显示加载态，客户端就绪后渲染 Agent Home：顶部欢迎区显示当前用户名，有当前团队时显示团队名；展示搜索框与各 Agent 分组容器骨架。未登录访问 /home 跳登录。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "01",
+      "owner": "claude",
       "capability": "CAP-WEB",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/home-shell.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-06-29T19:41:52.923Z",
       "notes": "uc-home-001。依赖 phase-04 的 session 与当前团队上下文。本 feature 只做壳，不含 Agent 真实数据加载（见 F02）。"
     },
     {
@@ -26,7 +26,7 @@
       "title": "Agent 分组与卡片渲染（含空状态）",
       "user_visible_behavior": "Home 展示「最近使用 / 我订阅 / 团队推荐」三个 Agent 分组；每组无数据时显示空状态并提供「进入 AI Store / 创建 Agent」入口；有数据时卡片显示头像或默认图标、名称、来源标签、描述、标签或模型、使用次数、最近使用时间、浏览量、喜欢数与「快捷对话」按钮；点「更多」横向列表继续滚动。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-WEB",
       "verification": [
@@ -44,7 +44,7 @@
       "title": "Home 内 Agent 搜索过滤",
       "user_visible_behavior": "在 Home 顶部搜索框输入关键词，前端按已加载 Agent 的名称/描述/标签过滤，各分组只显示匹配卡片并更新分组计数；无匹配显示分组空状态；清空恢复全部；数据加载中显示占位、返回后刷新。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-WEB",
       "verification": [
@@ -62,7 +62,7 @@
       "title": "Recent 页占位（忠于真实「开发中」状态）",
       "user_visible_behavior": "/recent 显示「Recent Activity」标题与「This page is under development.」提示；不展示资源卡片/列表/筛选/排序；用户可经导航/Home/Room/Board/全局搜索离开继续工作。未登录跳登录。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-WEB",
       "verification": [
@@ -79,15 +79,17 @@
       "area": "home-page",
       "title": "最近白板入口（跳转 Board）",
       "user_visible_behavior": "当存在最近访问白板记录时，Home/Recent 或 Room 页的最近白板卡片显示白板名与日期；点击按卡片携带的白板标识跳转 Board 页；白板已删除提示资源不存在；失去权限拒绝访问；无记录显示创建/进入房间入口。",
-      "status": "blocked",
-      "sprint": null,
+      "status": "not_started",
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-WEB",
       "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/home-recent-board.spec.ts"
       ],
       "evidence": "",
-      "notes": "uc-home-002。blocked-on p5（Board 生命周期/打开白板）。Home 不强制展示最近白板，此入口在 p5 Board 落地后点亮。"
+      "notes": "uc-home-002。p5 Board 已完成（GET /api/boards?scope=recent 可用），此入口解除阻塞。复用 p5 最近访问数据。"
     },
     {
       "id": "F06",
@@ -112,7 +114,7 @@
       "title": "新用户 Onboarding 空状态引导",
       "user_visible_behavior": "新用户首次进入 Home 时，无可展示 Agent 的分组显示空状态并提供「进入 AI Store / 创建 Agent」入口；可关闭/稍后再开引导；加载中先显示加载态。Home 本身不承担创建团队/房间/白板的完整引导（由对应模块完成）。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-WEB",
       "verification": [
