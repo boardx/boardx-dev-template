@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRoom, canViewRoom, createBoard, listBoardsInRoom } from "@repo/data";
+import { getRoom, canViewRoom, createBoard, listBoardsInRoom, listFavoriteBoardIds } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -16,7 +16,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     return NextResponse.json({ error: "无权限" }, { status: 403 });
   }
   const q = new URL(req.url).searchParams.get("q") ?? undefined;
-  return NextResponse.json({ boards: await listBoardsInRoom(roomId, q) });
+  const [boards, favoriteIds] = await Promise.all([
+    listBoardsInRoom(roomId, q),
+    listFavoriteBoardIds(user.id),
+  ]);
+  return NextResponse.json({ boards, favoriteIds });
 }
 
 // POST /api/rooms/:id/boards — 在房间内创建白板。空名→默认标题；非房间成员 403。

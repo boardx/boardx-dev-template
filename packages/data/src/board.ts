@@ -112,6 +112,53 @@ export function boardRole(isOwner: boolean, canRoom: boolean, isPublic: boolean)
   return null;
 }
 
+// ─── 收藏（P5 F04）──────────────────────────────────────────────────────────
+
+export async function addFavorite(boardId: number, userId: number): Promise<void> {
+  await query(
+    `INSERT INTO board_favorites (user_id, board_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+    [userId, boardId]
+  );
+}
+
+export async function removeFavorite(boardId: number, userId: number): Promise<void> {
+  await query(`DELETE FROM board_favorites WHERE user_id = $1 AND board_id = $2`, [userId, boardId]);
+}
+
+/** 当前用户收藏的 board id 集合（供列表渲染星标态）。 */
+export async function listFavoriteBoardIds(userId: number): Promise<number[]> {
+  const rows = await query<{ board_id: number }>(
+    `SELECT board_id FROM board_favorites WHERE user_id = $1`,
+    [userId]
+  );
+  return rows.map((r) => r.board_id);
+}
+
+/** 用户收藏且仍可见的白板，按收藏时间倒序；可选名称过滤。 */
+export async function listFavoriteBoards(userId: number, q?: string): Promise<Board[]> {
+  const params: unknown[] = [userId];
+  let nameClause = "";
+  if (q && q.trim()) {
+    params.push(`%${q.trim()}%`);
+    nameClause = ` AND b.name ILIKE $${params.length}`;
+  }
+  return query<Board>(
+    `SELECT b.id, b.room_id, b.team_id, b.name, b.cover, b.category, b.description,
+            b.visibility, b.owner_user_id, b.created_at, b.updated_at
+     FROM board_favorites f
+     JOIN boards b ON b.id = f.board_id
+     JOIN rooms r ON r.id = b.room_id
+     LEFT JOIN room_members rm ON rm.room_id = r.id AND rm.user_id = $1
+     LEFT JOIN team_members tm ON tm.team_id = r.team_id AND tm.user_id = $1
+     WHERE f.user_id = $1
+       AND (b.visibility = 'public' OR r.owner_user_id = $1 OR rm.user_id IS NOT NULL
+            OR (r.visibility = 'team' AND tm.user_id IS NOT NULL)
+            OR (b.visibility = 'team' AND tm.user_id IS NOT NULL))${nameClause}
+     ORDER BY f.created_at DESC`,
+    params
+  );
+}
+
 /** 用户能否查看某白板：白板 public，或可查看其所属 room。 */
 export async function canViewBoard(boardId: number, userId: number): Promise<boolean> {
   const b = await getBoard(boardId);

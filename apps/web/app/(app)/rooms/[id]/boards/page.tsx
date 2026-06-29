@@ -41,6 +41,7 @@ export default function RoomBoardsPage() {
   const params = useParams<{ id: string }>();
   const roomId = params.id;
   const [boards, setBoards] = useState<Board[]>([]);
+  const [favs, setFavs] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
   const [q, setQ] = useState("");
@@ -62,8 +63,16 @@ export default function RoomBoardsPage() {
       setLoading(false);
       return;
     }
-    setBoards((await res.json()).boards ?? []);
+    const d = await res.json();
+    setBoards(d.boards ?? []);
+    setFavs(new Set((d.favoriteIds ?? []).map(String)));
     setLoading(false);
+  }
+
+  async function toggleFav(id: number | string) {
+    const isFav = favs.has(String(id));
+    await fetch(`/api/boards/${id}/favorite`, { method: isFav ? "DELETE" : "POST" });
+    await load(q);
   }
 
   useEffect(() => {
@@ -159,15 +168,27 @@ export default function RoomBoardsPage() {
       ) : (
         <ul data-testid="board-list" className="flex flex-col gap-2">
           {boards.map((b) => (
-            <li key={String(b.id)} data-testid={`board-${b.id}`}>
-              <a
-                href={`/boards/${b.id}`}
-                className={cn(
-                  "flex items-center justify-between rounded-lg border bg-card px-4 py-3",
-                  "text-card-foreground shadow-sm",
-                  "transition-all duration-200 hover:shadow-md hover:border-border/70 cursor-pointer"
-                )}
+            <li
+              key={String(b.id)}
+              data-testid={`board-${b.id}`}
+              className={cn(
+                "flex items-center gap-2 rounded-lg border bg-card px-4 py-3",
+                "text-card-foreground shadow-sm transition-all duration-200 hover:shadow-md hover:border-border/70"
+              )}
+            >
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                data-testid={`fav-${b.id}`}
+                aria-pressed={favs.has(String(b.id))}
+                onClick={() => toggleFav(b.id)}
+                className="h-8 w-8 text-lg leading-none text-amber-500"
+                title={favs.has(String(b.id)) ? "取消收藏" : "收藏"}
               >
+                {favs.has(String(b.id)) ? "★" : "☆"}
+              </Button>
+              <a href={`/boards/${b.id}`} className="flex flex-1 items-center justify-between">
                 <span className="text-sm font-medium text-foreground">{b.name}</span>
                 <Badge variant="muted">{b.visibility}</Badge>
               </a>

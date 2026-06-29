@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { canViewRoom, getRoom, listBoardsInRoom, listRecentBoards } from "@repo/data";
+import { canViewRoom, getRoom, listBoardsInRoom, listRecentBoards, listFavoriteBoards } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -20,6 +20,10 @@ export async function GET(req: Request) {
 
   if (scope === "recent") {
     return NextResponse.json({ boards: await listRecentBoards(user.id, q) });
+  }
+
+  if (scope === "favorite") {
+    return NextResponse.json({ boards: await listFavoriteBoards(user.id, q) });
   }
 
   if (roomIdParam) {

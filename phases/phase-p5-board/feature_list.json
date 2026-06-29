@@ -61,16 +61,16 @@
       "area": "board",
       "title": "收藏 / 取消收藏 Board",
       "user_visible_behavior": "卡片星标：未收藏悬停出现、已收藏常亮；POST/DELETE /api/boards/:id/favorite 切换收藏并持久化（每用户独立）；收藏视图/筛选只显示已收藏白板；刷新后保持。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "claude",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-favorite.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F04.verify.log @ 2026-06-29T19:07:40.890Z",
       "notes": "uc-board-004。新增 board_favorites（user_id/board_id）。"
     },
     {
