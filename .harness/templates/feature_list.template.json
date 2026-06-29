@@ -10,6 +10,7 @@
       "status": "not_started",
       "sprint": null,
       "owner": null,
+      "capability": "CAP-WEB",
       "verification": [
         "curl -sf http://localhost:3000/api/health | jq -e '.ok == true'"
       ],

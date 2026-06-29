@@ -4,3 +4,15 @@ dist/
 *.log
 .DS_Store
 .harness/state/.cache/
+
+# Next.js / 全栈骨架
+.next/
+*.tsbuildinfo
+
+# 本地环境与运行时态（派生，不入库）
+.env
+.env.local
+**/.memory/
+
+# 脚本派生的只读视图（由 new-sprint/claim 重生成，不入库；权威源是 feature_list.json）
+**/active-features.json

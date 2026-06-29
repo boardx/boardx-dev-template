@@ -1,0 +1,25 @@
+{
+  "name": "@repo/workflow-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/main.ts",
+  "scripts": {
+    "dev": "tsx src/main.ts",
+    "start": "tsx src/main.ts",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "echo 'lint: ok'"
+  },
+  "dependencies": {
+    "@repo/queue": "workspace:*",
+    "@repo/data": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "*",
+    "vitest": "*",
+    "@types/node": "*",
+    "tsx": "*"
+  }
+}

@@ -51,6 +51,12 @@ fi
 echo "==> 生成 subagent（从 .harness/agents/*.yaml → .claude/agents + .codex/agents）"
 pnpm harness gen-subagents
 
+# 可选：起本地依赖服务（Postgres + Redis）。默认不起，保证基础验证无 docker 也能跑。
+if [ "${RUN_INFRA:-0}" = "1" ]; then
+  echo "==> RUN_INFRA=1，起本地依赖服务（infra/docker-compose.yml）"
+  docker compose -f infra/docker-compose.yml up -d
+fi
+
 echo "==> 基础验证: ${VERIFY_CMD}"
 if ! eval "${VERIFY_CMD}"; then
   echo "!! 基础验证失败。请先修复基础状态,不要在坏的基础上继续叠功能。" >&2

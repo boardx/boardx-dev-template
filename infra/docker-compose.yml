@@ -1,0 +1,30 @@
+# infra/docker-compose.yml — 本地依赖即代码（CAP-DATA / CAP-WORKFLOW）
+# 起：docker compose -f infra/docker-compose.yml up -d
+# 注：先用 pgvector 镜像（向量检索就绪）；Apache AGE 等图特性 feature 来了再换镜像。
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: boardx
+      POSTGRES_PASSWORD: boardx
+      POSTGRES_DB: boardx
+    # 主机端口可用 PG_PORT 覆盖（避开本机已占用的 5432），容器内仍 5432
+    ports:
+      - "${PG_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U boardx"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7
+    # 主机端口可用 REDIS_PORT 覆盖（避开本机已占用的 6379），容器内仍 6379
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 10

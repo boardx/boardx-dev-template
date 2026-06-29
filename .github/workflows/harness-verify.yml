@@ -42,3 +42,62 @@ jobs:
       # 新增 sprint 后，把这里更新/追加为对应的 --sprint NN/MM。
       - name: harness verify
         run: pnpm harness verify --sprint 01/01
+
+  # 全栈运行时回归：phase-03 的 F01-F03 已 passing（不可逆），harness verify 会跳过，
+  # 不构成真回归测试。故这里用 pg/redis 服务直接跑 curl 断言，每次 CI 真测运行时行为。
+  fullstack-smoke:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: boardx
+          POSTGRES_PASSWORD: boardx
+          POSTGRES_DB: boardx
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U boardx" --health-interval 3s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - "6379:6379"
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 3s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://boardx:boardx@localhost:5432/boardx
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - name: Setup Node (read .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Migrate
+        run: pnpm --filter @repo/data run migrate
+      - name: Build web
+        run: pnpm --filter @repo/web run build
+      - name: 起服务 + 全栈烟测（F01/F02/F03）
+        run: |
+          set -euo pipefail
+          pnpm --filter @repo/web start &
+          pnpm --filter @repo/workflow-worker start &
+          # 等 web 就绪
+          for i in $(seq 1 30); do curl -sf localhost:3000/api/health >/dev/null && break; sleep 2; done
+          # F01：健康 + 首页
+          curl -sf localhost:3000/api/health | jq -e '.ok==true'
+          curl -s localhost:3000 | grep -q BoardX
+          # F02：notes 写读闭环
+          curl -sf -X POST localhost:3000/api/notes -H 'content-type: application/json' -d '{"text":"ci-note"}' | jq -e '.note.text=="ci-note"'
+          curl -sf localhost:3000/api/notes | jq -e '[.notes[].text] | index("ci-note") != null'
+          # F03：入队 → worker → done（异步轮询，带超时）
+          JID=$(curl -sf -X POST localhost:3000/api/jobs -H 'content-type: application/json' -d '{"payload":"ci"}' | jq -r '.id')
+          ok=0; for i in $(seq 1 25); do curl -s localhost:3000/api/jobs/$JID | jq -e '.job.status=="done"' >/dev/null && { ok=1; break; }; sleep 1; done
+          test "$ok" = "1" || { echo "✗ F03 job 未在超时内完成"; exit 1; }
+          echo "✓ 全栈烟测通过（F01/F02/F03）"
