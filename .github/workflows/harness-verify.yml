@@ -142,4 +142,4 @@ jobs:
       - name: Install Playwright chromium
         run: pnpm --filter @repo/web exec playwright install --with-deps chromium
       - name: Playwright e2e（auth + team + room；webServer 自动起 next dev）
-        run: pnpm --filter @repo/web exec playwright test e2e/auth e2e/team e2e/room
+        run: pnpm --filter @repo/web exec playwright test e2e/auth e2e/team e2e/room e2e/canvas e2e/profile
