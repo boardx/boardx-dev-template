@@ -47,6 +47,7 @@ export function newPhase(args: Args): void {
   };
 
   writeFileSync(join(dir, "phase.md"), renderTemplateFile("phase.template.md", vars));
+  writeFileSync(join(dir, "requirements.md"), renderTemplateFile("requirements.template.md", vars));
   writeFileSync(join(dir, "feature_list.json"), renderTemplateFile("feature_list.template.json", vars));
   writeFileSync(join(dir, "progress.md"), renderTemplateFile("progress.template.md", vars));
   writeFileSync(
@@ -74,5 +75,8 @@ export function newPhase(args: Args): void {
 
   refreshProgress();
   log.ok(`已 scaffold 阶段: ${dir}`);
-  log.info(`下一步:编辑 feature_list.json 填功能,然后 pnpm harness new-sprint --phase ${id} --id 01 ...`);
+  log.info(`下一步（推荐流水线）：`);
+  log.info(`  1. 把原始需求写进 ${join(dir, "requirements.md")}`);
+  log.info(`  2. 调 requirement-author 智能体：读 requirements.md → 生成 feature_list.json`);
+  log.info(`  3. pnpm harness new-sprint --phase ${id} --id 01 --features F01,F02 ...`);
 }
