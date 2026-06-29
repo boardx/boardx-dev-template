@@ -9,6 +9,9 @@ import {
   generateToken,
   isExpired,
   expiresAt,
+  canManageTeam,
+  roleAtLeast,
+  isTeamRole,
 } from "./index";
 
 describe("password", () => {
@@ -60,5 +63,23 @@ describe("token/expiry", () => {
   it("过期判断", () => {
     expect(isExpired(new Date(Date.now() - 1000))).toBe(true);
     expect(isExpired(expiresAt(10000))).toBe(false);
+  });
+});
+
+describe("团队角色权限", () => {
+  it("owner/admin 可管理，member 不可", () => {
+    expect(canManageTeam("owner")).toBe(true);
+    expect(canManageTeam("admin")).toBe(true);
+    expect(canManageTeam("member")).toBe(false);
+    expect(canManageTeam(undefined)).toBe(false);
+  });
+  it("roleAtLeast 比较", () => {
+    expect(roleAtLeast("owner", "admin")).toBe(true);
+    expect(roleAtLeast("member", "admin")).toBe(false);
+    expect(roleAtLeast(undefined, "member")).toBe(false);
+  });
+  it("isTeamRole 守卫", () => {
+    expect(isTeamRole("owner")).toBe(true);
+    expect(isTeamRole("hacker")).toBe(false);
   });
 });

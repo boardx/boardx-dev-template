@@ -8,6 +8,8 @@ const { Pool } = pg;
 
 // CAP-AUTH 仓储（users/sessions/email_tokens）
 export * from "./auth";
+// CAP-AUTH 团队仓储（teams/team_members/team_invites）
+export * from "./teams";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 

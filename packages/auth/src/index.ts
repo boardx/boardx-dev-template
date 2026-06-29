@@ -77,3 +77,25 @@ export function isExpired(at: Date | string): boolean {
 }
 
 export const SESSION_COOKIE = "boardx_session";
+export const CURRENT_TEAM_COOKIE = "boardx_current_team";
+export const TEAM_INVITE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 天
+
+// ─── 团队角色与权限（纯逻辑，可单测）─────────────────────────────────────────
+
+export type TeamRole = "owner" | "admin" | "member";
+
+const ROLE_RANK: Record<TeamRole, number> = { owner: 3, admin: 2, member: 1 };
+
+export function isTeamRole(s: string): s is TeamRole {
+  return s === "owner" || s === "admin" || s === "member";
+}
+
+/** owner/admin 可管理团队（邀请、改角色、移除、改名/删除）。 */
+export function canManageTeam(role: TeamRole | undefined): boolean {
+  return role === "owner" || role === "admin";
+}
+
+/** a 的角色是否 >= b（用于权限比较）。 */
+export function roleAtLeast(a: TeamRole | undefined, b: TeamRole): boolean {
+  return a ? ROLE_RANK[a] >= ROLE_RANK[b] : false;
+}

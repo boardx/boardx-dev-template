@@ -95,16 +95,16 @@
       "area": "team",
       "title": "创建团队",
       "user_visible_behavior": "已登录用户 POST /api/teams {name} 创建团队、自己成为 owner、设为当前团队；名为空 400；GET /api/teams 列出我的团队含新团队。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "02",
+      "owner": "claude",
       "capability": "CAP-AUTH",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web run e2e -- team-create"
+        "pnpm --filter @repo/web exec playwright test e2e/team-create.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F06.verify.log @ 2026-06-29T08:44:41.444Z",
       "notes": "uc-team-001。创建者=owner。"
     },
     {
@@ -113,16 +113,16 @@
       "area": "team",
       "title": "查看与切换团队",
       "user_visible_behavior": "GET /api/teams 列出我加入的团队及我的角色；POST /api/teams/current {teamId} 切换当前团队；只能切换到自己已加入的团队。",
-      "status": "not_started",
-      "sprint": null,
+      "status": "passing",
+      "sprint": "02",
       "owner": null,
       "capability": "CAP-AUTH",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web run e2e -- team-switch"
+        "pnpm --filter @repo/web exec playwright test e2e/team-switch.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F07.verify.log @ 2026-06-29T08:44:46.483Z",
       "notes": "uc-team-002。"
     },
     {
@@ -131,16 +131,16 @@
       "area": "team",
       "title": "邀请成员与通过邀请加入",
       "user_visible_behavior": "owner/admin POST /api/teams/:id/invites 生成邀请令牌；受邀用户 POST /api/teams/join {token} 加入为 member；非 owner/admin 邀请被 403；无效/过期邀请 400。",
-      "status": "not_started",
-      "sprint": null,
+      "status": "passing",
+      "sprint": "02",
       "owner": null,
       "capability": "CAP-AUTH",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web run e2e -- team-invite-join"
+        "pnpm --filter @repo/web exec playwright test e2e/team-invite-join.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F08.verify.log @ 2026-06-29T08:44:50.625Z",
       "notes": "uc-team-003 + uc-team-004。"
     },
     {
@@ -149,16 +149,16 @@
       "area": "team",
       "title": "成员/角色管理与更新/删除团队",
       "user_visible_behavior": "owner/admin GET /api/teams/:id/members 列成员、PATCH 改角色、DELETE 移除成员；PATCH /api/teams/:id 改名、DELETE /api/teams/:id 删团队；member 访问管理操作 403。",
-      "status": "not_started",
-      "sprint": null,
+      "status": "passing",
+      "sprint": "02",
       "owner": null,
       "capability": "CAP-AUTH",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web run e2e -- team-manage"
+        "pnpm --filter @repo/web exec playwright test e2e/team-manage.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F09.verify.log @ 2026-06-29T08:44:55.148Z",
       "notes": "uc-team-005 + uc-team-006。RBAC：owner>admin>member。"
     },
     {
