@@ -75,6 +75,11 @@ export default function RoomBoardsPage() {
     await load(q);
   }
 
+  async function duplicate(id: number | string) {
+    await fetch(`/api/boards/${id}/duplicate`, { method: "POST" });
+    await load(q);
+  }
+
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -192,6 +197,16 @@ export default function RoomBoardsPage() {
                 <span className="text-sm font-medium text-foreground">{b.name}</span>
                 <Badge variant="muted">{b.visibility}</Badge>
               </a>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                data-testid={`dup-${b.id}`}
+                onClick={() => duplicate(b.id)}
+                title="复制白板"
+              >
+                复制
+              </Button>
             </li>
           ))}
         </ul>

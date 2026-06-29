@@ -97,16 +97,16 @@
       "area": "board",
       "title": "复制 Board",
       "user_visible_behavior": "卡片更多菜单选「复制」：POST /api/boards/:id/duplicate 在同房间创建副本（名称带副本后缀），复制元信息与画布内容快照（无内容时仅复制空白板）；副本出现在列表；无权限 403。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "claude",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-duplicate.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F06.verify.log @ 2026-06-29T19:15:58.102Z",
       "notes": "uc-board-007。画布内容复制依赖 p6 item 模型；本期复制白板元信息+已有 item 行（phase-p6-canvas 的 items 表）。"
     },
     {

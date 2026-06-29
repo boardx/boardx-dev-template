@@ -112,6 +112,20 @@ export function boardRole(isOwner: boolean, canRoom: boolean, isPublic: boolean)
   return null;
 }
 
+/** 复制白板：在同房间创建副本（名称带「（副本）」后缀），复制元信息。
+ *  画布内容（items，board-keyed）在 p6 接入后随之复制。新副本属主为复制者。 */
+export async function duplicateBoard(boardId: number, userId: number): Promise<Board | undefined> {
+  const src = await getBoard(boardId);
+  if (!src) return undefined;
+  const rows = await query<Board>(
+    `INSERT INTO boards (room_id, team_id, name, cover, category, description, visibility, owner_user_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING ${BOARD_COLS}`,
+    [src.room_id, src.team_id, `${src.name}（副本）`, src.cover, src.category, src.description, src.visibility, userId]
+  );
+  return rows[0];
+}
+
 // ─── 收藏（P5 F04）──────────────────────────────────────────────────────────
 
 export async function addFavorite(boardId: number, userId: number): Promise<void> {
