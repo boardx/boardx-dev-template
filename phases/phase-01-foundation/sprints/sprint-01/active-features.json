@@ -1,0 +1,41 @@
+{
+  "phase": "01",
+  "sprint": "01",
+  "generated_at": "2026-06-29T02:59:41.280Z",
+  "source": "phases/phase-01-*/feature_list.json",
+  "note": "派生视图,只读。修改归属请改阶段 feature_list.json 的 sprint 字段后重新生成。",
+  "features": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "area": "tooling",
+      "title": "monorepo 骨架就位(pnpm + turbo)",
+      "user_visible_behavior": "仓库根存在 package.json / turbo.json / pnpm-workspace.yaml，且 workspace 配置可读",
+      "status": "passing",
+      "sprint": "01",
+      "owner": null,
+      "verification": [
+        "test -f package.json && test -f turbo.json && test -f pnpm-workspace.yaml",
+        "node -e \"const p=require('./package.json'); if(!p.scripts.harness) process.exit(1)\""
+      ],
+      "evidence": "evidence/F01.verify.log @ 2026-06-29T00:12:11.334Z",
+      "notes": "Foundation 阶段的最底座。"
+    },
+    {
+      "id": "F02",
+      "priority": 2,
+      "area": "harness",
+      "title": "harness 控制平面文件齐备",
+      "user_visible_behavior": "AGENTS.md / init.sh / .harness 指令与模板齐全，agent 开工有据可依",
+      "status": "passing",
+      "sprint": "01",
+      "owner": null,
+      "verification": [
+        "test -f AGENTS.md && test -x init.sh",
+        "test -f .harness/rubrics/clean-state-checklist.md && test -f .harness/templates/sprint.template.md"
+      ],
+      "evidence": "evidence/F02.verify.log @ 2026-06-29T00:12:11.340Z",
+      "notes": ""
+    }
+  ]
+}

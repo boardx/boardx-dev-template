@@ -1,0 +1,23 @@
+{
+  "name": "boardx-dev-template",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "verify:base": "turbo run typecheck lint test",
+    "harness": "tsx .harness/scripts/cli.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.6.0",
+    "yaml": "^2.5.0",
+    "@types/node": "^22.0.0",
+    "vitest": "^2.0.0"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm *)",
+      "Bash(tsx *)",
+      "Bash(node *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(curl -sf *)",
+      "Bash(jq *)",
+      "Bash(cat *)",
+      "Bash(ls *)",
+      "Bash(test *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Bash(chmod 777 *)"
+    ]
+  }
+}

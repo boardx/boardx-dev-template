@@ -1,0 +1,16 @@
+# roadmap.yaml — 所有阶段(phase=项目)的单一来源
+# new-phase 脚本读写本文件;每个阶段会在 phases/ 下 scaffold 一个目录。
+project: boardx-dev-template
+phases:
+  - id: "01"
+    slug: foundation
+    name: Foundation
+    goal: "搭好 monorepo 骨架、harness 控制平面与基础验证回路"
+    status: in_progress          # not_started | in_progress | blocked | done
+    depends_on: []
+  - id: "02"
+    slug: agent-runtime
+    name: Agent Runtime
+    goal: "实现 orchestrator + agent-core 的最小推理回路"
+    status: not_started
+    depends_on: ["01"]

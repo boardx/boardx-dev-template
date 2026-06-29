@@ -1,0 +1,28 @@
+# github-sync.yaml — 文件 → GitHub 单向映射规则(GitHub 只读投影)
+version: 1
+
+repo: "boardx/boardx-dev-template"   # owner/name
+
+direction: one-way              # 单向:文件是事实来源,GitHub 是投影
+
+mapping:
+  phase:   milestone            # 阶段 → Milestone
+  sprint:  label                # sprint → label(sprint:NN-MM)
+  feature: issue                # feature → Issue
+
+# 只对"当前/近期"的 sprint 开 Issue,避免一次开数百个
+issue_policy:
+  open_for: near_term           # near_term | all
+  near_term_window: 1           # 当前 sprint + 往后 N 个 sprint
+
+labels:
+  blocked: "blocked"
+  passing: "passing"
+  area_prefix: "area:"          # 用 feature.area 生成 area:<area> 标签
+
+# 状态 → GitHub 动作
+status_actions:
+  passing:     { close_issue: true, add_label: "passing" }
+  blocked:     { add_label: "blocked" }
+  in_progress: { add_label: "in-progress" }
+  not_started: { }

@@ -1,0 +1,25 @@
+{
+  "name": "@repo/orchestrator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/main.ts",
+  "scripts": {
+    "dev": "tsx --watch src/main.ts",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "echo 'lint: ok'"
+  },
+  "dependencies": {
+    "@repo/agent-core": "workspace:*",
+    "@repo/memory": "workspace:*",
+    "@repo/tools": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "*",
+    "vitest": "*",
+    "@types/node": "*",
+    "tsx": "*"
+  }
+}

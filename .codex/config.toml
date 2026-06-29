@@ -1,0 +1,42 @@
+# .codex/config.toml — Codex 项目级配置
+# 仅在 trusted 模式下加载（git-tracked 仓库内）
+# 技能发现：.agents/skills/（与 Gemini 共享同一真身）
+
+[model]
+# 默认使用 o4-mini；复杂推理任务可切 o3
+default = "o4-mini"
+
+[approval]
+# 除下面白名单外，所有命令需要用户确认
+policy = "on-failure"   # auto-approve 通过的命令；失败时暂停等确认
+
+[shell]
+# 自动审批的安全命令前缀
+allowed_commands = [
+  "pnpm",
+  "tsx",
+  "node",
+  "git status",
+  "git diff",
+  "git log",
+  "git add",
+  "git commit",
+  "curl -sf",
+  "jq",
+  "cat",
+  "ls",
+  "test",
+]
+denied_commands = [
+  "rm -rf",
+  "sudo",
+  "chmod 777",
+]
+
+[skills]
+# Codex 从 .agents/skills/ 发现 skills（与 Gemini/Antigravity 共享）
+path = ".agents/skills"
+
+[agents]
+# 项目级 subagent 定义目录
+path = ".codex/agents"

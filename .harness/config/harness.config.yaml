@@ -1,0 +1,27 @@
+# harness.config.yaml — 全局配置:命令、门控规则、阈值
+version: 1
+
+paths:
+  phases_dir: phases
+  roadmap: .harness/state/roadmap.yaml
+  project_progress: .harness/state/PROGRESS.md
+
+# feature 状态机(passing 不可逆;同一时刻只能有一个 in_progress)
+feature_states: [not_started, in_progress, blocked, passing]
+
+verification:
+  # verify 脚本逐条执行 feature.verification 中的命令,全部退出码为 0 才允许门控通过
+  shell: bash
+  fail_fast: true
+  # 门控通过后是否要求基础验证仍然通过
+  require_base_pass: true
+  base_verify_cmd: "pnpm -w run verify:base"
+
+gates:
+  single_in_progress: true        # 强制"同时只有一个 in_progress"
+  passing_is_irreversible: true   # 禁止从 passing 回退
+  evidence_required: true         # 没有 evidence 不允许标 passing
+
+quality:
+  evaluator_rubric: .harness/rubrics/evaluator-rubric.md
+  quality_document: .harness/state/quality-document.md

@@ -1,0 +1,40 @@
+# harness-verify.yml — CI 门控
+# 仓库即唯一事实来源：PR 必须通过基础验证 + harness verify 才能合并。
+# 同时校验 subagent 生成物没有漂移（改了 yaml 却忘了重新生成 → 红）。
+
+name: harness-verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node (read .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install + 基础验证 (init.sh)
+        run: ./init.sh
+
+      - name: Subagent 生成物未漂移
+        run: |
+          pnpm harness gen-subagents
+          git diff --exit-code .claude/agents .codex/agents \
+            || (echo "✗ subagent 生成物与 .harness/agents/*.yaml 不一致：改了 yaml 请重新跑 pnpm harness gen-subagents 并提交" && exit 1)
+
+      - name: harness verify
+        run: pnpm harness verify
