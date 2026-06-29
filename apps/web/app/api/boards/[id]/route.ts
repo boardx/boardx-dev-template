@@ -6,6 +6,7 @@ import {
   recordBoardVisit,
   canManageBoard,
   updateBoard,
+  deleteBoard,
   type BoardMetaFields,
 } from "@repo/data";
 import { currentUser } from "@/lib/session";
@@ -61,6 +62,24 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
     const updated = await updateBoard(boardId, fields);
     return NextResponse.json({ board: updated });
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
+}
+
+// DELETE /api/boards/:id — 删除白板。仅管理者，否则 403。
+export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+  try {
+    const user = await currentUser();
+    if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
+    const boardId = Number(params.id);
+    const board = await getBoard(boardId);
+    if (!board) return NextResponse.json({ error: "not found" }, { status: 404 });
+    if (!(await canManageBoard(boardId, user.id))) {
+      return NextResponse.json({ error: "无管理权限" }, { status: 403 });
+    }
+    await deleteBoard(boardId);
+    return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ type Role = "owner" | "editor" | "viewer";
 
 export default function BoardPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const boardId = params.id;
   const [board, setBoard] = useState<Board | null>(null);
   const [role, setRole] = useState<Role | null>(null);
@@ -42,6 +43,8 @@ export default function BoardPage() {
   // 移动
   const [rooms, setRooms] = useState<RoomOpt[]>([]);
   const [moveTarget, setMoveTarget] = useState("");
+  // 删除（行内确认）
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   async function refresh() {
     const res = await fetch(`/api/boards/${boardId}`);
@@ -71,6 +74,14 @@ export default function BoardPage() {
     });
     setMoveTarget("");
     await refresh();
+  }
+
+  async function remove() {
+    const roomId = board?.room_id;
+    const res = await fetch(`/api/boards/${boardId}`, { method: "DELETE" });
+    if (res.ok) {
+      router.push(roomId ? `/rooms/${roomId}/boards` : "/boards");
+    }
   }
 
   useEffect(() => {
@@ -226,6 +237,39 @@ export default function BoardPage() {
                 移动
               </Button>
             </div>
+          </div>
+
+          {/* 删除（行内确认） */}
+          <div className="mt-2 flex items-center gap-2 border-t pt-3">
+            {!confirmingDelete ? (
+              <Button
+                type="button"
+                data-testid="board-delete"
+                size="sm"
+                variant="destructive"
+                onClick={() => setConfirmingDelete(true)}
+              >
+                删除白板
+              </Button>
+            ) : (
+              <>
+                <span data-testid="delete-confirm-text" className="text-sm text-destructive">
+                  确认删除「{board?.name}」？此操作不可恢复。
+                </span>
+                <Button
+                  type="button"
+                  data-testid="board-delete-confirm"
+                  size="sm"
+                  variant="destructive"
+                  onClick={remove}
+                >
+                  确认删除
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setConfirmingDelete(false)}>
+                  取消
+                </Button>
+              </>
+            )}
           </div>
         </form>
       )}

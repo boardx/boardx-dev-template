@@ -133,16 +133,16 @@
       "area": "board",
       "title": "删除 Board",
       "user_visible_behavior": "更多菜单选「删除」弹确认框；确认后 DELETE /api/boards/:id 删除白板及其 item/收藏/最近访问关联，卡片从列表移除；Cancel 不删除；无权限 403。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "claude",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-delete.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F08.verify.log @ 2026-06-29T19:22:26.937Z",
       "notes": "uc-board-008。级联清理 items/favorites/visits。"
     },
     {

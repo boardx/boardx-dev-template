@@ -112,6 +112,11 @@ export function boardRole(isOwner: boolean, canRoom: boolean, isPublic: boolean)
   return null;
 }
 
+/** 删除白板。board_favorites / board_visits 经 FK ON DELETE CASCADE 自动清理。 */
+export async function deleteBoard(boardId: number): Promise<void> {
+  await query(`DELETE FROM boards WHERE id = $1`, [boardId]);
+}
+
 /** 移动白板到其他房间（同时更新归属团队为目标房间的团队）。 */
 export async function moveBoard(
   boardId: number,
