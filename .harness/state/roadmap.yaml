@@ -48,7 +48,7 @@ phases:
     slug: board
     name: Board 基础 (P5)
     goal: "Board 生命周期：创建/打开/列表搜索最近/收藏/改元数据/复制/移动/删除 + 可见性 access（board 容器，非画布编辑）"
-    status: not_started
+    status: done
     depends_on: ["04"]
   - id: "p6"
     slug: canvas
