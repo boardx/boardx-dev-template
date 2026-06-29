@@ -1,8 +1,10 @@
 // packages/data/src/board.ts — CAP-DATA 白板容器仓储（P5）
 // Board = 房间内的白板容器（生命周期）。画布内容（items）属 P6，不在此层。
 import { query } from "./index";
+import { canViewRoom } from "./rooms";
 
 export type BoardVisibility = "room" | "team" | "public";
+export type BoardRole = "owner" | "editor" | "viewer";
 
 export interface Board {
   id: number;
@@ -53,4 +55,24 @@ export async function getBoard(boardId: number): Promise<Board | undefined> {
 /** 房间内全部白板，最新在前。 */
 export async function listBoardsInRoom(roomId: number): Promise<Board[]> {
   return query<Board>(`SELECT ${BOARD_COLS} FROM boards WHERE room_id = $1 ORDER BY id DESC`, [roomId]);
+}
+
+/**
+ * 由三个布尔条件推导用户在某白板的角色（纯函数，可单测）。
+ * - 可访问房间者：owner（白板属主）/ editor（房间成员）
+ * - 仅白板 public：viewer（只读）
+ * - 都不满足：null（无权访问）
+ */
+export function boardRole(isOwner: boolean, canRoom: boolean, isPublic: boolean): BoardRole | null {
+  if (canRoom) return isOwner ? "owner" : "editor";
+  if (isPublic) return "viewer";
+  return null;
+}
+
+/** 用户能否查看某白板：白板 public，或可查看其所属 room。 */
+export async function canViewBoard(boardId: number, userId: number): Promise<boolean> {
+  const b = await getBoard(boardId);
+  if (!b) return false;
+  if (b.visibility === "public") return true;
+  return canViewRoom(b.room_id, userId);
 }

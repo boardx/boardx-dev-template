@@ -25,16 +25,16 @@
       "area": "board",
       "title": "打开 Board（容器壳）",
       "user_visible_behavior": "GET /api/boards/:id 返回白板元数据与当前用户角色（无权 403 / 公开可读除外）；/boards/:id 渲染加载态、白板标题、画布容器占位、Header 占位、缩放/小地图入口占位；只读角色隐藏/禁用编辑入口。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "claude",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-open.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-06-29T18:57:03.250Z",
       "notes": "uc-board-002。本期只做「打开容器壳 + 权限/角色解析」；真实画布编辑 blocked-on p6、Header 功能 blocked-on p7、实时协作 blocked-on p8。"
     },
     {
