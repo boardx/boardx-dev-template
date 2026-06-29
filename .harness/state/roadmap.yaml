@@ -36,7 +36,7 @@ phases:
     slug: home
     name: Home 工作台 (P2)
     goal: "首页工作台：欢迎区(用户/团队名)/Recent/Agent 搜索骨架/推荐功能入口/Onboarding。AVA 相关动作 blocked-on p9"
-    status: not_started
+    status: in_progress  # F01/F02/F04/F05/F07 passing；F03 blocked-on p11、F06 blocked-on p9
     depends_on: ["04"]
   - id: "p4"
     slug: room-chat

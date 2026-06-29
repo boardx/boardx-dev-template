@@ -111,16 +111,16 @@
       "area": "home-page",
       "title": "新用户 Onboarding 空状态引导",
       "user_visible_behavior": "新用户首次进入 Home 时，无可展示 Agent 的分组显示空状态并提供「进入 AI Store / 创建 Agent」入口；可关闭/稍后再开引导；加载中先显示加载态。Home 本身不承担创建团队/房间/白板的完整引导（由对应模块完成）。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "claude",
       "capability": "CAP-WEB",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/home-onboarding.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F07.verify.log @ 2026-06-29T19:52:51.311Z",
       "notes": "uc-home-003。空状态/引导壳可独立实现；其中指向 AI Store 的入口在 p11、指向 AVA 的入口在 p9 接通真实跳转。"
     }
   ]

@@ -61,7 +61,24 @@ export default function HomePage() {
   const [q, setQ] = useState("");
   const [groups] = useState<AgentGroups>(EMPTY_AGENT_GROUPS);
   const [recentBoards, setRecentBoards] = useState<{ id: number | string; name: string }[]>([]);
+  const [guideDismissed, setGuideDismissed] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.localStorage.getItem("home_guide_dismissed") === "1") {
+      setGuideDismissed(true);
+    }
+  }, []);
+
+  function dismissGuide() {
+    setGuideDismissed(true);
+    if (typeof window !== "undefined") window.localStorage.setItem("home_guide_dismissed", "1");
+  }
+
+  function reopenGuide() {
+    setGuideDismissed(false);
+    if (typeof window !== "undefined") window.localStorage.removeItem("home_guide_dismissed");
+  }
 
   useEffect(() => {
     let alive = true;
@@ -111,6 +128,48 @@ export default function HomePage() {
           </p>
         )}
       </section>
+
+      {/* 新用户 Onboarding 引导（无 Agent 时显示，可关闭/重开） */}
+      {(() => {
+        const totalAgents = GROUPS.reduce((n, g) => n + groups[g.key].length, 0);
+        if (totalAgents > 0) return null;
+        return guideDismissed ? (
+          <Button
+            data-testid="onboarding-reopen"
+            size="sm"
+            variant="ghost"
+            className="self-start"
+            onClick={reopenGuide}
+          >
+            查看新手引导
+          </Button>
+        ) : (
+          <div
+            data-testid="onboarding"
+            className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/5 p-5"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col gap-1">
+                <p className="text-sm font-semibold text-foreground">欢迎来到 BoardX 👋</p>
+                <p className="text-sm text-muted-foreground">
+                  从 AI Store 订阅一个 Agent，或自己创建一个，开始你的 AI 原生工作。
+                </p>
+              </div>
+              <Button data-testid="onboarding-dismiss" size="sm" variant="ghost" onClick={dismissGuide}>
+                关闭
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="secondary" data-testid="onboarding-store" onClick={() => (window.location.href = "/ai-store")}>
+                进入 AI Store
+              </Button>
+              <Button size="sm" variant="ghost" data-testid="onboarding-create" onClick={() => (window.location.href = "/ai-store/create")}>
+                创建 Agent
+              </Button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* 搜索框（过滤逻辑见 F03） */}
       <Input
