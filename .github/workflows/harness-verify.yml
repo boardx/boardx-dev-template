@@ -101,3 +101,45 @@ jobs:
           ok=0; for i in $(seq 1 25); do curl -s localhost:3000/api/jobs/$JID | jq -e '.job.status=="done"' >/dev/null && { ok=1; break; }; sleep 1; done
           test "$ok" = "1" || { echo "✗ F03 job 未在超时内完成"; exit 1; }
           echo "✓ 全栈烟测通过（F01/F02/F03）"
+
+  # phase-04 auth/team/room 的 Playwright e2e 回归（真浏览器，每次 CI 跑）。
+  e2e-auth-spaces:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: boardx
+          POSTGRES_PASSWORD: boardx
+          POSTGRES_DB: boardx
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U boardx" --health-interval 3s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - "6379:6379"
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 3s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://boardx:boardx@localhost:5432/boardx
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - name: Setup Node (read .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Migrate
+        run: pnpm --filter @repo/data run migrate
+      - name: Install Playwright chromium
+        run: pnpm --filter @repo/web exec playwright install --with-deps chromium
+      - name: Playwright e2e（auth + team + room；webServer 自动起 next dev）
+        run: pnpm --filter @repo/web exec playwright test e2e/auth e2e/team e2e/room
