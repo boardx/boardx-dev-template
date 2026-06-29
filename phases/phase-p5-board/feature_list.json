@@ -7,16 +7,16 @@
       "area": "board",
       "title": "创建 Board",
       "user_visible_behavior": "在有权限的房间内点「创建白板」：POST /api/rooms/:id/boards {name?} 创建白板并落库（201，默认名/空名给默认标题），列表立即出现该白板卡片（名称/封面占位/最近编辑信息）；非房间成员 403。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "01",
+      "owner": "claude",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-create.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-06-29T18:52:23.657Z",
       "notes": "uc-board-001。新增 boards 表（room_id/team_id/name/cover/category/description/visibility/owner_id/created_at/updated_at）。依赖 phase-04 room 权限。"
     },
     {
@@ -26,7 +26,7 @@
       "title": "打开 Board（容器壳）",
       "user_visible_behavior": "GET /api/boards/:id 返回白板元数据与当前用户角色（无权 403 / 公开可读除外）；/boards/:id 渲染加载态、白板标题、画布容器占位、Header 占位、缩放/小地图入口占位；只读角色隐藏/禁用编辑入口。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
@@ -44,7 +44,7 @@
       "title": "列表 / 搜索 / 最近访问",
       "user_visible_behavior": "GET /api/boards?roomId=&q=&scope=recent 返回当前房间/团队或最近访问的白板，前端展示卡片列表、搜索框（按名称过滤）、创建入口；无白板或无匹配显示空状态；打开白板写入最近访问记录用于排序。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
@@ -62,7 +62,7 @@
       "title": "收藏 / 取消收藏 Board",
       "user_visible_behavior": "卡片星标：未收藏悬停出现、已收藏常亮；POST/DELETE /api/boards/:id/favorite 切换收藏并持久化（每用户独立）；收藏视图/筛选只显示已收藏白板；刷新后保持。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
@@ -80,7 +80,7 @@
       "title": "更新 Board 元信息",
       "user_visible_behavior": "卡片更多菜单或 Board Header 标题输入框可改名称，并支持编辑标签/类别/描述、上传/移除封面；PATCH /api/boards/:id 校验权限后更新并回显；无管理权限的菜单项禁用 / 接口 403。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
@@ -98,7 +98,7 @@
       "title": "复制 Board",
       "user_visible_behavior": "卡片更多菜单选「复制」：POST /api/boards/:id/duplicate 在同房间创建副本（名称带副本后缀），复制元信息与画布内容快照（无内容时仅复制空白板）；副本出现在列表；无权限 403。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
@@ -116,7 +116,7 @@
       "title": "移动 Board 到其他房间",
       "user_visible_behavior": "更多菜单选「移动到另一个房间」：列出当前用户有管理权限的目标房间，POST /api/boards/:id/move {targetRoomId} 校验源/目标权限后改 room_id；移动后白板从原列表消失、出现在目标房间；无管理权限 403。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
@@ -134,7 +134,7 @@
       "title": "删除 Board",
       "user_visible_behavior": "更多菜单选「删除」弹确认框；确认后 DELETE /api/boards/:id 删除白板及其 item/收藏/最近访问关联，卡片从列表移除；Cancel 不删除；无权限 403。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
@@ -152,7 +152,7 @@
       "title": "Board 可见范围（访问级别数据 + API）",
       "user_visible_behavior": "Board 有访问级别字段（public / team / room）；PATCH /api/boards/:id/visibility 仅 Room Owner/Admin 可改，其他人接口 403 / 面板下拉禁用；访问级别决定 GET /api/boards/:id 对非成员/匿名的放行与否。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
@@ -170,7 +170,7 @@
       "title": "通过公开链接查看/加入 Board",
       "user_visible_behavior": "打开公开链接：访问级别允许时匿名/非成员可进入只读查看（加载态、可查看内容、在线状态占位）；不允许时提示需登录/加入；已登录用户可按策略加入协作身份（写 board/room 成员记录）。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
