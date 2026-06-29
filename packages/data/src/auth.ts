@@ -11,6 +11,8 @@ export interface User {
   last_name: string;
   provider: string;
   created_at: string;
+  display_name?: string | null;
+  avatar?: string | null;
 }
 
 export interface CreateUserInput {
@@ -66,7 +68,8 @@ export async function createSession(id: string, userId: number, expiresAt: Date)
 /** 取未过期会话对应的用户（联表，单查）。 */
 export async function getSessionUser(sessionId: string): Promise<User | undefined> {
   const rows = await query<User>(
-    `SELECT u.id, u.email, u.password_hash, u.first_name, u.last_name, u.provider, u.created_at
+    `SELECT u.id, u.email, u.password_hash, u.first_name, u.last_name, u.provider, u.created_at,
+            u.display_name, u.avatar
      FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.id = $1 AND s.expires_at > now()`,
     [sessionId]

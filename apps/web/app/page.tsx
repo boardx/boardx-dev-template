@@ -15,10 +15,19 @@ export default async function Home() {
       <Badge variant="success" data-testid="status-badge">skeleton online</Badge>
 
       {pub ? (
-        <div className="flex flex-col gap-2">
-          <p data-testid="current-user">已登录：{pub.email}（{pub.firstName} {pub.lastName}）</p>
+        <div className="flex flex-col gap-2" data-testid="user-menu">
+          <p data-testid="current-user">已登录：{pub.email}</p>
+          <div className="flex items-center gap-2">
+            <span data-testid="menu-avatar" className="rounded-full bg-neutral-200 px-2 py-1 font-mono text-xs">
+              {pub.avatar ?? "(默认头像)"}
+            </span>
+            <span data-testid="menu-displayname" className="text-sm font-medium">{pub.displayName}</span>
+          </div>
           <div className="flex items-center gap-3">
-            <a href="/account" className="text-sm text-blue-600">账号中心</a>
+            <a href="/account" data-testid="link-profile" className="text-sm text-blue-600">Profile</a>
+            <a href="/account?section=settings" data-testid="link-settings" className="text-sm text-blue-600">Settings</a>
+            <a href="/teams" className="text-sm text-blue-600">团队</a>
+            <a href="/rooms" className="text-sm text-blue-600">房间</a>
             <LogoutButton />
           </div>
         </div>

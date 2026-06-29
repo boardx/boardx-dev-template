@@ -16,3 +16,9 @@ dist/
 
 # 脚本派生的只读视图（由 new-sprint/claim 重生成，不入库；权威源是 feature_list.json）
 **/active-features.json
+
+# 旧系统代码：仅作实现参考，不入库（3 个完整旧代码库，5000+ 文件/含二进制）
+phases/requirements/oldcode/
+# Playwright 失败产物
+**/test-results/
+**/playwright-report/

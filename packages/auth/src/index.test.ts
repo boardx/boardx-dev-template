@@ -12,6 +12,10 @@ import {
   canManageTeam,
   roleAtLeast,
   isTeamRole,
+  avatarSeed,
+  resolveDisplayName,
+  isAiModel,
+  isPrivacyLevel,
 } from "./index";
 
 describe("password", () => {
@@ -81,5 +85,24 @@ describe("团队角色权限", () => {
   it("isTeamRole 守卫", () => {
     expect(isTeamRole("owner")).toBe(true);
     expect(isTeamRole("hacker")).toBe(false);
+  });
+});
+
+describe("账号资料与偏好", () => {
+  it("avatarSeed 确定性、同输入同结果", () => {
+    expect(avatarSeed("a@b.com")).toBe(avatarSeed("a@b.com"));
+    expect(avatarSeed("a@b.com")).not.toBe(avatarSeed("c@d.com"));
+    expect(avatarSeed("x").startsWith("seed:")).toBe(true);
+  });
+  it("resolveDisplayName 回退链", () => {
+    expect(resolveDisplayName({ displayName: "Nick", email: "a@b.com" })).toBe("Nick");
+    expect(resolveDisplayName({ firstName: "A", lastName: "B", email: "a@b.com" })).toBe("A B");
+    expect(resolveDisplayName({ email: "alice@b.com" })).toBe("alice");
+  });
+  it("偏好校验", () => {
+    expect(isAiModel("claude-opus-4-8")).toBe(true);
+    expect(isAiModel("gpt-x")).toBe(false);
+    expect(isPrivacyLevel("team")).toBe(true);
+    expect(isPrivacyLevel("public")).toBe(false);
   });
 });
