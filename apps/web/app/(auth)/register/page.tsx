@@ -64,7 +64,7 @@ export default function RegisterPage() {
               {submitting ? "提交中…" : "注册"}
             </Button>
           </form>
-          <a href="/login" className="mt-4 block text-sm text-foreground underline-offset-4 hover:underline">已有账号？登录</a>
+          <a href="/login" className="mt-4 block text-sm text-foreground underline-offset-4 transition-colors hover:underline">已有账号？登录</a>
         </CardContent>
       </Card>
     </main>

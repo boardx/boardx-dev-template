@@ -44,13 +44,13 @@ export default function BoardPage() {
 
   if (error)
     return (
-      <main className="p-8">
+      <div className="p-8">
         <p data-testid="board-error" className="text-sm text-destructive">{error}</p>
-      </main>
+      </div>
     );
 
   return (
-    <main className="flex min-h-screen flex-col gap-3 p-4">
+    <div className="flex flex-col gap-3 p-4">
       <div className="flex items-center gap-3">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">Board · Room {roomId}</h1>
         <Button data-testid="add-note" size="sm" onClick={addNote}>添加便签</Button>
@@ -62,13 +62,13 @@ export default function BoardPage() {
             className="absolute rounded-md border border-border bg-card p-1 text-card-foreground shadow-sm"
             style={{ left: it.x, top: it.y, width: it.w, height: it.h }}>
             <input data-testid={`text-${it.id}`}
-              className="w-full bg-transparent text-sm text-foreground outline-none"
+              className="w-full bg-transparent text-sm text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
               defaultValue={it.text} onBlur={(e) => editText(it.id, e.target.value)} />
             <button data-testid={`del-${it.id}`} onClick={() => remove(it.id)}
-              className="absolute right-1 top-1 text-xs text-destructive hover:text-destructive/80">×</button>
+              className="absolute right-1 top-1 text-xs text-destructive transition-colors duration-200 hover:text-destructive/80">×</button>
           </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

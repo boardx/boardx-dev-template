@@ -32,16 +32,16 @@ function AccountCenter() {
   }, [router]);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-5 p-8">
+    <div className="mx-auto flex max-w-2xl flex-col gap-5 p-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight text-foreground">账号中心</h1>
-        <a href="/" data-testid="back-workspace" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">返回工作区</a>
+        <a href="/" data-testid="back-workspace" className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline">返回工作区</a>
       </div>
       <nav className="flex gap-1 border-b border-border">
         {(["personal", "security", "settings"] as Section[]).map((s) => (
           <button key={s} data-testid={`tab-${s}`} onClick={() => setSection(s)}
             className={cn(
-              "px-3 py-2 text-sm transition-colors",
+              "px-3 py-2 text-sm transition-colors duration-200",
               section === s
                 ? "border-b-2 border-primary font-medium text-foreground"
                 : "text-muted-foreground hover:text-foreground"
@@ -57,7 +57,7 @@ function AccountCenter() {
           {section === "settings" && <Settings />}
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }
 

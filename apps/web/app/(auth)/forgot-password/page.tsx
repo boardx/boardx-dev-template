@@ -47,7 +47,7 @@ export default function ForgotPasswordPage() {
               </Button>
             </form>
           )}
-          <a href="/login" className="mt-4 block text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">返回登录</a>
+          <a href="/login" className="mt-4 block text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline">返回登录</a>
         </CardContent>
       </Card>
     </main>
