@@ -60,9 +60,16 @@
 - 可观测性约定 → `.harness/instructions/observability.md`
 - 阶段/局部规则 → 对应 `apps/*/AGENTS.md`、`phases/<phase>/AGENTS.md`
 
+## 需求录入流水线（新阶段开工前）
+原始需求 → 智能体 → 权威功能清单，三步：
+1. `pnpm harness new-phase` scaffold 出 `phases/<phase>/requirements.md`。
+2. 把**原始需求**（大白话/用户故事）写进 `requirements.md`。
+3. 调 **requirement-author** 智能体：读 `requirements.md` → 生成 `feature_list.json`（带可执行 `verification`）。
+`requirements.md` 是输入,不是权威;权威永远是 `feature_list.json`。
+
 ## 常用 harness 命令
 ```bash
-pnpm harness new-phase  --id 02 --name agent-runtime --goal "..."
+pnpm harness new-phase  --id 02 --name agent-runtime --goal "..."   # 同时 scaffold requirements.md
 pnpm harness new-sprint --phase 02 --id 01 --goal "..." --features F01,F02
 pnpm harness verify     --sprint 02/01
 pnpm harness sync       --phase 02 --apply
