@@ -25,16 +25,16 @@
       "area": "home-page",
       "title": "Agent 分组与卡片渲染（含空状态）",
       "user_visible_behavior": "Home 展示「最近使用 / 我订阅 / 团队推荐」三个 Agent 分组；每组无数据时显示空状态并提供「进入 AI Store / 创建 Agent」入口；有数据时卡片显示头像或默认图标、名称、来源标签、描述、标签或模型、使用次数、最近使用时间、浏览量、喜欢数与「快捷对话」按钮；点「更多」横向列表继续滚动。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "claude",
       "capability": "CAP-WEB",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/home-agent-groups.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-06-29T19:45:10.046Z",
       "notes": "uc-home-001/003。本期 Agent 数据源（订阅/推荐）由 AI Store(p11) 提供，故先以空数据集渲染空状态与入口；真实 Agent 列表在 p11 落地后接入（届时补 e2e 有数据分支）。"
     },
     {
