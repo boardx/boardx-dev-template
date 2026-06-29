@@ -12,6 +12,8 @@ export * from "./auth";
 export * from "./teams";
 // CAP-COLLAB 房间仓储（rooms/room_members）
 export * from "./rooms";
+// CAP-CANVAS 板 item 仓储（board_items）
+export * from "./items";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 

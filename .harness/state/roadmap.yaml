@@ -26,3 +26,9 @@ phases:
     goal: "用户身份与协作空间：auth / identity / team / room"
     status: not_started
     depends_on: []
+  - id: "05"
+    slug: canvas
+    name: canvas
+    goal: "Canvas：房间内的板内容（命令运行时 + 增删改 item + 持久化 + 渲染）"
+    status: not_started
+    depends_on: []

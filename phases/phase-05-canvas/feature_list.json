@@ -1,0 +1,77 @@
+{
+  "phase": "05",
+  "features": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "area": "canvas",
+      "title": "打开房间的板并渲染已有 item",
+      "user_visible_behavior": "GET /api/rooms/:id/items 返回该房间全部 item（按权限，无权 403）；/rooms/:id/board 页面渲染这些 item。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": "claude",
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/canvas-render.spec.ts"
+      ],
+      "evidence": "evidence/F01.verify.log @ 2026-06-29T09:56:59.137Z",
+      "notes": "依赖 phase-04 rooms 权限（canViewRoom）。"
+    },
+    {
+      "id": "F02",
+      "priority": 2,
+      "area": "canvas",
+      "title": "添加 item（命令运行时）",
+      "user_visible_behavior": "POST /api/rooms/:id/items {type,x,y,text} 经命令运行时新增 item 并落库（201）；板上出现该 item；刷新仍在；无权 403。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/canvas-add.spec.ts"
+      ],
+      "evidence": "evidence/F02.verify.log @ 2026-06-29T09:57:04.152Z",
+      "notes": "命令运行时 applyCommand 纯逻辑，含单测。"
+    },
+    {
+      "id": "F03",
+      "priority": 3,
+      "area": "canvas",
+      "title": "移动 / 编辑 item",
+      "user_visible_behavior": "PATCH /api/items/:id {x,y,text} 更新位置/文字并持久化；非房间成员 403；刷新后保留更新。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/canvas-update.spec.ts"
+      ],
+      "evidence": "evidence/F03.verify.log @ 2026-06-29T09:57:08.756Z",
+      "notes": "move/edit 都是命令；权限按所属 room。"
+    },
+    {
+      "id": "F04",
+      "priority": 4,
+      "area": "canvas",
+      "title": "删除 item",
+      "user_visible_behavior": "DELETE /api/items/:id 从板与库删除该 item；非房间成员 403；删除后 GET 列表不含它。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/canvas-delete.spec.ts"
+      ],
+      "evidence": "evidence/F04.verify.log @ 2026-06-29T09:57:13.335Z",
+      "notes": "删除是命令。"
+    }
+  ]
+}

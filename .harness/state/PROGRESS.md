@@ -8,5 +8,6 @@
 | 02 | Agent Runtime | not_started | 0 | 0 | 0 | 0 |
 | 03 | fullstack-skeleton | not_started | 0 | 0 | 0 | 3 |
 | 04 | identity-and-spaces | not_started | 2 | 0 | 0 | 12 |
+| 05 | canvas | not_started | 0 | 0 | 0 | 4 |
 
-_最近聚合:2026-06-29T09:01:59.245Z_
+_最近聚合:2026-06-29T09:57:13.344Z_
