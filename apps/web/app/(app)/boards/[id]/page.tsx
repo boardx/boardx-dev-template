@@ -5,13 +5,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 
 interface Board {
   id: number | string;
   name: string;
   visibility: string;
+  room_id?: number | string;
   category?: string | null;
   description?: string | null;
+}
+
+interface RoomOpt {
+  id: number | string;
+  name: string;
 }
 
 type Role = "owner" | "editor" | "viewer";
@@ -32,6 +39,10 @@ export default function BoardPage() {
   const [fDescription, setFDescription] = useState("");
   const [saveError, setSaveError] = useState("");
 
+  // 移动
+  const [rooms, setRooms] = useState<RoomOpt[]>([]);
+  const [moveTarget, setMoveTarget] = useState("");
+
   async function refresh() {
     const res = await fetch(`/api/boards/${boardId}`);
     if (res.status === 401) return setError("请先登录"), setLoading(false);
@@ -44,7 +55,22 @@ export default function BoardPage() {
     setFName(d.board?.name ?? "");
     setFCategory(d.board?.category ?? "");
     setFDescription(d.board?.description ?? "");
+    if (d.canManage) {
+      const rl = await (await fetch("/api/rooms")).json();
+      setRooms((rl.rooms ?? []).filter((r: RoomOpt) => String(r.id) !== String(d.board?.room_id)));
+    }
     setLoading(false);
+  }
+
+  async function move() {
+    if (!moveTarget) return;
+    await fetch(`/api/boards/${boardId}/move`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ targetRoomId: Number(moveTarget) }),
+    });
+    setMoveTarget("");
+    await refresh();
   }
 
   useEffect(() => {
@@ -170,6 +196,37 @@ export default function BoardPage() {
           <Button data-testid="meta-save" type="submit" size="sm" className="self-start">
             保存
           </Button>
+
+          {/* 移动到其他房间 */}
+          <div className="mt-2 flex flex-col gap-1.5 border-t pt-3">
+            <Label htmlFor="move-room">移动到房间</Label>
+            <div className="flex gap-2">
+              <Select
+                id="move-room"
+                data-testid="move-room"
+                className="w-56"
+                value={moveTarget}
+                onChange={(e) => setMoveTarget(e.target.value)}
+              >
+                <option value="">选择目标房间…</option>
+                {rooms.map((r) => (
+                  <option key={String(r.id)} value={String(r.id)}>
+                    {r.name}
+                  </option>
+                ))}
+              </Select>
+              <Button
+                type="button"
+                data-testid="move-btn"
+                size="sm"
+                variant="secondary"
+                disabled={!moveTarget}
+                onClick={move}
+              >
+                移动
+              </Button>
+            </div>
+          </div>
         </form>
       )}
 

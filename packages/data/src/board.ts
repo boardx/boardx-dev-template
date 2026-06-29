@@ -112,6 +112,20 @@ export function boardRole(isOwner: boolean, canRoom: boolean, isPublic: boolean)
   return null;
 }
 
+/** 移动白板到其他房间（同时更新归属团队为目标房间的团队）。 */
+export async function moveBoard(
+  boardId: number,
+  targetRoomId: number,
+  targetTeamId: number | null
+): Promise<Board | undefined> {
+  await query(`UPDATE boards SET room_id = $2, team_id = $3, updated_at = now() WHERE id = $1`, [
+    boardId,
+    targetRoomId,
+    targetTeamId,
+  ]);
+  return getBoard(boardId);
+}
+
 /** 复制白板：在同房间创建副本（名称带「（副本）」后缀），复制元信息。
  *  画布内容（items，board-keyed）在 p6 接入后随之复制。新副本属主为复制者。 */
 export async function duplicateBoard(boardId: number, userId: number): Promise<Board | undefined> {

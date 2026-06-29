@@ -115,16 +115,16 @@
       "area": "board",
       "title": "移动 Board 到其他房间",
       "user_visible_behavior": "更多菜单选「移动到另一个房间」：列出当前用户有管理权限的目标房间，POST /api/boards/:id/move {targetRoomId} 校验源/目标权限后改 room_id；移动后白板从原列表消失、出现在目标房间；无管理权限 403。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "claude",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-move.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F07.verify.log @ 2026-06-29T19:19:15.151Z",
       "notes": "uc-board-006。需源房间管理权限 + 目标房间成员/管理权限双校验。"
     },
     {
