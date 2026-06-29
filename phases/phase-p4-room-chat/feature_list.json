@@ -7,16 +7,16 @@
       "area": "room-chat",
       "title": "房间 Chat 页签与线程列表",
       "user_visible_behavior": "房间页 Chat 页签顶部显示 Chat List 与 New Chat；GET /api/rooms/:id/chats 返回当前团队+房间下的聊天线程（过滤虚拟线程与已删除），按更新/创建时间倒序，前端按今天/昨天/更早分日期分组；每张卡片显示名称、日期、创建者/最后编辑者；无线程显示空状态；非房间成员 403。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "01",
+      "owner": "claude",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/room-chat-list.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-06-29T19:59:47.425Z",
       "notes": "uc-room-chat-002。依赖 phase-04 room 成员权限（canViewRoom）。新增 room_chats 表（room_id/team_id/name/creator_id/status/created_at/updated_at）。"
     },
     {
@@ -26,7 +26,7 @@
       "title": "新建房间聊天线程并进入三栏工作区",
       "user_visible_behavior": "点 New Chat：若当前房间存在尚未发消息的虚拟线程则直接打开，否则创建新虚拟线程并设为当前；页面切到三栏聊天工作区——中间 AVA 聊天区、左 Room Files、右 Studio；首次发消息时虚拟线程转为持久线程并出现在列表。非房间成员 403。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
@@ -44,7 +44,7 @@
       "title": "打开线程详情（含他人线程只读态）",
       "user_visible_behavior": "点击聊天卡片把该线程设为当前并进入房间聊天详情地址，显示返回房间按钮、Agent 选择入口、聊天头部菜单、AVA 主体、Room Files 与 Studio 面板；打开其他成员创建的已保存线程时，聊天输入与文件操作区显示仅查看状态。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-WEB",
       "verification": [
@@ -62,7 +62,7 @@
       "title": "删除房间聊天线程",
       "user_visible_behavior": "归属当前用户的线程卡片显示更多菜单，选 Delete 弹确认框（有名称则说明含线程名）；确认后标记删除中并从列表隐藏、DELETE /api/rooms/:id/chats/:chatId 删除；若正打开该线程则返回 Chat 列表；Cancel 不删除；非归属者无删除入口/403。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [

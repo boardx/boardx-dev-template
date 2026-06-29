@@ -16,6 +16,8 @@ export * from "./rooms";
 export * from "./items";
 // CAP-DATA 白板容器仓储（boards / P5）
 export * from "./board";
+// CAP-DATA 房间聊天线程仓储（room_chats / P4）
+export * from "./roomChat";
 // CAP-AUTH 账号资料与偏好（profile / user_settings）
 export * from "./profile";
 
