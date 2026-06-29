@@ -7,16 +7,16 @@
       "area": "auth",
       "title": "邮箱注册账号",
       "user_visible_behavior": "POST /api/auth/register {firstName,lastName,email,password,agreeTerms} 创建用户并自动登录（写 session cookie，201）；重复邮箱返回 409；GET /api/auth/session 返回当前用户。/register 页面可完成注册并进入已登录态。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "claude",
       "capability": "CAP-AUTH",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web run e2e -- auth-register"
+        "pnpm --filter @repo/web exec playwright test e2e/auth-register.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-06-29T08:02:53.443Z",
       "notes": "uc-auth-001。密码≥6，邮箱小写，未勾选条款 400。"
     },
     {
@@ -25,16 +25,16 @@
       "area": "auth",
       "title": "邮箱登录、会话与登出",
       "user_visible_behavior": "POST /api/auth/login 正确凭据 200 写 session cookie，错误凭据 401「邮箱或密码无效」；POST /api/auth/logout 使会话失效；登出后 GET /api/auth/session 返回未登录。/login 页面可登录并登出。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
       "owner": null,
       "capability": "CAP-AUTH",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web run e2e -- auth-login"
+        "pnpm --filter @repo/web exec playwright test e2e/auth-login.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-06-29T08:02:59.877Z",
       "notes": "uc-auth-002。会话 7 天；不存在/错误密码统一报「邮箱或密码无效」。"
     },
     {
@@ -43,16 +43,16 @@
       "area": "auth",
       "title": "修改密码（账号中心 Security）",
       "user_visible_behavior": "已登录用户 POST /api/auth/change-password {current,next} 校验旧密码后更新；旧密码错 400；成功后旧会话失效需重新登录。/account 的 Security 区可改密。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
       "owner": null,
       "capability": "CAP-AUTH",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web run e2e -- auth-change-password"
+        "pnpm --filter @repo/web exec playwright test e2e/auth-change-password.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-06-29T08:03:06.108Z",
       "notes": "uc-auth-006。改密后 deleteUserSessions。"
     },
     {
@@ -61,16 +61,16 @@
       "area": "auth",
       "title": "忘记/重置密码（DB 令牌 + dev 邮件）",
       "user_visible_behavior": "POST /api/auth/forgot-password {email} 生成一次性过期令牌（dev 环境写入控制台/日志，响应不含令牌）；POST /api/auth/reset-password {token,next} 校验令牌后改密并失效旧会话；过期/已用令牌 400。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
       "owner": null,
       "capability": "CAP-AUTH",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web run e2e -- auth-reset-password"
+        "pnpm --filter @repo/web exec playwright test e2e/auth-reset-password.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F04.verify.log @ 2026-06-29T08:03:11.646Z",
       "notes": "uc-auth-004。响应绝不返回 token；令牌一次性、30 分钟过期。真 SMTP deferred。"
     },
     {
@@ -79,14 +79,14 @@
       "area": "auth",
       "title": "社交登录骨架（占位，不接真 OAuth）",
       "user_visible_behavior": "GET /api/auth/social/:provider 返回 501 与「社交登录待接入」结构化提示；登录/注册页在能力关闭时不展示第三方入口。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
       "owner": null,
       "capability": "CAP-AUTH",
       "verification": [
         "test \"$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/api/auth/social/google)\" = \"501\""
       ],
-      "evidence": "",
+      "evidence": "evidence/F05.verify.log @ 2026-06-29T08:03:13.656Z",
       "notes": "uc-auth-003。DEFERRED 真 OAuth（需 provider secret），本轮仅骨架。"
     },
     {

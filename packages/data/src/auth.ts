@@ -120,3 +120,18 @@ export async function getValidEmailToken(token: string, type: string): Promise<E
 export async function consumeEmailToken(token: string): Promise<void> {
   await query("UPDATE email_tokens SET consumed_at = now() WHERE token = $1", [token]);
 }
+
+/** 仅供 dev/测试：按邮箱取最新有效令牌（e2e 用，绝不在生产暴露）。 */
+export async function getLatestTokenByEmail(
+  email: string,
+  type: string
+): Promise<EmailToken | undefined> {
+  const rows = await query<EmailToken>(
+    `SELECT t.token, t.user_id, t.type, t.expires_at, t.consumed_at
+     FROM email_tokens t JOIN users u ON u.id = t.user_id
+     WHERE u.email = $1 AND t.type = $2 AND t.consumed_at IS NULL AND t.expires_at > now()
+     ORDER BY t.created_at DESC LIMIT 1`,
+    [email, type]
+  );
+  return rows[0];
+}
