@@ -15,8 +15,8 @@ tools:
   - bash_git_readonly   # 只允许 git diff、git log 等只读操作
 
 model:
-  claude: claude-opus-4-5
-  codex: o3
+  claude: claude-opus-4-8
+  codex: gpt-5.5
 
 system_prompt: |
   你是代码审查员。在隔离上下文中对 git diff 进行审查，不修改任何文件。

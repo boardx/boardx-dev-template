@@ -1,7 +1,7 @@
 ---
 name: feature-evaluator
 description: 按 evaluator-rubric.md 六维对 feature 产出打分，出 Accept/Revise/Block 结论。 在独立隔离上下文中运行，不带实现历史，避免自我背书。 触发：用户提到"评审"、"evaluator"、"检查产出"、"验收"、"六维打分"。
-model: claude-opus-4-5
+model: claude-opus-4-8
 tools:
   - Read
 ---

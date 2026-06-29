@@ -41,7 +41,7 @@ function toClaudeTools(tools: string[]): string[] {
 /** 生成 Claude Code subagent .md */
 function generateClaudeMd(spec: AgentSpec): string {
   const claudeTools = toClaudeTools(spec.tools ?? []);
-  const model = spec.model?.claude ?? "claude-sonnet-4-5";
+  const model = spec.model?.claude ?? "claude-sonnet-4-6";
 
   const frontmatter = [
     "---",
@@ -60,7 +60,7 @@ function generateClaudeMd(spec: AgentSpec): string {
 
 /** 生成 Codex subagent .toml */
 function generateCodexToml(spec: AgentSpec): string {
-  const model = spec.model?.codex ?? "o4-mini";
+  const model = spec.model?.codex ?? "gpt-5.4-mini";
   const tools = spec.tools ?? [];
   const allowedCmds = spec.allowed_commands ?? [];
 

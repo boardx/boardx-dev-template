@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
 description: 对提交前的 git diff 进行代码审查，审查 bug、安全问题和代码风格，返回带严重度的问题清单。 只读上下文，不修改代码。 触发：用户提到"审查代码"、"review"、"提交前检查"、"diff 检查"。
-model: claude-opus-4-5
+model: claude-opus-4-8
 tools:
   - Read
   - Bash

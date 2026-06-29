@@ -1,7 +1,7 @@
 ---
 name: e2e-verifier
 description: 端到端冒烟验证员：起服务、走真实用户路径、与活体应用交互，确认行为端到端可见。 完整日志归档到 evidence/，只回精简的通过/失败结论。 触发：用户提到"端到端"、"e2e"、"冒烟"、"起服务验证"、"活体验证"、"smoke test"。
-model: claude-sonnet-4-5
+model: claude-sonnet-4-6
 tools:
   - Bash
   - Read

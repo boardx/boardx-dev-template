@@ -15,8 +15,8 @@ tools:
   - bash_search_readonly   # 只允许 grep、find、cat
 
 model:
-  claude: claude-opus-4-5
-  codex: o3
+  claude: claude-opus-4-8
+  codex: gpt-5.5
 
 system_prompt: |
   你是代码库研究员。在隔离上下文中深度阅读代码，回答具体问题，主线程只看你的摘要。

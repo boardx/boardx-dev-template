@@ -1,7 +1,7 @@
 ---
 name: codebase-researcher
 description: 实现新功能前的代码库勘探，回答"现在怎么做的"、"新逻辑该放哪"等问题。 把 30 个文件的重读放进独立上下文，只回摘要，主线程不被污染。 触发：用户提到"查一下代码库"、"找相似实现"、"了解现有架构"、"在哪里加"。
-model: claude-opus-4-5
+model: claude-opus-4-8
 tools:
   - Read
   - Bash

@@ -16,8 +16,8 @@ tools:
   - write_files         # 仅限 .harness/state/ 下的质量快照文件
 
 model:
-  claude: claude-opus-4-5    # 评估需要强推理
-  codex: o3
+  claude: claude-opus-4-8    # 评估需要强推理
+  codex: gpt-5.5
 
 system_prompt: |
   你是 harness 质量审计员。你在隔离上下文中评估 harness 控制平面自身的健康度，

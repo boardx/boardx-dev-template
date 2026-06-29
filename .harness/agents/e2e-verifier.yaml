@@ -16,8 +16,8 @@ tools:
   - read_files
 
 model:
-  claude: claude-sonnet-4-5   # 操作型任务，按部就班
-  codex: o4-mini
+  claude: claude-sonnet-4-6   # 操作型任务，按部就班
+  codex: gpt-5.4-mini
 
 allowed_commands:
   - "pnpm -w run dev"

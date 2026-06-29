@@ -15,7 +15,7 @@ tools:
 
 model:
   claude: claude-haiku-4-5   # 执行任务，不需要强推理
-  codex: o4-mini
+  codex: gpt-5.4-mini
 
 allowed_commands:
   - "pnpm harness verify *"

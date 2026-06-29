@@ -17,8 +17,8 @@ tools:
 rubric_ref: .harness/rubrics/evaluator-rubric.md
 
 model:
-  claude: claude-opus-4-5    # 评审需要强推理
-  codex: o3
+  claude: claude-opus-4-8    # 评审需要强推理
+  codex: gpt-5.5
 
 system_prompt: |
   你是一名独立的功能质量评审员。你在隔离的上下文中运行，没有实现历史，这是你客观性的前提。

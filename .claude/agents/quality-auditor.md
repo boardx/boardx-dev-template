@@ -1,7 +1,7 @@
 ---
 name: quality-auditor
 description: 审计 harness 控制平面健康度：按五子系统打分、跑控制变量实验、更新 quality 快照与趋势。 只读代码，写权限仅限 .harness/state/，绝不修改 feature 状态或实现代码。 触发：用户提到"质量审计"、"健康度"、"quality-document"、"控制变量实验"、"harness 趋势"。
-model: claude-opus-4-5
+model: claude-opus-4-8
 tools:
   - Read
   - Write

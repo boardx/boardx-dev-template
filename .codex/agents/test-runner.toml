@@ -6,7 +6,7 @@ name = "test-runner"
 description = """
 执行 harness verify 和测试套件，把冗长输出留在隔离上下文，只回失败摘要 + evidence 路径。 避免大量测试日志污染主对话。 触发：用户提到"跑测试"、"run verify"、"测试失败"、"跑 harness"。
 """
-model = "o4-mini"
+model = "gpt-5.4-mini"
 context_isolation = true
 
 [tools]
