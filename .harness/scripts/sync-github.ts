@@ -33,8 +33,9 @@ function loadCfg(): SyncCfg {
 /** 通过 title 搜索 issue number（apply 模式下执行；dry-run 只打印意图） */
 function findIssueNumber(repo: string, title: string, apply: boolean): number | null {
   if (!apply) return null; // dry-run 不实际查询
+  // --state all：含已关闭 issue，否则幂等检查会漏掉 closed issue 而重复创建
   const r = sh(
-    `gh issue list --repo ${JSON.stringify(repo)} --search ${JSON.stringify(title)} --json number,title --limit 5`
+    `gh issue list --repo ${JSON.stringify(repo)} --state all --search ${JSON.stringify(title)} --json number,title --limit 10`
   );
   if (r.code !== 0) return null;
   try {
@@ -122,11 +123,17 @@ export function syncGithub(args: Args): void {
         ? ` --assignee ${JSON.stringify(f.owner)}`
         : "";
 
-      run(
-        `gh issue create --repo ${cfg.repo} --title ${JSON.stringify(title)} ` +
-          `--body ${JSON.stringify(body)} --label ${JSON.stringify(labels.join(","))} --milestone ${JSON.stringify(milestone)}${assigneeArg}`,
-        `创建 Issue: ${title} [${f.status}]${f.owner ? ` @${f.owner}` : ""}`
-      );
+      // 幂等：已存在同名 issue 则跳过创建（apply 模式才查询；避免重复开 issue）。
+      const existing = findIssueNumber(cfg.repo, title, apply);
+      if (apply && existing !== null) {
+        log.info(`已存在 Issue #${existing}: ${title}，跳过创建`);
+      } else {
+        run(
+          `gh issue create --repo ${cfg.repo} --title ${JSON.stringify(title)} ` +
+            `--body ${JSON.stringify(body)} --label ${JSON.stringify(labels.join(","))} --milestone ${JSON.stringify(milestone)}${assigneeArg}`,
+          `创建 Issue: ${title} [${f.status}]${f.owner ? ` @${f.owner}` : ""}`
+        );
+      }
 
       // 修复：gh issue close 使用 issue number，不是 title 字符串
       if (statusAction.close_issue) {
