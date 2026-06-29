@@ -10,7 +10,7 @@
 | p1 | Profile & Common (P1 补全) | not_started | 0 | 0 | 0 | 3 |
 | p2 | Home 工作台 (P2) | not_started | 5 | 0 | 2 | 0 |
 | p4 | Room-Chat (P4 补全) | not_started | 4 | 0 | 1 | 0 |
-| p5 | Board 基础 (P5) | not_started | 1 | 0 | 0 | 9 |
+| p5 | Board 基础 (P5) | not_started | 0 | 0 | 0 | 10 |
 | p6 | Canvas & 组件 (P6) | not_started | 15 | 0 | 3 | 4 |
 | p7 | Board 壳 (P7) | not_started | 11 | 0 | 5 | 0 |
 | p8 | 实时协作 (P8) | not_started | 4 | 0 | 0 | 0 |
@@ -22,4 +22,4 @@
 | p14 | 积分 & 计费 (P14) | not_started | 0 | 0 | 0 | 0 |
 | p15 | Admin 后台 (P15) | not_started | 0 | 0 | 0 | 0 |
 
-_最近聚合:2026-06-29T19:27:34.876Z_
+_最近聚合:2026-06-29T19:31:41.341Z_

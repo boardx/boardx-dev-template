@@ -169,16 +169,16 @@
       "area": "board",
       "title": "通过公开链接查看/加入 Board",
       "user_visible_behavior": "打开公开链接：访问级别允许时匿名/非成员可进入只读查看（加载态、可查看内容、在线状态占位）；不允许时提示需登录/加入；已登录用户可按策略加入协作身份（写 board/room 成员记录）。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "claude",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-public-access.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F10.verify.log @ 2026-06-29T19:31:41.325Z",
       "notes": "uc-board-access-002。依赖 F09 访问级别；只读渲染复用 F02 容器壳；在线状态 blocked-on p8。"
     }
   ]

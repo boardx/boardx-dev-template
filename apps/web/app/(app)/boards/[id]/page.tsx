@@ -31,6 +31,7 @@ export default function BoardPage() {
   const [role, setRole] = useState<Role | null>(null);
   const [canManage, setCanManage] = useState(false);
   const [canSetVisibility, setCanSetVisibility] = useState(false);
+  const [anonymous, setAnonymous] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -57,6 +58,7 @@ export default function BoardPage() {
     setRole(d.role);
     setCanManage(!!d.canManage);
     setCanSetVisibility(!!d.canSetVisibility);
+    setAnonymous(!!d.anonymous);
     setFName(d.board?.name ?? "");
     setFCategory(d.board?.category ?? "");
     setFDescription(d.board?.description ?? "");
@@ -75,6 +77,11 @@ export default function BoardPage() {
       body: JSON.stringify({ targetRoomId: Number(moveTarget) }),
     });
     setMoveTarget("");
+    await refresh();
+  }
+
+  async function join() {
+    await fetch(`/api/boards/${boardId}/join`, { method: "POST" });
     await refresh();
   }
 
@@ -156,6 +163,23 @@ export default function BoardPage() {
           </Badge>
         </div>
         <div className="flex items-center gap-2">
+          {/* 匿名公开访问：提示登录加入 */}
+          {anonymous && (
+            <Button
+              data-testid="login-to-join"
+              size="sm"
+              variant="default"
+              onClick={() => router.push("/login")}
+            >
+              登录以加入协作
+            </Button>
+          )}
+          {/* 已登录只读者：加入协作 */}
+          {!anonymous && role === "viewer" && (
+            <Button data-testid="join-collab" size="sm" variant="default" onClick={join}>
+              加入协作
+            </Button>
+          )}
           {/* 管理者可改元信息 */}
           {canManage && (
             <Button
