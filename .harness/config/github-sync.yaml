@@ -12,8 +12,8 @@ mapping:
 
 # 只对"当前/近期"的 sprint 开 Issue,避免一次开数百个
 issue_policy:
-  open_for: near_term           # near_term | all
-  near_term_window: 1           # 当前 sprint + 往后 N 个 sprint
+  open_for: near_term           # near_term | all（创建已幂等；all 在大清单上较慢，逐 feature 查询）
+  near_term_window: 2           # near_term 模式：当前 + 往后 N 个 sprint
 
 labels:
   blocked: "blocked"

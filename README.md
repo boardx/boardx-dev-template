@@ -30,4 +30,4 @@ pnpm harness verify     --sprint 02/01
 pnpm harness sync       --phase 02 --apply
 ```
 
-详见 `AGENTS.md`(agent 工作规则)与 `.harness/`(机制实现)。
+详见 [AGENTS.md](file:///Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/AGENTS.md)（Agent 工作规则）、[人机协同开发指南](file:///Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/docs/harness-collaboration-guide.md)（人类程序员协作指南）与 [.harness/](file:///Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.harness/)（机制实现）。
