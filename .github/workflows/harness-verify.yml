@@ -36,5 +36,9 @@ jobs:
           git diff --exit-code .claude/agents .codex/agents \
             || (echo "✗ subagent 生成物与 .harness/agents/*.yaml 不一致：改了 yaml 请重新跑 pnpm harness gen-subagents 并提交" && exit 1)
 
+      # verify 需要 --phase 或 --sprint（裸调用会报缺少 --phase）。
+      # 指向已交付的 sprint：已 passing 的 feature 会被跳过(不可逆)，
+      # 其验收是文件检查、不依赖运行时服务，故 CI 可安全门控。
+      # 新增 sprint 后，把这里更新/追加为对应的 --sprint NN/MM。
       - name: harness verify
-        run: pnpm harness verify
+        run: pnpm harness verify --sprint 01/01
