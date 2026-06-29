@@ -10,6 +10,8 @@ const { Pool } = pg;
 export * from "./auth";
 // CAP-AUTH 团队仓储（teams/team_members/team_invites）
 export * from "./teams";
+// CAP-COLLAB 房间仓储（rooms/room_members）
+export * from "./rooms";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 

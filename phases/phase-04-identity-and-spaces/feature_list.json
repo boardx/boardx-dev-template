@@ -167,16 +167,16 @@
       "area": "room",
       "title": "创建房间",
       "user_visible_behavior": "已登录用户 POST /api/rooms {name,visibility,teamId?} 创建 room、自己为 owner、可归属个人或团队；名为空 400；GET /api/rooms 列出可见 room。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "03",
+      "owner": "claude",
       "capability": "CAP-COLLAB",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web run e2e -- room-create"
+        "pnpm --filter @repo/web exec playwright test e2e/room-create.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F10.verify.log @ 2026-06-29T09:01:50.515Z",
       "notes": "uc-room-001。room 是 BoardX 核心实体（Workspace）。"
     },
     {
@@ -185,16 +185,16 @@
       "area": "room",
       "title": "查看/搜索房间与权限可见性",
       "user_visible_behavior": "GET /api/rooms 列出我有权限的 room（私有仅 owner/成员、团队可见团队成员）；GET /api/rooms/:id 未授权 403/404；GET /api/rooms?q= 关键字搜索。",
-      "status": "not_started",
-      "sprint": null,
+      "status": "passing",
+      "sprint": "03",
       "owner": null,
       "capability": "CAP-COLLAB",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web run e2e -- room-view-search"
+        "pnpm --filter @repo/web exec playwright test e2e/room-view-search.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F11.verify.log @ 2026-06-29T09:01:55.103Z",
       "notes": "uc-room-002。"
     },
     {
@@ -203,16 +203,16 @@
       "area": "room",
       "title": "房间成员管理与更新/删除",
       "user_visible_behavior": "room owner POST /api/rooms/:id/members 邀请、DELETE 移除成员；PATCH /api/rooms/:id 改名/可见性、DELETE 删除；非 owner 管理操作 403。",
-      "status": "not_started",
-      "sprint": null,
+      "status": "passing",
+      "sprint": "03",
       "owner": null,
       "capability": "CAP-COLLAB",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web run e2e -- room-manage"
+        "pnpm --filter @repo/web exec playwright test e2e/room-manage.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F12.verify.log @ 2026-06-29T09:01:59.238Z",
       "notes": "uc-room-003 + uc-room-004。"
     },
     {
