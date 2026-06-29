@@ -5,6 +5,7 @@ import {
   SESSION_TTL_MS,
   newSessionId,
   expiresAt,
+  resolveDisplayName,
 } from "@repo/auth";
 import {
   createSession,
@@ -18,10 +19,24 @@ export interface PublicUser {
   email: string;
   firstName: string;
   lastName: string;
+  displayName: string;
+  avatar: string | null;
 }
 
 export function toPublicUser(u: User): PublicUser {
-  return { id: u.id, email: u.email, firstName: u.first_name, lastName: u.last_name };
+  return {
+    id: u.id,
+    email: u.email,
+    firstName: u.first_name,
+    lastName: u.last_name,
+    displayName: resolveDisplayName({
+      displayName: u.display_name,
+      firstName: u.first_name,
+      lastName: u.last_name,
+      email: u.email,
+    }),
+    avatar: u.avatar ?? null,
+  };
 }
 
 /** 为用户新建会话并写 httpOnly cookie。 */

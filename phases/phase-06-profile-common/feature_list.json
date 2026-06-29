@@ -1,0 +1,59 @@
+{
+  "phase": "06",
+  "features": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "area": "profile",
+      "title": "账号中心三分区 + 用户菜单入口",
+      "user_visible_behavior": "/account 展示 Personal info / Security / Settings 三个可切换分区，默认 Personal info；/account?section=settings 直达 Settings；首页用户菜单显示头像/名并有 Profile/Settings/登出入口；未登录访问 /account 跳登录。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": "claude",
+      "capability": "CAP-AUTH",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/profile-account-center.spec.ts"
+      ],
+      "evidence": "evidence/F01.verify.log @ 2026-06-29T14:44:08.141Z",
+      "notes": "uc-profile-001。Security 复用 phase-04 改密。"
+    },
+    {
+      "id": "F02",
+      "priority": 2,
+      "area": "profile",
+      "title": "编辑个人信息（显示名 + 头像）",
+      "user_visible_behavior": "Personal info 分区可改 display name（空名报错）、从候选头像选择或点 AI generate 预览；保存后 GET /api/profile 返回新值，首页用户菜单头像/名刷新。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/profile-edit.spec.ts"
+      ],
+      "evidence": "evidence/F02.verify.log @ 2026-06-29T14:44:14.985Z",
+      "notes": "uc-profile-002。AI 头像本轮用确定性 seed 占位（真 AI 生成 deferred）。"
+    },
+    {
+      "id": "F03",
+      "priority": 3,
+      "area": "profile",
+      "title": "账号设置偏好（AI 模型 / 默认隐私）",
+      "user_visible_behavior": "Settings 分区可设 aiModel 偏好与默认隐私级别；保存后 GET /api/profile/settings 读回；非法值被拒。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/profile-settings.spec.ts"
+      ],
+      "evidence": "evidence/F03.verify.log @ 2026-06-29T14:44:19.754Z",
+      "notes": "uc-profile-005。偏好供后续 AVA/Board 默认值用。"
+    }
+  ]
+}

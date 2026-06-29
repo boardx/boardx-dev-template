@@ -2,7 +2,7 @@
 // 与 IO 解耦，全部可单测。表与仓储在 @repo/data；HTTP/cookie 在 apps/web。
 
 import bcrypt from "bcryptjs";
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes, randomUUID, createHash } from "node:crypto";
 
 // ─── 密码 ────────────────────────────────────────────────────────────────────
 
@@ -98,4 +98,33 @@ export function canManageTeam(role: TeamRole | undefined): boolean {
 /** a 的角色是否 >= b（用于权限比较）。 */
 export function roleAtLeast(a: TeamRole | undefined, b: TeamRole): boolean {
   return a ? ROLE_RANK[a] >= ROLE_RANK[b] : false;
+}
+
+// ─── 账号资料与偏好（纯逻辑，可单测）─────────────────────────────────────────
+
+/** 确定性头像 seed（同输入同结果）。真 AI 生成头像 deferred；这里返回稳定 seed 串。 */
+export function avatarSeed(input: string): string {
+  return "seed:" + createHash("sha256").update(input).digest("hex").slice(0, 16);
+}
+
+/** 显示名回退：优先 displayName，否则 first+last，否则邮箱前缀。 */
+export function resolveDisplayName(p: {
+  displayName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  email: string;
+}): string {
+  if (p.displayName && p.displayName.trim()) return p.displayName.trim();
+  const fl = `${p.firstName ?? ""} ${p.lastName ?? ""}`.trim();
+  return fl || p.email.split("@")[0]!;
+}
+
+export const AI_MODELS = ["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5"] as const;
+export const PRIVACY_LEVELS = ["private", "team"] as const;
+
+export function isAiModel(s: string): boolean {
+  return (AI_MODELS as readonly string[]).includes(s);
+}
+export function isPrivacyLevel(s: string): boolean {
+  return (PRIVACY_LEVELS as readonly string[]).includes(s);
 }
