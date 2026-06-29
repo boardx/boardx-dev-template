@@ -9,7 +9,7 @@
 | 04 | Auth+Team+Room 核心 (P1/P3/P4 核心) | not_started | 2 | 0 | 0 | 12 |
 | p1 | Profile & Common (P1 补全) | not_started | 0 | 0 | 0 | 3 |
 | p2 | Home 工作台 (P2) | in_progress | 0 | 0 | 2 | 5 |
-| p4 | Room-Chat (P4 补全) | not_started | 2 | 0 | 1 | 2 |
+| p4 | Room-Chat (P4 补全) | not_started | 1 | 0 | 1 | 3 |
 | p5 | Board 基础 (P5) | done | 0 | 0 | 0 | 10 |
 | p6 | Canvas & 组件 (P6) | not_started | 15 | 0 | 3 | 4 |
 | p7 | Board 壳 (P7) | not_started | 11 | 0 | 5 | 0 |
@@ -22,4 +22,4 @@
 | p14 | 积分 & 计费 (P14) | not_started | 0 | 0 | 0 | 0 |
 | p15 | Admin 后台 (P15) | not_started | 0 | 0 | 0 | 0 |
 
-_最近聚合:2026-06-29T20:05:18.114Z_
+_最近聚合:2026-06-29T20:08:00.607Z_

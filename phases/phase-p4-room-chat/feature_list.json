@@ -43,16 +43,16 @@
       "area": "room-chat",
       "title": "打开线程详情（含他人线程只读态）",
       "user_visible_behavior": "点击聊天卡片把该线程设为当前并进入房间聊天详情地址，显示返回房间按钮、Agent 选择入口、聊天头部菜单、AVA 主体、Room Files 与 Studio 面板；打开其他成员创建的已保存线程时，聊天输入与文件操作区显示仅查看状态。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "claude",
       "capability": "CAP-WEB",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/room-chat-open.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-06-29T20:08:00.590Z",
       "notes": "uc-room-chat-002 step9-10。只读态判定（线程归属≠当前用户）可独立验证；面板内容同 F02 跨模块占位。"
     },
     {
