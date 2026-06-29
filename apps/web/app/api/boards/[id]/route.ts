@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import {
   getBoard,
-  canViewRoom,
-  boardRole,
+  getBoardAccessRole,
   recordBoardVisit,
   canManageBoard,
+  canSetBoardVisibility,
   updateBoard,
   deleteBoard,
   type BoardMetaFields,
@@ -23,18 +23,15 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const board = await getBoard(boardId);
   if (!board) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  const role = boardRole(
-    board.owner_user_id === user.id,
-    await canViewRoom(board.room_id, user.id),
-    board.visibility === "public"
-  );
+  const role = await getBoardAccessRole(boardId, user.id);
   if (!role) return NextResponse.json({ error: "无权限" }, { status: 403 });
 
   // 记录最近访问（供 F03 最近列表排序）
   await recordBoardVisit(boardId, user.id);
 
   const canManage = role === "owner" || (await canManageBoard(boardId, user.id));
-  return NextResponse.json({ board, role, canManage });
+  const canSetVisibility = await canSetBoardVisibility(boardId, user.id);
+  return NextResponse.json({ board, role, canManage, canSetVisibility });
 }
 
 // PATCH /api/boards/:id — 更新元信息（name/category/description/cover）。仅管理者，否则 403。

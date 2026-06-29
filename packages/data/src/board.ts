@@ -2,6 +2,7 @@
 // Board = 房间内的白板容器（生命周期）。画布内容（items）属 P6，不在此层。
 import { query } from "./index";
 import { canViewRoom, isRoomOwner } from "./rooms";
+import { getMembership } from "./teams";
 
 export type BoardVisibility = "room" | "team" | "public";
 export type BoardRole = "owner" | "editor" | "viewer";
@@ -192,20 +193,48 @@ export async function listFavoriteBoards(userId: number, q?: string): Promise<Bo
   );
 }
 
-/** 用户能否查看某白板：白板 public，或可查看其所属 room。 */
-export async function canViewBoard(boardId: number, userId: number): Promise<boolean> {
+/**
+ * 计算用户在某白板的访问角色，含 team 可见性：
+ *  - 房间可见者：owner（属主）/ editor（房间成员）
+ *  - 白板 public：viewer
+ *  - 白板 team 且用户属该房间的团队：viewer
+ *  - 否则 null（无权）
+ */
+export async function getBoardAccessRole(boardId: number, userId: number): Promise<BoardRole | null> {
   const b = await getBoard(boardId);
-  if (!b) return false;
-  if (b.visibility === "public") return true;
-  return canViewRoom(b.room_id, userId);
+  if (!b) return null;
+  const r = boardRole(b.owner_user_id === userId, await canViewRoom(b.room_id, userId), b.visibility === "public");
+  if (r) return r;
+  if (b.visibility === "team" && b.team_id != null && (await getMembership(b.team_id, userId))) {
+    return "viewer";
+  }
+  return null;
 }
 
-/** 用户能否管理某白板（改元信息/移动/删除/可见性）：白板属主或所属房间 owner。 */
+/** 用户能否查看某白板（含 public / team 访问级别）。 */
+export async function canViewBoard(boardId: number, userId: number): Promise<boolean> {
+  return (await getBoardAccessRole(boardId, userId)) !== null;
+}
+
+/** 用户能否管理某白板（改元信息/移动/删除）：白板属主或所属房间 owner。 */
 export async function canManageBoard(boardId: number, userId: number): Promise<boolean> {
   const b = await getBoard(boardId);
   if (!b) return false;
   if (b.owner_user_id === userId) return true;
   return isRoomOwner(b.room_id, userId);
+}
+
+/** 谁能改白板可见范围：所属房间 owner（uc-board-access-001：Room Owner/Admin）。 */
+export async function canSetBoardVisibility(boardId: number, userId: number): Promise<boolean> {
+  const b = await getBoard(boardId);
+  if (!b) return false;
+  return isRoomOwner(b.room_id, userId);
+}
+
+/** 设置白板可见范围。 */
+export async function setBoardVisibility(boardId: number, visibility: BoardVisibility): Promise<Board | undefined> {
+  await query(`UPDATE boards SET visibility = $2, updated_at = now() WHERE id = $1`, [boardId, visibility]);
+  return getBoard(boardId);
 }
 
 // ─── 更新元信息（P5 F05）────────────────────────────────────────────────────

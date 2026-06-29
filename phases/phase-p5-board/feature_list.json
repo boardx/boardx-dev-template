@@ -151,16 +151,16 @@
       "area": "board",
       "title": "Board 可见范围（访问级别数据 + API）",
       "user_visible_behavior": "Board 有访问级别字段（public / team / room）；PATCH /api/boards/:id/visibility 仅 Room Owner/Admin 可改，其他人接口 403 / 面板下拉禁用；访问级别决定 GET /api/boards/:id 对非成员/匿名的放行与否。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "claude",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-visibility.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F09.verify.log @ 2026-06-29T19:27:34.861Z",
       "notes": "uc-board-access-001。分享面板 UI（标题/复制链接/二维码）在 p7 header F-share 点亮；本期落地访问级别数据模型与授权判定，供 F02/F10 使用。"
     },
     {

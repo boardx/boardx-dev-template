@@ -30,6 +30,7 @@ export default function BoardPage() {
   const [board, setBoard] = useState<Board | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [canManage, setCanManage] = useState(false);
+  const [canSetVisibility, setCanSetVisibility] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -55,6 +56,7 @@ export default function BoardPage() {
     setBoard(d.board);
     setRole(d.role);
     setCanManage(!!d.canManage);
+    setCanSetVisibility(!!d.canSetVisibility);
     setFName(d.board?.name ?? "");
     setFCategory(d.board?.category ?? "");
     setFDescription(d.board?.description ?? "");
@@ -73,6 +75,15 @@ export default function BoardPage() {
       body: JSON.stringify({ targetRoomId: Number(moveTarget) }),
     });
     setMoveTarget("");
+    await refresh();
+  }
+
+  async function changeVisibility(v: string) {
+    await fetch(`/api/boards/${boardId}/visibility`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ visibility: v }),
+    });
     await refresh();
   }
 
@@ -238,6 +249,24 @@ export default function BoardPage() {
               </Button>
             </div>
           </div>
+
+          {/* 可见范围（仅房间 owner） */}
+          {canSetVisibility && (
+            <div className="mt-2 flex flex-col gap-1.5 border-t pt-3">
+              <Label htmlFor="visibility">可见范围</Label>
+              <Select
+                id="visibility"
+                data-testid="visibility"
+                className="w-56"
+                value={board?.visibility ?? "room"}
+                onChange={(e) => changeVisibility(e.target.value)}
+              >
+                <option value="room">房间成员可见</option>
+                <option value="team">团队可见</option>
+                <option value="public">公开（链接可访问）</option>
+              </Select>
+            </div>
+          )}
 
           {/* 删除（行内确认） */}
           <div className="mt-2 flex items-center gap-2 border-t pt-3">
