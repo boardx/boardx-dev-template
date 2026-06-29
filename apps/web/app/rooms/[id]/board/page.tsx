@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import type { BoardItem } from "@repo/canvas";
+import { Button } from "@/components/ui/button";
 
 export default function BoardPage() {
   const roomId = String(useParams().id);
@@ -41,25 +42,30 @@ export default function BoardPage() {
     await load();
   }
 
-  if (error) return <main className="p-8"><p data-testid="board-error" className="text-red-600">{error}</p></main>;
+  if (error)
+    return (
+      <main className="p-8">
+        <p data-testid="board-error" className="text-sm text-destructive">{error}</p>
+      </main>
+    );
 
   return (
     <main className="flex min-h-screen flex-col gap-3 p-4">
       <div className="flex items-center gap-3">
-        <h1 className="text-xl font-bold">Board · Room {roomId}</h1>
-        <button data-testid="add-note" onClick={addNote}
-          className="rounded bg-neutral-900 px-3 py-1 text-sm text-white">添加便签</button>
-        <span data-testid="item-count" className="text-sm text-neutral-500">{items.length} 个</span>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">Board · Room {roomId}</h1>
+        <Button data-testid="add-note" size="sm" onClick={addNote}>添加便签</Button>
+        <span data-testid="item-count" className="text-sm text-muted-foreground">{items.length} 个</span>
       </div>
-      <div data-testid="board" className="relative h-[70vh] w-full overflow-hidden rounded border bg-neutral-50">
+      <div data-testid="board" className="relative h-[70vh] w-full overflow-hidden rounded-lg border border-border bg-muted/40">
         {items.map((it) => (
           <div key={it.id} data-testid={`item-${it.id}`}
-            className="absolute rounded border border-yellow-400 bg-yellow-100 p-1 shadow"
+            className="absolute rounded-md border border-border bg-card p-1 text-card-foreground shadow-sm"
             style={{ left: it.x, top: it.y, width: it.w, height: it.h }}>
-            <input data-testid={`text-${it.id}`} className="w-full bg-transparent text-sm outline-none"
+            <input data-testid={`text-${it.id}`}
+              className="w-full bg-transparent text-sm text-foreground outline-none"
               defaultValue={it.text} onBlur={(e) => editText(it.id, e.target.value)} />
             <button data-testid={`del-${it.id}`} onClick={() => remove(it.id)}
-              className="absolute right-1 top-1 text-xs text-red-600">×</button>
+              className="absolute right-1 top-1 text-xs text-destructive hover:text-destructive/80">×</button>
           </div>
         ))}
       </div>

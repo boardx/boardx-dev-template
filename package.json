@@ -10,6 +10,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "verify:base": "turbo run typecheck lint test",
+    "verify:full": "bash scripts/verify-full.sh",
     "harness": "tsx .harness/scripts/cli.ts"
   },
   "devDependencies": {

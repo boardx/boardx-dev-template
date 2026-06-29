@@ -1,5 +1,8 @@
 "use client";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -26,22 +29,27 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 p-8">
-      <h1 className="text-2xl font-bold">找回密码</h1>
-      {sent ? (
-        <p data-testid="sent" className="text-green-700">若该邮箱已注册，重置链接已发送，请前往邮箱查看。</p>
-      ) : (
-        <form onSubmit={submit} className="flex flex-col gap-3">
-          <input data-testid="email" type="email" placeholder="邮箱 Email" className="rounded border px-3 py-2"
-            value={email} onChange={(e) => setEmail(e.target.value)} />
-          {error && <p data-testid="err-form" className="text-sm text-red-600">{error}</p>}
-          <button data-testid="submit" disabled={submitting}
-            className="rounded bg-neutral-900 px-4 py-2 text-white disabled:opacity-50">
-            {submitting ? "发送中…" : "发送重置链接"}
-          </button>
-        </form>
-      )}
-      <a href="/login" className="text-sm text-blue-600">返回登录</a>
+    <main className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="text-2xl">找回密码</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {sent ? (
+            <p data-testid="sent" className="text-sm text-success">若该邮箱已注册，重置链接已发送，请前往邮箱查看。</p>
+          ) : (
+            <form onSubmit={submit} className="flex flex-col gap-3">
+              <Input data-testid="email" type="email" placeholder="邮箱 Email"
+                value={email} onChange={(e) => setEmail(e.target.value)} />
+              {error && <p data-testid="err-form" className="text-sm text-destructive">{error}</p>}
+              <Button data-testid="submit" type="submit" disabled={submitting} className="w-full">
+                {submitting ? "发送中…" : "发送重置链接"}
+              </Button>
+            </form>
+          )}
+          <a href="/login" className="mt-4 block text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">返回登录</a>
+        </CardContent>
+      </Card>
     </main>
   );
 }

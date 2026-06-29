@@ -1,5 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 interface Room {
   id: number | string;
@@ -17,56 +21,43 @@ export default function RoomsPage() {
 
   async function load(search = "") {
     const res = await fetch(`/api/rooms${search ? `?q=${encodeURIComponent(search)}` : ""}`);
-    if (res.status === 401) {
-      setError("请先登录");
-      return;
-    }
+    if (res.status === 401) { setError("请先登录"); return; }
     setRooms((await res.json()).rooms ?? []);
   }
-  useEffect(() => {
-    void load();
-  }, []);
+  useEffect(() => { void load(); }, []);
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     const res = await fetch("/api/rooms", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, visibility }),
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, visibility }),
     });
-    if (res.status === 201) {
-      setName("");
-      await load(q);
-    } else {
-      const d = await res.json().catch(() => ({}));
-      setError(d.errors?.name ?? d.error ?? "创建失败");
-    }
+    if (res.status === 201) { setName(""); await load(q); }
+    else { const d = await res.json().catch(() => ({})); setError(d.errors?.name ?? d.error ?? "创建失败"); }
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col gap-4 p-8">
-      <h1 className="text-2xl font-bold">我的房间</h1>
-      {error && <p data-testid="err" className="text-red-600">{error}</p>}
+    <main className="mx-auto flex min-h-screen max-w-xl flex-col gap-5 p-8">
+      <h1 className="text-2xl font-bold tracking-tight text-foreground">我的房间</h1>
+      {error && <p data-testid="err" className="text-sm text-destructive">{error}</p>}
       <form onSubmit={create} className="flex gap-2">
-        <input data-testid="room-name" placeholder="房间名称" className="flex-1 rounded border px-3 py-2"
-          value={name} onChange={(e) => setName(e.target.value)} />
-        <select data-testid="visibility" className="rounded border px-2"
-          value={visibility} onChange={(e) => setVisibility(e.target.value)}>
+        <Input data-testid="room-name" placeholder="房间名称" value={name} onChange={(e) => setName(e.target.value)} />
+        <Select data-testid="visibility" className="w-32" value={visibility} onChange={(e) => setVisibility(e.target.value)}>
           <option value="private">私有</option>
           <option value="team">团队可见</option>
-        </select>
-        <button data-testid="create" className="rounded bg-neutral-900 px-4 py-2 text-white">创建</button>
+        </Select>
+        <Button data-testid="create" type="submit">创建</Button>
       </form>
       <div className="flex gap-2">
-        <input data-testid="search" placeholder="搜索房间" className="flex-1 rounded border px-3 py-2"
-          value={q} onChange={(e) => setQ(e.target.value)} />
-        <button data-testid="search-btn" onClick={() => load(q)} className="rounded bg-neutral-200 px-3 py-2">搜索</button>
+        <Input data-testid="search" placeholder="搜索房间" value={q} onChange={(e) => setQ(e.target.value)} />
+        <Button data-testid="search-btn" variant="secondary" onClick={() => load(q)}>搜索</Button>
       </div>
       <ul data-testid="room-list" className="flex flex-col gap-2">
         {rooms.map((r) => (
-          <li key={String(r.id)} data-testid={`room-${r.id}`} className="rounded border px-3 py-2">
-            {r.name} <span className="text-xs text-neutral-500">({r.visibility})</span>
+          <li key={String(r.id)} data-testid={`room-${r.id}`}
+            className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 text-card-foreground">
+            <span className="text-sm">{r.name}</span>
+            <Badge variant="muted">{r.visibility}</Badge>
           </li>
         ))}
       </ul>
