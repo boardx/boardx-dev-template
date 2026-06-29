@@ -1,11 +1,11 @@
-# 原始需求 — {{PHASE_NAME}}（Phase {{PHASE_ID}}）
+# 原始需求（概览）— {{PHASE_NAME}}（Phase {{PHASE_ID}}）
 
-> **这是本阶段的「原始需求入口」**：先把人类语言的需求写在这里，
-> 再调用 `requirement-author` 智能体把它切成 `feature_list.json`（带可执行 `verification` 的 feature）。
+> 这是 `requirements/` 文件夹里的**起始模板**。需求多时按领域拆成多份
+> （如 `auth.md`、`teams.md`、`rooms.md`），本文件可改名/删除。
 >
-> 流水线：**本文件（原始需求）→ requirement-author 智能体 → feature_list.json（权威）**。
+> 流水线：**本文件夹的全部 *.md（原始需求）→ requirement-author 智能体 → feature_list.json（权威）**。
 >
-> 本文件是「输入/上下文」，不是权威来源；权威永远是 `feature_list.json`。
+> 原始需求是「输入/上下文」，不是权威；权威永远是 `../feature_list.json`。
 > 这里可以模糊、可以是用户故事；模糊之处由 requirement-author 提问澄清后再落成 feature。
 
 ## 背景 / 为什么做

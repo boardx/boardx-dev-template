@@ -62,10 +62,10 @@
 
 ## 需求录入流水线（新阶段开工前）
 原始需求 → 智能体 → 权威功能清单，三步：
-1. `pnpm harness new-phase` scaffold 出 `phases/<phase>/requirements.md`。
-2. 把**原始需求**（大白话/用户故事）写进 `requirements.md`。
-3. 调 **requirement-author** 智能体：读 `requirements.md` → 生成 `feature_list.json`（带可执行 `verification`）。
-`requirements.md` 是输入,不是权威;权威永远是 `feature_list.json`。
+1. `pnpm harness new-phase` scaffold 出 `phases/<phase>/requirements/` 文件夹。
+2. 把**原始需求**（大白话/用户故事）写进该文件夹，可按领域放多份 `*.md`（auth.md/teams.md/rooms.md…）。
+3. 调 **requirement-author** 智能体：读该文件夹全部 `*.md` → 生成 `feature_list.json`（带可执行 `verification`）。
+`requirements/` 是输入,不是权威;权威永远是 `feature_list.json`。
 
 ## 常用 harness 命令
 ```bash

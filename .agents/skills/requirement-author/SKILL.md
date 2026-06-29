@@ -17,18 +17,19 @@ description: >
 > 字段结构见 [feature_list.template.json](.harness/templates/feature_list.template.json)。
 > 本 skill 只讲「从模糊到可验证」的转换手法。
 
-## 标准入口：phases/<phase>/requirements.md → feature_list.json
+## 标准入口：phases/<phase>/requirements/ → feature_list.json
 
-原始需求的固定家是每个阶段的 `phases/<phase>/requirements.md`（`new-phase` 自动 scaffold）。
+原始需求的固定家是每个阶段的 `phases/<phase>/requirements/` **文件夹**（`new-phase` 自动 scaffold，
+内含 `README.md` + 起始 `00-overview.md`）。需求可按领域拆成多份 `*.md`（auth.md / teams.md / rooms.md）。
 本 skill 的标准流水线：
 
-1. **读** `phases/<phase>/requirements.md`（原始需求、用户故事、验收线索、范围边界）。
+1. **读** `phases/<phase>/requirements/` 文件夹里的**全部** `*.md`（跳过 README.md，原始需求、用户故事、验收线索、范围边界）。
 2. **澄清**模糊处（用下面的澄清提问清单），不清楚就先问，别硬猜。
 3. **转换**成 feature 三元组，**写入**同目录 `phases/<phase>/feature_list.json`。
-4. `requirements.md` 是输入/上下文，**不改它**；权威产物是 `feature_list.json`。
+4. `requirements/` 是输入/上下文，**不改它**；权威产物是 `feature_list.json`。
 
-没有 requirements.md 时（用户直接口述需求），也可直接转换，但建议先把原始需求落进
-requirements.md 留痕，再生成 feature_list，保证可追溯。
+没有 requirements/ 内容时（用户直接口述需求），也可直接转换，但建议先把原始需求落进
+该文件夹留痕，再生成 feature_list，保证可追溯。
 
 ---
 

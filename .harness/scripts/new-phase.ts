@@ -47,7 +47,31 @@ export function newPhase(args: Args): void {
   };
 
   writeFileSync(join(dir, "phase.md"), renderTemplateFile("phase.template.md", vars));
-  writeFileSync(join(dir, "requirements.md"), renderTemplateFile("requirements.template.md", vars));
+
+  // 原始需求入口是一个【文件夹】：可按领域放多份（auth.md / teams.md / rooms.md…），
+  // requirement-author 智能体读取其中全部 *.md → 生成 feature_list.json。
+  const reqDir = join(dir, "requirements");
+  mkdirSync(reqDir, { recursive: true });
+  writeFileSync(
+    join(reqDir, "README.md"),
+    render(
+      [
+        `# 原始需求 — {{PHASE_NAME}}（Phase {{PHASE_ID}}）`,
+        ``,
+        `> 这个**文件夹**是本阶段原始需求的家。按领域放多份 \`*.md\`（如 \`auth.md\`、\`teams.md\`、\`rooms.md\`），`,
+        `> 每份用大白话/用户故事写即可。\`00-overview.md\` 是起始模板，可改名/拆分。`,
+        ``,
+        `## 流水线`,
+        `1. 往本文件夹写一份或多份原始需求 \`*.md\`。`,
+        `2. 调 **requirement-author** 智能体：读取本文件夹**全部** \`*.md\` → 生成/更新 \`../feature_list.json\`。`,
+        `3. 本文件夹是**输入/上下文，不是权威**；权威永远是 \`../feature_list.json\`（带可执行 \`verification\`）。`,
+        ``,
+      ].join("\n"),
+      vars
+    )
+  );
+  writeFileSync(join(reqDir, "00-overview.md"), renderTemplateFile("requirements.template.md", vars));
+
   writeFileSync(join(dir, "feature_list.json"), renderTemplateFile("feature_list.template.json", vars));
   writeFileSync(join(dir, "progress.md"), renderTemplateFile("progress.template.md", vars));
   writeFileSync(
@@ -76,7 +100,7 @@ export function newPhase(args: Args): void {
   refreshProgress();
   log.ok(`已 scaffold 阶段: ${dir}`);
   log.info(`下一步（推荐流水线）：`);
-  log.info(`  1. 把原始需求写进 ${join(dir, "requirements.md")}`);
-  log.info(`  2. 调 requirement-author 智能体：读 requirements.md → 生成 feature_list.json`);
+  log.info(`  1. 把原始需求写进 ${join(dir, "requirements")}/（可按领域放多份 *.md）`);
+  log.info(`  2. 调 requirement-author 智能体：读该文件夹全部 *.md → 生成 feature_list.json`);
   log.info(`  3. pnpm harness new-sprint --phase ${id} --id 01 --features F01,F02 ...`);
 }

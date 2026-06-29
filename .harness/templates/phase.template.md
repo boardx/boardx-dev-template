@@ -12,10 +12,10 @@
 - 明确不做:<列出本阶段刻意排除、留到后续阶段的事项>
 
 ## 需求 → 功能清单 流水线
-1. **原始需求**写进同目录的 `requirements.md`（人类语言、可模糊）。
-2. 调 **requirement-author** 智能体：读 `requirements.md` → 生成/更新 `feature_list.json`
+1. **原始需求**写进同目录的 `requirements/` 文件夹（可按领域放多份 `*.md`，人类语言、可模糊）。
+2. 调 **requirement-author** 智能体：读 `requirements/` 全部 `*.md` → 生成/更新 `feature_list.json`
    （每个 feature 带可执行 `verification`）。
-3. `requirements.md` 是输入/上下文,**不是权威**;权威永远是 `feature_list.json`。
+3. `requirements/` 是输入/上下文,**不是权威**;权威永远是 `feature_list.json`。
 
 ## 权威功能清单
 本阶段的唯一权威功能来源是同目录的 `feature_list.json`。
