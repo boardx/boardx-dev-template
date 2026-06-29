@@ -12,7 +12,7 @@
 | p4 | Room-Chat (P4 补全) | in_progress | 0 | 0 | 1 | 4 |
 | p5 | Board 基础 (P5) | done | 0 | 0 | 0 | 10 |
 | p6 | Canvas & 组件 (P6) | not_started | 15 | 0 | 3 | 4 |
-| p7 | Board 壳 (P7) | not_started | 10 | 0 | 5 | 1 |
+| p7 | Board 壳 (P7) | not_started | 9 | 0 | 5 | 2 |
 | p8 | 实时协作 (P8) | not_started | 4 | 0 | 0 | 0 |
 | p9 | AVA / Chat (P9) | not_started | 0 | 0 | 0 | 0 |
 | p10 | 知识库 (P10) | not_started | 0 | 0 | 0 | 0 |
@@ -22,4 +22,4 @@
 | p14 | 积分 & 计费 (P14) | not_started | 0 | 0 | 0 | 0 |
 | p15 | Admin 后台 (P15) | not_started | 0 | 0 | 0 | 0 |
 
-_最近聚合:2026-06-29T20:24:54.978Z_
+_最近聚合:2026-06-29T20:30:45.965Z_

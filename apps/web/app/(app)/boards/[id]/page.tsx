@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { BoardTimer } from "@/components/board/timer";
 
 interface Board {
   id: number | string;
@@ -173,6 +174,8 @@ export default function BoardPage() {
           </Badge>
         </div>
         <div className="flex items-center gap-2">
+          {/* 协作计时器（所有协作者可用） */}
+          <BoardTimer />
           {/* 匿名公开访问：提示登录加入 */}
           {anonymous && (
             <Button

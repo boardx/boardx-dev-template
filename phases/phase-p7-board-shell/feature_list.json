@@ -73,16 +73,16 @@
       "area": "board-header",
       "title": "协作计时器",
       "user_visible_behavior": "Header 计时器可启动/暂停/继续/停止并调整时长；运行时显示剩余时间，结束提示。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "claude",
       "capability": "CAP-WEB",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-timer.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F04.verify.log @ 2026-06-29T20:30:45.951Z",
       "notes": "uc-board-header-004。本期本地计时器；多人共享同步计时在 p8 接 Yjs 后增强。",
       "source_use_cases": [
         "phases/requirements/board/header/uc-board-header-004-use-timer.md"
