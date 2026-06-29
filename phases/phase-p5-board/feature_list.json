@@ -79,16 +79,16 @@
       "area": "board",
       "title": "更新 Board 元信息",
       "user_visible_behavior": "卡片更多菜单或 Board Header 标题输入框可改名称，并支持编辑标签/类别/描述、上传/移除封面；PATCH /api/boards/:id 校验权限后更新并回显；无管理权限的菜单项禁用 / 接口 403。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "claude",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-metadata.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F05.verify.log @ 2026-06-29T19:12:07.658Z",
       "notes": "uc-board-005。封面图上传依赖文件存储；本期可先用 URL/占位，真实 S3/R2 在 files 能力阶段接入。Header 内改名入口与 p7 共用同一 PATCH。"
     },
     {

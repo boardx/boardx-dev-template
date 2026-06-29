@@ -3,11 +3,15 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Board {
   id: number | string;
   name: string;
   visibility: string;
+  category?: string | null;
+  description?: string | null;
 }
 
 type Role = "owner" | "editor" | "viewer";
@@ -17,28 +21,55 @@ export default function BoardPage() {
   const boardId = params.id;
   const [board, setBoard] = useState<Board | null>(null);
   const [role, setRole] = useState<Role | null>(null);
+  const [canManage, setCanManage] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // 元信息编辑
+  const [editing, setEditing] = useState(false);
+  const [fName, setFName] = useState("");
+  const [fCategory, setFCategory] = useState("");
+  const [fDescription, setFDescription] = useState("");
+  const [saveError, setSaveError] = useState("");
+
+  async function refresh() {
+    const res = await fetch(`/api/boards/${boardId}`);
+    if (res.status === 401) return setError("请先登录"), setLoading(false);
+    if (res.status === 403) return setError("你无权访问该白板"), setLoading(false);
+    if (res.status === 404) return setError("白板不存在"), setLoading(false);
+    const d = await res.json();
+    setBoard(d.board);
+    setRole(d.role);
+    setCanManage(!!d.canManage);
+    setFName(d.board?.name ?? "");
+    setFCategory(d.board?.category ?? "");
+    setFDescription(d.board?.description ?? "");
+    setLoading(false);
+  }
+
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      setLoading(true);
-      setError("");
-      const res = await fetch(`/api/boards/${boardId}`);
-      if (!alive) return;
-      if (res.status === 401) return setError("请先登录"), setLoading(false);
-      if (res.status === 403) return setError("你无权访问该白板"), setLoading(false);
-      if (res.status === 404) return setError("白板不存在"), setLoading(false);
-      const d = await res.json();
-      setBoard(d.board);
-      setRole(d.role);
-      setLoading(false);
-    })();
-    return () => {
-      alive = false;
-    };
+    setLoading(true);
+    setError("");
+    void refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId]);
+
+  async function saveMeta(e: React.FormEvent) {
+    e.preventDefault();
+    setSaveError("");
+    const res = await fetch(`/api/boards/${boardId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: fName, category: fCategory, description: fDescription }),
+    });
+    if (res.ok) {
+      setEditing(false);
+      await refresh();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      setSaveError(d.errors?.name ?? d.error ?? "保存失败");
+    }
+  }
 
   if (loading) {
     return (
@@ -76,13 +107,71 @@ export default function BoardPage() {
             {role}
           </Badge>
         </div>
-        {/* 只读角色隐藏编辑入口 */}
-        {canEdit && (
-          <Button data-testid="board-edit-entry" size="sm" variant="secondary">
-            编辑
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* 管理者可改元信息 */}
+          {canManage && (
+            <Button
+              data-testid="board-meta-edit"
+              size="sm"
+              variant="secondary"
+              onClick={() => setEditing((v) => !v)}
+            >
+              {editing ? "取消" : "编辑信息"}
+            </Button>
+          )}
+          {/* 只读角色隐藏编辑入口 */}
+          {canEdit && (
+            <Button data-testid="board-edit-entry" size="sm" variant="secondary">
+              编辑
+            </Button>
+          )}
+        </div>
       </header>
+
+      {/* 元信息编辑表单（管理者） */}
+      {editing && canManage && (
+        <form
+          onSubmit={saveMeta}
+          data-testid="board-meta-form"
+          className="flex flex-col gap-3 border-b bg-card p-4"
+        >
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="meta-name">名称</Label>
+            <Input
+              id="meta-name"
+              data-testid="meta-name"
+              value={fName}
+              onChange={(e) => setFName(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="meta-category">类别</Label>
+            <Input
+              id="meta-category"
+              data-testid="meta-category"
+              value={fCategory}
+              onChange={(e) => setFCategory(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="meta-description">描述</Label>
+            <Input
+              id="meta-description"
+              data-testid="meta-description"
+              value={fDescription}
+              onChange={(e) => setFDescription(e.target.value)}
+            />
+          </div>
+          {saveError && (
+            <p role="alert" data-testid="meta-err" className="text-sm text-destructive">
+              {saveError}
+            </p>
+          )}
+          <Button data-testid="meta-save" type="submit" size="sm" className="self-start">
+            保存
+          </Button>
+        </form>
+      )}
 
       {/* 画布容器占位（真实画布编辑在 p6） */}
       <div className="relative flex-1 overflow-hidden bg-muted/30">

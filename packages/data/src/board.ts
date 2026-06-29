@@ -1,7 +1,7 @@
 // packages/data/src/board.ts — CAP-DATA 白板容器仓储（P5）
 // Board = 房间内的白板容器（生命周期）。画布内容（items）属 P6，不在此层。
 import { query } from "./index";
-import { canViewRoom } from "./rooms";
+import { canViewRoom, isRoomOwner } from "./rooms";
 
 export type BoardVisibility = "room" | "team" | "public";
 export type BoardRole = "owner" | "editor" | "viewer";
@@ -165,4 +165,41 @@ export async function canViewBoard(boardId: number, userId: number): Promise<boo
   if (!b) return false;
   if (b.visibility === "public") return true;
   return canViewRoom(b.room_id, userId);
+}
+
+/** 用户能否管理某白板（改元信息/移动/删除/可见性）：白板属主或所属房间 owner。 */
+export async function canManageBoard(boardId: number, userId: number): Promise<boolean> {
+  const b = await getBoard(boardId);
+  if (!b) return false;
+  if (b.owner_user_id === userId) return true;
+  return isRoomOwner(b.room_id, userId);
+}
+
+// ─── 更新元信息（P5 F05）────────────────────────────────────────────────────
+
+export interface BoardMetaFields {
+  name?: string;
+  category?: string | null;
+  description?: string | null;
+  cover?: string | null;
+}
+
+const META_COLS = ["name", "category", "description", "cover"] as const;
+
+/** 更新白板元信息（仅白名单列）。返回更新后的 board；无可更新字段时原样返回。 */
+export async function updateBoard(boardId: number, fields: BoardMetaFields): Promise<Board | undefined> {
+  const sets: string[] = [];
+  const params: unknown[] = [boardId];
+  for (const col of META_COLS) {
+    const v = (fields as Record<string, unknown>)[col];
+    if (v !== undefined) {
+      params.push(v);
+      sets.push(`${col} = $${params.length}`);
+    }
+  }
+  if (sets.length) {
+    sets.push("updated_at = now()");
+    await query(`UPDATE boards SET ${sets.join(", ")} WHERE id = $1`, params);
+  }
+  return getBoard(boardId);
 }
