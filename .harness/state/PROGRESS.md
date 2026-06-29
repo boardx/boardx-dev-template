@@ -7,5 +7,6 @@
 | 01 | Foundation | in_progress | 1 | 0 | 0 | 2 |
 | 02 | Agent Runtime | not_started | 0 | 0 | 0 | 0 |
 | 03 | fullstack-skeleton | not_started | 0 | 0 | 0 | 3 |
+| 04 | identity-and-spaces | not_started | 1 | 0 | 0 | 0 |
 
-_最近聚合:2026-06-29T05:34:35.989Z_
+_最近聚合:2026-06-29T06:55:41.574Z_

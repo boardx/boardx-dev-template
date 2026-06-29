@@ -20,3 +20,9 @@ phases:
     goal: "用 web/data/workflow 三个小 feature 验证 harness 流程在全栈代码库上端到端可行且有质量"
     status: not_started
     depends_on: []
+  - id: "04"
+    slug: identity-and-spaces
+    name: identity-and-spaces
+    goal: "用户身份与协作空间：auth / identity / team / room"
+    status: not_started
+    depends_on: []
