@@ -14,7 +14,7 @@ export async function GET(_req: Request, { params }: { params: { id: string; cha
     return NextResponse.json({ error: "无权限" }, { status: 403 });
   }
   const chat = await getRoomChat(Number(params.chatId));
-  if (!chat || chat.room_id !== roomId) {
+  if (!chat || Number(chat.room_id) !== roomId) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
   return NextResponse.json({ chat, canEdit: chat.creator_user_id === user.id });
@@ -27,7 +27,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string; 
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
     const roomId = Number(params.id);
     const chat = await getRoomChat(Number(params.chatId));
-    if (!chat || chat.room_id !== roomId) {
+    if (!chat || Number(chat.room_id) !== roomId) {
       return NextResponse.json({ error: "not found" }, { status: 404 });
     }
     if (chat.creator_user_id !== user.id) {

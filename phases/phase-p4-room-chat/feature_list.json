@@ -25,16 +25,16 @@
       "area": "room-chat",
       "title": "新建房间聊天线程并进入三栏工作区",
       "user_visible_behavior": "点 New Chat：若当前房间存在尚未发消息的虚拟线程则直接打开，否则创建新虚拟线程并设为当前；页面切到三栏聊天工作区——中间 AVA 聊天区、左 Room Files、右 Studio；首次发消息时虚拟线程转为持久线程并出现在列表。非房间成员 403。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "claude",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/room-chat-create.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-06-29T20:05:18.098Z",
       "notes": "uc-room-chat-001。虚拟线程复用逻辑可纯前端+落库验证；三栏工作区为壳，Room Files 内容 blocked-on p10、Studio blocked-on p12、AVA 主体 blocked-on p9（先占位）。"
     },
     {
