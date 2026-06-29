@@ -1,5 +1,5 @@
 {
-  "phase": "05",
+  "phase": "p6",
   "features": [
     {
       "id": "F01",
@@ -17,7 +17,10 @@
         "pnpm --filter @repo/web exec playwright test e2e/canvas-render.spec.ts"
       ],
       "evidence": "evidence/F01.verify.log @ 2026-06-29T09:56:59.137Z",
-      "notes": "依赖 phase-04 rooms 权限（canViewRoom）。"
+      "notes": "依赖 phase-04 rooms 权限（canViewRoom）。",
+      "source_use_cases": [
+        "phases/phase-p6-canvas/requirements/canvas/uc-canvas-001-manage-room-board-items.md"
+      ]
     },
     {
       "id": "F02",
@@ -35,7 +38,10 @@
         "pnpm --filter @repo/web exec playwright test e2e/canvas-add.spec.ts"
       ],
       "evidence": "evidence/F02.verify.log @ 2026-06-29T09:57:04.152Z",
-      "notes": "命令运行时 applyCommand 纯逻辑，含单测。"
+      "notes": "命令运行时 applyCommand 纯逻辑，含单测。",
+      "source_use_cases": [
+        "phases/phase-p6-canvas/requirements/canvas/uc-canvas-001-manage-room-board-items.md"
+      ]
     },
     {
       "id": "F03",
@@ -53,7 +59,10 @@
         "pnpm --filter @repo/web exec playwright test e2e/canvas-update.spec.ts"
       ],
       "evidence": "evidence/F03.verify.log @ 2026-06-29T09:57:08.756Z",
-      "notes": "move/edit 都是命令；权限按所属 room。"
+      "notes": "move/edit 都是命令；权限按所属 room。",
+      "source_use_cases": [
+        "phases/phase-p6-canvas/requirements/canvas/uc-canvas-001-manage-room-board-items.md"
+      ]
     },
     {
       "id": "F04",
@@ -71,7 +80,395 @@
         "pnpm --filter @repo/web exec playwright test e2e/canvas-delete.spec.ts"
       ],
       "evidence": "evidence/F04.verify.log @ 2026-06-29T09:57:13.335Z",
-      "notes": "删除是命令。"
+      "notes": "删除是命令。",
+      "source_use_cases": [
+        "phases/phase-p6-canvas/requirements/canvas/uc-canvas-001-manage-room-board-items.md"
+      ]
+    },
+    {
+      "id": "F05",
+      "priority": 5,
+      "area": "canvas",
+      "title": "画布平移 / 缩放 / 导航 + 缩放控制条与小地图",
+      "user_visible_behavior": "在 Board 画布可拖拽平移、滚轮/触控板缩放、空格拖动；右下角缩放控制条显示当前缩放百分比，支持放大/缩小/适应内容/重置 100%；小地图显示画布概览与当前视口，点击/拖动小地图跳转视口。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/canvas-pan-zoom.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-canvas-001 + uc-canvas-006。视口变换为纯前端状态（无需落库），含 viewport 变换单测。",
+      "source_use_cases": [
+        "phases/requirements/canvas/uc-canvas-001-pan-zoom-navigate.md",
+        "phases/requirements/board/canvas/uc-canvas-006-zoom-and-minimap.md"
+      ]
+    },
+    {
+      "id": "F06",
+      "priority": 6,
+      "area": "canvas",
+      "title": "选择 / 多选组件 + 键盘操作",
+      "user_visible_behavior": "点击选中单个组件显示选中框与控制点；框选(marquee)/Shift 加选多个；Esc 取消选择；选中后方向键微移、Shift+方向键大步移动、Delete 删除、Cmd/Ctrl+A 全选；选择状态驱动 Widget Menu 出现。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/canvas-select.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-canvas-009 + uc-canvas-008。selection 模型为前端状态，键盘移动复用 move 命令落库。",
+      "source_use_cases": [
+        "phases/requirements/board/canvas/uc-canvas-009-select-and-multi-select-widget.md",
+        "phases/requirements/board/canvas/uc-canvas-008-keyboard-operate-widget.md"
+      ]
+    },
+    {
+      "id": "F07",
+      "priority": 7,
+      "area": "canvas",
+      "title": "拖动时的对齐参考线",
+      "user_visible_behavior": "拖动或缩放组件时，与邻近组件的边/中心对齐时显示动态参考线并吸附；多组件等间距时显示间距提示；释放后参考线消失。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/canvas-guidelines.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-canvas-007。对齐/吸附为纯几何计算，含单测。",
+      "source_use_cases": [
+        "phases/requirements/board/canvas/uc-canvas-007-use-alignment-guidelines.md"
+      ]
+    },
+    {
+      "id": "F08",
+      "priority": 8,
+      "area": "canvas",
+      "title": "复制 / 粘贴画布内容",
+      "user_visible_behavior": "选中组件 Cmd/Ctrl+C 复制、Cmd/Ctrl+V 粘贴出带偏移的副本（新 id 落库）；支持多选批量复制；粘贴后新组件被选中。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/canvas-copy-paste.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-canvas-003。粘贴 = 批量 add 命令；剪贴板用应用内 store（系统剪贴板互通可后续增强）。",
+      "source_use_cases": [
+        "phases/requirements/canvas/uc-canvas-003-copy-paste.md"
+      ]
+    },
+    {
+      "id": "F09",
+      "priority": 9,
+      "area": "canvas",
+      "title": "撤销 / 重做",
+      "user_visible_behavior": "Cmd/Ctrl+Z 撤销、Cmd/Ctrl+Shift+Z 重做，覆盖增删/移动/编辑/样式等命令；连续操作可逐步回退；撤销栈在会话内维护，状态回放后落库一致。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/canvas-undo-redo.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-canvas-004。基于已有命令运行时做可逆命令栈（每个命令带 inverse），含单测。Board Header 的撤销/重做按钮（uc-board-header-010）在 p7 复用本栈。",
+      "source_use_cases": [
+        "phases/requirements/canvas/uc-canvas-004-undo-redo.md"
+      ]
+    },
+    {
+      "id": "F10",
+      "priority": 10,
+      "area": "widgets",
+      "title": "Widget 框架与能力边界 + Widget Menu 悬浮操作",
+      "user_visible_behavior": "各类型组件（便利贴/形状/文本/连接线/手绘/图片/文件/图表）统一为 widget 模型，按类型暴露可操作能力；选中组件后在其附近浮出 Widget Menu，仅展示该类型适用的操作项（样式/锁定/删除/对齐/AI 等），多选时展示交集操作。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/widget-menu-framework.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-widgets-001 + uc-widget-menu-001。定义 widget type 注册表与能力矩阵（驱动 Widget Menu 项的可见性），是 F11-F22 的地基。",
+      "source_use_cases": [
+        "phases/requirements/board/widgets/uc-widgets-001-use-canvasx-widgets.md",
+        "phases/requirements/board/widget-menu/uc-widget-menu-001-use-widget-menu.md"
+      ]
+    },
+    {
+      "id": "F11",
+      "priority": 11,
+      "area": "widgets",
+      "title": "便利贴组件（内容 / 外观 / 状态）",
+      "user_visible_behavior": "创建便利贴并双击编辑文字；可改背景色、字号、对齐；可移动/缩放/旋转；内容与外观持久化，刷新保留。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/widget-sticky.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-widgets-003。在 F02/F03 的 item 命令运行时上扩出 sticky 专有属性（color/fontSize/align）。",
+      "source_use_cases": [
+        "phases/requirements/board/widgets/uc-widgets-003-use-sticky-note-widget.md"
+      ]
+    },
+    {
+      "id": "F12",
+      "priority": 12,
+      "area": "widgets",
+      "title": "文本组件 + 文本样式 + 文本转便利贴",
+      "user_visible_behavior": "创建独立文本组件并编辑；调整字体/字号/粗斜体/颜色/对齐（uc-widget-menu-013）；可把一段文本按行/段拆分为多个便利贴（uc-widget-menu-014）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/widget-text.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-widgets-007 + uc-widget-menu-013 + uc-widget-menu-014。文本→便利贴为批量 add 命令。",
+      "source_use_cases": [
+        "phases/requirements/board/widgets/uc-widgets-007-use-text-widget.md",
+        "phases/requirements/board/widget-menu/uc-widget-menu-013-edit-text-style.md",
+        "phases/requirements/board/widget-menu/uc-widget-menu-014-convert-text-to-sticky-notes.md"
+      ]
+    },
+    {
+      "id": "F13",
+      "priority": 13,
+      "area": "widgets",
+      "title": "形状组件",
+      "user_visible_behavior": "创建形状（矩形/圆/菱形等）并在其中输入文本；调整大小/外观（填充/边框）/层级；移动/缩放/旋转持久化。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/widget-shape.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-widgets-004。",
+      "source_use_cases": [
+        "phases/requirements/board/widgets/uc-widgets-004-use-shape-widget.md"
+      ]
+    },
+    {
+      "id": "F14",
+      "priority": 14,
+      "area": "widgets",
+      "title": "连接线组件 + 连接线样式",
+      "user_visible_behavior": "从一个组件拉出连接线连到另一个组件，组件移动时连接线跟随；调整线型（直/折/曲）、粗细、颜色、端点箭头与路径/流程标识（uc-widget-menu-012）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/widget-connector.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-widgets-005 + uc-widget-menu-012。连接线锚定到源/目标 widget id，重算路径为纯几何。",
+      "source_use_cases": [
+        "phases/requirements/board/widgets/uc-widgets-005-use-connector-widget.md",
+        "phases/requirements/board/widget-menu/uc-widget-menu-012-edit-connector-style.md"
+      ]
+    },
+    {
+      "id": "F15",
+      "priority": 15,
+      "area": "widgets",
+      "title": "手绘组件",
+      "user_visible_behavior": "切到手绘工具用鼠标/触控自由绘制笔迹；调整笔色/粗细；橡皮擦擦除笔迹（uc-board-menu-012）；笔迹作为组件可选中/移动/删除并持久化。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/widget-draw.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-widgets-006。笔迹存为路径点序列。橡皮擦入口在 p7 board-menu（uc-board-menu-012）触发本组件能力。",
+      "source_use_cases": [
+        "phases/requirements/board/widgets/uc-widgets-006-use-draw-widget.md"
+      ]
+    },
+    {
+      "id": "F16",
+      "priority": 16,
+      "area": "widgets",
+      "title": "图表组件",
+      "user_visible_behavior": "在画布查看/插入图表组件，对其选择/移动/缩放/锁定/删除；图表按其数据渲染（柱/线/饼等）；不支持的操作在 Widget Menu 隐藏。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/widget-chart.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-widgets-008。图表数据本期用内联数据；AI 辅助生成图表 blocked-on p9。",
+      "source_use_cases": [
+        "phases/requirements/board/widgets/uc-widgets-008-use-chart-widget.md"
+      ]
+    },
+    {
+      "id": "F17",
+      "priority": 17,
+      "area": "widgets",
+      "title": "组件样式调整 + 应用格式",
+      "user_visible_behavior": "Widget Menu 中调整选中组件的颜色/边框/背景/线宽/透明度并实时预览、持久化（uc-widget-menu-002）；「应用格式」把当前组件样式刷到其他文本/便利贴（uc-widget-menu-010）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/widget-style.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-widget-menu-002 + uc-widget-menu-010。样式更新走 update 命令，支持多选批量。",
+      "source_use_cases": [
+        "phases/requirements/board/widget-menu/uc-widget-menu-002-style-widget.md",
+        "phases/requirements/board/widget-menu/uc-widget-menu-010-apply-format.md"
+      ]
+    },
+    {
+      "id": "F18",
+      "priority": 18,
+      "area": "widgets",
+      "title": "锁定/解锁 + 删除 + 刷新组件",
+      "user_visible_behavior": "锁定组件后不可移动/缩放/旋转/编辑，菜单显示解锁（uc-widget-menu-003）；删除选中的一个或多个组件（uc-widget-menu-008）；支持重新加载的组件可刷新内容（uc-widget-menu-009）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/widget-lock-delete-refresh.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-widget-menu-003 + 008 + 009。lock 标志参与所有交互守卫。",
+      "source_use_cases": [
+        "phases/requirements/board/widget-menu/uc-widget-menu-003-lock-unlock-widget.md",
+        "phases/requirements/board/widget-menu/uc-widget-menu-008-delete-widget.md",
+        "phases/requirements/board/widget-menu/uc-widget-menu-009-refresh-widget.md"
+      ]
+    },
+    {
+      "id": "F19",
+      "priority": 19,
+      "area": "widgets",
+      "title": "多选组合批量操作（移动/对齐/编组/锁定/删除）",
+      "user_visible_behavior": "同时选中多个组件形成 active selection，整体拖动；通过 Widget Menu 批量对齐（左/右/上/下/水平居中/垂直居中/等间距，uc-widget-menu-011）、编组/解组、批量锁定、批量删除。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/widget-active-selection.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-widgets-010 + uc-widget-menu-011。对齐为纯几何批量 update。Context Menu 的层级/编组锁定（uc-context-menu-003/004）在 p7 复用本能力。",
+      "source_use_cases": [
+        "phases/requirements/board/widgets/uc-widgets-010-use-active-selection-widget.md",
+        "phases/requirements/board/widget-menu/uc-widget-menu-011-align-selected-widgets.md"
+      ]
+    },
+    {
+      "id": "F20",
+      "priority": 20,
+      "area": "widgets",
+      "title": "图片组件 + 裁剪",
+      "user_visible_behavior": "向画布添加图片，管理其位置/尺寸/裁剪/状态；Widget Menu 提供裁剪（uc-widget-menu-004）；图片可移动/缩放/锁定/删除。",
+      "status": "blocked",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/widget-image.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-widgets-009 + uc-widget-menu-004。blocked-on files 能力（S3/R2 上传/存储，packages/files 未建）。裁剪几何可先行单测。",
+      "source_use_cases": [
+        "phases/requirements/board/widgets/uc-widgets-009-use-image-widget.md",
+        "phases/requirements/board/widget-menu/uc-widget-menu-004-crop-image.md"
+      ]
+    },
+    {
+      "id": "F21",
+      "priority": 21,
+      "area": "widgets",
+      "title": "文件组件 + 下载 + 音频转文本",
+      "user_visible_behavior": "向画布添加文件并显示文件卡片信息，可移动/删除/下载（uc-widget-menu-005）；音频文件组件可转文本（uc-widget-menu-006）。",
+      "status": "blocked",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/widget-file.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-widgets-002 + uc-widget-menu-005 + uc-widget-menu-006。blocked-on files 能力（上传/下载）；音频转文本另 blocked-on p9（AI 转写）。",
+      "source_use_cases": [
+        "phases/requirements/board/widgets/uc-widgets-002-use-file-widgets.md",
+        "phases/requirements/board/widget-menu/uc-widget-menu-005-download-file-widget.md",
+        "phases/requirements/board/widget-menu/uc-widget-menu-006-audio-to-text.md"
+      ]
+    },
+    {
+      "id": "F22",
+      "priority": 22,
+      "area": "widgets",
+      "title": "组件 AI 助手",
+      "user_visible_behavior": "选中组件后从 Widget Menu 触发 AI 能力（基于该组件内容生成/改写/总结等），结果写回画布或新建组件。",
+      "status": "blocked",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AI",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/widget-ai-assist.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-widget-menu-007。blocked-on p9（AI 运行时）。Board AI Assist（uc-board-menu-010）在 p7 复用同一 AI 入口。",
+      "source_use_cases": [
+        "phases/requirements/board/widget-menu/uc-widget-menu-007-use-widget-ai-assist.md"
+      ]
     }
   ]
 }

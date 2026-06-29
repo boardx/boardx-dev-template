@@ -1,5 +1,5 @@
 {
-  "phase": "06",
+  "phase": "p1",
   "features": [
     {
       "id": "F01",
@@ -17,7 +17,10 @@
         "pnpm --filter @repo/web exec playwright test e2e/profile-account-center.spec.ts"
       ],
       "evidence": "evidence/F01.verify.log @ 2026-06-29T14:44:08.141Z",
-      "notes": "uc-profile-001。Security 复用 phase-04 改密。"
+      "notes": "uc-profile-001。Security 复用 phase-04 改密。",
+      "source_use_cases": [
+        "phases/phase-p1-profile-common/requirements/profile/uc-profile-001-view-profile.md"
+      ]
     },
     {
       "id": "F02",
@@ -35,7 +38,10 @@
         "pnpm --filter @repo/web exec playwright test e2e/profile-edit.spec.ts"
       ],
       "evidence": "evidence/F02.verify.log @ 2026-06-29T14:44:14.985Z",
-      "notes": "uc-profile-002。AI 头像本轮用确定性 seed 占位（真 AI 生成 deferred）。"
+      "notes": "uc-profile-002。AI 头像本轮用确定性 seed 占位（真 AI 生成 deferred）。",
+      "source_use_cases": [
+        "phases/phase-p1-profile-common/requirements/profile/uc-profile-002-edit-profile.md"
+      ]
     },
     {
       "id": "F03",
@@ -53,7 +59,10 @@
         "pnpm --filter @repo/web exec playwright test e2e/profile-settings.spec.ts"
       ],
       "evidence": "evidence/F03.verify.log @ 2026-06-29T14:44:19.754Z",
-      "notes": "uc-profile-005。偏好供后续 AVA/Board 默认值用。"
+      "notes": "uc-profile-005。偏好供后续 AVA/Board 默认值用。",
+      "source_use_cases": [
+        "phases/phase-p1-profile-common/requirements/profile/uc-profile-005-manage-account-settings.md"
+      ]
     }
   ]
 }

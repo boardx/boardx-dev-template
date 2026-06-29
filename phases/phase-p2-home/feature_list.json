@@ -1,0 +1,127 @@
+{
+  "phase": "p2",
+  "features": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "area": "home-page",
+      "title": "Home 工作台壳与欢迎区",
+      "user_visible_behavior": "已登录访问 /home 先显示加载态，客户端就绪后渲染 Agent Home：顶部欢迎区显示当前用户名，有当前团队时显示团队名；展示搜索框与各 Agent 分组容器骨架。未登录访问 /home 跳登录。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/home-shell.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-home-001。依赖 phase-04 的 session 与当前团队上下文。本 feature 只做壳，不含 Agent 真实数据加载（见 F02）。"
+    },
+    {
+      "id": "F02",
+      "priority": 2,
+      "area": "home-page",
+      "title": "Agent 分组与卡片渲染（含空状态）",
+      "user_visible_behavior": "Home 展示「最近使用 / 我订阅 / 团队推荐」三个 Agent 分组；每组无数据时显示空状态并提供「进入 AI Store / 创建 Agent」入口；有数据时卡片显示头像或默认图标、名称、来源标签、描述、标签或模型、使用次数、最近使用时间、浏览量、喜欢数与「快捷对话」按钮；点「更多」横向列表继续滚动。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/home-agent-groups.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-home-001/003。本期 Agent 数据源（订阅/推荐）由 AI Store(p11) 提供，故先以空数据集渲染空状态与入口；真实 Agent 列表在 p11 落地后接入（届时补 e2e 有数据分支）。"
+    },
+    {
+      "id": "F03",
+      "priority": 3,
+      "area": "home-page",
+      "title": "Home 内 Agent 搜索过滤",
+      "user_visible_behavior": "在 Home 顶部搜索框输入关键词，前端按已加载 Agent 的名称/描述/标签过滤，各分组只显示匹配卡片并更新分组计数；无匹配显示分组空状态；清空恢复全部；数据加载中显示占位、返回后刷新。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/home-agent-search.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-home-005。纯客户端过滤当前已加载集合，不依赖后端搜索；可用注入的测试 Agent 集验证过滤逻辑。"
+    },
+    {
+      "id": "F04",
+      "priority": 4,
+      "area": "home-page",
+      "title": "Recent 页占位（忠于真实「开发中」状态）",
+      "user_visible_behavior": "/recent 显示「Recent Activity」标题与「This page is under development.」提示；不展示资源卡片/列表/筛选/排序；用户可经导航/Home/Room/Board/全局搜索离开继续工作。未登录跳登录。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/recent-placeholder.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-home-004。真实产品当前即为占位页，故按占位实现而非臆造最近资源列表（避免 quality-document.md 记录的「臆造用例」回归）。后续支持团队范围最近资源时再升级。"
+    },
+    {
+      "id": "F05",
+      "priority": 5,
+      "area": "home-page",
+      "title": "最近白板入口（跳转 Board）",
+      "user_visible_behavior": "当存在最近访问白板记录时，Home/Recent 或 Room 页的最近白板卡片显示白板名与日期；点击按卡片携带的白板标识跳转 Board 页；白板已删除提示资源不存在；失去权限拒绝访问；无记录显示创建/进入房间入口。",
+      "status": "blocked",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/home-recent-board.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-home-002。blocked-on p5（Board 生命周期/打开白板）。Home 不强制展示最近白板，此入口在 p5 Board 落地后点亮。"
+    },
+    {
+      "id": "F06",
+      "priority": 6,
+      "area": "home-page",
+      "title": "Agent 快捷对话 / 继续上次对话 / 推荐功能启动",
+      "user_visible_behavior": "点击 Agent 卡片「快捷对话」按其配置创建/转换 AVA 线程（写线程名、Agent、模型、研究类型）并跳转 AVA 聊天；欢迎区「继续上次对话」在有当前线程时出现并跳回该线程；推荐功能区「用户研究/深度研究/实时转录」分别创建对应 research_type 的 AVA 线程并跳转；创建中防重复点击、失败停留 Home 可重试。",
+      "status": "blocked",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AI",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/home-quick-chat.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-home-006/007/008。blocked-on p9（AVA 线程创建/聊天页）。本期仅渲染按钮与禁用态占位；接通在 p9。"
+    },
+    {
+      "id": "F07",
+      "priority": 7,
+      "area": "home-page",
+      "title": "新用户 Onboarding 空状态引导",
+      "user_visible_behavior": "新用户首次进入 Home 时，无可展示 Agent 的分组显示空状态并提供「进入 AI Store / 创建 Agent」入口；可关闭/稍后再开引导；加载中先显示加载态。Home 本身不承担创建团队/房间/白板的完整引导（由对应模块完成）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/home-onboarding.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-home-003。空状态/引导壳可独立实现；其中指向 AI Store 的入口在 p11、指向 AVA 的入口在 p9 接通真实跳转。"
+    }
+  ]
+}

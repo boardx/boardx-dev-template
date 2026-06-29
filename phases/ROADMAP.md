@@ -1,8 +1,15 @@
 # BoardX 实施路线图（从真实需求推导）
 
 > 依据 `phases/requirements/`（**168 个用例 / 22 个模块**）做的系统化分析与依赖排序。
-> 这是**逻辑分阶段**的权威来源；已建的 phase 目录（03/04/05）按本表重新对齐与修正。
+> 这是**逻辑分阶段**的权威来源；物理 phase 目录已按本表对齐为 `phase-pN-<slug>`（P 前缀）。
 > 旧系统代码在 `oldcode/`，实现每个模块前先检索参考。
+>
+> **编号对齐（2026-06-30）**：物理目录已重排为 `pN` 前缀直接对应 P 阶段（见 `.harness/state/roadmap.yaml`）。
+> 两个例外保留旧物理号、不改名（避免动已 passing 的 CI 绿态）：`phase-01-foundation`（harness 元层）、
+> `phase-04-identity-and-spaces`（auth/team/room 核心打包体 = P1/P3/P4 核心，未拆）。`phase-05-canvas` 的便签
+> item CRUD 本质是画布素材，已并入 `phase-p6-canvas`（作为 F01-F04 种子）。
+> **P2–P8 的 feature_list 已产出**（壳/数据层可建项 = `not_started`；跨模块依赖未就绪项 = `blocked` 并在 notes 标 blocked-on pN）。
+> Team/Room 高级入口仍按「渐进点亮」在对应能力阶段补，不在本轮 P3/P4 硬塞。
 
 ## 一、依赖结构（决定先后顺序）
 
@@ -29,15 +36,15 @@ Team/Room 的「高级入口」（Team AI Store、Team Memory、Room Studio、Ro
 
 | 逻辑阶段 | 模块（用例数） | 关键能力(CAP) | 依赖 | 现状 |
 |---|---|---|---|---|
-| **P0 基础设施** | web/data/queue/worker/infra | WEB/DATA/WORKFLOW | — | ✅ 已建（phase-03） |
-| **P1 Auth & 身份** | auth(6) + profile(4) + common(4) + feedback(1) | AUTH | P0 | 🟡 auth 已建；profile/common/feedback 缺 |
-| **P2 Home 工作台** | home-page(8) | WEB | P1 | ❌ |
-| **P3 Team & 邀请** | team 核心 + invite(2) | AUTH/DATA | P1 | 🟡 team 核心已建；设置/Memory/统计/高级入口缺 |
-| **P4 Room & Room-Chat** | room(7) + room-chat(4) | COLLAB/DATA | P3 | 🟡 room 核心已建；文件/Chat/Studio/Survey 入口缺 |
-| **P5 Board 基础** | board 根(8) + access(2) | DATA | P4 | 🟡 phase-05 只做了便签雏形，需重做为真 Board 生命周期 |
-| **P6 Canvas & 组件** | canvas(5)+board/canvas(4)+widgets(10)+widget-menu(14) | CANVAS | P5 | ❌（核心白板编辑） |
-| **P7 Board 壳** | header(15)+board-menu(12)+context-menu(6)+local-workspace(3) | WEB/CANVAS | P6 | ❌ |
-| **P8 实时协作** | board/collaboration(3) + 在线状态/光标 | COLLAB(Yjs+Redis) | P6 | ❌ |
+| **P0 基础设施** | web/data/queue/worker/infra | WEB/DATA/WORKFLOW | — | ✅ 已建（phase-p0） |
+| **P1 Auth & 身份** | auth(6) + profile(4) + common(4) + feedback(1) | AUTH | P0 | 🟡 auth(phase-04)/profile(phase-p1) 已 passing；common/feedback 缺 |
+| **P2 Home 工作台** | home-page(8) | WEB | P1 | 📋 feature_list 已产出（phase-p2，7F；AVA/最近板项 blocked） |
+| **P3 Team & 邀请** | team 核心 + invite(2) | AUTH/DATA | P1 | 🟡 team 核心已建（phase-04）；高级入口随能力阶段点亮 |
+| **P4 Room & Room-Chat** | room(7) + room-chat(4) | COLLAB/DATA | P3 | 🟡 room 核心已建（phase-04）；room-chat feature_list 已产出（phase-p4，5F） |
+| **P5 Board 基础** | board 根(8) + access(2) | DATA | P4 | 📋 feature_list 已产出（phase-p5，10F，全可建） |
+| **P6 Canvas & 组件** | canvas(5)+board/canvas(4)+widgets(10)+widget-menu(14) | CANVAS | P5 | 📋 feature_list 已产出（phase-p6，22F=4passing种子+18；图片/文件/AI 助手 blocked） |
+| **P7 Board 壳** | header(15)+board-menu(12)+context-menu(6)+local-workspace(3) | WEB/CANVAS | P6 | 📋 feature_list 已产出（phase-p7，16F；语音/AI/导出/模板 blocked） |
+| **P8 实时协作** | board/collaboration(3) + 在线状态/光标 | COLLAB(Yjs+Redis) | P6 | 📋 feature_list 已产出（phase-p8，4F，待建 packages/collab） |
 | **P9 AVA / Chat** | ava(10) + share(1) | AI(LangGraph/LiteLLM) | P3 | ❌ |
 | **P10 知识库** | knowledge-base(4) | FILE+AI | P3,P9 | ❌ |
 | **P11 AI Store** | ai-store(6) | AI+审核流 | P3,P9 | ❌ |
