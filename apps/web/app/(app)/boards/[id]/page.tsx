@@ -14,6 +14,7 @@ interface Board {
   room_id?: number | string;
   category?: string | null;
   description?: string | null;
+  settings?: { grid?: boolean; snap?: boolean };
 }
 
 interface RoomOpt {
@@ -82,6 +83,15 @@ export default function BoardPage() {
 
   async function join() {
     await fetch(`/api/boards/${boardId}/join`, { method: "POST" });
+    await refresh();
+  }
+
+  async function changeSetting(key: "grid" | "snap", on: boolean) {
+    await fetch(`/api/boards/${boardId}/settings`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ [key]: on }),
+    });
     await refresh();
   }
 
@@ -271,6 +281,37 @@ export default function BoardPage() {
               >
                 移动
               </Button>
+            </div>
+          </div>
+
+          {/* 白板设置 / 交互偏好（管理者） */}
+          <div data-testid="board-settings" className="mt-2 flex flex-col gap-2 border-t pt-3">
+            <Label>交互偏好</Label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                网格
+                <Select
+                  data-testid="setting-grid"
+                  className="w-20"
+                  value={board?.settings?.grid ? "on" : "off"}
+                  onChange={(e) => changeSetting("grid", e.target.value === "on")}
+                >
+                  <option value="off">关</option>
+                  <option value="on">开</option>
+                </Select>
+              </label>
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                吸附
+                <Select
+                  data-testid="setting-snap"
+                  className="w-20"
+                  value={board?.settings?.snap ? "on" : "off"}
+                  onChange={(e) => changeSetting("snap", e.target.value === "on")}
+                >
+                  <option value="off">关</option>
+                  <option value="on">开</option>
+                </Select>
+              </label>
             </div>
           </div>
 

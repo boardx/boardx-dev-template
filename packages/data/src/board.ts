@@ -17,6 +17,7 @@ export interface Board {
   description: string | null;
   visibility: BoardVisibility;
   owner_user_id: number;
+  settings: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -30,7 +31,7 @@ export function boardTitleOrDefault(name: string | null | undefined): string {
 }
 
 const BOARD_COLS =
-  "id, room_id, team_id, name, cover, category, description, visibility, owner_user_id, created_at, updated_at";
+  "id, room_id, team_id, name, cover, category, description, visibility, owner_user_id, settings, created_at, updated_at";
 
 export async function createBoard(
   roomId: number,
@@ -86,7 +87,7 @@ export async function listRecentBoards(userId: number, q?: string): Promise<Boar
   }
   return query<Board>(
     `SELECT b.id, b.room_id, b.team_id, b.name, b.cover, b.category, b.description,
-            b.visibility, b.owner_user_id, b.created_at, b.updated_at
+            b.visibility, b.owner_user_id, b.settings, b.created_at, b.updated_at
      FROM board_visits v
      JOIN boards b ON b.id = v.board_id
      JOIN rooms r ON r.id = b.room_id
@@ -178,7 +179,7 @@ export async function listFavoriteBoards(userId: number, q?: string): Promise<Bo
   }
   return query<Board>(
     `SELECT b.id, b.room_id, b.team_id, b.name, b.cover, b.category, b.description,
-            b.visibility, b.owner_user_id, b.created_at, b.updated_at
+            b.visibility, b.owner_user_id, b.settings, b.created_at, b.updated_at
      FROM board_favorites f
      JOIN boards b ON b.id = f.board_id
      JOIN rooms r ON r.id = b.room_id
@@ -222,6 +223,18 @@ export async function canManageBoard(boardId: number, userId: number): Promise<b
   if (!b) return false;
   if (b.owner_user_id === userId) return true;
   return isRoomOwner(b.room_id, userId);
+}
+
+/** 合并更新白板设置（jsonb 浅合并）。 */
+export async function updateBoardSettings(
+  boardId: number,
+  patch: Record<string, unknown>
+): Promise<Board | undefined> {
+  await query(`UPDATE boards SET settings = settings || $2::jsonb, updated_at = now() WHERE id = $1`, [
+    boardId,
+    JSON.stringify(patch),
+  ]);
+  return getBoard(boardId);
 }
 
 /** 谁能改白板可见范围：所属房间 owner（uc-board-access-001：Room Owner/Admin）。 */

@@ -74,7 +74,7 @@
       "title": "协作计时器",
       "user_visible_behavior": "Header 计时器可启动/暂停/继续/停止并调整时长；运行时显示剩余时间，结束提示。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-WEB",
       "verification": [
@@ -94,16 +94,16 @@
       "area": "board-header",
       "title": "Board 设置与交互偏好",
       "user_visible_behavior": "Header 打开 Board 设置面板，调整白板级设置与交互偏好（如网格/吸附/默认样式等），保存后持久化（PATCH /api/boards/:id/settings）并即时生效。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "01",
+      "owner": "claude",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-settings.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F05.verify.log @ 2026-06-29T20:24:54.962Z",
       "notes": "uc-board-header-012。",
       "source_use_cases": [
         "phases/requirements/board/header/uc-board-header-012-manage-board-settings.md"
@@ -137,7 +137,7 @@
       "title": "快捷键帮助 + 欢迎引导",
       "user_visible_behavior": "Header 可打开快捷键帮助面板列出当前可用快捷键；新用户/访客可查看白板欢迎引导信息，可关闭并稍后再开。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-WEB",
       "verification": [
