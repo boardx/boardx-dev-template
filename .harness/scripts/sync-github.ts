@@ -82,6 +82,24 @@ export function syncGithub(args: Args): void {
       ? sprintIds
       : sprintIds.slice(0, Math.max(1, cfg.issue_policy.near_term_window));
 
+  // 2.5) 先确保用到的 label 都存在——GitHub 不允许给 issue 加不存在的 label。
+  //      收集近期 sprint 会用到的全部 label，逐个 gh label create --force（幂等）。
+  const neededLabels = new Set<string>();
+  for (const sid of nearTerm) {
+    neededLabels.add(`sprint:${phaseId}-${sid}`);
+    for (const f of featuresForSprint(fl, sid)) {
+      neededLabels.add(`${cfg.labels.area_prefix}${f.area}`);
+      const sa = cfg.status_actions?.[f.status];
+      if (sa?.add_label) neededLabels.add(sa.add_label);
+    }
+  }
+  for (const label of neededLabels) {
+    run(
+      `gh label create ${JSON.stringify(label)} --repo ${cfg.repo} --force`,
+      `确保 label 存在: ${label}`
+    );
+  }
+
   // 3) 对近期 sprint 的 feature 开/更新 Issue
   for (const sid of nearTerm) {
     for (const f of featuresForSprint(fl, sid)) {

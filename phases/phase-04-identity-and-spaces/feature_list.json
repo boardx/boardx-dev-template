@@ -4,18 +4,248 @@
     {
       "id": "F01",
       "priority": 1,
-      "area": "orchestrator",
-      "title": "示例:健康检查端点",
-      "user_visible_behavior": "GET /api/health 返回 200 且 body 为 {\"ok\": true}",
+      "area": "auth",
+      "title": "邮箱注册账号",
+      "user_visible_behavior": "POST /api/auth/register {firstName,lastName,email,password,agreeTerms} 创建用户并自动登录（写 session cookie，201）；重复邮箱返回 409；GET /api/auth/session 返回当前用户。/register 页面可完成注册并进入已登录态。",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web run e2e -- auth-register"
+      ],
+      "evidence": "",
+      "notes": "uc-auth-001。密码≥6，邮箱小写，未勾选条款 400。"
+    },
+    {
+      "id": "F02",
+      "priority": 2,
+      "area": "auth",
+      "title": "邮箱登录、会话与登出",
+      "user_visible_behavior": "POST /api/auth/login 正确凭据 200 写 session cookie，错误凭据 401「邮箱或密码无效」；POST /api/auth/logout 使会话失效；登出后 GET /api/auth/session 返回未登录。/login 页面可登录并登出。",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web run e2e -- auth-login"
+      ],
+      "evidence": "",
+      "notes": "uc-auth-002。会话 7 天；不存在/错误密码统一报「邮箱或密码无效」。"
+    },
+    {
+      "id": "F03",
+      "priority": 3,
+      "area": "auth",
+      "title": "修改密码（账号中心 Security）",
+      "user_visible_behavior": "已登录用户 POST /api/auth/change-password {current,next} 校验旧密码后更新；旧密码错 400；成功后旧会话失效需重新登录。/account 的 Security 区可改密。",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web run e2e -- auth-change-password"
+      ],
+      "evidence": "",
+      "notes": "uc-auth-006。改密后 deleteUserSessions。"
+    },
+    {
+      "id": "F04",
+      "priority": 4,
+      "area": "auth",
+      "title": "忘记/重置密码（DB 令牌 + dev 邮件）",
+      "user_visible_behavior": "POST /api/auth/forgot-password {email} 生成一次性过期令牌（dev 环境写入控制台/日志，响应不含令牌）；POST /api/auth/reset-password {token,next} 校验令牌后改密并失效旧会话；过期/已用令牌 400。",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web run e2e -- auth-reset-password"
+      ],
+      "evidence": "",
+      "notes": "uc-auth-004。响应绝不返回 token；令牌一次性、30 分钟过期。真 SMTP deferred。"
+    },
+    {
+      "id": "F05",
+      "priority": 5,
+      "area": "auth",
+      "title": "社交登录骨架（占位，不接真 OAuth）",
+      "user_visible_behavior": "GET /api/auth/social/:provider 返回 501 与「社交登录待接入」结构化提示；登录/注册页在能力关闭时不展示第三方入口。",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "verification": [
+        "test \"$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/api/auth/social/google)\" = \"501\""
+      ],
+      "evidence": "",
+      "notes": "uc-auth-003。DEFERRED 真 OAuth（需 provider secret），本轮仅骨架。"
+    },
+    {
+      "id": "F06",
+      "priority": 6,
+      "area": "team",
+      "title": "创建团队",
+      "user_visible_behavior": "已登录用户 POST /api/teams {name} 创建团队、自己成为 owner、设为当前团队；名为空 400；GET /api/teams 列出我的团队含新团队。",
       "status": "not_started",
       "sprint": null,
       "owner": null,
-      "capability": "CAP-WEB",
+      "capability": "CAP-AUTH",
       "verification": [
-        "curl -sf http://localhost:3000/api/health | jq -e '.ok == true'"
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web run e2e -- team-create"
       ],
       "evidence": "",
-      "notes": "把示例替换成你自己的功能。粒度=一次会话能完成。"
+      "notes": "uc-team-001。创建者=owner。"
+    },
+    {
+      "id": "F07",
+      "priority": 7,
+      "area": "team",
+      "title": "查看与切换团队",
+      "user_visible_behavior": "GET /api/teams 列出我加入的团队及我的角色；POST /api/teams/current {teamId} 切换当前团队；只能切换到自己已加入的团队。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web run e2e -- team-switch"
+      ],
+      "evidence": "",
+      "notes": "uc-team-002。"
+    },
+    {
+      "id": "F08",
+      "priority": 8,
+      "area": "team",
+      "title": "邀请成员与通过邀请加入",
+      "user_visible_behavior": "owner/admin POST /api/teams/:id/invites 生成邀请令牌；受邀用户 POST /api/teams/join {token} 加入为 member；非 owner/admin 邀请被 403；无效/过期邀请 400。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web run e2e -- team-invite-join"
+      ],
+      "evidence": "",
+      "notes": "uc-team-003 + uc-team-004。"
+    },
+    {
+      "id": "F09",
+      "priority": 9,
+      "area": "team",
+      "title": "成员/角色管理与更新/删除团队",
+      "user_visible_behavior": "owner/admin GET /api/teams/:id/members 列成员、PATCH 改角色、DELETE 移除成员；PATCH /api/teams/:id 改名、DELETE /api/teams/:id 删团队；member 访问管理操作 403。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web run e2e -- team-manage"
+      ],
+      "evidence": "",
+      "notes": "uc-team-005 + uc-team-006。RBAC：owner>admin>member。"
+    },
+    {
+      "id": "F10",
+      "priority": 10,
+      "area": "room",
+      "title": "创建房间",
+      "user_visible_behavior": "已登录用户 POST /api/rooms {name,visibility,teamId?} 创建 room、自己为 owner、可归属个人或团队；名为空 400；GET /api/rooms 列出可见 room。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-COLLAB",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web run e2e -- room-create"
+      ],
+      "evidence": "",
+      "notes": "uc-room-001。room 是 BoardX 核心实体（Workspace）。"
+    },
+    {
+      "id": "F11",
+      "priority": 11,
+      "area": "room",
+      "title": "查看/搜索房间与权限可见性",
+      "user_visible_behavior": "GET /api/rooms 列出我有权限的 room（私有仅 owner/成员、团队可见团队成员）；GET /api/rooms/:id 未授权 403/404；GET /api/rooms?q= 关键字搜索。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-COLLAB",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web run e2e -- room-view-search"
+      ],
+      "evidence": "",
+      "notes": "uc-room-002。"
+    },
+    {
+      "id": "F12",
+      "priority": 12,
+      "area": "room",
+      "title": "房间成员管理与更新/删除",
+      "user_visible_behavior": "room owner POST /api/rooms/:id/members 邀请、DELETE 移除成员；PATCH /api/rooms/:id 改名/可见性、DELETE 删除；非 owner 管理操作 403。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-COLLAB",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web run e2e -- room-manage"
+      ],
+      "evidence": "",
+      "notes": "uc-room-003 + uc-room-004。"
+    },
+    {
+      "id": "F13",
+      "priority": 20,
+      "area": "team",
+      "title": "[DEFERRED] 团队设置/Home/Memory/AI Store",
+      "user_visible_behavior": "团队级入口：设置页、Team Home、Memory、AI Store。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AI",
+      "verification": [
+        "echo 'DEFERRED：依赖 CAP-AI/CAP-DATA 平面，本阶段不实现' && false"
+      ],
+      "evidence": "",
+      "notes": "uc-team-007/008/009/010。DEFERRED：依赖 AI/Memory 平面，不排入本阶段 sprint。"
+    },
+    {
+      "id": "F14",
+      "priority": 21,
+      "area": "room",
+      "title": "[DEFERRED] 房间文件/Studio/问卷",
+      "user_visible_behavior": "Room 内文件管理、Studio（画布）、问卷查看。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-FILE",
+      "verification": [
+        "echo 'DEFERRED：依赖 CAP-FILE/CAP-CANVAS 平面，本阶段不实现' && false"
+      ],
+      "evidence": "",
+      "notes": "uc-room-005/006/007。DEFERRED：依赖 File/Canvas 平面。"
     }
   ]
 }

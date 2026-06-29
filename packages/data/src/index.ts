@@ -6,6 +6,9 @@ import pg from "pg";
 
 const { Pool } = pg;
 
+// CAP-AUTH 仓储（users/sessions/email_tokens）
+export * from "./auth";
+
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 
 export interface DbConfig {
