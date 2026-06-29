@@ -60,6 +60,7 @@ export default function HomePage() {
   const [teamName, setTeamName] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [groups] = useState<AgentGroups>(EMPTY_AGENT_GROUPS);
+  const [recentBoards, setRecentBoards] = useState<{ id: number | string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -78,6 +79,8 @@ export default function HomePage() {
         const t = (ts.teams ?? []).find((x: { id: number | string }) => String(x.id) === String(cur.teamId));
         if (alive) setTeamName(t?.name ?? null);
       }
+      const rb = await (await fetch("/api/boards?scope=recent")).json();
+      if (alive) setRecentBoards(rb.boards ?? []);
       if (alive) setLoading(false);
     })();
     return () => {
@@ -116,6 +119,35 @@ export default function HomePage() {
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
+
+      {/* 最近白板（uc-home-002，复用 p5 最近访问） */}
+      <section data-testid="recent-boards" className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold text-foreground">最近白板</h2>
+        {recentBoards.length === 0 ? (
+          <div
+            data-testid="recent-boards-empty"
+            className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-border p-6"
+          >
+            <p className="text-sm text-muted-foreground">还没有最近访问的白板</p>
+            <Button size="sm" variant="secondary" onClick={() => router.push("/rooms")} data-testid="goto-rooms">
+              进入房间创建白板
+            </Button>
+          </div>
+        ) : (
+          <ul data-testid="recent-boards-list" className="flex flex-col gap-2">
+            {recentBoards.map((b) => (
+              <li key={String(b.id)} data-testid={`recent-board-${b.id}`}>
+                <a
+                  href={`/boards/${b.id}`}
+                  className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 text-sm font-medium text-foreground shadow-sm transition-all hover:shadow-md hover:border-border/70"
+                >
+                  {b.name}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {/* Agent 分组：有数据渲染卡片，无数据渲染空状态 + 入口 */}
       <div className="flex flex-col gap-6">

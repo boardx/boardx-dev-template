@@ -77,16 +77,16 @@
       "area": "home-page",
       "title": "最近白板入口（跳转 Board）",
       "user_visible_behavior": "当存在最近访问白板记录时，Home/Recent 或 Room 页的最近白板卡片显示白板名与日期；点击按卡片携带的白板标识跳转 Board 页；白板已删除提示资源不存在；失去权限拒绝访问；无记录显示创建/进入房间入口。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "claude",
       "capability": "CAP-WEB",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/home-recent-board.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F05.verify.log @ 2026-06-29T19:50:38.875Z",
       "notes": "uc-home-002。p5 Board 已完成（GET /api/boards?scope=recent 可用），此入口解除阻塞。复用 p5 最近访问数据。"
     },
     {
