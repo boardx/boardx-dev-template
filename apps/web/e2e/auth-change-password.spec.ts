@@ -10,10 +10,11 @@ test("修改密码后旧会话失效、新密码可登录、旧密码失败", as
   });
 
   await page.goto("/account");
+  await page.getByTestId("tab-security").click(); // 改密在 Security 分区
   await page.getByTestId("current").fill("secret123");
   await page.getByTestId("next").fill("newsecret456");
   await page.getByTestId("confirm").fill("newsecret456");
-  await page.getByTestId("submit").click();
+  await page.getByTestId("submit-security").click();
   await expect(page.getByTestId("done")).toBeVisible();
 
   // 旧会话已失效：主页应为访客态
@@ -40,9 +41,10 @@ test("旧密码错误时拒绝修改", async ({ page }) => {
     data: { firstName: "A", lastName: "B", email, password: "secret123", agreeTerms: true },
   });
   await page.goto("/account");
+  await page.getByTestId("tab-security").click();
   await page.getByTestId("current").fill("wrong-old");
   await page.getByTestId("next").fill("newsecret456");
   await page.getByTestId("confirm").fill("newsecret456");
-  await page.getByTestId("submit").click();
-  await expect(page.getByTestId("err-form")).toContainText("当前密码不正确");
+  await page.getByTestId("submit-security").click();
+  await expect(page.getByTestId("err-sec")).toContainText("当前密码不正确");
 });
