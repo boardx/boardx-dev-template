@@ -2,7 +2,19 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Home, LayoutGrid, User, Users, LogOut, Moon, Sun } from "lucide-react";
+import {
+  Home,
+  LayoutGrid,
+  User,
+  Users,
+  LogOut,
+  Moon,
+  Sun,
+  Settings,
+  BookOpen,
+  UserPlus,
+  Gem,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SidebarUser {
@@ -23,6 +35,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dark, setDark] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [lang, setLang] = useState<"en" | "zh">("en");
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,11 +54,14 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
     return () => document.removeEventListener("mousedown", onDown);
   }, [menuOpen]);
 
-  function toggleTheme() {
-    const next = !dark;
+  function setTheme(next: boolean) {
     setDark(next);
     document.documentElement.classList.toggle("dark", next);
     localStorage.setItem("theme", next ? "dark" : "light");
+  }
+
+  function toggleTheme() {
+    setTheme(!dark);
   }
 
   async function logout() {
@@ -119,36 +135,161 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
         {menuOpen && (
           <div
             role="menu"
+            data-testid="user-menu-popup"
             className="absolute bottom-0 left-[3.25rem] z-50 w-62 rounded-12 border border-border bg-popover p-2 shadow-[0_16px_40px_rgba(0,0,0,0.18)]"
           >
             {/* identity */}
-            <div className="flex items-center gap-2.5 px-2 pb-2.5 pt-2">
+            <div
+              data-testid="user-menu-identity"
+              className="flex items-center gap-2.5 px-2 pb-2.5 pt-2"
+            >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground text-13 font-semibold text-background">
                 {initial}
               </div>
               <div className="min-w-0">
-                <div className="text-13 font-semibold text-foreground">
+                <div
+                  data-testid="user-menu-name"
+                  className="text-13 font-semibold text-foreground"
+                >
                   {user?.displayName ?? "访客"}
                 </div>
-                <div className="truncate text-11 text-placeholder">
+                <div
+                  data-testid="user-menu-email"
+                  className="truncate text-11 text-placeholder"
+                >
                   {user?.email ?? "未登录"}
                 </div>
               </div>
             </div>
 
-            <MenuLink href="/account" onClick={() => setMenuOpen(false)}>
+            {/* Credits 余额行 */}
+            <Link
+              role="menuitem"
+              href="/credits"
+              data-testid="user-menu-credits"
+              onClick={() => setMenuOpen(false)}
+              className="mb-1.5 flex items-center gap-2 rounded-9 bg-surface-2 px-2.5 py-2.5 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Gem className="h-3.5 w-3.5 text-foreground" />
+              <span className="flex-1 text-12 font-semibold text-foreground">
+                3,210 credits
+              </span>
+              <span className="text-11 font-semibold text-foreground">Buy →</span>
+            </Link>
+
+            <MenuLink href="/account" testId="user-menu-profile" onClick={() => setMenuOpen(false)}>
               <User className="h-3.5 w-3.5" /> Profile
             </MenuLink>
-            <MenuLink href="/teams" onClick={() => setMenuOpen(false)}>
+            <MenuLink href="/teams" testId="user-menu-team" onClick={() => setMenuOpen(false)}>
               <Users className="h-3.5 w-3.5" /> Manage team
             </MenuLink>
+            <MenuLink
+              href="/account?section=settings"
+              testId="user-menu-settings"
+              onClick={() => setMenuOpen(false)}
+            >
+              <Settings className="h-3.5 w-3.5" /> Settings
+            </MenuLink>
+            <MenuLink
+              href="/knowledge-base"
+              testId="user-menu-kb"
+              onClick={() => setMenuOpen(false)}
+            >
+              <BookOpen className="h-3.5 w-3.5" /> Personal knowledge base
+            </MenuLink>
+            <MenuLink
+              href="/teams"
+              testId="user-menu-invite"
+              onClick={() => setMenuOpen(false)}
+            >
+              <UserPlus className="h-3.5 w-3.5" /> Invite friends
+            </MenuLink>
 
-            <div className="my-1.5 mx-1.5 h-px bg-muted" />
+            <div className="mx-1.5 my-1.5 h-px bg-muted" />
+
+            {/* Language */}
+            <div className="px-2.5 pb-0.5 pt-1 text-10 font-semibold uppercase text-placeholder">
+              Language
+            </div>
+            <div
+              role="group"
+              aria-label="语言"
+              data-testid="user-menu-language"
+              className="flex gap-1.5 px-2 pb-1.5"
+            >
+              <button
+                type="button"
+                onClick={() => setLang("en")}
+                aria-pressed={lang === "en"}
+                className={cn(
+                  "flex-1 rounded-7 border px-1 py-1 text-12 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  lang === "en"
+                    ? "border-foreground text-foreground"
+                    : "border-border text-muted-foreground hover:border-border-strong hover:text-foreground",
+                )}
+              >
+                English
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang("zh")}
+                aria-pressed={lang === "zh"}
+                className={cn(
+                  "flex-1 rounded-7 border px-1 py-1 text-12 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  lang === "zh"
+                    ? "border-foreground text-foreground"
+                    : "border-border text-muted-foreground hover:border-border-strong hover:text-foreground",
+                )}
+              >
+                中文
+              </button>
+            </div>
+
+            {/* Theme */}
+            <div className="px-2.5 pb-0.5 pt-0.5 text-10 font-semibold uppercase text-placeholder">
+              Theme
+            </div>
+            <div
+              role="group"
+              aria-label="主题"
+              data-testid="user-menu-theme"
+              className="flex gap-1.5 px-2 pb-1.5"
+            >
+              <button
+                type="button"
+                onClick={() => setTheme(false)}
+                aria-pressed={hydrated && !dark}
+                className={cn(
+                  "flex-1 rounded-7 border px-1 py-1 text-12 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  hydrated && !dark
+                    ? "border-foreground text-foreground"
+                    : "border-border text-muted-foreground hover:border-border-strong hover:text-foreground",
+                )}
+              >
+                Light
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme(true)}
+                aria-pressed={hydrated && dark}
+                className={cn(
+                  "flex-1 rounded-7 border px-1 py-1 text-12 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  hydrated && dark
+                    ? "border-foreground text-foreground"
+                    : "border-border text-muted-foreground hover:border-border-strong hover:text-foreground",
+                )}
+              >
+                Dark
+              </button>
+            </div>
+
+            <div className="mx-1.5 my-1.5 h-px bg-muted" />
 
             <button
               role="menuitem"
+              data-testid="user-menu-logout"
               onClick={logout}
-              className="flex w-full items-center gap-2 rounded-7 px-2.5 py-2 text-13 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex w-full items-center gap-2 rounded-7 px-2.5 py-2 text-13 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <LogOut className="h-3.5 w-3.5" /> Log out
             </button>
@@ -162,18 +303,21 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
 function MenuLink({
   href,
   onClick,
+  testId,
   children,
 }: {
   href: string;
   onClick: () => void;
+  testId?: string;
   children: React.ReactNode;
 }) {
   return (
     <Link
       role="menuitem"
       href={href}
+      data-testid={testId}
       onClick={onClick}
-      className="flex items-center gap-2 rounded-7 px-2.5 py-2 text-13 text-foreground transition-colors hover:bg-muted"
+      className="flex items-center gap-2 rounded-7 px-2.5 py-2 text-13 text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       {children}
     </Link>
