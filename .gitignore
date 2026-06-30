@@ -3,6 +3,7 @@ dist/
 .turbo/
 *.log
 .DS_Store
+.pnpm-store/
 .harness/state/.cache/
 
 # Next.js / 全栈骨架
