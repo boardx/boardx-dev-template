@@ -6,6 +6,8 @@ export type TeamRole = "owner" | "admin" | "member";
 export interface Team {
   id: number;
   name: string;
+  description: string;
+  team_type: string;
   owner_user_id: number;
   created_at: string;
 }
@@ -17,7 +19,7 @@ export interface TeamWithRole extends Team {
 /** 创建团队并把创建者设为 owner（一个事务内）。 */
 export async function createTeam(name: string, ownerId: number): Promise<Team> {
   const rows = await query<Team>(
-    "INSERT INTO teams (name, owner_user_id) VALUES ($1, $2) RETURNING id, name, owner_user_id, created_at",
+    "INSERT INTO teams (name, owner_user_id) VALUES ($1, $2) RETURNING id, name, description, team_type, owner_user_id, created_at",
     [name, ownerId]
   );
   const team = rows[0]!;
@@ -26,13 +28,16 @@ export async function createTeam(name: string, ownerId: number): Promise<Team> {
 }
 
 export async function getTeam(teamId: number): Promise<Team | undefined> {
-  const rows = await query<Team>("SELECT id, name, owner_user_id, created_at FROM teams WHERE id = $1", [teamId]);
+  const rows = await query<Team>(
+    "SELECT id, name, description, team_type, owner_user_id, created_at FROM teams WHERE id = $1",
+    [teamId]
+  );
   return rows[0];
 }
 
 export async function listUserTeams(userId: number): Promise<TeamWithRole[]> {
   return query<TeamWithRole>(
-    `SELECT t.id, t.name, t.owner_user_id, t.created_at, m.role
+    `SELECT t.id, t.name, t.description, t.team_type, t.owner_user_id, t.created_at, m.role
      FROM team_members m JOIN teams t ON t.id = m.team_id
      WHERE m.user_id = $1 ORDER BY t.id DESC`,
     [userId]
@@ -80,6 +85,18 @@ export async function removeMember(teamId: number, userId: number): Promise<void
 
 export async function renameTeam(teamId: number, name: string): Promise<void> {
   await query("UPDATE teams SET name = $2 WHERE id = $1", [teamId, name]);
+}
+
+/** uc-team-007：更新团队通用设置（name 必填，description 可选）。 */
+export async function updateTeam(
+  teamId: number,
+  fields: { name: string; description?: string }
+): Promise<void> {
+  await query("UPDATE teams SET name = $2, description = $3 WHERE id = $1", [
+    teamId,
+    fields.name,
+    fields.description ?? "",
+  ]);
 }
 
 export async function deleteTeam(teamId: number): Promise<void> {
