@@ -57,3 +57,28 @@
 - ⚠️ #46 board-share 首次因 API Overloaded 崩溃(未提交)→ 丢弃重试。
 ### Batch 7（启动）
 - #71 room-members · #62 global-search · #46 board-share(retry)
+
+## ===== 编排中段汇总（~04:30 CST）=====
+
+### 已完成：24 个 feature 合并入 feat/ui-prototype-v1（均 tsc + design-lint 绿，e2e spec 已落）
+credits, kb, ai-store, share, invite, survey, billing, recent, studio, presentations, admin, ava,
+confirm-email, user-menu, room-chat-send, team-invite, social-login, board-share, room-members,
+team-settings(冲突已解), shortcuts-help, create-text, global-search, sync-status(冲突已解)。
+对应 issues 标 status:in-review（待 push 后 CI 跑全量 e2e）。
+
+### 关键结构性发现（影响后续并行）
+**所有 worktree 子 agent 从固定 base `35a3378` 分支**（非 live tip），而非各自最新。
+→ 凡触碰「已被前序 feature 改过的共享文件」(`board-canvas.tsx`、`boards/[id]/page.tsx`、`teams/page.tsx`)
+  的 feature，合并时必冲突；部分是语义冲突（如 #57 bold 与 #51 text 共用 color 字段编码）。
+→ 新建独立路由/文件的 feature 合并干净（前 18 个几乎都是）；共享文件 feature 需逐个手解。
+
+### 剩余（~13，几乎全是 board 子件，均共享 board-canvas.tsx / boards 页 → 并行会冲突）
+#45,49,50,52,53,54,55,56,58,59,60,61,77 + #57(已释放，需重做)。少量非 board：#63 feedback(疑与 #65 重)。
+
+### 建议续作方式（二选一）
+1. **串行、直接在 live tip 上做**（不走 stale-base worktree）：board 子件一次一个，改 board-canvas.tsx/board 页 → tsc+lint → commit。无冲突。
+2. 若仍用 worktree 并行：让每个 worktree 从「当前 tip」rebase 后再交付，或编排器接受逐个手解冲突。
+
+### 收尾动作（待人工/下一轮）
+- push feat/ui-prototype-v1 → CI(harness-verify) 跑全量 e2e（本地无 DB，e2e 未本地执行）；按结果修红。
+- 把 in-review 的 24 个 issue 在 CI 绿后置 passing/关闭。
