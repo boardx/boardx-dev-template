@@ -17,6 +17,7 @@ export default function RegisterPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [pendingProvider, setPendingProvider] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -35,6 +36,25 @@ export default function RegisterPage() {
     }
     const data = await res.json().catch(() => ({}));
     setErrors(data.errors ?? { _: data.error ?? "注册失败" });
+  }
+
+  // 第三方注册/登录（uc-auth-003 stub）：POST /api/auth/social → 成功建立会话并回首页。
+  async function social(provider: string) {
+    setPendingProvider(provider);
+    setErrors({});
+    const res = await fetch("/api/auth/social", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ provider }),
+    });
+    if (res.ok) {
+      router.push("/");
+      router.refresh();
+      return;
+    }
+    setPendingProvider(null);
+    const data = await res.json().catch(() => ({}));
+    setErrors({ _: data.error ?? "第三方登录失败" });
   }
 
   const err = (k: string) =>
@@ -140,11 +160,25 @@ export default function RegisterPage() {
       <AuthDivider />
 
       <div className="flex gap-2.5">
-        <Button variant="outline" type="button" className="flex-1 text-13 font-normal">
-          Google
+        <Button
+          data-testid="social-google"
+          variant="outline"
+          type="button"
+          disabled={pendingProvider !== null}
+          onClick={() => social("google")}
+          className="flex-1 text-13 font-normal"
+        >
+          {pendingProvider === "google" ? "Connecting…" : "Google"}
         </Button>
-        <Button variant="outline" type="button" className="flex-1 text-13 font-normal">
-          Facebook
+        <Button
+          data-testid="social-facebook"
+          variant="outline"
+          type="button"
+          disabled={pendingProvider !== null}
+          onClick={() => social("facebook")}
+          className="flex-1 text-13 font-normal"
+        >
+          {pendingProvider === "facebook" ? "Connecting…" : "Facebook"}
         </Button>
       </div>
 
