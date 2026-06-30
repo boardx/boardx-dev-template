@@ -102,3 +102,11 @@ verification 全绿 + evidence 落盘 + `init.sh` 基础验证不破 + 行为端
 3. 跑 DoR → 合格的 flip `ready_for_dev`。
 4. `harness sync` 分批投影 issue（建议按 wave 分批，不要一次开 169 个）。
 5. 按 wave 启动并行 agent 开发。
+
+## 8. 跨 agent 认领锁（GitHub label 分布式锁）
+
+多个 agent（含本仓其它会话）并行时，用 issue 的 `status:in-progress` label 做认领锁：
+1. **领取前先查**：`gh issue view <N> --json labels`。若已带 `status:in-progress` → 已被他人领取，**跳过**，换下一个。
+2. **领取即标记**：派给某 agent 前，`gh issue edit <N> --add-label status:in-progress --remove-label status:ready-for-dev`。
+3. **完成**：验证通过合并后 `gh issue close <N>` 并加 `passing`（去掉 in-progress）。
+4. **失败/放弃**：回退为 `status:ready-for-dev`（去掉 in-progress），释放锁。
