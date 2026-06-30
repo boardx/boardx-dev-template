@@ -56,6 +56,7 @@
 - 系统架构总览 → `.harness/instructions/architecture.md`
 - 智能体编排/工具/记忆约定 → `.harness/instructions/agentic-patterns.md`
 - 编码规范 → `.harness/instructions/coding-standards.md`
+- UIUX 规范 → `.harness/instructions/uiux-standards.md`
 - 端到端验证标准 → `.harness/instructions/testing-standards.md`
 - 可观测性约定 → `.harness/instructions/observability.md`
 - 阶段/局部规则 → 对应 `apps/*/AGENTS.md`、`phases/<phase>/AGENTS.md`

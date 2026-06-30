@@ -17,7 +17,10 @@
         "pnpm --filter @repo/web exec playwright test e2e/auth-register.spec.ts"
       ],
       "evidence": "evidence/F01.verify.log @ 2026-06-29T08:02:53.443Z",
-      "notes": "uc-auth-001。密码≥6，邮箱小写，未勾选条款 400。"
+      "notes": "uc-auth-001。密码≥6，邮箱小写，未勾选条款 400。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-001-email-register.md"
+      ]
     },
     {
       "id": "F02",
@@ -35,7 +38,10 @@
         "pnpm --filter @repo/web exec playwright test e2e/auth-login.spec.ts"
       ],
       "evidence": "evidence/F02.verify.log @ 2026-06-29T08:02:59.877Z",
-      "notes": "uc-auth-002。会话 7 天；不存在/错误密码统一报「邮箱或密码无效」。"
+      "notes": "uc-auth-002。会话 7 天；不存在/错误密码统一报「邮箱或密码无效」。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-002-email-login.md"
+      ]
     },
     {
       "id": "F03",
@@ -53,7 +59,10 @@
         "pnpm --filter @repo/web exec playwright test e2e/auth-change-password.spec.ts"
       ],
       "evidence": "evidence/F03.verify.log @ 2026-06-29T08:03:06.108Z",
-      "notes": "uc-auth-006。改密后 deleteUserSessions。"
+      "notes": "uc-auth-006。改密后 deleteUserSessions。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-006-change-password.md"
+      ]
     },
     {
       "id": "F04",
@@ -71,7 +80,10 @@
         "pnpm --filter @repo/web exec playwright test e2e/auth-reset-password.spec.ts"
       ],
       "evidence": "evidence/F04.verify.log @ 2026-06-29T08:03:11.646Z",
-      "notes": "uc-auth-004。响应绝不返回 token；令牌一次性、30 分钟过期。真 SMTP deferred。"
+      "notes": "uc-auth-004。响应绝不返回 token；令牌一次性、30 分钟过期。真 SMTP deferred。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-004-forgot-reset-password.md"
+      ]
     },
     {
       "id": "F05",
@@ -87,7 +99,10 @@
         "test \"$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/api/auth/social/google)\" = \"501\""
       ],
       "evidence": "evidence/F05.verify.log @ 2026-06-29T08:03:13.656Z",
-      "notes": "uc-auth-003。DEFERRED 真 OAuth（需 provider secret），本轮仅骨架。"
+      "notes": "uc-auth-003。DEFERRED 真 OAuth（需 provider secret），本轮仅骨架。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-003-social-login.md"
+      ]
     },
     {
       "id": "F06",
@@ -105,7 +120,10 @@
         "pnpm --filter @repo/web exec playwright test e2e/team-create.spec.ts"
       ],
       "evidence": "evidence/F06.verify.log @ 2026-06-29T08:44:41.444Z",
-      "notes": "uc-team-001。创建者=owner。"
+      "notes": "uc-team-001。创建者=owner。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-001-create-team.md"
+      ]
     },
     {
       "id": "F07",
@@ -123,7 +141,10 @@
         "pnpm --filter @repo/web exec playwright test e2e/team-switch.spec.ts"
       ],
       "evidence": "evidence/F07.verify.log @ 2026-06-29T08:44:46.483Z",
-      "notes": "uc-team-002。"
+      "notes": "uc-team-002。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-002-view-switch-team.md"
+      ]
     },
     {
       "id": "F08",
@@ -141,7 +162,11 @@
         "pnpm --filter @repo/web exec playwright test e2e/team-invite-join.spec.ts"
       ],
       "evidence": "evidence/F08.verify.log @ 2026-06-29T08:44:50.625Z",
-      "notes": "uc-team-003 + uc-team-004。"
+      "notes": "uc-team-003 + uc-team-004。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-003-invite-members.md",
+        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-004-join-by-invite.md"
+      ]
     },
     {
       "id": "F09",
@@ -159,7 +184,11 @@
         "pnpm --filter @repo/web exec playwright test e2e/team-manage.spec.ts"
       ],
       "evidence": "evidence/F09.verify.log @ 2026-06-29T08:44:55.148Z",
-      "notes": "uc-team-005 + uc-team-006。RBAC：owner>admin>member。"
+      "notes": "uc-team-005 + uc-team-006。RBAC：owner>admin>member。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-005-manage-members.md",
+        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-006-update-delete-team.md"
+      ]
     },
     {
       "id": "F10",
@@ -177,7 +206,10 @@
         "pnpm --filter @repo/web exec playwright test e2e/room-create.spec.ts"
       ],
       "evidence": "evidence/F10.verify.log @ 2026-06-29T09:01:50.515Z",
-      "notes": "uc-room-001。room 是 BoardX 核心实体（Workspace）。"
+      "notes": "uc-room-001。room 是 BoardX 核心实体（Workspace）。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/room/uc-room-001-create-room.md"
+      ]
     },
     {
       "id": "F11",
@@ -195,7 +227,10 @@
         "pnpm --filter @repo/web exec playwright test e2e/room-view-search.spec.ts"
       ],
       "evidence": "evidence/F11.verify.log @ 2026-06-29T09:01:55.103Z",
-      "notes": "uc-room-002。"
+      "notes": "uc-room-002。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/room/uc-room-002-view-search-room.md"
+      ]
     },
     {
       "id": "F12",
@@ -213,7 +248,11 @@
         "pnpm --filter @repo/web exec playwright test e2e/room-manage.spec.ts"
       ],
       "evidence": "evidence/F12.verify.log @ 2026-06-29T09:01:59.238Z",
-      "notes": "uc-room-003 + uc-room-004。"
+      "notes": "uc-room-003 + uc-room-004。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/room/uc-room-003-invite-manage-room-members.md",
+        "phases/phase-04-identity-and-spaces/requirements/room/uc-room-004-update-delete-room.md"
+      ]
     },
     {
       "id": "F13",
@@ -229,7 +268,13 @@
         "echo 'DEFERRED：依赖 CAP-AI/CAP-DATA 平面，本阶段不实现' && false"
       ],
       "evidence": "",
-      "notes": "uc-team-007/008/009/010。DEFERRED：依赖 AI/Memory 平面，不排入本阶段 sprint。"
+      "notes": "uc-team-007/008/009/010。DEFERRED：依赖 AI/Memory 平面，不排入本阶段 sprint。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-007-manage-team-general-settings.md",
+        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-008-view-team-home.md",
+        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-009-manage-team-memory.md",
+        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-010-view-team-ai-store.md"
+      ]
     },
     {
       "id": "F14",
@@ -245,7 +290,12 @@
         "echo 'DEFERRED：依赖 CAP-FILE/CAP-CANVAS 平面，本阶段不实现' && false"
       ],
       "evidence": "",
-      "notes": "uc-room-005/006/007。DEFERRED：依赖 File/Canvas 平面。"
+      "notes": "uc-room-005/006/007。DEFERRED：依赖 File/Canvas 平面。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/room/uc-room-005-manage-room-files.md",
+        "phases/phase-04-identity-and-spaces/requirements/room/uc-room-006-use-room-studio.md",
+        "phases/phase-04-identity-and-spaces/requirements/room/uc-room-007-view-room-surveys.md"
+      ]
     }
   ]
 }

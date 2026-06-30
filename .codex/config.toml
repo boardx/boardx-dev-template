@@ -2,9 +2,8 @@
 # 仅在 trusted 模式下加载（git-tracked 仓库内）
 # 技能发现：.agents/skills/（与 Gemini 共享同一真身）
 
-[model]
 # 默认使用 o4-mini；复杂推理任务可切 o3
-default = "o4-mini"
+model = "gpt-5.5"
 
 [approval]
 # 除下面白名单外，所有命令需要用户确认
@@ -33,10 +32,5 @@ denied_commands = [
   "chmod 777",
 ]
 
-[skills]
-# Codex 从 .agents/skills/ 发现 skills（与 Gemini/Antigravity 共享）
-path = ".agents/skills"
-
-[agents]
-# 项目级 subagent 定义目录
-path = ".codex/agents"
+skills = { path = ".agents/skills" }
+agents = { path = ".codex/agents" }

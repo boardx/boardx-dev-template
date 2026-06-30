@@ -1,0 +1,93 @@
+{
+  "phase": "p4",
+  "features": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "area": "room-chat",
+      "title": "房间 Chat 页签与线程列表",
+      "user_visible_behavior": "房间页 Chat 页签顶部显示 Chat List 与 New Chat；GET /api/rooms/:id/chats 返回当前团队+房间下的聊天线程（过滤虚拟线程与已删除），按更新/创建时间倒序，前端按今天/昨天/更早分日期分组；每张卡片显示名称、日期、创建者/最后编辑者；无线程显示空状态；非房间成员 403。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": "claude",
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-chat-list.spec.ts"
+      ],
+      "evidence": "evidence/F01.verify.log @ 2026-06-29T19:59:47.425Z",
+      "notes": "uc-room-chat-002。依赖 phase-04 room 成员权限（canViewRoom）。新增 room_chats 表（room_id/team_id/name/creator_id/status/created_at/updated_at）。"
+    },
+    {
+      "id": "F02",
+      "priority": 2,
+      "area": "room-chat",
+      "title": "新建房间聊天线程并进入三栏工作区",
+      "user_visible_behavior": "点 New Chat：创建一个房间聊天线程并设为当前；页面切到三栏聊天工作区——中间 AVA 聊天区、左 Room Files、右 Studio；线程出现在列表。非房间成员 403。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": "claude",
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-chat-create.spec.ts"
+      ],
+      "evidence": "evidence/F02.verify.log @ 2026-06-29T20:05:18.098Z",
+      "notes": "uc-room-chat-001。**本期实现差异（2026-06-30 回写，见 quality-document #6）**：线程创建即持久化，跳过 uc 原文「虚拟线程until首条消息」的优化——该优化依赖 p9 发消息流程，随 p9 一起做。三栏工作区为壳，Room Files blocked-on p10、Studio blocked-on p12、AVA 主体 blocked-on p9。"
+    },
+    {
+      "id": "F03",
+      "priority": 3,
+      "area": "room-chat",
+      "title": "打开线程详情（含他人线程只读态）",
+      "user_visible_behavior": "点击聊天卡片把该线程设为当前并进入房间聊天详情地址，显示返回房间按钮、Agent 选择入口、聊天头部菜单、AVA 主体、Room Files 与 Studio 面板；打开其他成员创建的已保存线程时，聊天输入与文件操作区显示仅查看状态。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": "claude",
+      "capability": "CAP-WEB",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-chat-open.spec.ts"
+      ],
+      "evidence": "evidence/F03.verify.log @ 2026-06-29T20:08:00.590Z",
+      "notes": "uc-room-chat-002 step9-10。只读态判定（线程归属≠当前用户）可独立验证；面板内容同 F02 跨模块占位。"
+    },
+    {
+      "id": "F04",
+      "priority": 4,
+      "area": "room-chat",
+      "title": "删除房间聊天线程",
+      "user_visible_behavior": "归属当前用户的线程卡片显示更多菜单，选 Delete 弹确认框（有名称则说明含线程名）；确认后标记删除中并从列表隐藏、DELETE /api/rooms/:id/chats/:chatId 删除；若正打开该线程则返回 Chat 列表；Cancel 不删除；非归属者无删除入口/403。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": "claude",
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-chat-delete.spec.ts"
+      ],
+      "evidence": "evidence/F04.verify.log @ 2026-06-29T20:11:31.317Z",
+      "notes": "uc-room-chat-004。删除权限按线程 creator_id。"
+    },
+    {
+      "id": "F05",
+      "priority": 5,
+      "area": "room-chat",
+      "title": "在房间聊天向 AVA 发送消息",
+      "user_visible_behavior": "在三栏工作区中间聊天输入区发送消息：当前线程追加用户消息，系统以 room chat 类型 + 当前 roomId 处理对话使回复与房间关联，可在同线程连续发送；点返回房间清除当前选择并回到 Chat 列表。",
+      "status": "blocked",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AI",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/room-chat-send.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-room-chat-003。blocked-on p9（AVA 对话运行时）。本期输入区可见但发送走占位；roomId 上下文透传在 p9 接通。"
+    }
+  ]
+}

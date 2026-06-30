@@ -12,3 +12,8 @@
 1. 原始需求放进上面的子目录（use case / 交互图）。
 2. 调 **requirement-author** 智能体：递归读取本文件夹**全部** `*.md`（跳过 README）→ 生成/更新 `../feature_list.json`。
 3. 本文件夹是**输入/上下文，不是权威**；权威永远是 `../feature_list.json`（带可执行 `verification`）。
+
+## 来源与同步
+- 本阶段的 `auth/`、`team/`、`room/` 用例是 `phases/requirements/` 全量 Use Case 库的阶段快照。
+- 同名 `uc-*.md` 应与全量库保持一致；如果阶段实现需要收窄范围，只在 `../feature_list.json` 的 feature 和 `source_use_cases` 中表达切分，不直接改写快照语义。
+- `../feature_list.json` 中每个 feature 必须用 `source_use_cases` 记录对应的阶段快照路径，避免只靠 `notes` 中的短 ID 猜来源。

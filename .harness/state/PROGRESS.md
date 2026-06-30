@@ -4,21 +4,22 @@
 
 | Phase | 名称 | 状态 | not_started | in_progress | blocked | passing |
 |-------|------|------|-------------|-------------|---------|---------|
-| 01 | Foundation | in_progress | 1 | 0 | 0 | 2 |
-| 03 | 基础设施 (P0) | not_started | 0 | 0 | 0 | 3 |
+| 01 | Foundation（harness 元层） | in_progress | 1 | 0 | 0 | 2 |
+| p0 | 基础设施 (P0) | not_started | 0 | 0 | 0 | 3 |
 | 04 | Auth+Team+Room 核心 (P1/P3/P4 核心) | not_started | 2 | 0 | 0 | 12 |
-| 05 | Board 基础起点 (P5 部分) | not_started | 0 | 0 | 0 | 4 |
-| 06 | Profile & Common (P1 补全) | not_started | 0 | 0 | 0 | 3 |
-| 07 | Home 工作台 (P2) | not_started | 0 | 0 | 0 | 0 |
-| 08 | Canvas & 组件 (P6) | not_started | 0 | 0 | 0 | 0 |
-| 09 | Board 壳 (P7) | not_started | 0 | 0 | 0 | 0 |
-| 10 | 实时协作 (P8) | not_started | 0 | 0 | 0 | 0 |
-| 11 | AVA / Chat (P9) | not_started | 0 | 0 | 0 | 0 |
-| 12 | 知识库 (P10) | not_started | 0 | 0 | 0 | 0 |
-| 13 | AI Store (P11) | not_started | 0 | 0 | 0 | 0 |
-| 14 | 问卷 (P13) | not_started | 0 | 0 | 0 | 0 |
-| 15 | 积分 & 计费 (P14) | not_started | 0 | 0 | 0 | 0 |
-| 16 | Studio & 演示 (P12) | not_started | 0 | 0 | 0 | 0 |
-| 17 | Admin 后台 (P15) | not_started | 0 | 0 | 0 | 0 |
+| p1 | Profile & Common (P1 补全) | not_started | 0 | 0 | 0 | 3 |
+| p2 | Home 工作台 (P2) | in_progress | 0 | 0 | 2 | 5 |
+| p4 | Room-Chat (P4 补全) | in_progress | 0 | 0 | 1 | 4 |
+| p5 | Board 基础 (P5) | done | 0 | 0 | 0 | 10 |
+| p6 | Canvas & 组件 (P6) | not_started | 13 | 1 | 3 | 5 |
+| p7 | Board 壳 (P7) | in_progress | 8 | 0 | 5 | 3 |
+| p8 | 实时协作 (P8) | not_started | 4 | 0 | 0 | 0 |
+| p9 | AVA / Chat (P9) | not_started | 0 | 0 | 0 | 0 |
+| p10 | 知识库 (P10) | not_started | 0 | 0 | 0 | 0 |
+| p11 | AI Store (P11) | not_started | 0 | 0 | 0 | 0 |
+| p12 | Studio & 演示 (P12) | not_started | 0 | 0 | 0 | 0 |
+| p13 | 问卷 (P13) | not_started | 0 | 0 | 0 | 0 |
+| p14 | 积分 & 计费 (P14) | not_started | 0 | 0 | 0 | 0 |
+| p15 | Admin 后台 (P15) | not_started | 0 | 0 | 0 | 0 |
 
-_最近聚合:2026-06-29T14:44:19.764Z_
+_最近聚合:2026-06-30T00:29:14.317Z_
