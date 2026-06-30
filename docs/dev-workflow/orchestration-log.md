@@ -45,3 +45,9 @@
 ### Batch 4（启动）
 - #69 presentations(/presentations) · #39 admin(/admin) · #43 ava(/ava, 大)
 进度：已合并 9 个 feature（credits/kb/ai-store/share/invite/survey/billing/recent/studio）。
+
+### Batch 4 完成（merged → in-review）
+- ✅ #69 presentations · #39 admin · #43 ava（AVA 聊天主流程）
+### Batch 5（启动）
+- #42 confirm-email · #70 user-menu(增强 sidebar) · #72 room-chat-send
+进度：已合并 12 个 feature。剩余多为 board 子件(同文件，需串行)+ 少量独立件。
