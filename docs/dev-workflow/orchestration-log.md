@@ -22,3 +22,10 @@
 - 驱动：background-agent 完成通知（harness 原生）自动重新唤醒主 agent → 集成 + 派下一批。
 - 定时心跳：调度 MCP 暂 404，未能设置；依赖完成通知推进。
 - 预算：起 01:55 CST，止 ~08:57 CST。
+
+### Batch 1 完成（merged → in-review，待 CI e2e）
+- ✅ #64 credits /credits · #68 kb /knowledge-base · #40 ai-store /ai-store
+- 均合并入 feat/ui-prototype-v1；tsc+lint 绿；e2e spec 已落；本地无 DB，完整 e2e 待 push CI。
+
+### Batch 2（启动）
+- #73 share(view-shared-chat) · #75 survey(create-survey) · #67 invite(accept-invite-link)
