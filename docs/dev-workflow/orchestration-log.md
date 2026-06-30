@@ -37,3 +37,11 @@
 - #66 recent(/recent 增强) · #74 studio(/studio) · #44 billing(/billing)
 
 进度：已合并 6 个 feature（credits/kb/ai-store/share/invite/survey）入 feat/ui-prototype-v1；均 tsc+lint 绿，e2e 待 CI。
+
+### Batch 3 完成（merged → in-review）
+- ✅ #44 billing /billing · #66 recent /recent · #74 studio /studio
+- 注：#65 feedback 被【其它会话 agent】认领（in-progress）→ 本编排跳过（认领锁生效）。
+
+### Batch 4（启动）
+- #69 presentations(/presentations) · #39 admin(/admin) · #43 ava(/ava, 大)
+进度：已合并 9 个 feature（credits/kb/ai-store/share/invite/survey/billing/recent/studio）。
