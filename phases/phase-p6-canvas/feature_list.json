@@ -220,16 +220,16 @@
       "area": "widgets",
       "title": "便利贴组件（内容 / 外观 / 状态）",
       "user_visible_behavior": "创建便利贴并双击编辑文字；可改背景色、字号、对齐；可移动/缩放/旋转；内容与外观持久化，刷新保留。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "07",
+      "owner": "claude",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/widget-sticky.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F11.verify.log @ 2026-06-30T05:33:30.094Z",
       "notes": "uc-widgets-003。在 F02/F03 的 item 命令运行时上扩出 sticky 专有属性（color/fontSize/align）。",
       "source_use_cases": [
         "phases/requirements/board/widgets/uc-widgets-003-use-sticky-note-widget.md"

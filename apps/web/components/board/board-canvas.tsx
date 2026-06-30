@@ -11,7 +11,18 @@ interface Item {
   h: number;
   text: string;
   type: string;
+  color?: string | null;
 }
+
+// 便签外观色 token → 样式（F11）。null/未知 → 默认 amber。
+const COLORS: Record<string, string> = {
+  amber: "bg-amber-100 border-amber-300 text-amber-900",
+  blue: "bg-sky-100 border-sky-300 text-sky-900",
+  green: "bg-emerald-100 border-emerald-300 text-emerald-900",
+  pink: "bg-pink-100 border-pink-300 text-pink-900",
+};
+const COLOR_TOKENS = Object.keys(COLORS);
+const colorClass = (c?: string | null) => COLORS[c ?? "amber"] ?? COLORS.amber;
 
 interface Move {
   id: string;
@@ -35,6 +46,7 @@ const BIG_NUDGE = 10;
 export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [editingId, setEditingId] = useState<string | null>(null); // F11 文本编辑中的便签
   const placeN = useRef(0); // 同步自增放置位，避免连点时读到尚未刷新的 items.length 造成重叠
   const clipboard = useRef<Item[]>([]); // 应用内剪贴板（F08）
   const undoStack = useRef<Op[]>([]); // F09
@@ -144,6 +156,32 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     void pasteClipboard();
   }
 
+  // F11：保存便签文字（双击编辑 → 失焦/回车）
+  async function saveText(id: string, text: string) {
+    setEditingId(null);
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, text } : it)));
+    await fetch(`/api/board-items/${id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+  }
+
+  // F11：改选中便签颜色
+  async function setColor(color: string) {
+    const ids = items.filter((it) => selected.has(it.id)).map((it) => it.id);
+    setItems((prev) => prev.map((it) => (selected.has(it.id) ? { ...it, color } : it)));
+    await Promise.all(
+      ids.map((id) =>
+        fetch(`/api/board-items/${id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ color }),
+        })
+      )
+    );
+  }
+
   const deleteSelected = useCallback(async () => {
     if (!canEdit || selected.size === 0) return;
     const removed = items.filter((it) => selected.has(it.id));
@@ -244,6 +282,17 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           className="absolute left-1/2 top-2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-lg"
         >
           <span className="px-1 text-xs text-muted-foreground">{selected.size} 项</span>
+          {/* 颜色色板（F11） */}
+          {COLOR_TOKENS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              data-testid={`wm-color-${c}`}
+              aria-label={`颜色 ${c}`}
+              onClick={() => void setColor(c)}
+              className={"h-5 w-5 rounded-full border " + colorClass(c)}
+            />
+          ))}
           <Button data-testid="wm-duplicate" size="sm" variant="ghost" onClick={duplicateSelected}>
             复制
           </Button>
@@ -265,13 +314,36 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                 e.stopPropagation();
                 selectItem(it.id, e.shiftKey);
               }}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                if (canEdit) setEditingId(it.id);
+              }}
               style={{ left: it.x, top: it.y, width: it.w, height: it.h }}
               className={
-                "absolute flex items-center justify-center rounded-md border bg-amber-100 p-2 text-xs text-amber-900 shadow-sm " +
-                (selected.has(it.id) ? "ring-2 ring-primary ring-offset-1" : "")
+                "absolute flex items-center justify-center rounded-md border p-2 text-xs shadow-sm " +
+                colorClass(it.color) +
+                (selected.has(it.id) ? " ring-2 ring-primary ring-offset-1" : "")
               }
             >
-              {it.text}
+              {editingId === it.id ? (
+                <textarea
+                  data-testid={`item-edit-${it.id}`}
+                  autoFocus
+                  defaultValue={it.text}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  onBlur={(e) => void saveText(it.id, e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      (e.target as HTMLTextAreaElement).blur();
+                    }
+                  }}
+                  className="h-full w-full resize-none rounded bg-transparent text-center outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                />
+              ) : (
+                it.text
+              )}
             </div>
           ))}
         </div>

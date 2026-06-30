@@ -11,9 +11,10 @@ export interface BoardItemRow {
   w: number;
   h: number;
   text: string;
+  color?: string | null;
 }
 
-const ITEM_COLS = "id, room_id, board_id, type, x, y, w, h, text";
+const ITEM_COLS = "id, room_id, board_id, type, x, y, w, h, text, color";
 
 export async function listRoomItems(roomId: number): Promise<BoardItemRow[]> {
   return query<BoardItemRow>(
@@ -37,23 +38,26 @@ export async function getItem(itemId: string): Promise<BoardItemRow | undefined>
 
 export async function insertItem(item: BoardItemRow): Promise<BoardItemRow> {
   const rows = await query<BoardItemRow>(
-    `INSERT INTO board_items (id, room_id, board_id, type, x, y, w, h, text)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `INSERT INTO board_items (id, room_id, board_id, type, x, y, w, h, text, color)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      RETURNING ${ITEM_COLS}`,
-    [item.id, item.room_id, item.board_id ?? null, item.type, item.x, item.y, item.w, item.h, item.text]
+    [item.id, item.room_id, item.board_id ?? null, item.type, item.x, item.y, item.w, item.h, item.text, item.color ?? null]
   );
   return rows[0]!;
 }
 
 export async function updateItem(
   itemId: string,
-  fields: { x?: number; y?: number; text?: string }
+  fields: { x?: number; y?: number; text?: string; color?: string | null }
 ): Promise<void> {
   if (fields.x !== undefined && fields.y !== undefined) {
     await query("UPDATE board_items SET x = $2, y = $3 WHERE id = $1", [itemId, fields.x, fields.y]);
   }
   if (fields.text !== undefined) {
     await query("UPDATE board_items SET text = $2 WHERE id = $1", [itemId, fields.text]);
+  }
+  if (fields.color !== undefined) {
+    await query("UPDATE board_items SET color = $2 WHERE id = $1", [itemId, fields.color]);
   }
 }
 
