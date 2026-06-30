@@ -51,3 +51,9 @@
 ### Batch 5（启动）
 - #42 confirm-email · #70 user-menu(增强 sidebar) · #72 room-chat-send
 进度：已合并 12 个 feature。剩余多为 board 子件(同文件，需串行)+ 少量独立件。
+
+### Batch 5/6 完成（merged → in-review）
+- ✅ #42 confirm-email · #70 user-menu · #72 room-chat-send · #76 team-invite · #41 social-login（共 17 merged）
+- ⚠️ #46 board-share 首次因 API Overloaded 崩溃(未提交)→ 丢弃重试。
+### Batch 7（启动）
+- #71 room-members · #62 global-search · #46 board-share(retry)
