@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { BoardTimer } from "@/components/board/timer";
 import { BoardHelpGuide } from "@/components/board/help-guide";
-import { CanvasViewport } from "@/components/board/canvas-viewport";
+import { BoardCanvas } from "@/components/board/board-canvas";
 
 interface Board {
   id: number | string;
@@ -374,8 +374,8 @@ export default function BoardPage() {
         </form>
       )}
 
-      {/* 画布视口（P6 F05：平移/缩放/缩放条/小地图） */}
-      <CanvasViewport />
+      {/* 画布（P6：F05 视口 + F06 board-keyed items 渲染/选择/键盘） */}
+      <BoardCanvas boardId={String(boardId)} canEdit={canEdit} />
     </div>
   );
 }

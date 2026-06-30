@@ -113,9 +113,9 @@
       "area": "canvas",
       "title": "选择 / 多选组件 + 键盘操作",
       "user_visible_behavior": "点击选中单个组件显示选中框与控制点；框选(marquee)/Shift 加选多个；Esc 取消选择；选中后方向键微移、Shift+方向键大步移动、Delete 删除、Cmd/Ctrl+A 全选；选择状态驱动 Widget Menu 出现。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "03",
+      "owner": "claude",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
