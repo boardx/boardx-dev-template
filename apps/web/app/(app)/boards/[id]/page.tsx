@@ -52,6 +52,12 @@ export default function BoardPage() {
   // 删除（行内确认）
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
+  // 分享面板
+  const [sharing, setSharing] = useState(false);
+  const [showQr, setShowQr] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
+  const [shareUrl, setShareUrl] = useState("");
+
   async function refresh() {
     const res = await fetch(`/api/boards/${boardId}`);
     if (res.status === 401) return setError("请先登录"), setLoading(false);
@@ -122,6 +128,30 @@ export default function BoardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId]);
 
+  // 分享链接：客户端按当前 origin 计算
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setShareUrl(`${window.location.origin}/boards/${boardId}`);
+    }
+  }, [boardId]);
+
+  async function copyShareLink() {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("error");
+    }
+    setTimeout(() => setCopyStatus("idle"), 2000);
+  }
+
+  const visibilityLabel =
+    board?.visibility === "public"
+      ? "公开（任何持链接者可访问）"
+      : board?.visibility === "team"
+        ? "团队成员可访问"
+        : "房间成员可访问";
+
   async function saveMeta(e: React.FormEvent) {
     e.preventDefault();
     setSaveError("");
@@ -179,6 +209,16 @@ export default function BoardPage() {
         <div className="flex items-center gap-2">
           {/* 协作计时器（所有协作者可用） */}
           <BoardTimer />
+          {/* 分享（所有可访问者可见：复制链接 + 可见性说明 + 二维码占位） */}
+          <Button
+            data-testid="board-share"
+            size="sm"
+            variant="secondary"
+            aria-expanded={sharing}
+            onClick={() => setSharing((v) => !v)}
+          >
+            {sharing ? "关闭分享" : "分享"}
+          </Button>
           {/* 匿名公开访问：提示登录加入 */}
           {anonymous && (
             <Button
@@ -215,6 +255,85 @@ export default function BoardPage() {
           )}
         </div>
       </header>
+
+      {/* 分享白板面板 */}
+      {sharing && (
+        <div
+          data-testid="share-panel"
+          role="dialog"
+          aria-label="分享白板"
+          className="absolute right-4 top-14 z-30 w-80 rounded-xl border bg-popover p-4 text-popover-foreground shadow-xl"
+        >
+          <h2 className="text-sm font-semibold text-foreground">分享白板</h2>
+
+          {/* 可见性说明（复用 board.visibility） */}
+          <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            访问范围
+          </p>
+          <p data-testid="share-visibility" className="mt-1 text-sm text-foreground">
+            {visibilityLabel}
+          </p>
+
+          {/* 复制分享链接 */}
+          <div className="mt-3 flex flex-col gap-1.5">
+            <Label htmlFor="share-url">分享链接</Label>
+            <div className="flex gap-2">
+              <Input
+                id="share-url"
+                data-testid="share-url"
+                readOnly
+                value={shareUrl}
+                aria-label="分享链接"
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                data-testid="share-copy"
+                size="sm"
+                variant="default"
+                onClick={copyShareLink}
+              >
+                复制链接
+              </Button>
+            </div>
+            {copyStatus === "copied" && (
+              <p data-testid="share-copy-status" className="text-xs text-muted-foreground">
+                已复制到剪贴板
+              </p>
+            )}
+            {copyStatus === "error" && (
+              <p data-testid="share-copy-status" role="alert" className="text-xs text-destructive">
+                复制失败，请手动复制
+              </p>
+            )}
+          </div>
+
+          {/* 二维码（占位） */}
+          <div className="mt-3 border-t pt-3">
+            <Button
+              type="button"
+              data-testid="share-qr-toggle"
+              size="sm"
+              variant="outline"
+              className="w-full"
+              aria-expanded={showQr}
+              onClick={() => setShowQr((v) => !v)}
+            >
+              {showQr ? "隐藏二维码" : "显示二维码"}
+            </Button>
+            {showQr && (
+              <div className="mt-3 flex flex-col items-center gap-2">
+                <div
+                  data-testid="share-qr"
+                  aria-label="分享二维码占位"
+                  className="size-28 rounded-md border bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">二维码占位 · 后续接入生成</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 元信息编辑表单（管理者） */}
       {editing && canManage && (
