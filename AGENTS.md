@@ -58,6 +58,7 @@
 - 编码规范 → `.harness/instructions/coding-standards.md`
 - UIUX 规范 → `.harness/instructions/uiux-standards.md`
 - 端到端验证标准 → `.harness/instructions/testing-standards.md`
+- 发布/部署脚手架标准 → `.harness/instructions/devops-release.md`
 - 可观测性约定 → `.harness/instructions/observability.md`
 - 阶段/局部规则 → 对应 `apps/*/AGENTS.md`、`phases/<phase>/AGENTS.md`
 
