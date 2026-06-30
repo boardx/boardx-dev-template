@@ -156,16 +156,16 @@
       "area": "canvas",
       "title": "复制 / 粘贴画布内容",
       "user_visible_behavior": "选中组件 Cmd/Ctrl+C 复制、Cmd/Ctrl+V 粘贴出带偏移的副本（新 id 落库）；支持多选批量复制；粘贴后新组件被选中。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "04",
+      "owner": "claude",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/canvas-copy-paste.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F08.verify.log @ 2026-06-30T01:11:48.759Z",
       "notes": "uc-canvas-003。粘贴 = 批量 add 命令；剪贴板用应用内 store（系统剪贴板互通可后续增强）。",
       "source_use_cases": [
         "phases/requirements/canvas/uc-canvas-003-copy-paste.md"

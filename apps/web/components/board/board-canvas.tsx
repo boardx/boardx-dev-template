@@ -22,6 +22,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const [items, setItems] = useState<Item[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const placeN = useRef(0); // 同步自增放置位，避免连点时读到尚未刷新的 items.length 造成重叠
+  const clipboard = useRef<Item[]>([]); // 应用内剪贴板（F08）
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/boards/${boardId}/items`);
@@ -76,6 +77,21 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     [canEdit, selected, items]
   );
 
+  const pasteClipboard = useCallback(async () => {
+    if (!canEdit || clipboard.current.length === 0) return;
+    const created: string[] = [];
+    for (const it of clipboard.current) {
+      const res = await fetch(`/api/boards/${boardId}/items`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ type: it.type, x: it.x + 20, y: it.y + 20, text: it.text }),
+      });
+      if (res.status === 201) created.push((await res.json()).item.id);
+    }
+    await load();
+    setSelected(new Set(created));
+  }, [canEdit, boardId, load]);
+
   const deleteSelected = useCallback(async () => {
     if (!canEdit || selected.size === 0) return;
     const ids = [...selected];
@@ -95,6 +111,15 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         e.preventDefault();
         return void deleteSelected();
       }
+      if ((e.key === "c" || e.key === "C") && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        clipboard.current = items.filter((it) => selected.has(it.id));
+        return;
+      }
+      if ((e.key === "v" || e.key === "V") && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        return void pasteClipboard();
+      }
       const step = e.shiftKey ? BIG_NUDGE : NUDGE;
       if (e.key === "ArrowLeft") return void moveSelected(-step, 0);
       if (e.key === "ArrowRight") return void moveSelected(step, 0);
@@ -103,7 +128,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [items, deleteSelected, moveSelected]);
+  }, [items, selected, deleteSelected, moveSelected, pasteClipboard]);
 
   return (
     <div className="relative flex flex-1 flex-col">
