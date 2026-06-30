@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CanvasViewport } from "@/components/board/canvas-viewport";
 
@@ -21,6 +21,7 @@ const BIG_NUDGE = 10;
 export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const placeN = useRef(0); // 同步自增放置位，避免连点时读到尚未刷新的 items.length 造成重叠
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/boards/${boardId}/items`);
@@ -32,8 +33,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   }, [load]);
 
   async function addNote() {
-    const x = 80 + items.length * 30;
-    const y = 80 + items.length * 24;
+    // 纵向堆叠（x 固定靠左、y 间隔 130 > 便签高 100）：不重叠、且都落在视口左侧不被裁剪。
+    // 用同步 ref 计数而非 items.length，避免连点时第二次读到尚未 load() 刷新的旧长度→重叠。
+    const x = 40;
+    const y = 40 + placeN.current++ * 130;
     const res = await fetch(`/api/boards/${boardId}/items`, {
       method: "POST",
       headers: { "content-type": "application/json" },

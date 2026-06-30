@@ -113,7 +113,7 @@
       "area": "canvas",
       "title": "选择 / 多选组件 + 键盘操作",
       "user_visible_behavior": "点击选中单个组件显示选中框与控制点；框选(marquee)/Shift 加选多个；Esc 取消选择；选中后方向键微移、Shift+方向键大步移动、Delete 删除、Cmd/Ctrl+A 全选；选择状态驱动 Widget Menu 出现。",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "03",
       "owner": "claude",
       "capability": "CAP-CANVAS",
@@ -122,8 +122,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/canvas-select.spec.ts"
       ],
-      "evidence": "",
-      "notes": "uc-canvas-009 + uc-canvas-008。selection 模型为前端状态，键盘移动复用 move 命令落库。",
+      "evidence": "evidence/F06.verify.log @ 2026-06-30T01:00:11.366Z",
+      "notes": "uc-canvas-009 + uc-canvas-008。基于 ADR-0002 board-keyed items（migration 012 + /api/boards/:id/items + /api/board-items/:itemId）。已实现：点选/Shift多选/点空白清除/Esc/Ctrl+A全选/Delete删除/方向键移动(落库)。**本期实现差异（见 quality-document #6）**：marquee 框选 deferred——与 CanvasViewport(F05) 拖拽平移冲突，待实现 uc「空格拖动平移」语义后放开 drag-框选；选中状态驱动 Widget Menu 在 F10。",
       "source_use_cases": [
         "phases/requirements/board/canvas/uc-canvas-009-select-and-multi-select-widget.md",
         "phases/requirements/board/canvas/uc-canvas-008-keyboard-operate-widget.md"
