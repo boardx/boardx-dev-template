@@ -1,0 +1,3280 @@
+{
+  "note": "169 UC → feature 全量拆解（usecase→feature 同步）。一 UC 一 feature。",
+  "generated_from": "phases/requirements/**/uc-*.md（排除 oldcode）",
+  "next_steps": [
+    "verification: 由 verification-writer 按 feature 补可执行命令",
+    "ui: feature→UI gap 步骤逐条核对对应界面与实现状态"
+  ],
+  "total": 169,
+  "features": [
+    {
+      "id": "uc-admin-001-manage-users",
+      "module": "admin",
+      "user_visible_behavior": "管理员创建、查询、编辑或删除用户账号，维护平台用户数据。",
+      "source": "phases/requirements/admin/uc-admin-001-manage-users.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/admin-001-manage-users.spec.ts"
+      ],
+      "ui": "/admin",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 管理员创建、查询、编辑或删除用户账号，维护平台用户数据。",
+        "[入口] 访问 /admin",
+        "[成功出口] 成功时，用户数据按管理员操作变化。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-admin-002-manage-teams",
+      "module": "admin",
+      "user_visible_behavior": "管理员查询、筛选团队，查看团队基础信息，并在后台支持的范围内更新团队类型或为团队手动增加 Credit。",
+      "source": "phases/requirements/admin/uc-admin-002-manage-teams.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「管理员查询、筛选团队，查看团队基础信息，并在后台支持的范围内更新团队类型或为团队」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-admin-001-manage-users"
+      ],
+      "wave": 3,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-admin-003-ai-store-approval",
+      "module": "admin",
+      "user_visible_behavior": "管理员查看提交到 BoardX 平台审核的 AI Store 项目，并将项目批准或撤回到待审核状态。",
+      "source": "phases/requirements/admin/uc-admin-003-ai-store-approval.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「管理员查看提交到 BoardX 平台审核的 AI Store 项目，并将项目批准」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-admin-002-manage-teams"
+      ],
+      "wave": 4,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-admin-004-featured-ai-store",
+      "module": "admin",
+      "user_visible_behavior": "管理员查看已通过平台审核的 AI Store 项目，并切换其官方精选状态。",
+      "source": "phases/requirements/admin/uc-admin-004-featured-ai-store.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「管理员查看已通过平台审核的 AI Store 项目，并切换其官方精选状态。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-admin-003-ai-store-approval"
+      ],
+      "wave": 5,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-admin-005-view-admin-home",
+      "module": "admin",
+      "user_visible_behavior": "管理员进入后台首页，快速访问用户、团队、AI Store 等管理模块。",
+      "source": "phases/requirements/admin/uc-admin-005-view-admin-home.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「管理员进入后台首页，快速访问用户、团队、AI Store 等管理模块。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-admin-004-featured-ai-store"
+      ],
+      "wave": 6,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-ai-store-001-browse-items",
+      "module": "ai-store",
+      "user_visible_behavior": "用户浏览可用的 Agent、工具或模板，找到适合当前工作的 AI 能力。",
+      "source": "phases/requirements/ai-store/uc-ai-store-001-browse-items.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ai-store-001-browse-items.spec.ts"
+      ],
+      "ui": "/ai-store",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户浏览可用的 Agent、工具或模板，找到适合当前工作的 AI 能力。",
+        "[入口] 访问 /ai-store",
+        "[成功出口] 成功时，用户看到可用 AI Store 项目列表或详情。",
+        "[成功出口] 用户选择的筛选条件在当前页面上下文中生效。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-ai-store-002-create-update-item",
+      "module": "ai-store",
+      "user_visible_behavior": "用户创建或维护 Agent、工具、模板或图片工具，使其可以被自己、团队或平台用户使用。",
+      "source": "phases/requirements/ai-store/uc-ai-store-002-create-update-item.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户创建或维护 Agent、工具、模板或图片工具，使其可以被自己、团队或平台用户」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-ai-store-001-browse-items"
+      ],
+      "wave": 3,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-ai-store-003-subscribe-use-item",
+      "module": "ai-store",
+      "user_visible_behavior": "用户订阅可用的 AI Store 项目，并在 AVA、Board 或团队场景中使用该能力。",
+      "source": "phases/requirements/ai-store/uc-ai-store-003-subscribe-use-item.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户订阅可用的 AI Store 项目，并在 AVA、Board 或团队场景中使」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-ai-store-002-create-update-item"
+      ],
+      "wave": 4,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-ai-store-004-favorite-item",
+      "module": "ai-store",
+      "user_visible_behavior": "用户在 AI Store 浏览项目时识别项目的喜欢数量和收藏状态，辅助判断是否查看详情或订阅使用。",
+      "source": "phases/requirements/ai-store/uc-ai-store-004-favorite-item.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户在 AI Store 浏览项目时识别项目的喜欢数量和收藏状态，辅助判断是否查」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-ai-store-003-subscribe-use-item"
+      ],
+      "wave": 5,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-ai-store-005-share-management",
+      "module": "ai-store",
+      "user_visible_behavior": "项目拥有者生成或关闭 AI Store 管理授权链接，让协作者进入授权管理视图；被授权协作者查看和管理自己被授权的项目。",
+      "source": "phases/requirements/ai-store/uc-ai-store-005-share-management.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「项目拥有者生成或关闭 AI Store 管理授权链接，让协作者进入授权管理视图；」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-ai-store-004-favorite-item"
+      ],
+      "wave": 6,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-ai-store-006-approval-featured",
+      "module": "ai-store",
+      "user_visible_behavior": "管理员审核团队或平台 AI Store 项目，并设置是否精选、发布或拒绝。",
+      "source": "phases/requirements/ai-store/uc-ai-store-006-approval-featured.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「管理员审核团队或平台 AI Store 项目，并设置是否精选、发布或拒绝。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-ai-store-005-share-management"
+      ],
+      "wave": 7,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-auth-001-email-register",
+      "module": "auth",
+      "user_visible_behavior": "用户使用邮箱、姓名和密码创建 BoardX 账号，以便进入产品并使用团队协作能力。",
+      "source": "phases/requirements/auth/uc-auth-001-email-register.md",
+      "verification": [],
+      "ui": "/(auth)/*",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：auth-register",
+      "depends_on": [],
+      "wave": 0,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-auth-002-email-login",
+      "module": "auth",
+      "user_visible_behavior": "用户使用邮箱和密码登录 BoardX，获得访问个人与团队资源的登录状态。",
+      "source": "phases/requirements/auth/uc-auth-002-email-login.md",
+      "verification": [],
+      "ui": "/(auth)/*",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：auth-login",
+      "depends_on": [
+        "uc-auth-001-email-register"
+      ],
+      "wave": 1,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-auth-003-social-login",
+      "module": "auth",
+      "user_visible_behavior": "用户通过第三方身份快速进入 BoardX，减少邮箱密码注册和记忆成本。",
+      "source": "phases/requirements/auth/uc-auth-003-social-login.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/auth-003-social-login.spec.ts"
+      ],
+      "ui": "/(auth)/*",
+      "status": "partial",
+      "gap": "有 e2e 佐证：auth-login",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户通过第三方身份快速进入 BoardX，减少邮箱密码注册和记忆成本。",
+        "[入口] 访问 /(auth)/*",
+        "[成功出口] 成功时，用户处于已登录状态。",
+        "[成功出口] 新用户成功时，系统生成用户记录。",
+        "[成功出口] 失败时，用户保持未登录状态。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-auth-004-forgot-reset-password",
+      "module": "auth",
+      "user_visible_behavior": "用户通过邮箱接收重置链接，设置新密码并恢复账号访问。",
+      "source": "phases/requirements/auth/uc-auth-004-forgot-reset-password.md",
+      "verification": [],
+      "ui": "/(auth)/*",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：auth-reset-password",
+      "depends_on": [
+        "uc-auth-003-social-login"
+      ],
+      "wave": 3,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-auth-005-confirm-email",
+      "module": "auth",
+      "user_visible_behavior": "用户通过邮箱确认入口完成账号邮箱验证或新邮箱确认。",
+      "source": "phases/requirements/auth/uc-auth-005-confirm-email.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/auth-005-confirm-email.spec.ts"
+      ],
+      "ui": "/(auth)/*",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-auth-004-forgot-reset-password"
+      ],
+      "wave": 4,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户通过邮箱确认入口完成账号邮箱验证或新邮箱确认。",
+        "[入口] 访问 /(auth)/*",
+        "[成功出口] 成功时，邮箱确认状态或新邮箱绑定状态被更新。",
+        "[成功出口] 失败时，账号邮箱状态保持不变。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-auth-006-change-password",
+      "module": "auth",
+      "user_visible_behavior": "用户在账号中心的 Security 分区修改账号密码，保证账号安全。",
+      "source": "phases/requirements/auth/uc-auth-006-change-password.md",
+      "verification": [],
+      "ui": "/(auth)/*",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：auth-change-password",
+      "depends_on": [
+        "uc-auth-005-confirm-email"
+      ],
+      "wave": 5,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-ava-001-start-chat",
+      "module": "ava",
+      "user_visible_behavior": "用户在 AVA 中创建或进入一个聊天会话，输入问题、选择上下文或工具，并获得可继续追问的 AI 回复。",
+      "source": "phases/requirements/ava/uc-ava-001-start-chat.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ava-001-start-chat.spec.ts"
+      ],
+      "ui": "/ava",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户在 AVA 中创建或进入一个聊天会话，输入问题、选择上下文或工具，并获得可继续追问的 AI 回复。",
+        "[入口] 访问 /ava",
+        "[成功出口] 成功时，系统生成或更新聊天线程。",
+        "[成功出口] 成功时，消息历史被保存并可再次加载。",
+        "[成功出口] 失败时，系统不应丢失用户当前输入内容。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-ava-002-manage-chat-threads",
+      "module": "ava",
+      "user_visible_behavior": "用户在 AVA 中查看、切换、搜索或管理自己的聊天线程，快速回到历史对话。",
+      "source": "phases/requirements/ava/uc-ava-002-manage-chat-threads.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户在 AVA 中查看、切换、搜索或管理自己的聊天线程，快速回到历史对话。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-ava-001-start-chat"
+      ],
+      "wave": 3,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-ava-003-edit-delete-message",
+      "module": "ava",
+      "user_visible_behavior": "用户修改已发送的问题，或删除自己可管理的消息，使对话内容保持准确。",
+      "source": "phases/requirements/ava/uc-ava-003-edit-delete-message.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户修改已发送的问题，或删除自己可管理的消息，使对话内容保持准确。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-ava-002-manage-chat-threads"
+      ],
+      "wave": 4,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-ava-004-share-chat",
+      "module": "ava",
+      "user_visible_behavior": "用户将一个 AVA 聊天线程生成可访问的分享链接，让他人只读查看对话内容。",
+      "source": "phases/requirements/ava/uc-ava-004-share-chat.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户将一个 AVA 聊天线程生成可访问的分享链接，让他人只读查看对话内容。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-ava-003-edit-delete-message"
+      ],
+      "wave": 5,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-ava-005-deep-research",
+      "module": "ava",
+      "user_visible_behavior": "用户通过 Deep Research 让 AVA 针对复杂问题收集需求、制定研究计划、执行研究并输出报告。",
+      "source": "phases/requirements/ava/uc-ava-005-deep-research.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户通过 Deep Research 让 AVA 针对复杂问题收集需求、制定研究」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-ava-004-share-chat"
+      ],
+      "wave": 6,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-ava-006-configure-chat-ai-settings",
+      "module": "ava",
+      "user_visible_behavior": "用户在发送消息前选择模型、Agent、工具或 AI 参数，使回复符合当前任务需要。",
+      "source": "phases/requirements/ava/uc-ava-006-configure-chat-ai-settings.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户在发送消息前选择模型、Agent、工具或 AI 参数，使回复符合当前任务需要」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-ava-005-deep-research"
+      ],
+      "wave": 7,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-ava-007-attach-files-to-chat",
+      "module": "ava",
+      "user_visible_behavior": "用户在 AVA 消息中上传或附加文件、图片、音频等材料，让 AI 基于附件上下文回复。",
+      "source": "phases/requirements/ava/uc-ava-007-attach-files-to-chat.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户在 AVA 消息中上传或附加文件、图片、音频等材料，让 AI 基于附件上下文」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-ava-006-configure-chat-ai-settings"
+      ],
+      "wave": 8,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-ava-008-use-voice-input",
+      "module": "ava",
+      "user_visible_behavior": "用户通过语音录入或实时转写向 AVA 提问，减少手动输入。",
+      "source": "phases/requirements/ava/uc-ava-008-use-voice-input.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户通过语音录入或实时转写向 AVA 提问，减少手动输入。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-ava-007-attach-files-to-chat"
+      ],
+      "wave": 9,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-ava-009-use-suggested-actions",
+      "module": "ava",
+      "user_visible_behavior": "用户通过系统推荐的问题、快捷动作或下一步建议，快速继续 AVA 对话。",
+      "source": "phases/requirements/ava/uc-ava-009-use-suggested-actions.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户通过系统推荐的问题、快捷动作或下一步建议，快速继续 AVA 对话。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-ava-008-use-voice-input"
+      ],
+      "wave": 10,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-ava-010-react-copy-and-use-message",
+      "module": "ava",
+      "user_visible_behavior": "用户对 AVA 回复执行复制、反馈、重新生成、发送到 Board、发送邮件或使用结果等操作。",
+      "source": "phases/requirements/ava/uc-ava-010-react-copy-and-use-message.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户对 AVA 回复执行复制、反馈、重新生成、发送到 Board、发送邮件或使用」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-ava-009-use-suggested-actions"
+      ],
+      "wave": 11,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-billing-001-upgrade-plan",
+      "module": "billing",
+      "user_visible_behavior": "用户在个人菜单或 AI 额度不足提示中打开计划弹窗，升级免费账号或管理已有订阅；在 Credit 计费模式下进入购买 Credit 流程。",
+      "source": "phases/requirements/billing/uc-billing-001-upgrade-plan.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/billing-001-upgrade-plan.spec.ts"
+      ],
+      "ui": "计划/购买 Credit 弹窗",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户在个人菜单或 AI 额度不足提示中打开计划弹窗，升级免费账号或管理已有订阅；在 Credit 计费模式下进入购买 Credit 流程。",
+        "[入口] 访问 计划/购买 Credit 弹窗",
+        "[成功出口] 用户被引导到外部订阅支付/管理页面，或进入 Credit 购买流程，或取消操作。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-billing-002-scan-payment",
+      "module": "billing",
+      "user_visible_behavior": "用户在个人 Pro 开通或 Credit 购买流程中生成二维码，并通过外部支付工具扫码付款。",
+      "source": "phases/requirements/billing/uc-billing-002-scan-payment.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户在个人 Pro 开通或 Credit 购买流程中生成二维码，并通过外部支付工」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-billing-001-upgrade-plan"
+      ],
+      "wave": 3,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-board-001-create-board",
+      "module": "board",
+      "user_visible_behavior": "让用户在有权限的空间内创建一个新白板。",
+      "source": "phases/requirements/board/uc-board-001-create-board.md",
+      "verification": [],
+      "ui": "/boards/[id] · core",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：board-create",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-board-002-open-collaborate-board",
+      "module": "board",
+      "user_visible_behavior": "让用户打开可访问白板并进入协作画布。",
+      "source": "phases/requirements/board/uc-board-002-open-collaborate-board.md",
+      "verification": [],
+      "ui": "/boards/[id] · core",
+      "status": "implemented",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-board-001-create-board"
+      ],
+      "wave": 3,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-board-003-list-search-recent-board",
+      "module": "board",
+      "user_visible_behavior": "让用户在列表中查找最近使用或目标白板。",
+      "source": "phases/requirements/board/uc-board-003-list-search-recent-board.md",
+      "verification": [],
+      "ui": "/boards/[id] · core",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：board-list-search",
+      "depends_on": [
+        "uc-board-002-open-collaborate-board"
+      ],
+      "wave": 4,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-board-004-favorite-board",
+      "module": "board",
+      "user_visible_behavior": "让用户把常用白板加入或移出收藏。",
+      "source": "phases/requirements/board/uc-board-004-favorite-board.md",
+      "verification": [],
+      "ui": "/boards/[id] · core",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：board-favorite",
+      "depends_on": [
+        "uc-board-003-list-search-recent-board"
+      ],
+      "wave": 5,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-board-005-update-board-metadata",
+      "module": "board",
+      "user_visible_behavior": "让有权限用户修改白板名称、封面、类别或描述等可见元信息。",
+      "source": "phases/requirements/board/uc-board-005-update-board-metadata.md",
+      "verification": [],
+      "ui": "/boards/[id] · core",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：board-metadata",
+      "depends_on": [
+        "uc-board-004-favorite-board"
+      ],
+      "wave": 6,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-board-006-move-board",
+      "module": "board",
+      "user_visible_behavior": "让有管理权限用户把白板移动到其他房间。",
+      "source": "phases/requirements/board/uc-board-006-move-board.md",
+      "verification": [],
+      "ui": "/boards/[id] · core",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：board-move",
+      "depends_on": [
+        "uc-board-005-update-board-metadata"
+      ],
+      "wave": 7,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-board-007-duplicate-board",
+      "module": "board",
+      "user_visible_behavior": "让用户基于已有白板创建副本。",
+      "source": "phases/requirements/board/uc-board-007-duplicate-board.md",
+      "verification": [],
+      "ui": "/boards/[id] · core",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：board-duplicate",
+      "depends_on": [
+        "uc-board-006-move-board"
+      ],
+      "wave": 8,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-board-008-delete-board",
+      "module": "board",
+      "user_visible_behavior": "让有权限用户删除不再需要的白板。",
+      "source": "phases/requirements/board/uc-board-008-delete-board.md",
+      "verification": [],
+      "ui": "/boards/[id] · core",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：board-delete",
+      "depends_on": [
+        "uc-board-007-duplicate-board"
+      ],
+      "wave": 9,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-board-access-001-manage-board-visibility",
+      "module": "board",
+      "user_visible_behavior": "让具备管理权限的用户设置谁可以访问 Board。",
+      "source": "phases/requirements/board/access/uc-board-access-001-manage-board-visibility.md",
+      "verification": [],
+      "ui": "/boards/[id] · access",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：board-visibility",
+      "depends_on": [
+        "uc-auth-002-email-login",
+        "uc-board-001-create-board",
+        "uc-canvas-002-create-edit-widgets"
+      ],
+      "wave": 4,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-board-access-002-join-public-board",
+      "module": "board",
+      "user_visible_behavior": "让用户通过公开链接进入允许访问的 Board，并在需要时加入协作身份。",
+      "source": "phases/requirements/board/access/uc-board-access-002-join-public-board.md",
+      "verification": [],
+      "ui": "/boards/[id] · access",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：board-public-access",
+      "depends_on": [
+        "uc-board-access-001-manage-board-visibility"
+      ],
+      "wave": 5,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-board-header-001-use-board-header",
+      "module": "board",
+      "user_visible_behavior": "让用户理解 Header 上可见状态并进入被授权的操作。",
+      "source": "phases/requirements/board/header/uc-board-header-001-use-board-header.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/board-header-001-use-board-header.spec.ts"
+      ],
+      "ui": "/boards/[id] · header",
+      "status": "partial",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-auth-002-email-login",
+        "uc-board-001-create-board",
+        "uc-canvas-002-create-edit-widgets"
+      ],
+      "wave": 4,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 让用户理解 Header 上可见状态并进入被授权的操作。",
+        "[入口] 访问 /boards/[id] · header",
+        "[成功出口] 1. Header、画布、侧栏、弹窗或协作者状态与用户操作结果一致。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-board-header-002-manage-board-title",
+      "module": "board",
+      "user_visible_behavior": "让有权限用户查看并修改白板标题。",
+      "source": "phases/requirements/board/header/uc-board-header-002-manage-board-title.md",
+      "verification": [],
+      "ui": "/boards/[id] · header",
+      "status": "implemented",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-board-header-001-use-board-header"
+      ],
+      "wave": 5,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-board-header-003-share-board",
+      "module": "board",
+      "user_visible_behavior": "让用户复制分享链接、查看二维码，并按权限调整访问范围。",
+      "source": "phases/requirements/board/header/uc-board-header-003-share-board.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/board-header-003-share-board.spec.ts"
+      ],
+      "ui": "/boards/[id] · header",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-board-header-002-manage-board-title"
+      ],
+      "wave": 6,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 让用户复制分享链接、查看二维码，并按权限调整访问范围。",
+        "[入口] 访问 /boards/[id] · header",
+        "[成功出口] 1. Header、画布、侧栏、弹窗或协作者状态与用户操作结果一致。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-board-header-004-use-timer",
+      "module": "board",
+      "user_visible_behavior": "让协作者启动、暂停、继续、停止或调整协作计时。",
+      "source": "phases/requirements/board/header/uc-board-header-004-use-timer.md",
+      "verification": [],
+      "ui": "/boards/[id] · header",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：board-timer",
+      "depends_on": [
+        "uc-board-header-003-share-board"
+      ],
+      "wave": 7,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-board-header-005-manage-slides",
+      "module": "board",
+      "user_visible_behavior": "让用户打开幻灯片侧栏，创建、排序、展示或导出幻灯片。",
+      "source": "phases/requirements/board/header/uc-board-header-005-manage-slides.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/board-header-005-manage-slides.spec.ts"
+      ],
+      "ui": "/boards/[id] · header",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-board-header-004-use-timer"
+      ],
+      "wave": 8,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 让用户打开幻灯片侧栏，创建、排序、展示或导出幻灯片。",
+        "[入口] 访问 /boards/[id] · header",
+        "[成功出口] 1. Header、画布、侧栏、弹窗或协作者状态与用户操作结果一致。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-board-header-006-use-voice-transcription",
+      "module": "board",
+      "user_visible_behavior": "让用户把语音录制转为白板文本。",
+      "source": "phases/requirements/board/header/uc-board-header-006-use-voice-transcription.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · header，执行「让用户把语音录制转为白板文本。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · header",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-board-header-005-manage-slides"
+      ],
+      "wave": 9,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-board-header-007-manage-board-backup",
+      "module": "board",
+      "user_visible_behavior": "让有权限用户创建备份并从备份恢复白板。",
+      "source": "phases/requirements/board/header/uc-board-header-007-manage-board-backup.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · header，执行「让有权限用户创建备份并从备份恢复白板。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · header",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-board-header-006-use-voice-transcription"
+      ],
+      "wave": 10,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-board-header-008-go-back-from-board",
+      "module": "board",
+      "user_visible_behavior": "让用户安全离开当前白板并回到房间或列表。",
+      "source": "phases/requirements/board/header/uc-board-header-008-go-back-from-board.md",
+      "verification": [],
+      "ui": "/boards/[id] · header",
+      "status": "implemented",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-board-header-007-manage-board-backup"
+      ],
+      "wave": 11,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-board-header-009-view-sync-status",
+      "module": "board",
+      "user_visible_behavior": "让用户知道白板当前是否仍在同步。",
+      "source": "phases/requirements/board/header/uc-board-header-009-view-sync-status.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/board-header-009-view-sync-status.spec.ts"
+      ],
+      "ui": "/boards/[id] · header",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-board-header-008-go-back-from-board"
+      ],
+      "wave": 12,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 让用户知道白板当前是否仍在同步。",
+        "[入口] 访问 /boards/[id] · header",
+        "[成功出口] 1. Header、画布、侧栏、弹窗或协作者状态与用户操作结果一致。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-board-header-010-undo-redo-board-operation",
+      "module": "board",
+      "user_visible_behavior": "让用户撤销或重做最近的白板编辑。",
+      "source": "phases/requirements/board/header/uc-board-header-010-undo-redo-board-operation.md",
+      "verification": [],
+      "ui": "/boards/[id] · header",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：canvas-undo-redo",
+      "depends_on": [
+        "uc-board-header-009-view-sync-status"
+      ],
+      "wave": 13,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-board-header-011-open-shortcuts-help",
+      "module": "board",
+      "user_visible_behavior": "让用户查看当前可用快捷键。",
+      "source": "phases/requirements/board/header/uc-board-header-011-open-shortcuts-help.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/board-header-011-open-shortcuts-help.spec.ts"
+      ],
+      "ui": "/boards/[id] · header",
+      "status": "missing",
+      "gap": "有 e2e 佐证：board-help-guide",
+      "depends_on": [
+        "uc-board-header-010-undo-redo-board-operation"
+      ],
+      "wave": 14,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 让用户查看当前可用快捷键。",
+        "[入口] 访问 /boards/[id] · header",
+        "[成功出口] 1. Header、画布、侧栏、弹窗或协作者状态与用户操作结果一致。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-board-header-012-manage-board-settings",
+      "module": "board",
+      "user_visible_behavior": "让用户调整白板设置和交互偏好。",
+      "source": "phases/requirements/board/header/uc-board-header-012-manage-board-settings.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · header，执行「让用户调整白板设置和交互偏好。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · header",
+      "status": "missing",
+      "gap": "有 e2e 佐证：board-settings",
+      "depends_on": [
+        "uc-board-header-011-open-shortcuts-help"
+      ],
+      "wave": 15,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-board-header-013-view-welcome-guide",
+      "module": "board",
+      "user_visible_behavior": "让新用户或访客查看白板引导信息。",
+      "source": "phases/requirements/board/header/uc-board-header-013-view-welcome-guide.md",
+      "verification": [],
+      "ui": "/boards/[id] · header",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：board-help-guide",
+      "depends_on": [
+        "uc-board-header-012-manage-board-settings"
+      ],
+      "wave": 16,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-board-header-014-view-board-statistics",
+      "module": "board",
+      "user_visible_behavior": "让用户查看与白板相关的状态或统计摘要。",
+      "source": "phases/requirements/board/header/uc-board-header-014-view-board-statistics.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/board-header-014-view-board-statistics.spec.ts"
+      ],
+      "ui": "/boards/[id] · header",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-board-header-013-view-welcome-guide"
+      ],
+      "wave": 17,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 让用户查看与白板相关的状态或统计摘要。",
+        "[入口] 访问 /boards/[id] · header",
+        "[成功出口] 1. Header、画布、侧栏、弹窗或协作者状态与用户操作结果一致。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-board-header-015-export-board-pdf",
+      "module": "board",
+      "user_visible_behavior": "让用户从幻灯片或导出入口获得 PDF 文件。",
+      "source": "phases/requirements/board/header/uc-board-header-015-export-board-pdf.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · header，执行「让用户从幻灯片或导出入口获得 PDF 文件。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · header",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-board-header-014-view-board-statistics"
+      ],
+      "wave": 18,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-board-menu-001-use-board-menu",
+      "module": "board",
+      "user_visible_behavior": "通过 Board Menu 选择工具并在画布创建或放置内容。",
+      "source": "phases/requirements/board/board-menu/uc-board-menu-001-use-board-menu.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/board-menu-001-use-board-menu.spec.ts"
+      ],
+      "ui": "/boards/[id] · board-menu",
+      "status": "partial",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-auth-002-email-login",
+        "uc-board-001-create-board",
+        "uc-canvas-002-create-edit-widgets"
+      ],
+      "wave": 4,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 通过 Board Menu 选择工具并在画布创建或放置内容。",
+        "[入口] 访问 /boards/[id] · board-menu",
+        "[成功出口] 1. 画布出现新内容、模式被切换，或系统明确告知该入口当前不可用。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-board-menu-002-create-sticky-note",
+      "module": "board",
+      "user_visible_behavior": "让用户从工具栏创建矩形、方形或圆形便利贴。",
+      "source": "phases/requirements/board/board-menu/uc-board-menu-002-create-sticky-note.md",
+      "verification": [],
+      "ui": "/boards/[id] · board-menu",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：board-create",
+      "depends_on": [
+        "uc-board-menu-001-use-board-menu"
+      ],
+      "wave": 5,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-board-menu-003-create-text",
+      "module": "board",
+      "user_visible_behavior": "让用户在画布上创建文本框或标题文本。",
+      "source": "phases/requirements/board/board-menu/uc-board-menu-003-create-text.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/board-menu-003-create-text.spec.ts"
+      ],
+      "ui": "/boards/[id] · board-menu",
+      "status": "missing",
+      "gap": "有 e2e 佐证：board-create",
+      "depends_on": [
+        "uc-board-menu-002-create-sticky-note"
+      ],
+      "wave": 6,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 让用户在画布上创建文本框或标题文本。",
+        "[入口] 访问 /boards/[id] · board-menu",
+        "[成功出口] 1. 画布出现新内容、模式被切换，或系统明确告知该入口当前不可用。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-board-menu-004-create-shape",
+      "module": "board",
+      "user_visible_behavior": "让用户创建矩形、圆形、三角形、菱形、圆角矩形、六边形等图形。",
+      "source": "phases/requirements/board/board-menu/uc-board-menu-004-create-shape.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · board-menu，执行「让用户创建矩形、圆形、三角形、菱形、圆角矩形、六边形等图形。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · board-menu",
+      "status": "missing",
+      "gap": "有 e2e 佐证：board-create",
+      "depends_on": [
+        "uc-board-menu-003-create-text"
+      ],
+      "wave": 7,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-board-menu-005-create-connector",
+      "module": "board",
+      "user_visible_behavior": "让用户创建直线、箭头或连接对象的线。",
+      "source": "phases/requirements/board/board-menu/uc-board-menu-005-create-connector.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · board-menu，执行「让用户创建直线、箭头或连接对象的线。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · board-menu",
+      "status": "missing",
+      "gap": "有 e2e 佐证：board-create",
+      "depends_on": [
+        "uc-board-menu-004-create-shape"
+      ],
+      "wave": 8,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-board-menu-006-draw-on-canvas",
+      "module": "board",
+      "user_visible_behavior": "让用户用画笔在画布上绘制自由路径。",
+      "source": "phases/requirements/board/board-menu/uc-board-menu-006-draw-on-canvas.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · board-menu，执行「让用户用画笔在画布上绘制自由路径。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · board-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-board-menu-005-create-connector"
+      ],
+      "wave": 9,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-board-menu-007-create-chart",
+      "module": "board",
+      "user_visible_behavior": "让用户在当前 Board 支持图表模式时，通过已注册的快捷键进入图表创建流程，并避免把未显示的 Board Menu 图表按钮当作当前入口。",
+      "source": "phases/requirements/board/board-menu/uc-board-menu-007-create-chart.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · board-menu，执行「让用户在当前 Board 支持图表模式时，通过已注册的快捷键进入图表创建流程，并」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · board-menu",
+      "status": "missing",
+      "gap": "有 e2e 佐证：board-create",
+      "depends_on": [
+        "uc-board-menu-006-draw-on-canvas"
+      ],
+      "wave": 10,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-board-menu-008-upload-file",
+      "module": "board",
+      "user_visible_behavior": "让用户把本地文件上传并放到画布。",
+      "source": "phases/requirements/board/board-menu/uc-board-menu-008-upload-file.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · board-menu，执行「让用户把本地文件上传并放到画布。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · board-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-board-menu-007-create-chart"
+      ],
+      "wave": 11,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-board-menu-009-use-resources-template",
+      "module": "board",
+      "user_visible_behavior": "让用户从资源、模板、图片、图标或贴画面板放置内容。",
+      "source": "phases/requirements/board/board-menu/uc-board-menu-009-use-resources-template.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · board-menu，执行「让用户从资源、模板、图片、图标或贴画面板放置内容。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · board-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-board-menu-008-upload-file"
+      ],
+      "wave": 12,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-board-menu-010-use-board-ai-assist",
+      "module": "board",
+      "user_visible_behavior": "让用户从 Board 画布中的 AI 浮动入口打开白板级 AI 对话能力。",
+      "source": "phases/requirements/board/board-menu/uc-board-menu-010-use-board-ai-assist.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · board-menu，执行「让用户从 Board 画布中的 AI 浮动入口打开白板级 AI 对话能力。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · board-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-board-menu-009-use-resources-template"
+      ],
+      "wave": 13,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-board-menu-011-create-link-widget",
+      "module": "board",
+      "user_visible_behavior": "让用户把 URL 放到画布成为链接组件。",
+      "source": "phases/requirements/board/board-menu/uc-board-menu-011-create-link-widget.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · board-menu，执行「让用户把 URL 放到画布成为链接组件。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · board-menu",
+      "status": "missing",
+      "gap": "有 e2e 佐证：board-create",
+      "depends_on": [
+        "uc-board-menu-010-use-board-ai-assist"
+      ],
+      "wave": 14,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-board-menu-012-erase-drawing-content",
+      "module": "board",
+      "user_visible_behavior": "让用户用橡皮擦删除可擦除的手绘笔迹。",
+      "source": "phases/requirements/board/board-menu/uc-board-menu-012-erase-drawing-content.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · board-menu，执行「让用户用橡皮擦删除可擦除的手绘笔迹。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · board-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-board-menu-011-create-link-widget"
+      ],
+      "wave": 15,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-canvas-006-zoom-and-minimap",
+      "module": "board",
+      "user_visible_behavior": "在 Board 画布中通过右下角缩放控制条缩放画布和适应内容。",
+      "source": "phases/requirements/board/canvas/uc-canvas-006-zoom-and-minimap.md",
+      "verification": [],
+      "ui": "/boards/[id] · canvas",
+      "status": "implemented",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-auth-002-email-login",
+        "uc-board-001-create-board",
+        "uc-canvas-002-create-edit-widgets"
+      ],
+      "wave": 4,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-canvas-007-use-alignment-guidelines",
+      "module": "board",
+      "user_visible_behavior": "在 Board 画布中完成使用对齐参考线。",
+      "source": "phases/requirements/board/canvas/uc-canvas-007-use-alignment-guidelines.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/canvas-007-use-alignment-guidelines.spec.ts"
+      ],
+      "ui": "/boards/[id] · canvas",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-canvas-006-zoom-and-minimap"
+      ],
+      "wave": 5,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 在 Board 画布中完成使用对齐参考线。",
+        "[入口] 访问 /boards/[id] · canvas",
+        "[成功出口] 1. 组件位置与用户释放位置或参考线吸附位置一致。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-canvas-008-keyboard-operate-widget",
+      "module": "board",
+      "user_visible_behavior": "在 Board 画布中完成用键盘操作组件。",
+      "source": "phases/requirements/board/canvas/uc-canvas-008-keyboard-operate-widget.md",
+      "verification": [],
+      "ui": "/boards/[id] · canvas",
+      "status": "implemented",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-canvas-007-use-alignment-guidelines"
+      ],
+      "wave": 6,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-canvas-009-select-and-multi-select-widget",
+      "module": "board",
+      "user_visible_behavior": "在 Board 画布中完成选择和多选组件。",
+      "source": "phases/requirements/board/canvas/uc-canvas-009-select-and-multi-select-widget.md",
+      "verification": [],
+      "ui": "/boards/[id] · canvas",
+      "status": "implemented",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-canvas-008-keyboard-operate-widget"
+      ],
+      "wave": 7,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-collab-001-yjs-realtime-sync",
+      "module": "board",
+      "user_visible_behavior": "在多人场景中实时同步协作内容。",
+      "source": "phases/requirements/board/collaboration/uc-collab-001-yjs-realtime-sync.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/collab-001-yjs-realtime-sync.spec.ts"
+      ],
+      "ui": "/boards/[id] · collaboration",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-auth-002-email-login",
+        "uc-board-001-create-board",
+        "uc-canvas-002-create-edit-widgets"
+      ],
+      "wave": 4,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 在多人场景中实时同步协作内容。",
+        "[入口] 访问 /boards/[id] · collaboration",
+        "[成功出口] 1. 用户能理解谁在线、谁在操作，以及自己的视角是否正在跟随他人。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-collab-002-show-online-users-cursors",
+      "module": "board",
+      "user_visible_behavior": "在多人场景中查看在线成员和光标。",
+      "source": "phases/requirements/board/collaboration/uc-collab-002-show-online-users-cursors.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · collaboration，执行「在多人场景中查看在线成员和光标。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · collaboration",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-collab-001-yjs-realtime-sync"
+      ],
+      "wave": 5,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-collab-003-follow-collaborator",
+      "module": "board",
+      "user_visible_behavior": "在多人场景中跟随协作者视角。",
+      "source": "phases/requirements/board/collaboration/uc-collab-003-follow-collaborator.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · collaboration，执行「在多人场景中跟随协作者视角。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · collaboration",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-collab-002-show-online-users-cursors"
+      ],
+      "wave": 6,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-context-menu-001-use-context-menu",
+      "module": "board",
+      "user_visible_behavior": "让用户通过右键菜单执行当前目标允许的快捷操作。",
+      "source": "phases/requirements/board/context-menu/uc-context-menu-001-use-context-menu.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/context-menu-001-use-context-menu.spec.ts"
+      ],
+      "ui": "/boards/[id] · context-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-auth-002-email-login",
+        "uc-board-001-create-board",
+        "uc-canvas-002-create-edit-widgets"
+      ],
+      "wave": 4,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 让用户通过右键菜单执行当前目标允许的快捷操作。",
+        "[入口] 访问 /boards/[id] · context-menu",
+        "[成功出口] 1. 所选操作完成，或系统明确告知该动作不可用。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-context-menu-002-copy-cut-paste",
+      "module": "board",
+      "user_visible_behavior": "让用户通过右键菜单复制、剪切或粘贴画布内容。",
+      "source": "phases/requirements/board/context-menu/uc-context-menu-002-copy-cut-paste.md",
+      "verification": [],
+      "ui": "/boards/[id] · context-menu",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：canvas-copy-paste",
+      "depends_on": [
+        "uc-context-menu-001-use-context-menu"
+      ],
+      "wave": 5,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-context-menu-003-arrange-layer",
+      "module": "board",
+      "user_visible_behavior": "让用户把对象移至上层、最前、下层或最后。",
+      "source": "phases/requirements/board/context-menu/uc-context-menu-003-arrange-layer.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/context-menu-003-arrange-layer.spec.ts"
+      ],
+      "ui": "/boards/[id] · context-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-context-menu-002-copy-cut-paste"
+      ],
+      "wave": 6,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 让用户把对象移至上层、最前、下层或最后。",
+        "[入口] 访问 /boards/[id] · context-menu",
+        "[成功出口] 1. 所选操作完成，或系统明确告知该动作不可用。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-context-menu-004-group-lock",
+      "module": "board",
+      "user_visible_behavior": "让用户管理多个对象的组合和锁定状态。",
+      "source": "phases/requirements/board/context-menu/uc-context-menu-004-group-lock.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · context-menu，执行「让用户管理多个对象的组合和锁定状态。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · context-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-context-menu-003-arrange-layer"
+      ],
+      "wave": 7,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-context-menu-005-export-selected-content",
+      "module": "board",
+      "user_visible_behavior": "让用户把选区或白板导出为图片/文件。",
+      "source": "phases/requirements/board/context-menu/uc-context-menu-005-export-selected-content.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · context-menu，执行「让用户把选区或白板导出为图片/文件。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · context-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-context-menu-004-group-lock"
+      ],
+      "wave": 8,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-context-menu-006-save-as-template",
+      "module": "board",
+      "user_visible_behavior": "让用户把选中对象保存为可复用模板。",
+      "source": "phases/requirements/board/context-menu/uc-context-menu-006-save-as-template.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · context-menu，执行「让用户把选中对象保存为可复用模板。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · context-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-context-menu-005-export-selected-content"
+      ],
+      "wave": 9,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-local-001-use-local-workspace",
+      "module": "board",
+      "user_visible_behavior": "在本地工作区中使用 Local Workspace。",
+      "source": "phases/requirements/board/local-workspace/uc-local-001-use-local-workspace.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/local-001-use-local-workspace.spec.ts"
+      ],
+      "ui": "/boards/[id] · local-workspace",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-auth-002-email-login",
+        "uc-board-001-create-board",
+        "uc-canvas-002-create-edit-widgets"
+      ],
+      "wave": 4,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 在本地工作区中使用 Local Workspace。",
+        "[入口] 访问 /boards/[id] · local-workspace",
+        "[成功出口] 1. 用户完成一次 Board Chat 或 Board Memory 操作，并知道结果是已保存为 Board Memory，还是仅显示在当前会话。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-local-002-use-local-model-chat-tools",
+      "module": "board",
+      "user_visible_behavior": "在 Board 中使用当前可见的 Board Chat；本地模型和本地工具只有入口明确展示时才纳入流程。",
+      "source": "phases/requirements/board/local-workspace/uc-local-002-use-local-model-chat-tools.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · local-workspace，执行「在 Board 中使用当前可见的 Board Chat；本地模型和本地工具只有入」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · local-workspace",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-local-001-use-local-workspace"
+      ],
+      "wave": 5,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-local-003-use-board-memory",
+      "module": "board",
+      "user_visible_behavior": "在本地工作区中使用 Board Memory。",
+      "source": "phases/requirements/board/local-workspace/uc-local-003-use-board-memory.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · local-workspace，执行「在本地工作区中使用 Board Memory。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · local-workspace",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-local-002-use-local-model-chat-tools"
+      ],
+      "wave": 6,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-widget-menu-001-use-widget-menu",
+      "module": "board",
+      "user_visible_behavior": "让用户在选中组件后使用适用的悬浮操作。",
+      "source": "phases/requirements/board/widget-menu/uc-widget-menu-001-use-widget-menu.md",
+      "verification": [],
+      "ui": "/boards/[id] · widget-menu",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：widget-menu-framework",
+      "depends_on": [
+        "uc-auth-002-email-login",
+        "uc-board-001-create-board",
+        "uc-canvas-002-create-edit-widgets"
+      ],
+      "wave": 4,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-widget-menu-002-style-widget",
+      "module": "board",
+      "user_visible_behavior": "让用户修改组件颜色、边框、背景、线宽或透明度等样式。",
+      "source": "phases/requirements/board/widget-menu/uc-widget-menu-002-style-widget.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/widget-menu-002-style-widget.spec.ts"
+      ],
+      "ui": "/boards/[id] · widget-menu",
+      "status": "partial",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widget-menu-001-use-widget-menu"
+      ],
+      "wave": 5,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 让用户修改组件颜色、边框、背景、线宽或透明度等样式。",
+        "[入口] 访问 /boards/[id] · widget-menu",
+        "[成功出口] 1. 组件属性、内容、锁定状态或文件处理结果与用户动作一致。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-widget-menu-003-lock-unlock-widget",
+      "module": "board",
+      "user_visible_behavior": "让用户防止组件被误移动、缩放、旋转或编辑。",
+      "source": "phases/requirements/board/widget-menu/uc-widget-menu-003-lock-unlock-widget.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · widget-menu，执行「让用户防止组件被误移动、缩放、旋转或编辑。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · widget-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widget-menu-002-style-widget"
+      ],
+      "wave": 6,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-widget-menu-004-crop-image",
+      "module": "board",
+      "user_visible_behavior": "让用户裁剪图片组件。",
+      "source": "phases/requirements/board/widget-menu/uc-widget-menu-004-crop-image.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · widget-menu，执行「让用户裁剪图片组件。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · widget-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widget-menu-003-lock-unlock-widget"
+      ],
+      "wave": 7,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-widget-menu-005-download-file-widget",
+      "module": "board",
+      "user_visible_behavior": "让用户下载画布上的文件类组件。",
+      "source": "phases/requirements/board/widget-menu/uc-widget-menu-005-download-file-widget.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · widget-menu，执行「让用户下载画布上的文件类组件。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · widget-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widget-menu-004-crop-image"
+      ],
+      "wave": 8,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-widget-menu-006-audio-to-text",
+      "module": "board",
+      "user_visible_behavior": "让用户把音频文件组件转换为文本。",
+      "source": "phases/requirements/board/widget-menu/uc-widget-menu-006-audio-to-text.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · widget-menu，执行「让用户把音频文件组件转换为文本。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · widget-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widget-menu-005-download-file-widget"
+      ],
+      "wave": 9,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-widget-menu-007-use-widget-ai-assist",
+      "module": "board",
+      "user_visible_behavior": "让用户基于选中组件使用 AI 能力。",
+      "source": "phases/requirements/board/widget-menu/uc-widget-menu-007-use-widget-ai-assist.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · widget-menu，执行「让用户基于选中组件使用 AI 能力。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · widget-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widget-menu-006-audio-to-text"
+      ],
+      "wave": 10,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-widget-menu-008-delete-widget",
+      "module": "board",
+      "user_visible_behavior": "让用户删除选中的一个或多个组件。",
+      "source": "phases/requirements/board/widget-menu/uc-widget-menu-008-delete-widget.md",
+      "verification": [],
+      "ui": "/boards/[id] · widget-menu",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：board-delete",
+      "depends_on": [
+        "uc-widget-menu-007-use-widget-ai-assist"
+      ],
+      "wave": 11,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-widget-menu-009-refresh-widget",
+      "module": "board",
+      "user_visible_behavior": "让用户刷新支持重新加载的组件内容。",
+      "source": "phases/requirements/board/widget-menu/uc-widget-menu-009-refresh-widget.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/widget-menu-009-refresh-widget.spec.ts"
+      ],
+      "ui": "/boards/[id] · widget-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widget-menu-008-delete-widget"
+      ],
+      "wave": 12,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 让用户刷新支持重新加载的组件内容。",
+        "[入口] 访问 /boards/[id] · widget-menu",
+        "[成功出口] 1. 组件属性、内容、锁定状态或文件处理结果与用户动作一致。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-widget-menu-010-apply-format",
+      "module": "board",
+      "user_visible_behavior": "让用户把当前格式应用到其他文本或便利贴。",
+      "source": "phases/requirements/board/widget-menu/uc-widget-menu-010-apply-format.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · widget-menu，执行「让用户把当前格式应用到其他文本或便利贴。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · widget-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widget-menu-009-refresh-widget"
+      ],
+      "wave": 13,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-widget-menu-011-align-selected-widgets",
+      "module": "board",
+      "user_visible_behavior": "让用户整理多选组件的位置。",
+      "source": "phases/requirements/board/widget-menu/uc-widget-menu-011-align-selected-widgets.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · widget-menu，执行「让用户整理多选组件的位置。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · widget-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widget-menu-010-apply-format"
+      ],
+      "wave": 14,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-widget-menu-012-edit-connector-style",
+      "module": "board",
+      "user_visible_behavior": "让用户调整连接线颜色、粗细、端点、路径和流程标识，让对象之间的关系表达更清楚。",
+      "source": "phases/requirements/board/widget-menu/uc-widget-menu-012-edit-connector-style.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · widget-menu，执行「让用户调整连接线颜色、粗细、端点、路径和流程标识，让对象之间的关系表达更清楚。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · widget-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widget-menu-011-align-selected-widgets"
+      ],
+      "wave": 15,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-widget-menu-013-edit-text-style",
+      "module": "board",
+      "user_visible_behavior": "让用户调整文本、标题或便利贴中的文字表现。",
+      "source": "phases/requirements/board/widget-menu/uc-widget-menu-013-edit-text-style.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · widget-menu，执行「让用户调整文本、标题或便利贴中的文字表现。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · widget-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widget-menu-012-edit-connector-style"
+      ],
+      "wave": 16,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-widget-menu-014-convert-text-to-sticky-notes",
+      "module": "board",
+      "user_visible_behavior": "让用户把文本内容拆分成多个便利贴。",
+      "source": "phases/requirements/board/widget-menu/uc-widget-menu-014-convert-text-to-sticky-notes.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · widget-menu，执行「让用户把文本内容拆分成多个便利贴。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · widget-menu",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widget-menu-013-edit-text-style"
+      ],
+      "wave": 17,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-widgets-001-use-canvasx-widgets",
+      "module": "board",
+      "user_visible_behavior": "用户在 Board 画布中创建、选择和管理 CanvasX 组件，并理解不同组件类型对应的可操作能力边界。",
+      "source": "phases/requirements/board/widgets/uc-widgets-001-use-canvasx-widgets.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/widgets-001-use-canvasx-widgets.spec.ts"
+      ],
+      "ui": "/boards/[id] · widgets",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-auth-002-email-login",
+        "uc-board-001-create-board",
+        "uc-canvas-002-create-edit-widgets"
+      ],
+      "wave": 4,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户在 Board 画布中创建、选择和管理 CanvasX 组件，并理解不同组件类型对应的可操作能力边界。",
+        "[入口] 访问 /boards/[id] · widgets",
+        "[成功出口] 1. 组件被创建、选中、移动、缩放、改样式、改内容、锁定、删除，或系统明确提示当前动作不可用。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-widgets-002-use-file-widgets",
+      "module": "board",
+      "user_visible_behavior": "用户在 Board 中添加文件，查看文件卡片信息，并对文件组件进行移动、下载、转写或删除等操作。",
+      "source": "phases/requirements/board/widgets/uc-widgets-002-use-file-widgets.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · widgets，执行「用户在 Board 中添加文件，查看文件卡片信息，并对文件组件进行移动、下载、转」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · widgets",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widgets-001-use-canvasx-widgets"
+      ],
+      "wave": 5,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-widgets-003-use-sticky-note-widget",
+      "module": "board",
+      "user_visible_behavior": "用户在 Board 中创建便利贴，用便利贴记录想法，并对便利贴的内容、外观、位置和状态进行编辑。",
+      "source": "phases/requirements/board/widgets/uc-widgets-003-use-sticky-note-widget.md",
+      "verification": [],
+      "ui": "/boards/[id] · widgets",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：widget-sticky",
+      "depends_on": [
+        "uc-widgets-002-use-file-widgets"
+      ],
+      "wave": 6,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-widgets-004-use-shape-widget",
+      "module": "board",
+      "user_visible_behavior": "用户在 Board 中创建形状，用形状承载结构化内容，并调整形状的文本、外观、大小和层级。",
+      "source": "phases/requirements/board/widgets/uc-widgets-004-use-shape-widget.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/widgets-004-use-shape-widget.spec.ts"
+      ],
+      "ui": "/boards/[id] · widgets",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widgets-003-use-sticky-note-widget"
+      ],
+      "wave": 7,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户在 Board 中创建形状，用形状承载结构化内容，并调整形状的文本、外观、大小和层级。",
+        "[入口] 访问 /boards/[id] · widgets",
+        "[成功出口] 1. 当前形状工具类型被切换，或形状被创建、修改、移动、缩放、连接、锁定、删除，或系统明确提示当前动作不可用。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-widgets-005-use-connector-widget",
+      "module": "board",
+      "user_visible_behavior": "用户在 Board 中用连接线表达对象之间的关系，并通过当前可见的线型、端点和路径样式让关系含义更清楚。",
+      "source": "phases/requirements/board/widgets/uc-widgets-005-use-connector-widget.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · widgets，执行「用户在 Board 中用连接线表达对象之间的关系，并通过当前可见的线型、端点和路」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · widgets",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widgets-004-use-shape-widget"
+      ],
+      "wave": 8,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-widgets-006-use-draw-widget",
+      "module": "board",
+      "user_visible_behavior": "用户在 Board 中通过手绘笔迹表达草图、标注或自由线条，并可调整笔迹样式和管理绘制内容。",
+      "source": "phases/requirements/board/widgets/uc-widgets-006-use-draw-widget.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · widgets，执行「用户在 Board 中通过手绘笔迹表达草图、标注或自由线条，并可调整笔迹样式和管」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · widgets",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widgets-005-use-connector-widget"
+      ],
+      "wave": 9,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-widgets-007-use-text-widget",
+      "module": "board",
+      "user_visible_behavior": "用户在 Board 中创建独立文本，用文本表达说明、标题或内容，并调整文本样式和位置。",
+      "source": "phases/requirements/board/widgets/uc-widgets-007-use-text-widget.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · widgets，执行「用户在 Board 中创建独立文本，用文本表达说明、标题或内容，并调整文本样式和」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · widgets",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widgets-006-use-draw-widget"
+      ],
+      "wave": 10,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-widgets-008-use-chart-widget",
+      "module": "board",
+      "user_visible_behavior": "用户在 Board 中查看或使用图表组件，并对图表组件进行选择、移动、锁定、删除和 AI 辅助等可用操作。",
+      "source": "phases/requirements/board/widgets/uc-widgets-008-use-chart-widget.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · widgets，执行「用户在 Board 中查看或使用图表组件，并对图表组件进行选择、移动、锁定、删除」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · widgets",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widgets-007-use-text-widget"
+      ],
+      "wave": 11,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-widgets-009-use-image-widget",
+      "module": "board",
+      "user_visible_behavior": "用户在 Board 中添加图片，并对图片的位置、尺寸、裁剪和状态进行管理。",
+      "source": "phases/requirements/board/widgets/uc-widgets-009-use-image-widget.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · widgets，执行「用户在 Board 中添加图片，并对图片的位置、尺寸、裁剪和状态进行管理。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · widgets",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widgets-008-use-chart-widget"
+      ],
+      "wave": 12,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-widgets-010-use-active-selection-widget",
+      "module": "board",
+      "user_visible_behavior": "用户在 Board 中同时选择多个组件，对它们执行批量移动、对齐、编组、锁定、删除等操作。",
+      "source": "phases/requirements/board/widgets/uc-widgets-010-use-active-selection-widget.md",
+      "verification": [
+        "[草稿] e2e：访问 /boards/[id] · widgets，执行「用户在 Board 中同时选择多个组件，对它们执行批量移动、对齐、编组、锁定、删」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/boards/[id] · widgets",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-widgets-009-use-image-widget"
+      ],
+      "wave": 13,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-canvas-001-pan-zoom-navigate",
+      "module": "canvas",
+      "user_visible_behavior": "在 Board 画布中完成平移、缩放和导航画布。",
+      "source": "phases/requirements/canvas/uc-canvas-001-pan-zoom-navigate.md",
+      "verification": [],
+      "ui": "Board 画布",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：canvas-pan-zoom",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-canvas-002-create-edit-widgets",
+      "module": "canvas",
+      "user_visible_behavior": "在 Board 画布中完成在画布创建和编辑组件。",
+      "source": "phases/requirements/canvas/uc-canvas-002-create-edit-widgets.md",
+      "verification": [],
+      "ui": "Board 画布",
+      "status": "implemented",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-canvas-001-pan-zoom-navigate"
+      ],
+      "wave": 3,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-canvas-003-copy-paste",
+      "module": "canvas",
+      "user_visible_behavior": "在 Board 画布中完成复制和粘贴画布内容。",
+      "source": "phases/requirements/canvas/uc-canvas-003-copy-paste.md",
+      "verification": [],
+      "ui": "Board 画布",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：canvas-copy-paste",
+      "depends_on": [
+        "uc-canvas-002-create-edit-widgets"
+      ],
+      "wave": 4,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-canvas-004-undo-redo",
+      "module": "canvas",
+      "user_visible_behavior": "在 Board 画布中完成撤销和重做画布操作。",
+      "source": "phases/requirements/canvas/uc-canvas-004-undo-redo.md",
+      "verification": [],
+      "ui": "Board 画布",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：canvas-undo-redo",
+      "depends_on": [
+        "uc-canvas-003-copy-paste"
+      ],
+      "wave": 5,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-canvas-005-realtime-collaboration",
+      "module": "canvas",
+      "user_visible_behavior": "在 Board 画布中完成画布实时协作。",
+      "source": "phases/requirements/canvas/uc-canvas-005-realtime-collaboration.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/canvas-005-realtime-collaboration.spec.ts"
+      ],
+      "ui": "Board 画布",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-canvas-004-undo-redo"
+      ],
+      "wave": 6,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 在 Board 画布中完成画布实时协作。",
+        "[入口] 访问 Board 画布",
+        "[成功出口] 1. 在线用户看到一致的 Board 内容、在线成员状态和同步状态；无权限用户不能通过协作通道写入内容。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-common-001-global-search",
+      "module": "common",
+      "user_visible_behavior": "用户通过全局搜索快速找到自己有权限访问的 Boards、Rooms、Templates、Agents、Tools 和 Threads。",
+      "source": "phases/requirements/common/uc-common-001-global-search.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/common-001-global-search.spec.ts"
+      ],
+      "ui": "全局(搜索/语言/主题/反馈)",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户通过全局搜索快速找到自己有权限访问的 Boards、Rooms、Templates、Agents、Tools 和 Threads。",
+        "[入口] 访问 全局(搜索/语言/主题/反馈)",
+        "[成功出口] 用户进入选中的资源页面，或保持在搜索面板查看结果。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-common-002-switch-language",
+      "module": "common",
+      "user_visible_behavior": "用户切换 BoardX 界面语言，以使用自己熟悉的语言浏览和操作系统。",
+      "source": "phases/requirements/common/uc-common-002-switch-language.md",
+      "verification": [
+        "[草稿] e2e：访问 全局(搜索/语言/主题/反馈)，执行「用户切换 BoardX 界面语言，以使用自己熟悉的语言浏览和操作系统。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "全局(搜索/语言/主题/反馈)",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-common-001-global-search"
+      ],
+      "wave": 3,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-common-003-switch-theme",
+      "module": "common",
+      "user_visible_behavior": "用户在浅色、深色或系统主题之间切换，以获得合适的视觉体验。",
+      "source": "phases/requirements/common/uc-common-003-switch-theme.md",
+      "verification": [],
+      "ui": "全局(搜索/语言/主题/反馈)",
+      "status": "implemented",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-common-002-switch-language"
+      ],
+      "wave": 4,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-common-004-submit-feedback-with-attachment",
+      "module": "common",
+      "user_visible_behavior": "用户提交产品反馈，并可附带截图或图片帮助说明问题。",
+      "source": "phases/requirements/common/uc-common-004-submit-feedback-with-attachment.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/common-004-submit-feedback-with-attachment.spec.ts"
+      ],
+      "ui": "全局(搜索/语言/主题/反馈)",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-common-003-switch-theme"
+      ],
+      "wave": 5,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户提交产品反馈，并可附带截图或图片帮助说明问题。",
+        "[入口] 访问 全局(搜索/语言/主题/反馈)",
+        "[成功出口] 反馈被记录，用户得到提交结果。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-credits-001-view-wallet",
+      "module": "credits",
+      "user_visible_behavior": "Team 管理角色查看团队 Credit 余额、购买记录和消耗记录；普通用户在用户菜单查看个人 Credit 余额入口。",
+      "source": "phases/requirements/credits/uc-credits-001-view-wallet.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/credits-001-view-wallet.spec.ts"
+      ],
+      "ui": "/credits",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] Team 管理角色查看团队 Credit 余额、购买记录和消耗记录；普通用户在用户菜单查看个人 Credit 余额入口。",
+        "[入口] 访问 /credits",
+        "[成功出口] 用户完成积分状态查看。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-credits-002-purchase-credits",
+      "module": "credits",
+      "user_visible_behavior": "用户购买个人或团队 Credit，以继续使用 AI 或其他消耗型能力。",
+      "source": "phases/requirements/credits/uc-credits-002-purchase-credits.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户购买个人或团队 Credit，以继续使用 AI 或其他消耗型能力。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-credits-001-view-wallet"
+      ],
+      "wave": 3,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-credits-003-view-credit-records",
+      "module": "credits",
+      "user_visible_behavior": "用户查看自己或团队被允许范围内的 Credit 余额和交易记录。",
+      "source": "phases/requirements/credits/uc-credits-003-view-credit-records.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户查看自己或团队被允许范围内的 Credit 余额和交易记录。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-credits-002-purchase-credits"
+      ],
+      "wave": 4,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-feedback-001-submit-feedback",
+      "module": "feedback",
+      "user_visible_behavior": "用户向 BoardX 提交问题或建议，并可附带图片帮助说明。",
+      "source": "phases/requirements/feedback/uc-feedback-001-submit-feedback.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/feedback-001-submit-feedback.spec.ts"
+      ],
+      "ui": "反馈入口弹窗",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户向 BoardX 提交问题或建议，并可附带图片帮助说明。",
+        "[入口] 访问 反馈入口弹窗",
+        "[成功出口] 反馈被提交。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-home-001-view-dashboard",
+      "module": "home-page",
+      "user_visible_behavior": "用户进入 Home Page 后，查看当前团队上下文下的 Agent 工作入口，并快速开始 AVA 相关工作。",
+      "source": "phases/requirements/home-page/uc-home-001-view-dashboard.md",
+      "verification": [],
+      "ui": "/ , /home, /recent",
+      "status": "implemented",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-home-002-open-recent-board",
+      "module": "home-page",
+      "user_visible_behavior": "用户从首页快速回到最近编辑或查看的白板。",
+      "source": "phases/requirements/home-page/uc-home-002-open-recent-board.md",
+      "verification": [],
+      "ui": "/ , /home, /recent",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：home-recent-board",
+      "depends_on": [
+        "uc-home-001-view-dashboard"
+      ],
+      "wave": 3,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-home-003-onboarding",
+      "module": "home-page",
+      "user_visible_behavior": "系统帮助用户理解 Home Page 当前可见入口，并引导其进入 Agent、AI Store 或 AVA 推荐功能。",
+      "source": "phases/requirements/home-page/uc-home-003-onboarding.md",
+      "verification": [],
+      "ui": "/ , /home, /recent",
+      "status": "implemented",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-home-002-open-recent-board"
+      ],
+      "wave": 4,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-home-004-view-recent-page",
+      "module": "home-page",
+      "user_visible_behavior": "用户查看最近访问或最近编辑的资源，并快速回到工作内容。",
+      "source": "phases/requirements/home-page/uc-home-004-view-recent-page.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/home-004-view-recent-page.spec.ts"
+      ],
+      "ui": "/ , /home, /recent",
+      "status": "partial",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-home-003-onboarding"
+      ],
+      "wave": 5,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户查看最近访问或最近编辑的资源，并快速回到工作内容。",
+        "[入口] 访问 / , /home, /recent",
+        "[成功出口] 用户继续停留在 Recent 页面，或通过其它导航进入工作内容。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-home-005-search-agents",
+      "module": "home-page",
+      "user_visible_behavior": "用户在 Home Page 中快速找到自己想使用的 Agent。",
+      "source": "phases/requirements/home-page/uc-home-005-search-agents.md",
+      "verification": [],
+      "ui": "/ , /home, /recent",
+      "status": "implemented",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-home-004-view-recent-page"
+      ],
+      "wave": 6,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-home-006-start-agent-quick-chat",
+      "module": "home-page",
+      "user_visible_behavior": "用户从 Home Page 选择一个可用 Agent，并立即进入带有该 Agent 上下文的 AVA 对话。",
+      "source": "phases/requirements/home-page/uc-home-006-start-agent-quick-chat.md",
+      "verification": [
+        "[草稿] e2e：访问 / , /home, /recent，执行「用户从 Home Page 选择一个可用 Agent，并立即进入带有该 Agen」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/ , /home, /recent",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-home-005-search-agents",
+        "uc-ava-001-start-chat"
+      ],
+      "wave": 7,
+      "parallel_safe": true,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-home-007-start-recommended-feature",
+      "module": "home-page",
+      "user_visible_behavior": "用户从 Home Page 直接启动 BoardX 推荐的高频 AI 工作流。",
+      "source": "phases/requirements/home-page/uc-home-007-start-recommended-feature.md",
+      "verification": [
+        "[草稿] e2e：访问 / , /home, /recent，执行「用户从 Home Page 直接启动 BoardX 推荐的高频 AI 工作流。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/ , /home, /recent",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-home-006-start-agent-quick-chat",
+        "uc-ava-001-start-chat"
+      ],
+      "wave": 8,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-home-008-continue-last-chat",
+      "module": "home-page",
+      "user_visible_behavior": "用户从 Home Page 快速回到上一次正在使用的 AVA 对话。",
+      "source": "phases/requirements/home-page/uc-home-008-continue-last-chat.md",
+      "verification": [
+        "[草稿] e2e：访问 / , /home, /recent，执行「用户从 Home Page 快速回到上一次正在使用的 AVA 对话。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/ , /home, /recent",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-home-007-start-recommended-feature",
+        "uc-ava-001-start-chat"
+      ],
+      "wave": 9,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-invite-001-accept-invite-link",
+      "module": "invite",
+      "user_visible_behavior": "用户打开团队或房间邀请链接，完成登录/注册后加入对应团队或房间。",
+      "source": "phases/requirements/invite/uc-invite-001-accept-invite-link.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/invite-001-accept-invite-link.spec.ts"
+      ],
+      "ui": "team 邀请 / 邀请链接",
+      "status": "partial",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户打开团队或房间邀请链接，完成登录/注册后加入对应团队或房间。",
+        "[入口] 访问 team 邀请 / 邀请链接",
+        "[成功出口] 成功时，用户加入邀请对应团队或房间；房间邀请成功后进入对应房间，团队邀请成功后进入该团队的房间列表。",
+        "[成功出口] 成功时，邀请对应团队写入当前团队上下文。",
+        "[成功出口] 失败时，用户不会被成功加入。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-invite-002-invite-friend",
+      "module": "invite",
+      "user_visible_behavior": "管理者通过复制邀请链接或输入邮箱，把他人邀请到团队或房间协作。",
+      "source": "phases/requirements/invite/uc-invite-002-invite-friend.md",
+      "verification": [
+        "[草稿] e2e：访问 team 邀请 / 邀请链接，执行「管理者通过复制邀请链接或输入邮箱，把他人邀请到团队或房间协作。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "team 邀请 / 邀请链接",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-invite-001-accept-invite-link"
+      ],
+      "wave": 3,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-kb-001-upload-file",
+      "module": "knowledge-base",
+      "user_visible_behavior": "用户上传文件到个人、团队、Agent 或 AI Tool 知识库，使后续 AI 能在对应上下文中使用。",
+      "source": "phases/requirements/knowledge-base/uc-kb-001-upload-file.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/kb-001-upload-file.spec.ts"
+      ],
+      "ui": "/knowledge-base",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户上传文件到个人、团队、Agent 或 AI Tool 知识库，使后续 AI 能在对应上下文中使用。",
+        "[入口] 访问 /knowledge-base",
+        "[成功出口] 成功时，文件元数据被保存，用户可在知识库列表查看文件。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-kb-002-list-download-file",
+      "module": "knowledge-base",
+      "user_visible_behavior": "用户查看已上传知识库文件，并下载或打开有权访问的文件。",
+      "source": "phases/requirements/knowledge-base/uc-kb-002-list-download-file.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户查看已上传知识库文件，并下载或打开有权访问的文件。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-kb-001-upload-file"
+      ],
+      "wave": 3,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-kb-003-delete-file",
+      "module": "knowledge-base",
+      "user_visible_behavior": "用户删除不再需要或错误上传的知识库文件，使其不再出现在当前知识库列表中。",
+      "source": "phases/requirements/knowledge-base/uc-kb-003-delete-file.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户删除不再需要或错误上传的知识库文件，使其不再出现在当前知识库列表中。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-kb-002-list-download-file"
+      ],
+      "wave": 4,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-kb-004-use-file-in-ai-context",
+      "module": "knowledge-base",
+      "user_visible_behavior": "用户让 AVA、Agent 或 AI Tool 在回答时使用当前上下文中已完成处理的知识库文件。",
+      "source": "phases/requirements/knowledge-base/uc-kb-004-use-file-in-ai-context.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户让 AVA、Agent 或 AI Tool 在回答时使用当前上下文中已完成处」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-kb-003-delete-file"
+      ],
+      "wave": 5,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-presentations-001-generate-presentation",
+      "module": "presentations",
+      "user_visible_behavior": "用户基于当前聊天、文件或输入说明生成演示文稿，并查看生成结果或生成进度。",
+      "source": "phases/requirements/presentations/uc-presentations-001-generate-presentation.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/presentations-001-generate-presentation.spec.ts"
+      ],
+      "ui": "Slides 侧栏",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户基于当前聊天、文件或输入说明生成演示文稿，并查看生成结果或生成进度。",
+        "[入口] 访问 Slides 侧栏",
+        "[成功出口] 演示文稿消息、PPTX 附件或演示任务被创建，并能在支持的入口中查看。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-presentations-002-revise-presentation",
+      "module": "presentations",
+      "user_visible_behavior": "用户对已生成演示文稿的方案或单页预览提出修改要求，得到更新后的方案或页面。",
+      "source": "phases/requirements/presentations/uc-presentations-002-revise-presentation.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户对已生成演示文稿的方案或单页预览提出修改要求，得到更新后的方案或页面。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-presentations-001-generate-presentation"
+      ],
+      "wave": 3,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-profile-001-view-profile",
+      "module": "profile",
+      "user_visible_behavior": "用户从用户菜单进入账号中心，查看自己的个人信息、安全设置和偏好设置入口。",
+      "source": "phases/requirements/profile/uc-profile-001-view-profile.md",
+      "verification": [],
+      "ui": "/account",
+      "status": "implemented",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-profile-002-edit-profile",
+      "module": "profile",
+      "user_visible_behavior": "用户在账号中心维护显示名和头像，并能从候选头像或 AI 生成头像中选择一个作为个人头像。",
+      "source": "phases/requirements/profile/uc-profile-002-edit-profile.md",
+      "verification": [],
+      "ui": "/account",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：profile-edit",
+      "depends_on": [
+        "uc-profile-001-view-profile"
+      ],
+      "wave": 3,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-profile-003-manage-user-menu",
+      "module": "profile",
+      "user_visible_behavior": "用户通过个人菜单进入账号中心的个人资料或设置分区，并继续访问个人知识库、邀请好友、升级或 Credit、语言、主题、退出登录等账号相关能力。",
+      "source": "phases/requirements/profile/uc-profile-003-manage-user-menu.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/profile-003-manage-user-menu.spec.ts"
+      ],
+      "ui": "/account",
+      "status": "partial",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-profile-002-edit-profile"
+      ],
+      "wave": 4,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户通过个人菜单进入账号中心的个人资料或设置分区，并继续访问个人知识库、邀请好友、升级或 Credit、语言、主题、退出登录等账号相关能力。",
+        "[入口] 访问 /account",
+        "[成功出口] 用户进入所选账号能力，或继续停留在当前页面。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-profile-004-manage-user-memory",
+      "module": "profile",
+      "user_visible_behavior": "用户维护个人 Memory，使 AI 在个人上下文中使用用户偏好、事实和长期信息。",
+      "source": "phases/requirements/profile/uc-profile-004-manage-user-memory.md",
+      "verification": [
+        "[草稿] e2e：访问 /account，执行「用户维护个人 Memory，使 AI 在个人上下文中使用用户偏好、事实和长期信息」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/account",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-profile-003-manage-user-menu"
+      ],
+      "wave": 5,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-profile-005-manage-account-settings",
+      "module": "profile",
+      "user_visible_behavior": "用户在账号中心维护自己的默认偏好，使后续使用 AVA、知识库、Room、Board 或其它工作区能力时采用合适的个人默认设置。",
+      "source": "phases/requirements/profile/uc-profile-005-manage-account-settings.md",
+      "verification": [],
+      "ui": "/account",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：profile-account-center",
+      "depends_on": [
+        "uc-profile-004-manage-user-memory"
+      ],
+      "wave": 6,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-room-001-create-room",
+      "module": "room",
+      "user_visible_behavior": "用户在当前团队下创建一个房间，用于集中管理白板、房间聊天、问卷、文件和 Studio 协作内容。",
+      "source": "phases/requirements/room/uc-room-001-create-room.md",
+      "verification": [],
+      "ui": "/rooms, /rooms/[id]/*",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：room-chat-create",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-room-002-view-search-room",
+      "module": "room",
+      "user_visible_behavior": "用户在当前团队下查看自己可访问的房间，搜索房间名称，打开房间或收藏房间。",
+      "source": "phases/requirements/room/uc-room-002-view-search-room.md",
+      "verification": [],
+      "ui": "/rooms, /rooms/[id]/*",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：room-view-search",
+      "depends_on": [
+        "uc-room-001-create-room"
+      ],
+      "wave": 3,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-room-003-invite-manage-room-members",
+      "module": "room",
+      "user_visible_behavior": "房间管理者邀请团队成员或外部邮箱进入房间，并维护房间成员角色。",
+      "source": "phases/requirements/room/uc-room-003-invite-manage-room-members.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/room-003-invite-manage-room-members.spec.ts"
+      ],
+      "ui": "/rooms, /rooms/[id]/*",
+      "status": "partial",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-room-002-view-search-room"
+      ],
+      "wave": 4,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 房间管理者邀请团队成员或外部邮箱进入房间，并维护房间成员角色。",
+        "[入口] 访问 /rooms, /rooms/[id]/*",
+        "[成功出口] 邀请成功时，已注册用户成为房间 member。",
+        "[成功出口] 未注册邮箱由系统邀请流程处理发送邀请。",
+        "[成功出口] 角色变更或移除成功时，成员列表更新。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-room-004-update-delete-room",
+      "module": "room",
+      "user_visible_behavior": "房间管理者修改房间名称，或删除不再需要的房间。",
+      "source": "phases/requirements/room/uc-room-004-update-delete-room.md",
+      "verification": [],
+      "ui": "/rooms, /rooms/[id]/*",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：room-chat-delete",
+      "depends_on": [
+        "uc-room-003-invite-manage-room-members"
+      ],
+      "wave": 5,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-room-005-manage-room-files",
+      "module": "room",
+      "user_visible_behavior": "用户在房间聊天工作区上传、查看、搜索、预览或删除与当前聊天线程关联的文件，辅助 AI 对话和协作。",
+      "source": "phases/requirements/room/uc-room-005-manage-room-files.md",
+      "verification": [
+        "[草稿] e2e：访问 /rooms, /rooms/[id]/*，执行「用户在房间聊天工作区上传、查看、搜索、预览或删除与当前聊天线程关联的文件，辅助 」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/rooms, /rooms/[id]/*",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-room-004-update-delete-room",
+        "uc-kb-001-upload-file"
+      ],
+      "wave": 6,
+      "parallel_safe": true,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-room-006-use-room-studio",
+      "module": "room",
+      "user_visible_behavior": "用户在房间聊天工作区打开右侧 Studio 面板，从房间文件生成音频概览、思维导图、报告、闪卡或数据表等 AI 产物。",
+      "source": "phases/requirements/room/uc-room-006-use-room-studio.md",
+      "verification": [
+        "[草稿] e2e：访问 /rooms, /rooms/[id]/*，执行「用户在房间聊天工作区打开右侧 Studio 面板，从房间文件生成音频概览、思维导」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/rooms, /rooms/[id]/*",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-room-005-manage-room-files",
+        "uc-studio-001-generate-artifact"
+      ],
+      "wave": 7,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-room-007-view-room-surveys",
+      "module": "room",
+      "user_visible_behavior": "用户在房间内进入 Survey 页签，查看团队问卷列表，必要时创建、编辑、分享、启停或查看结果。",
+      "source": "phases/requirements/room/uc-room-007-view-room-surveys.md",
+      "verification": [
+        "[草稿] e2e：访问 /rooms, /rooms/[id]/*，执行「用户在房间内进入 Survey 页签，查看团队问卷列表，必要时创建、编辑、分享、」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/rooms, /rooms/[id]/*",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-room-006-use-room-studio",
+        "uc-survey-001-create-survey"
+      ],
+      "wave": 8,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-room-chat-001-create-chat",
+      "module": "room-chat",
+      "user_visible_behavior": "用户在房间 Chat 页签中新建一个与当前房间关联的 AVA 聊天线程。",
+      "source": "phases/requirements/room-chat/uc-room-chat-001-create-chat.md",
+      "verification": [],
+      "ui": "/rooms/[id]/chats/*",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：room-chat-create",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-room-chat-002-list-open-chat",
+      "module": "room-chat",
+      "user_visible_behavior": "用户查看当前房间的聊天线程列表，并打开某个聊天继续协作。",
+      "source": "phases/requirements/room-chat/uc-room-chat-002-list-open-chat.md",
+      "verification": [],
+      "ui": "/rooms/[id]/chats/*",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：room-chat-list",
+      "depends_on": [
+        "uc-room-chat-001-create-chat"
+      ],
+      "wave": 3,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-room-chat-003-send-message",
+      "module": "room-chat",
+      "user_visible_behavior": "用户在房间聊天线程中向 AVA 发送消息，并在当前房间上下文中继续协作。",
+      "source": "phases/requirements/room-chat/uc-room-chat-003-send-message.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/room-chat-003-send-message.spec.ts"
+      ],
+      "ui": "/rooms/[id]/chats/*",
+      "status": "partial",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-room-chat-002-list-open-chat"
+      ],
+      "wave": 4,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户在房间聊天线程中向 AVA 发送消息，并在当前房间上下文中继续协作。",
+        "[入口] 访问 /rooms/[id]/chats/*",
+        "[成功出口] 用户消息出现在当前线程中。",
+        "[成功出口] AI 回复成功时，对话继续展示在当前线程。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-room-chat-004-delete-chat",
+      "module": "room-chat",
+      "user_visible_behavior": "用户从房间聊天列表删除自己可删除的聊天线程。",
+      "source": "phases/requirements/room-chat/uc-room-chat-004-delete-chat.md",
+      "verification": [],
+      "ui": "/rooms/[id]/chats/*",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：room-chat-delete",
+      "depends_on": [
+        "uc-room-chat-003-send-message"
+      ],
+      "wave": 5,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-share-001-view-shared-chat",
+      "module": "share",
+      "user_visible_behavior": "用户通过分享链接只读查看 AVA 或 Chat 对话内容。",
+      "source": "phases/requirements/share/uc-share-001-view-shared-chat.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/share-001-view-shared-chat.spec.ts"
+      ],
+      "ui": "/chatShare 分享面板",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户通过分享链接只读查看 AVA 或 Chat 对话内容。",
+        "[入口] 访问 /chatShare 分享面板",
+        "[成功出口] 用户完成公开对话查看，原始聊天线程不被修改。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-studio-001-generate-artifact",
+      "module": "studio",
+      "user_visible_behavior": "用户通过 Studio 生成音频概览、演示文稿或信息图，并在聊天中查看、播放、下载或预览生成结果。",
+      "source": "phases/requirements/studio/uc-studio-001-generate-artifact.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/studio-001-generate-artifact.spec.ts"
+      ],
+      "ui": "Room Studio 面板",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户通过 Studio 生成音频概览、演示文稿或信息图，并在聊天中查看、播放、下载或预览生成结果。",
+        "[入口] 访问 Room Studio 面板",
+        "[成功出口] Studio 制品或失败消息被写入当前聊天，用户可在聊天中查看结果。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-survey-001-create-survey",
+      "module": "survey",
+      "user_visible_behavior": "用户在当前团队中创建一份可分享给答题人的问卷。",
+      "source": "phases/requirements/survey/uc-survey-001-create-survey.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/survey-001-create-survey.spec.ts"
+      ],
+      "ui": "/surveys",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 用户在当前团队中创建一份可分享给答题人的问卷。",
+        "[入口] 访问 /surveys",
+        "[成功出口] 成功时，团队中新增一份问卷。",
+        "[成功出口] 成功时，问卷可在列表中展示。",
+        "[成功出口] 失败时，问卷不保存。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-survey-002-list-manage-surveys",
+      "module": "survey",
+      "user_visible_behavior": "用户查看当前团队中的问卷，打开结果、编辑、分享、预览答题页或删除问卷。",
+      "source": "phases/requirements/survey/uc-survey-002-list-manage-surveys.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户查看当前团队中的问卷，打开结果、编辑、分享、预览答题页或删除问卷。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-survey-001-create-survey"
+      ],
+      "wave": 3,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-survey-003-answer-survey",
+      "module": "survey",
+      "user_visible_behavior": "答题人打开公开答题链接，填写并提交问卷。",
+      "source": "phases/requirements/survey/uc-survey-003-answer-survey.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「答题人打开公开答题链接，填写并提交问卷。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-survey-002-list-manage-surveys"
+      ],
+      "wave": 4,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-survey-004-view-answers-report",
+      "module": "survey",
+      "user_visible_behavior": "用户查看问卷回收结果，生成分析报告，并导出报告。",
+      "source": "phases/requirements/survey/uc-survey-004-view-answers-report.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户查看问卷回收结果，生成分析报告，并导出报告。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-survey-003-answer-survey"
+      ],
+      "wave": 5,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-survey-005-manage-templates",
+      "module": "survey",
+      "user_visible_behavior": "用户使用内置模板或团队保存模板快速创建问卷，并把当前问卷保存为模板。",
+      "source": "phases/requirements/survey/uc-survey-005-manage-templates.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户使用内置模板或团队保存模板快速创建问卷，并把当前问卷保存为模板。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-survey-004-view-answers-report"
+      ],
+      "wave": 6,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-survey-006-publish-unpublish-survey",
+      "module": "survey",
+      "user_visible_behavior": "用户控制问卷是否接受公开答题。",
+      "source": "phases/requirements/survey/uc-survey-006-publish-unpublish-survey.md",
+      "verification": [
+        "[草稿] e2e：访问 ?，执行「用户控制问卷是否接受公开答题。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "?",
+      "status": "not_built",
+      "gap": "整模块缺失（设计有/实现无）",
+      "depends_on": [
+        "uc-survey-005-manage-templates"
+      ],
+      "wave": 7,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-team-001-create-team",
+      "module": "team",
+      "user_visible_behavior": "用户在 BoardX 中创建一个新的协作团队，后续可以在该团队下进入房间、成员管理、知识库、AI Store 和问卷等工作区。",
+      "source": "phases/requirements/team/uc-team-001-create-team.md",
+      "verification": [],
+      "ui": "/teams",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：team-create",
+      "depends_on": [
+        "uc-auth-002-email-login"
+      ],
+      "wave": 2,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-team-002-view-switch-team",
+      "module": "team",
+      "user_visible_behavior": "用户查看自己所在团队列表，并切换当前工作团队。",
+      "source": "phases/requirements/team/uc-team-002-view-switch-team.md",
+      "verification": [],
+      "ui": "/teams",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：team-switch",
+      "depends_on": [
+        "uc-team-001-create-team"
+      ],
+      "wave": 3,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-team-003-invite-members",
+      "module": "team",
+      "user_visible_behavior": "团队管理者通过邮箱邀请新成员，或复制团队邀请链接给外部用户加入团队。",
+      "source": "phases/requirements/team/uc-team-003-invite-members.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/team-003-invite-members.spec.ts"
+      ],
+      "ui": "/teams",
+      "status": "partial",
+      "gap": "有 e2e 佐证：team-invite-join",
+      "depends_on": [
+        "uc-team-002-view-switch-team"
+      ],
+      "wave": 4,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 团队管理者通过邮箱邀请新成员，或复制团队邀请链接给外部用户加入团队。",
+        "[入口] 访问 /teams",
+        "[成功出口] 已注册用户被加入团队成员列表。",
+        "[成功出口] 未注册邮箱由系统邀请流程处理发送邀请。",
+        "[成功出口] 复制链接成功时，邀请链接在用户剪贴板中。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-team-004-join-by-invite",
+      "module": "team",
+      "user_visible_behavior": "用户打开团队邀请链接，登录或注册后加入团队，并进入团队相关工作区。",
+      "source": "phases/requirements/team/uc-team-004-join-by-invite.md",
+      "verification": [],
+      "ui": "/teams",
+      "status": "implemented",
+      "gap": "有 e2e 佐证：team-invite-join",
+      "depends_on": [
+        "uc-team-003-invite-members"
+      ],
+      "wave": 5,
+      "parallel_safe": false,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-team-005-manage-members",
+      "module": "team",
+      "user_visible_behavior": "团队管理者查看成员、调整成员角色、移除成员、管理成员 token 使用权限，并查看成员 token 用量。",
+      "source": "phases/requirements/team/uc-team-005-manage-members.md",
+      "verification": [],
+      "ui": "/teams",
+      "status": "implemented",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-team-004-join-by-invite"
+      ],
+      "wave": 6,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-team-006-update-delete-team",
+      "module": "team",
+      "user_visible_behavior": "团队管理者维护团队名称、团队头像，或删除不再需要的团队。",
+      "source": "phases/requirements/team/uc-team-006-update-delete-team.md",
+      "verification": [],
+      "ui": "/teams",
+      "status": "implemented",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-team-005-manage-members"
+      ],
+      "wave": 7,
+      "parallel_safe": true,
+      "dev_status": "passing"
+    },
+    {
+      "id": "uc-team-007-manage-team-general-settings",
+      "module": "team",
+      "user_visible_behavior": "团队管理者从 Team 管理页集中查看和进入团队的基础管理入口。",
+      "source": "phases/requirements/team/uc-team-007-manage-team-general-settings.md",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/team-007-manage-team-general-settings.spec.ts"
+      ],
+      "ui": "/teams",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-team-006-update-delete-team"
+      ],
+      "wave": 8,
+      "parallel_safe": true,
+      "dev_status": "ready_for_dev",
+      "acceptance": [
+        "[目标] 团队管理者从 Team 管理页集中查看和进入团队的基础管理入口。",
+        "[入口] 访问 /teams",
+        "[成功出口] 用户进入选择的团队管理子页面。",
+        "[成功出口] 当前团队上下文保持不变。"
+      ],
+      "acceptance_note": "实现前契约(TDD)：与 feature 同时新建上述 e2e spec；spec 绿 = 完成。失败/权限分支也需覆盖。",
+      "ready": true
+    },
+    {
+      "id": "uc-team-008-view-team-home",
+      "module": "team",
+      "user_visible_behavior": "团队管理者进入 Team Home，了解当前团队管理入口与团队工作概况。",
+      "source": "phases/requirements/team/uc-team-008-view-team-home.md",
+      "verification": [
+        "[草稿] e2e：访问 /teams，执行「团队管理者进入 Team Home，了解当前团队管理入口与团队工作概况。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/teams",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-team-007-manage-team-general-settings"
+      ],
+      "wave": 9,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-team-009-manage-team-memory",
+      "module": "team",
+      "user_visible_behavior": "团队管理者进入团队 Memory 页面，维护团队在 AI 协作中可复用的上下文信息。",
+      "source": "phases/requirements/team/uc-team-009-manage-team-memory.md",
+      "verification": [
+        "[草稿] e2e：访问 /teams，执行「团队管理者进入团队 Memory 页面，维护团队在 AI 协作中可复用的上下文信」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/teams",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-team-008-view-team-home"
+      ],
+      "wave": 10,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    },
+    {
+      "id": "uc-team-010-view-team-ai-store",
+      "module": "team",
+      "user_visible_behavior": "用户在当前团队上下文中查看可探索、已订阅或待审批的 AI Store 内容。",
+      "source": "phases/requirements/team/uc-team-010-view-team-ai-store.md",
+      "verification": [
+        "[草稿] e2e：访问 /teams，执行「用户在当前团队上下文中查看可探索、已订阅或待审批的 AI Store 内容。」，断言可见结果（verification-writer 细化为可运行命令）"
+      ],
+      "ui": "/teams",
+      "status": "missing",
+      "gap": "外壳已建，但该能力无 e2e/路由佐证（疑缺）",
+      "depends_on": [
+        "uc-team-009-manage-team-memory",
+        "uc-ai-store-001-browse-items"
+      ],
+      "wave": 11,
+      "parallel_safe": false,
+      "dev_status": "blocked"
+    }
+  ],
+  "workflow": {
+    "schema": "depends_on/wave/parallel_safe/dev_status 已补；verification 多为草稿待 verification-writer 细化",
+    "dev_status_legend": {
+      "passing": "已实现",
+      "ready_for_dev": "依赖已满足，可开发",
+      "blocked": "等依赖完成"
+    }
+  }
+}
