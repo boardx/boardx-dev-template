@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { canManageTeam } from "@repo/auth";
-import { getMembership, renameTeam, deleteTeam } from "@repo/data";
+import { getMembership, renameTeam, updateTeam, deleteTeam } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -14,10 +14,14 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (!canManageTeam(await getMembership(teamId, user.id))) {
       return NextResponse.json({ error: "无权限" }, { status: 403 });
     }
-    const body = (await req.json()) as { name?: unknown };
+    const body = (await req.json()) as { name?: unknown; description?: unknown };
     const name = String(body.name ?? "").trim();
     if (!name) return NextResponse.json({ errors: { name: "团队名不能为空" } }, { status: 400 });
-    await renameTeam(teamId, name);
+    if ("description" in body) {
+      await updateTeam(teamId, { name, description: String(body.description ?? "").trim() });
+    } else {
+      await renameTeam(teamId, name);
+    }
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
