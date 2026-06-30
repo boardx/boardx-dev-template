@@ -198,16 +198,16 @@
       "area": "widgets",
       "title": "Widget 框架与能力边界 + Widget Menu 悬浮操作",
       "user_visible_behavior": "各类型组件（便利贴/形状/文本/连接线/手绘/图片/文件/图表）统一为 widget 模型，按类型暴露可操作能力；选中组件后在其附近浮出 Widget Menu，仅展示该类型适用的操作项（样式/锁定/删除/对齐/AI 等），多选时展示交集操作。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "06",
+      "owner": "claude",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/widget-menu-framework.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F10.verify.log @ 2026-06-30T05:01:44.780Z",
       "notes": "uc-widgets-001 + uc-widget-menu-001。定义 widget type 注册表与能力矩阵（驱动 Widget Menu 项的可见性），是 F11-F22 的地基。",
       "source_use_cases": [
         "phases/requirements/board/widgets/uc-widgets-001-use-canvasx-widgets.md",

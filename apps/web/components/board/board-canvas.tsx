@@ -139,6 +139,11 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     setSelected(new Set(created.map((c) => c.id)));
   }, [canEdit, boardId, load]);
 
+  function duplicateSelected() {
+    clipboard.current = items.filter((it) => selected.has(it.id));
+    void pasteClipboard();
+  }
+
   const deleteSelected = useCallback(async () => {
     if (!canEdit || selected.size === 0) return;
     const removed = items.filter((it) => selected.has(it.id));
@@ -228,6 +233,23 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           <span data-testid="selection-count" className="text-xs text-muted-foreground">
             已选 {selected.size}
           </span>
+        </div>
+      )}
+
+      {/* Widget Menu：选中驱动的悬浮操作（F10）。能力随 widget type 矩阵扩展（F17 样式/F18 锁定…）。
+          当前 item 均为便签，动作统一；多选展示交集动作。 */}
+      {canEdit && selected.size > 0 && (
+        <div
+          data-testid="widget-menu"
+          className="absolute left-1/2 top-2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-lg"
+        >
+          <span className="px-1 text-xs text-muted-foreground">{selected.size} 项</span>
+          <Button data-testid="wm-duplicate" size="sm" variant="ghost" onClick={duplicateSelected}>
+            复制
+          </Button>
+          <Button data-testid="wm-delete" size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteSelected()}>
+            删除
+          </Button>
         </div>
       )}
 
