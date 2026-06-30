@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { BoardTimer } from "@/components/board/timer";
 import { BoardHelpGuide } from "@/components/board/help-guide";
+import { BoardShortcutsHelp } from "@/components/board/shortcuts-help";
 import { BoardCanvas } from "@/components/board/board-canvas";
 
 interface Board {
@@ -207,6 +208,8 @@ export default function BoardPage() {
           </Badge>
         </div>
         <div className="flex items-center gap-2">
+          {/* 快捷键帮助（所有可访问者可见，只读不改权限） */}
+          <BoardShortcutsHelp />
           {/* 协作计时器（所有协作者可用） */}
           <BoardTimer />
           {/* 分享（所有可访问者可见：复制链接 + 可见性说明 + 二维码占位） */}
