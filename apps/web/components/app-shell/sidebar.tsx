@@ -1,16 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import {
-  Home,
-  Users,
-  DoorOpen,
-  User,
-  ChevronLeft,
-  ChevronRight,
-  LogOut,
-} from "lucide-react";
+import { Home, LayoutGrid, User, Users, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SidebarUser {
@@ -19,28 +11,41 @@ interface SidebarUser {
   avatar: string | null;
 }
 
-const NAV_ITEMS = [
-  { label: "主页", icon: Home, href: "/" },
-  { label: "团队", icon: Users, href: "/teams" },
-  { label: "房间", icon: DoorOpen, href: "/rooms" },
-  { label: "账号", icon: User, href: "/account" },
+// 设计 rail：保留现有导航目的地（Home / Rooms 进 rail，Teams / Profile 进账号菜单）。
+// 见 docs/design/boardx-prototype-mapping.md §2.2。
+const RAIL_ITEMS = [
+  { label: "Home", icon: Home, href: "/" },
+  { label: "Rooms", icon: LayoutGrid, href: "/rooms" },
 ] as const;
 
 export function Sidebar({ user }: { user: SidebarUser | null }) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [dark, setDark] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("sidebar-collapsed");
-    if (stored !== null) setCollapsed(stored === "true");
+    setDark(document.documentElement.classList.contains("dark"));
     setHydrated(true);
   }, []);
 
-  function toggle() {
-    const next = !collapsed;
-    setCollapsed(next);
-    localStorage.setItem("sidebar-collapsed", String(next));
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onDown(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [menuOpen]);
+
+  function toggleTheme() {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
   }
 
   async function logout() {
@@ -53,145 +58,124 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   return (
     <aside
       aria-label="主导航"
-      className={cn(
-        "hidden md:flex flex-col border-r border-border bg-background",
-        "transition-all duration-300 ease-in-out shrink-0",
-        collapsed ? "w-16" : "w-60",
-      )}
+      className="hidden w-15 shrink-0 flex-col items-center gap-1.5 border-r border-border bg-surface-1 py-3 md:flex"
     >
-      {/* Logo + collapse toggle */}
-      <div
-        className={cn(
-          "flex h-14 items-center border-b border-border px-3",
-          collapsed ? "justify-center" : "justify-between",
-        )}
+      {/* Logo */}
+      <Link
+        href="/"
+        aria-label="BoardX 首页"
+        className="mb-2 flex h-8.5 w-8.5 items-center justify-center rounded-9 bg-primary text-base font-extrabold text-primary-foreground transition-colors hover:bg-surface-dark"
       >
-        {!collapsed && (
-          <span className="text-base font-bold text-foreground tracking-tight select-none">
-            BoardX
-          </span>
-        )}
-        <button
-          onClick={toggle}
-          aria-label={collapsed ? "展开侧边栏" : "收起侧边栏"}
-          className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-md",
-            "text-muted-foreground transition-colors duration-200",
-            "hover:bg-accent hover:text-accent-foreground",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          )}
-        >
-          {hydrated && collapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </button>
-      </div>
+        X
+      </Link>
 
-      {/* Nav items */}
-      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2">
-        {NAV_ITEMS.map(({ label, icon: Icon, href }) => {
-          const isActive =
-            href === "/" ? pathname === "/" : pathname.startsWith(href);
-          return (
-            <div key={href} className="group/nav relative">
-              <Link
-                href={href}
-                className={cn(
-                  "flex h-10 items-center gap-3 rounded-md px-3",
-                  "text-sm font-medium transition-colors duration-200",
-                  isActive
-                    ? "bg-accent text-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                  collapsed && "justify-center px-0",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-                )}
-              >
-                <Icon className="h-5 w-5 shrink-0" />
-                {!collapsed && (
-                  <>
-                    <span className="truncate">{label}</span>
-                    {isActive && (
-                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
-                    )}
-                  </>
-                )}
-              </Link>
-              {/* CSS tooltip — collapsed only */}
-              {collapsed && (
-                <span
-                  className={cn(
-                    "pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2",
-                    "whitespace-nowrap rounded-md bg-foreground px-2 py-1",
-                    "text-xs text-background shadow-md",
-                    "opacity-0 transition-opacity duration-150 group-hover/nav:opacity-100",
-                  )}
-                >
-                  {label}
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </nav>
-
-      {/* Footer — user info + logout */}
-      <div className="border-t border-border p-2">
-        {user ? (
-          <div
-            className={cn(
-              "flex items-center gap-2 rounded-md p-2",
-              collapsed && "justify-center",
-            )}
-          >
-            {/* Avatar initial */}
-            <div
-              aria-hidden
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold"
-            >
-              {initial}
-            </div>
-            {!collapsed && (
-              <>
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-xs font-medium text-foreground">
-                    {user.displayName}
-                  </span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {user.email}
-                  </span>
-                </div>
-                <button
-                  onClick={logout}
-                  aria-label="退出登录"
-                  className={cn(
-                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-md",
-                    "text-muted-foreground transition-colors duration-200",
-                    "hover:bg-destructive/10 hover:text-destructive",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  )}
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
-              </>
-            )}
-          </div>
-        ) : (
+      {/* Rail nav */}
+      {RAIL_ITEMS.map(({ label, icon: Icon, href }) => {
+        const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+        return (
           <Link
-            href="/login"
+            key={href}
+            href={href}
+            title={label}
             className={cn(
-              "flex h-10 items-center justify-center gap-2 rounded-md px-3",
-              "text-sm text-muted-foreground transition-colors duration-200",
-              "hover:bg-accent hover:text-foreground",
+              "flex h-11.5 w-11.5 flex-col items-center justify-center gap-0.5 rounded-10 transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              active
+                ? "bg-muted text-foreground"
+                : "text-placeholder hover:bg-muted hover:text-foreground",
             )}
           >
-            <User className="h-5 w-5" />
-            {!collapsed && <span>登录</span>}
+            <Icon className="h-[1.0625rem] w-[1.0625rem]" strokeWidth={2} />
+            <span className="text-9 font-semibold leading-none">{label}</span>
           </Link>
+        );
+      })}
+
+      <div className="flex-1" />
+
+      {/* Theme toggle */}
+      <button
+        onClick={toggleTheme}
+        title="主题"
+        aria-label="切换主题"
+        className="flex h-10 w-10 items-center justify-center rounded-9 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {hydrated && dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      </button>
+
+      {/* Account */}
+      <div className="relative" ref={menuRef}>
+        <button
+          onClick={() => setMenuOpen((v) => !v)}
+          title="账号"
+          aria-label="账号菜单"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          className="flex h-7.5 w-7.5 items-center justify-center rounded-full bg-foreground text-11 font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {initial}
+        </button>
+
+        {menuOpen && (
+          <div
+            role="menu"
+            className="absolute bottom-0 left-[3.25rem] z-50 w-62 rounded-12 border border-border bg-popover p-2 shadow-[0_16px_40px_rgba(0,0,0,0.18)]"
+          >
+            {/* identity */}
+            <div className="flex items-center gap-2.5 px-2 pb-2.5 pt-2">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground text-13 font-semibold text-background">
+                {initial}
+              </div>
+              <div className="min-w-0">
+                <div className="text-13 font-semibold text-foreground">
+                  {user?.displayName ?? "访客"}
+                </div>
+                <div className="truncate text-11 text-placeholder">
+                  {user?.email ?? "未登录"}
+                </div>
+              </div>
+            </div>
+
+            <MenuLink href="/account" onClick={() => setMenuOpen(false)}>
+              <User className="h-3.5 w-3.5" /> Profile
+            </MenuLink>
+            <MenuLink href="/teams" onClick={() => setMenuOpen(false)}>
+              <Users className="h-3.5 w-3.5" /> Manage team
+            </MenuLink>
+
+            <div className="my-1.5 mx-1.5 h-px bg-muted" />
+
+            <button
+              role="menuitem"
+              onClick={logout}
+              className="flex w-full items-center gap-2 rounded-7 px-2.5 py-2 text-13 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <LogOut className="h-3.5 w-3.5" /> Log out
+            </button>
+          </div>
         )}
       </div>
     </aside>
+  );
+}
+
+function MenuLink({
+  href,
+  onClick,
+  children,
+}: {
+  href: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      role="menuitem"
+      href={href}
+      onClick={onClick}
+      className="flex items-center gap-2 rounded-7 px-2.5 py-2 text-13 text-foreground transition-colors hover:bg-muted"
+    >
+      {children}
+    </Link>
   );
 }

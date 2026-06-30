@@ -14,12 +14,13 @@ interface Item {
   color?: string | null;
 }
 
-// 便签外观色 token → 样式（F11）。null/未知 → 默认 amber。
+// 便签外观色 token → 样式（F11）。对齐 BoardX Prototype 柔彩便签（#fff7cc/#dbe8f7/#d8efe6/#fde2dd）。
+// null/未知 → 默认 amber(=tag-yellow)。色 key 为持久化数据，勿改（见 widget-sticky e2e）。
 const COLORS: Record<string, string> = {
-  amber: "bg-amber-100 border-amber-300 text-amber-900",
-  blue: "bg-sky-100 border-sky-300 text-sky-900",
-  green: "bg-emerald-100 border-emerald-300 text-emerald-900",
-  pink: "bg-pink-100 border-pink-300 text-pink-900",
+  amber: "bg-tag-yellow border-border-strong text-foreground",
+  blue: "bg-tag-blue border-border-strong text-foreground",
+  green: "bg-tag-green border-border-strong text-foreground",
+  pink: "bg-tag-pink border-border-strong text-foreground",
 };
 const COLOR_TOKENS = Object.keys(COLORS);
 const colorClass = (c?: string | null) => COLORS[c ?? "amber"] ?? COLORS.amber;
@@ -51,6 +52,16 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const clipboard = useRef<Item[]>([]); // 应用内剪贴板（F08）
   const undoStack = useRef<Op[]>([]); // F09
   const redoStack = useRef<Op[]>([]);
+  // 鼠标拖拽移动便签（指针驱动；记录可逆 move 命令）。
+  const dragRef = useRef<{
+    startX: number;
+    startY: number;
+    scale: number;
+    ids: string[];
+    init: Record<string, { x: number; y: number }>;
+    moved: boolean;
+  } | null>(null);
+  const justDraggedRef = useRef(false); // 拖拽刚结束 → 抑制随后的 click 选择翻转
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/boards/${boardId}/items`);
@@ -96,6 +107,68 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   function recordOp(op: Op) {
     undoStack.current.push(op);
     redoStack.current = [];
+  }
+
+  // ── 鼠标拖拽移动便签（F06 增强：指针驱动 + 视口缩放感知 + 可逆）──────────────
+  // 读取画布表面的缩放（item 坐标系在缩放后的 surface 内，故屏幕位移需 ÷scale）。
+  function readScale(): number {
+    const surf = document.querySelector('[data-testid="canvas-surface"]') as HTMLElement | null;
+    if (!surf) return 1;
+    const t = getComputedStyle(surf).transform;
+    const m = t && t !== "none" ? t.match(/matrix\(([^)]+)\)/) : null;
+    const first = m?.[1]?.split(",")[0];
+    const a = first ? parseFloat(first) : 1;
+    return a || 1;
+  }
+
+  const onDragMove = useCallback((e: MouseEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    if (!d.moved && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > 3) d.moved = true;
+    if (!d.moved) return;
+    const dx = (e.clientX - d.startX) / d.scale;
+    const dy = (e.clientY - d.startY) / d.scale;
+    setItems((prev) =>
+      prev.map((it) => {
+        const p = d.init[it.id];
+        return p ? { ...it, x: p.x + dx, y: p.y + dy } : it;
+      }),
+    );
+  }, []);
+
+  const onDragUp = useCallback(
+    async (e: MouseEvent) => {
+      window.removeEventListener("mousemove", onDragMove);
+      window.removeEventListener("mouseup", onDragUp);
+      const d = dragRef.current;
+      dragRef.current = null;
+      if (!d || !d.moved) return;
+      justDraggedRef.current = true;
+      const dx = (e.clientX - d.startX) / d.scale;
+      const dy = (e.clientY - d.startY) / d.scale;
+      const moves: Move[] = d.ids.map((id) => {
+        const f = d.init[id] ?? { x: 0, y: 0 };
+        return { id, fromX: f.x, fromY: f.y, toX: f.x + dx, toY: f.y + dy };
+      });
+      setSelected(new Set(d.ids));
+      undoStack.current.push({ kind: "move", moves });
+      redoStack.current = [];
+      await apiMove(moves, false);
+    },
+    [apiMove, onDragMove],
+  );
+
+  function startNoteDrag(e: React.MouseEvent, item: Item) {
+    e.stopPropagation(); // 阻止视口平移在便签上启动
+    if (!canEdit || editingId === item.id) return;
+    const ids = selected.has(item.id) ? items.filter((it) => selected.has(it.id)).map((it) => it.id) : [item.id];
+    const init: Record<string, { x: number; y: number }> = {};
+    items.forEach((it) => {
+      if (ids.includes(it.id)) init[it.id] = { x: it.x, y: it.y };
+    });
+    dragRef.current = { startX: e.clientX, startY: e.clientY, scale: readScale(), ids, init, moved: false };
+    window.addEventListener("mousemove", onDragMove);
+    window.addEventListener("mouseup", onDragUp);
   }
 
   async function addNote() {
@@ -309,9 +382,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               key={it.id}
               data-testid={`item-${it.id}`}
               data-selected={selected.has(it.id) ? "true" : "false"}
-              onMouseDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => startNoteDrag(e, it)}
               onClick={(e) => {
                 e.stopPropagation();
+                if (justDraggedRef.current) {
+                  justDraggedRef.current = false;
+                  return;
+                }
                 selectItem(it.id, e.shiftKey);
               }}
               onDoubleClick={(e) => {
@@ -320,7 +397,8 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               }}
               style={{ left: it.x, top: it.y, width: it.w, height: it.h }}
               className={
-                "absolute flex items-center justify-center rounded-md border p-2 text-xs shadow-sm " +
+                "absolute flex items-center justify-center rounded-7 border p-2 text-xs shadow-sm " +
+                (canEdit && editingId !== it.id ? "cursor-grab active:cursor-grabbing " : "") +
                 colorClass(it.color) +
                 (selected.has(it.id) ? " ring-2 ring-primary ring-offset-1" : "")
               }

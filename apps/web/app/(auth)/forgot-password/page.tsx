@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AuthShell, AuthLabel } from "@/components/auth/auth-shell";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -29,27 +30,64 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">找回密码</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {sent ? (
-            <p data-testid="sent" className="text-sm text-success">若该邮箱已注册，重置链接已发送，请前往邮箱查看。</p>
-          ) : (
-            <form onSubmit={submit} className="flex flex-col gap-3">
-              <Input data-testid="email" type="email" placeholder="邮箱 Email"
-                value={email} onChange={(e) => setEmail(e.target.value)} />
-              {error && <p data-testid="err-form" className="text-sm text-destructive">{error}</p>}
-              <Button data-testid="submit" type="submit" disabled={submitting} className="w-full">
-                {submitting ? "发送中…" : "发送重置链接"}
-              </Button>
-            </form>
+    <AuthShell>
+      <Link
+        href="/login"
+        className="mb-4.5 inline-block text-xs text-muted-foreground transition-colors hover:text-foreground"
+      >
+        ‹ Back to sign in
+      </Link>
+      <h2 className="text-22 font-bold tracking-tight">Reset your password</h2>
+
+      {sent ? (
+        <div
+          data-testid="sent"
+          className="mt-4.5 flex items-start gap-3 rounded-xl border border-border p-4.5"
+        >
+          <div className="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-full bg-primary text-sm text-primary-foreground">
+            ✓
+          </div>
+          <div>
+            <div className="text-13 font-semibold">Check your email</div>
+            <div className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+              If that email is registered, a reset link has been sent. It expires
+              in 30 minutes.
+            </div>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="flex flex-col">
+          <p className="mt-1.5 text-13 text-muted-foreground">
+            Enter your email and we&apos;ll send a reset link.
+          </p>
+          <div className="mt-5.5">
+            <AuthLabel htmlFor="email">Email</AuthLabel>
+          </div>
+          <Input
+            id="email"
+            data-testid="email"
+            type="email"
+            placeholder="you@company.com"
+            className="mt-1.5"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          {error && (
+            <p data-testid="err-form" className="mt-3 text-13 text-destructive">
+              {error}
+            </p>
           )}
-          <a href="/login" className="mt-4 block text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline">返回登录</a>
-        </CardContent>
-      </Card>
-    </main>
+          <Button
+            data-testid="submit"
+            type="submit"
+            disabled={submitting}
+            size="lg"
+            className="mt-4 w-full"
+          >
+            {submitting ? "Sending…" : "Send reset link"}
+          </Button>
+        </form>
+      )}
+    </AuthShell>
   );
 }
