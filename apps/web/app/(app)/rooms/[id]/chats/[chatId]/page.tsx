@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,12 @@ import { Input } from "@/components/ui/input";
 interface Chat {
   id: number | string;
   name: string;
+}
+
+interface Message {
+  id: number;
+  role: "user" | "assistant";
+  content: string;
 }
 
 export default function RoomChatDetailPage() {
@@ -19,22 +25,64 @@ export default function RoomChatDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const endRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     let alive = true;
     (async () => {
       const res = await fetch(`/api/rooms/${roomId}/chats/${chatId}`);
       if (!alive) return;
+      if (res.status === 401) return router.replace("/login");
       if (res.status === 403) return setError("你不是该房间成员"), setLoading(false);
       if (res.status === 404) return setError("线程不存在"), setLoading(false);
       const d = await res.json();
       setChat(d.chat);
       setCanEdit(!!d.canEdit);
+      const mres = await fetch(`/api/rooms/${roomId}/chats/${chatId}/messages`);
+      if (!alive) return;
+      if (mres.ok) {
+        const md = await mres.json();
+        setMessages(md.messages ?? []);
+      }
       setLoading(false);
     })();
     return () => {
       alive = false;
     };
   }, [roomId, chatId]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [messages.length]);
+
+  async function send() {
+    const text = draft.trim();
+    if (!text || sending) return;
+    setSending(true);
+    setSendError("");
+    try {
+      const res = await fetch(`/api/rooms/${roomId}/chats/${chatId}/messages`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) {
+        setSendError("发送失败，请重试");
+        return;
+      }
+      const d = await res.json();
+      setMessages((prev) => [...prev, d.userMessage, d.replyMessage]);
+      setDraft("");
+    } catch {
+      setSendError("发送失败，请重试");
+    } finally {
+      setSending(false);
+    }
+  }
 
   if (loading) {
     return <div data-testid="loading" className="h-[80vh] animate-pulse bg-muted/40" />;
@@ -79,19 +127,58 @@ export default function RoomChatDetailPage() {
           <p className="text-xs text-muted-foreground">文件能力将在 p10 接入</p>
         </aside>
 
-        {/* 中：AVA 聊天（p9） */}
+        {/* 中：AVA 聊天 */}
         <section data-testid="pane-chat" className="flex flex-col">
-          <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-            AVA 对话区（消息与回复将在 p9 接入）
+          <div data-testid="message-list" className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+            {messages.length === 0 ? (
+              <div data-testid="empty" className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+                还没有消息，向 AVA 发送第一条消息开始协作。
+              </div>
+            ) : (
+              messages.map((m) => (
+                <div
+                  key={m.id}
+                  data-testid={m.role === "user" ? "msg-user" : "msg-ava"}
+                  className={
+                    m.role === "user"
+                      ? "max-w-[80%] self-end rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground"
+                      : "max-w-[80%] self-start rounded-lg bg-muted px-3 py-2 text-sm text-foreground"
+                  }
+                >
+                  {m.content}
+                </div>
+              ))
+            )}
+            <div ref={endRef} />
           </div>
           <div className="border-t p-3">
             {canEdit ? (
-              <div className="flex gap-2">
-                <Input data-testid="chat-input" placeholder="输入消息…（发送将在 p9 接入）" disabled />
-                <Button data-testid="chat-send" size="sm" disabled title="AVA 发送将在 p9 接入">
-                  发送
-                </Button>
-              </div>
+              <>
+                <form
+                  className="flex gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void send();
+                  }}
+                >
+                  <Input
+                    data-testid="chat-input"
+                    aria-label="聊天输入"
+                    placeholder="输入消息…"
+                    value={draft}
+                    disabled={sending}
+                    onChange={(e) => setDraft(e.target.value)}
+                  />
+                  <Button data-testid="chat-send" type="submit" size="sm" disabled={sending || !draft.trim()}>
+                    {sending ? "发送中…" : "发送"}
+                  </Button>
+                </form>
+                {sendError && (
+                  <p role="alert" data-testid="send-error" className="mt-2 text-xs text-destructive">
+                    {sendError}
+                  </p>
+                )}
+              </>
             ) : (
               <p data-testid="readonly-input" className="text-center text-xs text-muted-foreground">
                 他人创建的线程，当前为只读
