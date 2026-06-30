@@ -1,24 +1,10 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-function Field({
-  id, label, error, ...inputProps
-}: { id: string; label: string; error?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <Input id={id} aria-describedby={error ? `${id}-err` : undefined} {...inputProps} />
-      {error && (
-        <p id={`${id}-err`} role="alert" className="text-xs text-destructive">{error}</p>
-      )}
-    </div>
-  );
-}
+import { AuthShell, AuthLabel, AuthDivider } from "@/components/auth/auth-shell";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -46,65 +32,86 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md shadow-md">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold tracking-tight">登录 BoardX</CardTitle>
-          <p className="text-sm text-muted-foreground">欢迎回来，请输入你的账号信息。</p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={submit} className="flex flex-col gap-4">
-            <Field
-              id="email"
-              label="邮箱"
-              data-testid="email"
-              type="email"
-              placeholder="you@example.com"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-            />
-            <Field
-              id="password"
-              label="密码"
-              data-testid="password"
-              type="password"
-              placeholder="••••••••"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-            />
+    <AuthShell>
+      <h2 className="text-22 font-bold tracking-tight">Sign in</h2>
+      <p className="mt-1.5 text-13 text-muted-foreground">
+        Welcome back. Enter your details.
+      </p>
 
-            {error && (
-              <p role="alert" data-testid="err-form" className="text-sm text-destructive">
-                {error}
-              </p>
-            )}
+      <form onSubmit={submit} className="mt-6 flex flex-col">
+        <AuthLabel htmlFor="email">Email</AuthLabel>
+        <Input
+          id="email"
+          data-testid="email"
+          type="email"
+          autoComplete="email"
+          placeholder="you@company.com"
+          className="mt-1.5"
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
+        />
 
-            <Button
-              data-testid="submit"
-              type="submit"
-              disabled={submitting}
-              className="w-full transition-all duration-200 active:scale-[0.98]"
-            >
-              {submitting ? "提交中…" : "登录"}
-            </Button>
-          </form>
+        <div className="mt-3.5">
+          <AuthLabel htmlFor="password">Password</AuthLabel>
+        </div>
+        <Input
+          id="password"
+          data-testid="password"
+          type="password"
+          autoComplete="current-password"
+          placeholder="••••••••"
+          className="mt-1.5"
+          value={form.password}
+          onChange={(e) => setForm({ ...form, password: e.target.value })}
+        />
 
-          <div className="mt-4 flex justify-between text-sm">
-            <a
-              href="/forgot-password"
-              className="text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-            >
-              忘记密码？
-            </a>
-            <a
-              href="/register"
-              className="text-foreground underline-offset-4 transition-colors hover:underline"
-            >
-              创建账号
-            </a>
-          </div>
-        </CardContent>
-      </Card>
-    </main>
+        <div className="mt-2 text-right">
+          <Link
+            href="/forgot-password"
+            className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Forgot password?
+          </Link>
+        </div>
+
+        {error && (
+          <p
+            role="alert"
+            data-testid="err-form"
+            className="mt-3 text-13 text-destructive"
+          >
+            {error}
+          </p>
+        )}
+
+        <Button
+          data-testid="submit"
+          type="submit"
+          disabled={submitting}
+          size="lg"
+          className="mt-3.5 w-full"
+        >
+          {submitting ? "Signing in…" : "Sign in"}
+        </Button>
+      </form>
+
+      <AuthDivider />
+
+      <div className="flex gap-2.5">
+        <Button variant="outline" type="button" className="flex-1 text-13 font-normal">
+          Google
+        </Button>
+        <Button variant="outline" type="button" className="flex-1 text-13 font-normal">
+          WeChat
+        </Button>
+      </div>
+
+      <p className="mt-5 text-center text-13 text-muted-foreground">
+        No account?{" "}
+        <Link href="/register" className="font-semibold text-foreground transition-colors hover:text-muted-foreground">
+          Sign up
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

@@ -34,6 +34,11 @@ if docker info >/dev/null 2>&1; then
   done
   $PNPM --filter @repo/data run migrate
   $PNPM --filter @repo/web exec playwright install chromium >/dev/null 2>&1 || true
+  # 清 :3000 上残留的 next dev + 旧 .next：反复本地 verify 会留僵尸 server 抢端口，
+  # 或上次 `next build` 的生产 .next 与 next dev 冲突，导致全量 e2e 从中途整片崩溃
+  # （quality-document #8）。Playwright reuseExistingServer 会复用僵尸 server 跑到旧代码。
+  lsof -ti tcp:3000 2>/dev/null | xargs kill -9 2>/dev/null || true
+  rm -rf apps/web/.next
   $PNPM --filter @repo/web exec playwright test
   echo "✓ 全量 e2e 通过"
 else

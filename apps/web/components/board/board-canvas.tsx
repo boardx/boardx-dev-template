@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CanvasViewport } from "@/components/board/canvas-viewport";
 
@@ -11,16 +11,57 @@ interface Item {
   h: number;
   text: string;
   type: string;
+  color?: string | null;
 }
+
+// 便签外观色 token → 样式（F11）。对齐 BoardX Prototype 柔彩便签（#fff7cc/#dbe8f7/#d8efe6/#fde2dd）。
+// null/未知 → 默认 amber(=tag-yellow)。色 key 为持久化数据，勿改（见 widget-sticky e2e）。
+const COLORS: Record<string, string> = {
+  amber: "bg-tag-yellow border-border-strong text-foreground",
+  blue: "bg-tag-blue border-border-strong text-foreground",
+  green: "bg-tag-green border-border-strong text-foreground",
+  pink: "bg-tag-pink border-border-strong text-foreground",
+};
+const COLOR_TOKENS = Object.keys(COLORS);
+const colorClass = (c?: string | null) => COLORS[c ?? "amber"] ?? COLORS.amber;
+
+interface Move {
+  id: string;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+}
+
+// 可逆操作（F09 撤销/重做命令栈）。add 与 delete 互为逆；move 记录 from/to。
+type Op =
+  | { kind: "add"; items: Item[] }
+  | { kind: "delete"; items: Item[] }
+  | { kind: "move"; moves: Move[] };
 
 const NUDGE = 1;
 const BIG_NUDGE = 10;
 
-// 画布：渲染 board-keyed items（ADR-0002）+ 选择/多选/键盘操作（P6 F06）。
+// 画布：渲染 board-keyed items（ADR-0002）+ 选择/键盘（F06）+ 复制粘贴（F08）+ 撤销/重做（F09）。
 // 视口（平移/缩放/小地图）复用 CanvasViewport（F05）。marquee 框选 deferred（与拖拽平移冲突，留后续）。
 export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [editingId, setEditingId] = useState<string | null>(null); // F11 文本编辑中的便签
+  const placeN = useRef(0); // 同步自增放置位，避免连点时读到尚未刷新的 items.length 造成重叠
+  const clipboard = useRef<Item[]>([]); // 应用内剪贴板（F08）
+  const undoStack = useRef<Op[]>([]); // F09
+  const redoStack = useRef<Op[]>([]);
+  // 鼠标拖拽移动便签（指针驱动；记录可逆 move 命令）。
+  const dragRef = useRef<{
+    startX: number;
+    startY: number;
+    scale: number;
+    ids: string[];
+    init: Record<string, { x: number; y: number }>;
+    moved: boolean;
+  } | null>(null);
+  const justDraggedRef = useRef(false); // 拖拽刚结束 → 抑制随后的 click 选择翻转
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/boards/${boardId}/items`);
@@ -31,9 +72,108 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     void load();
   }, [load]);
 
+  // ── 落库原子操作（撤销/重做与正常操作共用）──────────────────────────────
+  const apiDelete = useCallback(
+    (ids: string[]) => Promise.all(ids.map((id) => fetch(`/api/board-items/${id}`, { method: "DELETE" }))),
+    []
+  );
+  const apiRestore = useCallback(
+    (its: Item[]) =>
+      Promise.all(
+        its.map((it) =>
+          fetch(`/api/boards/${boardId}/items`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ id: it.id, type: it.type, x: it.x, y: it.y, w: it.w, h: it.h, text: it.text }),
+          })
+        )
+      ),
+    [boardId]
+  );
+  const apiMove = useCallback(
+    (moves: Move[], useFrom: boolean) =>
+      Promise.all(
+        moves.map((m) =>
+          fetch(`/api/board-items/${m.id}`, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(useFrom ? { x: m.fromX, y: m.fromY } : { x: m.toX, y: m.toY }),
+          })
+        )
+      ),
+    []
+  );
+
+  function recordOp(op: Op) {
+    undoStack.current.push(op);
+    redoStack.current = [];
+  }
+
+  // ── 鼠标拖拽移动便签（F06 增强：指针驱动 + 视口缩放感知 + 可逆）──────────────
+  // 读取画布表面的缩放（item 坐标系在缩放后的 surface 内，故屏幕位移需 ÷scale）。
+  function readScale(): number {
+    const surf = document.querySelector('[data-testid="canvas-surface"]') as HTMLElement | null;
+    if (!surf) return 1;
+    const t = getComputedStyle(surf).transform;
+    const m = t && t !== "none" ? t.match(/matrix\(([^)]+)\)/) : null;
+    const first = m?.[1]?.split(",")[0];
+    const a = first ? parseFloat(first) : 1;
+    return a || 1;
+  }
+
+  const onDragMove = useCallback((e: MouseEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    if (!d.moved && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > 3) d.moved = true;
+    if (!d.moved) return;
+    const dx = (e.clientX - d.startX) / d.scale;
+    const dy = (e.clientY - d.startY) / d.scale;
+    setItems((prev) =>
+      prev.map((it) => {
+        const p = d.init[it.id];
+        return p ? { ...it, x: p.x + dx, y: p.y + dy } : it;
+      }),
+    );
+  }, []);
+
+  const onDragUp = useCallback(
+    async (e: MouseEvent) => {
+      window.removeEventListener("mousemove", onDragMove);
+      window.removeEventListener("mouseup", onDragUp);
+      const d = dragRef.current;
+      dragRef.current = null;
+      if (!d || !d.moved) return;
+      justDraggedRef.current = true;
+      const dx = (e.clientX - d.startX) / d.scale;
+      const dy = (e.clientY - d.startY) / d.scale;
+      const moves: Move[] = d.ids.map((id) => {
+        const f = d.init[id] ?? { x: 0, y: 0 };
+        return { id, fromX: f.x, fromY: f.y, toX: f.x + dx, toY: f.y + dy };
+      });
+      setSelected(new Set(d.ids));
+      undoStack.current.push({ kind: "move", moves });
+      redoStack.current = [];
+      await apiMove(moves, false);
+    },
+    [apiMove, onDragMove],
+  );
+
+  function startNoteDrag(e: React.MouseEvent, item: Item) {
+    e.stopPropagation(); // 阻止视口平移在便签上启动
+    if (!canEdit || editingId === item.id) return;
+    const ids = selected.has(item.id) ? items.filter((it) => selected.has(it.id)).map((it) => it.id) : [item.id];
+    const init: Record<string, { x: number; y: number }> = {};
+    items.forEach((it) => {
+      if (ids.includes(it.id)) init[it.id] = { x: it.x, y: it.y };
+    });
+    dragRef.current = { startX: e.clientX, startY: e.clientY, scale: readScale(), ids, init, moved: false };
+    window.addEventListener("mousemove", onDragMove);
+    window.addEventListener("mouseup", onDragUp);
+  }
+
   async function addNote() {
-    const x = 80 + items.length * 30;
-    const y = 80 + items.length * 24;
+    const x = 40;
+    const y = 40 + placeN.current++ * 130;
     const res = await fetch(`/api/boards/${boardId}/items`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -41,6 +181,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     });
     if (res.status === 201) {
       const { item } = await res.json();
+      recordOp({ kind: "add", items: [item] });
       await load();
       setSelected(new Set([item.id]));
     }
@@ -59,38 +200,122 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     async (dx: number, dy: number) => {
       if (!canEdit || selected.size === 0) return;
       const targets = items.filter((it) => selected.has(it.id));
+      const moves: Move[] = targets.map((it) => ({ id: it.id, fromX: it.x, fromY: it.y, toX: it.x + dx, toY: it.y + dy }));
       setItems((prev) => prev.map((it) => (selected.has(it.id) ? { ...it, x: it.x + dx, y: it.y + dy } : it)));
-      await Promise.all(
-        targets.map((it) =>
-          fetch(`/api/board-items/${it.id}`, {
-            method: "PATCH",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ x: it.x + dx, y: it.y + dy }),
-          })
-        )
-      );
+      recordOp({ kind: "move", moves });
+      await apiMove(moves, false);
     },
-    [canEdit, selected, items]
+    [canEdit, selected, items, apiMove]
   );
+
+  const pasteClipboard = useCallback(async () => {
+    if (!canEdit || clipboard.current.length === 0) return;
+    const created: Item[] = [];
+    for (const it of clipboard.current) {
+      const res = await fetch(`/api/boards/${boardId}/items`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ type: it.type, x: it.x + 20, y: it.y + 20, text: it.text }),
+      });
+      if (res.status === 201) created.push((await res.json()).item);
+    }
+    if (created.length) recordOp({ kind: "add", items: created });
+    await load();
+    setSelected(new Set(created.map((c) => c.id)));
+  }, [canEdit, boardId, load]);
+
+  function duplicateSelected() {
+    clipboard.current = items.filter((it) => selected.has(it.id));
+    void pasteClipboard();
+  }
+
+  // F11：保存便签文字（双击编辑 → 失焦/回车）
+  async function saveText(id: string, text: string) {
+    setEditingId(null);
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, text } : it)));
+    await fetch(`/api/board-items/${id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+  }
+
+  // F11：改选中便签颜色
+  async function setColor(color: string) {
+    const ids = items.filter((it) => selected.has(it.id)).map((it) => it.id);
+    setItems((prev) => prev.map((it) => (selected.has(it.id) ? { ...it, color } : it)));
+    await Promise.all(
+      ids.map((id) =>
+        fetch(`/api/board-items/${id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ color }),
+        })
+      )
+    );
+  }
 
   const deleteSelected = useCallback(async () => {
     if (!canEdit || selected.size === 0) return;
-    const ids = [...selected];
+    const removed = items.filter((it) => selected.has(it.id));
     setItems((prev) => prev.filter((it) => !selected.has(it.id)));
     setSelected(new Set());
-    await Promise.all(ids.map((id) => fetch(`/api/board-items/${id}`, { method: "DELETE" })));
-  }, [canEdit, selected]);
+    recordOp({ kind: "delete", items: removed });
+    await apiDelete(removed.map((it) => it.id));
+  }, [canEdit, selected, items, apiDelete]);
+
+  const undo = useCallback(async () => {
+    if (!canEdit) return;
+    const op = undoStack.current.pop();
+    if (!op) return;
+    if (op.kind === "add") await apiDelete(op.items.map((i) => i.id));
+    else if (op.kind === "delete") await apiRestore(op.items);
+    else await apiMove(op.moves, true);
+    redoStack.current.push(op);
+    setSelected(new Set());
+    await load();
+  }, [canEdit, apiDelete, apiRestore, apiMove, load]);
+
+  const redo = useCallback(async () => {
+    if (!canEdit) return;
+    const op = redoStack.current.pop();
+    if (!op) return;
+    if (op.kind === "add") await apiRestore(op.items);
+    else if (op.kind === "delete") await apiDelete(op.items.map((i) => i.id));
+    else await apiMove(op.moves, false);
+    undoStack.current.push(op);
+    setSelected(new Set());
+    await load();
+  }, [canEdit, apiDelete, apiRestore, apiMove, load]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") return setSelected(new Set());
-      if ((e.key === "a" || e.key === "A") && (e.metaKey || e.ctrlKey)) {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && (e.key === "z" || e.key === "Z")) {
+        e.preventDefault();
+        return void (e.shiftKey ? redo() : undo());
+      }
+      if (mod && (e.key === "y" || e.key === "Y")) {
+        e.preventDefault();
+        return void redo();
+      }
+      if (mod && (e.key === "a" || e.key === "A")) {
         e.preventDefault();
         return setSelected(new Set(items.map((it) => it.id)));
       }
       if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
         return void deleteSelected();
+      }
+      if (mod && (e.key === "c" || e.key === "C")) {
+        e.preventDefault();
+        clipboard.current = items.filter((it) => selected.has(it.id));
+        return;
+      }
+      if (mod && (e.key === "v" || e.key === "V")) {
+        e.preventDefault();
+        return void pasteClipboard();
       }
       const step = e.shiftKey ? BIG_NUDGE : NUDGE;
       if (e.key === "ArrowLeft") return void moveSelected(-step, 0);
@@ -100,7 +325,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [items, deleteSelected, moveSelected]);
+  }, [items, selected, deleteSelected, moveSelected, pasteClipboard, undo, redo]);
 
   return (
     <div className="relative flex flex-1 flex-col">
@@ -110,35 +335,93 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           <Button data-testid="add-note" size="sm" variant="secondary" onClick={addNote}>
             + 便签
           </Button>
+          <Button data-testid="undo" size="sm" variant="ghost" onClick={() => void undo()}>
+            撤销
+          </Button>
+          <Button data-testid="redo" size="sm" variant="ghost" onClick={() => void redo()}>
+            重做
+          </Button>
           <span data-testid="selection-count" className="text-xs text-muted-foreground">
             已选 {selected.size}
           </span>
         </div>
       )}
 
-      <CanvasViewport>
+      {/* Widget Menu：选中驱动的悬浮操作（F10）。能力随 widget type 矩阵扩展（F17 样式/F18 锁定…）。
+          当前 item 均为便签，动作统一；多选展示交集动作。 */}
+      {canEdit && selected.size > 0 && (
         <div
-          className="relative h-full w-full"
-          data-testid="items-layer"
-          onClick={() => setSelected(new Set())}
+          data-testid="widget-menu"
+          className="absolute left-1/2 top-2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-lg"
         >
+          <span className="px-1 text-xs text-muted-foreground">{selected.size} 项</span>
+          {/* 颜色色板（F11） */}
+          {COLOR_TOKENS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              data-testid={`wm-color-${c}`}
+              aria-label={`颜色 ${c}`}
+              onClick={() => void setColor(c)}
+              className={"h-5 w-5 rounded-full border " + colorClass(c)}
+            />
+          ))}
+          <Button data-testid="wm-duplicate" size="sm" variant="ghost" onClick={duplicateSelected}>
+            复制
+          </Button>
+          <Button data-testid="wm-delete" size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteSelected()}>
+            删除
+          </Button>
+        </div>
+      )}
+
+      <CanvasViewport>
+        <div className="relative h-full w-full" data-testid="items-layer" onClick={() => setSelected(new Set())}>
           {items.map((it) => (
             <div
               key={it.id}
               data-testid={`item-${it.id}`}
               data-selected={selected.has(it.id) ? "true" : "false"}
-              onMouseDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => startNoteDrag(e, it)}
               onClick={(e) => {
                 e.stopPropagation();
+                if (justDraggedRef.current) {
+                  justDraggedRef.current = false;
+                  return;
+                }
                 selectItem(it.id, e.shiftKey);
+              }}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                if (canEdit) setEditingId(it.id);
               }}
               style={{ left: it.x, top: it.y, width: it.w, height: it.h }}
               className={
-                "absolute flex items-center justify-center rounded-md border bg-amber-100 p-2 text-xs text-amber-900 shadow-sm " +
-                (selected.has(it.id) ? "ring-2 ring-primary ring-offset-1" : "")
+                "absolute flex items-center justify-center rounded-7 border p-2 text-xs shadow-sm " +
+                (canEdit && editingId !== it.id ? "cursor-grab active:cursor-grabbing " : "") +
+                colorClass(it.color) +
+                (selected.has(it.id) ? " ring-2 ring-primary ring-offset-1" : "")
               }
             >
-              {it.text}
+              {editingId === it.id ? (
+                <textarea
+                  data-testid={`item-edit-${it.id}`}
+                  autoFocus
+                  defaultValue={it.text}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  onBlur={(e) => void saveText(it.id, e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      (e.target as HTMLTextAreaElement).blur();
+                    }
+                  }}
+                  className="h-full w-full resize-none rounded bg-transparent text-center outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                />
+              ) : (
+                it.text
+              )}
             </div>
           ))}
         </div>

@@ -113,7 +113,7 @@
       "area": "canvas",
       "title": "选择 / 多选组件 + 键盘操作",
       "user_visible_behavior": "点击选中单个组件显示选中框与控制点；框选(marquee)/Shift 加选多个；Esc 取消选择；选中后方向键微移、Shift+方向键大步移动、Delete 删除、Cmd/Ctrl+A 全选；选择状态驱动 Widget Menu 出现。",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "03",
       "owner": "claude",
       "capability": "CAP-CANVAS",
@@ -122,8 +122,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/canvas-select.spec.ts"
       ],
-      "evidence": "",
-      "notes": "uc-canvas-009 + uc-canvas-008。selection 模型为前端状态，键盘移动复用 move 命令落库。",
+      "evidence": "evidence/F06.verify.log @ 2026-06-30T01:00:11.366Z",
+      "notes": "uc-canvas-009 + uc-canvas-008。基于 ADR-0002 board-keyed items（migration 012 + /api/boards/:id/items + /api/board-items/:itemId）。已实现：点选/Shift多选/点空白清除/Esc/Ctrl+A全选/Delete删除/方向键移动(落库)。**本期实现差异（见 quality-document #6）**：marquee 框选 deferred——与 CanvasViewport(F05) 拖拽平移冲突，待实现 uc「空格拖动平移」语义后放开 drag-框选；选中状态驱动 Widget Menu 在 F10。",
       "source_use_cases": [
         "phases/requirements/board/canvas/uc-canvas-009-select-and-multi-select-widget.md",
         "phases/requirements/board/canvas/uc-canvas-008-keyboard-operate-widget.md"
@@ -156,16 +156,16 @@
       "area": "canvas",
       "title": "复制 / 粘贴画布内容",
       "user_visible_behavior": "选中组件 Cmd/Ctrl+C 复制、Cmd/Ctrl+V 粘贴出带偏移的副本（新 id 落库）；支持多选批量复制；粘贴后新组件被选中。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "04",
+      "owner": "claude",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/canvas-copy-paste.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F08.verify.log @ 2026-06-30T01:11:48.759Z",
       "notes": "uc-canvas-003。粘贴 = 批量 add 命令；剪贴板用应用内 store（系统剪贴板互通可后续增强）。",
       "source_use_cases": [
         "phases/requirements/canvas/uc-canvas-003-copy-paste.md"
@@ -177,16 +177,16 @@
       "area": "canvas",
       "title": "撤销 / 重做",
       "user_visible_behavior": "Cmd/Ctrl+Z 撤销、Cmd/Ctrl+Shift+Z 重做，覆盖增删/移动/编辑/样式等命令；连续操作可逐步回退；撤销栈在会话内维护，状态回放后落库一致。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "05",
+      "owner": "claude",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/canvas-undo-redo.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F09.verify.log @ 2026-06-30T04:54:31.268Z",
       "notes": "uc-canvas-004。基于已有命令运行时做可逆命令栈（每个命令带 inverse），含单测。Board Header 的撤销/重做按钮（uc-board-header-010）在 p7 复用本栈。",
       "source_use_cases": [
         "phases/requirements/canvas/uc-canvas-004-undo-redo.md"
@@ -198,16 +198,16 @@
       "area": "widgets",
       "title": "Widget 框架与能力边界 + Widget Menu 悬浮操作",
       "user_visible_behavior": "各类型组件（便利贴/形状/文本/连接线/手绘/图片/文件/图表）统一为 widget 模型，按类型暴露可操作能力；选中组件后在其附近浮出 Widget Menu，仅展示该类型适用的操作项（样式/锁定/删除/对齐/AI 等），多选时展示交集操作。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "06",
+      "owner": "claude",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/widget-menu-framework.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F10.verify.log @ 2026-06-30T05:01:44.780Z",
       "notes": "uc-widgets-001 + uc-widget-menu-001。定义 widget type 注册表与能力矩阵（驱动 Widget Menu 项的可见性），是 F11-F22 的地基。",
       "source_use_cases": [
         "phases/requirements/board/widgets/uc-widgets-001-use-canvasx-widgets.md",
@@ -220,16 +220,16 @@
       "area": "widgets",
       "title": "便利贴组件（内容 / 外观 / 状态）",
       "user_visible_behavior": "创建便利贴并双击编辑文字；可改背景色、字号、对齐；可移动/缩放/旋转；内容与外观持久化，刷新保留。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "07",
+      "owner": "claude",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/widget-sticky.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F11.verify.log @ 2026-06-30T05:33:30.094Z",
       "notes": "uc-widgets-003。在 F02/F03 的 item 命令运行时上扩出 sticky 专有属性（color/fontSize/align）。",
       "source_use_cases": [
         "phases/requirements/board/widgets/uc-widgets-003-use-sticky-note-widget.md"

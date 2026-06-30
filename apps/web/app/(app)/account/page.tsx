@@ -1,15 +1,26 @@
 "use client";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { User, Shield, Settings as SettingsIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type Section = "personal" | "security" | "settings";
 const CANDIDATE_AVATARS = ["seed:a1", "seed:b2", "seed:c3", "seed:d4"];
+
+const NAV: { key: Section; label: string; icon: typeof User }[] = [
+  { key: "personal", label: "Personal info", icon: User },
+  { key: "security", label: "Security", icon: Shield },
+  { key: "settings", label: "Settings", icon: SettingsIcon },
+];
+const TITLE: Record<Section, string> = {
+  personal: "Personal info",
+  security: "Security",
+  settings: "Settings",
+};
 
 export default function AccountPage() {
   return (
@@ -32,31 +43,45 @@ function AccountCenter() {
   }, [router]);
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-5 p-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">账号中心</h1>
-        <a href="/" data-testid="back-workspace" className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline">返回工作区</a>
-      </div>
-      <nav className="flex gap-1 border-b border-border">
-        {(["personal", "security", "settings"] as Section[]).map((s) => (
-          <button key={s} data-testid={`tab-${s}`} onClick={() => setSection(s)}
+    <div className="flex h-full overflow-hidden">
+      {/* 左侧 section 导航 */}
+      <aside className="flex w-[12.5rem] shrink-0 flex-col gap-0.5 border-r border-border p-3">
+        <div className="px-2 pb-3 text-15 font-bold text-foreground">Account</div>
+        {NAV.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            data-testid={`tab-${key}`}
+            onClick={() => setSection(key)}
             className={cn(
-              "px-3 py-2 text-sm transition-colors duration-200",
-              section === s
-                ? "border-b-2 border-primary font-medium text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            )}>
-            {s === "personal" ? "Personal info" : s === "security" ? "Security" : "Settings"}
+              "flex items-center gap-2.5 rounded-7 px-2.5 py-2 text-13 transition-colors",
+              section === key
+                ? "bg-muted font-semibold text-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
           </button>
         ))}
-      </nav>
-      <Card>
-        <CardContent className="pt-6">
+        <div className="flex-1" />
+        <a
+          href="/"
+          data-testid="back-workspace"
+          className="rounded-7 px-2.5 py-2 text-13 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          ‹ Back to workspace
+        </a>
+      </aside>
+
+      {/* 内容 */}
+      <div className="flex-1 overflow-auto px-9 py-8">
+        <h1 className="text-22 font-bold tracking-tight text-foreground">{TITLE[section]}</h1>
+        <div className="mt-5 max-w-[32.5rem]">
           {section === "personal" && <PersonalInfo />}
           {section === "security" && <Security router={router} />}
           {section === "settings" && <Settings />}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
@@ -76,7 +101,7 @@ function PersonalInfo() {
     })();
   }, []);
 
-  if (!loaded) return <section data-testid="section-personal"><p className="text-sm text-muted-foreground">加载中…</p></section>;
+  if (!loaded) return <section data-testid="section-personal"><p className="text-13 text-muted-foreground">加载中…</p></section>;
 
   async function save() {
     setError(""); setSaved(false);
@@ -90,20 +115,32 @@ function PersonalInfo() {
   }
 
   return (
-    <section data-testid="section-personal" className="flex flex-col gap-3">
-      <Label htmlFor="display-name">显示名</Label>
-      <Input id="display-name" data-testid="display-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-      <p className="text-sm text-foreground">当前头像：<span data-testid="avatar-preview" className="font-mono text-muted-foreground">{avatar || "(默认)"}</span></p>
-      <div className="flex flex-wrap items-center gap-2">
+    <section data-testid="section-personal" className="flex flex-col gap-1.5">
+      {/* 头像 */}
+      <div className="mb-4 flex items-center gap-4">
+        <div className="flex h-[3.875rem] w-[3.875rem] items-center justify-center rounded-full bg-foreground text-22 font-semibold text-background">
+          {(displayName || "?").charAt(0).toUpperCase()}
+        </div>
+        <span data-testid="avatar-preview" className="font-mono text-13 text-muted-foreground">
+          {avatar || "(默认)"}
+        </span>
+      </div>
+
+      <Label htmlFor="display-name">Name</Label>
+      <Input id="display-name" data-testid="display-name" className="mb-2" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+
+      <Label>Avatar</Label>
+      <div className="mb-1 flex flex-wrap items-center gap-2">
         {CANDIDATE_AVATARS.map((a, i) => (
           <Button key={a} data-testid={`avatar-opt-${i}`} type="button" size="sm"
             variant={avatar === a ? "default" : "outline"} onClick={() => setAvatar(a)}>{a}</Button>
         ))}
         <Button data-testid="avatar-generate" type="button" size="sm" variant="secondary" onClick={() => setAvatar("seed:gen" + Date.now())}>AI generate</Button>
       </div>
-      {error && <p data-testid="err" className="text-sm text-destructive">{error}</p>}
-      {saved && <p data-testid="saved" className="text-sm text-success">已保存</p>}
-      <Button data-testid="save-personal" type="button" className="self-start" onClick={save}>Save personal info</Button>
+
+      {error && <p data-testid="err" className="text-13 text-destructive">{error}</p>}
+      {saved && <p data-testid="saved" className="text-13 text-success">已保存</p>}
+      <Button data-testid="save-personal" type="button" className="mt-2 self-start" onClick={save}>Save personal info</Button>
     </section>
   );
 }
@@ -125,13 +162,13 @@ function Security({ router }: { router: ReturnType<typeof useRouter> }) {
   }
   return (
     <section data-testid="section-security" className="flex flex-col gap-3">
-      <p className="text-sm text-muted-foreground">修改密码会使现有会话失效，需要重新登录。</p>
-      {done ? <p data-testid="done" className="text-sm text-success">密码已更新，请重新登录。</p> : (
+      <p className="text-13 text-muted-foreground">Changing your password signs out other sessions.</p>
+      {done ? <p data-testid="done" className="text-13 text-success">密码已更新，请重新登录。</p> : (
         <form onSubmit={submit} className="flex flex-col gap-3">
-          <Input data-testid="current" type="password" placeholder="当前密码" value={form.current} onChange={(e) => setForm({ ...form, current: e.target.value })} />
-          <Input data-testid="next" type="password" placeholder="新密码（≥6）" value={form.next} onChange={(e) => setForm({ ...form, next: e.target.value })} />
-          <Input data-testid="confirm" type="password" placeholder="确认新密码" value={form.confirm} onChange={(e) => setForm({ ...form, confirm: e.target.value })} />
-          {error && <p data-testid="err-sec" className="text-sm text-destructive">{error}</p>}
+          <Input data-testid="current" type="password" placeholder="Current password" value={form.current} onChange={(e) => setForm({ ...form, current: e.target.value })} />
+          <Input data-testid="next" type="password" placeholder="New password (≥6)" value={form.next} onChange={(e) => setForm({ ...form, next: e.target.value })} />
+          <Input data-testid="confirm" type="password" placeholder="Confirm new password" value={form.confirm} onChange={(e) => setForm({ ...form, confirm: e.target.value })} />
+          {error && <p data-testid="err-sec" className="text-13 text-destructive">{error}</p>}
           <Button data-testid="submit-security" type="submit" className="self-start">Update password</Button>
         </form>
       )}
@@ -151,7 +188,7 @@ function Settings() {
       setLoaded(true);
     })();
   }, []);
-  if (!loaded) return <section data-testid="section-settings"><p className="text-sm text-muted-foreground">加载中…</p></section>;
+  if (!loaded) return <section data-testid="section-settings"><p className="text-13 text-muted-foreground">加载中…</p></section>;
   async function save() {
     setSaved(false);
     const res = await fetch("/api/profile/settings", {
@@ -162,18 +199,22 @@ function Settings() {
   }
   return (
     <section data-testid="section-settings" className="flex flex-col gap-3">
-      <Label htmlFor="ai-model">AI 模型偏好</Label>
-      <Select id="ai-model" data-testid="ai-model" value={aiModel} onChange={(e) => setAiModel(e.target.value)}>
-        <option value="claude-opus-4-8">claude-opus-4-8</option>
-        <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
-        <option value="claude-haiku-4-5">claude-haiku-4-5</option>
-      </Select>
-      <Label htmlFor="default-privacy">默认隐私级别</Label>
-      <Select id="default-privacy" data-testid="default-privacy" value={defaultPrivacy} onChange={(e) => setDefaultPrivacy(e.target.value)}>
-        <option value="private">私有</option>
-        <option value="team">团队可见</option>
-      </Select>
-      {saved && <p data-testid="saved-settings" className="text-sm text-success">已保存</p>}
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="ai-model">AI model preference</Label>
+        <Select id="ai-model" data-testid="ai-model" value={aiModel} onChange={(e) => setAiModel(e.target.value)}>
+          <option value="claude-opus-4-8">claude-opus-4-8</option>
+          <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
+          <option value="claude-haiku-4-5">claude-haiku-4-5</option>
+        </Select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="default-privacy">Default privacy</Label>
+        <Select id="default-privacy" data-testid="default-privacy" value={defaultPrivacy} onChange={(e) => setDefaultPrivacy(e.target.value)}>
+          <option value="private">Private</option>
+          <option value="team">Team</option>
+        </Select>
+      </div>
+      {saved && <p data-testid="saved-settings" className="text-13 text-success">已保存</p>}
       <Button data-testid="save-settings" type="button" className="self-start" onClick={save}>Save settings</Button>
     </section>
   );

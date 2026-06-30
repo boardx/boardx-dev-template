@@ -20,13 +20,14 @@ export async function PATCH(req: Request, { params }: { params: { itemId: string
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
     const gate = await requireEdit(params.itemId, user.id);
     if ("error" in gate) return NextResponse.json({ error: gate.error }, { status: gate.status });
-    const body = (await req.json().catch(() => ({}))) as { x?: unknown; y?: unknown; text?: unknown };
-    const fields: { x?: number; y?: number; text?: string } = {};
+    const body = (await req.json().catch(() => ({}))) as { x?: unknown; y?: unknown; text?: unknown; color?: unknown };
+    const fields: { x?: number; y?: number; text?: string; color?: string | null } = {};
     if (body.x !== undefined && body.y !== undefined) {
       fields.x = Math.trunc(Number(body.x));
       fields.y = Math.trunc(Number(body.y));
     }
     if (typeof body.text === "string") fields.text = body.text;
+    if (body.color !== undefined) fields.color = body.color === null ? null : String(body.color);
     await updateItem(params.itemId, fields);
     return NextResponse.json({ ok: true });
   } catch (err) {

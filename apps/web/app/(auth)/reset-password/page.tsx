@@ -3,7 +3,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AuthShell, AuthLabel } from "@/components/auth/auth-shell";
 
 export default function ResetPasswordPage() {
   return (
@@ -44,28 +44,72 @@ function ResetPasswordInner() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">设置新密码</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {done ? (
-            <p data-testid="done" className="text-sm text-success">密码已重置，请用新密码登录。</p>
-          ) : (
-            <form onSubmit={submit} className="flex flex-col gap-3">
-              <Input data-testid="next" type="password" placeholder="新密码（≥6）"
-                value={next} onChange={(e) => setNext(e.target.value)} />
-              <Input data-testid="confirm" type="password" placeholder="确认新密码"
-                value={confirm} onChange={(e) => setConfirm(e.target.value)} />
-              {error && <p data-testid="err-form" className="text-sm text-destructive">{error}</p>}
-              <Button data-testid="submit" type="submit" disabled={submitting} className="w-full">
-                {submitting ? "提交中…" : "设置密码"}
-              </Button>
-            </form>
+    <AuthShell>
+      <h2 className="text-22 font-bold tracking-tight">Set a new password</h2>
+      <p className="mt-1.5 text-13 text-muted-foreground">
+        Choose a strong password you don&apos;t use elsewhere.
+      </p>
+
+      {done ? (
+        <div
+          data-testid="done"
+          className="mt-4.5 flex items-start gap-3 rounded-xl border border-border p-4.5"
+        >
+          <div className="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-full bg-primary text-sm text-primary-foreground">
+            ✓
+          </div>
+          <div>
+            <div className="text-13 font-semibold">Password updated</div>
+            <div className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+              Redirecting you to sign in…
+            </div>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="flex flex-col">
+          <div className="mt-5.5">
+            <AuthLabel htmlFor="next">New password</AuthLabel>
+          </div>
+          <Input
+            id="next"
+            data-testid="next"
+            type="password"
+            placeholder="At least 6 characters"
+            className="mt-1.5"
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
+          />
+
+          <div className="mt-3">
+            <AuthLabel htmlFor="confirm">Confirm password</AuthLabel>
+          </div>
+          <Input
+            id="confirm"
+            data-testid="confirm"
+            type="password"
+            placeholder="Re-enter password"
+            className="mt-1.5"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
+
+          {error && (
+            <p data-testid="err-form" className="mt-3 text-13 text-destructive">
+              {error}
+            </p>
           )}
-        </CardContent>
-      </Card>
-    </main>
+
+          <Button
+            data-testid="submit"
+            type="submit"
+            disabled={submitting}
+            size="lg"
+            className="mt-4 w-full"
+          >
+            {submitting ? "Updating…" : "Update password"}
+          </Button>
+        </form>
+      )}
+    </AuthShell>
   );
 }

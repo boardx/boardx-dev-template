@@ -6,6 +6,16 @@
 #   - id "01" foundation：harness 控制平面元层，非产品 P 阶段。
 #   - id "04" identity-and-spaces：auth/team/room 核心打包体（= P1/P3/P4 核心），已 passing，未拆。
 # phase-05-canvas 的便签 item CRUD 本质是画布素材 → 已并入 P6（目录改名为 phase-p6-canvas）。
+#
+# ⚠ 逻辑 P 阶段 ↔ 物理 phase 映射（物理 id 非 1:1 对应 P 阶段，看 PROGRESS 表前先读这里）：
+#   元层   → 01 foundation
+#   P0     → p0
+#   P1     → 04(auth 核心) + p1(profile/common 补全)      ← P1 跨两个物理 phase
+#   P2     → p2
+#   P3     → 04(team 核心)                                 ← 无独立 p3
+#   P4     → 04(room 核心) + p4(room-chat 补全)            ← P4 跨两个物理 phase
+#   P5..P15 → p5..p15（1:1）
+# 即：物理 "04" 是 auth/team/room 三件核心的打包体（横跨 P1/P3/P4），pN 多为对应 P 的「补全/扩展」。
 project: boardx-dev-template
 phases:
   - id: "01"
@@ -18,19 +28,19 @@ phases:
     slug: fullstack-skeleton
     name: 基础设施 (P0)
     goal: "全栈基础设施：web/data/queue/worker/infra（CAP-WEB/DATA/WORKFLOW）"
-    status: not_started
+    status: done  # 3/3 passing
     depends_on: ["01"]
   - id: "04"
     slug: identity-and-spaces
-    name: Auth+Team+Room 核心 (P1/P3/P4 核心)
+    name: Auth/Team/Room 核心打包体（横跨 P1auth + P3team + P4room）
     goal: "账号身份+协作空间核心：auth/team核心/room核心。高级入口在对应能力阶段渐进点亮（见 ROADMAP.md）"
-    status: not_started
+    status: in_progress  # 12/14 passing（核心已交付，2 个高级入口随能力阶段点亮）
     depends_on: ["p0"]
   - id: "p1"
     slug: profile-common
-    name: Profile & Common (P1 补全)
+    name: Profile/Common（P1 补全，配合 04 的 auth）
     goal: "个人资料/用户菜单/个人 Memory + 全局搜索/语言/主题/反馈"
-    status: not_started
+    status: done  # 3/3 passing（profile 三件；common/feedback 未纳入本轮 scope）
     depends_on: ["04"]
   - id: "p2"
     slug: home
@@ -54,7 +64,7 @@ phases:
     slug: canvas
     name: Canvas & 组件 (P6)
     goal: "白板画布编辑核心：canvas(平移缩放/选择/对齐/撤销重做) + widgets(便签/形状/文本/连接线/图片/图表…) + widget-menu。含 phase-05 便签 item 命令运行时作为种子"
-    status: not_started
+    status: in_progress  # 7/22 passing（F01-F04 种子 + F05 视口 + F06 选择/board-keyed 地基 + F08 复制粘贴；F07/F09/widgets 待做）
     depends_on: ["p5"]
   - id: "p7"
     slug: board-shell
