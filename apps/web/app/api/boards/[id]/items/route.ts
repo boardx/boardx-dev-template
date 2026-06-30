@@ -29,7 +29,32 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (role !== "owner" && role !== "editor") {
       return NextResponse.json({ error: "无编辑权限" }, { status: 403 });
     }
-    const body = (await req.json()) as { type?: unknown; x?: unknown; y?: unknown; text?: unknown };
+    const body = (await req.json()) as {
+      id?: unknown;
+      type?: unknown;
+      x?: unknown;
+      y?: unknown;
+      w?: unknown;
+      h?: unknown;
+      text?: unknown;
+    };
+
+    // restore 模式（撤销删除）：带原 id + 完整几何，原样还原，保持 id 稳定（F09）。
+    if (typeof body.id === "string" && body.id.length > 0) {
+      const restored: BoardItemRow = {
+        id: body.id,
+        room_id: board.room_id,
+        board_id: boardId,
+        type: isItemType(String(body.type)) ? (body.type as "note" | "rect") : "note",
+        x: Math.trunc(Number(body.x) || 0),
+        y: Math.trunc(Number(body.y) || 0),
+        w: Math.trunc(Number(body.w)) || DEFAULT_SIZE.note.w,
+        h: Math.trunc(Number(body.h)) || DEFAULT_SIZE.note.h,
+        text: typeof body.text === "string" ? body.text : "",
+      };
+      return NextResponse.json({ item: await insertItem(restored) }, { status: 201 });
+    }
+
     const v = validateNewItem(body);
     if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 });
     const type = isItemType(String(body.type)) ? (body.type as "note" | "rect") : "note";

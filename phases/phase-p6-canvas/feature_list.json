@@ -177,16 +177,16 @@
       "area": "canvas",
       "title": "撤销 / 重做",
       "user_visible_behavior": "Cmd/Ctrl+Z 撤销、Cmd/Ctrl+Shift+Z 重做，覆盖增删/移动/编辑/样式等命令；连续操作可逐步回退；撤销栈在会话内维护，状态回放后落库一致。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "05",
+      "owner": "claude",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/canvas-undo-redo.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F09.verify.log @ 2026-06-30T04:54:31.268Z",
       "notes": "uc-canvas-004。基于已有命令运行时做可逆命令栈（每个命令带 inverse），含单测。Board Header 的撤销/重做按钮（uc-board-header-010）在 p7 复用本栈。",
       "source_use_cases": [
         "phases/requirements/canvas/uc-canvas-004-undo-redo.md"
