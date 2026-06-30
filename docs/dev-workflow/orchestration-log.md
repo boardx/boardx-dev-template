@@ -29,3 +29,11 @@
 
 ### Batch 2（启动）
 - #73 share(view-shared-chat) · #75 survey(create-survey) · #67 invite(accept-invite-link)
+
+### Batch 2 完成（merged → in-review）
+- ✅ #73 share /share/[id] · #67 invite /invite/[token] · #75 survey /surveys （均合并，tsc+lint 绿）
+
+### Batch 3（启动）
+- #66 recent(/recent 增强) · #74 studio(/studio) · #44 billing(/billing)
+
+进度：已合并 6 个 feature（credits/kb/ai-store/share/invite/survey）入 feat/ui-prototype-v1；均 tsc+lint 绿，e2e 待 CI。
