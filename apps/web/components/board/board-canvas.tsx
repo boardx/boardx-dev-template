@@ -25,6 +25,15 @@ const COLORS: Record<string, string> = {
 const COLOR_TOKENS = Object.keys(COLORS);
 const colorClass = (c?: string | null) => COLORS[c ?? "amber"] ?? COLORS.amber;
 
+// 文本（Text）组件（uc-board-menu-003）。
+// 约束（范围纪律）：当前 @repo/canvas 的 validateNewItem 只放行 type ∈ {note,rect}，
+// 服务端校验/路由不可改。故文本组件在「线上」仍以 type:"note" 持久化，
+// 用 color 哨兵值 "text" 作为判别位（color 字段经 POST/PATCH/GET 全程原样透传，
+// 刷新后仍在）。客户端据此把它渲染为「透明无边框文本块」，与便签区分。
+const TEXT_MARK = "text";
+const DEFAULT_TEXT = "文本";
+const isText = (it: { color?: string | null }) => it.color === TEXT_MARK;
+
 interface Move {
   id: string;
   fromX: number;
@@ -80,13 +89,21 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const apiRestore = useCallback(
     (its: Item[]) =>
       Promise.all(
-        its.map((it) =>
-          fetch(`/api/boards/${boardId}/items`, {
+        its.map(async (it) => {
+          await fetch(`/api/boards/${boardId}/items`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ id: it.id, type: it.type, x: it.x, y: it.y, w: it.w, h: it.h, text: it.text }),
-          })
-        )
+          });
+          // 路由 restore 分支不读 color；用 PATCH 补回外观色（含文本哨兵），保证撤销删除后仍是原样。
+          if (it.color != null) {
+            await fetch(`/api/board-items/${it.id}`, {
+              method: "PATCH",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ color: it.color }),
+            });
+          }
+        })
       ),
     [boardId]
   );
@@ -187,6 +204,32 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     }
   }
 
+  // 文本（Text）组件创建（uc-board-menu-003）：在画布放置默认文本块并自动选中。
+  // 线上以 type:"note" 持久化 + color:"text" 哨兵；创建后立即 PATCH 写入 color 标记，
+  // 使刷新/重载后仍判别为文本（见上方 TEXT_MARK 注释）。
+  async function addText() {
+    const x = 220;
+    const y = 40 + placeN.current++ * 130;
+    // 服务端 validateNewItem 仅放行 note/rect（不可改）；以 note 落库，再用 color 哨兵标记为文本。
+    const res = await fetch(`/api/boards/${boardId}/items`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "note", x, y, text: DEFAULT_TEXT }),
+    });
+    if (res.status !== 201) return;
+    const { item } = (await res.json()) as { item: Item };
+    // 持久化文本标记（color 哨兵），刷新后仍可判别为文本块。
+    await fetch(`/api/board-items/${item.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ color: TEXT_MARK }),
+    });
+    const textItem: Item = { ...item, color: TEXT_MARK };
+    recordOp({ kind: "add", items: [textItem] });
+    await load();
+    setSelected(new Set([item.id]));
+  }
+
   function selectItem(id: string, additive: boolean) {
     setSelected((prev) => {
       const next = new Set(additive ? prev : []);
@@ -217,7 +260,18 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ type: it.type, x: it.x + 20, y: it.y + 20, text: it.text }),
       });
-      if (res.status === 201) created.push((await res.json()).item);
+      if (res.status !== 201) continue;
+      const copy = (await res.json()).item as Item;
+      // 保留外观色（含文本组件的 color:"text" 哨兵），使复制出的文本仍是文本块。
+      if (it.color != null) {
+        await fetch(`/api/board-items/${copy.id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ color: it.color }),
+        });
+        copy.color = it.color;
+      }
+      created.push(copy);
     }
     if (created.length) recordOp({ kind: "add", items: created });
     await load();
@@ -335,6 +389,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           <Button data-testid="add-note" size="sm" variant="secondary" onClick={addNote}>
             + 便签
           </Button>
+          <Button data-testid="add-text" size="sm" variant="secondary" onClick={() => void addText()}>
+            + 文本
+          </Button>
           <Button data-testid="undo" size="sm" variant="ghost" onClick={() => void undo()}>
             撤销
           </Button>
@@ -355,8 +412,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           className="absolute left-1/2 top-2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-lg"
         >
           <span className="px-1 text-xs text-muted-foreground">{selected.size} 项</span>
-          {/* 颜色色板（F11） */}
-          {COLOR_TOKENS.map((c) => (
+          {/* 颜色色板（F11）：仅对便签生效；选中项全为文本时隐藏（文本为透明块，不套柔彩色） */}
+          {!items.filter((it) => selected.has(it.id)).every(isText) &&
+            COLOR_TOKENS.map((c) => (
             <button
               key={c}
               type="button"
@@ -397,10 +455,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               }}
               style={{ left: it.x, top: it.y, width: it.w, height: it.h }}
               className={
-                "absolute flex items-center justify-center rounded-7 border p-2 text-xs shadow-sm " +
+                "absolute flex p-2 text-xs " +
+                // 文本组件：透明无边框文本块（左上对齐）；便签：柔彩 + 边框 + 圆角 + 阴影
+                (isText(it)
+                  ? "items-start justify-start border-0 bg-transparent text-foreground shadow-none "
+                  : "items-center justify-center rounded-7 border shadow-sm " + colorClass(it.color) + " ") +
                 (canEdit && editingId !== it.id ? "cursor-grab active:cursor-grabbing " : "") +
-                colorClass(it.color) +
-                (selected.has(it.id) ? " ring-2 ring-primary ring-offset-1" : "")
+                (selected.has(it.id) ? "ring-2 ring-primary ring-offset-1" : "")
               }
             >
               {editingId === it.id ? (
@@ -417,7 +478,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                       (e.target as HTMLTextAreaElement).blur();
                     }
                   }}
-                  className="h-full w-full resize-none rounded bg-transparent text-center outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className={
+                    "h-full w-full resize-none rounded bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-primary " +
+                    (isText(it) ? "text-left" : "text-center")
+                  }
                 />
               ) : (
                 it.text
