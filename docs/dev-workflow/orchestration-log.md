@@ -82,3 +82,7 @@ team-settings(冲突已解), shortcuts-help, create-text, global-search, sync-st
 ### 收尾动作（待人工/下一轮）
 - push feat/ui-prototype-v1 → CI(harness-verify) 跑全量 e2e（本地无 DB，e2e 未本地执行）；按结果修红。
 - 把 in-review 的 24 个 issue 在 CI 绿后置 passing/关闭。
+
+## ===== 续作（直接 live tip，无冲突）=====
+- ✅ #49 board-statistics（直接做，合并干净）→ 共 25 个 feature 落地。
+- 方式确认：board 子件改用「直接在 tip 上串行做」可完全避开 stale-base worktree 冲突。
