@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/select";
 import { BoardTimer } from "@/components/board/timer";
 import { BoardHelpGuide } from "@/components/board/help-guide";
 import { BoardShortcutsHelp } from "@/components/board/shortcuts-help";
+import { BoardSyncStatus } from "@/components/board/sync-status";
 import { BoardCanvas } from "@/components/board/board-canvas";
 
 interface Board {
@@ -206,6 +207,8 @@ export default function BoardPage() {
           <Badge variant="muted" data-testid="board-role">
             {role}
           </Badge>
+          {/* 同步状态（UC-009）：只读状态入口，显示在标题/身份附近 */}
+          <BoardSyncStatus />
         </div>
         <div className="flex items-center gap-2">
           {/* 快捷键帮助（所有可访问者可见，只读不改权限） */}
