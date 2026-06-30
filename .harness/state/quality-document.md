@@ -39,6 +39,33 @@
 - **pre-commit hook 三防线**：active-features.json / **lockfile 必须 9.0** / oldcode 或 >800 文件阻断。挡住 #4 #5。
 - 待补（流程顺序 #1#2）：feature schema 加 `requirements_ref`；`claim` 拒绝空 verification（强制契约先行）。
 
+## 流程审计补遗（2026-06-30 续：P2/P4/P5/P6/P7 实现会话）
+
+一轮 23 feature 端到端交付（P5 完整 + P2/P4/P7/P6 部分），骨架纪律基本守住
+（claim→实现→三层测试→verify 门控→passing；单 owner；source_use_cases 溯源；跨模块依赖诚实标 blocked）。
+新发现 5 类偏差，**记此防复发**：
+
+6. **实现简化未回写 feature_list（权威 drift）**：room-chat「线程创建即持久化」跳过了
+   user_visible_behavior 里写的「虚拟线程until首条消息」，但**没回写权威清单**——实现与
+   feature_list drift。根因：简化决策只写进 commit message，没回 feature_list。
+   → 规则：实现偏离 user_visible_behavior 时，必须同步回写该字段或加「本期实现差异」note，
+   保持 feature_list 是唯一权威（同 #2 精神）。
+7. **数据模型决策滞后到实现期**：board-keyed items 的归属矛盾在做 P6 时才暴露，
+   应在 P5/P6 设计阶段就用 ADR 定。根因：没有「阶段实现前先定数据模型」的闸门。
+   → 规则：涉及新实体/跨阶段共享数据的 phase，实现前先出 ADR（见 docs/adr/0002）。
+8. **环境卫生致假门控失败（被误判 flaky）**：反复 `harness verify` 留下僵尸 `next dev`
+   争抢 :3000，导致全量 e2e 从某条起**整片级联崩溃**（极短耗时），一度被误判为 suite flaky。
+   清理僵尸进程后 107/107 绿。根因：verify 没有固定的「跑前清端口」。
+   → 规则：跑全量 e2e / verify 前先 `lsof -ti tcp:3000 | xargs kill -9`，
+   或起一个常驻 dev server 让 Playwright `reuseExistingServer` 复用（见 [[boardx-impl-progress]]）。
+9. **GitHub issue sync 被整轮跳过**：流程定义是 `sync issue → claim → … → 关 issue`，
+   本轮为省事完全跳过 `harness sync`（只做 claim→verify）。根因：sync 非门控、易被省。
+   → 决定：本轮范围内文档化为「可选」（避免在共享仓刷 64 条 issue）；若要恢复，
+   在 phase 启动时统一 `harness sync --phase pN --apply` 建一次。
+10. **pg bigint 比较 bug（已修+文档化）**：`board_items`/`room_chats` 等 id 是 `bigint`，
+    pg 返回**字符串**；`chat.room_id !== Number(params.id)` 恒真致 404。
+    → 已写入 architecture.md 数据层硬约定：跨类型比较前 `Number()`/`String()` 统一。
+
 ## 候选改进 / 待办
 - [ ] **#4 统一权限配置源（延后）**：`.claude/settings.json` 与 `.codex/config.toml`
   目前各自手维护同一份 allow/deny 命令清单(约 13 行)，存在配置漂移风险。
