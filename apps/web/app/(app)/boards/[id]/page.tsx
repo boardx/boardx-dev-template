@@ -10,6 +10,7 @@ import { BoardTimer } from "@/components/board/timer";
 import { BoardHelpGuide } from "@/components/board/help-guide";
 import { BoardShortcutsHelp } from "@/components/board/shortcuts-help";
 import { BoardSyncStatus } from "@/components/board/sync-status";
+import { BoardStatistics } from "@/components/board/board-statistics";
 import { BoardCanvas } from "@/components/board/board-canvas";
 
 interface Board {
@@ -211,6 +212,8 @@ export default function BoardPage() {
           <BoardSyncStatus />
         </div>
         <div className="flex items-center gap-2">
+          {/* 板统计（uc-board-header-014）：只读组件计数面板 */}
+          <BoardStatistics boardId={String(boardId)} />
           {/* 快捷键帮助（所有可访问者可见，只读不改权限） */}
           <BoardShortcutsHelp />
           {/* 协作计时器（所有协作者可用） */}
