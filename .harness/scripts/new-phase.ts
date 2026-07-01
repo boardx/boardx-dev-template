@@ -12,6 +12,7 @@ import type { RoadmapPhase } from "./lib/types";
 
 export function newPhase(args: Args): void {
   const id = req(args, "id");
+  const hasUi = args.flags["ui"] === true; // --ui：本阶段有界面，走 UI 先行确认关卡（ADR-003）
   const rm = loadRoadmap();
   let phase = rm.phases.find((p) => p.id === id);
 
@@ -24,12 +25,19 @@ export function newPhase(args: Args): void {
       goal: args.opts["goal"] ?? "",
       status: "not_started",
       depends_on: [],
+      ...(hasUi ? { has_ui: true } : {}),
     } as RoadmapPhase;
     rm.phases.push(phase);
     saveRoadmap(rm);
-    log.ok(`已把 Phase ${id} 写入 roadmap.yaml`);
+    log.ok(`已把 Phase ${id} 写入 roadmap.yaml${hasUi ? "（has_ui:true）" : ""}`);
   } else {
-    log.info(`Phase ${id} 已在 roadmap 中,沿用其定义`);
+    if (hasUi && !phase.has_ui) {
+      phase.has_ui = true;
+      saveRoadmap(rm);
+      log.ok(`已把 Phase ${id} 标记为 has_ui:true`);
+    } else {
+      log.info(`Phase ${id} 已在 roadmap 中,沿用其定义`);
+    }
   }
 
   const dir = join(PHASES_DIR, phaseDirName(phase.id, phase.slug));
@@ -97,10 +105,24 @@ export function newPhase(args: Args): void {
     )
   );
 
+  // UI 相关阶段（--ui）：scaffold UI 先行确认关卡产物（ADR-003）。
+  if (hasUi) {
+    mkdirSync(join(dir, "ui-preview"), { recursive: true });
+    writeFileSync(join(dir, "ui-preview", ".gitkeep"), "");
+    writeFileSync(join(dir, "ui-signoff.md"), renderTemplateFile("ui-signoff.template.md", vars));
+  }
+
   refreshProgress();
   log.ok(`已 scaffold 阶段: ${dir}`);
   log.info(`下一步（推荐流水线）：`);
   log.info(`  1. 把原始需求写进 ${join(dir, "requirements")}/（可按领域放多份 *.md）`);
-  log.info(`  2. 调 requirement-author 智能体：读该文件夹全部 *.md → 生成 feature_list.json`);
-  log.info(`  3. pnpm harness new-sprint --phase ${id} --id 01 --features F01,F02 ...`);
+  if (hasUi) {
+    log.info(`  2. 【UI 先行】做真实 UI（apps/web + mock，套用 uiux-standards），截图存 ${join(dir, "ui-preview")}/`);
+    log.info(`  3. 填 ${join(dir, "ui-signoff.md")} → 人类工程师核对 → 把 status 改为 confirmed`);
+    log.info(`  4. 调 requirement-author 智能体：读需求 + 已确认 UI → 生成 feature_list.json`);
+    log.info(`  5. pnpm harness new-sprint --phase ${id} --id 01 ...（UI 未 confirmed 会被门控拒绝）`);
+  } else {
+    log.info(`  2. 调 requirement-author 智能体：读该文件夹全部 *.md → 生成 feature_list.json`);
+    log.info(`  3. pnpm harness new-sprint --phase ${id} --id 01 --features F01,F02 ...`);
+  }
 }

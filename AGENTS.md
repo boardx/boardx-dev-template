@@ -36,6 +36,8 @@
 - **状态不能自己改**:你不能把 feature 直接标成 `passing`。只能跑
   `pnpm harness verify`,由验证脚本门控转移。`passing` 不可逆。
 - **范围纪律**:只动当前 feature 涉及的代码,别顺手重构无关区域。
+- **UI 先行(仅 has_ui 阶段)**:UI 相关阶段的 `feature_list` 必须在真实 UI 经**人类**确认
+  (`ui-signoff.md` status: confirmed)之后才定稿;`new-sprint` 对未确认的 UI 阶段直接拒绝。见 ADR-003。
 
 ## 完成定义(DON'T EDIT — 这是整个 harness 最关键的部分)
 一个 feature 只有同时满足以下条件才算 `passing`:
@@ -62,15 +64,19 @@
 - 阶段/局部规则 → 对应 `apps/*/AGENTS.md`、`phases/<phase>/AGENTS.md`
 
 ## 需求录入流水线（新阶段开工前）
-原始需求 → 智能体 → 权威功能清单，三步：
-1. `pnpm harness new-phase` scaffold 出 `phases/<phase>/requirements/` 文件夹。
+原始需求 → 智能体 → 权威功能清单：
+1. `pnpm harness new-phase [--ui]` scaffold 出 `phases/<phase>/requirements/` 文件夹（`--ui` = 有界面的阶段）。
 2. 把**原始需求**（大白话/用户故事）写进该文件夹，可按领域放多份 `*.md`（auth.md/teams.md/rooms.md…）。
-3. 调 **requirement-author** 智能体：读该文件夹全部 `*.md` → 生成 `feature_list.json`（带可执行 `verification`）。
+3. **【仅 UI 阶段，has_ui】UI 先行确认关卡**（ADR-003）：先由 **ui-prototyper** 用真实组件
+   （`apps/web` + mock 数据）把界面做出来 → **人类工程师**核对 → 把 `ui-signoff.md` 的 `status`
+   改为 `confirmed`。未确认不得进入下一步（`new-sprint` 会拒绝）。
+4. 调 **requirement-author** 智能体：读该文件夹全部 `*.md`（UI 阶段还读已确认 UI）→ 生成
+   `feature_list.json`（带可执行 `verification`，锚定真实 `data-testid`）。
 `requirements/` 是输入,不是权威;权威永远是 `feature_list.json`。
 
 ## 常用 harness 命令
 ```bash
-pnpm harness new-phase  --id 02 --name agent-runtime --goal "..."   # 同时 scaffold requirements.md
+pnpm harness new-phase  --id 02 --name agent-runtime --goal "..."   # scaffold requirements/；加 --ui 走 UI 先行关卡
 pnpm harness new-sprint --phase 02 --id 01 --goal "..." --features F01,F02
 pnpm harness verify     --sprint 02/01
 pnpm harness sync       --phase 02 --apply

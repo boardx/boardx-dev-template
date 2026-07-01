@@ -12,14 +12,17 @@ export function loadRoadmap(): Roadmap {
 
 function dumpPhase(p: RoadmapPhase): string {
   const dep = p.depends_on.length ? `[${p.depends_on.map((d) => `"${d}"`).join(", ")}]` : "[]";
-  return [
+  const lines = [
     `  - id: "${p.id}"`,
     `    slug: ${p.slug}`,
     `    name: ${p.name}`,
     `    goal: "${p.goal.replace(/"/g, '\\"')}"`,
     `    status: ${p.status}`,
     `    depends_on: ${dep}`,
-  ].join("\n");
+  ];
+  // has_ui 仅在 true 时落盘（默认 false 的后端/逻辑阶段保持干净）。
+  if (p.has_ui) lines.push(`    has_ui: true`);
+  return lines.join("\n");
 }
 
 export function saveRoadmap(r: Roadmap): void {

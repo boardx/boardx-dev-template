@@ -21,7 +21,8 @@ try {
     case "claim":         claim(args); break;
     default:
       log.info("用法:");
-      log.info("  pnpm harness new-phase     --id NN --name <name> [--slug <s>] [--goal <g>]");
+      log.info("  pnpm harness new-phase     --id NN --name <name> [--slug <s>] [--goal <g>] [--ui]");
+      log.info("                             --ui：有界面的阶段，scaffold UI 先行确认关卡（ADR-003）");
       log.info("  pnpm harness new-sprint    --phase NN --id MM [--goal <g>] [--features F01,F02]");
       log.info("  pnpm harness verify        --sprint NN/MM | --phase NN [--feature F01] [--owner <id>]");
       log.info("  pnpm harness sync          --phase NN [--apply]");

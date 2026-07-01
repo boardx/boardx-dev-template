@@ -6,6 +6,7 @@ import { loadFeatureList, saveFeatureList, featuresForSprint, writeActiveFeature
 import { renderTemplateFile, nowISO } from "./lib/render";
 import { parseArgs, req } from "./lib/args";
 import { log, die } from "./lib/log";
+import { assertUiSignedOff } from "./lib/ui-signoff";
 import type { Args } from "./lib/args";
 
 export function newSprint(args: Args): void {
@@ -14,6 +15,13 @@ export function newSprint(args: Args): void {
   const goal = args.opts["goal"] ?? "";
 
   findPhaseDir(phaseId); // 不存在则抛错
+
+  // UI 先行确认关卡（ADR-003）：UI 相关阶段未经人类确认 UI，不得开 sprint 进入代码开发。
+  try {
+    assertUiSignedOff(phaseId);
+  } catch (e) {
+    die((e as Error).message);
+  }
   const fl = loadFeatureList(phaseId);
 
   // 分配 feature 到本 sprint（改阶段权威清单的 sprint 字段）
