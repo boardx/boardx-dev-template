@@ -4,18 +4,97 @@
     {
       "id": "F01",
       "priority": 1,
-      "area": "orchestrator",
-      "title": "示例:健康检查端点",
-      "user_visible_behavior": "GET /api/health 返回 200 且 body 为 {\"ok\": true}",
+      "area": "admin",
+      "title": "Admin Panel 首页 + 身份门控 + 统计摘要 + 模块导航",
+      "user_visible_behavior": "SysAdmin 访问 /admin：非 SysAdmin 一律 403/重定向；SysAdmin 看到后台首页（平台统计摘要卡片：用户/团队/AI Store 项目数 等）与模块导航（用户/团队/AI Store 审核·精选）；点导航进入对应管理页；加载骨架与空态。",
+      "design_ref": "prototype:<!-- ADMIN --> + <!-- overview -->（统计卡片 + 模块卡片 + 侧边菜单）；DESIGN.md tokens",
       "status": "not_started",
       "sprint": null,
       "owner": null,
-      "capability": "CAP-WEB",
+      "capability": "CAP-AUTH",
       "verification": [
-        "curl -sf http://localhost:3000/api/health | jq -e '.ok == true'"
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/admin-005-view-admin-home.spec.ts"
       ],
       "evidence": "",
-      "notes": "把示例替换成你自己的功能。粒度=一次会话能完成。"
+      "notes": "uc-admin-005（首页，作为 Admin 骨架先建）。本阶段地基：SysAdmin 角色门控中间件 + /admin 布局 + 统计聚合。依赖 phase-04 auth 的角色体系（SysAdmin）。"
+    },
+    {
+      "id": "F02",
+      "priority": 2,
+      "area": "admin",
+      "title": "用户管理（列表/搜索/分页/增删改 + 手动上分）",
+      "user_visible_behavior": "SysAdmin 在用户管理页：GET /api/admin/users?q= 分页列出用户（邮箱/名称/状态/团队数）；搜索过滤；创建用户、编辑资料、删除（确认弹窗）；对用户手动增加 Credit（manual credit 弹窗）；操作即时反映；越权非 SysAdmin 无法访问接口。",
+      "design_ref": "prototype:<!-- users --> + <!-- admin: manual credit modal --> + <!-- admin: delete user confirm -->；DESIGN.md tokens",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/admin-001-manage-users.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-admin-001。手动上分复用 p14 credit_transactions（admin 来源）。依赖 F01 门控 + p14 credits。"
+    },
+    {
+      "id": "F03",
+      "priority": 2,
+      "area": "admin",
+      "title": "团队管理（搜索/分页/编辑团队类型 + 手动上分）",
+      "user_visible_behavior": "SysAdmin 在团队管理页：GET /api/admin/teams?q= 分页/筛选团队（名称/类型/成员数/Credit），查看基础信息；在后台支持范围内更新团队类型（team edit 弹窗）或为团队手动增加 Credit；操作即时反映；无权限不可访问。",
+      "design_ref": "prototype:<!-- teams --> + <!-- admin: team edit --> + <!-- admin: manual credit modal -->；DESIGN.md tokens",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/admin-002-manage-teams.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-admin-002。团队手动上分复用 p14。依赖 F01 门控 + p14 credits。"
+    },
+    {
+      "id": "F04",
+      "priority": 3,
+      "area": "admin",
+      "title": "AI Store 平台审核页（APPROVED/PENDING 切换）",
+      "user_visible_behavior": "SysAdmin 在平台审核页查看提交到平台审核的 AI Store 项目（PENDING 列表）：批准（→APPROVED/发布到平台）、拒绝，或将已批准项目撤回到待审核；操作即时反映在列表与状态标；确认弹窗防误操作；无权限不可访问。",
+      "design_ref": "prototype:<!-- store approval --> + <!-- admin: approval confirm -->；DESIGN.md tokens",
+      "status": "blocked",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/admin-003-ai-store-approval.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-admin-003。blocked-on p11：审核对象是 p11 的 ai_store_items（平台作用域 + 审核状态机）。p11 未就绪则无审核数据。依赖 F01 门控 + p11。"
+    },
+    {
+      "id": "F05",
+      "priority": 3,
+      "area": "admin",
+      "title": "AI Store 官方精选页（isFeatured 切换）",
+      "user_visible_behavior": "SysAdmin 在精选页查看已通过平台审核（APPROVED）的项目，切换其官方精选状态（isFeatured）；精选项目在 AI Store Explore 获得精选标/优先展示；切换即时反映；无权限不可访问。",
+      "design_ref": "prototype:<!-- store approval -->（精选页复用审核页资源管理布局，卡片改星标切换；Prototype 无独立 featured 屏，星标/Featured 标识见 store content 卡片）；DESIGN.md tokens",
+      "status": "blocked",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/admin-004-featured-ai-store.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-admin-004。blocked-on p11：精选作用于 p11 ai_store_items 的 isFeatured 字段，且需 F04 的 APPROVED 集合。依赖 F01 门控 + F04 + p11。"
     }
   ]
 }

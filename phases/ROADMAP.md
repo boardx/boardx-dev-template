@@ -45,15 +45,21 @@ Team/Room 的「高级入口」（Team AI Store、Team Memory、Room Studio、Ro
 | **P6 Canvas & 组件** | canvas(5)+board/canvas(4)+widgets(10)+widget-menu(14) | CANVAS | P5 | 📋 feature_list 已产出（phase-p6，22F=4passing种子+18；图片/文件/AI 助手 blocked） |
 | **P7 Board 壳** | header(15)+board-menu(12)+context-menu(6)+local-workspace(3) | WEB/CANVAS | P6 | 📋 feature_list 已产出（phase-p7，16F；语音/AI/导出/模板 blocked） |
 | **P8 实时协作** | board/collaboration(3) + 在线状态/光标 | COLLAB(Yjs+Redis) | P6 | 📋 feature_list 已产出（phase-p8，4F，待建 packages/collab） |
-| **P9 AVA / Chat** | ava(10) + share(1) | AI(LangGraph/LiteLLM) | P3 | ❌ |
-| **P10 知识库** | knowledge-base(4) | FILE+AI | P3,P9 | ❌ |
-| **P11 AI Store** | ai-store(6) | AI+审核流 | P3,P9 | ❌ |
-| **P12 Studio & 演示** | studio(1) + presentations(2) | AI+FILE | P5,P9 | ❌ |
-| **P13 问卷** | survey(6) | DATA | P3 | ❌ |
-| **P14 积分 & 计费** | credits(3) + billing(2) | Payment | P3 | ❌ |
-| **P15 Admin** | admin(5) | AUTH(SysAdmin) | 全部 | ❌ |
+| **P9 AVA / Chat** | ava(10) + share(1) | AI(LangGraph/LiteLLM) | P3 | 📋 feature_list 已产出（phase-p9，11F=9 not_started+2 blocked；附件 blocked-on p10、语音 blocked-on STT。本阶段建 CAP-AI 地基） |
+| **P10 知识库** | knowledge-base(4) | FILE+AI | P3,P9 | 📋 feature_list 已产出（phase-p10，4F=3+1 blocked；RAG blocked-on p9。本阶段建 CAP-FILE 地基） |
+| **P11 AI Store** | ai-store(6) | AI+审核流 | P3,P9 | 📋 feature_list 已产出（phase-p11，6F=5+1 blocked；订阅使用 blocked-on p9） |
+| **P12 Studio & 演示** | studio(1) + presentations(2) | AI+FILE | P5,P9 | 📋 feature_list 已产出（phase-p12，3F 全 blocked-on p9+p10；演示预览/优化设计稿已补） |
+| **P13 问卷** | survey(6) | DATA | P3 | 📋 feature_list 已产出（phase-p13，6F 全可建，仅依赖 P3） |
+| **P14 积分 & 计费** | credits(3) + billing(2) | Payment | P3 | 📋 feature_list 已产出（phase-p14，5F=3+2 blocked-on 支付引擎；本阶段建 CAP-PAYMENT；订阅升级页设计稿已补） |
+| **P15 Admin** | admin(5) | AUTH(SysAdmin) | 全部 | 📋 feature_list 已产出（phase-p15，5F=3+2 blocked-on p11；建 SysAdmin 门控） |
 
 > 并行性：P9/P13/P14 只依赖 P3，可在 Board 线（P5-P8）之外并行；P10/P11 依赖 P9。
+
+> **UI 配对（2026-07-01）**：P9–P15 每个 feature 的 `feature_list.json` 都带 `design_ref` 字段，指向 UI 设计来源：
+> 多数指向 `phases/requirements/BoardX UI Prototype V1.html` 的屏锚点（HTML 注释，如 `<!-- STORE -->`，可 grep）+ `DESIGN.md` token；
+> Prototype 未覆盖的 3 处已在本轮补设计稿到 `phases/requirements/mockups/`：
+> `chat-share-readonly.html`（p9-F05 公开只读分享页）、`presentation-preview.html`（p12-F02/F03 演示预览+单页优化）、`upgrade-plan.html`（p14-F04 订阅升级弹窗）。
+> 三处原 `design-needed` 阻塞已解除（现仅剩能力阻塞 blocked-on pN）。
 
 ## 三、对前面已建阶段的修正（核心诉求）
 
