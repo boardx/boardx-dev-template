@@ -145,7 +145,7 @@ export function BoardPresence({ boardId }: { boardId: string }) {
                 data-member-id={m.id}
                 title={`${m.name}（${m.role}）${m.operating ? " · 操作中" : ""}`}
                 className={
-                  "grid size-6 place-items-center rounded-full border text-[10px] font-semibold ring-1 ring-card " +
+                  "grid size-6 place-items-center rounded-full border text-10 font-semibold ring-1 ring-card " +
                   (m.operating
                     ? "border-primary bg-primary/20 text-primary"
                     : "border-border bg-primary/10 text-primary")
@@ -170,7 +170,7 @@ export function BoardPresence({ boardId }: { boardId: string }) {
                   aria-label={`跟随 ${m.name} 的视角`}
                   title={`跟随 ${m.name}`}
                   onClick={() => startFollow(m)}
-                  className="ml-0.5 rounded px-1 text-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  className="ml-0.5 rounded px-1 text-10 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   跟随
                 </button>
@@ -185,7 +185,7 @@ export function BoardPresence({ boardId }: { boardId: string }) {
         <div
           data-testid="following-banner"
           data-following-id={followed.id}
-          className="flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
+          className="flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-11 font-medium text-primary"
         >
           <span>正在跟随 {followed.name}</span>
           <button

@@ -1024,7 +1024,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                 <span
                   data-testid={`widget-reloaded-${it.id}`}
                   data-reload-count={reload[it.id]?.count ?? 0}
-                  className="pointer-events-none absolute -right-1 -top-2 flex items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground shadow"
+                  className="pointer-events-none absolute -right-1 -top-2 flex items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-10 font-medium text-primary-foreground shadow"
                 >
                   <RefreshCw className={"h-2.5 w-2.5 " + (refreshing.has(it.id) ? "animate-spin" : "")} />
                   {reload[it.id]?.count ?? 0}
