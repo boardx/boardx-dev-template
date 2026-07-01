@@ -7,6 +7,7 @@ import { Queue, Worker, type Processor, type ConnectionOptions } from "bullmq";
 
 export const QUEUE_NAMES = {
   jobs: "boardx.jobs",
+  kbFileProcessing: "boardx.kb-file-processing", // CAP-FILE：解析/切分/向量化（p10-F01）
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

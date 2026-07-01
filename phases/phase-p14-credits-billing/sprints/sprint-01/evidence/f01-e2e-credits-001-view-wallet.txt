@@ -1,0 +1,16 @@
+
+Running 9 tests using 1 worker
+
+  ✓  1 [chromium] › credits-001-view-wallet.spec.ts:24:5 › 登录后 /credits 展示个人钱包余额 + 标题 + Buy credits (5.1s)
+  ✓  2 [chromium] › credits-001-view-wallet.spec.ts:41:5 › 登录后 /credits 默认 Usage 标签展示消耗记录列表，切 Purchase 展示购买记录 (2.6s)
+  ✓  3 [chromium] › credits-001-view-wallet.spec.ts:55:5 › 无记录时 /credits?state=empty 展示空状态 (1.5s)
+  ✓  4 [chromium] › credits-001-view-wallet.spec.ts:67:5 › 用户菜单展示个人 Credit 余额入口与数值 (3.6s)
+  ✓  5 [chromium] › credits-001-view-wallet.spec.ts:77:5 › Team owner 进入 /credits 展示团队钱包（scope=team）+ 团队名 (2.2s)
+  ✓  6 [chromium] › credits-001-view-wallet.spec.ts:98:5 › Team member（非 owner/admin）请求团队钱包 → 403，看不到团队钱包 (3.5s)
+  ✓  7 [chromium] › credits-001-view-wallet.spec.ts:118:5 › 未登录访问 /credits → 跳登录 (5.8s)
+  ✓  8 [chromium] › credits-001-view-wallet.spec.ts:123:5 › 未登录调用 /api/credits/wallet → 401 (584ms)
+  ✓  9 [chromium] › credits-001-view-wallet.spec.ts:128:5 › 未登录调用兼容旧路径 /api/credits → 401 (840ms)
+
+  Slow test file: [chromium] › credits-001-view-wallet.spec.ts (25.7s)
+  Consider splitting slow test files to speed up parallel execution
+  9 passed (30.8s)

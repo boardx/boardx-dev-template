@@ -14,11 +14,18 @@ interface CreditRecord {
 }
 
 interface Wallet {
+  scope: "personal" | "team";
   balance: number;
   totalPurchased: number;
   totalGranted: number;
   totalConsumed: number;
   records: CreditRecord[];
+}
+
+interface TeamWithRole {
+  id: number | string;
+  name: string;
+  role: string;
 }
 
 const fmt = (n: number) => n.toLocaleString("en-US");
@@ -49,8 +56,10 @@ function WalletSkeleton() {
 export default function CreditsPage() {
   const router = useRouter();
   const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [teamName, setTeamName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [forbidden, setForbidden] = useState(false);
   const [tab, setTab] = useState<"usage" | "purchase">("usage");
 
   useEffect(() => {
@@ -58,12 +67,39 @@ export default function CreditsPage() {
     (async () => {
       setLoading(true);
       setError("");
+      setForbidden(false);
       const state =
         typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("state") : null;
-      const res = await fetch(`/api/credits${state === "empty" ? "?state=empty" : ""}`);
+      const stateQuery = state === "empty" ? "&state=empty" : "";
+
+      // 判断当前是否处在「团队管理角色」上下文：有当前团队且角色为 owner/admin → 走团队钱包；
+      // 否则（无团队 / 普通 member）→ 走个人钱包。
+      const [teamsRes, currentRes] = await Promise.all([
+        fetch("/api/teams"),
+        fetch("/api/teams/current"),
+      ]);
+      if (!alive) return;
+      if (teamsRes.status === 401 || currentRes.status === 401) {
+        router.replace("/login");
+        return;
+      }
+      const teamsData = (await teamsRes.json().catch(() => ({ teams: [] }))) as { teams?: TeamWithRole[] };
+      const currentData = (await currentRes.json().catch(() => ({ teamId: null }))) as { teamId: number | null };
+      const teams = teamsData.teams ?? [];
+      const activeTeam =
+        currentData.teamId != null ? teams.find((t) => String(t.id) === String(currentData.teamId)) : undefined;
+      const canManage = activeTeam != null && (activeTeam.role === "owner" || activeTeam.role === "admin");
+
+      const scopeQuery = canManage ? "scope=team" : "scope=personal";
+      const res = await fetch(`/api/credits/wallet?${scopeQuery}${stateQuery}`);
       if (!alive) return;
       if (res.status === 401) {
         router.replace("/login");
+        return;
+      }
+      if (res.status === 403) {
+        setForbidden(true);
+        setLoading(false);
         return;
       }
       if (!res.ok) {
@@ -74,6 +110,7 @@ export default function CreditsPage() {
       const data = (await res.json()) as { wallet: Wallet };
       if (!alive) return;
       setWallet(data.wallet);
+      setTeamName(canManage ? activeTeam!.name : null);
       setLoading(false);
     })();
     return () => {
@@ -92,7 +129,11 @@ export default function CreditsPage() {
         <h1 data-testid="credits-title" className="text-22 font-bold tracking-tight text-foreground">
           Credits
         </h1>
-        <span className="text-13 text-placeholder">Acme Inc</span>
+        {teamName && (
+          <span data-testid="scope-label" className="text-13 text-placeholder">
+            {teamName}
+          </span>
+        )}
         <div className="flex-1" />
         <Button data-testid="buy-credits" size="sm">
           Buy credits
@@ -102,6 +143,12 @@ export default function CreditsPage() {
       {error && (
         <p role="alert" data-testid="error" className="mt-4 text-13 text-destructive">
           {error}
+        </p>
+      )}
+
+      {forbidden && (
+        <p role="alert" data-testid="forbidden" className="mt-4 text-13 text-destructive">
+          你没有权限查看团队 Credit 钱包
         </p>
       )}
 
