@@ -32,6 +32,10 @@ export * from "./aiStore";
 export * from "./credits";
 // CAP-FILE 知识库文件仓储（kb_files / P10）
 export * from "./kbFiles";
+// CAP-PAYMENT 支付订单仓储（payment_orders / F05）
+export * from "./payment";
+// P15 Admin 后台：平台统计聚合（用户/团队计数；仅已建表的真实维度）
+export * from "./admin";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 
