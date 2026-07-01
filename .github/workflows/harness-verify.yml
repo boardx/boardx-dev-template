@@ -8,9 +8,14 @@ on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    # 全量浏览器 e2e 较重，不随每个 PR/push 跑；每天 03:00 UTC 定时回归一次。
+    - cron: "0 3 * * *"
 
 jobs:
   verify:
+    # 静态门控：每个 PR/push 都跑；定时(daily)不重复跑。
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -46,6 +51,8 @@ jobs:
   # 全栈运行时回归：phase-03 的 F01-F03 已 passing（不可逆），harness verify 会跳过，
   # 不构成真回归测试。故这里用 pg/redis 服务直接跑 curl 断言，每次 CI 真测运行时行为。
   fullstack-smoke:
+    # 后端闭环烟测：每个 PR/push 都跑；定时(daily)不重复跑。
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -102,8 +109,10 @@ jobs:
           test "$ok" = "1" || { echo "✗ F03 job 未在超时内完成"; exit 1; }
           echo "✓ 全栈烟测通过（F01/F02/F03）"
 
-  # phase-04 auth/team/room 的 Playwright e2e 回归（真浏览器，每次 CI 跑）。
-  e2e-auth-spaces:
+  # 全量 Playwright e2e 回归（真浏览器，覆盖 auth/team/room/canvas/board 等全部模块）。
+  # 较重，不随每个 PR/push 跑；仅每日定时(schedule)执行一次。
+  e2e-full:
+    if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     services:
       postgres:
