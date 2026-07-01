@@ -1,0 +1,390 @@
+
+> boardx-dev-template@ verify:base /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2
+> turbo run typecheck lint test
+
+turbo 2.5.0
+
+• Packages in scope: @repo/agent-core, @repo/ai, @repo/auth, @repo/canvas, @repo/data, @repo/memory, @repo/orchestrator, @repo/queue, @repo/storage, @repo/tools, @repo/web, @repo/workflow-worker
+• Running typecheck, lint, test in 12 packages
+• Remote caching disabled
+@repo/canvas:build: cache miss, executing b6aa4bb2f63421c1
+@repo/auth:lint: cache miss, executing 24a3e4084d3f070c
+@repo/auth:test: cache miss, executing 07701a27d4cca53b
+@repo/data:typecheck: cache miss, executing 16d77b0567d016aa
+@repo/auth:typecheck: cache miss, executing 02de50f5c7bc1670
+@repo/queue:build: cache miss, executing 80e583435fafb286
+@repo/ai:typecheck: cache miss, executing 2b1cb34d4c369d99
+@repo/ai:lint: cache miss, executing 5df4d8dfc18faa69
+@repo/ai:test: cache miss, executing 7b73df8adba3f96d
+@repo/queue:typecheck: cache miss, executing 185d9961bc7fc8a3
+@repo/auth:test: 
+@repo/auth:test: > @repo/auth@0.1.0 test /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/auth
+@repo/auth:test: > vitest run
+@repo/auth:test: 
+@repo/ai:typecheck: 
+@repo/ai:typecheck: > @repo/ai@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/ai
+@repo/ai:typecheck: > tsc --noEmit
+@repo/ai:typecheck: 
+@repo/queue:typecheck: 
+@repo/queue:typecheck: > @repo/queue@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/queue
+@repo/queue:typecheck: > tsc --noEmit
+@repo/queue:typecheck: 
+@repo/ai:test: 
+@repo/ai:test: > @repo/ai@0.1.0 test /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/ai
+@repo/ai:test: > vitest run
+@repo/ai:test: 
+@repo/canvas:build: 
+@repo/canvas:build: > @repo/canvas@0.1.0 build /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/canvas
+@repo/canvas:build: > tsc --noEmit
+@repo/canvas:build: 
+@repo/auth:typecheck: 
+@repo/auth:typecheck: > @repo/auth@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/auth
+@repo/auth:typecheck: > tsc --noEmit
+@repo/auth:typecheck: 
+@repo/auth:lint: 
+@repo/auth:lint: > @repo/auth@0.1.0 lint /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/auth
+@repo/auth:lint: > echo 'lint: ok'
+@repo/auth:lint: 
+@repo/queue:build: 
+@repo/queue:build: > @repo/queue@0.1.0 build /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/queue
+@repo/queue:build: > tsc --noEmit
+@repo/queue:build: 
+@repo/data:typecheck: 
+@repo/data:typecheck: > @repo/data@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/data
+@repo/data:typecheck: > tsc --noEmit
+@repo/data:typecheck: 
+@repo/ai:lint: 
+@repo/ai:lint: > @repo/ai@0.1.0 lint /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/ai
+@repo/ai:lint: > echo 'lint: ok'
+@repo/ai:lint: 
+@repo/auth:lint: lint: ok
+@repo/ai:lint: lint: ok
+@repo/queue:lint: cache miss, executing 6058cb704f0f123f
+@repo/queue:test: cache miss, executing 5e132fdc5f732214
+@repo/queue:lint: 
+@repo/queue:lint: > @repo/queue@0.1.0 lint /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/queue
+@repo/queue:lint: > echo 'lint: ok'
+@repo/queue:lint: 
+@repo/queue:test: 
+@repo/queue:test: > @repo/queue@0.1.0 test /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/queue
+@repo/queue:test: > vitest run
+@repo/queue:test: 
+@repo/queue:lint: lint: ok
+@repo/canvas:typecheck: cache miss, executing 7f1e47ea3b0f1d72
+@repo/canvas:typecheck: 
+@repo/canvas:typecheck: > @repo/canvas@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/canvas
+@repo/canvas:typecheck: > tsc --noEmit
+@repo/canvas:typecheck: 
+@repo/canvas:lint: cache miss, executing 892e22bc4f3bdea6
+@repo/canvas:lint: 
+@repo/canvas:lint: > @repo/canvas@0.1.0 lint /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/canvas
+@repo/canvas:lint: > echo 'lint: ok'
+@repo/canvas:lint: 
+@repo/canvas:lint: lint: ok
+@repo/canvas:test: cache miss, executing c066ed7806e4e8ac
+@repo/tools:build: cache miss, executing 6dd268ebdbdbaa55
+@repo/agent-core:build: cache miss, executing e8fe764971a99a5e
+@repo/canvas:test: 
+@repo/canvas:test: > @repo/canvas@0.1.0 test /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/canvas
+@repo/canvas:test: > vitest run
+@repo/canvas:test: 
+@repo/tools:build: 
+@repo/tools:build: > @repo/tools@0.1.0 build /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/tools
+@repo/tools:build: > tsc --noEmit
+@repo/tools:build: 
+@repo/agent-core:build: 
+@repo/agent-core:build: > @repo/agent-core@0.1.0 build /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/agent-core
+@repo/agent-core:build: > tsc --noEmit
+@repo/agent-core:build: 
+@repo/memory:build: cache miss, executing a7c807692b8349a1
+@repo/ai:test: 
+@repo/ai:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/ai
+@repo/ai:test: 
+@repo/auth:test: 
+@repo/auth:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/auth
+@repo/auth:test: 
+@repo/queue:test: 
+@repo/queue:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/queue
+@repo/queue:test: 
+@repo/orchestrator:lint: cache miss, executing 0a6005e9d068fa9b
+@repo/canvas:test: 
+@repo/canvas:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/canvas
+@repo/canvas:test: 
+@repo/storage:typecheck: cache miss, executing 454b154492f1bf29
+@repo/ai:test:  ✓ src/index.test.ts  (10 tests) 7ms
+@repo/ai:test: 
+@repo/ai:test:  Test Files  1 passed (1)
+@repo/ai:test:       Tests  10 passed (10)
+@repo/ai:test:    Start at  00:31:12
+@repo/ai:test:    Duration  2.33s (transform 283ms, setup 0ms, collect 300ms, tests 7ms, environment 0ms, prepare 653ms)
+@repo/ai:test: 
+@repo/storage:lint: cache miss, executing 4c4968d529a88900
+@repo/canvas:test:  ✓ src/index.test.ts  (8 tests) 4ms
+@repo/canvas:test: 
+@repo/canvas:test:  Test Files  1 passed (1)
+@repo/canvas:test:       Tests  8 passed (8)
+@repo/canvas:test:    Start at  00:31:13
+@repo/canvas:test:    Duration  1.77s (transform 94ms, setup 0ms, collect 170ms, tests 4ms, environment 0ms, prepare 517ms)
+@repo/canvas:test: 
+@repo/storage:test: cache miss, executing d8c4faac4e3056ac
+@repo/memory:build: 
+@repo/memory:build: > @repo/memory@0.1.0 build /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/memory
+@repo/memory:build: > tsc --noEmit
+@repo/memory:build: 
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: > @repo/orchestrator@0.1.0 lint /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/apps/orchestrator
+@repo/orchestrator:lint: > echo 'lint: ok'
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: lint: ok
+@repo/workflow-worker:lint: cache miss, executing 2e8179dc23ed0cee
+@repo/storage:typecheck: 
+@repo/storage:typecheck: > @repo/storage@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/storage
+@repo/storage:typecheck: > tsc --noEmit
+@repo/storage:typecheck: 
+@repo/auth:test:  ✓ src/index.test.ts  (15 tests) 1486ms
+@repo/auth:test: 
+@repo/auth:test:  Test Files  1 passed (1)
+@repo/auth:test:       Tests  15 passed (15)
+@repo/auth:test:    Start at  00:31:12
+@repo/auth:test:    Duration  3.75s (transform 888ms, setup 0ms, collect 932ms, tests 1.49s, environment 0ms, prepare 111ms)
+@repo/auth:test: 
+@repo/storage:build: cache miss, executing 924fc4e640e99802
+@repo/storage:lint: 
+@repo/storage:lint: > @repo/storage@0.1.0 lint /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/storage
+@repo/storage:lint: > echo 'lint: ok'
+@repo/storage:lint: 
+@repo/storage:lint: lint: ok
+@repo/storage:test: 
+@repo/storage:test: > @repo/storage@0.1.0 test /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/storage
+@repo/storage:test: > vitest run
+@repo/storage:test: 
+@repo/ai:build: cache miss, executing 52c6b7a18b4efe6d
+@repo/auth:build: cache miss, executing 01a61dc3820ea177
+@repo/web:lint: cache miss, executing 9a3e79b7f4efd25b
+@repo/memory:test: cache miss, executing a8f1633b61c04749
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: > @repo/workflow-worker@0.1.0 lint /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/apps/workflow-worker
+@repo/workflow-worker:lint: > echo 'lint: ok'
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: lint: ok
+@repo/data:lint: cache miss, executing 95cd5bbcdd57d805
+@repo/storage:build: 
+@repo/storage:build: > @repo/storage@0.1.0 build /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/storage
+@repo/storage:build: > tsc --noEmit
+@repo/storage:build: 
+@repo/auth:build: 
+@repo/auth:build: > @repo/auth@0.1.0 build /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/auth
+@repo/auth:build: > tsc --noEmit
+@repo/auth:build: 
+@repo/ai:build: 
+@repo/ai:build: > @repo/ai@0.1.0 build /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/ai
+@repo/ai:build: > tsc --noEmit
+@repo/ai:build: 
+@repo/memory:test: 
+@repo/memory:test: > @repo/memory@0.1.0 test /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/memory
+@repo/memory:test: > vitest run
+@repo/memory:test: 
+@repo/data:lint: 
+@repo/data:lint: > @repo/data@0.1.0 lint /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/data
+@repo/data:lint: > echo 'lint: ok'
+@repo/data:lint: 
+@repo/data:lint: lint: ok
+@repo/data:test: cache miss, executing e47f48cd55edfff7
+@repo/web:lint: 
+@repo/web:lint: > @repo/web@0.1.0 lint /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/apps/web
+@repo/web:lint: > bash scripts/lint-design.sh
+@repo/web:lint: 
+@repo/data:test: 
+@repo/data:test: > @repo/data@0.1.0 test /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/data
+@repo/data:test: > vitest run
+@repo/data:test: 
+@repo/tools:typecheck: cache miss, executing d35e23a6e8312d57
+@repo/data:build: cache miss, executing c3f467bae5df9199
+@repo/queue:test:  ✓ src/index.test.ts  (4 tests) 4ms
+@repo/queue:test: 
+@repo/queue:test:  Test Files  1 passed (1)
+@repo/queue:test:       Tests  4 passed (4)
+@repo/queue:test:    Start at  00:31:12
+@repo/queue:test:    Duration  5.30s (transform 174ms, setup 0ms, collect 3.57s, tests 4ms, environment 0ms, prepare 357ms)
+@repo/queue:test: 
+@repo/tools:lint: cache miss, executing b6343de6e5d57abf
+@repo/tools:typecheck: 
+@repo/tools:typecheck: > @repo/tools@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/tools
+@repo/tools:typecheck: > tsc --noEmit
+@repo/tools:typecheck: 
+@repo/data:build: 
+@repo/data:build: > @repo/data@0.1.0 build /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/data
+@repo/data:build: > tsc --noEmit
+@repo/data:build: 
+@repo/tools:lint: 
+@repo/tools:lint: > @repo/tools@0.1.0 lint /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/tools
+@repo/tools:lint: > echo 'lint: ok'
+@repo/tools:lint: 
+@repo/tools:lint: lint: ok
+@repo/tools:test: cache miss, executing 772cdb06b7866344
+@repo/tools:test: 
+@repo/tools:test: > @repo/tools@0.1.0 test /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/tools
+@repo/tools:test: > vitest run
+@repo/tools:test: 
+@repo/memory:lint: cache miss, executing 2a4b4ca0e1c9b292
+@repo/web:lint: ✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性）
+@repo/agent-core:typecheck: cache miss, executing 6ff9d781ede8e6dc
+@repo/agent-core:lint: cache miss, executing e5bf32cf6b47e071
+@repo/agent-core:test: cache miss, executing 5524f5371172bdc5
+@repo/memory:lint: 
+@repo/memory:lint: > @repo/memory@0.1.0 lint /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/memory
+@repo/memory:lint: > echo 'lint: ok'
+@repo/memory:lint: 
+@repo/memory:lint: lint: ok
+@repo/memory:typecheck: cache miss, executing 24ae493f81cd7239
+@repo/agent-core:typecheck: 
+@repo/agent-core:typecheck: > @repo/agent-core@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/agent-core
+@repo/agent-core:typecheck: > tsc --noEmit
+@repo/agent-core:typecheck: 
+@repo/agent-core:lint: 
+@repo/agent-core:lint: > @repo/agent-core@0.1.0 lint /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/agent-core
+@repo/agent-core:lint: > echo 'lint: ok'
+@repo/agent-core:lint: 
+@repo/agent-core:lint: lint: ok
+@repo/workflow-worker:test: cache miss, executing d4210c0f8eef243d
+@repo/agent-core:test: 
+@repo/agent-core:test: > @repo/agent-core@0.1.0 test /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/agent-core
+@repo/agent-core:test: > vitest run
+@repo/agent-core:test: 
+@repo/memory:typecheck: 
+@repo/memory:typecheck: > @repo/memory@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/memory
+@repo/memory:typecheck: > tsc --noEmit
+@repo/memory:typecheck: 
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test: > @repo/workflow-worker@0.1.0 test /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/apps/workflow-worker
+@repo/workflow-worker:test: > vitest run
+@repo/workflow-worker:test: 
+@repo/workflow-worker:typecheck: cache miss, executing b09244ff9673b191
+@repo/orchestrator:test: cache miss, executing 41a7461f347575cc
+@repo/workflow-worker:typecheck: 
+@repo/workflow-worker:typecheck: > @repo/workflow-worker@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/apps/workflow-worker
+@repo/workflow-worker:typecheck: > tsc --noEmit
+@repo/workflow-worker:typecheck: 
+@repo/storage:test: 
+@repo/storage:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/storage
+@repo/storage:test: 
+@repo/data:test: 
+@repo/data:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/data
+@repo/data:test: 
+@repo/orchestrator:typecheck: cache miss, executing c22da1b4dac83e63
+@repo/web:test: cache miss, executing 3282b096bcb03165
+@repo/tools:test: 
+@repo/tools:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/tools
+@repo/tools:test: 
+@repo/memory:test: 
+@repo/memory:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/memory
+@repo/memory:test: 
+@repo/orchestrator:test: 
+@repo/orchestrator:test: > @repo/orchestrator@0.1.0 test /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/apps/orchestrator
+@repo/orchestrator:test: > vitest run
+@repo/orchestrator:test: 
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/apps/workflow-worker
+@repo/workflow-worker:test: 
+@repo/agent-core:test: 
+@repo/agent-core:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/packages/agent-core
+@repo/agent-core:test: 
+@repo/storage:test:  ✓ src/index.test.ts  (10 tests) 10ms
+@repo/storage:test: 
+@repo/storage:test:  Test Files  1 passed (1)
+@repo/storage:test:       Tests  10 passed (10)
+@repo/storage:test:    Start at  00:31:22
+@repo/storage:test:    Duration  2.45s (transform 341ms, setup 0ms, collect 1.15s, tests 10ms, environment 0ms, prepare 305ms)
+@repo/storage:test: 
+@repo/web:typecheck: cache miss, executing 12249216435fd905
+@repo/data:test:  ✓ src/aiStore.test.ts  (8 tests) 4ms
+@repo/data:test:  ✓ src/avaChat.test.ts  (5 tests) 2ms
+@repo/data:test:  ✓ src/index.test.ts  (3 tests) 6ms
+@repo/data:test:  ✓ src/survey.test.ts  (4 tests) 9ms
+@repo/memory:test:  ✓ src/index.test.ts  (13 tests) 20ms
+@repo/data:test:  ✓ src/board.test.ts  (9 tests) 27ms
+@repo/data:test:  ✓ src/roomChat.test.ts  (2 tests) 4ms
+@repo/memory:test: 
+@repo/memory:test:  Test Files  1 passed (1)
+@repo/memory:test:       Tests  13 passed (13)
+@repo/memory:test:    Start at  00:31:23
+@repo/memory:test:    Duration  2.38s (transform 335ms, setup 0ms, collect 638ms, tests 20ms, environment 0ms, prepare 394ms)
+@repo/memory:test: 
+@repo/data:test: 
+@repo/data:test:  Test Files  6 passed (6)
+@repo/data:test:       Tests  31 passed (31)
+@repo/data:test:    Start at  00:31:23
+@repo/data:test:    Duration  2.92s (transform 1.62s, setup 2ms, collect 7.57s, tests 52ms, environment 28ms, prepare 2.53s)
+@repo/data:test: 
+@repo/workflow-worker:test:  ✓ src/job.test.ts  (3 tests) 1ms
+@repo/web:test: 
+@repo/web:test: > @repo/web@0.1.0 test /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/apps/web
+@repo/web:test: > vitest run
+@repo/web:test: 
+@repo/tools:test:  ✓ src/index.test.ts  (12 tests) 934ms
+@repo/tools:test: 
+@repo/tools:test:  Test Files  1 passed (1)
+@repo/tools:test:       Tests  12 passed (12)
+@repo/tools:test:    Start at  00:31:23
+@repo/tools:test:    Duration  2.77s (transform 201ms, setup 0ms, collect 501ms, tests 934ms, environment 0ms, prepare 499ms)
+@repo/tools:test: 
+@repo/orchestrator:typecheck: 
+@repo/orchestrator:typecheck: > @repo/orchestrator@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/apps/orchestrator
+@repo/orchestrator:typecheck: > tsc --noEmit
+@repo/orchestrator:typecheck: 
+@repo/workflow-worker:test:  ✓ src/kbFileJob.test.ts  (2 tests) 10ms
+@repo/agent-core:test:  ✓ src/index.test.ts  (3 tests) 6ms
+@repo/agent-core:test: 
+@repo/agent-core:test:  Test Files  1 passed (1)
+@repo/agent-core:test:       Tests  3 passed (3)
+@repo/agent-core:test:    Start at  00:31:24
+@repo/agent-core:test:    Duration  1.54s (transform 50ms, setup 0ms, collect 68ms, tests 6ms, environment 0ms, prepare 163ms)
+@repo/agent-core:test: 
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  Test Files  2 passed (2)
+@repo/workflow-worker:test:       Tests  5 passed (5)
+@repo/workflow-worker:test:    Start at  00:31:24
+@repo/workflow-worker:test:    Duration  1.62s (transform 68ms, setup 0ms, collect 110ms, tests 11ms, environment 0ms, prepare 523ms)
+@repo/workflow-worker:test: 
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/apps/orchestrator
+@repo/orchestrator:test: 
+@repo/web:typecheck: 
+@repo/web:typecheck: > @repo/web@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/apps/web
+@repo/web:typecheck: > tsc --noEmit
+@repo/web:typecheck: 
+@repo/web:test: [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+@repo/web:test: 
+@repo/web:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-116-ai-store-f02-v2/apps/web
+@repo/web:test: 
+@repo/orchestrator:test:  ✓ src/orchestrator.test.ts  (3 tests) 315ms
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  Test Files  1 passed (1)
+@repo/orchestrator:test:       Tests  3 passed (3)
+@repo/orchestrator:test:    Start at  00:31:26
+@repo/orchestrator:test:    Duration  1.04s (transform 159ms, setup 0ms, collect 220ms, tests 315ms, environment 0ms, prepare 135ms)
+@repo/orchestrator:test: 
+@repo/web:test:  ✓ lib/agents.test.ts  (5 tests) 4ms
+@repo/web:test:  ✓ lib/viewport.test.ts  (4 tests) 3ms
+@repo/web:test:  ✓ lib/health.test.ts  (1 test) 2ms
+@repo/web:test:  ✓ lib/feedback.test.ts  (2 tests) 4ms
+@repo/web:test: 
+@repo/web:test:  Test Files  4 passed (4)
+@repo/web:test:       Tests  12 passed (12)
+@repo/web:test:    Start at  00:31:27
+@repo/web:test:    Duration  876ms (transform 171ms, setup 0ms, collect 279ms, tests 13ms, environment 0ms, prepare 380ms)
+@repo/web:test: 
+
+ Tasks:    45 successful, 45 total
+Cached:    0 cached, 45 total
+  Time:    27.137s 
+
+ WARNING  no output files found for task @repo/agent-core#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/ai#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/auth#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/canvas#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/data#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/memory#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/queue#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/storage#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/tools#build. Please check your `outputs` key in `turbo.json`

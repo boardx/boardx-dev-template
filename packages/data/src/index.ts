@@ -3,6 +3,8 @@
 // 显式 pg + SQL（不用 ORM），保持透明，便于后续接 pgvector / Apache AGE。
 
 import pg from "pg";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 const { Pool } = pg;
 
@@ -39,14 +41,55 @@ export interface DbConfig {
   connectionString: string;
 }
 
+function parseEnvFile(path: string): Record<string, string> {
+  if (!existsSync(path)) return {};
+  const out: Record<string, string> = {};
+  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const idx = trimmed.indexOf("=");
+    if (idx <= 0) continue;
+    const key = trimmed.slice(0, idx).trim();
+    let value = trimmed.slice(idx + 1).trim();
+    if (
+      (value.startsWith("\"") && value.endsWith("\"")) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    out[key] = value;
+  }
+  return out;
+}
+
+function findWorkspaceRoot(start: string): string {
+  let dir = start;
+  for (;;) {
+    if (existsSync(join(dir, "pnpm-workspace.yaml"))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) return start;
+    dir = parent;
+  }
+}
+
+function loadDbEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const root = findWorkspaceRoot(process.cwd());
+  const fileEnv = {
+    ...parseEnvFile(join(root, ".env")),
+    ...parseEnvFile(join(root, "apps/web/.env.local")),
+  };
+  return { ...fileEnv, ...env };
+}
+
 /** 从环境变量解析连接串。优先 DATABASE_URL，否则用 PG* 拼。 */
 export function resolveDbConfig(env: NodeJS.ProcessEnv = process.env): DbConfig {
-  if (env.DATABASE_URL) return { connectionString: env.DATABASE_URL };
-  const host = env.PGHOST ?? "localhost";
-  const port = env.PGPORT ?? "5432";
-  const user = env.PGUSER ?? "boardx";
-  const password = env.PGPASSWORD ?? "boardx";
-  const database = env.PGDATABASE ?? "boardx";
+  const mergedEnv = env === process.env ? loadDbEnv(env) : env;
+  if (mergedEnv.DATABASE_URL) return { connectionString: mergedEnv.DATABASE_URL };
+  const host = mergedEnv.PGHOST ?? "localhost";
+  const port = mergedEnv.PGPORT ?? mergedEnv.PG_PORT ?? "5432";
+  const user = mergedEnv.PGUSER ?? "boardx";
+  const password = mergedEnv.PGPASSWORD ?? "boardx";
+  const database = mergedEnv.PGDATABASE ?? "boardx";
   return {
     connectionString: `postgresql://${user}:${password}@${host}:${port}/${database}`,
   };

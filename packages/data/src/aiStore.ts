@@ -1,11 +1,11 @@
-// packages/data/src/aiStore.ts — CAP-DATA AI Store 商品仓储（P11 F01 地基）
+// packages/data/src/aiStore.ts — CAP-DATA AI Store 商品仓储（P11）
 // ai_store_items：Agent / AI 工具 / 图片工具 / 模板，scope=personal/team/platform。
-// F01 只读浏览已发布（published）项目；创建/审核状态机由 F02/F06 负责，此处不写。
 import { query } from "./index";
 
 export type AiStoreItemType = "agent" | "ai-tool" | "image-tool" | "template";
 export type AiStoreItemScope = "personal" | "team" | "platform";
 export type AiStoreItemStatus = "draft" | "published" | "pending" | "approved" | "rejected";
+export type AiStoreSubmitAction = "draft" | "publish" | "submit_review";
 
 export interface AiStoreItem {
   id: number;
@@ -20,6 +20,7 @@ export interface AiStoreItem {
   author: string;
   tags: string[];
   examples: string[];
+  config: Record<string, unknown>;
   likes: number;
   views: number;
   featured: boolean;
@@ -28,7 +29,7 @@ export interface AiStoreItem {
 }
 
 const ITEM_COLS =
-  "id, type, scope, owner_user_id, team_id, status, name, description, cover, author, tags, examples, likes, views, featured, created_at, updated_at";
+  "id, type, scope, owner_user_id, team_id, status, name, description, cover, author, tags, examples, config, likes, views, featured, created_at, updated_at";
 
 export interface ListAiStoreItemsOptions {
   /** 类型筛选；空/undefined = 不筛选。 */
@@ -52,6 +53,21 @@ export interface ListAiStoreItemsResult {
   page: number;
   pageSize: number;
   totalPages: number;
+}
+
+export interface AiStoreItemDraftInput {
+  type: AiStoreItemType;
+  scope: AiStoreItemScope;
+  status: AiStoreItemStatus;
+  ownerUserId: number;
+  teamId?: number | null;
+  name: string;
+  description: string;
+  cover?: string | null;
+  author: string;
+  tags?: string[];
+  examples?: string[];
+  config?: Record<string, unknown>;
 }
 
 const DEFAULT_PAGE_SIZE = 9;
@@ -116,6 +132,83 @@ export async function listAiStoreItems(opts: ListAiStoreItemsOptions = {}): Prom
 /** 取单个项目详情（供详情弹窗）。不做可见性过滤，调用方按需自行校验。 */
 export async function getAiStoreItem(id: number): Promise<AiStoreItem | undefined> {
   const rows = await query<AiStoreItem>(`SELECT ${ITEM_COLS} FROM ai_store_items WHERE id = $1`, [id]);
+  return rows[0];
+}
+
+/** 拥有者管理列表：用于 Create/Authorized 视图展示自己的草稿、已发布和审核中项目。 */
+export async function listOwnedAiStoreItems(ownerUserId: number): Promise<AiStoreItem[]> {
+  return query<AiStoreItem>(
+    `SELECT ${ITEM_COLS} FROM ai_store_items
+     WHERE owner_user_id = $1
+     ORDER BY updated_at DESC, id DESC`,
+    [ownerUserId]
+  );
+}
+
+/** 创建 AI Store 项目：F02 的草稿/发布/提交审核都落同一张表。 */
+export async function createAiStoreItem(input: AiStoreItemDraftInput): Promise<AiStoreItem> {
+  const rows = await query<AiStoreItem>(
+    `INSERT INTO ai_store_items
+       (type, scope, owner_user_id, team_id, status, name, description, cover, author, tags, examples, config)
+     VALUES
+       ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb)
+     RETURNING ${ITEM_COLS}`,
+    [
+      input.type,
+      input.scope,
+      input.ownerUserId,
+      input.teamId ?? null,
+      input.status,
+      input.name,
+      input.description,
+      input.cover ?? null,
+      input.author,
+      input.tags ?? [],
+      input.examples ?? [],
+      JSON.stringify(input.config ?? {}),
+    ]
+  );
+  return rows[0]!;
+}
+
+/** 仅 owner 可更新自己的 AI Store 项目。调用方负责决定状态动作是否合法。 */
+export async function updateAiStoreItem(
+  id: number,
+  ownerUserId: number,
+  input: AiStoreItemDraftInput
+): Promise<AiStoreItem | undefined> {
+  const rows = await query<AiStoreItem>(
+    `UPDATE ai_store_items
+     SET type = $3,
+         scope = $4,
+         team_id = $5,
+         status = $6,
+         name = $7,
+         description = $8,
+         cover = $9,
+         author = $10,
+         tags = $11,
+         examples = $12,
+         config = $13::jsonb,
+         updated_at = now()
+     WHERE id = $1 AND owner_user_id = $2
+     RETURNING ${ITEM_COLS}`,
+    [
+      id,
+      ownerUserId,
+      input.type,
+      input.scope,
+      input.teamId ?? null,
+      input.status,
+      input.name,
+      input.description,
+      input.cover ?? null,
+      input.author,
+      input.tags ?? [],
+      input.examples ?? [],
+      JSON.stringify(input.config ?? {}),
+    ]
+  );
   return rows[0];
 }
 

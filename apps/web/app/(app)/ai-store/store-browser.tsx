@@ -1,19 +1,29 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Search, Compass, Bookmark, Plus, ShieldCheck, Share2, LayoutGrid } from "lucide-react";
+import { Search, Compass, Bookmark, Plus, ShieldCheck, Share2, LayoutGrid, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 type StoreType = "agent" | "ai-tool" | "image-tool" | "template";
+type StoreScope = "personal" | "team" | "platform";
+type StoreStatus = "draft" | "published" | "pending" | "approved" | "rejected";
+type SubmitAction = "draft" | "publish" | "submit_review";
 
 interface StoreItem {
   id: number;
   name: string;
   description: string;
   type: StoreType;
+  scope: StoreScope;
+  status: StoreStatus;
+  cover: string | null;
   tags: string[];
   examples: string[];
+  config?: Record<string, unknown>;
   author: string;
   likes: number;
   views: number;
@@ -57,6 +67,25 @@ const TYPE_TABS: { key: "all" | StoreType; name: string }[] = [
   { key: "template", name: "Template" },
 ];
 
+const CREATOR_TYPES: { key: StoreType; name: string; help: string }[] = [
+  { key: "agent", name: "Agent", help: "Reusable AI teammate for AVA and board workflows." },
+  { key: "ai-tool", name: "AI Tool", help: "Focused text or workflow utility." },
+  { key: "image-tool", name: "Image Tool", help: "Image generation, editing, or enhancement tool." },
+  { key: "template", name: "Template", help: "Reusable board, room, or work canvas template." },
+];
+
+const EMPTY_FORM = {
+  id: null as number | null,
+  type: "agent" as StoreType,
+  name: "",
+  description: "",
+  config: "",
+  cover: "",
+  scope: "personal" as StoreScope,
+  tags: "",
+  examples: "",
+};
+
 const TAGS = ["research", "writing", "design", "productivity", "meetings", "featured"];
 
 const TAG_FILLS = ["bg-tag-green", "bg-tag-blue", "bg-tag-purple", "bg-tag-pink", "bg-tag-yellow"];
@@ -80,20 +109,38 @@ function StoreSkeleton() {
   );
 }
 
+function statusLabel(status: StoreStatus) {
+  if (status === "pending") return "PENDING";
+  return status.toUpperCase();
+}
+
+function configText(item: StoreItem) {
+  const instructions = item.config?.instructions;
+  if (typeof instructions === "string") return instructions;
+  return item.config && Object.keys(item.config).length > 0 ? JSON.stringify(item.config, null, 2) : "";
+}
+
 export function StoreBrowser() {
   const [nav, setNav] = useState<string>("explore");
   const [items, setItems] = useState<StoreItem[]>([]);
+  const [ownedItems, setOwnedItems] = useState<StoreItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [ownedLoading, setOwnedLoading] = useState(false);
   const [error, setError] = useState("");
+  const [ownedError, setOwnedError] = useState("");
   const [type, setType] = useState<"all" | StoreType>("all");
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [q, setQ] = useState("");
   const [detailId, setDetailId] = useState<number | null>(null);
   const [detailItem, setDetailItem] = useState<StoreItem | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [formMessage, setFormMessage] = useState("");
+  const [submitting, setSubmitting] = useState<SubmitAction | null>(null);
 
   async function load(opts: { type: "all" | StoreType; tags: string[]; q: string; page: number }) {
     setLoading(true);
@@ -121,9 +168,33 @@ export function StoreBrowser() {
     setLoading(false);
   }
 
-  // 仅 Explore 拉全量；其他 submenu（Subscribe/Create/...）当前为占位空态。
+  async function loadOwned() {
+    setOwnedLoading(true);
+    setOwnedError("");
+    try {
+      const res = await fetch("/api/ai-store/items?owner=me");
+      if (!res.ok) {
+        setOwnedError("加载你的项目失败，请稍后重试");
+        setOwnedLoading(false);
+        return;
+      }
+      const data = (await res.json()) as { items: StoreItem[] };
+      setOwnedItems(data.items ?? []);
+    } catch {
+      setOwnedError("加载你的项目失败，请稍后重试");
+    }
+    setOwnedLoading(false);
+  }
+
+  // Explore 拉浏览列表；Create/Authorized 拉属主列表。
   useEffect(() => {
     if (nav === "explore") void load({ type, tags: activeTags, q, page: 1 });
+    else if (nav === "create" || nav === "authorized") {
+      setItems([]);
+      setLoading(false);
+      setError("");
+      void loadOwned();
+    }
     else {
       setItems([]);
       setLoading(false);
@@ -171,10 +242,146 @@ export function StoreBrowser() {
     void load({ type, tags: activeTags, q, page: p });
   }
 
+  function updateForm<K extends keyof typeof EMPTY_FORM>(key: K, value: (typeof EMPTY_FORM)[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setFormErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+    setFormMessage("");
+  }
+
+  function editItem(item: StoreItem) {
+    setForm({
+      id: item.id,
+      type: item.type,
+      name: item.name,
+      description: item.description,
+      config: configText(item),
+      cover: item.cover ?? "",
+      scope: item.scope,
+      tags: item.tags.join(", "),
+      examples: item.examples.join(", "),
+    });
+    setFormErrors({});
+    setFormMessage("");
+    setNav("create");
+  }
+
+  async function submitItem(action: SubmitAction) {
+    setSubmitting(action);
+    setFormErrors({});
+    setFormMessage("");
+    try {
+      const res = await fetch(form.id ? `/api/ai-store/items/${form.id}` : "/api/ai-store/items", {
+        method: form.id ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, action }),
+      });
+      const data = (await res.json()) as { item?: StoreItem; errors?: Record<string, string>; error?: string };
+      if (!res.ok) {
+        setFormErrors(data.errors ?? { form: data.error ?? "保存失败，请稍后重试" });
+        return;
+      }
+      if (data.item) {
+        editItem(data.item);
+        setFormMessage(
+          action === "submit_review"
+            ? "已提交审核，状态为 PENDING"
+            : action === "publish"
+              ? "已发布"
+              : "草稿已保存"
+        );
+      }
+      await loadOwned();
+    } catch {
+      setFormErrors({ form: "保存失败，请稍后重试" });
+    } finally {
+      setSubmitting(null);
+    }
+  }
+
   const filtersActive = activeTags.length > 0 || q.trim().length > 0 || type !== "all";
   const isExplore = nav === "explore";
+  const isCreate = nav === "create";
+  const isAuthorized = nav === "authorized";
   const navTitle =
     NAV_GROUPS.flatMap((g) => g.items).find((n) => n.key === nav)?.name ?? "Explore";
+  const ownedList = (
+    <div data-testid="owner-items" className="mt-5">
+      {ownedLoading ? (
+        <div data-testid="loading" className="grid animate-pulse grid-cols-1 gap-3 lg:grid-cols-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-24 rounded-12 bg-muted" />
+          ))}
+        </div>
+      ) : ownedError ? (
+        <div
+          data-testid="err-owned"
+          role="alert"
+          className="rounded-12 border border-border p-4 text-13 text-destructive"
+        >
+          {ownedError}
+        </div>
+      ) : ownedItems.length === 0 ? (
+        <div data-testid="empty" className="rounded-12 border border-dashed border-border py-10 text-center">
+          <p className="text-13 font-semibold text-foreground">No owned items yet</p>
+          <p className="mt-1 text-13 text-placeholder">Create and save your first AI Store item.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {ownedItems.map((it) => (
+            <article
+              key={it.id}
+              data-testid={`owner-item-${it.id}`}
+              className="rounded-12 border border-border p-4 transition-all duration-200 hover:border-border-strong hover:shadow-md"
+            >
+              <div className="flex items-start gap-3">
+                <span
+                  className={cn(
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-10 text-15 font-bold text-foreground/40",
+                    fillFor(it.id),
+                  )}
+                >
+                  {(it.cover || it.name.charAt(0)).slice(0, 1).toUpperCase()}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-13 font-semibold text-foreground">{it.name}</div>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    <span data-testid={`owner-item-status-${it.id}`} className="rounded-7 bg-muted px-2 py-0.5 text-10 font-bold text-muted-foreground">
+                      {statusLabel(it.status)}
+                    </span>
+                    <span className="rounded-7 bg-muted px-2 py-0.5 text-10 text-muted-foreground">
+                      {it.scope}
+                    </span>
+                    <span className="rounded-7 bg-muted px-2 py-0.5 text-10 text-muted-foreground">
+                      {it.type}
+                    </span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-12 leading-relaxed text-muted-foreground">
+                    {it.description}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  data-testid={`edit-item-${it.id}`}
+                  onClick={() => editItem(it)}
+                  className="shrink-0"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit
+                </Button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="flex h-full overflow-hidden" data-testid="ai-store">
@@ -439,6 +646,233 @@ export function StoreBrowser() {
               )}
             </div>
           </>
+        ) : isCreate ? (
+          <div data-testid="create-view" className="mt-5 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)]">
+            <div>
+              <div data-testid="creator-types" className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {CREATOR_TYPES.map((creator) => (
+                  <Button
+                    key={creator.key}
+                    type="button"
+                    variant={form.type === creator.key ? "default" : "outline"}
+                    data-testid={`creator-type-${creator.key}`}
+                    aria-pressed={form.type === creator.key}
+                    onClick={() => updateForm("type", creator.key)}
+                    className="h-auto justify-start rounded-12 p-4 text-left transition-all duration-200"
+                  >
+                    <span className="flex flex-col items-start gap-1">
+                      <span className="text-13 font-bold">{creator.name}</span>
+                      <span className="whitespace-normal text-11 font-medium opacity-80">{creator.help}</span>
+                    </span>
+                  </Button>
+                ))}
+              </div>
+
+              <form
+                data-testid="creator-form"
+                className="mt-5 rounded-12 border border-border p-5"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void submitItem("draft");
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div>
+                    <h2 className="text-15 font-bold text-foreground">
+                      {form.id ? "Edit AI Store item" : "Create AI Store item"}
+                    </h2>
+                    <p className="mt-1 text-12 text-placeholder">
+                      Fill the required fields, then save, publish, or submit for review.
+                    </p>
+                  </div>
+                  <div className="flex-1" />
+                  {form.id && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      data-testid="new-item"
+                      onClick={() => {
+                        setForm(EMPTY_FORM);
+                        setFormErrors({});
+                        setFormMessage("");
+                      }}
+                    >
+                      New
+                    </Button>
+                  )}
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="store-name">Name</Label>
+                    <Input
+                      id="store-name"
+                      data-testid="field-name"
+                      value={form.name}
+                      onChange={(e) => updateForm("name", e.target.value)}
+                      aria-describedby={formErrors.name ? "store-name-error" : undefined}
+                      placeholder="Customer Research Agent"
+                    />
+                    {formErrors.name && (
+                      <p id="store-name-error" role="alert" data-testid="err-name" className="text-xs text-destructive">
+                        {formErrors.name}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="store-scope">Visibility</Label>
+                    <Select
+                      id="store-scope"
+                      data-testid="field-scope"
+                      value={form.scope}
+                      onChange={(e) => updateForm("scope", e.target.value as StoreScope)}
+                    >
+                      <option value="personal">Personal</option>
+                      <option value="team">Team</option>
+                      <option value="platform">Platform review</option>
+                    </Select>
+                    {formErrors.scope && (
+                      <p role="alert" data-testid="err-scope" className="text-xs text-destructive">
+                        {formErrors.scope}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 md:col-span-2">
+                    <Label htmlFor="store-description">Description</Label>
+                    <Textarea
+                      id="store-description"
+                      data-testid="field-description"
+                      value={form.description}
+                      onChange={(e) => updateForm("description", e.target.value)}
+                      aria-describedby={formErrors.description ? "store-description-error" : undefined}
+                      placeholder="What this item does and when to use it."
+                    />
+                    {formErrors.description && (
+                      <p id="store-description-error" role="alert" data-testid="err-description" className="text-xs text-destructive">
+                        {formErrors.description}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 md:col-span-2">
+                    <Label htmlFor="store-config">Configuration</Label>
+                    <Textarea
+                      id="store-config"
+                      data-testid="field-config"
+                      value={form.config}
+                      onChange={(e) => updateForm("config", e.target.value)}
+                      aria-describedby={formErrors.config ? "store-config-error" : undefined}
+                      placeholder="Instructions, prompts, schema, or reusable setup."
+                    />
+                    {formErrors.config && (
+                      <p id="store-config-error" role="alert" data-testid="err-config" className="text-xs text-destructive">
+                        {formErrors.config}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="store-cover">Icon</Label>
+                    <Input
+                      id="store-cover"
+                      data-testid="field-cover"
+                      value={form.cover}
+                      onChange={(e) => updateForm("cover", e.target.value)}
+                      placeholder="R"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="store-tags">Tags</Label>
+                    <Input
+                      id="store-tags"
+                      data-testid="field-tags"
+                      value={form.tags}
+                      onChange={(e) => updateForm("tags", e.target.value)}
+                      placeholder="research, productivity"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 md:col-span-2">
+                    <Label htmlFor="store-examples">Examples</Label>
+                    <Input
+                      id="store-examples"
+                      data-testid="field-examples"
+                      value={form.examples}
+                      onChange={(e) => updateForm("examples", e.target.value)}
+                      placeholder="Summarize a customer interview, Draft a research brief"
+                    />
+                  </div>
+                </div>
+
+                {formErrors.form && (
+                  <p role="alert" data-testid="err-form" className="mt-4 text-13 text-destructive">
+                    {formErrors.form}
+                  </p>
+                )}
+                {formMessage && (
+                  <p data-testid="saved" className="mt-4 text-13 font-semibold text-success transition-opacity duration-300">
+                    {formMessage}
+                  </p>
+                )}
+
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    data-testid="action-save-draft"
+                    disabled={submitting != null}
+                  >
+                    Save draft
+                  </Button>
+                  <Button
+                    type="button"
+                    data-testid="action-publish"
+                    disabled={submitting != null}
+                    onClick={() => submitItem("publish")}
+                  >
+                    Publish
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    data-testid="action-submit-review"
+                    disabled={submitting != null}
+                    onClick={() => submitItem("submit_review")}
+                  >
+                    Submit review
+                  </Button>
+                </div>
+              </form>
+            </div>
+
+            <aside className="xl:border-l xl:border-border xl:pl-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-15 font-bold text-foreground">Your items</h2>
+                <Button type="button" size="sm" variant="ghost" data-testid="refresh-owned" onClick={loadOwned}>
+                  Refresh
+                </Button>
+              </div>
+              {ownedList}
+            </aside>
+          </div>
+        ) : isAuthorized ? (
+          <div data-testid="authorized-view" className="mt-5">
+            <div className="flex items-center gap-3">
+              <p className="text-13 text-placeholder">
+                Items you own or are authorized to manage. Sharing collaboration arrives in a later feature.
+              </p>
+              <div className="flex-1" />
+              <Button type="button" size="sm" variant="outline" data-testid="authorized-create" onClick={() => setNav("create")}>
+                <Plus className="h-4 w-4" />
+                Create
+              </Button>
+            </div>
+            {ownedList}
+          </div>
         ) : (
           <div data-testid="empty" className="flex flex-col items-center gap-1.5 py-12 text-center">
             <LayoutGrid className="h-7.5 w-7.5 text-border-strong" strokeWidth={1.5} />
