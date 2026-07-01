@@ -272,7 +272,7 @@ export default function BoardPage() {
           data-testid="share-panel"
           role="dialog"
           aria-label="分享白板"
-          className="absolute right-4 top-14 z-30 w-80 rounded-xl border bg-popover p-4 text-popover-foreground shadow-xl"
+          className="absolute right-4 top-20 z-30 w-80 rounded-xl border bg-popover p-4 text-popover-foreground shadow-xl"
         >
           <h2 className="text-sm font-semibold text-foreground">分享白板</h2>
 
