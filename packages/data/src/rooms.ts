@@ -78,6 +78,28 @@ export async function isRoomOwner(roomId: number, userId: number): Promise<boole
   return rows[0]?.ok ?? false;
 }
 
+export type RoomRole = "owner" | "admin" | "member";
+
+/** 取某用户在某 room 的角色（非成员返回 undefined）。room owner 始终回 "owner"。 */
+export async function getRoomRole(roomId: number, userId: number): Promise<RoomRole | undefined> {
+  const rows = await query<{ role: string; is_owner: boolean }>(
+    `SELECT m.role, (r.owner_user_id = $2) AS is_owner
+     FROM room_members m JOIN rooms r ON r.id = m.room_id
+     WHERE m.room_id = $1 AND m.user_id = $2`,
+    [roomId, userId]
+  );
+  const row = rows[0];
+  if (!row) return undefined;
+  if (row.is_owner) return "owner";
+  return row.role === "admin" ? "admin" : "member";
+}
+
+/** owner / admin 可管理房间成员（邀请 / 改角色 / 移除）。 */
+export async function canManageRoom(roomId: number, userId: number): Promise<boolean> {
+  const role = await getRoomRole(roomId, userId);
+  return role === "owner" || role === "admin";
+}
+
 export interface RoomMemberRow {
   user_id: number;
   email: string;
@@ -92,11 +114,24 @@ export async function listRoomMembers(roomId: number): Promise<RoomMemberRow[]> 
   );
 }
 
-export async function addRoomMember(roomId: number, userId: number): Promise<void> {
+export async function addRoomMember(
+  roomId: number,
+  userId: number,
+  role: "admin" | "member" = "member"
+): Promise<void> {
   await query(
-    "INSERT INTO room_members (room_id, user_id, role) VALUES ($1, $2, 'member') ON CONFLICT DO NOTHING",
-    [roomId, userId]
+    "INSERT INTO room_members (room_id, user_id, role) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+    [roomId, userId, role]
   );
+}
+
+/** 改成员角色（不影响 owner，路由层负责拦截 owner）。 */
+export async function updateRoomMemberRole(
+  roomId: number,
+  userId: number,
+  role: "admin" | "member"
+): Promise<void> {
+  await query("UPDATE room_members SET role = $3 WHERE room_id = $1 AND user_id = $2", [roomId, userId, role]);
 }
 
 export async function removeRoomMember(roomId: number, userId: number): Promise<void> {

@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [pendingProvider, setPendingProvider] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,6 +30,25 @@ export default function LoginPage() {
     }
     const data = await res.json().catch(() => ({}));
     setError(data.error ?? "登录失败");
+  }
+
+  // 第三方登录（uc-auth-003 stub）：POST /api/auth/social → 成功建立会话并回首页。
+  async function social(provider: string) {
+    setPendingProvider(provider);
+    setError("");
+    const res = await fetch("/api/auth/social", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ provider }),
+    });
+    if (res.ok) {
+      router.push("/");
+      router.refresh();
+      return;
+    }
+    setPendingProvider(null);
+    const data = await res.json().catch(() => ({}));
+    setError(data.error ?? "第三方登录失败");
   }
 
   return (
@@ -98,11 +118,25 @@ export default function LoginPage() {
       <AuthDivider />
 
       <div className="flex gap-2.5">
-        <Button variant="outline" type="button" className="flex-1 text-13 font-normal">
-          Google
+        <Button
+          data-testid="social-google"
+          variant="outline"
+          type="button"
+          disabled={pendingProvider !== null}
+          onClick={() => social("google")}
+          className="flex-1 text-13 font-normal"
+        >
+          {pendingProvider === "google" ? "Connecting…" : "Google"}
         </Button>
-        <Button variant="outline" type="button" className="flex-1 text-13 font-normal">
-          WeChat
+        <Button
+          data-testid="social-wechat"
+          variant="outline"
+          type="button"
+          disabled={pendingProvider !== null}
+          onClick={() => social("wechat")}
+          className="flex-1 text-13 font-normal"
+        >
+          {pendingProvider === "wechat" ? "Connecting…" : "WeChat"}
         </Button>
       </div>
 

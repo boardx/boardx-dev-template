@@ -1,11 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, LayoutGrid, List, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+type View = "grid" | "list";
 
 interface Room {
   id: number | string;
@@ -35,6 +38,49 @@ function NewRoomCard({ onClick }: { onClick: () => void }) {
   );
 }
 
+function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => void }) {
+  const opts: { v: View; icon: typeof LayoutGrid; label: string }[] = [
+    { v: "grid", icon: LayoutGrid, label: "网格视图" },
+    { v: "list", icon: List, label: "列表视图" },
+  ];
+  return (
+    <div className="flex gap-0.5 rounded-lg border border-border p-0.5">
+      {opts.map(({ v, icon: Icon, label }) => (
+        <Button
+          key={v}
+          variant="ghost"
+          size="icon"
+          aria-label={label}
+          aria-pressed={view === v}
+          data-testid={`view-${v}`}
+          onClick={() => onChange(v)}
+          className={cn(
+            "h-7 w-7 rounded-md",
+            view === v ? "bg-muted text-foreground" : "text-placeholder hover:text-foreground",
+          )}
+        >
+          <Icon className="h-4 w-4" />
+        </Button>
+      ))}
+    </div>
+  );
+}
+
+function NewRoomRow({ onClick }: { onClick: () => void }) {
+  return (
+    <Button
+      variant="ghost"
+      onClick={onClick}
+      className="h-auto w-full justify-start gap-3 rounded-none border-b border-muted px-4 py-3 font-normal text-muted-foreground hover:bg-surface-1 hover:text-foreground"
+    >
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-dashed border-border-strong">
+        <Plus className="h-3.5 w-3.5" />
+      </span>
+      <span className="text-13 font-medium">New room</span>
+    </Button>
+  );
+}
+
 function RoomSkeleton() {
   return (
     <div data-testid="loading" className="grid animate-pulse grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -54,6 +100,17 @@ export default function RoomsPage() {
   const [error, setError] = useState("");
   const [createError, setCreateError] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [view, setView] = useState<View>("grid");
+
+  useEffect(() => {
+    const v = typeof window !== "undefined" ? window.localStorage.getItem("rooms-view") : null;
+    if (v === "grid" || v === "list") setView(v);
+  }, []);
+
+  function changeView(v: View) {
+    setView(v);
+    if (typeof window !== "undefined") window.localStorage.setItem("rooms-view", v);
+  }
 
   async function load(search = "") {
     setLoading(true);
@@ -147,15 +204,20 @@ export default function RoomsPage() {
         </Button>
       </div>
 
+      {/* 视图切换（V1：grid / list） */}
+      <div className="mt-6 flex items-center justify-end">
+        <ViewToggle view={view} onChange={changeView} />
+      </div>
+
       {/* 内容 */}
-      <div className="mt-6">
+      <div className="mt-4">
         {loading ? (
           <RoomSkeleton />
         ) : rooms.length === 0 ? (
           <div data-testid="empty" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <NewRoomCard onClick={() => setShowForm(true)} />
           </div>
-        ) : (
+        ) : view === "grid" ? (
           <div data-testid="room-list" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <NewRoomCard onClick={() => setShowForm(true)} />
             {rooms.map((r) => (
@@ -172,6 +234,25 @@ export default function RoomsPage() {
                   <span className="truncate text-13 font-semibold text-foreground">{r.name}</span>
                   <Badge variant="muted">{r.visibility}</Badge>
                 </div>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <div data-testid="room-list" className="overflow-hidden rounded-12 border border-border">
+            <NewRoomRow onClick={() => setShowForm(true)} />
+            {rooms.map((r) => (
+              <a
+                key={String(r.id)}
+                href={`/rooms/${r.id}/boards`}
+                data-testid={`room-${r.id}`}
+                className="flex items-center gap-3 border-b border-muted px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              >
+                <span className={`flex h-7 w-9 shrink-0 items-center justify-center rounded-md text-13 font-bold text-foreground/30 ${fillFor(r.id)}`}>
+                  {r.name.charAt(0).toUpperCase()}
+                </span>
+                <span className="flex-1 truncate text-13 font-semibold text-foreground">{r.name}</span>
+                <Badge variant="muted">{r.visibility}</Badge>
+                <ChevronRight className="h-4 w-4 shrink-0 text-border-strong" />
               </a>
             ))}
           </div>
