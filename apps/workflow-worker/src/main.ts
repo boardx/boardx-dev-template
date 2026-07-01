@@ -2,9 +2,10 @@
 // 消费 boardx.jobs / boardx.kb-file-processing 队列，处理后把状态回写 Postgres。幂等。
 
 import { makeWorker, QUEUE_NAMES } from "@repo/queue";
-import { setJobStatus, setKbFileStatus } from "@repo/data";
+import { setJobStatus, setKbFileStatus, markStudioArtifactReady, markStudioArtifactError } from "@repo/data";
 import { decideStatus, type JobData } from "./job";
 import { decideKbFileStatus, type KbFileJobData } from "./kbFileJob";
+import { processStudioJob, type StudioJobData } from "./studioJob";
 
 const worker = makeWorker<JobData>(QUEUE_NAMES.jobs, async (job) => {
   const status = decideStatus(job.data);
@@ -34,6 +35,27 @@ kbFileWorker.on("failed", async (job, err) => {
   if (job) await setKbFileStatus(job.data.fileId, "error", err.message);
 });
 
+// CAP-AI：Studio 音频概览/信息图/演示文稿生成（p12-F01）。processStudioJob 内部已捕获生成
+// 失败，这里按返回的终态回写 DB（不复用 BullMQ 的 failed 事件语义，因为「生成失败」是
+// 业务终态而非任务异常——任务本身处理成功，只是生成结果是 error）。
+const studioWorker = makeWorker<StudioJobData>(QUEUE_NAMES.studioGeneration, async (job) => {
+  const outcome = await processStudioJob(job.data);
+  if (outcome.status === "ready") {
+    await markStudioArtifactReady(job.data.artifactId, outcome.objectKey!, outcome.title!);
+  } else {
+    await markStudioArtifactError(job.data.artifactId, outcome.errorMessage ?? "生成失败");
+  }
+  return { artifactId: job.data.artifactId, status: outcome.status };
+});
+
+studioWorker.on("completed", (job) => {
+  console.log(`✓ studio ${job.data.artifactId}`);
+});
+studioWorker.on("failed", async (job, err) => {
+  console.error(`✗ studio ${job?.data.artifactId} 任务异常:`, err.message);
+  if (job) await markStudioArtifactError(job.data.artifactId, err.message);
+});
+
 console.log(
-  `workflow-worker 已启动，监听队列 ${QUEUE_NAMES.jobs} / ${QUEUE_NAMES.kbFileProcessing}`
+  `workflow-worker 已启动，监听队列 ${QUEUE_NAMES.jobs} / ${QUEUE_NAMES.kbFileProcessing} / ${QUEUE_NAMES.studioGeneration}`
 );
