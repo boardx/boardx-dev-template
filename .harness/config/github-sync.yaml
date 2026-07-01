@@ -16,13 +16,13 @@ issue_policy:
   near_term_window: 2           # near_term 模式：当前 + 往后 N 个 sprint
 
 labels:
-  blocked: "blocked"
-  passing: "passing"
+  blocked: "status:blocked"     # 规范化：统一到 status:* 状态机（ADR-004）
+  passing: "status:merged"      # feature.passing ⇔ label status:merged（ADR-004 §3）
   area_prefix: "area:"          # 用 feature.area 生成 area:<area> 标签
 
-# 状态 → GitHub 动作
+# 状态 → GitHub 动作（label 对齐 multi-agent-coordination.md §1 的规范 status:* 集合）
 status_actions:
-  passing:     { close_issue: true, add_label: "passing" }
-  blocked:     { add_label: "blocked" }
-  in_progress: { add_label: "in-progress" }
+  passing:     { close_issue: true, add_label: "status:merged" }
+  blocked:     { add_label: "status:blocked" }
+  in_progress: { add_label: "status:in-progress" }
   not_started: { }

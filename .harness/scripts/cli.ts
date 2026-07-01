@@ -6,6 +6,7 @@ import { verify } from "./verify";
 import { syncGithub } from "./sync-github";
 import { genSubagents } from "./gen-subagents";
 import { claim } from "./claim";
+import { migrateLabels } from "./migrate-labels";
 
 const argv = process.argv.slice(2);
 const cmd = argv[0];
@@ -19,6 +20,7 @@ try {
     case "sync":          syncGithub(args); break;
     case "gen-subagents": genSubagents(args); break;
     case "claim":         claim(args); break;
+    case "migrate-labels": migrateLabels(args); break;
     default:
       log.info("用法:");
       log.info("  pnpm harness new-phase     --id NN --name <name> [--slug <s>] [--goal <g>] [--ui]");
@@ -28,6 +30,7 @@ try {
       log.info("  pnpm harness sync          --phase NN [--apply]");
       log.info("  pnpm harness gen-subagents             # 从 .harness/agents/*.yaml 生成 Claude + Codex subagents");
       log.info("  pnpm harness claim         --phase NN --feature F01 --owner <agent-id>");
+      log.info("  pnpm harness migrate-labels            # 收敛线上 label 到规范 status:*（ADR-004）；加 --apply 执行");
       process.exit(cmd ? 1 : 0);
   }
 } catch (e) {
