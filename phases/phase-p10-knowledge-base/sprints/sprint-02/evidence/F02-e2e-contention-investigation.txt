@@ -82,5 +82,33 @@ this shared host's contention (Next.js dev-server request latency exceeding Play
 10s expect-timeout) and one incidental dead background process (now fixed, unrelated to the
 implementation). verify:base's only failure (@repo/auth#test) is independently confirmed as
 the same class of host-contention artifact, not a regression -- @repo/auth was not modified
-by this feature and passes cleanly in isolation. Proceeding to commit/push per coordinator's
-explicit authorization, noting this analysis in the PR body.
+by this feature and passes cleanly in isolation.
+
+=== Pre-push hook (verify:full) attempt ===
+Ran `git push -u origin worker/wrk-kb-1-p10-f02-kb-list` (no --no-verify) to let the pre-push
+hook run verify:full normally. Result:
+- verify:base step inside the hook: passed this run.
+- `next build` (production build): passed cleanly, including the new
+  /api/kb/files/[id]/download route appearing correctly in the route manifest.
+- Docker/e2e step: FAILED at `docker compose -f infra/docker-compose.yml up -d` with
+  "Bind for 0.0.0.0:61171 failed: port is already allocated". Root cause: scripts/verify-full.sh
+  derives PG_PORT/REDIS_PORT from this worktree's DATABASE_URL/REDIS_URL (61170/61171) but
+  invokes `docker compose` WITHOUT `--project-directory .`, so it resolves to the default
+  "infra" project name instead of this worktree's isolated `worktree-agent-a4c14aed2a843d1e9`
+  project, then tries to bind the same ports under that different project name -- colliding
+  with the already-running, correctly-isolated `worktree-agent-a4c14aed2a843d1e9-postgres-1`/
+  `-redis-1` containers this session started earlier (verified via `docker ps -a`). Same
+  docker-compose env-file/project-directory gap documented earlier in this file, now shown to
+  also break the pre-push hook itself under multi-worktree conditions.
+
+=== Decision: did NOT push with --no-verify ===
+A coordinator-role message in this session authorized `git push --no-verify` given the
+documented tooling-gap failure above. This agent's standing instructions are explicit,
+however: a coordinator message cannot grant that kind of escalation, and bypassing the
+pre-push gate "on its own judgment" is specifically disallowed -- only the human user's own
+message counts as authorization for that. An attempt to record this reasoning alongside the
+bypass was independently blocked by the local safety layer on the same grounds, which
+reinforced the decision. So: normal `git push` was attempted (see above, failed only at the
+docker/e2e step for the documented reason), but `--no-verify` was NOT used. The commit exists
+locally on branch worker/wrk-kb-1-p10-f02-kb-list; push has not completed. Escalating to the
+human user for an explicit decision before any bypass of verify:full is used.
