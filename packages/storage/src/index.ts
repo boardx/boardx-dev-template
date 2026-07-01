@@ -1,6 +1,6 @@
 // packages/storage/src/index.ts — CAP-FILE 对象存储封装（S3 兼容，本地 MinIO）
 // 原则：只暴露 key 级操作；调用方不碰 SDK 类型/凭据。被 p10 知识库上传复用，
-// 未来 AVA 附件 / Studio 演示读文件也应复用本层，不要各自再造 S3 client。
+// AVA 附件（p9-F08）/ Studio 演示读文件也复用本层，不要各自再造 S3 client。
 
 import {
   S3Client,
@@ -78,6 +78,73 @@ export function validateKbUpload(fileName: string, sizeBytes: number): KbUploadV
   }
   if (sizeBytes > KB_MAX_BYTES) {
     return { ok: false, reason: "too_large", message: "文件过大（上限 50MB）" };
+  }
+  return { ok: true };
+}
+
+// ─── AVA 聊天附件（p9-F08）：独立的 key 前缀/校验规则，与 KB 隔离 ──────────────
+// 支持图片/音频/常见文档；上限更小（聊天场景不需要 KB 级的大文件）。
+
+export const AVA_ALLOWED_EXT = [
+  // 图片
+  "png",
+  "jpg",
+  "jpeg",
+  "gif",
+  "webp",
+  // 音频
+  "mp3",
+  "wav",
+  "m4a",
+  "ogg",
+  // 常见文档
+  "pdf",
+  "txt",
+  "md",
+  "doc",
+  "docx",
+  "csv",
+];
+export const AVA_MAX_BYTES = 20 * 1024 * 1024; // 20MB
+export const AVA_MAX_ATTACHMENTS_PER_MESSAGE = 5;
+
+export type AvaAttachmentKind = "image" | "audio" | "file";
+
+/** 按扩展名归类，用于前端预览条决定缩略图（image）/波形图标（audio）/通用文件图标（file）。 */
+export function avaAttachmentKind(fileName: string): AvaAttachmentKind {
+  const ext = extOf(fileName);
+  if (["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) return "image";
+  if (["mp3", "wav", "m4a", "ogg"].includes(ext)) return "audio";
+  return "file";
+}
+
+export function buildAvaObjectKey(params: {
+  ownerId: string | number;
+  attachmentId: string;
+  fileName: string;
+}): string {
+  const safeName = params.fileName.replace(/[/\\]/g, "_");
+  return `ava/${params.ownerId}/${params.attachmentId}/${safeName}`;
+}
+
+/** 类型 + 大小 + 数量校验，前端预检和后端二次校验共用同一规则（不可只在前端做，防绕过）。 */
+export function validateAvaUpload(
+  fileName: string,
+  sizeBytes: number
+): KbUploadValidation {
+  const ext = extOf(fileName);
+  if (!AVA_ALLOWED_EXT.includes(ext)) {
+    return {
+      ok: false,
+      reason: "unsupported_type",
+      message: `不支持的文件类型 .${ext || "?"}（仅支持图片/音频/常见文档）`,
+    };
+  }
+  if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
+    return { ok: false, reason: "too_large", message: "文件大小无效" };
+  }
+  if (sizeBytes > AVA_MAX_BYTES) {
+    return { ok: false, reason: "too_large", message: "文件过大（上限 20MB）" };
   }
   return { ok: true };
 }
