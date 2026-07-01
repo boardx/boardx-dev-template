@@ -26,13 +26,23 @@ import {
   attachAvaAttachmentsToMessage,
 } from "@repo/data";
 import { defaultGateway, DEFAULT_MODEL_ID, runChatGraph, makeGenerateNode } from "@repo/ai";
-import { currentUser, currentTeamId } from "@/lib/session";
+import { currentTeamId, currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function sseEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+function isThreadInCurrentContext(
+  thread: { user_id: number | string; team_id: number | string | null },
+  userId: number,
+  teamId: number | null
+): boolean {
+  const sameUser = String(thread.user_id) === String(userId);
+  const sameTeam = thread.team_id == null ? teamId == null : teamId != null && String(thread.team_id) === String(teamId);
+  return sameUser && sameTeam;
 }
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
@@ -46,7 +56,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const thread = await getAvaThread(threadId);
   // 鉴权同时校验 user_id 与 team_id：修复 #153（跨团队用可枚举的线程 id 越权读/写）。
-  if (!thread || thread.user_id !== user.id || thread.team_id !== currentTeamId()) {
+  if (!thread || !isThreadInCurrentContext(thread, user.id, currentTeamId())) {
     return new Response(JSON.stringify({ error: "线程不存在" }), { status: 404 });
   }
 

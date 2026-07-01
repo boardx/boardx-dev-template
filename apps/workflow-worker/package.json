@@ -14,7 +14,9 @@
   },
   "dependencies": {
     "@repo/queue": "workspace:*",
-    "@repo/data": "workspace:*"
+    "@repo/data": "workspace:*",
+    "@repo/ai": "workspace:*",
+    "@repo/storage": "workspace:*"
   },
   "devDependencies": {
     "typescript": "*",

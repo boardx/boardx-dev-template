@@ -1,0 +1,12 @@
+
+Running 7 tests using 1 worker
+
+  ✓  1 [chromium] › credits-003-view-credit-records.spec.ts:23:5 › 用户菜单点击 Credit 余额区域打开 Credit Records 弹窗，展示摘要与消费记录 (4.5s)
+  ✓  2 [chromium] › credits-003-view-credit-records.spec.ts:41:5 › 关闭 Credit Records 弹窗后返回原页面 (1.3s)
+  ✓  3 [chromium] › credits-003-view-credit-records.spec.ts:55:5 › GET /api/credits/transactions?scope=personal 分页返回个人流水（time/kind/amount） (350ms)
+  ✓  4 [chromium] › credits-003-view-credit-records.spec.ts:79:5 › state=empty 时 Credit Records 弹窗展示空状态 (238ms)
+  ✓  5 [chromium] › credits-003-view-credit-records.spec.ts:90:5 › Team owner 在 /credits 的 Usage/Purchase 标签页看团队分页记录 (2.3s)
+  ✓  6 [chromium] › credits-003-view-credit-records.spec.ts:115:5 › Team member（非 owner/admin）请求团队流水 → 403，越权范围不可见 (1.8s)
+  ✓  7 [chromium] › credits-003-view-credit-records.spec.ts:132:5 › 未登录调用 /api/credits/transactions → 401 (97ms)
+
+  7 passed (16.8s)

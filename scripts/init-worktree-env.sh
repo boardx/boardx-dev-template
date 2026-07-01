@@ -10,7 +10,7 @@
 #
 # 用法：在 worktree 根目录跑一次 `bash scripts/init-worktree-env.sh`，再 `docker compose up -d`。
 # 幂等：已存在的 apps/web/.env.local 只会被更新 DATABASE_URL/REDIS_URL/E2E_PORT 三个 key，
-# 不动其它内容（比如 worker 自己加的 AI provider key）；根 .env 只写 COMPOSE_PROJECT_NAME。
+# 不动其它内容（比如 worker 自己加的 AI provider key）；根 .env 和 infra/.env 写 compose project/port。
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -34,22 +34,25 @@ PY
 pg_port="$(free_port)"
 redis_port="$(free_port)"
 web_port="$(free_port)"
+minio_port="$(free_port)"
+minio_console_port="$(free_port)"
 # 避免几次 free_port 撞到同一个端口（极小概率），撞了就再要一个
 if [ "$pg_port" = "$redis_port" ]; then redis_port="$(free_port)"; fi
 if [ "$web_port" = "$pg_port" ] || [ "$web_port" = "$redis_port" ]; then web_port="$(free_port)"; fi
+if [ "$minio_port" = "$pg_port" ] || [ "$minio_port" = "$redis_port" ] || [ "$minio_port" = "$web_port" ]; then minio_port="$(free_port)"; fi
+if [ "$minio_console_port" = "$pg_port" ] || [ "$minio_console_port" = "$redis_port" ] || [ "$minio_console_port" = "$web_port" ] || [ "$minio_console_port" = "$minio_port" ]; then minio_console_port="$(free_port)"; fi
 
 env_local="apps/web/.env.local"
 mkdir -p "$(dirname "$env_local")"
 touch "$env_local"
+compose_env="infra/.env"
+touch "$compose_env"
 
 upsert() {
   local key="$1" val="$2" file="$3"
-  if grep -q "^${key}=" "$file" 2>/dev/null; then
-    # macOS/BSD sed 需要 -i ''；用临时文件方式兼容 GNU/BSD 两种 sed
-    sed "s#^${key}=.*#${key}=${val}#" "$file" > "$file.tmp" && mv "$file.tmp" "$file"
-  else
-    printf '%s=%s\n' "$key" "$val" >> "$file"
-  fi
+  grep -v "^${key}=" "$file" > "$file.tmp" 2>/dev/null || true
+  mv "$file.tmp" "$file"
+  printf '%s=%s\n' "$key" "$val" >> "$file"
 }
 
 upsert "DATABASE_URL" "postgresql://boardx:boardx@localhost:${pg_port}/boardx" "$env_local"
@@ -58,11 +61,29 @@ upsert "E2E_PORT" "${web_port}" "$env_local"
 
 touch .env
 upsert "COMPOSE_PROJECT_NAME" "$project_name" ".env"
+upsert "PG_PORT" "${pg_port}" ".env"
+upsert "REDIS_PORT" "${redis_port}" ".env"
+# 根 .env 也带上 DATABASE_URL/REDIS_URL/E2E_PORT，方便直接在根目录跑脚本时继承。
+upsert "DATABASE_URL" "postgresql://boardx:boardx@localhost:${pg_port}/boardx" ".env"
+upsert "REDIS_URL" "redis://localhost:${redis_port}" ".env"
+upsert "E2E_PORT" "${web_port}" ".env"
+upsert "MINIO_PORT" "${minio_port}" ".env"
+upsert "MINIO_CONSOLE_PORT" "${minio_console_port}" ".env"
+
+# `docker compose -f infra/docker-compose.yml ...` uses the compose file's directory as
+# project directory, so it reads infra/.env（= $compose_env）rather than the repo root .env.
+touch "$compose_env"
+upsert "COMPOSE_PROJECT_NAME" "$project_name" "$compose_env"
+upsert "PG_PORT" "${pg_port}" "$compose_env"
+upsert "REDIS_PORT" "${redis_port}" "$compose_env"
+upsert "MINIO_PORT" "${minio_port}" "$compose_env"
+upsert "MINIO_CONSOLE_PORT" "${minio_console_port}" "$compose_env"
 
 echo "worktree env 已就绪："
 echo "  project name : $project_name"
 echo "  postgres     : localhost:${pg_port}"
 echo "  redis        : localhost:${redis_port}"
+echo "  minio        : localhost:${minio_port} / console localhost:${minio_console_port}"
 echo "  web/e2e      : localhost:${web_port}（next dev -p \$E2E_PORT，playwright.config.ts 已读这个变量）"
-echo "  已写入        : $env_local, .env（都已 gitignore，机器级/worktree 级覆盖）"
+echo "  已写入        : $env_local, .env, $compose_env（都已 gitignore，机器级/worktree 级覆盖）"
 echo "接下来正常跑: docker compose -f infra/docker-compose.yml up -d"
