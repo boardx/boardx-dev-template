@@ -7,16 +7,34 @@
 // DB 持久化（ava_threads/ava_messages）。桌面端左右分栏常驻；移动端先列表，
 // 选中线程或新建聊天后切到聊天视图（带返回入口）。
 //
-// OUT OF SCOPE（本 feature 不做，留给后续 F03-F11）：
-// 消息编辑/重生成/反馈、分享只读、Deep Research、附件/图片、语音、模型/Agent/工具切换、
-// 建议动作个性化、发送到 Board / 邮件。
+// OUT OF SCOPE（本 feature 不做，留给后续 F03/F06/F07/F10 等）：
+// 消息编辑/重生成/反馈、分享只读、Deep Research、模型/Agent/工具切换、建议动作个性化、
+// 发送到 Board / 邮件。线程重命名/删除（F02）与附件/图片/音频（F08）已在本文件实现。
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, ArrowUp, Sparkles, ArrowLeft, MoreHorizontal, Pencil, Trash2, Check, X } from "lucide-react";
+import {
+  Plus,
+  ArrowUp,
+  Sparkles,
+  ArrowLeft,
+  FileAudio,
+  FileText,
+  ImageIcon,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Check,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { MarkdownMessage } from "./markdown-message";
+import {
+  useAvaAttachments,
+  AttachmentTrigger,
+  AttachmentPreviewStrip,
+} from "./attachments";
 
 interface ThreadSummary {
   id: number;
@@ -24,11 +42,18 @@ interface ThreadSummary {
   created_at: string;
   updated_at: string;
 }
+interface MessageAttachment {
+  id: string;
+  name: string;
+  kind: "image" | "audio" | "file";
+  mime_type: string;
+}
 interface Message {
   id: number;
   role: "user" | "assistant";
   content: string;
   status: "complete" | "failed";
+  attachments?: MessageAttachment[];
 }
 
 const SUGGESTIONS = [
@@ -61,7 +86,13 @@ export default function AvaPage() {
   const [renameDraft, setRenameDraft] = useState("");
   // 移动端视图切换：list-first。桌面端（md 及以上）始终双栏，此状态被 CSS 忽略。
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
+  const [dragOver, setDragOver] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const attachments = useAvaAttachments({
+    threadId: activeId,
+    ensureThread: () => ensureThread(),
+  });
 
   const guard = useCallback(
     (status: number) => {
@@ -137,6 +168,7 @@ export default function AvaPage() {
     setEditingThreadId(null);
     setMessages([]);
     setMobileView("chat");
+    attachments.reset();
     try {
       const res = await fetch(`/api/ava/threads/${id}`);
       if (guard(res.status)) return;
@@ -157,6 +189,7 @@ export default function AvaPage() {
     setEditingThreadId(null);
     setDraft("");
     setMobileView("chat");
+    attachments.reset();
   }
 
   function startRename(thread: ThreadSummary) {
@@ -231,7 +264,10 @@ export default function AvaPage() {
 
   async function send() {
     const text = draft.trim();
-    if (!text || sending) return;
+    const attachmentIds = attachments.uploadedIds;
+    // 文本和附件至少要有一个；上传中/失败的附件会阻塞发送，避免半上传附件随消息发出
+    // （失败态附件不阻塞——用户可以移除它继续发送纯文本，只有 uploading 阻塞）。
+    if ((!text && attachmentIds.length === 0) || sending || attachments.hasPending) return;
     setSending(true);
     setSendError("");
     setStreamingText("");
@@ -243,7 +279,7 @@ export default function AvaPage() {
       const res = await fetch(`/api/ava/threads/${threadId}/messages`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, attachmentIds }),
       });
       if (guard(res.status)) return;
       if (!res.ok || !res.body) {
@@ -257,9 +293,10 @@ export default function AvaPage() {
       }
 
       setDraft(""); // 请求已受理（用户消息即将持久化），清空草稿；失败态由下面 SSE error 分支处理
+      attachments.reset(); // 附件已随消息发出，清空 composer 预览条
       await consumeSse(res.body, {
-        onUser: (msg: Message) => {
-          setMessages((prev) => [...prev, msg]);
+        onUser: (msg: Message, msgAttachments?: MessageAttachment[]) => {
+          setMessages((prev) => [...prev, { ...msg, attachments: msgAttachments }]);
         },
         onToken: (token: string) => {
           setStreamingText((prev) => prev + token);
@@ -478,8 +515,35 @@ export default function AvaPage() {
                           </span>
                         )}
                         {m.role === "user" ? (
-                          <div className="whitespace-pre-wrap rounded-12 bg-surface-1 px-4 py-2.5 text-sm leading-relaxed text-foreground">
-                            {m.content}
+                          <div className="flex flex-col items-end gap-1.5">
+                            {m.attachments && m.attachments.length > 0 && (
+                              <ul
+                                data-testid="msg-attachments"
+                                className="flex flex-wrap justify-end gap-1.5"
+                              >
+                                {m.attachments.map((a) => (
+                                  <li
+                                    key={a.id}
+                                    data-testid="msg-attachment-item"
+                                    className="flex items-center gap-1 rounded-9 border border-border bg-surface-1 px-2 py-1 text-11 text-muted-foreground"
+                                  >
+                                    {a.kind === "image" ? (
+                                      <ImageIcon className="h-3 w-3" strokeWidth={1.5} />
+                                    ) : a.kind === "audio" ? (
+                                      <FileAudio className="h-3 w-3" strokeWidth={1.5} />
+                                    ) : (
+                                      <FileText className="h-3 w-3" strokeWidth={1.5} />
+                                    )}
+                                    <span className="max-w-[10rem] truncate">{a.name}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                            {m.content && (
+                              <div className="whitespace-pre-wrap rounded-12 bg-surface-1 px-4 py-2.5 text-sm leading-relaxed text-foreground">
+                                {m.content}
+                              </div>
+                            )}
                           </div>
                         ) : m.status === "failed" ? (
                           <div data-testid="msg-failed" className="text-sm leading-relaxed text-destructive">
@@ -511,7 +575,33 @@ export default function AvaPage() {
 
             {/* composer */}
             <div className="flex-none px-6 pb-5">
-              <div className="mx-auto max-w-2xl rounded-14 border border-border p-3 transition-colors focus-within:border-foreground">
+              <div
+                data-testid="composer-dropzone"
+                data-drag-over={dragOver}
+                className={`mx-auto max-w-2xl rounded-14 border p-3 transition-colors focus-within:border-foreground ${
+                  dragOver ? "border-primary bg-surface-1" : "border-border"
+                }`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  if (e.dataTransfer.files.length > 0) void attachments.addFiles(e.dataTransfer.files);
+                }}
+              >
+                <AttachmentPreviewStrip
+                  entries={attachments.entries}
+                  onRetry={attachments.retry}
+                  onRemove={attachments.remove}
+                />
+                {attachments.queueError && (
+                  <p role="alert" data-testid="attachment-queue-error" className="mb-2 text-xs text-destructive">
+                    {attachments.queueError}
+                  </p>
+                )}
                 <label htmlFor="ava-composer" className="sr-only">
                   Message AVA
                 </label>
@@ -530,13 +620,18 @@ export default function AvaPage() {
                     {sendError}
                   </p>
                 )}
-                <div className="mt-2 flex items-center justify-end">
+                <div className="mt-2 flex items-center justify-between">
+                  <AttachmentTrigger onFiles={(files) => void attachments.addFiles(files)} />
                   <Button
                     data-testid="send"
                     size="icon"
                     className="h-8 w-8 rounded-9"
                     onClick={() => void send()}
-                    disabled={!draft.trim() || sending}
+                    disabled={
+                      (!draft.trim() && attachments.uploadedIds.length === 0) ||
+                      sending ||
+                      attachments.hasPending
+                    }
                     aria-label="Send message"
                   >
                     <ArrowUp className="h-4 w-4" strokeWidth={2} />
@@ -554,7 +649,7 @@ export default function AvaPage() {
 // ─── SSE 消费（POST body 是 ReadableStream，浏览器原生 EventSource 不支持 POST，手动解析）──
 
 interface SseHandlers {
-  onUser: (msg: Message) => void;
+  onUser: (msg: Message, attachments?: MessageAttachment[]) => void;
   onToken: (token: string) => void;
   onDone: (msg: Message) => void;
   onError: (msg: Message) => void;
@@ -588,7 +683,7 @@ function dispatchSseEvent(raw: string, handlers: SseHandlers): void {
   }
   if (!data) return;
   const parsed = JSON.parse(data);
-  if (event === "user") handlers.onUser(parsed.message);
+  if (event === "user") handlers.onUser(parsed.message, parsed.attachments);
   else if (event === "token") handlers.onToken(parsed.token);
   else if (event === "done") handlers.onDone(parsed.message);
   else if (event === "error") handlers.onError(parsed.message);
