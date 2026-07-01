@@ -22,6 +22,8 @@ export * from "./roomChat";
 export * from "./profile";
 // CAP-WEB 用户反馈提交记录
 export * from "./feedback";
+// CAP-DATA 积分钱包仓储（credit_wallets/credit_transactions / P14 uc-credits-001）
+export * from "./credits";
 // CAP-FILE 知识库文件仓储（kb_files / P10）
 export * from "./kbFiles";
 
