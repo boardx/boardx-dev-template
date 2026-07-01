@@ -7,13 +7,17 @@ set -euo pipefail
 
 PNPM="corepack pnpm@9.0.0"
 
-# DB/Redis 连接：优先 apps/web/.env.local（本机端口覆盖），否则环境变量，否则默认。
+# DB/Redis/web 端口：优先 apps/web/.env.local（本机端口覆盖），否则环境变量，否则默认。
 if [ -f apps/web/.env.local ]; then
   # shellcheck disable=SC2046
-  export $(grep -E '^(DATABASE_URL|REDIS_URL)=' apps/web/.env.local | xargs) 2>/dev/null || true
+  export $(grep -E '^(DATABASE_URL|REDIS_URL|E2E_PORT)=' apps/web/.env.local | xargs) 2>/dev/null || true
 fi
 export DATABASE_URL="${DATABASE_URL:-postgresql://boardx:boardx@localhost:5432/boardx}"
 export REDIS_URL="${REDIS_URL:-redis://localhost:6379}"
+# e2e/next dev 端口：多个 worktree 并行跑 verify:full 时，若都用默认 3000，Playwright
+# 的 reuseExistingServer 会复用到别的 worktree 的 server（测错代码），下面的清理步骤
+# 也会误杀别的 worktree 的 server。scripts/init-worktree-env.sh 会写入独立 E2E_PORT。
+export E2E_PORT="${E2E_PORT:-3000}"
 # 从 URL 解析端口给 docker compose 发布
 export PG_PORT="$(printf '%s' "$DATABASE_URL" | sed -E 's#.*:([0-9]+)/.*#\1#')"
 export REDIS_PORT="$(printf '%s' "$REDIS_URL" | sed -E 's#.*:([0-9]+).*#\1#')"
@@ -34,10 +38,11 @@ if docker info >/dev/null 2>&1; then
   done
   $PNPM --filter @repo/data run migrate
   $PNPM --filter @repo/web exec playwright install chromium >/dev/null 2>&1 || true
-  # 清 :3000 上残留的 next dev + 旧 .next：反复本地 verify 会留僵尸 server 抢端口，
+  # 清 :$E2E_PORT 上残留的 next dev + 旧 .next：反复本地 verify 会留僵尸 server 抢端口，
   # 或上次 `next build` 的生产 .next 与 next dev 冲突，导致全量 e2e 从中途整片崩溃
   # （quality-document #8）。Playwright reuseExistingServer 会复用僵尸 server 跑到旧代码。
-  lsof -ti tcp:3000 2>/dev/null | xargs kill -9 2>/dev/null || true
+  # 只清本 worktree 自己的 E2E_PORT，不碰其它端口——避免误杀别的 worktree 的 dev server。
+  lsof -ti tcp:"$E2E_PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
   rm -rf apps/web/.next
   $PNPM --filter @repo/web exec playwright test
   echo "✓ 全量 e2e 通过"

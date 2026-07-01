@@ -13,6 +13,7 @@ export interface User {
   created_at: string;
   display_name?: string | null;
   avatar?: string | null;
+  platform_role?: string;
 }
 
 export interface CreateUserInput {
@@ -53,6 +54,11 @@ export async function updateUserPassword(userId: number, passwordHash: string): 
   await query("UPDATE users SET password_hash = $2 WHERE id = $1", [userId, passwordHash]);
 }
 
+/** 仅供 dev/测试：把用户提升为平台 SysAdmin（P15 Admin 门控 e2e 用）。 */
+export async function setPlatformRole(userId: number, role: string): Promise<void> {
+  await query("UPDATE users SET platform_role = $2 WHERE id = $1", [userId, role]);
+}
+
 // ─── sessions ────────────────────────────────────────────────────────────────
 
 export interface Session {
@@ -69,7 +75,7 @@ export async function createSession(id: string, userId: number, expiresAt: Date)
 export async function getSessionUser(sessionId: string): Promise<User | undefined> {
   const rows = await query<User>(
     `SELECT u.id, u.email, u.password_hash, u.first_name, u.last_name, u.provider, u.created_at,
-            u.display_name, u.avatar
+            u.display_name, u.avatar, u.platform_role
      FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.id = $1 AND s.expires_at > now()`,
     [sessionId]

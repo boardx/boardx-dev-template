@@ -44,3 +44,15 @@
     全量钩子不会产出更多信号，遂用 `--no-verify` 推送。coordinator/CI 如需要，可在专属跑道上重跑
     `pnpm verify:full` 复核。
 - 下一步最佳动作: coordinator review 通过后跑 `pnpm harness verify --sprint p14/02` 门控 F05 → passing；随后可解锁 F02（buy credits）/ F04（upgrade plan）调用本 feature 的下单/webhook 能力
+- 当前最高优先级未完成功能: <feature id / title>
+- 当前 blocker: <无 / 描述>
+
+## 会话记录
+### 2026-07-01 09:25:47
+- 本轮目标:
+- 已完成:
+- 运行过的验证:
+- 已记录证据:
+- 提交记录:
+- 已知风险或未解决问题:
+- 下一步最佳动作:
