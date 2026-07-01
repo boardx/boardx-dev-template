@@ -21,9 +21,12 @@
    每一项都已 `passing`（同阶段写 `"F0x"`；跨阶段写 `"p9:F0x"` 这种形式，去对应
    phase 的 feature_list.json 查）。这些是本轮可以派发的候选。
 
-4. **并发上限**：统计全仓 `status == "in_progress"` 的 feature 数；≥10 就不再新派，
-   只汇报队列深度（docker 端口已靠 `scripts/init-worktree-env.sh` 隔离，但机器算力/
-   review 带宽还是有限，10 是保守起点，观察一段时间没问题可以调高）。
+4. **并发上限**：统计全仓 `status == "in_progress"` 的 feature 数；≥6 就不再新派，
+   只汇报队列深度。降到 6（原计划 10）是因为实测：7 个并发 worker 就已经把本机
+   docker/e2e 压得 `verify:full` 超时，且暴露了 `apps/web/playwright.config.ts`
+   硬编码 3000 端口导致跨 worktree 复用到别人 dev server 的真实 bug（已修，见
+   `scripts/init-worktree-env.sh` 新增的 `E2E_PORT` + `playwright.config.ts`/
+   `verify-full.sh` 联动）。先按 6 跑一段时间，观察机器负载和 review 吞吐再考虑上调。
 
 5. 对每个要派发的新 feature：
    - `.harness/agents/registry.yaml` 里没有覆盖该 area 的 worker 就新增一个
