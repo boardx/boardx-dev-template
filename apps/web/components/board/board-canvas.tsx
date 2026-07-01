@@ -10,6 +10,7 @@ import {
   MousePointer2,
   PenLine,
   Redo2,
+  RefreshCw,
   Shapes,
   StickyNote,
   Type,
@@ -51,6 +52,14 @@ const DEFAULT_TEXT = "文本";
 const isText = (it: { color?: string | null }) => baseColor(it.color) === TEXT_MARK;
 // 形状（Shape）组件（uc-widgets-004）：服务端原生放行 type:"rect"，按 type 判别，无需 color 哨兵。
 const isShape = (it: { type: string }) => it.type === "rect";
+
+// 可刷新组件（uc-widget-menu-009 刷新组件）：模拟「内容会重新加载」的嵌入/资源类组件
+// （如图片、文件、外链预览）。线上仍以 type:"note" 持久化 + color:"embed" 哨兵判别。
+// 普通便签/文本/形状为「不可刷新」（内容即静态文字），Widget Menu 中刷新入口不显示，
+// 仅在对象不支持时展示禁用的「刷新暂不可用」，满足 UC：类型不支持则隐藏/置灰刷新入口。
+const EMBED_MARK = "embed";
+const DEFAULT_EMBED = "嵌入内容";
+const isReloadable = (it: { color?: string | null }) => baseColor(it.color) === EMBED_MARK;
 
 interface Move {
   id: string;
@@ -201,6 +210,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const [openPanel, setOpenPanel] = useState<"assets" | "templates" | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null); // 右键上下文菜单（uc-context-menu-001）
   const [guides, setGuides] = useState<Guide[]>([]); // 拖动时的对齐参考线（uc-canvas-007）
+  // uc-widget-menu-009 刷新组件：可刷新组件的重载信号（重载次数 + 最近重载时间戳），
+  // 是纯客户端的「内容已重新加载」可见反馈，随每次刷新自增。
+  const [reload, setReload] = useState<Record<string, { count: number; at: number }>>({});
+  const [refreshing, setRefreshing] = useState<Set<string>>(new Set()); // 刷新处理中（旋转/加载态）
   const placeN = useRef(0); // 同步自增放置位，避免连点时读到尚未刷新的 items.length 造成重叠
   const clipboard = useRef<Item[]>([]); // 应用内剪贴板（F08）
   const undoStack = useRef<Op[]>([]); // F09
@@ -463,6 +476,56 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     await load();
     setSelected(new Set([item.id]));
   }
+
+  // 嵌入/资源组件创建（uc-widget-menu-009）：可刷新组件。线上以 type:"note" 落库 +
+  // color:"embed" 哨兵，创建后立即 PATCH 写入标记，刷新/重载后仍判别为可刷新组件。
+  async function addEmbed() {
+    setActiveTool("assets");
+    setOpenPanel(null);
+    const x = 580;
+    const y = 40 + placeN.current++ * 130;
+    const res = await fetch(`/api/boards/${boardId}/items`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "note", x, y, text: DEFAULT_EMBED }),
+    });
+    if (res.status !== 201) return;
+    const { item } = (await res.json()) as { item: Item };
+    await fetch(`/api/board-items/${item.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ color: EMBED_MARK }),
+    });
+    const embedItem: Item = { ...item, color: EMBED_MARK };
+    recordOp({ kind: "add", items: [embedItem] });
+    await load();
+    setSelected(new Set([item.id]));
+  }
+
+  // uc-widget-menu-009：刷新选中的可刷新组件。仅对 color:"embed" 的组件生效；
+  // 主流程 = 显示处理中 → 重新获取该组件内容（重走 GET /items）→ 内容/状态更新并保持选中。
+  // 可见反馈：重载计数自增 + 时间戳更新（data-testid=widget-reloaded-<id>）。
+  const refreshSelected = useCallback(async () => {
+    if (!canEdit) return;
+    const targets = items.filter((it) => selected.has(it.id) && isReloadable(it));
+    if (targets.length === 0) return; // 不支持刷新的对象不执行（入口本就不显示）
+    const ids = targets.map((t) => t.id);
+    setRefreshing((prev) => new Set([...prev, ...ids])); // 处理中/旋转状态
+    // 重新获取该组件内容：原组件保持在画布中（load 覆盖同 id）。
+    await load();
+    setReload((prev) => {
+      const next = { ...prev };
+      const now = Date.now();
+      for (const id of ids) next[id] = { count: (prev[id]?.count ?? 0) + 1, at: now };
+      return next;
+    });
+    setRefreshing((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) next.delete(id);
+      return next;
+    });
+    setSelected(new Set(ids)); // 刷新后保持选中
+  }, [canEdit, items, selected, load]);
 
   function chooseTool(tool: BoardTool) {
     setActiveTool(tool);
@@ -730,6 +793,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             >
               <Image className="h-4 w-4" />
             </BoardMenuButton>
+            {/* 嵌入/资源组件（可刷新）：uc-widget-menu-009 的刷新入口只对这类组件出现 */}
+            <BoardMenuButton testId="add-embed" label="嵌入" active={false} onClick={() => void addEmbed()}>
+              <RefreshCw className="h-4 w-4" />
+            </BoardMenuButton>
             <BoardMenuButton
               testId="board-tool-templates"
               label="模板"
@@ -819,6 +886,37 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           >
             B
           </Button>
+          {/* 刷新组件（uc-widget-menu-009）：仅当选中项全部为可刷新（embed）组件时显示刷新入口；
+              否则（含不可刷新对象）显示禁用的「刷新暂不可用」，体现类型不支持则动作不可用。 */}
+          {(() => {
+            const sel = items.filter((it) => selected.has(it.id));
+            const allReloadable = sel.length > 0 && sel.every(isReloadable);
+            const busy = sel.some((it) => refreshing.has(it.id));
+            return allReloadable ? (
+              <Button
+                data-testid="wm-refresh"
+                size="sm"
+                variant="ghost"
+                aria-label="刷新组件"
+                aria-busy={busy}
+                disabled={busy}
+                onClick={() => void refreshSelected()}
+              >
+                <RefreshCw className={"mr-1 h-3.5 w-3.5 " + (busy ? "animate-spin" : "")} />
+                {busy ? "刷新中" : "刷新"}
+              </Button>
+            ) : (
+              <Button
+                data-testid="wm-refresh-unavailable"
+                size="sm"
+                variant="ghost"
+                disabled
+                title="当前组件类型不支持刷新"
+              >
+                刷新暂不可用
+              </Button>
+            );
+          })()}
           <Button data-testid="wm-duplicate" size="sm" variant="ghost" onClick={duplicateSelected}>
             复制
           </Button>
@@ -854,6 +952,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               data-testid={`item-${it.id}`}
               data-selected={selected.has(it.id) ? "true" : "false"}
               data-z={z}
+              data-reloadable={isReloadable(it) ? "true" : "false"}
+              data-reload-count={reload[it.id]?.count ?? 0}
+              data-refreshed-at={reload[it.id]?.at ?? ""}
               onMouseDown={(e) => startNoteDrag(e, it)}
               onClick={(e) => {
                 e.stopPropagation();
@@ -909,6 +1010,17 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                 />
               ) : (
                 it.text
+              )}
+              {/* uc-widget-menu-009：可刷新组件的重载可见反馈（重载次数徽标）。刷新中显示旋转态。 */}
+              {isReloadable(it) && (
+                <span
+                  data-testid={`widget-reloaded-${it.id}`}
+                  data-reload-count={reload[it.id]?.count ?? 0}
+                  className="pointer-events-none absolute -right-1 -top-2 flex items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground shadow"
+                >
+                  <RefreshCw className={"h-2.5 w-2.5 " + (refreshing.has(it.id) ? "animate-spin" : "")} />
+                  {reload[it.id]?.count ?? 0}
+                </span>
               )}
             </div>
           ))}
