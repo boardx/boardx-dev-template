@@ -84,3 +84,53 @@ test("标签筛选高亮并显示 filters active，Clear all 复位", async ({ p
   await page.getByTestId("clear-filters").click();
   await expect(page.getByTestId("tag-writing")).toHaveAttribute("aria-pressed", "false");
 });
+
+test("未登录调用 GET /api/ai-store/items 返回未授权", async ({ page, request }) => {
+  await page.context().clearCookies();
+  const res = await request.get("/api/ai-store/items");
+  expect(res.status()).toBe(401);
+});
+
+test("分页：种子数据超过一页时显示分页控件，翻页后内容更新", async ({ page }) => {
+  await register(page);
+  await page.goto("/ai-store");
+  await expect(page.getByTestId("item-grid")).toBeVisible();
+
+  // 12 条种子数据、默认 pageSize=9 → 应有 2 页。
+  await expect(page.getByTestId("result-count")).toContainText("12");
+  await expect(page.getByTestId("pagination")).toBeVisible();
+  await expect(page.getByTestId("page-indicator")).toContainText("Page 1 / 2");
+  await expect(page.getByTestId("page-prev")).toBeDisabled();
+
+  const firstPageText = await page.getByTestId("item-grid").textContent();
+
+  await page.getByTestId("page-next").click();
+  await expect(page.getByTestId("page-indicator")).toContainText("Page 2 / 2");
+  await expect(page.getByTestId("page-next")).toBeDisabled();
+  const secondPageText = await page.getByTestId("item-grid").textContent();
+  expect(secondPageText).not.toBe(firstPageText);
+
+  await page.getByTestId("page-prev").click();
+  await expect(page.getByTestId("page-indicator")).toContainText("Page 1 / 2");
+});
+
+test("点卡片打开详情弹窗：展示描述/示例/统计/订阅入口，可关闭", async ({ page }) => {
+  await register(page);
+  await page.goto("/ai-store");
+  await expect(page.getByTestId("item-grid")).toBeVisible();
+
+  const card = page.getByTestId("item-grid").locator('article:has-text("Research Agent")');
+  await card.click();
+
+  const modal = page.getByTestId("item-detail-modal");
+  await expect(modal).toBeVisible();
+  await expect(modal.getByTestId("detail-name")).toContainText("Research Agent");
+  await expect(modal.getByTestId("detail-description")).toBeVisible();
+  await expect(modal.getByTestId("detail-examples")).toBeVisible();
+  await expect(modal.getByTestId("detail-stats")).toBeVisible();
+  await expect(modal.getByTestId("detail-subscribe")).toBeVisible();
+  await expect(modal.getByTestId("detail-subscribe")).toBeDisabled();
+
+  await modal.getByTestId("close-detail").click();
+  await expect(modal).not.toBeVisible();
+});
