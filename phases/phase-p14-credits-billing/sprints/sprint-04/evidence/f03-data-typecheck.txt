@@ -1,0 +1,4 @@
+
+> @repo/data@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a2aa8f87e0d04e0af/packages/data
+> tsc --noEmit
+

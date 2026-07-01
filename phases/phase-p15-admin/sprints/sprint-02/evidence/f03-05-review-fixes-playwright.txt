@@ -1,0 +1,13 @@
+
+Running 8 tests using 1 worker
+
+  ✓  1 [chromium] › admin-002-manage-teams.spec.ts:26:5 › 未登录访问 /admin/teams 跳转到 /login (6.5s)
+  ✓  2 [chromium] › admin-002-manage-teams.spec.ts:33:5 › 已登录但非 SysAdmin 访问 /admin/teams 看到无权限 (816ms)
+  ✓  3 [chromium] › admin-002-manage-teams.spec.ts:41:5 › 未登录调用团队列表 API 返回 401，非 SysAdmin 返回 403 (167ms)
+  ✓  4 [chromium] › admin-002-manage-teams.spec.ts:53:5 › SysAdmin 看到团队列表（名称/类型/成员数/Credit）并能搜索 (1.5s)
+  ✓  5 [chromium] › admin-002-manage-teams.spec.ts:77:5 › SysAdmin 编辑团队类型，立即反映 (1.6s)
+  ✓  6 [chromium] › admin-002-manage-teams.spec.ts:101:5 › SysAdmin 为团队手动增加 Credit，余额立即反映 (1.3s)
+  ✓  7 [chromium] › admin-002-manage-teams.spec.ts:126:5 › 手动上分带幂等 key：重复提交（同 key）不会重复入账 (221ms)
+  ✓  8 [chromium] › admin-002-manage-teams.spec.ts:162:5 › 手动上分 note 超长会被服务端裁剪到 200 字符 (235ms)
+
+  8 passed (17.2s)

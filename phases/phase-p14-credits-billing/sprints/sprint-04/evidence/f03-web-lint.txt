@@ -1,0 +1,5 @@
+
+> @repo/web@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a2aa8f87e0d04e0af/apps/web
+> bash scripts/lint-design.sh
+
+✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性）

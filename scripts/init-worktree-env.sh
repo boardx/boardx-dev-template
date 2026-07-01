@@ -10,7 +10,7 @@
 #
 # 用法：在 worktree 根目录跑一次 `bash scripts/init-worktree-env.sh`，再 `docker compose up -d`。
 # 幂等：已存在的 apps/web/.env.local 只会被更新 DATABASE_URL/REDIS_URL/E2E_PORT 三个 key，
-# 不动其它内容（比如 worker 自己加的 AI provider key）；根 .env 只写 COMPOSE_PROJECT_NAME。
+# 不动其它内容（比如 worker 自己加的 AI provider key）；根 .env 和 infra/.env 写 compose project/port。
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -63,9 +63,16 @@ touch .env
 upsert "COMPOSE_PROJECT_NAME" "$project_name" ".env"
 upsert "PG_PORT" "${pg_port}" ".env"
 upsert "REDIS_PORT" "${redis_port}" ".env"
+# 根 .env 也带上 DATABASE_URL/REDIS_URL/E2E_PORT，方便直接在根目录跑脚本时继承。
 upsert "DATABASE_URL" "postgresql://boardx:boardx@localhost:${pg_port}/boardx" ".env"
 upsert "REDIS_URL" "redis://localhost:${redis_port}" ".env"
 upsert "E2E_PORT" "${web_port}" ".env"
+upsert "MINIO_PORT" "${minio_port}" ".env"
+upsert "MINIO_CONSOLE_PORT" "${minio_console_port}" ".env"
+
+# `docker compose -f infra/docker-compose.yml ...` uses the compose file's directory as
+# project directory, so it reads infra/.env（= $compose_env）rather than the repo root .env.
+touch "$compose_env"
 upsert "COMPOSE_PROJECT_NAME" "$project_name" "$compose_env"
 upsert "PG_PORT" "${pg_port}" "$compose_env"
 upsert "REDIS_PORT" "${redis_port}" "$compose_env"
