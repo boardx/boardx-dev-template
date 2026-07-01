@@ -15,6 +15,7 @@ import {
   UserPlus,
   Gem,
 } from "lucide-react";
+import { FeedbackLauncher } from "@/components/feedback/feedback-launcher";
 import { cn } from "@/lib/utils";
 
 interface SidebarUser {
@@ -108,6 +109,8 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
       })}
 
       <div className="flex-1" />
+
+      {user && <FeedbackLauncher />}
 
       {/* Theme toggle */}
       <button
