@@ -1,0 +1,2 @@
+surveyf01-postgres-1	0.0.0.0:15913->5432/tcp
+surveyf01-redis-1	0.0.0.0:16913->6379/tcp

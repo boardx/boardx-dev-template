@@ -1,106 +1,114 @@
 import { NextResponse } from "next/server";
+import {
+  createSurvey,
+  listVisibleSurveys,
+  countResponses,
+  getMembership,
+  isBlank,
+  type NewQuestionInput,
+  type QuestionType,
+  type SurveyScope,
+} from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// uc-survey-001-create-survey — 问卷存储（内存版）。
-// 说明：本 feature 不引入 DB 表（UC「不包含问卷后端存储实现」）。
-// 采用进程内 Map 保存问卷，按创建者归属，供列表 + 创建端到端可见。
-// 唯一命名 globalThis key，避免与其它内存 store 冲突；dev 热重载下保持单例。
-export interface SurveyQuestion {
-  id: string;
-  title: string;
-  type: "text" | "single" | "multiple" | "rating";
-  required: boolean;
-  options: string[];
+// uc-survey-001-create-survey — 问卷创建地基（P13 F01）。
+// surveys / survey_questions / survey_responses 落库（team 作用域），供后续 F02-F06 复用。
+
+const QUESTION_TYPES: QuestionType[] = ["text", "single", "multiple", "rating"];
+
+function parseQuestions(raw: unknown): NewQuestionInput[] {
+  if (!Array.isArray(raw)) return [];
+  const out: NewQuestionInput[] = [];
+  for (const item of raw) {
+    const obj = (item ?? {}) as Record<string, unknown>;
+    const title = String(obj.title ?? "").trim();
+    if (isBlank(title)) continue; // 空标题的题目不计入有效题（不落库）
+    const type = QUESTION_TYPES.includes(obj.type as QuestionType) ? (obj.type as QuestionType) : "text";
+    const options = Array.isArray(obj.options)
+      ? obj.options.map((o) => String(o ?? "").trim()).filter(Boolean)
+      : [];
+    out.push({ title, type, required: obj.required === true, options });
+  }
+  return out;
 }
 
-export interface Survey {
-  id: string;
-  title: string;
-  description: string;
-  scope: string;
-  status: string;
-  responses: number;
-  questions: SurveyQuestion[];
-  userId: number;
-  updatedAt: number;
-}
-
-const STORE_KEY = "__boardx_survey_store_uc001__";
-type Store = Map<number, Survey[]>;
-function store(): Store {
-  const g = globalThis as unknown as Record<string, Store | undefined>;
-  if (!g[STORE_KEY]) g[STORE_KEY] = new Map();
-  return g[STORE_KEY]!;
-}
-
-function newId(): string {
-  return `sv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-export async function GET(req: Request) {
+export async function GET() {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-  const q = (new URL(req.url).searchParams.get("q") ?? "").trim().toLowerCase();
-  const all = (store().get(user.id) ?? []).slice().sort((a, b) => b.updatedAt - a.updatedAt);
-  const surveys = q ? all.filter((s) => s.title.toLowerCase().includes(q)) : all;
-  return NextResponse.json({ surveys });
+
+  const surveys = await listVisibleSurveys(user.id);
+  const withCounts = await Promise.all(
+    surveys.map(async (s) => ({
+      id: s.id,
+      title: s.title,
+      description: s.description,
+      scope: s.scope,
+      teamId: s.team_id,
+      status: s.is_active ? "Active" : "Draft",
+      responses: await countResponses(s.id),
+      updatedAt: s.updated_at,
+    }))
+  );
+  return NextResponse.json({ surveys: withCounts });
 }
 
 export async function POST(req: Request) {
   try {
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
+
     const body = (await req.json()) as {
       title?: unknown;
       description?: unknown;
       scope?: unknown;
+      teamId?: unknown;
       questions?: unknown;
     };
+
     const title = String(body.title ?? "").trim();
-    if (!title) return NextResponse.json({ errors: { title: "问卷标题不能为空" } }, { status: 400 });
+    if (isBlank(title)) {
+      return NextResponse.json({ errors: { title: "问卷标题不能为空" } }, { status: 400 });
+    }
 
-    const rawQuestions = Array.isArray(body.questions) ? body.questions : [];
-    const questions: SurveyQuestion[] = rawQuestions
-      .map((raw): SurveyQuestion | null => {
-        const obj = (raw ?? {}) as Record<string, unknown>;
-        const qTitle = String(obj.title ?? "").trim();
-        if (!qTitle) return null;
-        const type =
-          obj.type === "single" || obj.type === "multiple" || obj.type === "rating"
-            ? obj.type
-            : "text";
-        const options = Array.isArray(obj.options)
-          ? obj.options.map((o) => String(o ?? "").trim()).filter(Boolean)
-          : [];
-        return {
-          id: newId(),
-          title: qTitle,
-          type,
-          required: obj.required === true,
-          options,
-        };
-      })
-      .filter((q): q is SurveyQuestion => q !== null);
+    const questions = parseQuestions(body.questions);
+    if (questions.length === 0) {
+      return NextResponse.json({ errors: { questions: "至少需要一道题目" } }, { status: 400 });
+    }
 
-    const scope = body.scope === "team" ? "Team" : "Private";
-    const survey: Survey = {
-      id: newId(),
-      title,
-      description: String(body.description ?? "").trim(),
-      scope,
-      status: "Draft",
-      responses: 0,
-      questions,
-      userId: user.id,
-      updatedAt: Date.now(),
-    };
-    const list = store().get(user.id) ?? [];
-    list.push(survey);
-    store().set(user.id, list);
-    return NextResponse.json({ survey }, { status: 201 });
+    const scope: SurveyScope = body.scope === "team" ? "team" : "private";
+    let teamId: number | null = null;
+    if (scope === "team") {
+      teamId = Number(body.teamId);
+      if (!Number.isFinite(teamId)) {
+        return NextResponse.json({ errors: { teamId: "team 作用域需指定所属团队" } }, { status: 400 });
+      }
+      if (!(await getMembership(teamId, user.id))) {
+        return NextResponse.json({ error: "你不是该团队成员" }, { status: 403 });
+      }
+    }
+
+    const description = String(body.description ?? "").trim();
+    const survey = await createSurvey(user.id, title, description, scope, teamId, questions);
+
+    return NextResponse.json(
+      {
+        survey: {
+          id: survey.id,
+          title: survey.title,
+          description: survey.description,
+          scope: survey.scope,
+          teamId: survey.team_id,
+          status: survey.is_active ? "Active" : "Draft",
+          responses: 0,
+          questions: survey.questions,
+          shareUrl: `/survey/${survey.id}/answer`,
+        },
+      },
+      { status: 201 }
+    );
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }

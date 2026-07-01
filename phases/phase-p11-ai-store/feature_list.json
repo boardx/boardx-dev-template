@@ -8,7 +8,7 @@
       "title": "AI Store 浏览/筛选（Explore + 类型 Tab + 搜索/标签/分页 + 详情弹窗）",
       "user_visible_behavior": "进入 /ai-store 展示 Explore：GET /api/ai-store/items?type=&q=&tag= 列出可用 Agent/工具/模板/图片工具卡片（封面/名称/作者/类型/喜欢数/精选标）；按类型 Tab、关键词、标签筛选与分页；点卡片打开详情弹窗（描述/示例/统计/订阅入口）；空态与加载骨架；未登录 302 登录。",
       "design_ref": "prototype:<!-- STORE --> + <!-- store submenu --> + <!-- store content --> + <!-- store detail modal -->；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "wrk-store-1",
       "capability": "CAP-DATA",
@@ -19,7 +19,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ai-store-001-browse-items.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-07-01T12:49:42.430Z",
       "notes": "uc-ai-store-001。本阶段地基：ai_store_items 表（type/scope=personal/team/platform/owner/status/likes/featured）+ 浏览 API。依赖 phase-04 team 上下文。"
     },
     {
@@ -29,9 +29,9 @@
       "title": "创建/更新 AI Store 项目（各类型创建器 + 草稿/发布/提交审核）",
       "user_visible_behavior": "在 Create 视图选类型（Agent/工具/模板/图片工具）打开对应创建器填写（名称/描述/配置/图标/可见范围）：POST/PATCH /api/ai-store/items 落库；可存草稿、发布到个人/团队，或提交平台审核（进入 PENDING）；必填校验失败禁止提交；拥有者在 Create/Authorized 列表看到自己项目并可编辑。",
       "design_ref": "prototype:<!-- store create modal --> + <!-- STORE -->（Create / Authorized / Shared 视图）；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "02",
+      "owner": "wrk-codex-store-1",
       "capability": "CAP-DATA",
       "depends_on": [
         "F01"
@@ -76,9 +76,9 @@
       "title": "项目喜欢/收藏状态展示与切换",
       "user_visible_behavior": "浏览时卡片与详情展示喜欢数与自己的收藏/喜欢状态（心形高亮）；点喜欢/收藏 POST /api/ai-store/items/:id/favorite 切换状态并更新计数（乐观更新，失败回滚）；未登录点击引导登录；计数按真实聚合展示。",
       "design_ref": "prototype:<!-- store content -->（卡片 likes/views/心形图标）+ <!-- store detail modal -->（统计区）；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "03",
+      "owner": "wrk-store-2",
       "capability": "CAP-DATA",
       "depends_on": [
         "F01"

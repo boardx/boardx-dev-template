@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Plus, Trash2, ArrowUp, ArrowDown, ChevronLeft } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, ChevronLeft, Eye, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,13 +18,18 @@ interface Question {
 }
 
 interface Survey {
-  id: string;
+  id: number;
   title: string;
   description: string;
   scope: string;
   status: string;
   responses: number;
-  questions: Question[];
+  teamId: number | null;
+}
+
+interface Team {
+  id: number;
+  name: string;
 }
 
 const TYPE_LABEL: Record<QType, string> = {
@@ -55,14 +60,18 @@ export default function SurveysPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [mode, setMode] = useState<"list" | "editor">("list");
+  const [view, setView] = useState<"edit" | "preview">("edit");
 
   // editor state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [scope, setScope] = useState("private");
+  const [scope, setScope] = useState<"private" | "team">("private");
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [teamId, setTeamId] = useState<string>("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [created, setCreated] = useState<{ id: number; shareUrl: string } | null>(null);
 
   async function load() {
     setLoading(true);
@@ -88,13 +97,26 @@ export default function SurveysPage() {
 
   useEffect(() => { void load(); }, []);
 
+  async function loadTeams() {
+    try {
+      const res = await fetch("/api/teams");
+      if (res.ok) setTeams(((await res.json()).teams ?? []).map((t: Team) => ({ id: t.id, name: t.name })));
+    } catch {
+      // 团队列表加载失败不阻塞创建（保留 private 作用域可用）
+    }
+  }
+
   function openEditor() {
     setTitle("");
     setDescription("");
     setScope("private");
+    setTeamId("");
     setQuestions([newQuestion()]);
     setSaveError("");
+    setCreated(null);
+    setView("edit");
     setMode("editor");
+    void loadTeams();
   }
 
   function patchQuestion(id: string, patch: Partial<Question>) {
@@ -130,17 +152,27 @@ export default function SurveysPage() {
     const res = await fetch("/api/surveys", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ title, description, scope, questions }),
+      body: JSON.stringify({
+        title,
+        description,
+        scope,
+        teamId: scope === "team" ? Number(teamId) : undefined,
+        questions,
+      }),
     });
     setSaving(false);
     if (res.status === 201) {
-      setMode("list");
+      const { survey } = await res.json();
+      setCreated({ id: survey.id, shareUrl: survey.shareUrl });
       await load();
     } else {
       const d = await res.json().catch(() => ({}));
-      setSaveError(d.errors?.title ?? d.error ?? "保存失败");
+      setSaveError(d.errors?.title ?? d.errors?.questions ?? d.errors?.teamId ?? d.error ?? "保存失败");
     }
   }
+
+  const hasValidQuestion = questions.some((q) => q.title.trim().length > 0);
+  const canSave = title.trim().length > 0 && hasValidQuestion && (scope !== "team" || teamId);
 
   if (mode === "editor") {
     return (
@@ -157,16 +189,98 @@ export default function SurveysPage() {
             Surveys
           </Button>
           <div className="flex-1" />
-          <Button
-            data-testid="save-survey"
-            size="sm"
-            disabled={saving}
-            onClick={() => void save()}
-          >
-            {saving ? "Saving…" : "Create survey"}
-          </Button>
+          {!created && (
+            <Button
+              data-testid={view === "edit" ? "preview-survey" : "edit-survey"}
+              variant="outline"
+              size="sm"
+              onClick={() => setView(view === "edit" ? "preview" : "edit")}
+              className="gap-1.5"
+            >
+              {view === "edit" ? (
+                <>
+                  <Eye className="h-4 w-4" strokeWidth={1.5} />
+                  Preview
+                </>
+              ) : (
+                <>
+                  <Pencil className="h-4 w-4" strokeWidth={1.5} />
+                  Edit
+                </>
+              )}
+            </Button>
+          )}
+          {!created && view === "edit" && (
+            <Button
+              data-testid="save-survey"
+              size="sm"
+              disabled={saving || !canSave}
+              onClick={() => void save()}
+            >
+              {saving ? "Saving…" : "Create survey"}
+            </Button>
+          )}
         </div>
 
+        {created && (
+          <div className="mx-auto mt-7 max-w-2xl">
+            <div
+              data-testid="survey-created"
+              className="rounded-12 border border-border bg-surface-1 p-5"
+            >
+              <p className="text-15 font-semibold text-foreground">Survey created</p>
+              <p className="mt-1 text-13 text-muted-foreground">Share this link with answerers:</p>
+              <div className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
+                <span data-testid="survey-share-link" className="flex-1 truncate text-13 text-foreground">
+                  {created.shareUrl}
+                </span>
+              </div>
+              <Button
+                data-testid="done-created"
+                size="sm"
+                className="mt-4"
+                onClick={() => setMode("list")}
+              >
+                Back to surveys
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {!created && view === "preview" && (
+          <div className="mx-auto mt-7 max-w-2xl" data-testid="survey-preview">
+            <h2 className="text-20 font-bold text-foreground">{title.trim() || "Untitled survey"}</h2>
+            {description.trim() && <p className="mt-1.5 text-13 text-muted-foreground">{description}</p>}
+            <div className="mt-6 flex flex-col gap-4">
+              {questions.map((q, idx) => (
+                <div key={q.id} data-testid={`preview-question-${idx}`} className="rounded-12 border border-border p-4">
+                  <p className="text-13 font-semibold text-foreground">
+                    {q.title.trim() || `Question ${idx + 1}`}
+                    {q.required && <span className="ml-1 text-destructive">*</span>}
+                  </p>
+                  <div className="mt-3">
+                    {q.type === "text" && (
+                      <Input disabled placeholder="Your answer" className="bg-muted/30" />
+                    )}
+                    {(q.type === "single" || q.type === "multiple") && (
+                      <div className="flex flex-col gap-2">
+                        {(q.options.length ? q.options : ["Option 1"]).map((o, k) => (
+                          <label key={k} className="flex items-center gap-2 text-13 text-foreground">
+                            <input type="checkbox" disabled className="accent-primary" />
+                            {o || `Option ${k + 1}`}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                    {q.type === "rating" && <div className="text-22 text-border-strong">★ ★ ★ ★ ★</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!created && view === "edit" && (
         <div className="mx-auto mt-7 max-w-2xl">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="survey-title">Survey title</Label>
@@ -196,12 +310,34 @@ export default function SurveysPage() {
               data-testid="survey-scope"
               className="w-44"
               value={scope}
-              onChange={(e) => setScope(e.target.value)}
+              onChange={(e) => setScope(e.target.value as "private" | "team")}
             >
               <option value="private">Only me</option>
               <option value="team">Shareable with team</option>
             </Select>
           </div>
+          {scope === "team" && (
+            <div className="mt-4 flex flex-col gap-1.5">
+              <Label htmlFor="survey-team">Team</Label>
+              <Select
+                id="survey-team"
+                data-testid="survey-team"
+                className="w-64"
+                value={teamId}
+                onChange={(e) => setTeamId(e.target.value)}
+              >
+                <option value="">Select a team…</option>
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </Select>
+              {teams.length === 0 && (
+                <p className="text-12 text-muted-foreground">
+                  You have no teams yet. Create one from the Teams page to share this survey with a team.
+                </p>
+              )}
+            </div>
+          )}
 
           <div data-testid="question-list" className="mt-6 flex flex-col gap-3.5">
             {questions.map((q, idx) => (
@@ -316,6 +452,7 @@ export default function SurveysPage() {
             </p>
           )}
         </div>
+        )}
       </div>
     );
   }
@@ -368,7 +505,7 @@ export default function SurveysPage() {
               >
                 <div className="flex-[2.4] truncate text-13 font-semibold text-foreground">{s.title}</div>
                 <div className="flex-1">
-                  <Badge variant="muted">{s.scope}</Badge>
+                  <Badge variant="muted">{s.scope === "team" ? "Team" : "Private"}</Badge>
                 </div>
                 <div className="flex-1 text-13 text-muted-foreground">{s.responses}</div>
                 <div className="flex-1">

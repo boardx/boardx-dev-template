@@ -41,7 +41,7 @@ const MODULES: ModuleCard[] = [
     description: "查看、筛选团队，编辑团队类型，手动上分",
     href: "/admin/teams",
     icon: UsersRound,
-    available: false,
+    available: true,
   },
   {
     key: "ai-store-review",
