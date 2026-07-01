@@ -540,6 +540,42 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     await applyColors(updates);
   }
 
+  // uc-context-menu-003：调整图层顺序（z-order）。items 数组顺序即 DOM 绘制顺序，
+  // 越靠后越在上层（同 z-index、position:absolute → 后绘制覆盖先绘制）。
+  // 通过重排 items 数组实现「置顶/上移/下移/置底」，并保留选中态。
+  // z-order 为纯客户端视图关注点（后端 item 无 order 字段），重排数组即改变遮挡关系。
+  const arrange = useCallback(
+    (mode: "front" | "forward" | "backward" | "back") => {
+      if (!canEdit || selected.size === 0) return;
+      setItems((prev) => {
+        if (!prev.some((it) => selected.has(it.id))) return prev;
+        const sel = prev.filter((it) => selected.has(it.id));
+        const rest = prev.filter((it) => !selected.has(it.id));
+        if (mode === "front") return [...rest, ...sel];
+        if (mode === "back") return [...sel, ...rest];
+        const next = [...prev];
+        if (mode === "forward") {
+          // 整体上移一层：从右往左，把每个选中项与其右侧最近的未选中项交换，
+          // 保留选中项彼此相对次序。
+          for (let i = next.length - 2; i >= 0; i--) {
+            if (selected.has(next[i]!.id) && !selected.has(next[i + 1]!.id)) {
+              [next[i], next[i + 1]] = [next[i + 1]!, next[i]!];
+            }
+          }
+        } else {
+          // 整体下移一层：从左往右，把每个选中项与其左侧最近的未选中项交换。
+          for (let i = 1; i < next.length; i++) {
+            if (selected.has(next[i]!.id) && !selected.has(next[i - 1]!.id)) {
+              [next[i], next[i - 1]] = [next[i - 1]!, next[i]!];
+            }
+          }
+        }
+        return next;
+      });
+    },
+    [canEdit, selected]
+  );
+
   const deleteSelected = useCallback(async () => {
     if (!canEdit || selected.size === 0) return;
     const removed = items.filter((it) => selected.has(it.id));
@@ -782,11 +818,12 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             setCtxMenu({ x: e.clientX, y: e.clientY });
           }}
         >
-          {items.map((it) => (
+          {items.map((it, z) => (
             <div
               key={it.id}
               data-testid={`item-${it.id}`}
               data-selected={selected.has(it.id) ? "true" : "false"}
+              data-z={z}
               onMouseDown={(e) => startNoteDrag(e, it)}
               onClick={(e) => {
                 e.stopPropagation();
@@ -807,7 +844,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                 if (!selected.has(it.id)) selectItem(it.id, false);
                 setCtxMenu({ x: e.clientX, y: e.clientY });
               }}
-              style={{ left: it.x, top: it.y, width: it.w, height: it.h }}
+              style={{ left: it.x, top: it.y, width: it.w, height: it.h, zIndex: z }}
               className={
                 "absolute flex p-2 text-xs " +
                 // 文本：透明无边框文本块；形状：粗边框矩形；便签：柔彩 + 边框 + 圆角 + 阴影
@@ -896,6 +933,53 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               >
                 创建副本
               </button>
+              {/* uc-context-menu-003：调整图层顺序（z-order）。重排后关闭菜单、保留选中态。 */}
+              <div className="my-1 h-px bg-border" />
+              <button
+                type="button"
+                data-testid="ctx-bring-front"
+                className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
+                onClick={() => {
+                  arrange("front");
+                  setCtxMenu(null);
+                }}
+              >
+                置于顶层
+              </button>
+              <button
+                type="button"
+                data-testid="ctx-bring-forward"
+                className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
+                onClick={() => {
+                  arrange("forward");
+                  setCtxMenu(null);
+                }}
+              >
+                上移一层
+              </button>
+              <button
+                type="button"
+                data-testid="ctx-send-backward"
+                className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
+                onClick={() => {
+                  arrange("backward");
+                  setCtxMenu(null);
+                }}
+              >
+                下移一层
+              </button>
+              <button
+                type="button"
+                data-testid="ctx-send-back"
+                className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
+                onClick={() => {
+                  arrange("back");
+                  setCtxMenu(null);
+                }}
+              >
+                置于底层
+              </button>
+              <div className="my-1 h-px bg-border" />
               <button
                 type="button"
                 data-testid="ctx-delete"
