@@ -8,15 +8,24 @@ import { cn } from "@/lib/utils";
 type StoreType = "agent" | "ai-tool" | "image-tool" | "template";
 
 interface StoreItem {
-  id: string;
+  id: number;
   name: string;
   description: string;
   type: StoreType;
   tags: string[];
+  examples: string[];
   author: string;
   likes: number;
   views: number;
   featured: boolean;
+}
+
+interface ListResponse {
+  items: StoreItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 type NavItem = { key: string; name: string; icon: typeof Compass };
@@ -51,9 +60,10 @@ const TYPE_TABS: { key: "all" | StoreType; name: string }[] = [
 const TAGS = ["research", "writing", "design", "productivity", "meetings", "featured"];
 
 const TAG_FILLS = ["bg-tag-green", "bg-tag-blue", "bg-tag-purple", "bg-tag-pink", "bg-tag-yellow"];
-function fillFor(id: string) {
+function fillFor(id: number | string) {
+  const s = String(id);
   let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
   return TAG_FILLS[h % TAG_FILLS.length];
 }
 
@@ -73,27 +83,38 @@ function StoreSkeleton() {
 export function StoreBrowser() {
   const [nav, setNav] = useState<string>("explore");
   const [items, setItems] = useState<StoreItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [type, setType] = useState<"all" | StoreType>("all");
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [q, setQ] = useState("");
+  const [detailId, setDetailId] = useState<number | null>(null);
+  const [detailItem, setDetailItem] = useState<StoreItem | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
-  async function load(opts: { type: "all" | StoreType; tags: string[]; q: string }) {
+  async function load(opts: { type: "all" | StoreType; tags: string[]; q: string; page: number }) {
     setLoading(true);
     setError("");
     const params = new URLSearchParams();
     if (opts.type !== "all") params.set("type", opts.type);
     if (opts.tags[0]) params.set("tag", opts.tags[0]);
     if (opts.q.trim()) params.set("q", opts.q.trim());
+    params.set("page", String(opts.page));
     try {
-      const res = await fetch(`/api/ai-store${params.toString() ? `?${params}` : ""}`);
+      const res = await fetch(`/api/ai-store/items?${params}`);
       if (!res.ok) {
         setError("加载失败，请稍后重试");
         setLoading(false);
         return;
       }
-      setItems((await res.json()).items ?? []);
+      const data = (await res.json()) as ListResponse;
+      setItems(data.items ?? []);
+      setTotal(data.total ?? 0);
+      setPage(data.page ?? 1);
+      setTotalPages(data.totalPages ?? 1);
     } catch {
       setError("加载失败，请稍后重试");
     }
@@ -102,7 +123,7 @@ export function StoreBrowser() {
 
   // 仅 Explore 拉全量；其他 submenu（Subscribe/Create/...）当前为占位空态。
   useEffect(() => {
-    if (nav === "explore") void load({ type, tags: activeTags, q });
+    if (nav === "explore") void load({ type, tags: activeTags, q, page: 1 });
     else {
       setItems([]);
       setLoading(false);
@@ -110,6 +131,30 @@ export function StoreBrowser() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nav, type, activeTags]);
+
+  // 详情弹窗：按 id 拉取详情。
+  useEffect(() => {
+    if (detailId == null) {
+      setDetailItem(null);
+      return;
+    }
+    let cancelled = false;
+    setDetailLoading(true);
+    fetch(`/api/ai-store/items/${detailId}`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((data: { item: StoreItem }) => {
+        if (!cancelled) setDetailItem(data.item);
+      })
+      .catch(() => {
+        if (!cancelled) setDetailItem(null);
+      })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [detailId]);
 
   function toggleTag(tag: string) {
     setActiveTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
@@ -119,6 +164,11 @@ export function StoreBrowser() {
     setActiveTags([]);
     setQ("");
     setType("all");
+  }
+
+  function goToPage(p: number) {
+    if (p < 1 || p > totalPages || p === page) return;
+    void load({ type, tags: activeTags, q, page: p });
   }
 
   const filtersActive = activeTags.length > 0 || q.trim().length > 0 || type !== "all";
@@ -167,7 +217,7 @@ export function StoreBrowser() {
           <h1 className="text-22 font-bold tracking-tight text-foreground">{navTitle}</h1>
           {isExplore && (
             <span data-testid="result-count" className="text-13 text-placeholder">
-              {items.length} results
+              {total} results
             </span>
           )}
           <div className="flex-1" />
@@ -188,7 +238,7 @@ export function StoreBrowser() {
                 placeholder="Search by name or description…"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && load({ type, tags: activeTags, q })}
+                onKeyDown={(e) => e.key === "Enter" && load({ type, tags: activeTags, q, page: 1 })}
                 className="pl-10"
               />
             </div>
@@ -267,7 +317,7 @@ export function StoreBrowser() {
                     size="sm"
                     variant="outline"
                     data-testid="retry"
-                    onClick={() => load({ type, tags: activeTags, q })}
+                    onClick={() => load({ type, tags: activeTags, q, page })}
                   >
                     重试
                   </Button>
@@ -295,57 +345,97 @@ export function StoreBrowser() {
                   )}
                 </div>
               ) : (
-                <div
-                  data-testid="item-grid"
-                  className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-                >
-                  {items.map((it) => (
-                    <article
-                      key={it.id}
-                      data-testid={`item-${it.id}`}
-                      className="relative rounded-12 border border-border p-4 transition-all hover:border-border-strong hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
-                    >
-                      {it.featured && (
-                        <span className="absolute right-3 top-3 rounded-7 bg-primary px-1.75 py-0.5 text-9 font-bold text-primary-foreground">
-                          ★ FEATURED
-                        </span>
-                      )}
-                      <div className="flex items-center gap-2.5">
-                        <span
-                          className={cn(
-                            "flex h-9 w-9 shrink-0 items-center justify-center rounded-10 text-15 font-bold text-foreground/40",
-                            fillFor(it.id),
-                          )}
-                        >
-                          {it.name.charAt(0).toUpperCase()}
-                        </span>
-                        <div className="min-w-0">
-                          <div className="truncate text-13 font-semibold text-foreground">
-                            {it.name}
-                          </div>
-                          <div className="truncate text-11 text-placeholder">{it.author}</div>
-                        </div>
-                      </div>
-                      <p className="mt-2.75 min-h-9 text-13 leading-relaxed text-muted-foreground">
-                        {it.description}
-                      </p>
-                      <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                        {it.tags.slice(0, 2).map((tag) => (
-                          <span
-                            key={tag}
-                            className="rounded-7 bg-muted px-2 py-0.5 text-10 text-muted-foreground"
-                          >
-                            {tag}
+                <>
+                  <div
+                    data-testid="item-grid"
+                    className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                  >
+                    {items.map((it) => (
+                      <article
+                        key={it.id}
+                        data-testid={`item-${it.id}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setDetailId(it.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setDetailId(it.id);
+                          }
+                        }}
+                        className="relative cursor-pointer rounded-12 border border-border p-4 transition-all hover:border-border-strong hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+                      >
+                        {it.featured && (
+                          <span className="absolute right-3 top-3 rounded-7 bg-primary px-1.75 py-0.5 text-9 font-bold text-primary-foreground">
+                            ★ FEATURED
                           </span>
-                        ))}
-                        <span className="flex-1" />
-                        <span className="text-11 text-placeholder">
-                          ♡ {it.likes} · 👁 {it.views}
-                        </span>
-                      </div>
-                    </article>
-                  ))}
-                </div>
+                        )}
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className={cn(
+                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-10 text-15 font-bold text-foreground/40",
+                              fillFor(it.id),
+                            )}
+                          >
+                            {it.name.charAt(0).toUpperCase()}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="truncate text-13 font-semibold text-foreground">
+                              {it.name}
+                            </div>
+                            <div className="truncate text-11 text-placeholder">{it.author}</div>
+                          </div>
+                        </div>
+                        <p className="mt-2.75 min-h-9 text-13 leading-relaxed text-muted-foreground">
+                          {it.description}
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                          {it.tags.slice(0, 2).map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded-7 bg-muted px-2 py-0.5 text-10 text-muted-foreground"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                          <span className="flex-1" />
+                          <span className="text-11 text-placeholder">
+                            ♡ {it.likes} · 👁 {it.views}
+                          </span>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div
+                      data-testid="pagination"
+                      className="mt-6 flex items-center justify-center gap-2"
+                    >
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        data-testid="page-prev"
+                        disabled={page <= 1}
+                        onClick={() => goToPage(page - 1)}
+                      >
+                        Prev
+                      </Button>
+                      <span data-testid="page-indicator" className="text-11 text-placeholder">
+                        Page {page} / {totalPages}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        data-testid="page-next"
+                        disabled={page >= totalPages}
+                        onClick={() => goToPage(page + 1)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </>
@@ -368,6 +458,106 @@ export function StoreBrowser() {
           </div>
         )}
       </section>
+
+      {/* store detail modal */}
+      {detailId != null && (
+        <div
+          data-testid="item-detail-modal"
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/35"
+          onClick={() => setDetailId(null)}
+        >
+          <div
+            className="max-h-[84vh] w-85 max-w-[92vw] overflow-auto rounded-14 bg-background shadow-[0_24px_60px_rgba(0,0,0,0.28)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className={cn(
+                "relative flex h-32 items-center justify-center rounded-t-14 text-30",
+                fillFor(detailId),
+              )}
+            >
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                data-testid="close-detail"
+                aria-label="Close"
+                onClick={() => setDetailId(null)}
+                className="absolute right-2.25 top-2.25 h-7 w-7 rounded-full bg-background/70 text-muted-foreground hover:bg-background"
+              >
+                ✕
+              </Button>
+              {detailItem ? detailItem.name.charAt(0).toUpperCase() : ""}
+            </div>
+
+            {detailLoading || !detailItem ? (
+              <div className="p-6 text-13 text-placeholder" data-testid="detail-loading">
+                Loading…
+              </div>
+            ) : (
+              <div className="p-5.5">
+                <div className="flex items-center gap-2.5">
+                  <div data-testid="detail-name" className="text-17 font-bold text-foreground">
+                    {detailItem.name}
+                  </div>
+                  {detailItem.featured && (
+                    <span className="rounded-7 bg-foreground px-1.75 py-0.5 text-9 font-bold text-background">
+                      ★ FEATURED
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 text-11 text-placeholder">
+                  {detailItem.type} · by {detailItem.author}
+                </div>
+                <p
+                  data-testid="detail-description"
+                  className="mt-3.5 text-13 leading-relaxed text-muted-foreground"
+                >
+                  {detailItem.description}
+                </p>
+
+                {detailItem.examples.length > 0 && (
+                  <div data-testid="detail-examples" className="mt-4">
+                    <div className="text-11 font-semibold uppercase tracking-wide text-placeholder">
+                      Examples
+                    </div>
+                    <ul className="mt-2 list-disc space-y-1 pl-4 text-13 text-muted-foreground">
+                      {detailItem.examples.map((ex) => (
+                        <li key={ex}>{ex}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div
+                  data-testid="detail-stats"
+                  className="mt-4 flex gap-6 border-y border-border py-3.5"
+                >
+                  <div>
+                    <div className="text-17 font-bold text-foreground">{detailItem.likes}</div>
+                    <div className="text-11 text-placeholder">Likes</div>
+                  </div>
+                  <div>
+                    <div className="text-17 font-bold text-foreground">{detailItem.views}</div>
+                    <div className="text-11 text-placeholder">Views</div>
+                  </div>
+                </div>
+
+                {/* 订阅入口：F01 只读浏览，订阅动作留给 F03（当前禁用占位）。 */}
+                <Button
+                  size="sm"
+                  disabled
+                  data-testid="detail-subscribe"
+                  className="mt-4.5 w-full"
+                  title="订阅功能即将上线（F03）"
+                >
+                  Subscribe
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -24,6 +24,14 @@ export * from "./profile";
 export * from "./feedback";
 // CAP-DATA 问卷仓储（surveys / survey_questions / survey_responses / P13 F01）
 export * from "./survey";
+// CAP-AI AVA 聊天线程与消息仓储（ava_threads/ava_messages / P9 F01）
+export * from "./avaChat";
+// CAP-DATA AI Store 商品仓储（ai_store_items / P11）
+export * from "./aiStore";
+// CAP-DATA 积分钱包仓储（credit_wallets/credit_transactions / P14 uc-credits-001）
+export * from "./credits";
+// CAP-FILE 知识库文件仓储（kb_files / P10）
+export * from "./kbFiles";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 

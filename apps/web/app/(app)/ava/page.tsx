@@ -1,28 +1,31 @@
 "use client";
-// apps/web/app/(app)/ava/page.tsx — AVA 助手聊天主流程（uc-ava-001-start-chat）
+// apps/web/app/(app)/ava/page.tsx — AVA 助手聊天主流程（P9 F01：聊天壳 + 新建会话 +
+// 发首条消息 + AI 流式回复）
 //
-// 主流程 only：thread 列表 + 聊天区（user/assistant 气泡 + 空态建议）+ 底部 composer。
-// 新建/进入会话 → 发送消息 → 显示 AI（stub）回复 → 消息持久化（内存）。
-// loading / empty / error 状态齐备。
+// 主流程：线程列表 + 聊天区（user/assistant 气泡，assistant 支持 Markdown/代码块）+
+// 空态建议 + composer。新建/进入会话 → 发送消息 → SSE 逐字流式渲染 AI 回复 →
+// DB 持久化（ava_threads/ava_messages）。桌面端左右分栏常驻；移动端先列表，
+// 选中线程或新建聊天后切到聊天视图（带返回入口）。
 //
-// OUT OF SCOPE（本 feature 不做）：Deep Research、附件/图片、语音、模型/Agent/工具切换、
-// 分享只读、消息编辑/重生成/反馈、团队切换清理。
+// OUT OF SCOPE（本 feature 不做，留给后续 F02-F11）：线程重命名/删除/分页、
+// 消息编辑/重生成/反馈、分享只读、Deep Research、附件/图片、语音、模型/Agent/工具切换、
+// 建议动作个性化、发送到 Board / 邮件。
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, ArrowUp, Sparkles } from "lucide-react";
+import { Plus, ArrowUp, Sparkles, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MarkdownMessage } from "./markdown-message";
 
 interface ThreadSummary {
-  id: string;
+  id: number;
   title: string;
-  preview: string;
-  updatedAt: number;
+  updated_at: string;
 }
 interface Message {
-  id: string;
+  id: number;
   role: "user" | "assistant";
-  text: string;
-  createdAt: number;
+  content: string;
+  status: "complete" | "failed";
 }
 
 const SUGGESTIONS = [
@@ -35,16 +38,18 @@ const SUGGESTIONS = [
 export default function AvaPage() {
   const router = useRouter();
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [streamingText, setStreamingText] = useState("");
   const [error, setError] = useState("");
   const [sendError, setSendError] = useState("");
+  // 移动端视图切换：list-first。桌面端（md 及以上）始终双栏，此状态被 CSS 忽略。
+  const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 未登录统一跳转 /login（UC E1）。
   const guard = useCallback(
     (status: number) => {
       if (status === 401) {
@@ -56,18 +61,21 @@ export default function AvaPage() {
     [router]
   );
 
-  // 初始化：加载线程列表。
+  const refreshThreads = useCallback(async () => {
+    const res = await fetch("/api/ava/threads");
+    if (guard(res.status)) return;
+    if (!res.ok) throw new Error("加载失败");
+    const data = await res.json();
+    setThreads(data.threads ?? []);
+  }, [guard]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch("/api/ava");
-        if (guard(res.status)) return;
-        if (!res.ok) throw new Error("加载失败");
-        const data = await res.json();
-        if (!cancelled) setThreads(data.threads ?? []);
+        await refreshThreads();
       } catch {
         if (!cancelled) setError("加载会话失败，请稍后重试");
       } finally {
@@ -77,18 +85,20 @@ export default function AvaPage() {
     return () => {
       cancelled = true;
     };
-  }, [guard]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages, sending]);
+  }, [messages, streamingText, sending]);
 
-  async function openThread(id: string) {
+  async function openThread(id: number) {
     setActiveId(id);
     setSendError("");
     setMessages([]);
+    setMobileView("chat");
     try {
-      const res = await fetch(`/api/ava?chatId=${encodeURIComponent(id)}`);
+      const res = await fetch(`/api/ava/threads/${id}`);
       if (guard(res.status)) return;
       if (!res.ok) throw new Error();
       const data = await res.json();
@@ -103,6 +113,18 @@ export default function AvaPage() {
     setMessages([]);
     setSendError("");
     setDraft("");
+    setMobileView("chat");
+  }
+
+  async function ensureThread(): Promise<number | null> {
+    if (activeId != null) return activeId;
+    const res = await fetch("/api/ava/threads", { method: "POST" });
+    if (guard(res.status)) return null;
+    if (!res.ok) throw new Error("创建线程失败");
+    const data = await res.json();
+    const id: number = data.thread.id;
+    setActiveId(id);
+    return id;
   }
 
   async function send() {
@@ -110,23 +132,47 @@ export default function AvaPage() {
     if (!text || sending) return;
     setSending(true);
     setSendError("");
+    setStreamingText("");
+
     try {
-      const res = await fetch("/api/ava", {
+      const threadId = await ensureThread();
+      if (threadId == null) return; // guard 已处理未登录跳转
+
+      const res = await fetch(`/api/ava/threads/${threadId}/messages`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ chatId: activeId, text }),
+        body: JSON.stringify({ text }),
       });
       if (guard(res.status)) return;
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setMessages((prev) => [...prev, data.userMessage, data.assistantMessage]);
-      setActiveId(data.thread.id);
-      setDraft(""); // 仅成功后清空草稿（失败保留输入，UC 成功出口3 / E2）
-      // 刷新线程列表（新建/更新均反映在左栏）。
-      const listRes = await fetch("/api/ava");
-      if (!guard(listRes.status) && listRes.ok) {
-        setThreads((await listRes.json()).threads ?? []);
+      if (!res.ok || !res.body) {
+        const errBody = await res.json().catch(() => ({}));
+        if (errBody?.errors?.text) {
+          setSendError(errBody.errors.text);
+        } else {
+          setSendError("发送失败，请重试（你的输入已保留）");
+        }
+        return;
       }
+
+      setDraft(""); // 请求已受理（用户消息即将持久化），清空草稿；失败态由下面 SSE error 分支处理
+      await consumeSse(res.body, {
+        onUser: (msg: Message) => {
+          setMessages((prev) => [...prev, msg]);
+        },
+        onToken: (token: string) => {
+          setStreamingText((prev) => prev + token);
+        },
+        onDone: (msg: Message) => {
+          setMessages((prev) => [...prev, msg]);
+          setStreamingText("");
+        },
+        onError: (msg: Message) => {
+          setMessages((prev) => [...prev, msg]);
+          setStreamingText("");
+          setSendError("AVA 生成回复失败，请重试。");
+        },
+      });
+      await refreshThreads();
     } catch {
       setSendError("发送失败，请重试（你的输入已保留）");
     } finally {
@@ -145,8 +191,12 @@ export default function AvaPage() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      {/* thread list */}
-      <aside className="flex w-60 flex-none flex-col border-r border-border p-3">
+      {/* thread list：移动端 list 视图或桌面端常驻 */}
+      <aside
+        className={`w-full flex-none flex-col border-r border-border p-3 md:flex md:w-60 ${
+          mobileView === "list" ? "flex" : "hidden"
+        }`}
+      >
         <Button data-testid="new-chat" size="sm" className="h-9 w-full gap-1.5" onClick={newChat}>
           <Plus className="h-4 w-4" strokeWidth={1.5} />
           New chat
@@ -175,7 +225,6 @@ export default function AvaPage() {
                     }`}
                   >
                     <span className="block w-full truncate text-13 font-medium text-foreground">{t.title}</span>
-                    <span className="block w-full truncate text-xs text-muted-foreground">{t.preview}</span>
                   </Button>
                 </li>
               ))}
@@ -184,8 +233,10 @@ export default function AvaPage() {
         </div>
       </aside>
 
-      {/* chat */}
-      <section className="flex min-w-0 flex-1 flex-col">
+      {/* chat：移动端 chat 视图或桌面端常驻 */}
+      <section
+        className={`min-w-0 flex-1 flex-col md:flex ${mobileView === "chat" ? "flex" : "hidden"}`}
+      >
         {error ? (
           <div className="flex flex-1 items-center justify-center px-6">
             <p role="alert" data-testid="error" className="text-13 text-destructive">
@@ -194,6 +245,20 @@ export default function AvaPage() {
           </div>
         ) : (
           <>
+            <div className="flex flex-none items-center gap-2 border-b border-border px-4 py-2.5 md:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                data-testid="back-to-list"
+                className="h-8 w-8"
+                onClick={() => setMobileView("list")}
+                aria-label="Back to thread list"
+              >
+                <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
+              </Button>
+              <span className="text-13 font-medium text-foreground">AVA</span>
+            </div>
+
             <div ref={scrollRef} className="flex-1 overflow-auto py-6">
               <div className="mx-auto flex max-w-2xl flex-col gap-5 px-6">
                 {isEmptyThread ? (
@@ -224,6 +289,7 @@ export default function AvaPage() {
                       <li
                         key={m.id}
                         data-testid={`msg-${m.role}`}
+                        data-status={m.status}
                         className={`flex items-start gap-2.5 ${m.role === "user" ? "justify-end" : ""}`}
                       >
                         {m.role === "assistant" && (
@@ -231,25 +297,33 @@ export default function AvaPage() {
                             AI
                           </span>
                         )}
-                        <div
-                          className={`whitespace-pre-wrap text-sm leading-relaxed ${
-                            m.role === "user"
-                              ? "rounded-12 bg-surface-1 px-4 py-2.5 text-foreground"
-                              : "text-foreground"
-                          }`}
-                        >
-                          {m.text}
-                        </div>
+                        {m.role === "user" ? (
+                          <div className="whitespace-pre-wrap rounded-12 bg-surface-1 px-4 py-2.5 text-sm leading-relaxed text-foreground">
+                            {m.content}
+                          </div>
+                        ) : m.status === "failed" ? (
+                          <div data-testid="msg-failed" className="text-sm leading-relaxed text-destructive">
+                            {m.content}
+                          </div>
+                        ) : (
+                          <MarkdownMessage content={m.content} />
+                        )}
                       </li>
                     ))}
                   </ul>
                 )}
                 {sending && (
-                  <div data-testid="sending" className="flex items-center gap-2.5">
+                  <div data-testid="sending" className="flex items-start gap-2.5">
                     <span className="flex h-7 w-7 flex-none items-center justify-center rounded-7 bg-primary text-11 font-bold text-primary-foreground">
                       AI
                     </span>
-                    <span className="text-13 text-muted-foreground">AVA 正在思考…</span>
+                    {streamingText ? (
+                      <div data-testid="msg-assistant-streaming">
+                        <MarkdownMessage content={streamingText} />
+                      </div>
+                    ) : (
+                      <span className="text-13 text-muted-foreground">AVA 正在思考…</span>
+                    )}
                   </div>
                 )}
               </div>
@@ -295,4 +369,47 @@ export default function AvaPage() {
       </section>
     </div>
   );
+}
+
+// ─── SSE 消费（POST body 是 ReadableStream，浏览器原生 EventSource 不支持 POST，手动解析）──
+
+interface SseHandlers {
+  onUser: (msg: Message) => void;
+  onToken: (token: string) => void;
+  onDone: (msg: Message) => void;
+  onError: (msg: Message) => void;
+}
+
+async function consumeSse(body: ReadableStream<Uint8Array>, handlers: SseHandlers): Promise<void> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let sepIndex: number;
+    while ((sepIndex = buffer.indexOf("\n\n")) !== -1) {
+      const rawEvent = buffer.slice(0, sepIndex);
+      buffer = buffer.slice(sepIndex + 2);
+      dispatchSseEvent(rawEvent, handlers);
+    }
+  }
+}
+
+function dispatchSseEvent(raw: string, handlers: SseHandlers): void {
+  let event = "message";
+  let data = "";
+  for (const line of raw.split("\n")) {
+    if (line.startsWith("event: ")) event = line.slice("event: ".length);
+    else if (line.startsWith("data: ")) data += line.slice("data: ".length);
+  }
+  if (!data) return;
+  const parsed = JSON.parse(data);
+  if (event === "user") handlers.onUser(parsed.message);
+  else if (event === "token") handlers.onToken(parsed.token);
+  else if (event === "done") handlers.onDone(parsed.message);
+  else if (event === "error") handlers.onError(parsed.message);
 }
