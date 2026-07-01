@@ -89,6 +89,7 @@ function AccountCenter() {
 function PersonalInfo() {
   const [displayName, setDisplayName] = useState("");
   const [avatar, setAvatar] = useState("");
+  const displayNameRef = useRef<HTMLInputElement>(null);
   const avatarRef = useRef("");
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -108,10 +109,10 @@ function PersonalInfo() {
 
   if (!loaded) return <section data-testid="section-personal"><p className="text-13 text-muted-foreground">加载中…</p></section>;
 
-  async function save() {
+  async function save(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     setError(""); setSaved(false);
-    const input = document.getElementById("display-name") as HTMLInputElement | null;
-    const nextDisplayName = (input?.value ?? displayName).trim();
+    const nextDisplayName = (displayNameRef.current?.value ?? displayName).trim();
     const nextAvatar = avatarRef.current;
     setDisplayName(nextDisplayName);
     setAvatar(nextAvatar);
@@ -130,7 +131,7 @@ function PersonalInfo() {
   }
 
   return (
-    <section data-testid="section-personal" className="flex flex-col gap-1.5">
+    <form data-testid="section-personal" onSubmit={save} className="flex flex-col gap-1.5">
       {/* 头像 */}
       <div className="mb-4 flex items-center gap-4">
         <div className="flex h-[3.875rem] w-[3.875rem] items-center justify-center rounded-full bg-foreground text-22 font-semibold text-background">
@@ -142,7 +143,7 @@ function PersonalInfo() {
       </div>
 
       <Label htmlFor="display-name">Name</Label>
-      <Input id="display-name" data-testid="display-name" className="mb-2" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+      <Input ref={displayNameRef} id="display-name" data-testid="display-name" className="mb-2" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
 
       <Label>Avatar</Label>
       <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -155,8 +156,8 @@ function PersonalInfo() {
 
       {error && <p data-testid="err" className="text-13 text-destructive">{error}</p>}
       {saved && <p data-testid="saved" className="text-13 text-success">已保存</p>}
-      <Button data-testid="save-personal" type="button" className="mt-2 self-start" onClick={save}>Save personal info</Button>
-    </section>
+      <Button data-testid="save-personal" type="submit" className="mt-2 self-start">Save personal info</Button>
+    </form>
   );
 }
 
