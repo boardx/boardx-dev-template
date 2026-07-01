@@ -1,16 +1,19 @@
 
-Running 9 tests using 1 worker
+Running 12 tests using 1 worker
 
-  ✓  1 [chromium] › studio-001-generate-artifact.spec.ts:24:5 › Studio 面板可见：来源为空时生成被禁用 (6.9s)
-  ✓  2 [chromium] › studio-001-generate-artifact.spec.ts:39:5 › 以当前聊天为来源生成音频概览：生成中 → 结果卡片可播放 (9.1s)
-  ✓  3 [chromium] › studio-001-generate-artifact.spec.ts:71:5 › 信息图生成：结果卡片图片可预览 (3.9s)
-  ✓  4 [chromium] › studio-001-generate-artifact.spec.ts:91:5 › 演示文稿生成：结果卡片提供下载链接 (3.3s)
-  ✓  5 [chromium] › studio-001-generate-artifact.spec.ts:111:5 › 生成失败：结果卡片展示失败态，提供重试并最终成功 (3.0s)
-  ✓  6 [chromium] › studio-001-generate-artifact.spec.ts:141:5 › 未登录访问房间聊天 → 跳转登录 (1.8s)
-  ✓  7 [chromium] › studio-001-generate-artifact.spec.ts:146:5 › 权限分支：未登录 POST 生成接口 → 401 (91ms)
-  ✓  8 [chromium] › studio-001-generate-artifact.spec.ts:153:5 › 失败分支：缺少类型/来源 → 400 (252ms)
-  ✓  9 [chromium] › studio-001-generate-artifact.spec.ts:162:5 › 失败分支：来源不可用时服务端二次校验拒绝（400），不产生半条制品 (209ms)
+  ✓  1 [chromium] › studio-001-generate-artifact.spec.ts:36:5 › Studio 面板可见：来源为空时生成被禁用 (23.1s)
+  ✓  2 [chromium] › studio-001-generate-artifact.spec.ts:51:5 › 以当前聊天为来源生成音频概览：生成中 → 结果卡片可播放 (20.8s)
+  ✓  3 [chromium] › studio-001-generate-artifact.spec.ts:83:5 › 信息图生成：结果卡片图片可预览 (6.4s)
+  ✓  4 [chromium] › studio-001-generate-artifact.spec.ts:103:5 › 演示文稿生成：结果卡片提供下载链接 (4.9s)
+  ✓  5 [chromium] › studio-001-generate-artifact.spec.ts:123:5 › 生成失败：结果卡片展示失败态，提供重试并最终成功 (4.8s)
+  ✓  6 [chromium] › studio-001-generate-artifact.spec.ts:153:5 › 未登录访问房间聊天 → 跳转登录 (4.5s)
+  ✓  7 [chromium] › studio-001-generate-artifact.spec.ts:158:5 › 权限分支：未登录 POST 生成接口 → 401 (205ms)
+  ✓  8 [chromium] › studio-001-generate-artifact.spec.ts:165:5 › 失败分支：缺少类型/来源 → 400 (893ms)
+  ✓  9 [chromium] › studio-001-generate-artifact.spec.ts:174:5 › 失败分支：来源不可用时服务端二次校验拒绝（400），不产生半条制品 (698ms)
+  ✓  10 [chromium] › studio-001-generate-artifact.spec.ts:184:5 › 权限：非创建者房间成员不能重试他人线程的失败制品 → 403 (3.5s)
+  ✓  11 [chromium] › studio-001-generate-artifact.spec.ts:219:5 › 权限：未登录调用重试接口 → 401 (1.3s)
+  ✓  12 [chromium] › studio-001-generate-artifact.spec.ts:228:5 › 「房间文件」来源不读取当前请求者的私人文件（个人房间场景的越权修复） (2.1s)
 
-  Slow test file: [chromium] › studio-001-generate-artifact.spec.ts (28.5s)
+  Slow test file: [chromium] › studio-001-generate-artifact.spec.ts (1.2m)
   Consider splitting slow test files to speed up parallel execution
-  9 passed (32.7s)
+  12 passed (1.5m)
