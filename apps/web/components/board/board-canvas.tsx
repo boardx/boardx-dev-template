@@ -2,6 +2,7 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CanvasViewport } from "@/components/board/canvas-viewport";
+import { setOperating } from "@/lib/collab-bus";
 import {
   Cable,
   Hand,
@@ -241,6 +242,11 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     void load();
   }, [load]);
 
+  // uc-collab-001：文本编辑进行中也算「正在操作」，供他人看到「谁在操作」（editingId 存在 = 编辑中）。
+  useEffect(() => {
+    setOperating(editingId != null);
+  }, [editingId]);
+
   // ── 实时协作同步（uc-canvas-005）────────────────────────────────────────
   // 轮询服务端 item 列表，让其它在线用户的新增/移动/删除在本地画布上出现，
   // 达成「在线用户看到一致的 Board 内容」（UC 后置条件 1）。
@@ -369,6 +375,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       window.removeEventListener("mouseup", onDragUp);
       const d = dragRef.current;
       dragRef.current = null;
+      setOperating(false); // uc-collab-001：拖拽结束 → 清除操作态
       setGuides([]); // 释放后隐藏参考线
       if (!d || !d.moved) return;
       justDraggedRef.current = true;
@@ -410,6 +417,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       snapDY: 0,
       moved: false,
     };
+    setOperating(true); // uc-collab-001：开始拖拽 → 标记为「正在操作」，供他人看到「谁在操作」
     window.addEventListener("mousemove", onDragMove);
     window.addEventListener("mouseup", onDragUp);
   }
