@@ -1,0 +1,10 @@
+@repo/orchestrator:typecheck: cache hit, replaying logs 1e68a3fdb453ab29
+@repo/orchestrator:typecheck: 
+@repo/orchestrator:typecheck: > @repo/orchestrator@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a0c7d04335ef0c11e/apps/orchestrator
+@repo/orchestrator:typecheck: > tsc --noEmit
+@repo/orchestrator:typecheck: 
+
+ Tasks:    45 successful, 45 total
+Cached:    45 cached, 45 total
+  Time:    548ms >>> FULL TURBO
+
