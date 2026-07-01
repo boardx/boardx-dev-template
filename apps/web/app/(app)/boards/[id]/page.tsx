@@ -9,8 +9,9 @@ import { Select } from "@/components/ui/select";
 import { BoardTimer } from "@/components/board/timer";
 import { BoardHelpGuide } from "@/components/board/help-guide";
 import { BoardShortcutsHelp } from "@/components/board/shortcuts-help";
-import { BoardSyncStatus } from "@/components/board/sync-status";
+import { BoardPresence } from "@/components/board/presence";
 import { BoardStatistics } from "@/components/board/board-statistics";
+import { SlidesPanel } from "@/components/board/slides-panel";
 import { BoardCanvas } from "@/components/board/board-canvas";
 import { LocalWorkspace } from "@/components/board/local-workspace";
 
@@ -209,8 +210,9 @@ export default function BoardPage() {
           <Badge variant="muted" data-testid="board-role">
             {role}
           </Badge>
-          {/* 同步状态（UC-009）：只读状态入口，显示在标题/身份附近 */}
-          <BoardSyncStatus />
+          {/* 实时协作（uc-canvas-005）：在线成员头像 + 真实同步状态。
+              内含 BoardSyncStatus（受控），并每 ~1.5s 心跳/拉取在线成员。 */}
+          <BoardPresence boardId={String(boardId)} />
         </div>
         <div className="flex items-center gap-2">
           {/* 板统计（uc-board-header-014）：只读组件计数面板 */}
@@ -219,6 +221,8 @@ export default function BoardPage() {
           <BoardShortcutsHelp />
           {/* 协作计时器（所有协作者可用） */}
           <BoardTimer />
+          {/* 幻灯片管理（uc-board-header-005）：侧栏创建/排序/展示/导出 */}
+          <SlidesPanel boardId={String(boardId)} />
           <LocalWorkspace boardId={String(boardId)} canEdit={canEdit} />
           {/* 分享（所有可访问者可见：复制链接 + 可见性说明 + 二维码占位） */}
           <Button

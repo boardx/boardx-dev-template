@@ -80,6 +80,90 @@ type BoardTool = "select" | "pan" | "sticky" | "draw" | "text" | "connector" | "
 const NUDGE = 1;
 const BIG_NUDGE = 10;
 
+// 对齐参考线（uc-canvas-007）：拖动组件时，若其边缘/中心线与其它组件的边缘/中心线
+// 足够接近（画布坐标系阈值 SNAP_TOLERANCE），则吸附到该对齐位置并显示参考线。
+const SNAP_TOLERANCE = 6;
+
+interface Guide {
+  orientation: "v" | "h"; // v=竖直参考线（沿 x 对齐）；h=水平参考线（沿 y 对齐）
+  pos: number; // 参考线在画布坐标系中的 x（v）或 y（h）
+}
+
+// 组件在某一轴上的三条对齐锚点（前/中/后 = 左中右 或 上中下）。
+function anchors(start: number, size: number): number[] {
+  return [start, start + size / 2, start + size];
+}
+
+// 计算拖动结果的吸附增量 + 需显示的参考线。
+// dragged: 拖动后（未吸附）的目标 item；others: 其余静止 item。
+// 返回沿 x/y 的吸附增量（把 dragged 拉到对齐位置）与参考线集合。
+function computeSnap(
+  dragged: { x: number; y: number; w: number; h: number },
+  others: { x: number; y: number; w: number; h: number }[],
+): { snapDX: number; snapDY: number; guides: Guide[] } {
+  const guides: Guide[] = [];
+  let snapDX = 0;
+  let snapDY = 0;
+  let bestX = SNAP_TOLERANCE + 1;
+  let bestY = SNAP_TOLERANCE + 1;
+
+  const dragXA = anchors(dragged.x, dragged.w);
+  const dragYA = anchors(dragged.y, dragged.h);
+
+  for (const o of others) {
+    const oxA = anchors(o.x, o.w);
+    const oyA = anchors(o.y, o.h);
+    for (const dx of dragXA) {
+      for (const ox of oxA) {
+        const diff = Math.abs(dx - ox);
+        if (diff <= SNAP_TOLERANCE && diff < bestX) {
+          bestX = diff;
+          snapDX = ox - dx;
+        }
+      }
+    }
+    for (const dy of dragYA) {
+      for (const oy of oyA) {
+        const diff = Math.abs(dy - oy);
+        if (diff <= SNAP_TOLERANCE && diff < bestY) {
+          bestY = diff;
+          snapDY = oy - dy;
+        }
+      }
+    }
+  }
+
+  const snap = { snapDX: bestX <= SNAP_TOLERANCE ? snapDX : 0, snapDY: bestY <= SNAP_TOLERANCE ? snapDY : 0 };
+
+  // 吸附确定后，收集所有与吸附后位置精确重合的对齐线用于绘制参考线。
+  if (bestX <= SNAP_TOLERANCE) {
+    const snappedX = anchors(dragged.x + snap.snapDX, dragged.w);
+    const seen = new Set<number>();
+    for (const o of others) {
+      for (const ox of anchors(o.x, o.w)) {
+        if (snappedX.some((a) => Math.abs(a - ox) < 0.5) && !seen.has(ox)) {
+          seen.add(ox);
+          guides.push({ orientation: "v", pos: ox });
+        }
+      }
+    }
+  }
+  if (bestY <= SNAP_TOLERANCE) {
+    const snappedY = anchors(dragged.y + snap.snapDY, dragged.h);
+    const seen = new Set<number>();
+    for (const o of others) {
+      for (const oy of anchors(o.y, o.h)) {
+        if (snappedY.some((a) => Math.abs(a - oy) < 0.5) && !seen.has(oy)) {
+          seen.add(oy);
+          guides.push({ orientation: "h", pos: oy });
+        }
+      }
+    }
+  }
+
+  return { ...snap, guides };
+}
+
 function BoardMenuButton({
   testId,
   label,
@@ -125,6 +209,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const [activeTool, setActiveTool] = useState<BoardTool>("select");
   const [openPanel, setOpenPanel] = useState<"assets" | "templates" | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null); // 右键上下文菜单（uc-context-menu-001）
+  const [guides, setGuides] = useState<Guide[]>([]); // 拖动时的对齐参考线（uc-canvas-007）
   // uc-widget-menu-009 刷新组件：可刷新组件的重载信号（重载次数 + 最近重载时间戳），
   // 是纯客户端的「内容已重新加载」可见反馈，随每次刷新自增。
   const [reload, setReload] = useState<Record<string, { count: number; at: number }>>({});
@@ -139,7 +224,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     startY: number;
     scale: number;
     ids: string[];
-    init: Record<string, { x: number; y: number }>;
+    init: Record<string, { x: number; y: number; w: number; h: number }>;
+    others: { x: number; y: number; w: number; h: number }[]; // 未参与拖动的组件（吸附参照）
+    snapDX: number; // 最近一次 onDragMove 计算出的吸附增量（release 时应用）
+    snapDY: number;
     moved: boolean;
   } | null>(null);
   const justDraggedRef = useRef(false); // 拖拽刚结束 → 抑制随后的 click 选择翻转
@@ -152,6 +240,36 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   useEffect(() => {
     void load();
   }, [load]);
+
+  // ── 实时协作同步（uc-canvas-005）────────────────────────────────────────
+  // 轮询服务端 item 列表，让其它在线用户的新增/移动/删除在本地画布上出现，
+  // 达成「在线用户看到一致的 Board 内容」（UC 后置条件 1）。
+  // 只在本地无进行中编辑/拖拽时才合并服务端快照，避免打断本地操作。
+  useEffect(() => {
+    let stop = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    async function poll() {
+      if (!stop && !editingId && !dragRef.current) {
+        try {
+          const res = await fetch(`/api/boards/${boardId}/items`);
+          if (res.ok && !stop && !editingId && !dragRef.current) {
+            const next = ((await res.json()).items ?? []) as Item[];
+            setItems((prev) =>
+              JSON.stringify(prev) === JSON.stringify(next) ? prev : next
+            );
+          }
+        } catch {
+          // 网络异常忽略；下个周期重试（UC 异常流程 2）
+        }
+      }
+      if (!stop) timer = setTimeout(poll, 1500);
+    }
+    timer = setTimeout(poll, 1500);
+    return () => {
+      stop = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [boardId, editingId]);
 
   // ── 落库原子操作（撤销/重做与正常操作共用）──────────────────────────────
   const apiDelete = useCallback(
@@ -217,10 +335,30 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     if (!d.moved) return;
     const dx = (e.clientX - d.startX) / d.scale;
     const dy = (e.clientY - d.startY) / d.scale;
+
+    // 以拖动集合的第一个 item 作为吸附参照，计算对齐吸附增量与参考线。
+    const leadId = d.ids[0];
+    const lead = leadId ? d.init[leadId] : undefined;
+    let snapDX = 0;
+    let snapDY = 0;
+    let nextGuides: Guide[] = [];
+    if (lead) {
+      const { snapDX: sdx, snapDY: sdy, guides: g } = computeSnap(
+        { x: lead.x + dx, y: lead.y + dy, w: lead.w, h: lead.h },
+        d.others,
+      );
+      snapDX = sdx;
+      snapDY = sdy;
+      nextGuides = g;
+    }
+    d.snapDX = snapDX;
+    d.snapDY = snapDY;
+    setGuides(nextGuides);
+
     setItems((prev) =>
       prev.map((it) => {
         const p = d.init[it.id];
-        return p ? { ...it, x: p.x + dx, y: p.y + dy } : it;
+        return p ? { ...it, x: p.x + dx + snapDX, y: p.y + dy + snapDY } : it;
       }),
     );
   }, []);
@@ -231,12 +369,14 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       window.removeEventListener("mouseup", onDragUp);
       const d = dragRef.current;
       dragRef.current = null;
+      setGuides([]); // 释放后隐藏参考线
       if (!d || !d.moved) return;
       justDraggedRef.current = true;
-      const dx = (e.clientX - d.startX) / d.scale;
-      const dy = (e.clientY - d.startY) / d.scale;
+      // 若拖动结束时触发吸附，最终位置 = 释放位置 + 吸附增量；否则停在释放位置。
+      const dx = (e.clientX - d.startX) / d.scale + d.snapDX;
+      const dy = (e.clientY - d.startY) / d.scale + d.snapDY;
       const moves: Move[] = d.ids.map((id) => {
-        const f = d.init[id] ?? { x: 0, y: 0 };
+        const f = d.init[id] ?? { x: 0, y: 0, w: 0, h: 0 };
         return { id, fromX: f.x, fromY: f.y, toX: f.x + dx, toY: f.y + dy };
       });
       setSelected(new Set(d.ids));
@@ -251,11 +391,25 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     e.stopPropagation(); // 阻止视口平移在便签上启动
     if (!canEdit || editingId === item.id) return;
     const ids = selected.has(item.id) ? items.filter((it) => selected.has(it.id)).map((it) => it.id) : [item.id];
-    const init: Record<string, { x: number; y: number }> = {};
+    // 拖动集合置于 ids 首位（吸附以拖动的目标 item 为参照）。
+    const orderedIds = [item.id, ...ids.filter((id) => id !== item.id)];
+    const init: Record<string, { x: number; y: number; w: number; h: number }> = {};
+    const others: { x: number; y: number; w: number; h: number }[] = [];
     items.forEach((it) => {
-      if (ids.includes(it.id)) init[it.id] = { x: it.x, y: it.y };
+      if (orderedIds.includes(it.id)) init[it.id] = { x: it.x, y: it.y, w: it.w, h: it.h };
+      else others.push({ x: it.x, y: it.y, w: it.w, h: it.h });
     });
-    dragRef.current = { startX: e.clientX, startY: e.clientY, scale: readScale(), ids, init, moved: false };
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      scale: readScale(),
+      ids: orderedIds,
+      init,
+      others,
+      snapDX: 0,
+      snapDY: 0,
+      moved: false,
+    };
     window.addEventListener("mousemove", onDragMove);
     window.addEventListener("mouseup", onDragUp);
   }
@@ -478,6 +632,42 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     });
     await applyColors(updates);
   }
+
+  // uc-context-menu-003：调整图层顺序（z-order）。items 数组顺序即 DOM 绘制顺序，
+  // 越靠后越在上层（同 z-index、position:absolute → 后绘制覆盖先绘制）。
+  // 通过重排 items 数组实现「置顶/上移/下移/置底」，并保留选中态。
+  // z-order 为纯客户端视图关注点（后端 item 无 order 字段），重排数组即改变遮挡关系。
+  const arrange = useCallback(
+    (mode: "front" | "forward" | "backward" | "back") => {
+      if (!canEdit || selected.size === 0) return;
+      setItems((prev) => {
+        if (!prev.some((it) => selected.has(it.id))) return prev;
+        const sel = prev.filter((it) => selected.has(it.id));
+        const rest = prev.filter((it) => !selected.has(it.id));
+        if (mode === "front") return [...rest, ...sel];
+        if (mode === "back") return [...sel, ...rest];
+        const next = [...prev];
+        if (mode === "forward") {
+          // 整体上移一层：从右往左，把每个选中项与其右侧最近的未选中项交换，
+          // 保留选中项彼此相对次序。
+          for (let i = next.length - 2; i >= 0; i--) {
+            if (selected.has(next[i]!.id) && !selected.has(next[i + 1]!.id)) {
+              [next[i], next[i + 1]] = [next[i + 1]!, next[i]!];
+            }
+          }
+        } else {
+          // 整体下移一层：从左往右，把每个选中项与其左侧最近的未选中项交换。
+          for (let i = 1; i < next.length; i++) {
+            if (selected.has(next[i]!.id) && !selected.has(next[i - 1]!.id)) {
+              [next[i], next[i - 1]] = [next[i - 1]!, next[i]!];
+            }
+          }
+        }
+        return next;
+      });
+    },
+    [canEdit, selected]
+  );
 
   const deleteSelected = useCallback(async () => {
     if (!canEdit || selected.size === 0) return;
@@ -756,11 +946,12 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             setCtxMenu({ x: e.clientX, y: e.clientY });
           }}
         >
-          {items.map((it) => (
+          {items.map((it, z) => (
             <div
               key={it.id}
               data-testid={`item-${it.id}`}
               data-selected={selected.has(it.id) ? "true" : "false"}
+              data-z={z}
               data-reloadable={isReloadable(it) ? "true" : "false"}
               data-reload-count={reload[it.id]?.count ?? 0}
               data-refreshed-at={reload[it.id]?.at ?? ""}
@@ -784,7 +975,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                 if (!selected.has(it.id)) selectItem(it.id, false);
                 setCtxMenu({ x: e.clientX, y: e.clientY });
               }}
-              style={{ left: it.x, top: it.y, width: it.w, height: it.h }}
+              style={{ left: it.x, top: it.y, width: it.w, height: it.h, zIndex: z }}
               className={
                 "absolute flex p-2 text-xs " +
                 // 文本：透明无边框文本块；形状：粗边框矩形；便签：柔彩 + 边框 + 圆角 + 阴影
@@ -833,6 +1024,22 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               )}
             </div>
           ))}
+
+          {/* 对齐参考线（uc-canvas-007）：拖动触发吸附时显示，与 item 同处画布坐标系。 */}
+          {guides.map((g, i) => (
+            <div
+              key={`${g.orientation}-${g.pos}-${i}`}
+              data-testid="alignment-guide"
+              data-orientation={g.orientation}
+              aria-hidden
+              className="pointer-events-none absolute z-10 bg-primary"
+              style={
+                g.orientation === "v"
+                  ? { left: g.pos, top: -4000, height: 8000, width: 1 }
+                  : { top: g.pos, left: -4000, width: 8000, height: 1 }
+              }
+            />
+          ))}
         </div>
       </CanvasViewport>
 
@@ -868,6 +1075,53 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               >
                 创建副本
               </button>
+              {/* uc-context-menu-003：调整图层顺序（z-order）。重排后关闭菜单、保留选中态。 */}
+              <div className="my-1 h-px bg-border" />
+              <button
+                type="button"
+                data-testid="ctx-bring-front"
+                className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
+                onClick={() => {
+                  arrange("front");
+                  setCtxMenu(null);
+                }}
+              >
+                置于顶层
+              </button>
+              <button
+                type="button"
+                data-testid="ctx-bring-forward"
+                className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
+                onClick={() => {
+                  arrange("forward");
+                  setCtxMenu(null);
+                }}
+              >
+                上移一层
+              </button>
+              <button
+                type="button"
+                data-testid="ctx-send-backward"
+                className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
+                onClick={() => {
+                  arrange("backward");
+                  setCtxMenu(null);
+                }}
+              >
+                下移一层
+              </button>
+              <button
+                type="button"
+                data-testid="ctx-send-back"
+                className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
+                onClick={() => {
+                  arrange("back");
+                  setCtxMenu(null);
+                }}
+              >
+                置于底层
+              </button>
+              <div className="my-1 h-px bg-border" />
               <button
                 type="button"
                 data-testid="ctx-delete"
