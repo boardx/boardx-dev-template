@@ -20,6 +20,8 @@ export * from "./board";
 export * from "./roomChat";
 // CAP-AUTH 账号资料与偏好（profile / user_settings）
 export * from "./profile";
+// CAP-WEB 用户反馈提交记录
+export * from "./feedback";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 
