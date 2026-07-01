@@ -24,6 +24,8 @@ export * from "./profile";
 export * from "./feedback";
 // CAP-DATA 积分钱包仓储（credit_wallets/credit_transactions / P14 uc-credits-001）
 export * from "./credits";
+// CAP-FILE 知识库文件仓储（kb_files / P10）
+export * from "./kbFiles";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 
