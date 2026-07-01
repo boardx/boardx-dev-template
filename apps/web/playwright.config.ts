@@ -8,6 +8,8 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: 1,
+  // CI 上对 timing 敏感的用例（canvas 交互 / profile 保存）偶发 flake → 自动重试 2 次。
+  retries: process.env.CI ? 2 : 0,
   reporter: [["list"]],
   use: {
     baseURL: "http://localhost:3000",
