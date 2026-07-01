@@ -44,8 +44,19 @@
 - 建议另开 task 修复 33 个硬编码 `baseURL: "http://localhost:3000"` 的 e2e spec，使全量
   `verify:full` 在并行 worktree（非默认 `E2E_PORT`）下也能跑通，而不是每个 worker 都要
   用 `--no-verify` 绕过。
+- <哪些 feature 确认 passing,各自跑过的验证命令>
+
+## 本轮改动
+- <改了哪些代码 / 基础设施>
+
+## 仍损坏或未验证
+- <已知问题、风险区、未跑的验证>
+
+## 下一步最佳动作
+- <下一轮从哪个 feature 开始;哪些东西不要动>
 
 ## 命令
 - 启动:`pnpm -w run dev`
 - 验证:`pnpm harness verify --sprint p15/02`
 - 调试:`PG_PORT=60461 REDIS_PORT=60462 docker compose -f infra/docker-compose.yml up -d && DATABASE_URL="postgresql://boardx:boardx@localhost:60461/boardx" pnpm --filter @repo/data run migrate && DATABASE_URL="postgresql://boardx:boardx@localhost:60461/boardx" REDIS_URL="redis://localhost:60462" E2E_PORT=60463 pnpm --filter @repo/web exec playwright test e2e/admin-002-manage-teams.spec.ts`
+- 调试:<填你的调试命令>

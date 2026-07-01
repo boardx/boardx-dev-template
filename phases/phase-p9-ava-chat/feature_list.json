@@ -8,7 +8,7 @@
       "title": "AVA 聊天壳 + 新建会话 + 发首条消息 + AI 流式回复",
       "user_visible_behavior": "进入 /ava 展示聊天页（桌面端聊天页 / 移动端先列表）；点「新建聊天」或在输入框发送第一条消息：POST /api/ava/threads 创建线程、POST /api/ava/threads/:id/messages 落库用户消息并触发 AI；回复以流式（SSE）逐字出现在消息区，支持 Markdown/代码块渲染；线程出现在会话列表可继续追问。未登录 302 到登录；生成失败展示失败态且不丢用户输入。",
       "design_ref": "prototype:<!-- AVA --> (thread list / chat / messages / composer)；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "wrk-ava-1",
       "capability": "CAP-AI",
@@ -19,7 +19,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-chat-basic.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-07-01T12:48:49.448Z",
       "notes": "uc-ava-001。本阶段地基 feature：新建 packages/ai（LangGraph 编排 + LiteLLM 网关，CAP-AI）+ ava_threads/ava_messages 表（team_id/user_id/thread_id 三键组织）。e2e 用 mock/stub LLM 走通端到端流式，避免依赖真实供应商额度。依赖 phase-04 的 session 与当前团队上下文。"
     },
     {
@@ -29,9 +29,9 @@
       "title": "聊天线程列表 CRUD（按日期分组/切换/重命名/删除/团队隔离）",
       "user_visible_behavior": "左侧线程区按日期分组列出当前团队下自己可访问的线程（标题/分组/选中态/加载更多）；点线程切换并加载历史消息；更多菜单可重命名（PATCH /api/ava/threads/:id）与删除（DELETE，当前线程被删则切到空状态）；分页加载更多；切换团队时清空旧团队线程并加载新团队。加载失败给重试入口。",
       "design_ref": "prototype:<!-- AVA --> → thread list（按日期分组 / 线程项 / 更多菜单）；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "02",
+      "owner": "wrk-codex-1",
       "capability": "CAP-DATA",
       "depends_on": [
         "F01"
@@ -53,7 +53,7 @@
       "user_visible_behavior": "在最后一条用户消息上点编辑 → 内联编辑面板改文本（非空校验）保存后刷新该消息并重生成后续 AI 回复；点「删除最后一次请求」确认后移除该用户消息及其后 AI 回复；取消恢复原文；非最后消息隐藏编辑入口。失败展示提示且消息保持可见。",
       "design_ref": "prototype:<!-- AVA --> → messages / text message（消息卡片内联编辑/更多操作）；DESIGN.md tokens",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "02",
       "owner": null,
       "capability": "CAP-AI",
       "depends_on": [
@@ -76,7 +76,7 @@
       "user_visible_behavior": "聊天头部「分享」→ 面板提供「通过链接分享」：POST /api/ava/threads/:id/share 生成或复用 shareToken 并复制到剪贴板，提示复制成功；已存在链接则直接展示复制入口；关闭分享使原 /chatShare 链接立即失效（403）。仅线程拥有者/有管理权者可开关分享；私有附件/团队私有上下文不进入分享。",
       "design_ref": "prototype:<!-- share panel --> (Copy link)（AVA 聊天头部分享面板）；DESIGN.md tokens",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "02",
       "owner": null,
       "capability": "CAP-DATA",
       "depends_on": [
@@ -120,7 +120,7 @@
       "user_visible_behavior": "输入区选 Deep Research/用户研究模式并提交主题：消息区展示研究处理中，按需展示澄清问题/配置面板；生成研究计划（阶段/子任务/受众）供用户确认或调整；执行期展示时间线与各阶段/子任务状态；完成后消息区出现报告通知，点击打开报告详情面板（结论/结构化内容/阶段结果）并可继续追问。主题过短/额度不足/启动失败给对应提示并保留可恢复状态。",
       "design_ref": "prototype:<!-- research card --> / <!-- clarify --> / <!-- plan --> / <!-- running / report timeline --> / <!-- report panel --> / <!-- market report --> / <!-- user research report -->；DESIGN.md tokens",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "02",
       "owner": null,
       "capability": "CAP-AI",
       "depends_on": [
@@ -143,7 +143,7 @@
       "user_visible_behavior": "聊天输入区/头部展示当前模型/Agent/工具；打开模型选择器列出可用模型并标当前项，选择后更新当前聊天模型；打开 Agent/工具入口选择后写入当前聊天状态并在后续发送生效；团队限制的模型对普通成员不可选；已有消息的线程限制切换 Agent 时展示禁用态；切换团队刷新可用能力。选择失败保留原设置。",
       "design_ref": "prototype:<!-- AVA --> → chat header + composer（模型/Agent/工具入口）；DESIGN.md tokens",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "02",
       "owner": null,
       "capability": "CAP-AI",
       "depends_on": [
@@ -206,7 +206,7 @@
       "user_visible_behavior": "空状态或某条回复下方展示「建议操作」区（如理解文件/起草邮件/总结趋势/头脑风暴等）；点某项把其文本填入输入框作为待发送内容，用户可继续编辑再发送，按普通消息处理；无可用建议时不显示该区；对话推进后建议区按新上下文刷新或隐藏。无权限的建议隐藏或显示受限态。",
       "design_ref": "prototype:<!-- empty state suggested actions -->（AVA 空状态建议区）；DESIGN.md tokens",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "02",
       "owner": null,
       "capability": "CAP-WEB",
       "depends_on": [
