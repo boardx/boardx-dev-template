@@ -44,7 +44,10 @@ export async function findUserByEmail(email: string): Promise<User | undefined> 
 
 export async function getUserById(id: number): Promise<User | undefined> {
   const rows = await query<User>(
-    "SELECT id, email, password_hash, first_name, last_name, provider, created_at FROM users WHERE id = $1",
+    // platform_role 必须选出来：P15 F02 review 加固（自我降级/最后一个 SysAdmin 校验）依赖
+    // user.platform_role 判断目标当前是不是 sysadmin，此前这里漏选导致 platform_role 恒为
+    // undefined、guard 从未真正触发（isSysAdmin(undefined) 恒 false）。
+    "SELECT id, email, password_hash, first_name, last_name, provider, created_at, platform_role FROM users WHERE id = $1",
     [id]
   );
   return rows[0];
@@ -147,6 +150,14 @@ export async function updateAdminUser(userId: number, fields: UpdateAdminUserFie
 /** 后台删除用户（级联删除 sessions/email_tokens/team_members 等，由外键 ON DELETE CASCADE 处理）。 */
 export async function deleteUser(userId: number): Promise<void> {
   await query("DELETE FROM users WHERE id = $1", [userId]);
+}
+
+/** 平台当前 SysAdmin 总数（review 加固：降级/删除前用于"不能清零最后一个 SysAdmin"校验）。 */
+export async function countSysAdmins(): Promise<number> {
+  const rows = await query<{ count: string }>(
+    "SELECT COUNT(*)::text AS count FROM users WHERE platform_role = 'sysadmin'"
+  );
+  return Number(rows[0]?.count ?? 0);
 }
 
 // ─── sessions ────────────────────────────────────────────────────────────────

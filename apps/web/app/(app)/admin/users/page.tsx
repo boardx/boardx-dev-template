@@ -126,10 +126,12 @@ function CreateUserForm({
 
 function EditUserModal({
   user,
+  isSelf,
   onClose,
   onSaved,
 }: {
   user: AdminUser;
+  isSelf: boolean;
   onClose: () => void;
   onSaved: (user: AdminUser) => void;
 }) {
@@ -200,11 +202,15 @@ function EditUserModal({
               data-testid="edit-role"
               value={platformRole}
               onChange={(e) => setPlatformRole(e.target.value as PlatformRole)}
-              disabled={saving}
+              disabled={saving || isSelf}
+              title={isSelf ? "不能修改自己的平台角色" : undefined}
             >
               <option value="user">用户</option>
               <option value="sysadmin">系统管理员</option>
             </Select>
+            {isSelf && (
+              <p className="text-11 text-muted-foreground">不能修改自己的平台角色，避免误操作把自己降级。</p>
+            )}
           </div>
 
           {error && (
@@ -321,7 +327,9 @@ function ManualCreditModal({
   async function submit() {
     setError("");
     const n = Number(amount);
-    if (!Number.isFinite(n) || n <= 0) {
+    // review 加固：非整数（如 1.9）此前客户端能提交，服务端悄悄 Math.trunc 成 1 却没有任何
+    // 提示；改为客户端也用 Number.isInteger 校验，和服务端拒绝非整数保持一致。
+    if (!Number.isInteger(n) || n <= 0) {
       setError("请输入大于 0 的整数");
       return;
     }
@@ -433,6 +441,22 @@ export default function AdminUsersPage() {
   const [editing, setEditing] = useState<AdminUser | null>(null);
   const [deleting, setDeleting] = useState<AdminUser | null>(null);
   const [granting, setGranting] = useState<AdminUser | null>(null);
+
+  // 当前操作者自己的 user id（UI 侧防御性禁用"删除自己"/"把自己降级"；服务端才是真正门控，
+  // 见 apps/web/app/api/admin/users/[id]/route.ts 的 DELETE/PATCH review 加固）。
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/session");
+        if (!res.ok) return;
+        const data = (await res.json()) as { user: { id: number } | null };
+        if (data.user) setCurrentUserId(data.user.id);
+      } catch {
+        // 静默失败：拿不到自身 id 只影响 UI 层禁用提示，服务端校验依然生效。
+      }
+    })();
+  }, []);
 
   const load = useCallback(
     async (p: number, q: string) => {
@@ -655,8 +679,10 @@ export default function AdminUsersPage() {
                   size="icon"
                   aria-label={`删除 ${fullName(u)}`}
                   data-testid={`delete-${u.id}`}
-                  className="h-7.5 w-7.5 text-placeholder hover:text-destructive"
+                  className="h-7.5 w-7.5 text-placeholder hover:text-destructive disabled:opacity-40"
                   onClick={() => setDeleting(u)}
+                  disabled={u.id === currentUserId}
+                  title={u.id === currentUserId ? "不能删除自己的账号" : undefined}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -697,7 +723,14 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {editing && <EditUserModal user={editing} onClose={() => setEditing(null)} onSaved={onUserSaved} />}
+      {editing && (
+        <EditUserModal
+          user={editing}
+          isSelf={editing.id === currentUserId}
+          onClose={() => setEditing(null)}
+          onSaved={onUserSaved}
+        />
+      )}
       {deleting && (
         <DeleteUserModal user={deleting} onClose={() => setDeleting(null)} onDeleted={() => onUserDeleted(deleting.id)} />
       )}

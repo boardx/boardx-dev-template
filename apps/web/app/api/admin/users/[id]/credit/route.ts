@@ -32,10 +32,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!user) return NextResponse.json({ error: "用户不存在" }, { status: 404 });
 
   const body = (await req.json().catch(() => ({}))) as { amount?: unknown; note?: unknown };
-  const amount = Math.trunc(Number(body.amount));
-  if (!Number.isFinite(amount) || amount <= 0) {
+  // review 加固（低严重度）：非整数（如 1.9）此前会被 Math.trunc 静默截断成 1，客户端却显示
+  // "已提交 1.9"式的误导；改为拒绝非整数，而不是悄悄截断后没有任何反馈。
+  const rawAmount = Number(body.amount);
+  if (!Number.isInteger(rawAmount) || rawAmount <= 0) {
     return NextResponse.json({ errors: { amount: "增加额度必须是大于 0 的整数" } }, { status: 400 });
   }
+  const amount = rawAmount;
   const note = String(body.note ?? "").trim().slice(0, NOTE_MAX_LEN);
 
   // 幂等 key：优先取客户端头（每次提交生成一个，双击/重试会带同一个值）；

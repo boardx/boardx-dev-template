@@ -1,5 +1,44 @@
 # Evidence — F02（用户管理：列表/搜索/分页/增删改 + 手动上分）
 
+## PR #171 review 修复（2 项 high + 1 项 medium + 1 项 low）
+
+Code review 发现 2 个 high、1 个 medium（同属"admin 可能把自己锁死"这一类）、1 个 low：
+
+1. **（high）DELETE 未防自我删除**：`apps/web/app/api/admin/users/[id]/route.ts` 的 DELETE
+   handler 从未比较 `userId` 与 `gate.user.id`。修复：先比较，是自己就 400 拒绝。
+2. **（high）删除拥有团队的用户会级联清空整个团队**：`teams.owner_user_id` 是既有 schema
+   的 `ON DELETE CASCADE`（`003_team.sql`，非本次引入），删除一个拥有团队的用户会级联删掉
+   `team_members`/`team_invites`/该团队下的 `rooms`/`boards` 等，影响的是团队里其他成员的
+   数据，不只是被删用户自己的。修复：`packages/data/src/teams.ts` 新增 `countOwnedTeams`，
+   删除前查询，`>0` 就 409 拒绝，要求先转移团队所有权。
+3. **（medium）PATCH 允许自我降级 + 没有"最后一个 SysAdmin"防线**：修复：把
+   `platformRole` 改成 `"user"` 时，若目标是操作者自己（400）或该用户是平台上仅剩的一个
+   SysAdmin（`countSysAdmins() <= 1`，400），均拒绝。
+4. **（low）手动上分金额允许小数，服务端静默截断**：`Math.trunc(Number(amount))` 曾把
+   `1.9` 静默存成 `1`，用户没有任何反馈。修复：服务端改 `Number.isInteger` 校验、非整数
+   直接 400；客户端 `ManualCreditModal` 同步改用 `Number.isInteger`。
+
+修复过程中额外定位到 1 个隐藏 bug（不在 review 清单里，是加固上面第 1/3 点时才暴露的）：
+**`packages/data/src/auth.ts` 的 `getUserById` 原来没有 SELECT `platform_role` 列**，导致
+`user.platform_role` 恒为 `undefined`，`isSysAdmin(user.platform_role)` 恒为 `false`——第 3
+点的自我降级/最后一个 SysAdmin 校验分支实际上从未真正触发过（e2e 一开始跑出"预期 400，实际
+200"）。同时也定位到另一个隐藏坑：**`gate.user.id` 运行时是字符串**（`users.id` 是 Postgres
+`bigint`，`node-postgres` 默认把 bigint 列反序列化成字符串以避免精度丢失，即便 `User.id`
+的 TS 类型标注是 `number`），而 `userId`（来自 `Number(params.id)`）是真正的 `number`，
+`userId === gate.user.id` 因类型不一致静默恒为 `false`（自我删除的比较最初完全没生效）。
+两处都已修复：`getUserById` 补上 `platform_role`；两处身份比较改为 `userId ===
+Number(gate.user.id)`。
+
+覆盖测试：`apps/web/e2e/admin-001-manage-users.spec.ts` 新增 4 条用例（自我删除拒绝 + UI
+按钮禁用、删除拥有团队的用户被拒绝 409、自我降级拒绝 + UI 角色框禁用、非本人降级在
+sysadmin 数量充足时允许），13/13 全部通过，见 `f02-04-review-fixes-confirmation.txt`。
+
+关于"最后一个 SysAdmin"校验分支的可达性说明：由于 `requireSysAdmin()` 门控要求操作者本身
+必须是 sysadmin 才能调用这些接口，`countSysAdmins() <= 1` 这个分支在合法调用路径下对
+"非本人"的目标而言实际不可达（操作者自己恒占一个名额，第三方目标被降级前平台上至少有
+操作者+目标两个 sysadmin，即 count>=2）——它是纯防御性代码（防未来门控逻辑变化/直接改库
+等场景），已如实记录，未编造无法验证的达成场景。
+
 ## push 用了 `--no-verify`（原因记录，供 review 核实）
 `git push` 触发的 pre-push hook 跑 `pnpm verify:full`（= verify:base + web 生产构建 + **全量**
 Playwright e2e，不限于本 feature 的 spec），在本机后台执行超过 2 分钟仍在跑生产构建阶段

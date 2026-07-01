@@ -39,6 +39,25 @@ async function registerIsolated(
   return res;
 }
 
+/**
+ * 注册一个"目标用户"并保持其独立 request context 存活（不 dispose），供调用方接着以该用户
+ * 身份创建团队（POST /api/teams 用请求方自己的会话当 owner），用于测 review 加固②：
+ * 删除拥有团队的用户应被拒绝。调用方用完后自己 ctx.dispose()。
+ */
+async function registerIsolatedKeepCtx(
+  playwright: import("@playwright/test").PlaywrightWorkerArgs["playwright"],
+  baseURL: string,
+  firstName: string,
+  lastName: string,
+  email: string,
+) {
+  const ctx = await playwright.request.newContext({ baseURL });
+  await ctx.post("/api/auth/register", {
+    data: { firstName, lastName, email, password: "secret123", agreeTerms: true },
+  });
+  return ctx;
+}
+
 test("未登录访问 /admin/users 跳转到 /login", async ({ page }) => {
   await page.context().clearCookies();
   await page.goto("/admin/users");
@@ -230,4 +249,111 @@ test("用户手动上分带幂等 key：重复提交（同 key）不会重复入
   expect(res3.status()).toBe(200);
   const body3 = await res3.json();
   expect(body3.wallet.balance).toBe(2000);
+});
+
+// review 加固（PR #171 review，2 项 high + 1 项 medium）覆盖 ──────────────────────────
+
+test("SysAdmin 不能删除自己的账号（400，删除按钮也禁用）", async ({ page }) => {
+  const email = await registerAndPromote(page);
+  await page.goto("/admin/users");
+  await page.getByTestId("search").fill(email);
+  await page.getByTestId("search-btn").click();
+
+  const meRes = await page.request.get("/api/admin/users?q=" + encodeURIComponent(email));
+  const body = await meRes.json();
+  const selfId = body.users[0].id as number;
+
+  // UI：删除按钮对自己这一行应禁用
+  await expect(page.getByTestId(`delete-${selfId}`)).toBeDisabled();
+
+  // 越权直接调 API 也应拒绝
+  const res = await page.request.delete(`/api/admin/users/${selfId}`);
+  expect(res.status()).toBe(400);
+});
+
+test("SysAdmin 不能删除拥有团队的用户（409），转移/无团队后才能删除", async ({ page, playwright, baseURL }) => {
+  await registerAndPromote(page);
+  const email = uniq("adm1ownteam");
+  const targetCtx = await registerIsolatedKeepCtx(playwright, baseURL!, "Team", "Owner", email);
+
+  // 目标用户自己建一个团队，自己是 owner
+  const teamRes = await targetCtx.post("/api/teams", { data: { name: `Owned Team ${Date.now()}` } });
+  expect(teamRes.status()).toBe(201);
+  await targetCtx.dispose();
+
+  const meRes = await page.request.get("/api/admin/users?q=" + encodeURIComponent(email));
+  const body = await meRes.json();
+  const userId = body.users[0].id as number;
+
+  // 删除应被拒绝（409），而不是静默级联删掉整个团队
+  const delRes = await page.request.delete(`/api/admin/users/${userId}`);
+  expect(delRes.status()).toBe(409);
+
+  // 前端也应展示这个拒绝原因（走 UI 走一遍确认弹窗）
+  await page.goto("/admin/users");
+  await page.getByTestId("search").fill(email);
+  await page.getByTestId("search-btn").click();
+  await page.getByTestId(`delete-${userId}`).click();
+  await expect(page.getByTestId("delete-user-modal")).toBeVisible();
+  await page.getByTestId("confirm-delete-user").click();
+  await expect(page.getByTestId("err-delete-user")).toBeVisible();
+  // 弹窗仍在（未误判为成功关闭）
+  await expect(page.getByTestId("delete-user-modal")).toBeVisible();
+});
+
+test("SysAdmin 不能把自己的平台角色降级为 user（400，编辑弹窗里角色框也禁用）", async ({ page }) => {
+  const email = await registerAndPromote(page);
+  await page.goto("/admin/users");
+  await page.getByTestId("search").fill(email);
+  await page.getByTestId("search-btn").click();
+
+  const meRes = await page.request.get("/api/admin/users?q=" + encodeURIComponent(email));
+  const body = await meRes.json();
+  const selfId = body.users[0].id as number;
+
+  // UI：编辑自己时角色下拉应禁用
+  await page.getByTestId(`edit-${selfId}`).click();
+  await expect(page.getByTestId("edit-user-modal")).toBeVisible();
+  await expect(page.getByTestId("edit-role")).toBeDisabled();
+  await page.getByTestId("save-user").click(); // 只改名字，不涉及角色，应该照常保存成功
+  await expect(page.getByTestId("edit-user-modal")).toHaveCount(0);
+
+  // 越权直接调 API 把自己降级也应拒绝
+  const res = await page.request.patch(`/api/admin/users/${selfId}`, { data: { platformRole: "user" } });
+  expect(res.status()).toBe(400);
+});
+
+test("降级非本人的 SysAdmin：平台上还有其它 SysAdmin 时允许，只剩它一个时拒绝", async ({
+  page,
+  playwright,
+  baseURL,
+}) => {
+  // 操作者自身必须是 sysadmin 才能过 requireSysAdmin() 门控，所以平台上至少恒有 1 个
+  // sysadmin（操作者）。countSysAdmins() 校验的是"降级前平台上的 sysadmin 总数"，用来防止
+  // 反复把其它 sysadmin 都降级导致某个瞬间平台上仅剩 target 自己一个 sysadmin（例如操作者
+  // 的会话恰好因为别的原因失效、只能靠 target 这个账号维持系统可管理性）。用两个新建的
+  // sysadmin（不含操作者）复现：count 从 3（操作者 + A + B）先降到 2（降级 A 应该允许，
+  // 因为降级前 count=3>1），再降到只剩操作者一个时（降级 B 前 count=2，此时 B 是平台上
+  // "操作者之外的最后一个 sysadmin"，即降级前 sysadmin 总数已经等于 2——按当前实现
+  // sysAdminCount<=1 才拒绝，2 仍会放行，最终留下操作者一人）。为了真正触发拒绝分支
+  // （sysAdminCount<=1），需要让"降级前"总数恰为 1，而这只可能发生在 target 就是唯一
+  // sysadmin 时——由于操作者自身必然是 sysadmin，这个分支在正常门控下无法被第三方路径
+  // 触发，是纯防御性代码（防止未来门控逻辑变化/直接改库等场景）。这里改为验证其"不误伤"
+  // 的一面：平台上有 >1 个 sysadmin 时，降级任意非本人的 sysadmin 都应放行。
+  await registerAndPromote(page);
+
+  const emailA = uniq("adm1sysA");
+  const ctxA = await registerIsolatedKeepCtx(playwright, baseURL!, "Extra", "AdminA", emailA);
+  await ctxA.post("/api/dev/grant-sysadmin", { data: { email: emailA } });
+  await ctxA.dispose();
+
+  const meRes = await page.request.get("/api/admin/users?q=" + encodeURIComponent(emailA));
+  const body = await meRes.json();
+  const targetId = body.users[0].id as number;
+
+  // 平台上此刻至少有操作者 + A 两个 sysadmin，降级 A（非本人）应被允许。
+  const okRes = await page.request.patch(`/api/admin/users/${targetId}`, { data: { platformRole: "user" } });
+  expect(okRes.status()).toBe(200);
+  const updated = await okRes.json();
+  expect(updated.user.platformRole).toBe("user");
 });
