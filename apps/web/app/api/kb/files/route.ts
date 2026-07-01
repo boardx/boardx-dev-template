@@ -13,7 +13,8 @@ export const dynamic = "force-dynamic";
 // POST /api/kb/files（multipart/form-data）：前端已做客户端预校验，这里做服务端二次校验
 // （不可信前端），校验通过后：先写对象存储 → 成功后才落 kb_files 记录（避免半条记录）→
 // 入队解析/切分/向量化（异步，worker 回写 processing→ready/error）。
-// GET /api/kb/files?scope=&q=：按 scope + 权限过滤列出当前用户可见文件（F02 会扩展分页）。
+// GET /api/kb/files?scope=&q=&page=&pageSize=：按 scope + 权限过滤列出当前用户可见文件，
+// 支持名称模糊搜索与分页（p10-F02）。
 
 const SCOPES: KbScope[] = ["personal", "team", "agent", "tool"];
 
@@ -28,6 +29,8 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const scope = parseScope(url.searchParams.get("scope"));
   const q = url.searchParams.get("q") ?? undefined;
+  const page = Number(url.searchParams.get("page") ?? "1") || 1;
+  const pageSize = Number(url.searchParams.get("pageSize") ?? "20") || 20;
 
   let teamId: number | null = null;
   if (scope === "team") {
@@ -38,8 +41,8 @@ export async function GET(req: Request) {
     }
   }
 
-  const files = await listKbFiles({ ownerUserId: user.id, scope, teamId, q });
-  return NextResponse.json({ files });
+  const result = await listKbFiles({ ownerUserId: user.id, scope, teamId, q, page, pageSize });
+  return NextResponse.json(result);
 }
 
 export async function POST(req: Request) {

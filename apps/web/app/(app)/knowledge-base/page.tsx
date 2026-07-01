@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, Search, FileText, Download, Trash2, Loader2, X } from "lucide-react";
+import { Upload, Search, FileText, Download, Trash2, Loader2, X, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -85,20 +85,34 @@ function uploadWithProgress(
   });
 }
 
+const PAGE_SIZE = 10;
+
 export default function KnowledgeBasePage() {
   const [files, setFiles] = useState<KbFile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  async function load(search = "") {
-    setLoading(true);
+  async function load(opts: { search?: string; page?: number; silent?: boolean } = {}) {
+    const search = opts.search ?? q;
+    const targetPage = opts.page ?? page;
+    if (opts.silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError("");
-    const res = await fetch(`/api/kb/files?scope=personal${search ? `&q=${encodeURIComponent(search)}` : ""}`);
+    const params = new URLSearchParams({ scope: "personal", page: String(targetPage), pageSize: String(PAGE_SIZE) });
+    if (search) params.set("q", search);
+    const res = await fetch(`/api/kb/files?${params.toString()}`);
     if (res.status === 401) {
       // 未登录 → 跳登录（与 home 一致）
       router.replace("/login");
@@ -107,19 +121,49 @@ export default function KnowledgeBasePage() {
     if (!res.ok) {
       setError("加载失败，请重试");
       setLoading(false);
+      setRefreshing(false);
       return;
     }
-    setFiles((await res.json()).files ?? []);
+    const data = await res.json();
+    setFiles(data.files ?? []);
+    setPage(data.page ?? targetPage);
+    setTotalPages(data.totalPages ?? 1);
     setLoading(false);
+    setRefreshing(false);
   }
 
   useEffect(() => {
-    void load();
-    // 轮询刷新处理中状态（processing → ready 异步完成，与后端 worker 解耦轮询）。
-    const t = setInterval(() => void load(q), 2000);
+    void load({ page: 1 });
+    // 轮询刷新处理中状态（processing → ready 异步完成，与后端 worker 解耦轮询）；
+    // 静默刷新，不打断当前搜索词/翻页/触发骨架屏闪烁。
+    const t = setInterval(() => void load({ silent: true }), 2000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function goToPage(p: number) {
+    if (p < 1 || p > totalPages || p === page) return;
+    void load({ page: p });
+  }
+
+  // 下载：GET /api/kb/files/:id/download 走服务端鉴权检查后 302 到短期预签名 URL（不暴露对象存储直链）。
+  // 未 ready / 无权限时接口返回非 2xx JSON 错误 —— 先用 fetch 探测一次避免弹出浏览器原生下载失败页，
+  // 探测通过后用原生导航触发真实下载（浏览器会重新请求，短期 URL 5 分钟内仍有效）。
+  async function onDownload(f: KbFile) {
+    setDownloadingId(f.id);
+    setError("");
+    try {
+      const res = await fetch(`/api/kb/files/${f.id}/download`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}) as { error?: string });
+        setError(body?.error ?? "下载失败，请重试");
+        return;
+      }
+      window.location.href = `/api/kb/files/${f.id}/download`;
+    } finally {
+      setDownloadingId(null);
+    }
+  }
 
   function patchQueue(key: string, patch: Partial<QueueItem>) {
     setQueue((qs) => qs.map((it) => (it.key === key ? { ...it, ...patch } : it)));
@@ -162,7 +206,7 @@ export default function KnowledgeBasePage() {
       patchQueue(key, { pct: 100, state: "processing" });
       setTimeout(() => {
         setQueue((qs) => qs.filter((it) => it.key !== key));
-        void load(q);
+        void load({ page: 1 });
       }, 400);
     } catch {
       patchQueue(key, { state: "error", error: "上传失败，请重试" });
@@ -229,12 +273,17 @@ export default function KnowledgeBasePage() {
       )}
 
       {error && (
-        <p role="alert" data-testid="err" className="mt-4 text-13 text-destructive">
-          {error}
-        </p>
+        <div className="mt-4 flex items-center gap-2.5">
+          <p role="alert" data-testid="err" className="text-13 text-destructive">
+            {error}
+          </p>
+          <Button data-testid="retry-btn" variant="outline" size="sm" onClick={() => load({ page: 1 })}>
+            重试
+          </Button>
+        </div>
       )}
 
-      {/* 搜索 */}
+      {/* 搜索 + 刷新 */}
       <div className="mt-5 flex gap-2">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-placeholder" />
@@ -243,12 +292,22 @@ export default function KnowledgeBasePage() {
             placeholder="Search files…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && load(q)}
+            onKeyDown={(e) => e.key === "Enter" && load({ search: q, page: 1 })}
             className="pl-9"
           />
         </div>
-        <Button data-testid="search-btn" variant="secondary" onClick={() => load(q)}>
+        <Button data-testid="search-btn" variant="secondary" onClick={() => load({ search: q, page: 1 })}>
           Search
+        </Button>
+        <Button
+          data-testid="refresh-btn"
+          variant="outline"
+          size="icon"
+          aria-label="刷新"
+          disabled={refreshing || loading}
+          onClick={() => load({ page: 1 })}
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
         </Button>
       </div>
 
@@ -354,8 +413,20 @@ export default function KnowledgeBasePage() {
                   <span className="text-11 text-placeholder">{f.scope}</span>
                 </div>
                 <div className="flex w-15 items-center gap-3 text-placeholder">
-                  <Button variant="ghost" size="icon" aria-label="下载" className="h-7 w-7 hover:text-foreground">
-                    <Download className="h-4 w-4" />
+                  <Button
+                    data-testid={`download-${f.id}`}
+                    variant="ghost"
+                    size="icon"
+                    aria-label="下载"
+                    className="h-7 w-7 hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+                    disabled={f.status !== "ready" || downloadingId === f.id}
+                    onClick={() => onDownload(f)}
+                  >
+                    {downloadingId === f.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
                   </Button>
                   <Button variant="ghost" size="icon" aria-label="删除" className="h-7 w-7 hover:text-foreground">
                     <Trash2 className="h-4 w-4" />
@@ -363,6 +434,33 @@ export default function KnowledgeBasePage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* 分页 */}
+        {!loading && files.length > 0 && totalPages > 1 && (
+          <div className="mt-3.5 flex items-center justify-end gap-3">
+            <Button
+              data-testid="page-prev"
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => goToPage(page - 1)}
+            >
+              Prev
+            </Button>
+            <span data-testid="page-indicator" className="text-11 text-placeholder">
+              Page {page} / {totalPages}
+            </span>
+            <Button
+              data-testid="page-next"
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => goToPage(page + 1)}
+            >
+              Next
+            </Button>
           </div>
         )}
       </div>

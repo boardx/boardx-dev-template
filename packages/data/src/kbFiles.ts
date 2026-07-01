@@ -63,14 +63,30 @@ export async function getKbFile(id: string): Promise<KbFile | undefined> {
   return rows[0];
 }
 
+export interface ListKbFilesResult {
+  files: KbFile[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+const DEFAULT_KB_PAGE_SIZE = 20;
+const MAX_KB_PAGE_SIZE = 100;
+
 /** 列出某用户在给定 scope 下有权访问的文件（personal: 仅自己；team: 同 team_id）。
- *  按名称模糊搜索可选。仅 F01 所需最小过滤；F02 会扩展分页。 */
+ *  按名称模糊搜索可选，按 created_at desc 分页（F02：文件列表查看/搜索/刷新/分页）。 */
 export async function listKbFiles(params: {
   ownerUserId: number;
   scope?: KbScope;
   teamId?: number | null;
   q?: string;
-}): Promise<KbFile[]> {
+  page?: number;
+  pageSize?: number;
+}): Promise<ListKbFilesResult> {
+  const page = Math.max(1, params.page ?? 1);
+  const pageSize = Math.min(MAX_KB_PAGE_SIZE, Math.max(1, params.pageSize ?? DEFAULT_KB_PAGE_SIZE));
+
   const conditions: string[] = [];
   const values: unknown[] = [];
 
@@ -86,16 +102,29 @@ export async function listKbFiles(params: {
     }
   }
 
-  if (params.q) {
-    values.push(`%${params.q}%`);
+  if (params.q && params.q.trim()) {
+    values.push(`%${params.q.trim()}%`);
     conditions.push(`name ILIKE $${values.length}`);
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-  return query<KbFile>(
-    `SELECT ${KB_FILE_COLUMNS} FROM kb_files ${where} ORDER BY created_at DESC, id DESC`,
+
+  const countRows = await query<{ count: string }>(
+    `SELECT count(*)::text AS count FROM kb_files ${where}`,
     values
   );
+  const total = Number(countRows[0]?.count ?? 0);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const limitParams = [...values, pageSize, (page - 1) * pageSize];
+  const files = await query<KbFile>(
+    `SELECT ${KB_FILE_COLUMNS} FROM kb_files ${where}
+     ORDER BY created_at DESC, id DESC
+     LIMIT $${limitParams.length - 1} OFFSET $${limitParams.length}`,
+    limitParams
+  );
+
+  return { files, total, page, pageSize, totalPages };
 }
 
 /** worker 异步回写处理状态（幂等：相同输入多次调用结果一致）。 */
