@@ -11,6 +11,7 @@ import { BoardHelpGuide } from "@/components/board/help-guide";
 import { BoardShortcutsHelp } from "@/components/board/shortcuts-help";
 import { BoardSyncStatus } from "@/components/board/sync-status";
 import { BoardStatistics } from "@/components/board/board-statistics";
+import { SlidesPanel } from "@/components/board/slides-panel";
 import { BoardCanvas } from "@/components/board/board-canvas";
 import { LocalWorkspace } from "@/components/board/local-workspace";
 
@@ -219,6 +220,8 @@ export default function BoardPage() {
           <BoardShortcutsHelp />
           {/* 协作计时器（所有协作者可用） */}
           <BoardTimer />
+          {/* 幻灯片管理（uc-board-header-005）：侧栏创建/排序/展示/导出 */}
+          <SlidesPanel boardId={String(boardId)} />
           <LocalWorkspace boardId={String(boardId)} canEdit={canEdit} />
           {/* 分享（所有可访问者可见：复制链接 + 可见性说明 + 二维码占位） */}
           <Button
