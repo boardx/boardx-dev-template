@@ -1,0 +1,59 @@
+# registry.yaml — 参与开发的 Agent 花名册（多 agent 协调的身份来源）
+# 见 ADR-004（协调总线）与 .harness/instructions/multi-agent-coordination.md（流程）。
+#
+# 用途：
+#  - id 是 agent 的唯一身份，投影为 issue 的 `agent:<id>` label，也用作 claim 的 --owner。
+#  - kind 决定角色：coordinator（编排）/ worker（写码）/ reviewer（评审）。
+#  - reviewer 复用 .harness/agents/*.yaml 已定义的 subagent（agent: 字段指向其名）。
+#  - required_for：该 reviewer 对哪些 area 是**强制**门禁（coordinator 据此路由 review）。
+version: 1
+
+agents:
+  # ── 主 Agent：编排者（唯一）────────────────────────────────────────────────
+  - id: coord-main
+    kind: coordinator
+    model: opus-4.8
+    responsibilities:
+      - 读 issue 总线，按 wave + parallel_safe + area 不相交分派给空闲 worker
+      - 监视 status:* 流转；PR 开启后编排必需 reviewer
+      - review 全绿 + CI 绿 + 分支 up-to-date → 合并 main、置 status:merged、关 issue
+      - 回收 stale 认领（lease 超时）、升级 blocked
+
+  # ── Worker：写码 agent（1 agent = 1 owner，可增删）──────────────────────────
+  - id: wrk-claude-1
+    kind: worker
+    model: opus-4.8
+    areas: [canvas, board, home-page, common]   # 领域亲和（分派优先，不是硬限制）
+    max_concurrent: 1                            # 每 owner 同时最多 1 个 in_progress（ADR-001）
+  - id: wrk-codex-1
+    kind: worker
+    model: codex
+    areas: [auth, team, room, room-chat, invite, share]
+    max_concurrent: 1
+
+  # ── Reviewer：评审 agent（复用既有 subagent；coordinator 在 PR 阶段调起）──────
+  - id: rev-code
+    kind: reviewer
+    agent: code-reviewer          # .harness/agents/code-reviewer.yaml
+    required_for: ["*"]           # 所有 area 强制过代码审查
+    emits: review:code-ok         # 通过时打的 verdict label
+  - id: rev-e2e
+    kind: reviewer
+    agent: e2e-verifier           # .harness/agents/e2e-verifier.yaml
+    required_for: [canvas, board, board-shell, collab, room-chat]  # 有 UI 交互的 area
+    emits: review:e2e-ok
+  - id: rev-feature
+    kind: reviewer
+    agent: feature-evaluator      # .harness/agents/feature-evaluator.yaml
+    required_for: ["*"]           # 六维验收，所有 area
+    emits: review:feature-ok
+  - id: rev-security
+    kind: reviewer
+    agent: code-reviewer          # 复用 code-reviewer，以安全视角运行（专用 subagent 待建）
+    required_for: [auth, billing, admin, share, invite]  # 敏感 area 强制安全审查
+    emits: review:security-ok
+
+# review 路由规则（coordinator 用）：
+#   一个 issue 的必需 reviewer = 所有满足以下条件的 reviewer：
+#     required_for 含 "*"  或  required_for 与该 issue 的 area 相交。
+#   全部 emits 的 verdict label 都在 PR 上出现 → 允许合并。

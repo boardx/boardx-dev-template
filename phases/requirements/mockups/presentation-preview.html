@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<!--
+  MOCKUP · P12-F02 / P12-F03 · uc-presentations-001 / 002
+  用途：补齐 Prototype V1 缺失的「演示预览卡片 + 全屏预览 + 单页优化 + 方案修订」设计稿。
+  Tokens 对齐 DESIGN.md。左：聊天内预览卡片（F02）。右：全屏预览+翻页+单页优化+方案修订面板（F03）。
+  data-testid 供 e2e/presentations-001/002.spec.ts。
+-->
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Presentation Preview & Revise — BoardX Mockup</title>
+<style>
+  :root{
+    --background:#ffffff;--foreground:#181818;--primary:#000000;--primary-foreground:#fff;
+    --secondary:#f5f5f5;--muted:#f0f0f0;--muted-foreground:#707070;--border:#e0e0e0;--card:#fafafa;
+    --success:#3b936d;--tag-purple:#e6e0f5;--r-sm:4px;--r-md:6px;--r-lg:8px;
+    --font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--secondary);color:var(--foreground);font-family:var(--font);font-size:13px;
+    padding:24px;display:flex;gap:20px;flex-wrap:wrap;justify-content:center}
+  .col{display:flex;flex-direction:column;gap:8px}
+  .label{font-size:11px;font-weight:600;color:var(--muted-foreground);text-transform:uppercase;letter-spacing:.05em}
+
+  /* F02 · 聊天内预览卡片 */
+  .chatcard{width:340px;background:var(--background);border:1px solid var(--border);border-radius:var(--r-lg);
+    overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .cc-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--card)}
+  .cc-ic{width:26px;height:26px;border-radius:var(--r-md);background:var(--tag-purple);display:grid;place-items:center;font-size:13px}
+  .cc-title{font-weight:600;font-size:13px;flex:1}
+  .cc-sub{font-size:11px;color:var(--muted-foreground)}
+  .hero{aspect-ratio:16/9;background:var(--muted);border-bottom:1px solid var(--border);display:grid;place-items:center;
+    color:var(--muted-foreground);font-size:12px;position:relative}
+  .hero .pg{position:absolute;bottom:8px;right:10px;font-size:11px;background:var(--background);border:1px solid var(--border);
+    border-radius:9999px;padding:2px 8px}
+  .thumbs{display:flex;gap:6px;padding:10px 14px;overflow-x:auto}
+  .thumb{width:52px;height:30px;border-radius:var(--r-sm);background:var(--muted);border:1px solid var(--border);flex-shrink:0}
+  .thumb.active{border-color:var(--primary);outline:2px solid rgba(0,0,0,.12)}
+  .cc-actions{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border)}
+  .btn{height:34px;padding:0 14px;border-radius:var(--r-md);font-size:12px;font-weight:600;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--background);color:var(--foreground)}
+  .btn.primary{background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)}
+  .btn.sm{height:30px;padding:0 10px;font-size:11px}
+  .grow{flex:1}
+
+  /* F03 · 全屏预览 + 优化 */
+  .modal{width:560px;background:var(--background);border:1px solid var(--border);border-radius:var(--r-lg);
+    overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.16)}
+  .m-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--card)}
+  .m-title{font-weight:600;flex:1}
+  .stage{background:#f7f7f7;padding:18px;display:flex;align-items:center;gap:12px}
+  .navbtn{width:32px;height:32px;border-radius:9999px;border:1px solid var(--border);background:var(--background);
+    display:grid;place-items:center;cursor:pointer;font-size:15px;flex-shrink:0}
+  .slide{flex:1;aspect-ratio:16/9;background:var(--background);border:1px solid var(--border);border-radius:var(--r-md);
+    padding:20px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .slide h3{font-size:20px;font-weight:700}
+  .slide li{font-size:12px;color:#333;margin-left:16px}
+  .pgind{text-align:center;font-size:11px;color:var(--muted-foreground);padding:4px 0}
+  .optimize{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;background:var(--card)}
+  .optimize input{flex:1;height:34px;border:1px solid var(--border);border-radius:var(--r-md);padding:0 12px;font-size:12px;
+    background:var(--background);font-family:var(--font)}
+  .optimize input::placeholder{color:#909090}
+  /* 方案修订面板 */
+  .revise{width:560px;background:var(--background);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px}
+  .revise h4{font-size:13px;font-weight:600;margin-bottom:8px}
+  .plan{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+  .planrow{display:flex;gap:8px;align-items:center;font-size:12px;padding:7px 10px;border:1px solid var(--border);
+    border-radius:var(--r-md);background:var(--card)}
+  .planrow .n{width:18px;height:18px;border-radius:9999px;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:10px}
+  .revise textarea{width:100%;min-height:56px;border:1px solid var(--border);border-radius:var(--r-md);padding:9px 11px;
+    font-family:var(--font);font-size:12px;resize:vertical}
+</style>
+</head>
+<body>
+  <!-- F02: 聊天内预览卡片 -->
+  <div class="col">
+    <span class="label">P12-F02 · 聊天内预览卡片</span>
+    <div class="chatcard" data-testid="presentation-preview-card">
+      <div class="cc-head">
+        <div class="cc-ic">▦</div>
+        <div><div class="cc-title">Q3 产品评审演示</div><div class="cc-sub">12 页 · 已生成</div></div>
+      </div>
+      <div class="hero">封面预览<span class="pg" data-testid="pres-page-indicator">1 / 12</span></div>
+      <div class="thumbs" data-testid="pres-thumb-strip">
+        <div class="thumb active"></div><div class="thumb"></div><div class="thumb"></div>
+        <div class="thumb"></div><div class="thumb"></div><div class="thumb"></div>
+      </div>
+      <div class="cc-actions">
+        <button class="btn primary" data-testid="pres-open-fullscreen">全屏预览</button>
+        <button class="btn" data-testid="pres-download">下载 PPTX</button>
+        <span class="grow"></span>
+        <button class="btn sm" data-testid="pres-download-pdf">PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- F03: 全屏预览 + 单页优化 + 方案修订 -->
+  <div class="col">
+    <span class="label">P12-F03 · 全屏预览 + 单页优化</span>
+    <div class="modal" data-testid="presentation-fullscreen">
+      <div class="m-head">
+        <div class="m-title">Q3 产品评审演示 — 预览</div>
+        <button class="btn sm">下载</button>
+        <button class="btn sm" aria-label="close">✕</button>
+      </div>
+      <div class="stage">
+        <div class="navbtn" data-testid="pres-prev">‹</div>
+        <div class="slide">
+          <h3>协作实时同步</h3>
+          <ul><li>多人光标与在线状态</li><li>Yjs 冲突合并</li><li>Redis fanout 扩展</li></ul>
+        </div>
+        <div class="navbtn" data-testid="pres-next">›</div>
+      </div>
+      <div class="pgind">第 4 / 12 页</div>
+      <div class="optimize">
+        <input data-testid="pres-optimize-input" placeholder="优化本页：例如「加一张架构图并精简文字」" />
+        <button class="btn primary" data-testid="pres-optimize-submit">优化本页</button>
+      </div>
+    </div>
+
+    <div class="revise" data-testid="presentation-revise-panel">
+      <h4>方案修订（整体）</h4>
+      <div class="plan">
+        <div class="planrow"><span class="n">1</span>受众：内部评审 → 投资人</div>
+        <div class="planrow"><span class="n">2</span>结构：12 页 → 8 页精简版</div>
+        <div class="planrow"><span class="n">3</span>风格：默认 → 深色商务</div>
+      </div>
+      <textarea data-testid="pres-revise-input" placeholder="描述修改要求，得到更新后的方案…"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">
+        <button class="btn sm">取消</button>
+        <button class="btn primary sm" data-testid="pres-revise-submit">提交修订</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

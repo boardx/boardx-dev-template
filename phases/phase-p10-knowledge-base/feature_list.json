@@ -4,18 +4,78 @@
     {
       "id": "F01",
       "priority": 1,
-      "area": "orchestrator",
-      "title": "示例:健康检查端点",
-      "user_visible_behavior": "GET /api/health 返回 200 且 body 为 {\"ok\": true}",
+      "area": "knowledge-base",
+      "title": "上传知识库文件（自动上传 + 类型/大小校验 + 处理状态）",
+      "user_visible_behavior": "在知识库页（个人/团队/Agent/AI Tool 作用域）点上传或拖拽文件：前端校验类型/大小后 POST /api/kb/files（multipart）落对象存储与 kb_files 表；上传中展示进度，完成后文件出现在列表并显示处理状态（processing→ready，解析/切分/向量化异步）；类型不支持/超大小/上传失败给对应提示且不产生半条记录。",
+      "design_ref": "prototype:<!-- KNOWLEDGE BASE --> + <!-- kb upload dialog --> + <!-- upload queue -->；DESIGN.md tokens",
       "status": "not_started",
       "sprint": null,
       "owner": null,
-      "capability": "CAP-WEB",
+      "capability": "CAP-FILE",
       "verification": [
-        "curl -sf http://localhost:3000/api/health | jq -e '.ok == true'"
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/kb-001-upload-file.spec.ts"
       ],
       "evidence": "",
-      "notes": "把示例替换成你自己的功能。粒度=一次会话能完成。"
+      "notes": "uc-kb-001。本阶段地基 feature：建立 CAP-FILE（对象存储 MinIO/S3 + 上传管线 + 解析/切分/向量化 worker）+ kb_files 表（scope=personal/team/agent/tool + owner + status）。此能力被 p9-F08（AVA 附件）、p12（Studio/演示读文件）复用。依赖 phase-04 session/团队上下文。"
+    },
+    {
+      "id": "F02",
+      "priority": 2,
+      "area": "knowledge-base",
+      "title": "文件列表查看/搜索/刷新/分页/下载",
+      "user_visible_behavior": "进入知识库列表：GET /api/kb/files?scope=…&q=… 展示当前作用域下自己有权访问的文件（名称/类型/大小/上传时间/处理状态/骨架屏/空态）；搜索框按名称过滤；分页/加载更多；点下载对 ready 文件返回带鉴权的下载 URL 并开始下载；无权限文件不出现在列表；加载失败给重试。",
+      "design_ref": "prototype:<!-- KNOWLEDGE BASE -->（文件列表/搜索框/下载/骨架屏/空态）；DESIGN.md tokens",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/kb-002-list-download-file.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-kb-002。列表严格按 scope+权限过滤；下载走鉴权 URL 不泄露对象存储直链。依赖 F01。"
+    },
+    {
+      "id": "F03",
+      "priority": 2,
+      "area": "knowledge-base",
+      "title": "删除知识库文件",
+      "user_visible_behavior": "在文件行点删除并确认：DELETE /api/kb/files/:id 移除记录、对象存储文件与向量索引，列表立即移除该行并提示成功；仅有权限者可删；删除中失败保留该文件并提示；已被 AI 上下文引用的文件删除后不再被检索命中。",
+      "design_ref": "prototype:<!-- KNOWLEDGE BASE -->（文件行删除按钮 + 成功/失败 toast）；DESIGN.md tokens",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/kb-003-delete-file.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-kb-003。删除需级联清对象存储 + 向量索引，避免悬挂检索。依赖 F02。"
+    },
+    {
+      "id": "F04",
+      "priority": 3,
+      "area": "knowledge-base",
+      "title": "AI 引用知识库上下文（RAG 检索 + 作用域隔离）",
+      "user_visible_behavior": "在 AVA/Agent/AI Tool 回答时选择或自动使用当前上下文中已 ready 的知识库文件：检索相关切片注入 prompt，回复中标注引用来源；只检索用户有权访问且处理完成的文件；未处理完成的文件显示「处理中不可用」；无相关内容时回复不虚构来源。",
+      "design_ref": "prototype:<!-- AVA -->（RAG 引用发生在 AVA 回答链路，无独立屏；completed 文件状态见 <!-- KNOWLEDGE BASE -->）；DESIGN.md tokens",
+      "status": "blocked",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AI",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/kb-004-use-file-in-ai-context.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-kb-004。blocked-on p9：RAG 注入需 p9 的 CAP-AI 回答链路（AVA/Agent）作为落点，p9 未完成则无处挂载检索结果。F01-F03（文件 CRUD）可独立先做；F04 待 p9 就绪后接通并转 not_started。检索必须作用域隔离，不跨团队/跨用户泄露。"
     }
   ]
 }
