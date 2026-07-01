@@ -30,7 +30,7 @@
       "user_visible_behavior": "在钱包或额度不足提示点购买打开 Buy Credits 弹窗：展示套餐列表选择数量/价格，选支付方式生成订单并进入扫码支付（F05 引擎）；支付成功后余额增加、购买记录出现、弹窗提示成功；取消/超时不改余额；无权限购买团队 Credit 时回退个人范围。",
       "design_ref": "prototype:<!-- buy credits modal -->（套餐列表 + 支付区 + 最近交易记录）；DESIGN.md tokens",
       "status": "blocked",
-      "sprint": null,
+      "sprint": "04",
       "owner": null,
       "capability": "CAP-PAYMENT",
       "depends_on": [
@@ -52,9 +52,9 @@
       "title": "积分流水查看（个人 Credit Records 弹窗 + 团队记录）",
       "user_visible_behavior": "用户查看被允许范围内的余额与交易记录：个人从用户菜单打开 Credit Records 弹窗，团队管理者在 /credits 看团队交易表；GET /api/credits/transactions 分页展示（时间/类型 购买·消耗/金额/来源）；越权范围不可见；空态与加载。",
       "design_ref": "prototype:<!-- CREDITS -->（Usage/Purchase 记录表）+ <!-- buy credits modal -->（最近交易）；个人 Credit Records 弹窗细节较浅；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "04",
+      "owner": "wrk-credits-1",
       "capability": "CAP-DATA",
       "depends_on": [
         "F01"
@@ -76,7 +76,7 @@
       "user_visible_behavior": "用户从个人菜单或 AI 额度不足提示打开计划弹窗：subscription 模式展示 Free/Pro 权益对比与「升级到 Pro / 管理订阅」（走支付/管理流程）；credits 模式改为进入购买 Credit 流程（F02 弹窗）；升级成功后账号计划/权益更新；关闭弹窗不改变计划/余额。",
       "design_ref": "mockup:phases/requirements/mockups/upgrade-plan.html（本轮补：Free/Pro 类型 + 权益对比 + Upgrade to Pro / Manage Subscription 按钮）+ prototype:<!-- buy credits modal -->（credits 模式复用）；DESIGN.md tokens",
       "status": "blocked",
-      "sprint": null,
+      "sprint": "04",
       "owner": null,
       "capability": "CAP-PAYMENT",
       "depends_on": [
