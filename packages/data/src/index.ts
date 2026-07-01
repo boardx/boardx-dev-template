@@ -22,6 +22,8 @@ export * from "./roomChat";
 export * from "./profile";
 // CAP-WEB 用户反馈提交记录
 export * from "./feedback";
+// CAP-PAYMENT 支付订单仓储（payment_orders / F05）
+export * from "./payment";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 
