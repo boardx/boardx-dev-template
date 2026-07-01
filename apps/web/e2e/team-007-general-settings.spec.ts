@@ -80,12 +80,12 @@ test("团队名不能为空 → 400", async ({ playwright }) => {
   await owner.dispose();
 });
 
-test("General 设置区在 /teams 页面可见（owner）", async ({ page, request }) => {
-  await request.post("http://localhost:3000/api/auth/register", {
+test("General 设置区在 /teams 页面可见（owner）", async ({ page }) => {
+  // 用 page.request 注册 → 自动建立 page 上下文登录态（register 内 startSession）
+  await page.request.post("/api/auth/register", {
     data: { firstName: "U", lastName: "U", email: uniq(), password: "secret123", agreeTerms: true },
   });
-  // 复用浏览器上下文登录态需经 UI；此处直接断言已登录用户的页面骨架。
-  await page.goto("http://localhost:3000/teams");
+  await page.goto("/teams");
   // owner 创建团队后 General 区出现
   await page.getByTestId("team-name").fill("Visible Team");
   await page.getByTestId("create").click();
