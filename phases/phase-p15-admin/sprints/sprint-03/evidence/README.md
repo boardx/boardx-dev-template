@@ -1,0 +1,104 @@
+# Evidence — F02（用户管理：列表/搜索/分页/增删改 + 手动上分）
+
+## 运行环境说明
+本 worktree 用 `scripts/init-worktree-env.sh` 分配的独立端口跑验证（同机多 agent 并行，
+避免与其他 worktree 抢默认端口 5432/6379/3000）：
+
+```bash
+export DATABASE_URL="postgresql://boardx:boardx@localhost:61114/boardx"
+export REDIS_URL="redis://localhost:61115"
+export E2E_PORT="61116"
+
+docker compose -f infra/docker-compose.yml up -d
+pnpm --filter @repo/data run migrate
+pnpm --filter @repo/web exec playwright test e2e/admin-001-manage-users.spec.ts
+pnpm harness verify --sprint p15/03
+```
+
+注：`scripts/init-worktree-env.sh` 只把端口写进 `apps/web/.env.local`（给 Next dev/Playwright
+用），未写进根 `.env`；而 `infra/docker-compose.yml` 读的是 `PG_PORT`/`REDIS_PORT`/
+`MINIO_PORT`/`MINIO_CONSOLE_PORT` 这几个 compose 专用变量。另外 Docker Compose
+（本机 v2.17.3）只传 `-f infra/docker-compose.yml` 时不会从 cwd 自动读 `.env`（去 compose
+文件所在目录 `infra/` 找）。本轮手动把这几个端口 + `COMPOSE_PROJECT_NAME` 同时写进根
+`.env` 和 `infra/.env`（均已 gitignore）来绕过。这是现有脚本的缺口，与本 feature 无关，已用
+spawn_task 提给单独任务修复，未在本次改动里碰 `scripts/init-worktree-env.sh`。
+
+## 文件
+- `f02-01-harness-verify.txt`（同 `F02.verify.log`，harness 权威产出）—— `pnpm harness verify
+  --sprint p15/03` 完整输出：三条 verification 命令 + `require_base_pass` 的
+  `pnpm -w run verify:base`（45/45）全部通过，门控 F02 = passing。
+- `f02-02-manual-verification-commands.txt` —— 手动单独跑 feature_list.json 里三条
+  verification 命令（docker up / migrate / playwright）的完整输出，作为独立于 harness 脚本
+  之外的交叉验证。
+- `f02-03-final-confirmation-clean-toolchain.txt` —— 发现 `pnpm install --force` 曾误用本机全局
+  `pnpm@8.5.1`（而非仓库声明的 `pnpm@9.0.0`）重新生成过 `pnpm-lock.yaml`（lockfileVersion 从
+  9.0 降级到 6.0）后，已 `git checkout -- pnpm-lock.yaml` 撤销该改动、用
+  `corepack use pnpm@9.0.0` 重新按正确版本对齐 `node_modules`，本文件是用回正确工具链后的最终
+  确认跑（e2e 9/9 + verify:base 45/45），证明最终提交状态干净、lockfile 无污染。
+
+## 覆盖范围与复用说明
+- **门控**：复用 F01 的 `apps/web/lib/admin.ts` → `requireSysAdmin()`。原有
+  `apps/web/app/(app)/admin/users/page.tsx` 是 F01 之前就存在的 stub-gated 原型（自带
+  `ADMIN_GATE_OPEN` 环境变量网关 + 内存样例数据），本 feature 把它整页替换为真实门控 + 真实 DB。
+- **数据**：`packages/data/src/auth.ts` 新增 `listAdminUsers`（名称/邮箱搜索 + 分页 + 团队数/
+  个人 Credit 聚合）、`updateAdminUser`（改姓名/平台角色）、`deleteUser`；均为纯读/写既有
+  `users`/`team_members`/`credit_wallets` 表，未加迁移。
+- **手动上分**：`apps/web/app/api/admin/users/[id]/credit/route.ts` 直接复用 p14 的
+  `getOrCreatePersonalWallet` + `recordTransaction`（`packages/data/src/credits.ts`），与 F03
+  团队手动上分共用同一套仓储函数，只是 wallet scope 换成 personal；原样复用 F03 review 加固的
+  三点（幂等 key + 操作人审计 + note 200 字裁剪）。
+- **API**：
+  - `GET /api/admin/users?q=&page=&pageSize=` —— 分页/搜索列表。
+  - `POST /api/admin/users { firstName, lastName, email, platformRole? }` —— 创建用户
+    （后台直建号，无初始密码）。
+  - `PATCH /api/admin/users/:id { firstName?, lastName?, platformRole? }` —— 编辑资料/角色。
+  - `DELETE /api/admin/users/:id` —— 删除用户（级联由外键 ON DELETE CASCADE 处理）。
+  - `POST /api/admin/users/:id/credit { amount, note }` —— 手动增加个人 Credit（`amount<=0`
+    拒绝 400；支持 `idempotency-key` 请求头防重放）。
+  五者均走 `requireSysAdmin()`：未登录 401，非 SysAdmin 403。
+- **不属于 F02 范围、未做**：F03 团队管理（已 merged，未触碰 `admin/teams/*` 任何文件）、
+  F04/F05 AI Store 审核/精选（当前 `blocked`）。
+
+## e2e 测试设计注意事项（本轮踩过的坑，供下一个 worker 参考）
+1. **不要在已登录页面用 `page.request.post("/api/auth/register", ...)` 注册第二个用户**——
+   注册接口会 `startSession` 写入会话 cookie，`page.request` 与 `page` 共享同一个浏览器
+   context 的 cookie jar，会把 SysAdmin 的会话覆盖成新注册用户的会话，导致后续
+   `page.reload()`/`page.goto()` 变成以非管理员身份访问，命中 403。正确做法是走独立的
+   `playwright.request.newContext({ baseURL })`（本仓库 `board-create.spec.ts` 等既有 spec
+   的既定写法），不共享 cookie jar。注意 `baseURL` 要用 test fixture 提供的（读取
+   `playwright.config.ts` 的 `use.baseURL`，间接来自 `E2E_PORT`），不要像部分既有 spec
+   （如 `board-create.spec.ts:6`）那样硬编码 `http://localhost:3000`——那样在非默认
+   `E2E_PORT` 的并行 worktree 下会 `ECONNREFUSED`（F03 的 evidence README 里也记录了同样的
+   坑）。
+2. **`[data-testid^="user-"]` 前缀选择器会顺带匹配 `user-role-<id>`/`user-credit-<id>` 等
+   同前缀的子元素**，导致 `locator(...).locator('[data-testid^="edit-"]')` 命中多个元素报
+   strict mode violation。改为直接用 API 拿到 `userId` 后 `page.getByTestId(`edit-${userId}`)`
+   精确定位，不依赖行内相对选择器。
+3. **页面级 `useEffect` 不要把 `useCallback` 包裹的 `load` 放进依赖数组**（`[load]` 实质等价于
+   `[router]`，因为 `load` 用 `useCallback(..., [router])`）——若 `router` 引用在某些内部
+   重渲染中变化，会导致该 effect 重跑，把用户已应用的搜索/分页悄悄重置回第 1 页、无筛选
+   （曾观测到：删除确认弹窗关闭后 list 又跳回未过滤状态，导致 e2e 断言"删除后应显示空态"
+   间歇性超时）。改为 `useEffect(() => { void load(1, ""); }, [])`（仅挂载时跑一次），语义上
+   也更正确（首屏加载本就只该跑一次）。
+
+## 环境/工具链问题（记录，供 review 核实，未影响最终提交内容）
+- **共享机器 DB 不稳定（已知问题）**：本机同一时刻运行 50+ 个其它 worktree/worker 的 docker
+  容器（`docker stats` 观测到总 CPU 需求经常 180-200%，仅 8 核）。本 worktree 独占的
+  postgres 容器在多次压测式重复跑 e2e（`--repeat-each`）时出现
+  `57P03 the database system is in recovery mode` 崩溃重启（`server process terminated by
+  signal 13: Broken pipe` → 级联终止所有连接 → 自动恢复，几秒到几十秒后恢复正常），命中时
+  API 返回 500（例如 `/api/dev/grant-sysadmin`）。这不是本 feature 代码的回归——单次不压测的
+  e2e 全量跑，在 DB 稳定的时间窗口内多次确定性通过（9/9），`pnpm harness verify --sprint
+  p15/03` 最终成功跑通并把 F02 门控为 passing（未使用 `--no-verify`，未绕过任何门禁——
+  harness verify 命令本身就是标准门控路径，全部走通了）。
+- **`pnpm install --force` 误用工具链事故（已修正，不影响最终提交）**：调试 rollup optional
+  dependency 的 arm64/x64 架构不匹配问题（`node_modules/.pnpm` 里只装了
+  `@rollup/rollup-darwin-x64`，但本机是 arm64）时，先用了本机全局 `pnpm@8.5.1`（而非仓库
+  `package.json` 声明的 `pnpm@9.0.0`）执行 `pnpm install --force`，导致 `pnpm-lock.yaml` 被
+  降级重写（`lockfileVersion: '9.0'` → `'6.0'`，多个包版本被解析到更旧版本，如
+  `@aws-sdk/client-s3` 从 3.1077.0 变成 3.637.0）。发现后已 `git checkout -- pnpm-lock.yaml`
+  完整撤销该 lockfile 改动，改用 `corepack use pnpm@9.0.0` 用正确版本重新对齐
+  `node_modules`（+30 -98 包，收敛回原 lockfile 期望的树），最终 `git diff --stat
+  pnpm-lock.yaml` 为空、`package.json` 也已 `git checkout` 撤销（corepack 曾顺带给
+  `packageManager` 字段加了 sha512 完整性哈希，超出本 feature 范围，一并撤销）。最终提交
+  不含任何 lockfile/package.json 改动，仅 F02 相关代码 + evidence + progress/handoff。
