@@ -57,6 +57,12 @@ test("无匹配显示空提示", async ({ page }) => {
 
   await page.goto(`/rooms/${room.id}/boards`);
   await page.getByTestId("search").fill("Nonexistent");
-  await page.getByTestId("search-btn").click();
+  // 等搜索请求返回后再断言，避免 CI 慢环境下点击后立即断言的 timing race。
+  await Promise.all([
+    page.waitForResponse(
+      (r) => r.url().includes("/boards?q=") && r.request().method() === "GET",
+    ),
+    page.getByTestId("search-btn").click(),
+  ]);
   await expect(page.getByTestId("no-match")).toBeVisible();
 });
