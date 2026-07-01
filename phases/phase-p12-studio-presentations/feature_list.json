@@ -22,8 +22,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/studio-001-generate-artifact.spec.ts"
       ],
-      "evidence": "",
-      "notes": "uc-studio-001。blocked-on p9+p10：生成需 CAP-AI（p9 编排）+ CAP-FILE（p10 读房间文件/存产物）。Studio 面板 UI 壳可先做，生成端到端待两能力就绪。也点亮 phase-04 room 的 Room Studio 高级入口。依赖 p4 room-chat 工作区。"
+      "evidence": "phases/phase-p12-studio-presentations/sprints/sprint-01/evidence/studio-001-generate-artifact.e2e.log; phases/phase-p12-studio-presentations/sprints/sprint-01/evidence/verify-base.log",
+      "notes": "uc-studio-001。blocked-on p9+p10：生成需 CAP-AI（p9 编排）+ CAP-FILE（p10 读房间文件/存产物）。Studio 面板 UI 壳可先做，生成端到端待两能力就绪。也点亮 phase-04 room 的 Room Studio 高级入口。依赖 p4 room-chat 工作区。实现：room-chat pane-studio 集成真实面板（类型/来源选择 + 生成 + 轮询进度），POST /api/rooms/:id/chats/:chatId/studio/generate 入队 boardx.studio-generation，workflow-worker 消费（@repo/ai stub 生成器 + @repo/storage MinIO 写入），结果卡片出聊天（音频可播放/信息图可预览/演示可下载），失败态给重试。generation 用 sanctioned mock（同 AVA stub 模式），非真实 AI/TTS/PPTX 管线。"
     },
     {
       "id": "F02",

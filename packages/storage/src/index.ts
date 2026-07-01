@@ -49,6 +49,19 @@ export function buildKbObjectKey(params: {
   return `kb/${params.scope}/${params.ownerId}/${params.fileId}/${safeName}`;
 }
 
+// ─── Studio 制品对象 key：studio/{roomId}/{chatId}/{artifactId}/{文件名}（P12 F01）──
+// 与 kb/ 前缀区分命名空间，同一 bucket 内隔离 studio 生成产物与知识库文件。
+
+export function buildStudioObjectKey(params: {
+  roomId: string | number;
+  chatId: string | number;
+  artifactId: string;
+  fileName: string;
+}): string {
+  const safeName = params.fileName.replace(/[/\\]/g, "_");
+  return `studio/${params.roomId}/${params.chatId}/${params.artifactId}/${safeName}`;
+}
+
 // ─── 上传校验（纯函数，前后端共用同一份规则，避免规则漂移）────────────────────
 
 export const KB_ALLOWED_EXT = ["pdf", "txt", "md", "doc", "docx", "json", "csv", "xlsx", "xls"];

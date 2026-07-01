@@ -32,6 +32,8 @@ export * from "./aiStore";
 export * from "./credits";
 // CAP-FILE 知识库文件仓储（kb_files / P10）
 export * from "./kbFiles";
+// CAP-AI Studio 制品仓储（studio_artifacts / P12 F01）
+export * from "./studio";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 
