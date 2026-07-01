@@ -53,7 +53,7 @@
       "title": "团队管理（搜索/分页/编辑团队类型 + 手动上分）",
       "user_visible_behavior": "SysAdmin 在团队管理页：GET /api/admin/teams?q= 分页/筛选团队（名称/类型/成员数/Credit），查看基础信息；在后台支持范围内更新团队类型（team edit 弹窗）或为团队手动增加 Credit；操作即时反映；无权限不可访问。",
       "design_ref": "prototype:<!-- teams --> + <!-- admin: team edit --> + <!-- admin: manual credit modal -->；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "02",
       "owner": "wrk-admin-2",
       "capability": "CAP-AUTH",
@@ -67,7 +67,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/admin-002-manage-teams.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-07-01T18:51:56.666Z",
       "notes": "uc-admin-002。团队手动上分复用 p14。依赖 F01 门控 + p14 credits。"
     },
     {
