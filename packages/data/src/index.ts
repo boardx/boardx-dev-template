@@ -22,6 +22,8 @@ export * from "./roomChat";
 export * from "./profile";
 // CAP-WEB 用户反馈提交记录
 export * from "./feedback";
+// CAP-AI AVA 聊天线程与消息仓储（ava_threads/ava_messages / P9 F01）
+export * from "./avaChat";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 

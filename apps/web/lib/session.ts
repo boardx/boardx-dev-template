@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import {
   SESSION_COOKIE,
   SESSION_TTL_MS,
+  CURRENT_TEAM_COOKIE,
   newSessionId,
   expiresAt,
   resolveDisplayName,
@@ -63,4 +64,13 @@ export async function endSession(): Promise<void> {
   const id = cookies().get(SESSION_COOKIE)?.value;
   if (id) await deleteSession(id);
   cookies().delete(SESSION_COOKIE);
+}
+
+/** 当前团队上下文（cookie 未设置/用户未加入任何团队时为 null，即个人上下文）。
+ *  与 /api/teams/current 读取同一 cookie，保持全站团队切换一致。 */
+export function currentTeamId(): number | null {
+  const raw = cookies().get(CURRENT_TEAM_COOKIE)?.value;
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
 }
