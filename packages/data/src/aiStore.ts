@@ -227,3 +227,67 @@ export function isAiStoreItemVisible(
   if (item.scope === "personal") return userId != null && item.owner_user_id === userId;
   return false;
 }
+
+// ---------------------------------------------------------------------------
+// 喜欢/收藏（P11 F04，uc-ai-store-004）：ai_store_favorites 记录 (user_id, item_id)，
+// ai_store_items.likes 是聚合计数缓存；toggle 时同步更新计数，避免和明细表漂移。
+// ---------------------------------------------------------------------------
+
+/** 某用户是否已喜欢/收藏该项目。 */
+export async function isAiStoreItemFavorited(itemId: number, userId: number): Promise<boolean> {
+  const rows = await query<{ one: number }>(
+    `SELECT 1 AS one FROM ai_store_favorites WHERE item_id = $1 AND user_id = $2`,
+    [itemId, userId]
+  );
+  return rows.length > 0;
+}
+
+/** 该用户在给定项目集合中已喜欢的 id 集合（供列表页批量标注 liked 状态）。 */
+export async function listFavoritedAiStoreItemIds(itemIds: number[], userId: number): Promise<Set<number>> {
+  if (itemIds.length === 0) return new Set();
+  const rows = await query<{ item_id: number }>(
+    `SELECT item_id FROM ai_store_favorites WHERE user_id = $1 AND item_id = ANY($2)`,
+    [userId, itemIds]
+  );
+  return new Set(rows.map((r) => r.item_id));
+}
+
+export interface ToggleAiStoreFavoriteResult {
+  favorited: boolean;
+  likes: number;
+}
+
+/**
+ * 切换某用户对某项目的喜欢/收藏状态，并同步更新 ai_store_items.likes 聚合计数。
+ * 不存在的项目返回 undefined。INSERT ON CONFLICT DO NOTHING / DELETE 均至多影响一行，
+ * 幂等；重复点击只会在当前状态和相反状态之间翻转，不会重复计数。
+ * 注意：喜欢/收藏不算“内容更新”，故不改 updated_at——否则会扰动 Explore 列表
+ * “按 updated_at 倒序”的排序/分页，和内容编辑语义混淆。
+ */
+export async function toggleAiStoreFavorite(
+  itemId: number,
+  userId: number
+): Promise<ToggleAiStoreFavoriteResult | undefined> {
+  const existing = await getAiStoreItem(itemId);
+  if (!existing) return undefined;
+
+  const already = await isAiStoreItemFavorited(itemId, userId);
+  if (already) {
+    await query(`DELETE FROM ai_store_favorites WHERE item_id = $1 AND user_id = $2`, [itemId, userId]);
+    const rows = await query<{ likes: number }>(
+      `UPDATE ai_store_items SET likes = GREATEST(0, likes - 1) WHERE id = $1 RETURNING likes`,
+      [itemId]
+    );
+    return { favorited: false, likes: rows[0]?.likes ?? 0 };
+  }
+
+  await query(
+    `INSERT INTO ai_store_favorites (item_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+    [itemId, userId]
+  );
+  const rows = await query<{ likes: number }>(
+    `UPDATE ai_store_items SET likes = likes + 1 WHERE id = $1 RETURNING likes`,
+    [itemId]
+  );
+  return { favorited: true, likes: rows[0]?.likes ?? 0 };
+}

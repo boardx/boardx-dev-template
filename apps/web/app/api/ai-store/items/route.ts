@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { CURRENT_TEAM_COOKIE } from "@repo/auth";
-import { createAiStoreItem, getMembership, listAiStoreItems, listOwnedAiStoreItems, type AiStoreItemType } from "@repo/data";
+import {
+  createAiStoreItem,
+  getMembership,
+  listAiStoreItems,
+  listFavoritedAiStoreItemIds,
+  listOwnedAiStoreItems,
+  type AiStoreItemType,
+} from "@repo/data";
 import { currentUser } from "@/lib/session";
 import { parseAiStorePayload, VALID_TYPES } from "./payload";
 
@@ -39,7 +46,11 @@ export async function GET(req: Request) {
     pageSize,
   });
 
-  return NextResponse.json(result);
+  // uc-ai-store-004：批量标注当前用户对本页项目的喜欢/收藏状态（心形高亮）。
+  const likedIds = await listFavoritedAiStoreItemIds(result.items.map((it) => it.id), user.id);
+  const items = result.items.map((it) => ({ ...it, liked: likedIds.has(it.id) }));
+
+  return NextResponse.json({ ...result, items });
 }
 
 // uc-ai-store-002：创建 AI Store 项目。支持草稿、发布到个人/团队、提交平台审核。

@@ -1,0 +1,18 @@
+=== $ pnpm --filter @repo/web run typecheck ===
+
+> @repo/web@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-aafef3b8c9ccffcf0/apps/web
+> tsc --noEmit
+
+
+=== $ pnpm --filter @repo/data run typecheck ===
+
+> @repo/data@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-aafef3b8c9ccffcf0/packages/data
+> tsc --noEmit
+
+
+=== $ pnpm --filter @repo/web run lint ===
+
+> @repo/web@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-aafef3b8c9ccffcf0/apps/web
+> bash scripts/lint-design.sh
+
+✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性）
