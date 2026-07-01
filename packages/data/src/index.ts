@@ -22,6 +22,8 @@ export * from "./roomChat";
 export * from "./profile";
 // CAP-WEB 用户反馈提交记录
 export * from "./feedback";
+// CAP-DATA AI Store 商品仓储（ai_store_items / P11）
+export * from "./aiStore";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 
