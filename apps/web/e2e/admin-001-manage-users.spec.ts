@@ -8,16 +8,16 @@ async function register(page: import("@playwright/test").Page) {
   });
 }
 
-test("未登录访问 /admin 跳转到 /login", async ({ page }) => {
+test("未登录访问 /admin/users 跳转到 /login", async ({ page }) => {
   await page.context().clearCookies();
-  await page.goto("/admin");
+  await page.goto("/admin/users");
   await page.waitForURL("**/login");
   expect(page.url()).toContain("/login");
 });
 
 test("管理员看到用户列表并能创建用户", async ({ page }) => {
   await register(page);
-  await page.goto("/admin");
+  await page.goto("/admin/users");
 
   // 列表渲染（样例用户）
   await expect(page.getByTestId("user-list")).toBeVisible();

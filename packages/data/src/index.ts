@@ -24,6 +24,8 @@ export * from "./profile";
 export * from "./feedback";
 // CAP-PAYMENT 支付订单仓储（payment_orders / F05）
 export * from "./payment";
+// P15 Admin 后台：平台统计聚合（用户/团队计数；仅已建表的真实维度）
+export * from "./admin";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 

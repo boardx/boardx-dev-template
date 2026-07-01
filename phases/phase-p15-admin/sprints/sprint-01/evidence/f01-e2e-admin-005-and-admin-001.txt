@@ -1,0 +1,15 @@
+
+Running 10 tests using 1 worker
+
+  ✓  1 [chromium] › admin-001-manage-users.spec.ts:11:5 › 未登录访问 /admin/users 跳转到 /login (5.1s)
+  ✓  2 [chromium] › admin-001-manage-users.spec.ts:18:5 › 管理员看到用户列表并能创建用户 (1.4s)
+  ✓  3 [chromium] › admin-001-manage-users.spec.ts:36:5 › 创建邮箱格式无效被拒（400） (304ms)
+  ✓  4 [chromium] › admin-001-manage-users.spec.ts:44:5 › 未登录调用列表 API 返回 401 (121ms)
+  ✓  5 [chromium] › admin-005-view-admin-home.spec.ts:19:5 › 未登录访问 /admin 跳转到 /login (2.1s)
+  ✓  6 [chromium] › admin-005-view-admin-home.spec.ts:26:5 › 已登录但非 SysAdmin 访问 /admin 看到 403 无权限 (646ms)
+  ✓  7 [chromium] › admin-005-view-admin-home.spec.ts:35:5 › SysAdmin 访问 /admin 看到统计摘要与模块导航 (1.2s)
+  ✓  8 [chromium] › admin-005-view-admin-home.spec.ts:60:5 › SysAdmin 点用户管理导航进入 /admin/users (892ms)
+  ✓  9 [chromium] › admin-005-view-admin-home.spec.ts:68:5 › SysAdmin 点团队管理导航进入占位子页 (1.5s)
+  ✓  10 [chromium] › admin-005-view-admin-home.spec.ts:76:5 › 统计摘要 API 未登录 401、非 SysAdmin 403 (188ms)
+
+  10 passed (18.2s)
