@@ -2,8 +2,10 @@ import { defineConfig, devices } from "@playwright/test";
 
 // e2e 配置：webServer 用 next dev（免 build，DATABASE_URL 从环境继承）。
 // 已有该端口在跑则复用（reuseExistingServer）。
-// 端口默认 3000；可用 E2E_PORT 覆盖，便于同机多 worktree/多 agent 并行跑 e2e 时避开占用（默认行为不变）。
-const PORT = process.env.E2E_PORT ?? "3000";
+// 端口可用 E2E_PORT 覆盖（默认 3000）——多个 worktree 并行跑 e2e 时，"复用已有 server"
+// 会复用到别的 worktree/分支的 server，测出来的是别人的代码；scripts/init-worktree-env.sh
+// 会给每个 worktree 分配独立的 E2E_PORT 写进 apps/web/.env.local 来避免这个问题。
+const PORT = process.env.E2E_PORT || "3000";
 
 export default defineConfig({
   testDir: "./e2e",
