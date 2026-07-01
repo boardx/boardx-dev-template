@@ -4,18 +4,116 @@
     {
       "id": "F01",
       "priority": 1,
-      "area": "orchestrator",
-      "title": "示例:健康检查端点",
-      "user_visible_behavior": "GET /api/health 返回 200 且 body 为 {\"ok\": true}",
+      "area": "survey",
+      "title": "创建问卷（创建器 + 多题型 + 选项 + 预览）",
+      "user_visible_behavior": "在 /surveys 点新建进入创建器：填标题/描述，添加多种题型（单选/多选/文本/评分等）与选项，可调整顺序、必填、预览答题页；保存 POST /api/surveys 落库并出现在列表；标题为空或无题禁止保存；创建后得到可分享的问卷。",
+      "design_ref": "prototype:<!-- EDITOR --> + <!-- add question modal -->；DESIGN.md tokens",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-001-create-survey.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-survey-001。本阶段地基：surveys/survey_questions/survey_responses 表（team 作用域）。也点亮 phase-04 room 的 Room Survey 高级入口。依赖 phase-04 team 上下文。"
+    },
+    {
+      "id": "F02",
+      "priority": 2,
+      "area": "survey",
+      "title": "问卷列表管理（My/Team Surveys + 卡片操作）",
+      "user_visible_behavior": "进入问卷列表：GET /api/surveys 展示当前团队问卷卡片（标题/状态 active/paused/回收数/更新时间）；卡片操作 View 结果 / Edit / Preview 答题页 / Share / Pause·Activate / Delete（确认后 DELETE 移除）；空态与骨架；无权限问卷不显示。",
+      "design_ref": "prototype:<!-- SURVEYS --> → <!-- LIST -->（问卷卡片 + View/Edit/Preview/Share/Pause/Delete）；DESIGN.md tokens",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-002-list-manage-surveys.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-survey-002。列表按 team+权限过滤。依赖 F01。"
+    },
+    {
+      "id": "F03",
+      "priority": 2,
+      "area": "survey",
+      "title": "填写并提交问卷（公开答题页）",
+      "user_visible_behavior": "答题人无需登录打开公开答题链接 /survey/:id/answer：展示标题/说明/进度与各题控件，按题型校验必填；提交 POST /api/surveys/:id/responses 落库并展示提交成功页；问卷未发布/已暂停/已关闭展示对应不可答题态；重复提交按问卷设置处理。",
+      "design_ref": "prototype:<!-- ANSWER / PREVIEW -->（公开答题页 + 进度条 + 各题型控件 + 提交成功）；DESIGN.md tokens",
       "status": "not_started",
       "sprint": null,
       "owner": null,
       "capability": "CAP-WEB",
       "verification": [
-        "curl -sf http://localhost:3000/api/health | jq -e '.ok == true'"
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-003-answer-survey.spec.ts"
       ],
       "evidence": "",
-      "notes": "把示例替换成你自己的功能。粒度=一次会话能完成。"
+      "notes": "uc-survey-003。公开页不需登录但受发布状态门控（配合 F06）。依赖 F01。"
+    },
+    {
+      "id": "F04",
+      "priority": 3,
+      "area": "survey",
+      "title": "查看答卷与报告（Summary/Individual/Report + 导出）",
+      "user_visible_behavior": "打开某问卷结果：Summary 视图按题聚合（图表/占比/均值），Individual 视图逐份浏览答卷，Report 生成分析报告并可导出（PDF/CSV）；无回收时展示空态；仅有权限者可查看；导出失败给重试。",
+      "design_ref": "prototype:<!-- RESULTS / REPORT --> → <!-- summary --> / <!-- individual --> / <!-- report -->；DESIGN.md tokens",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-004-view-answers-report.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-survey-004。聚合与导出基于 survey_responses；分析报告的 AI 摘要为可选增强，核心导出不依赖 CAP-AI。依赖 F03。"
+    },
+    {
+      "id": "F05",
+      "priority": 3,
+      "area": "survey",
+      "title": "问卷模板管理（应用/保存/删除模板）",
+      "user_visible_behavior": "创建问卷时可选 Blank / 内置模板 / 团队保存模板快速起草；把当前问卷保存为团队模板（POST /api/survey-templates）；删除自己/团队可管理的模板；应用模板预填题目后仍可编辑；无模板时展示空态。",
+      "design_ref": "prototype:<!-- EDITOR -->（Choose template 区：Blank/内置/团队模板；模板区细节较浅）；DESIGN.md tokens",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-005-manage-templates.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-survey-005。survey_templates 表（内置 + 团队保存）。依赖 F01。"
+    },
+    {
+      "id": "F06",
+      "priority": 2,
+      "area": "survey",
+      "title": "发布/暂停问卷（公开答题开关）",
+      "user_visible_behavior": "在列表卡片或编辑页切换问卷 active/paused：PATCH /api/surveys/:id {isActive}；active 时公开答题链接可正常填答，paused/未发布时公开页展示「暂不接受答题」；状态即时反映在卡片标；无权限者不能切换。",
+      "design_ref": "prototype:<!-- SURVEYS --> → <!-- LIST -->（卡片 Pause/Activate 状态切换）；DESIGN.md tokens",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-006-publish-unpublish-survey.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-survey-006。isActive 门控 F03 公开答题页。依赖 F01/F03。"
     }
   ]
 }
