@@ -635,6 +635,12 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           <Button data-testid="wm-delete" size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteSelected()}>
             删除
           </Button>
+          <Button data-testid="wm-resize-unavailable" size="sm" variant="ghost" disabled title="当前组件暂不支持拖拽控制点缩放">
+            缩放暂不可用
+          </Button>
+          <Button data-testid="wm-lock-unavailable" size="sm" variant="ghost" disabled title="锁定能力将在后续组件权限矩阵接入">
+            锁定暂不可用
+          </Button>
         </div>
       )}
 
@@ -774,6 +780,15 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             }}
           >
             粘贴
+          </button>
+          <button
+            type="button"
+            data-testid="ctx-lock-unavailable"
+            className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
+            disabled
+            title="锁定能力将在后续组件权限矩阵接入"
+          >
+            锁定暂不可用
           </button>
         </div>
       )}
