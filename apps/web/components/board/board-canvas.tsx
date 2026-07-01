@@ -228,6 +228,36 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     void load();
   }, [load]);
 
+  // ── 实时协作同步（uc-canvas-005）────────────────────────────────────────
+  // 轮询服务端 item 列表，让其它在线用户的新增/移动/删除在本地画布上出现，
+  // 达成「在线用户看到一致的 Board 内容」（UC 后置条件 1）。
+  // 只在本地无进行中编辑/拖拽时才合并服务端快照，避免打断本地操作。
+  useEffect(() => {
+    let stop = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    async function poll() {
+      if (!stop && !editingId && !dragRef.current) {
+        try {
+          const res = await fetch(`/api/boards/${boardId}/items`);
+          if (res.ok && !stop && !editingId && !dragRef.current) {
+            const next = ((await res.json()).items ?? []) as Item[];
+            setItems((prev) =>
+              JSON.stringify(prev) === JSON.stringify(next) ? prev : next
+            );
+          }
+        } catch {
+          // 网络异常忽略；下个周期重试（UC 异常流程 2）
+        }
+      }
+      if (!stop) timer = setTimeout(poll, 1500);
+    }
+    timer = setTimeout(poll, 1500);
+    return () => {
+      stop = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [boardId, editingId]);
+
   // ── 落库原子操作（撤销/重做与正常操作共用）──────────────────────────────
   const apiDelete = useCallback(
     (ids: string[]) => Promise.all(ids.map((id) => fetch(`/api/board-items/${id}`, { method: "DELETE" }))),

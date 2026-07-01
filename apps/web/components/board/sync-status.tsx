@@ -16,9 +16,13 @@ const META: Record<SyncState, { label: string; dot: string; text: string }> = {
   offline: { label: "离线", dot: "bg-muted-foreground", text: "text-muted-foreground" },
 };
 
-export function BoardSyncStatus() {
-  const [state, setState] = useState<SyncState>("synced");
+// controlledState（uc-canvas-005）：由实时协作层驱动真实同步状态。
+// 传入时组件转为「受控只读」，反映跨客户端同步周期（synced/saving）；
+// 不传时保持既有本地行为（UC-board-header-009）。
+export function BoardSyncStatus({ controlledState }: { controlledState?: SyncState } = {}) {
+  const [localState, setState] = useState<SyncState>("synced");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const state = controlledState ?? localState;
 
   // 监听浏览器在线/离线，模拟同步异常分支（UC 异常流程 3）。
   useEffect(() => {
@@ -48,6 +52,7 @@ export function BoardSyncStatus() {
 
   // 模拟一次保存：短暂切到「保存中」，随后回到「已同步」（UC 主流程 3→5）。
   function simulateSave() {
+    if (controlledState) return; // 受控时点击只读，不改本地状态
     if (state === "offline") return;
     setState("saving");
     if (timer.current) clearTimeout(timer.current);
