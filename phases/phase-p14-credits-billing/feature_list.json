@@ -12,6 +12,8 @@
       "sprint": "01",
       "owner": "wrk-credits-1",
       "capability": "CAP-DATA",
+      "depends_on": [],
+      "wave": 0,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
@@ -31,6 +33,10 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-PAYMENT",
+      "depends_on": [
+        "F05"
+      ],
+      "wave": 1,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
@@ -50,6 +56,10 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-DATA",
+      "depends_on": [
+        "F01"
+      ],
+      "wave": 1,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
@@ -69,6 +79,10 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-PAYMENT",
+      "depends_on": [
+        "F05"
+      ],
+      "wave": 1,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
@@ -84,10 +98,12 @@
       "title": "扫码支付引擎（下单/二维码/轮询/回调，Pro+Credit 共用）",
       "user_visible_behavior": "在 Pro 开通或 Credit 购买流程中：POST /api/payment/orders 创建订单并生成支付二维码展示，前端轮询订单状态；外部支付工具扫码付款后回调（webhook）更新订单为已支付并触发发放（加 Credit / 升级计划）；支付成功页/失败页/超时可刷新；重复回调幂等。",
       "design_ref": "prototype:<!-- buy credits modal -->（支付方式按钮 + 生成二维码 + 订单号 + 刷新状态区）；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "02",
+      "owner": "wrk-payment-1",
       "capability": "CAP-PAYMENT",
+      "depends_on": [],
+      "wave": 0,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",

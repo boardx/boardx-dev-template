@@ -12,6 +12,11 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-AI",
+      "depends_on": [
+        "p9:F01",
+        "p10:F01"
+      ],
+      "wave": 1,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
@@ -31,6 +36,10 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-AI",
+      "depends_on": [
+        "F01"
+      ],
+      "wave": 2,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
@@ -50,6 +59,10 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-AI",
+      "depends_on": [
+        "F02"
+      ],
+      "wave": 3,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",

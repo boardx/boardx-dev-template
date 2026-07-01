@@ -2,9 +2,10 @@ import { defineConfig, devices } from "@playwright/test";
 
 // e2e 配置：webServer 用 next dev（免 build，DATABASE_URL 从环境继承）。
 // 已有该端口在跑则复用（reuseExistingServer）。
-// 端口可用 E2E_PORT 覆盖（默认 3000），供多 worktree/多 agent 并行跑 e2e 时避免端口互踩。
-const PORT = process.env.E2E_PORT ?? "3000";
-const BASE_URL = `http://localhost:${PORT}`;
+// 端口可用 E2E_PORT 覆盖（默认 3000）——多个 worktree 并行跑 e2e 时，"复用已有 server"
+// 会复用到别的 worktree/分支的 server，测出来的是别人的代码；scripts/init-worktree-env.sh
+// 会给每个 worktree 分配独立的 E2E_PORT 写进 apps/web/.env.local 来避免这个问题。
+const PORT = process.env.E2E_PORT || "3000";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -16,13 +17,13 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: [["list"]],
   use: {
-    baseURL: BASE_URL,
+    baseURL: `http://localhost:${PORT}`,
     trace: "off",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     command: `next dev -p ${PORT}`,
-    url: `${BASE_URL}/api/health`,
+    url: `http://localhost:${PORT}/api/health`,
     reuseExistingServer: true,
     timeout: 120_000,
   },
