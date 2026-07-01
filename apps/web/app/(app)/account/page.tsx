@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { User, Shield, Settings as SettingsIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -89,6 +89,7 @@ function AccountCenter() {
 function PersonalInfo() {
   const [displayName, setDisplayName] = useState("");
   const [avatar, setAvatar] = useState("");
+  const avatarRef = useRef("");
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -96,7 +97,11 @@ function PersonalInfo() {
   useEffect(() => {
     void (async () => {
       const p = (await (await fetch("/api/profile")).json()).profile;
-      if (p) { setDisplayName(p.displayName ?? ""); setAvatar(p.avatar ?? ""); }
+      if (p) {
+        setDisplayName(p.displayName ?? "");
+        setAvatar(p.avatar ?? "");
+        avatarRef.current = p.avatar ?? "";
+      }
       setLoaded(true);
     })();
   }, []);
@@ -105,13 +110,23 @@ function PersonalInfo() {
 
   async function save() {
     setError(""); setSaved(false);
-    if (!displayName.trim()) return setError("显示名不能为空");
+    const input = document.getElementById("display-name") as HTMLInputElement | null;
+    const nextDisplayName = (input?.value ?? displayName).trim();
+    const nextAvatar = avatarRef.current;
+    setDisplayName(nextDisplayName);
+    setAvatar(nextAvatar);
+    if (!nextDisplayName) return setError("显示名不能为空");
     const res = await fetch("/api/profile", {
       method: "PATCH", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ displayName, avatar }),
+      body: JSON.stringify({ displayName: nextDisplayName, avatar: nextAvatar }),
     });
     if (res.ok) setSaved(true);
     else setError((await res.json().catch(() => ({}))).errors?.displayName ?? "保存失败");
+  }
+
+  function chooseAvatar(nextAvatar: string) {
+    avatarRef.current = nextAvatar;
+    setAvatar(nextAvatar);
   }
 
   return (
@@ -133,9 +148,9 @@ function PersonalInfo() {
       <div className="mb-1 flex flex-wrap items-center gap-2">
         {CANDIDATE_AVATARS.map((a, i) => (
           <Button key={a} data-testid={`avatar-opt-${i}`} type="button" size="sm"
-            variant={avatar === a ? "default" : "outline"} onClick={() => setAvatar(a)}>{a}</Button>
+            variant={avatar === a ? "default" : "outline"} onClick={() => chooseAvatar(a)}>{a}</Button>
         ))}
-        <Button data-testid="avatar-generate" type="button" size="sm" variant="secondary" onClick={() => setAvatar("seed:gen" + Date.now())}>AI generate</Button>
+        <Button data-testid="avatar-generate" type="button" size="sm" variant="secondary" onClick={() => chooseAvatar("seed:gen" + Date.now())}>AI generate</Button>
       </div>
 
       {error && <p data-testid="err" className="text-13 text-destructive">{error}</p>}
@@ -191,9 +206,15 @@ function Settings() {
   if (!loaded) return <section data-testid="section-settings"><p className="text-13 text-muted-foreground">加载中…</p></section>;
   async function save() {
     setSaved(false);
+    const aiModelSelect = document.getElementById("ai-model") as HTMLSelectElement | null;
+    const privacySelect = document.getElementById("default-privacy") as HTMLSelectElement | null;
+    const nextAiModel = aiModelSelect?.value ?? aiModel;
+    const nextDefaultPrivacy = privacySelect?.value ?? defaultPrivacy;
+    setAiModel(nextAiModel);
+    setDefaultPrivacy(nextDefaultPrivacy);
     const res = await fetch("/api/profile/settings", {
       method: "PUT", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ aiModel, defaultPrivacy }),
+      body: JSON.stringify({ aiModel: nextAiModel, defaultPrivacy: nextDefaultPrivacy }),
     });
     if (res.ok) setSaved(true);
   }
