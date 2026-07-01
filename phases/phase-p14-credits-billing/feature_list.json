@@ -8,9 +8,9 @@
       "title": "积分钱包查看（Team Credits 页 + 用户菜单个人余额）",
       "user_visible_behavior": "Team 管理角色进入 /credits：GET /api/credits/wallet?scope=team 展示团队 Credit 余额、购买记录、消耗记录（摘要卡片 + Usage/Purchase 标签表）；普通用户在用户菜单看到个人 Credit 余额入口与数值；无权限看不到团队钱包；加载骨架与空态。",
       "design_ref": "prototype:<!-- CREDITS -->（四摘要卡片 + Usage/Purchase 标签 + 用户菜单余额入口）；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-credits-1",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
