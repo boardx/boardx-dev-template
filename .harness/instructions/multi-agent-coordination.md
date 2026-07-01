@@ -101,23 +101,41 @@ reviewer.required_for 含 "*"   OR   reviewer.required_for ∩ {issue.area} ≠ 
 - coordinator 每轮检查：`status:in-progress` 且最后活动 > `LEASE_TTL`（建议 6h）→
   视为 stale：去 `agent:<id>`、回退 `status:ready-for-dev`、`harness` 释放 owner，可重分派。
 
-## 5. review-before-merge 硬门禁（机器校验，非君子协定）
+## 5. review-before-merge 门禁
 
-- **main 分支保护**（v0 配置，见 setup）：必须 PR、必须 required checks
-  （`verify`、`fullstack-smoke`）、必须分支 up-to-date、禁直推、必须 1 个 approve
-  （= coordinator 的 approve）。
-- **合并前置校验**（coordinator 或一个 CI job）：PR 正文含 `Closes #N`；
-  该 issue 的必需 `review:*-ok` 全部在 PR/issue 上。缺任一 → 不合并。
+理想是**服务端硬门禁**：main 分支保护 —— 必须 PR、必须 required checks
+（`verify`、`fullstack-smoke`）、必须分支 up-to-date、禁直推、必须 1 个 approve。
 
-> 这条是本方案对「主 agent 调各 agent review 后再合并」的**可执行落地**：
-> 不过 review 的 PR，在分支保护 + 前置校验双重拦截下无合法合并路径。
+> ⚠️ **当前套餐限制**：本仓是**私有仓 + GitHub 免费套餐**，经典分支保护与 rulesets
+> 均返回 403（"Upgrade to GitHub Pro or make this repository public"）。故服务端硬门禁
+> **暂不可用**。启用前置条件：仓库转 public / 升级 Pro(个人) 或 Team(org)。届时执行：
+>
+> ```bash
+> gh api -X PUT repos/boardx/boardx-dev-template/branches/main/protection --input - <<'JSON'
+> { "required_status_checks": { "strict": true, "contexts": ["verify","fullstack-smoke"] },
+>   "enforce_admins": false,
+>   "required_pull_request_reviews": { "required_approving_review_count": 1 },
+>   "restrictions": null }
+> JSON
+> ```
+
+**v0 现行门禁（无服务端强制时的兜底）**——由 **coordinator（v1）** 在合并动作前**程序化校验**：
+1. PR 正文含 `Closes #N`；
+2. 该 issue 的必需 `review:*-ok`（按 §3 路由）全部到齐；
+3. CI 的 `verify`、`fullstack-smoke` 为 success；
+4. 分支 up-to-date。
+缺任一 → coordinator **拒绝合并**，置 `status:changes-requested`。
+
+> 因 coordinator 是**唯一被授权执行合并**的角色，"不过 review 就不合并"由它独占合并权来保证。
+> 服务端保护一旦可用，即从「唯一合并者」升级为「任何人都无法绕过」的双保险。
 
 ## 6. v0 边界（当前落地范围）
 
 v0 只做**契约层**，不引入 coordinator 自动化代码（那是 v1）：
 - 本文 + ADR-004 + `registry.yaml`（协议与身份）。
 - `migrate-labels.ts` + 规范 `status:*` label（状态机就位）。
-- main 分支保护 + required checks（硬门禁就位）。
+- 门禁：因套餐限制服务端分支保护暂不可用（§5），v0 由 coordinator 独占合并权兜底；
+  服务端保护命令已备好，待仓库转 public / 升级套餐后启用。
 - `github-sync.yaml` 的 `status_actions` 对齐规范 label。
 
 → v0 完成后，**人类或任一 agent 可照本文手动跑通全流程**；v1 再把 §2 循环实现为自动 coordinator。
