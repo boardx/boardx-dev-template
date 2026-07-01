@@ -56,15 +56,12 @@ export default function PaymentTestPage() {
     setCreating(true);
     setError("");
     stopPolling();
+    // 只传目录 sku——金额与发放数量由服务端目录决定，客户端不能自己指定
+    // amountCents/fulfillmentPayload（security review on PR #147）。
     const res = await fetch("/api/payment/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fulfillmentKind: "credit_purchase",
-        amountCents: 999,
-        currency: "USD",
-        fulfillmentPayload: { credits: 5000 },
-      }),
+      body: JSON.stringify({ sku: "credits_5000" }),
     });
     if (res.status === 401) {
       router.replace("/login");
