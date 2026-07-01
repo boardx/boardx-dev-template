@@ -2,7 +2,7 @@
 // uc-admin-002 — 后台团队管理（F03）：搜索/分页/编辑团队类型 + 手动上分。
 // 复用 F01 的 requireSysAdmin() 门控（server component 侧走 gate 决定是否渲染本页），
 // 数据走 /api/admin/teams* 真实 DB（CAP-DATA），手动上分复用 p14 credit_transactions。
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, ChevronLeft, ChevronRight, Pencil, Coins, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -146,6 +146,9 @@ function ManualCreditModal({
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  // 幂等 key：每次打开弹窗生成一次（不是每次点击），双击/重试提交复用同一个 key，
+  // 服务端据此去重，避免网络重试或手滑双击造成重复上分。
+  const idempotencyKeyRef = useRef<string>(crypto.randomUUID());
 
   async function submit() {
     setError("");
@@ -154,11 +157,12 @@ function ManualCreditModal({
       setError("请输入大于 0 的整数");
       return;
     }
+    if (saving) return; // 双重保险：客户端也拦一次并发提交（服务端幂等 key 才是真正的防线）
     setSaving(true);
     try {
       const res = await fetch(`/api/admin/teams/${team.id}/credit`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "idempotency-key": idempotencyKeyRef.current },
         body: JSON.stringify({ amount: n, note }),
       });
       const d = await res.json().catch(() => ({}));
@@ -212,13 +216,14 @@ function ManualCreditModal({
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="credit-note">备注（可选）</Label>
+            <Label htmlFor="credit-note">备注（可选，最多 200 字）</Label>
             <Input
               id="credit-note"
               data-testid="credit-note"
               placeholder="上分原因"
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(e) => setNote(e.target.value.slice(0, 200))}
+              maxLength={200}
               disabled={saving}
             />
           </div>

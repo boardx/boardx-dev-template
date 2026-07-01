@@ -83,6 +83,25 @@ export async function listTransactions(walletId: number, limit = 50): Promise<Cr
 }
 
 /**
+ * 幂等查重（P15 F03 review 加固）：按 wallet_id + label 精确匹配查最近一条流水。
+ * 调用方把幂等 key 编码进 label（如 "Admin grant · idem:<key>"），命中即视为重复提交，
+ * 直接复用已有流水，不再重复入账。不新增迁移/列——复用既有 label 文本列，靠调用方
+ * 保证 label 里带的 key 足够唯一（uuid）。
+ */
+export async function findTransactionByLabel(
+  walletId: number,
+  label: string
+): Promise<CreditTransaction | undefined> {
+  const rows = await query<CreditTransaction>(
+    `SELECT id, wallet_id, kind, label, description, amount, balance_after, created_at
+     FROM credit_transactions WHERE wallet_id = $1 AND label = $2
+     ORDER BY created_at DESC, id DESC LIMIT 1`,
+    [walletId, label]
+  );
+  return rows[0];
+}
+
+/**
  * 记一笔流水并原子更新钱包汇总字段（余额 + 对应累计）。
  * usage：amount 传负数，累加 total_consumed（取绝对值）。
  * purchase：amount 传正数；grant=true 累加 total_granted，否则累加 total_purchased。

@@ -3,17 +3,22 @@
 ## 当前已验证
 - F03（团队管理）：实现完成，验证全绿（见 `progress.md` 的"运行过的验证"一节）。
   尚未由 `pnpm harness verify` 门控为 `passing`（该转移不由本 agent 执行）。
+- PR #157 review 反馈的 3 处 medium finding（幂等/审计/note 长度）已修复并验证，等待
+  coordinator 重新 review。
 
 ## 本轮改动
 - 合并了 `origin/harness/coord-dispatch-wave2-admin-payment`（带入 F01 admin 门控骨架 +
   p14 F05 payment engine，这两者不是本 feature 的产出，只是依赖需要）。
 - `packages/data/src/teams.ts`：新增 `listAdminTeams`/`updateTeamType`/`isTeamType`。
 - `apps/web/app/api/admin/teams/route.ts`（新）、`.../[id]/route.ts`（新）、
-  `.../[id]/credit/route.ts`（新）。
-- `apps/web/app/(app)/admin/teams/page.tsx`：从 F01 占位页替换为真实团队管理页。
+  `.../[id]/credit/route.ts`（新，含幂等/审计/note 长度加固，见下）。
+- `apps/web/app/(app)/admin/teams/page.tsx`：从 F01 占位页替换为真实团队管理页；
+  `ManualCreditModal` 加 `Idempotency-Key` 请求头 + note `maxLength=200`。
 - `apps/web/app/(app)/admin/admin-home.tsx`：teams 模块 `available: true`。
 - `apps/web/e2e/admin-005-view-admin-home.spec.ts`：更新团队相关两条断言以匹配真实行为。
-- 新增 `apps/web/e2e/admin-002-manage-teams.spec.ts`（本 feature 的目标验证）。
+- `packages/data/src/credits.ts`：新增 `findTransactionByLabel`（幂等查重用）。
+- `apps/web/e2e/admin-002-manage-teams.spec.ts`：本 feature 的目标验证，现 8 条用例
+  （含幂等重放、note 裁剪两条 review 后新增）。
 
 ## 仍损坏或未验证
 - 无已知损坏。`verify:base` 与目标 e2e（`admin-002-manage-teams.spec.ts` 6/6 +
@@ -30,7 +35,7 @@
   `evidence/README.md`「push 用了 `--no-verify`」一节和 `evidence/f03-04-verify-full-attempt.txt`。
 
 ## 下一步最佳动作
-- 下一轮：等 PR #137（Closes #137）review + CI 绿后由 coordinator 合并。
+- 下一轮：等 PR #157（Closes #137）review 重跑 + CI 绿后由 coordinator 合并。
 - 不要动 `apps/web/app/(app)/admin/users/*`、`apps/web/app/api/admin/users/*`
   （F02 owner wrk-admin-1 的范围）。
 - 不要动 `apps/web/app/(app)/admin/ai-store/*`（F04/F05，blocked-on p11，未来 owner 的范围）。

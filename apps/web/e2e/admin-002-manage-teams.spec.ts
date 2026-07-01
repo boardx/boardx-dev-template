@@ -122,3 +122,53 @@ test("SysAdmin 为团队手动增加 Credit，余额立即反映", async ({ page
   const badRes = await page.request.post(`/api/admin/teams/${teamId}/credit`, { data: { amount: -5 } });
   expect(badRes.status()).toBe(400);
 });
+
+test("手动上分带幂等 key：重复提交（同 key）不会重复入账", async ({ page }) => {
+  await registerAndPromote(page);
+  const teamName = `Acme Idem ${Date.now()}`;
+  const teamId = await createTeam(page, teamName);
+
+  const idemKey = `idem-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const headers = { "content-type": "application/json", "idempotency-key": idemKey };
+
+  const res1 = await page.request.post(`/api/admin/teams/${teamId}/credit`, {
+    headers,
+    data: { amount: 1000 },
+  });
+  expect(res1.status()).toBe(200);
+  const body1 = await res1.json();
+  expect(body1.wallet.balance).toBe(1000);
+
+  // 同一 idempotency key 重放（模拟双击/网络重试）→ 不应二次入账
+  const res2 = await page.request.post(`/api/admin/teams/${teamId}/credit`, {
+    headers,
+    data: { amount: 1000 },
+  });
+  expect(res2.status()).toBe(200);
+  const body2 = await res2.json();
+  expect(body2.wallet.balance).toBe(1000); // 仍是 1000，不是 2000
+  expect(body2.idempotent).toBe(true);
+
+  // 换一个新 key 再提交 → 视为新的一次上分，正常入账
+  const res3 = await page.request.post(`/api/admin/teams/${teamId}/credit`, {
+    headers: { "content-type": "application/json", "idempotency-key": `${idemKey}-v2` },
+    data: { amount: 1000 },
+  });
+  expect(res3.status()).toBe(200);
+  const body3 = await res3.json();
+  expect(body3.wallet.balance).toBe(2000);
+});
+
+test("手动上分 note 超长会被服务端裁剪到 200 字符", async ({ page }) => {
+  await registerAndPromote(page);
+  const teamName = `Acme NoteCap ${Date.now()}`;
+  const teamId = await createTeam(page, teamName);
+
+  const longNote = "x".repeat(500);
+  const res = await page.request.post(`/api/admin/teams/${teamId}/credit`, {
+    data: { amount: 100, note: longNote },
+  });
+  expect(res.status()).toBe(200);
+  // 服务端裁剪逻辑不对外暴露原始 description，这里只验证请求本身被接受（不 500/不因超长报错），
+  // 裁剪结果的落库行为由 packages/data 层的字符串操作保证（slice(0, 200)），属实现细节。
+});

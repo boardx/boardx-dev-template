@@ -64,6 +64,30 @@
   wrk-admin-1 尚未完成）或本阶段其余 wave 1/2 feature 继续。不要动 `admin/users/*` 相关文件
   （F02 owner 的范围）。
 
+### 2026-07-01（续）— review 反馈修复（PR #157，3 处 medium finding）
+- 本轮目标: 修复 coordinator 转达的 code review 三处发现，均在
+  `apps/web/app/api/admin/teams/[id]/credit/route.ts`（手动上分接口）。
+- 已完成:
+  1. 幂等：`packages/data/src/credits.ts` 新增 `findTransactionByLabel`（按 wallet_id+label
+     精确查重，不加迁移）；接口读 `Idempotency-Key` 请求头，编码进流水 `label`，命中已存在
+     流水直接返回、不二次入账。客户端 `ManualCreditModal` 用 `crypto.randomUUID()` 每次
+     打开弹窗生成一个 key 随请求发送。
+  2. 审计：`description` 加入 `操作人 <email> (uid:<id>)`（来自 `gate.user`），敏感财务操作
+     现在可追溯到具体 SysAdmin。
+  3. `note` 服务端 `trim().slice(0, 200)`，客户端同步加 `maxLength={200}`。
+  - 新增 2 条 e2e（幂等重放、note 超长裁剪），`admin-002-manage-teams.spec.ts` 现 8 条用例。
+- 运行过的验证:
+  - `pnpm --filter @repo/data run typecheck` ✓ / `pnpm --filter @repo/web run typecheck` ✓
+  - `pnpm --filter @repo/data run lint` ✓ / `pnpm --filter @repo/web run lint` ✓
+  - `pnpm --filter @repo/web exec playwright test e2e/admin-002-manage-teams.spec.ts` ✓ 8/8 passed
+  - `pnpm --filter @repo/web exec playwright test e2e/admin-002-manage-teams.spec.ts e2e/admin-001-manage-users.spec.ts e2e/admin-005-view-admin-home.spec.ts` ✓ 18/18 passed（全量 admin 回归）
+  - 额外用 `docker exec infra-postgres-1 psql` 直接查 `credit_transactions` 表，确认
+    幂等未重复入账、审计字段格式正确、note 裁剪后精确 200 字符。
+- 已记录证据: `f03-05-review-fixes-playwright.txt`（新增），`README.md` 补充"review 加固"一节。
+- 提交记录: 同分支 `worker/wrk-admin-2-p15-f03-team-management` 追加 commit（见 PR #157）。
+- 已知风险或未解决问题: 无新增。
+- 下一步最佳动作: 等 coordinator 重新 review；review 绿后按原计划合并。
+
 ## 命令
 - 启动:`pnpm -w run dev`
 - 验证:`pnpm harness verify --sprint p15/02`
