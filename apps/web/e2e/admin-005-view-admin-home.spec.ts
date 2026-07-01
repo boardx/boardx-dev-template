@@ -53,8 +53,11 @@ test("SysAdmin 访问 /admin 看到统计摘要与模块导航", async ({ page }
   await expect(page.getByTestId("module-ai-store-review")).toBeVisible();
   await expect(page.getByTestId("module-ai-store-featured")).toBeVisible();
 
-  // 未建成模块标注"即将上线"
-  await expect(page.getByTestId("module-badge-teams")).toBeVisible();
+  // 尚未建成模块（AI Store 审核/精选，各自独立 feature）标注"即将上线"；
+  // 团队管理（F03）已落地，不带该徽章——见 admin-002-manage-teams.spec.ts。
+  await expect(page.getByTestId("module-badge-ai-store-review")).toBeVisible();
+  await expect(page.getByTestId("module-badge-ai-store-featured")).toBeVisible();
+  await expect(page.getByTestId("module-badge-teams")).toHaveCount(0);
 });
 
 test("SysAdmin 点用户管理导航进入 /admin/users", async ({ page }) => {
@@ -65,12 +68,12 @@ test("SysAdmin 点用户管理导航进入 /admin/users", async ({ page }) => {
   await expect(page.getByTestId("user-list")).toBeVisible();
 });
 
-test("SysAdmin 点团队管理导航进入占位子页", async ({ page }) => {
+test("SysAdmin 点团队管理导航进入 /admin/teams", async ({ page }) => {
   await registerAndPromote(page);
   await page.goto("/admin");
   await page.getByTestId("module-teams").click();
   await expect(page).toHaveURL(/\/admin\/teams$/);
-  await expect(page.getByTestId("coming-soon")).toBeVisible();
+  await expect(page.getByTestId("team-list")).toBeVisible();
 });
 
 test("统计摘要 API 未登录 401、非 SysAdmin 403", async ({ page }) => {
