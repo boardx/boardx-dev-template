@@ -28,9 +28,13 @@
   - `pnpm -w run verify:base`（typecheck + lint + test）✓ 45/45 通过
   - 回归检查：`ava-chat-basic.spec.ts`、`kb-001-upload-file.spec.ts`、
     `room-chat-create.spec.ts`（New Chat 三栏工作区场景）全部通过，无回归
+  - `bash scripts/verify-full.sh`（生产 build + 全量 275 个 e2e）：206 passed / 69 failed；
+    逐一核对 69 个失败均为既有 `ECONNREFUSED ::1:3000`（e2e helper 硬编码端口 3000，与
+    `E2E_PORT` 不一致的既有 bug），零个 `studio-*` 失败
 - 已记录证据:
-  - `phases/phase-p12-studio-presentations/sprints/sprint-01/evidence/studio-001-generate-artifact.e2e.log`
-  - `phases/phase-p12-studio-presentations/sprints/sprint-01/evidence/verify-base.log`
+  - `phases/phase-p12-studio-presentations/sprints/sprint-01/evidence/studio-001-generate-artifact.e2e.txt`
+  - `phases/phase-p12-studio-presentations/sprints/sprint-01/evidence/verify-base.txt`
+  - `phases/phase-p12-studio-presentations/sprints/sprint-01/evidence/verify-full.txt`
 - 提交记录: 分支 `worker/wrk-studio-1-p12-f01-studio-panel`（见 PR）
 - 已知风险或未解决问题:
   - "房间文件"来源语义 = kb_files（personal/team scope 映射），非真正房间级文件关联表（现有

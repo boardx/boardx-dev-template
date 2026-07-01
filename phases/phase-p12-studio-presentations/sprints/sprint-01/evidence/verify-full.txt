@@ -1,0 +1,2158 @@
+==> [1/3] verify:base（typecheck + lint + test）
+
+> boardx-dev-template@ verify:base /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea
+> turbo run typecheck lint test
+
+turbo 2.5.0
+
+• Packages in scope: @repo/agent-core, @repo/ai, @repo/auth, @repo/canvas, @repo/data, @repo/memory, @repo/orchestrator, @repo/queue, @repo/storage, @repo/tools, @repo/web, @repo/workflow-worker
+• Running typecheck, lint, test in 12 packages
+• Remote caching disabled
+@repo/auth:test: cache hit, replaying logs 283b76ae5d22e966
+@repo/auth:test: 
+@repo/auth:test: > @repo/auth@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/auth
+@repo/agent-core:typecheck: cache hit, replaying logs 605f8206aa339bc0
+@repo/agent-core:typecheck: 
+@repo/queue:typecheck: cache hit, replaying logs f22197f86e1f7c6c
+@repo/auth:test: > vitest run
+@repo/auth:test: 
+@repo/auth:test: 
+@repo/agent-core:typecheck: > @repo/agent-core@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/agent-core
+@repo/agent-core:typecheck: > tsc --noEmit
+@repo/workflow-worker:lint: cache hit, replaying logs e5e0d69f1d8a5902
+@repo/auth:typecheck: cache hit, replaying logs f35d7257fc333431
+@repo/auth:lint: cache hit, replaying logs 59f7760fc95c92b4
+@repo/auth:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/auth
+@repo/auth:test: 
+@repo/auth:test:  ✓ src/index.test.ts  (15 tests) 1464ms
+@repo/auth:test: 
+@repo/auth:test:  Test Files  1 passed (1)
+@repo/auth:test:       Tests  15 passed (15)
+@repo/auth:test:    Start at  23:01:14
+@repo/auth:test:    Duration  2.93s (transform 153ms, setup 0ms, collect 312ms, tests 1.46s, environment 0ms, prepare 253ms)
+@repo/auth:test: 
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: > @repo/workflow-worker@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/workflow-worker
+@repo/workflow-worker:lint: > echo 'lint: ok'
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: lint: ok
+@repo/auth:typecheck: 
+@repo/auth:typecheck: > @repo/auth@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/auth
+@repo/auth:typecheck: > tsc --noEmit
+@repo/auth:typecheck: 
+@repo/queue:typecheck: 
+@repo/queue:typecheck: > @repo/queue@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/queue
+@repo/queue:typecheck: > tsc --noEmit
+@repo/queue:typecheck: 
+@repo/agent-core:typecheck: 
+@repo/auth:lint: 
+@repo/auth:lint: > @repo/auth@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/auth
+@repo/auth:lint: > echo 'lint: ok'
+@repo/auth:lint: 
+@repo/auth:lint: lint: ok
+@repo/queue:test: cache hit, replaying logs bf88e28ea2c10c45
+@repo/queue:test: 
+@repo/queue:test: > @repo/queue@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/queue
+@repo/queue:test: > vitest run
+@repo/queue:test: 
+@repo/queue:test: 
+@repo/queue:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/queue
+@repo/queue:test: 
+@repo/queue:test:  ✓ src/index.test.ts  (4 tests) 5ms
+@repo/queue:test: 
+@repo/queue:test:  Test Files  1 passed (1)
+@repo/queue:test:       Tests  4 passed (4)
+@repo/queue:test:    Start at  23:01:19
+@repo/queue:test:    Duration  2.17s (transform 77ms, setup 0ms, collect 884ms, tests 5ms, environment 0ms, prepare 400ms)
+@repo/queue:test: 
+@repo/queue:lint: cache hit, replaying logs 673ec8885e75cc12
+@repo/queue:lint: 
+@repo/queue:lint: > @repo/queue@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/queue
+@repo/queue:lint: > echo 'lint: ok'
+@repo/queue:lint: 
+@repo/queue:lint: lint: ok
+@repo/ai:typecheck: cache hit, replaying logs 85590ec7ef654ffa
+@repo/ai:typecheck: 
+@repo/ai:typecheck: > @repo/ai@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/ai
+@repo/ai:typecheck: > tsc --noEmit
+@repo/ai:typecheck: 
+@repo/ai:lint: cache hit, replaying logs d2fe29f004daccb5
+@repo/ai:lint: 
+@repo/ai:lint: > @repo/ai@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/ai
+@repo/ai:lint: > echo 'lint: ok'
+@repo/ai:lint: 
+@repo/ai:lint: lint: ok
+@repo/ai:test: cache hit, replaying logs 9eabbc59baf6a932
+@repo/ai:test: 
+@repo/ai:test: > @repo/ai@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/ai
+@repo/ai:test: > vitest run
+@repo/ai:test: 
+@repo/ai:test: 
+@repo/ai:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/ai
+@repo/ai:test: 
+@repo/ai:test:  ✓ src/studioGenerator.test.ts  (4 tests) 11ms
+@repo/ai:test:  ✓ src/index.test.ts  (10 tests) 5ms
+@repo/ai:test: 
+@repo/ai:test:  Test Files  2 passed (2)
+@repo/ai:test:       Tests  14 passed (14)
+@repo/ai:test:    Start at  23:01:17
+@repo/ai:test:    Duration  1.23s (transform 179ms, setup 0ms, collect 217ms, tests 16ms, environment 0ms, prepare 804ms)
+@repo/ai:test: 
+@repo/canvas:typecheck: cache hit, replaying logs ec14d65654c44629
+@repo/canvas:typecheck: 
+@repo/canvas:typecheck: > @repo/canvas@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/canvas
+@repo/canvas:typecheck: > tsc --noEmit
+@repo/canvas:typecheck: 
+@repo/memory:test: cache hit, replaying logs 6901151252fb79a2
+@repo/memory:test: 
+@repo/memory:test: > @repo/memory@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/memory
+@repo/memory:test: > vitest run
+@repo/memory:test: 
+@repo/memory:test: 
+@repo/memory:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/memory
+@repo/memory:test: 
+@repo/memory:test:  ✓ src/index.test.ts  (13 tests) 19ms
+@repo/memory:test: 
+@repo/memory:test:  Test Files  1 passed (1)
+@repo/memory:test:       Tests  13 passed (13)
+@repo/memory:test:    Start at  23:01:26
+@repo/memory:test:    Duration  1.56s (transform 135ms, setup 0ms, collect 272ms, tests 19ms, environment 0ms, prepare 325ms)
+@repo/memory:test: 
+@repo/agent-core:build: cache hit, replaying logs 72029ef72bc90291
+@repo/agent-core:build: 
+@repo/agent-core:build: > @repo/agent-core@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/agent-core
+@repo/agent-core:build: > tsc --noEmit
+@repo/agent-core:build: 
+@repo/tools:build: cache hit, replaying logs 572d3f061bd1690e
+@repo/tools:build: 
+@repo/tools:build: > @repo/tools@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/tools
+@repo/tools:build: > tsc --noEmit
+@repo/tools:build: 
+@repo/canvas:lint: cache hit, replaying logs 13e32f8d9de0dc8c
+@repo/canvas:lint: 
+@repo/canvas:lint: > @repo/canvas@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/canvas
+@repo/canvas:lint: > echo 'lint: ok'
+@repo/canvas:lint: 
+@repo/canvas:lint: lint: ok
+@repo/memory:build: cache hit, replaying logs ef2c4955f90a55e2
+@repo/memory:build: 
+@repo/memory:build: > @repo/memory@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/memory
+@repo/memory:build: > tsc --noEmit
+@repo/memory:build: 
+@repo/canvas:test: cache hit, replaying logs 85524402dd543241
+@repo/canvas:test: 
+@repo/canvas:test: > @repo/canvas@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/canvas
+@repo/canvas:test: > vitest run
+@repo/canvas:test: 
+@repo/canvas:test: 
+@repo/canvas:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/canvas
+@repo/canvas:test: 
+@repo/canvas:test:  ✓ src/index.test.ts  (8 tests) 13ms
+@repo/canvas:test: 
+@repo/canvas:test:  Test Files  1 passed (1)
+@repo/canvas:test:       Tests  8 passed (8)
+@repo/canvas:test:    Start at  23:01:12
+@repo/canvas:test:    Duration  1.88s (transform 181ms, setup 0ms, collect 306ms, tests 13ms, environment 0ms, prepare 194ms)
+@repo/canvas:test: 
+@repo/orchestrator:lint: cache hit, replaying logs 30eb51336094ef04
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: > @repo/orchestrator@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/orchestrator
+@repo/orchestrator:lint: > echo 'lint: ok'
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: lint: ok
+@repo/memory:typecheck: cache hit, replaying logs 0c6677da20af9c13
+@repo/memory:typecheck: 
+@repo/memory:typecheck: > @repo/memory@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/memory
+@repo/memory:typecheck: > tsc --noEmit
+@repo/memory:typecheck: 
+@repo/memory:lint: cache hit, replaying logs 27a0f892baac9da2
+@repo/memory:lint: 
+@repo/memory:lint: > @repo/memory@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/memory
+@repo/memory:lint: > echo 'lint: ok'
+@repo/memory:lint: 
+@repo/memory:lint: lint: ok
+@repo/canvas:build: cache hit, replaying logs 5ab8469f958aa507
+@repo/canvas:build: 
+@repo/canvas:build: > @repo/canvas@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/canvas
+@repo/canvas:build: > tsc --noEmit
+@repo/canvas:build: 
+@repo/storage:test: cache hit, replaying logs d4a575feb0dc0c2a
+@repo/storage:test: 
+@repo/storage:test: > @repo/storage@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/storage
+@repo/storage:test: > vitest run
+@repo/storage:test: 
+@repo/storage:test: 
+@repo/storage:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/storage
+@repo/storage:test: 
+@repo/storage:test:  ✓ src/index.test.ts  (10 tests) 5ms
+@repo/storage:test: 
+@repo/storage:test:  Test Files  1 passed (1)
+@repo/storage:test:       Tests  10 passed (10)
+@repo/storage:test:    Start at  23:01:12
+@repo/storage:test:    Duration  2.76s (transform 257ms, setup 0ms, collect 742ms, tests 5ms, environment 0ms, prepare 722ms)
+@repo/storage:test: 
+@repo/ai:build: cache hit, replaying logs c617b76bcf6c213e
+@repo/ai:build: 
+@repo/ai:build: > @repo/ai@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/ai
+@repo/ai:build: > tsc --noEmit
+@repo/ai:build: 
+@repo/storage:build: cache hit, replaying logs ffa59a8ab7bf5aa4
+@repo/storage:build: 
+@repo/storage:build: > @repo/storage@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/storage
+@repo/storage:build: > tsc --noEmit
+@repo/storage:build: 
+@repo/data:build: cache hit, replaying logs 80dfce04304491d4
+@repo/data:build: 
+@repo/data:build: > @repo/data@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/data
+@repo/data:build: > tsc --noEmit
+@repo/data:build: 
+@repo/tools:test: cache hit, replaying logs 6ccaef08a058b3c2
+@repo/tools:test: 
+@repo/tools:test: > @repo/tools@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/tools
+@repo/tools:test: > vitest run
+@repo/tools:test: 
+@repo/tools:test: 
+@repo/tools:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/tools
+@repo/tools:test: 
+@repo/tools:test:  ✓ src/index.test.ts  (12 tests) 565ms
+@repo/tools:test: 
+@repo/tools:test:  Test Files  1 passed (1)
+@repo/tools:test:       Tests  12 passed (12)
+@repo/tools:test:    Start at  23:01:31
+@repo/tools:test:    Duration  2.25s (transform 102ms, setup 0ms, collect 95ms, tests 565ms, environment 0ms, prepare 383ms)
+@repo/tools:test: 
+@repo/tools:lint: cache hit, replaying logs 4cc8ff2f66a3d7bc
+@repo/tools:typecheck: cache hit, replaying logs d11b4f859a2cd2f4
+@repo/tools:lint: 
+@repo/tools:lint: > @repo/tools@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/tools
+@repo/tools:lint: > echo 'lint: ok'
+@repo/tools:lint: 
+@repo/tools:lint: lint: ok
+@repo/tools:typecheck: 
+@repo/tools:typecheck: > @repo/tools@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/tools
+@repo/tools:typecheck: > tsc --noEmit
+@repo/tools:typecheck: 
+@repo/data:typecheck: cache hit, replaying logs 02a66d685e575df6
+@repo/data:typecheck: 
+@repo/data:typecheck: > @repo/data@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/data
+@repo/data:typecheck: > tsc --noEmit
+@repo/data:typecheck: 
+@repo/agent-core:lint: cache hit, replaying logs ac94863c4184d627
+@repo/agent-core:lint: 
+@repo/agent-core:lint: > @repo/agent-core@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/agent-core
+@repo/agent-core:lint: > echo 'lint: ok'
+@repo/agent-core:lint: 
+@repo/agent-core:lint: lint: ok
+@repo/auth:build: cache hit, replaying logs 4766192533897541
+@repo/auth:build: 
+@repo/auth:build: > @repo/auth@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/auth
+@repo/auth:build: > tsc --noEmit
+@repo/auth:build: 
+@repo/web:lint: cache hit, replaying logs 2b257ddae0c401db
+@repo/web:lint: 
+@repo/web:lint: > @repo/web@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web
+@repo/web:lint: > bash scripts/lint-design.sh
+@repo/web:lint: 
+@repo/web:lint: ✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性）
+@repo/data:test: cache hit, replaying logs 9b7bb58b81e26e95
+@repo/data:test: 
+@repo/data:test: > @repo/data@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/data
+@repo/data:test: > vitest run
+@repo/data:test: 
+@repo/data:test: 
+@repo/data:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/data
+@repo/data:test: 
+@repo/data:test:  ✓ src/aiStore.test.ts  (8 tests) 3ms
+@repo/data:test:  ✓ src/roomChat.test.ts  (2 tests) 3ms
+@repo/data:test:  ✓ src/avaChat.test.ts  (5 tests) 4ms
+@repo/data:test:  ✓ src/board.test.ts  (9 tests) 7ms
+@repo/data:test:  ✓ src/index.test.ts  (3 tests) 25ms
+@repo/data:test:  ✓ src/survey.test.ts  (4 tests) 25ms
+@repo/data:test: 
+@repo/data:test:  Test Files  6 passed (6)
+@repo/data:test:       Tests  31 passed (31)
+@repo/data:test:    Start at  23:01:21
+@repo/data:test:    Duration  2.86s (transform 813ms, setup 2ms, collect 3.09s, tests 67ms, environment 1ms, prepare 3.03s)
+@repo/data:test: 
+@repo/data:lint: cache hit, replaying logs 7790c5a0cbf3ddc9
+@repo/data:lint: 
+@repo/data:lint: > @repo/data@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/data
+@repo/data:lint: > echo 'lint: ok'
+@repo/data:lint: 
+@repo/data:lint: lint: ok
+@repo/storage:typecheck: cache hit, replaying logs 086d2e30e6f2663c
+@repo/storage:typecheck: 
+@repo/storage:typecheck: > @repo/storage@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/storage
+@repo/storage:typecheck: > tsc --noEmit
+@repo/storage:typecheck: 
+@repo/queue:build: cache hit, replaying logs 96db79f6ee46487e
+@repo/queue:build: 
+@repo/queue:build: > @repo/queue@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/queue
+@repo/queue:build: > tsc --noEmit
+@repo/queue:build: 
+@repo/agent-core:test: cache hit, replaying logs 79e924826c73601a
+@repo/agent-core:test: 
+@repo/agent-core:test: > @repo/agent-core@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/agent-core
+@repo/agent-core:test: > vitest run
+@repo/agent-core:test: 
+@repo/agent-core:test: 
+@repo/agent-core:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/agent-core
+@repo/agent-core:test: 
+@repo/agent-core:test:  ✓ src/index.test.ts  (3 tests) 5ms
+@repo/agent-core:test: 
+@repo/agent-core:test:  Test Files  1 passed (1)
+@repo/agent-core:test:       Tests  3 passed (3)
+@repo/agent-core:test:    Start at  23:01:21
+@repo/agent-core:test:    Duration  2.02s (transform 78ms, setup 0ms, collect 138ms, tests 5ms, environment 0ms, prepare 772ms)
+@repo/agent-core:test: 
+@repo/storage:lint: cache hit, replaying logs a157f296906da492
+@repo/storage:lint: 
+@repo/storage:lint: > @repo/storage@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/storage
+@repo/storage:lint: > echo 'lint: ok'
+@repo/storage:lint: 
+@repo/storage:lint: lint: ok
+@repo/orchestrator:typecheck: cache hit, replaying logs 1e68a3fdb453ab29
+@repo/orchestrator:typecheck: 
+@repo/orchestrator:typecheck: > @repo/orchestrator@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/orchestrator
+@repo/orchestrator:typecheck: > tsc --noEmit
+@repo/orchestrator:typecheck: 
+@repo/orchestrator:test: cache hit, replaying logs 72b6c028823cc98c
+@repo/orchestrator:test: 
+@repo/orchestrator:test: > @repo/orchestrator@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/orchestrator
+@repo/orchestrator:test: > vitest run
+@repo/orchestrator:test: 
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/orchestrator
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  ✓ src/orchestrator.test.ts  (3 tests) 327ms
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  Test Files  1 passed (1)
+@repo/orchestrator:test:       Tests  3 passed (3)
+@repo/orchestrator:test:    Start at  23:01:31
+@repo/orchestrator:test:    Duration  1.93s (transform 242ms, setup 0ms, collect 320ms, tests 327ms, environment 0ms, prepare 166ms)
+@repo/orchestrator:test: 
+@repo/workflow-worker:test: cache hit, replaying logs 52f0b7936dc806c2
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test: > @repo/workflow-worker@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/workflow-worker
+@repo/workflow-worker:test: > vitest run
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/workflow-worker
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  ✓ src/kbFileJob.test.ts  (2 tests) 4ms
+@repo/workflow-worker:test:  ✓ src/job.test.ts  (3 tests) 6ms
+@repo/workflow-worker:test:  ✓ src/studioJob.test.ts  (2 tests) 3ms
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  Test Files  3 passed (3)
+@repo/workflow-worker:test:       Tests  7 passed (7)
+@repo/workflow-worker:test:    Start at  23:01:34
+@repo/workflow-worker:test:    Duration  1.19s (transform 291ms, setup 0ms, collect 392ms, tests 13ms, environment 1ms, prepare 1.06s)
+@repo/workflow-worker:test: 
+@repo/workflow-worker:typecheck: cache hit, replaying logs 6c1b78e8127f3ddc
+@repo/workflow-worker:typecheck: 
+@repo/workflow-worker:typecheck: > @repo/workflow-worker@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/workflow-worker
+@repo/workflow-worker:typecheck: > tsc --noEmit
+@repo/workflow-worker:typecheck: 
+@repo/web:test: cache hit, replaying logs 4d193b9b085d797f
+@repo/web:test: 
+@repo/web:test: > @repo/web@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web
+@repo/web:test: > vitest run
+@repo/web:test: 
+@repo/web:test: [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+@repo/web:test: 
+@repo/web:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web
+@repo/web:test: 
+@repo/web:test:  ✓ lib/health.test.ts  (1 test) 3ms
+@repo/web:test:  ✓ lib/agents.test.ts  (5 tests) 22ms
+@repo/web:test:  ✓ lib/viewport.test.ts  (4 tests) 3ms
+@repo/web:test:  ✓ lib/feedback.test.ts  (2 tests) 2ms
+@repo/web:test: 
+@repo/web:test:  Test Files  4 passed (4)
+@repo/web:test:       Tests  12 passed (12)
+@repo/web:test:    Start at  23:08:46
+@repo/web:test:    Duration  1.21s (transform 121ms, setup 0ms, collect 175ms, tests 30ms, environment 0ms, prepare 1.08s)
+@repo/web:test: 
+@repo/web:typecheck: cache hit, replaying logs c706db30a5f930b5
+@repo/web:typecheck: 
+@repo/web:typecheck: > @repo/web@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web
+@repo/web:typecheck: > tsc --noEmit
+@repo/web:typecheck: 
+
+ Tasks:    45 successful, 45 total
+Cached:    45 cached, 45 total
+  Time:    474ms >>> FULL TURBO
+
+==> [2/3] web 生产构建（抓 prerender/Suspense 类构建错）
+
+> @repo/web@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web
+> next build
+
+  ▲ Next.js 14.2.5
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/26) ...
+   Generating static pages (6/26) 
+   Generating static pages (12/26) 
+   Generating static pages (19/26) 
+ ✓ Generating static pages (26/26)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                                                Size     First Load JS
+┌ ƒ /                                                                      1.39 kB        95.2 kB
+├ ○ /_not-found                                                            872 B          87.9 kB
+├ ƒ /account                                                               4.96 kB        98.8 kB
+├ ƒ /admin                                                                 5.54 kB        99.3 kB
+├ ƒ /ai-store                                                              6.01 kB        99.8 kB
+├ ƒ /api/admin/users                                                       0 B                0 B
+├ ƒ /api/ai-store/items                                                    0 B                0 B
+├ ƒ /api/ai-store/items/[id]                                               0 B                0 B
+├ ƒ /api/auth/change-password                                              0 B                0 B
+├ ƒ /api/auth/confirm-email                                                0 B                0 B
+├ ƒ /api/auth/forgot-password                                              0 B                0 B
+├ ƒ /api/auth/login                                                        0 B                0 B
+├ ƒ /api/auth/logout                                                       0 B                0 B
+├ ƒ /api/auth/register                                                     0 B                0 B
+├ ƒ /api/auth/reset-password                                               0 B                0 B
+├ ƒ /api/auth/session                                                      0 B                0 B
+├ ƒ /api/auth/social                                                       0 B                0 B
+├ ƒ /api/ava/threads                                                       0 B                0 B
+├ ƒ /api/ava/threads/[id]                                                  0 B                0 B
+├ ƒ /api/ava/threads/[id]/messages                                         0 B                0 B
+├ ƒ /api/billing                                                           0 B                0 B
+├ ƒ /api/board-items/[itemId]                                              0 B                0 B
+├ ƒ /api/boards                                                            0 B                0 B
+├ ƒ /api/boards/[id]                                                       0 B                0 B
+├ ƒ /api/boards/[id]/duplicate                                             0 B                0 B
+├ ƒ /api/boards/[id]/favorite                                              0 B                0 B
+├ ƒ /api/boards/[id]/items                                                 0 B                0 B
+├ ƒ /api/boards/[id]/join                                                  0 B                0 B
+├ ƒ /api/boards/[id]/move                                                  0 B                0 B
+├ ƒ /api/boards/[id]/presence                                              0 B                0 B
+├ ƒ /api/boards/[id]/settings                                              0 B                0 B
+├ ƒ /api/boards/[id]/visibility                                            0 B                0 B
+├ ƒ /api/credits                                                           0 B                0 B
+├ ƒ /api/credits/wallet                                                    0 B                0 B
+├ ƒ /api/dev/reset-token                                                   0 B                0 B
+├ ƒ /api/feedback                                                          0 B                0 B
+├ ○ /api/health                                                            0 B                0 B
+├ ƒ /api/invite/[token]                                                    0 B                0 B
+├ ƒ /api/items/[id]                                                        0 B                0 B
+├ ƒ /api/jobs                                                              0 B                0 B
+├ ƒ /api/jobs/[id]                                                         0 B                0 B
+├ ƒ /api/kb/files                                                          0 B                0 B
+├ ƒ /api/notes                                                             0 B                0 B
+├ ƒ /api/presentations                                                     0 B                0 B
+├ ƒ /api/profile                                                           0 B                0 B
+├ ƒ /api/profile/settings                                                  0 B                0 B
+├ ƒ /api/rooms                                                             0 B                0 B
+├ ƒ /api/rooms/[id]                                                        0 B                0 B
+├ ƒ /api/rooms/[id]/boards                                                 0 B                0 B
+├ ƒ /api/rooms/[id]/chats                                                  0 B                0 B
+├ ƒ /api/rooms/[id]/chats/[chatId]                                         0 B                0 B
+├ ƒ /api/rooms/[id]/chats/[chatId]/messages                                0 B                0 B
+├ ƒ /api/rooms/[id]/chats/[chatId]/studio/artifacts                        0 B                0 B
+├ ƒ /api/rooms/[id]/chats/[chatId]/studio/artifacts/[artifactId]/download  0 B                0 B
+├ ƒ /api/rooms/[id]/chats/[chatId]/studio/artifacts/[artifactId]/retry     0 B                0 B
+├ ƒ /api/rooms/[id]/chats/[chatId]/studio/generate                         0 B                0 B
+├ ƒ /api/rooms/[id]/chats/[chatId]/studio/sources                          0 B                0 B
+├ ƒ /api/rooms/[id]/items                                                  0 B                0 B
+├ ƒ /api/rooms/[id]/members                                                0 B                0 B
+├ ƒ /api/rooms/[id]/members/[userId]                                       0 B                0 B
+├ ƒ /api/search                                                            0 B                0 B
+├ ƒ /api/share/[id]                                                        0 B                0 B
+├ ƒ /api/studio                                                            0 B                0 B
+├ ƒ /api/surveys                                                           0 B                0 B
+├ ƒ /api/teams                                                             0 B                0 B
+├ ƒ /api/teams/[id]                                                        0 B                0 B
+├ ƒ /api/teams/[id]/invites                                                0 B                0 B
+├ ƒ /api/teams/[id]/members                                                0 B                0 B
+├ ƒ /api/teams/[id]/members/[userId]                                       0 B                0 B
+├ ƒ /api/teams/current                                                     0 B                0 B
+├ ƒ /api/teams/invite                                                      0 B                0 B
+├ ƒ /api/teams/join                                                        0 B                0 B
+├ ƒ /ava                                                                   48.6 kB         142 kB
+├ ƒ /billing                                                               3.63 kB        97.4 kB
+├ ƒ /boards                                                                2.25 kB          96 kB
+├ ƒ /boards/[id]                                                           20 kB           114 kB
+├ ○ /confirm-email                                                         2.28 kB         103 kB
+├ ƒ /credits                                                               2.91 kB        96.7 kB
+├ ○ /forgot-password                                                       2.24 kB         103 kB
+├ ƒ /home                                                                  4.25 kB          98 kB
+├ ƒ /invite/[token]                                                        3.98 kB         105 kB
+├ ƒ /knowledge-base                                                        5.57 kB        99.4 kB
+├ ○ /login                                                                 2.47 kB         103 kB
+├ ƒ /presentations                                                         4.5 kB         98.3 kB
+├ ƒ /recent                                                                3.23 kB          97 kB
+├ ○ /register                                                              2.78 kB         104 kB
+├ ○ /reset-password                                                        2.8 kB         96.6 kB
+├ ƒ /rooms                                                                 4.67 kB        98.5 kB
+├ ƒ /rooms/[id]/board                                                      2.13 kB        95.9 kB
+├ ƒ /rooms/[id]/boards                                                     3.21 kB          97 kB
+├ ƒ /rooms/[id]/chats                                                      2.58 kB        96.4 kB
+├ ƒ /rooms/[id]/chats/[chatId]                                             6.19 kB         100 kB
+├ ƒ /rooms/[id]/members                                                    4.34 kB        98.1 kB
+├ ƒ /search                                                                3.96 kB        97.8 kB
+├ ƒ /share/[id]                                                            1.68 kB        95.5 kB
+├ ƒ /studio                                                                4.88 kB        98.7 kB
+├ ƒ /surveys                                                               5.99 kB        99.8 kB
+└ ƒ /teams                                                                 5.07 kB        98.9 kB
++ First Load JS shared by all                                              87 kB
+  ├ chunks/05e6949c-1ead6243317cf802.js                                    53.6 kB
+  ├ chunks/573-11397b928e83a949.js                                         31.5 kB
+  └ other shared chunks (total)                                            1.9 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+==> [3/3] 起 pg/redis（60421/60422）+ migrate + 全量 e2e
+ Container worktree-agent-a4ad9667ab850dbea-redis-1  Running
+ Container worktree-agent-a4ad9667ab850dbea-minio-1  Running
+ Container worktree-agent-a4ad9667ab850dbea-postgres-1  Running
+
+> @repo/data@0.1.0 migrate /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/packages/data
+> tsx src/migrate.ts
+
+✓ 已应用，跳过：001_init.sql
+✓ 已应用，跳过：002_auth.sql
+✓ 已应用，跳过：003_team.sql
+✓ 已应用，跳过：004_room.sql
+✓ 已应用，跳过：005_canvas.sql
+✓ 已应用，跳过：006_profile.sql
+✓ 已应用，跳过：007_board.sql
+✓ 已应用，跳过：008_board_visits.sql
+✓ 已应用，跳过：009_board_favorites.sql
+✓ 已应用，跳过：010_room_chat.sql
+✓ 已应用，跳过：011_board_settings.sql
+✓ 已应用，跳过：012_board_items_board_id.sql
+✓ 已应用，跳过：013_board_items_color.sql
+✓ 已应用，跳过：014_feedback.sql
+✓ 已应用，跳过：014_room_chat_messages.sql
+✓ 已应用，跳过：015_team_general.sql
+✓ 已应用，跳过：016_ai_store.sql
+✓ 已应用，跳过：016_ava_chat.sql
+✓ 已应用，跳过：016_credits.sql
+✓ 已应用，跳过：016_kb_files.sql
+✓ 已应用，跳过：016_survey.sql
+✓ 已应用，跳过：017_studio_artifacts.sql
+迁移完成。
+
+Running 275 tests using 1 worker
+
+  ✓  1 [chromium] › admin-001-manage-users.spec.ts:11:5 › 未登录访问 /admin 跳转到 /login (6.1s)
+  ✓  2 [chromium] › admin-001-manage-users.spec.ts:18:5 › 管理员看到用户列表并能创建用户 (1.4s)
+  ✓  3 [chromium] › admin-001-manage-users.spec.ts:36:5 › 创建邮箱格式无效被拒（400） (232ms)
+  ✓  4 [chromium] › admin-001-manage-users.spec.ts:44:5 › 未登录调用列表 API 返回 401 (92ms)
+  ✓  5 [chromium] › ai-store-001-browse-items.spec.ts:11:5 › 未登录访问 /ai-store 重定向到 /login (1.0s)
+  ✓  6 [chromium] › ai-store-001-browse-items.spec.ts:17:5 › 登录后浏览：submenu 分类 + 内容网格 (1.1s)
+  ✓  7 [chromium] › ai-store-001-browse-items.spec.ts:34:5 › 类型筛选只显示该类型，并在页面上下文生效 (828ms)
+  ✓  8 [chromium] › ai-store-001-browse-items.spec.ts:47:5 › 搜索按名称/描述收窄列表 (980ms)
+  ✓  9 [chromium] › ai-store-001-browse-items.spec.ts:59:5 › 无匹配结果显示空状态 + 清空筛选入口 (1.1s)
+  ✓  10 [chromium] › ai-store-001-browse-items.spec.ts:74:5 › 标签筛选高亮并显示 filters active，Clear all 复位 (814ms)
+  ✓  11 [chromium] › ai-store-001-browse-items.spec.ts:88:5 › 未登录调用 GET /api/ai-store/items 返回未授权 (65ms)
+  ✓  12 [chromium] › ai-store-001-browse-items.spec.ts:94:5 › 分页：种子数据超过一页时显示分页控件，翻页后内容更新 (1.0s)
+  ✓  13 [chromium] › ai-store-001-browse-items.spec.ts:117:5 › 点卡片打开详情弹窗：展示描述/示例/统计/订阅入口，可关闭 (1.6s)
+  ✓  14 [chromium] › auth-003-social-login.spec.ts:10:5 › 登录页点击 Google → 已登录回到首页 (1.3s)
+  ✓  15 [chromium] › auth-003-social-login.spec.ts:18:5 › 登录页点击 WeChat → 已登录回到首页 (859ms)
+  ✓  16 [chromium] › auth-003-social-login.spec.ts:25:5 › 注册页点击 Facebook → 已登录回到首页 (982ms)
+  ✓  17 [chromium] › auth-003-social-login.spec.ts:32:5 › 第三方登出后回到访客态 (909ms)
+  ✓  18 [chromium] › auth-003-social-login.spec.ts:41:5 › 同一 provider 二次登录复用同一用户记录（不报错） (1.5s)
+  ✓  19 [chromium] › auth-003-social-login.spec.ts:55:5 › 未启用 provider → 失败保持未登录 (424ms)
+  ✓  20 [chromium] › auth-005-confirm-email.spec.ts:3:5 › 有效令牌 → 确认成功，可去登录/工作区 (955ms)
+  ✓  21 [chromium] › auth-005-confirm-email.spec.ts:10:5 › 无效令牌 → 链接无效或已过期，可重新发送 (545ms)
+  ✓  22 [chromium] › auth-005-confirm-email.spec.ts:16:5 › 缺少令牌 → 确认失败 (539ms)
+  ✓  23 [chromium] › auth-005-confirm-email.spec.ts:21:5 › API：known token demo → ok；unknown → 400 (29ms)
+  ✓  24 [chromium] › auth-change-password.spec.ts:5:5 › 修改密码后旧会话失效、新密码可登录、旧密码失败 (4.3s)
+  ✓  25 [chromium] › auth-change-password.spec.ts:55:5 › 旧密码错误时拒绝修改 (1.1s)
+  ✓  26 [chromium] › auth-login.spec.ts:11:5 › 正确凭据登录成功 (1.0s)
+  ✓  27 [chromium] › auth-login.spec.ts:23:5 › 错误密码报「邮箱或密码无效」 (705ms)
+  ✓  28 [chromium] › auth-login.spec.ts:34:5 › 登出后回到访客态 (1.1s)
+  ✓  29 [chromium] › auth-register.spec.ts:5:5 › 注册成功后自动登录并进入首页 (1.0s)
+  ✓  30 [chromium] › auth-register.spec.ts:18:5 › 未勾选条款/弱密码显示字段错误 (582ms)
+  ✓  31 [chromium] › auth-register.spec.ts:29:5 › 重复邮箱注册被拒 (716ms)
+  ✘  32 [chromium] › auth-reset-password.spec.ts:5:5 › 忘记密码→邮件令牌→重置→新密码登录 (11.3s)
+  ✓  33 [chromium] › auth-reset-password.spec.ts:38:5 › 已用令牌不可重复使用 (310ms)
+  ✓  34 [chromium] › ava-chat-basic.spec.ts:11:5 › 登录用户：空态建议 → 发送 → user+assistant(Markdown/代码块) 气泡 → 线程入列表 → reload 后可继续追问 (4.6s)
+  ✓  35 [chromium] › ava-chat-basic.spec.ts:50:5 › 未登录访问 /ava：跳转 /login (579ms)
+  ✓  36 [chromium] › ava-chat-basic.spec.ts:56:5 › 空消息被 API 拒绝（400，不创建线程） (215ms)
+  ✓  37 [chromium] › ava-chat-basic.spec.ts:68:5 › 生成失败：展示失败态，用户输入已持久化不丢失 (1.3s)
+  ✓  38 [chromium] › ava-chat-basic.spec.ts:89:5 › 未登录调用发消息接口 → 401 (241ms)
+  ✓  39 [chromium] › billing-001-upgrade-plan.spec.ts:5:5 › 已登录访问 /billing：展示当前计划 + 可升级计划 + 升级 CTA (1.5s)
+  ✓  40 [chromium] › billing-001-upgrade-plan.spec.ts:23:5 › 未登录访问 /billing → 跳转登录 (570ms)
+  ✓  41 [chromium] › billing-001-upgrade-plan.spec.ts:28:5 › API：未登录 GET /api/billing 返回 401 (66ms)
+  ✓  42 [chromium] › board-create.spec.ts:13:5 › 在房间内创建白板后出现在白板列表 (2.8s)
+  ✓  43 [chromium] › board-create.spec.ts:26:5 › 空名白板用默认标题创建（201） (195ms)
+  ✘  44 [chromium] › board-create.spec.ts:38:5 › 非房间成员创建白板 → 403 (307ms)
+  ✓  45 [chromium] › board-delete.spec.ts:13:5 › 属主删除白板：列表移除且 GET 404（API） (1.7s)
+  ✘  46 [chromium] › board-delete.spec.ts:27:5 › 房间成员（非管理者）删除 → 403 (308ms)
+  ✓  47 [chromium] › board-delete.spec.ts:41:5 › UI：属主确认删除后回到房间白板列表且不含该板 (4.3s)
+  ✓  48 [chromium] › board-duplicate.spec.ts:13:5 › 复制白板生成带副本后缀的新板（API） (4.3s)
+  ✘  49 [chromium] › board-duplicate.spec.ts:33:5 › 非房间成员复制 → 403 (313ms)
+  ✓  50 [chromium] › board-duplicate.spec.ts:46:5 › UI：点复制后列表多出副本 (1.6s)
+  ✓  51 [chromium] › board-favorite.spec.ts:11:5 › 收藏/取消收藏切换并体现在收藏列表（API） (1.5s)
+  ✘  52 [chromium] › board-favorite.spec.ts:32:5 › 非成员收藏他人私有白板 → 403 (880ms)
+  ✓  53 [chromium] › board-favorite.spec.ts:46:5 › UI：点星标收藏，刷新后保持 (2.1s)
+  ✓  54 [chromium] › board-header-001-use-board-header.spec.ts:14:5 › owner 通过 Board Header 理解状态并进入授权操作 (2.1s)
+  ✘  55 [chromium] › board-header-001-use-board-header.spec.ts:65:5 › viewer 在 Header 中只看到授权入口，加入后获得编辑入口 (365ms)
+  ✓  56 [chromium] › board-header-003-share-board.spec.ts:7:5 › 板页 Header 打开分享面板：复制链接 + 可见性 + 二维码占位 (2.0s)
+  ✓  57 [chromium] › board-header-005-manage-slides.spec.ts:7:5 › 幻灯片管理：创建 → 排序 → 展示 → 导出 (2.0s)
+  ✓  58 [chromium] › board-header-009-sync-status.spec.ts:17:5 › 进入白板后 Header 显示同步状态指示器与状态文案 (1.4s)
+  ✘  59 [chromium] › board-header-009-sync-status.spec.ts:36:5 › 触发模拟保存后短暂显示「保存中」再回到「已同步」 (11.4s)
+  ✓  60 [chromium] › board-header-009-sync-status.spec.ts:49:5 › 既有 Header testid 仍在（board-header/board-title/board-role/计时器） (1.7s)
+  ✓  61 [chromium] › board-header-011-shortcuts-help.spec.ts:18:5 › Header 快捷键入口打开帮助弹窗并按分类列出快捷键 (2.7s)
+  ✓  62 [chromium] › board-header-011-shortcuts-help.spec.ts:51:5 › 关闭按钮可关闭快捷键弹窗 (1.6s)
+  ✓  63 [chromium] › board-header-011-shortcuts-help.spec.ts:60:5 › 按 Esc 关闭快捷键弹窗（UC 主流程第 7 步） (1.5s)
+  ✓  64 [chromium] › board-header-011-shortcuts-help.spec.ts:69:5 › 既有 Header testid 仍在（board-header/board-title/board-role/快捷键帮助引导） (1.5s)
+  ✓  65 [chromium] › board-header-014-statistics.spec.ts:5:5 › 板统计：header 入口打开面板，显示组件总数/便签/文本 (1.7s)
+  ✓  66 [chromium] › board-help-guide.spec.ts:14:5 › 快捷键帮助面板可开关并列出快捷键 (1.5s)
+  ✓  67 [chromium] › board-help-guide.spec.ts:24:5 › 欢迎引导可关闭、刷新保持、可重新打开 (2.7s)
+  ✓  68 [chromium] › board-list-search.spec.ts:11:5 › 按名称搜索房间内白板（API） (598ms)
+  ✓  69 [chromium] › board-list-search.spec.ts:23:5 › 打开白板写入最近访问，scope=recent 返回它 (465ms)
+  ✓  70 [chromium] › board-list-search.spec.ts:39:5 › UI：搜索过滤房间白板列表 (1.5s)
+  ✘  71 [chromium] › board-list-search.spec.ts:53:5 › 无匹配显示空提示 (11.2s)
+  ✘  72 [chromium] › board-menu-001-use-board-menu.spec.ts:18:5 › 编辑者使用 Board Menu：工具可见、面板可打开、创建后选中 (12.2s)
+  ✘  73 [chromium] › board-menu-001-use-board-menu.spec.ts:59:5 › viewer 不显示会改变内容的 Board Menu (462ms)
+  ✓  74 [chromium] › board-menu-003-create-text.spec.ts:19:5 › 添加文本 → 画布出现文本组件并自动选中 (3.9s)
+  ✓  75 [chromium] › board-menu-003-create-text.spec.ts:30:5 › 双击文本组件 → 编辑文字并持久化（刷新仍在） (3.2s)
+  ✓  76 [chromium] › board-menu-003-create-text.spec.ts:51:5 › 文本与便签共存：add-note 仍可用 (2.0s)
+  ✓  77 [chromium] › board-metadata.spec.ts:13:5 › 属主更新名称/类别/描述并回显（API） (437ms)
+  ✓  78 [chromium] › board-metadata.spec.ts:30:5 › 空名更新被拒（400） (413ms)
+  ✘  79 [chromium] › board-metadata.spec.ts:40:5 › 房间成员（非管理者）更新 → 403 (313ms)
+  ✓  80 [chromium] › board-metadata.spec.ts:57:5 › UI：属主在板页编辑名称，标题刷新 (1.8s)
+  ✓  81 [chromium] › board-move.spec.ts:13:5 › 属主把白板从 A 移动到 B（API） (1.2s)
+  ✘  82 [chromium] › board-move.spec.ts:32:5 › 移动到自己不是成员的房间 → 403 (312ms)
+  ✘  83 [chromium] › board-move.spec.ts:47:5 › 房间成员（非管理者）移动 → 403 (324ms)
+  ✓  84 [chromium] › board-move.spec.ts:62:5 › UI：属主选目标房间移动，目标房间列表出现该板 (2.7s)
+  ✓  85 [chromium] › board-open.spec.ts:13:5 › 属主打开白板：标题 + owner 角色 + 画布/缩放占位 + 编辑入口可见 (1.5s)
+  ✘  86 [chromium] › board-open.spec.ts:28:5 › 非房间成员打开白板 → API 403 (322ms)
+  ✓  87 [chromium] › board-open.spec.ts:41:5 › 打开不存在的白板 → 404 (635ms)
+  ✘  88 [chromium] › board-public-access.spec.ts:13:5 › 匿名打开 public 白板 → 200 viewer；private → 401 (320ms)
+  ✘  89 [chromium] › board-public-access.spec.ts:35:5 › 已登录非成员加入 public 白板 → 成为 editor (342ms)
+  ✘  90 [chromium] › board-public-access.spec.ts:54:5 › 加入无权访问的 private 白板 → 403 (323ms)
+  ✘  91 [chromium] › board-public-access.spec.ts:66:5 › UI：已登录非成员在 public 板上点加入协作 → 变 editor (511ms)
+  ✓  92 [chromium] › board-settings.spec.ts:13:5 › 管理者更新设置并持久化（API） (1.5s)
+  ✘  93 [chromium] › board-settings.spec.ts:29:5 › 非管理者改设置 → 403 (310ms)
+  ✓  94 [chromium] › board-settings.spec.ts:42:5 › UI：属主在板页打开网格并刷新保持 (2.7s)
+  ✓  95 [chromium] › board-timer.spec.ts:14:5 › 计时器：开始/暂停/继续/停止状态切换 (2.2s)
+  ✓  96 [chromium] › board-timer.spec.ts:34:5 › 计时器倒计时到 0 → 结束提示 (3.0s)
+  ✘  97 [chromium] › board-visibility.spec.ts:13:5 › 改为 public 后非成员可只读访问（viewer） (311ms)
+  ✘  98 [chromium] › board-visibility.spec.ts:32:5 › team 可见：团队成员（非房间成员）可只读，非团队成员 403 (327ms)
+  ✘  99 [chromium] › board-visibility.spec.ts:56:5 › 非房间 owner 改可见范围 → 403；非法值 400 (325ms)
+  ✘  100 [chromium] › board-visibility.spec.ts:71:5 › UI：房间 owner 在板页切换可见范围到 public (13.3s)
+  ✘  101 [chromium] › canvas-005-realtime-collaboration.spec.ts:20:5 › 两名协作者：在线成员 + 同步状态 + 跨客户端内容一致 (355ms)
+  ✘  102 [chromium] › canvas-005-realtime-collaboration.spec.ts:73:5 › 离开后在线成员数量回落（UC 主流程 6） (374ms)
+  ✘  103 [chromium] › canvas-005-realtime-collaboration.spec.ts:101:5 › 无权限者不能通过协作/items 通道写入 → 403 (366ms)
+  ✓  104 [chromium] › canvas-007-use-alignment-guidelines.spec.ts:30:5 › 拖动组件靠近另一组件边缘 → 出现对齐参考线并吸附对齐 (2.5s)
+  ✓  105 [chromium] › canvas-add.spec.ts:5:5 › 添加便签后出现在板上且刷新仍在 (5.0s)
+  ✘  106 [chromium] › canvas-add.spec.ts:21:5 › 非房间成员添加 item → 403 (397ms)
+  ✓  107 [chromium] › canvas-copy-paste.spec.ts:15:5 › Cmd/Ctrl+C 复制 + V 粘贴出偏移副本并选中 (3.4s)
+  ✓  108 [chromium] › canvas-copy-paste.spec.ts:34:5 › 多选批量复制粘贴 (2.3s)
+  ✓  109 [chromium] › canvas-delete.spec.ts:5:5 › 删除 item：板上消失且列表不含 (3.2s)
+  ✘  110 [chromium] › canvas-delete.spec.ts:24:5 › 非房间成员删除 item → 403 (366ms)
+  ✓  111 [chromium] › canvas-pan-zoom.spec.ts:14:5 › 缩放控制条：放大/缩小/重置百分比 (1.8s)
+  ✓  112 [chromium] › canvas-pan-zoom.spec.ts:31:5 › 小地图与画布表面渲染 (1.5s)
+  ✓  113 [chromium] › canvas-pan-zoom.spec.ts:38:5 › 拖拽平移改变画布表面 transform (1.6s)
+  ✓  114 [chromium] › canvas-render.spec.ts:5:5 › 打开房间的板，渲染已有 item (1.3s)
+  ✓  115 [chromium] › canvas-select.spec.ts:23:5 › 加便签 → 出现并自动选中（board-keyed item） (1.7s)
+  ✓  116 [chromium] › canvas-select.spec.ts:30:5 › 点选 / Shift 多选 / 点空白清除 / Esc 清除 (1.9s)
+  ✓  117 [chromium] › canvas-select.spec.ts:51:5 › Ctrl/Cmd+A 全选 + Delete 删除选中 (2.7s)
+  ✓  118 [chromium] › canvas-select.spec.ts:68:5 › 方向键移动选中 item 并持久化 (1.8s)
+  ✘  119 [chromium] › canvas-select.spec.ts:81:5 › viewer 无编辑工具栏；POST item → 403 (441ms)
+  ✓  120 [chromium] › canvas-undo-redo.spec.ts:17:5 › 撤销/重做 添加（Cmd/Ctrl+Z / +Shift+Z） (2.4s)
+  ✓  121 [chromium] › canvas-undo-redo.spec.ts:32:5 › 撤销 移动 → 回到原位（落库） (2.2s)
+  ✓  122 [chromium] › canvas-undo-redo.spec.ts:46:5 › 撤销 删除 → 用原 id 还原（restore） (3.5s)
+  ✓  123 [chromium] › canvas-undo-redo.spec.ts:62:5 › 撤销/重做 按钮 (2.6s)
+  ✓  124 [chromium] › canvas-update.spec.ts:5:5 › 移动 + 编辑 item 并持久化 (1.3s)
+  ✘  125 [chromium] › canvas-update.spec.ts:27:5 › 非房间成员更新 item → 403 (401ms)
+  ✘  126 [chromium] › collab-001-yjs-realtime-sync.spec.ts:23:5 › 协作感知 + 视角跟随：谁在线 / 谁在操作 / 我是否正在跟随 (360ms)
+  ✘  127 [chromium] › collab-001-yjs-realtime-sync.spec.ts:113:5 › (d) 非成员对 presence/collab 通道 → 403 (353ms)
+  ✓  128 [chromium] › common-001-global-search.spec.ts:19:5 › API：按关键词跨 rooms/boards/teams 聚合，且只含有权限资源 (1.2s)
+  ✘  129 [chromium] › common-001-global-search.spec.ts:33:5 › API：搜索不泄露他人私有 room 内的 board (311ms)
+  ✓  130 [chromium] › common-001-global-search.spec.ts:48:5 › UI：登录后 /search?q= 显示分组结果，点击跳转 (2.3s)
+  ✓  131 [chromium] › common-001-global-search.spec.ts:64:5 › UI：无匹配显示空态 (778ms)
+  ✓  132 [chromium] › common-001-global-search.spec.ts:70:5 › UI：空查询显示提示 (669ms)
+  ✓  133 [chromium] › common-001-global-search.spec.ts:76:5 › UI：未登录访问 /search 跳转 /login (702ms)
+  ✓  134 [chromium] › common-004-submit-feedback-with-attachment.spec.ts:23:5 › UI：登录用户填写内容并附带图片，提交后展示成功且后端记录反馈 (2.1s)
+  ✓  135 [chromium] › common-004-submit-feedback-with-attachment.spec.ts:74:5 › UI：反馈内容为空时阻止提交并保持弹窗打开（E1） (1.1s)
+  ✓  136 [chromium] › common-004-submit-feedback-with-attachment.spec.ts:90:5 › API：仅文字反馈也能记录（备选 A1，无附件） (251ms)
+  ✓  137 [chromium] › common-004-submit-feedback-with-attachment.spec.ts:101:5 › API：内容为空返回 400（业务规则：反馈内容必须非空） (267ms)
+  ✓  138 [chromium] › common-004-submit-feedback-with-attachment.spec.ts:109:5 › 权限：未登录提交反馈返回 401 (113ms)
+  ✓  139 [chromium] › context-menu-001-use-context-menu.spec.ts:15:5 › 右键便签 → 上下文菜单出现，含复制/副本/删除/粘贴 (1.8s)
+  ✓  140 [chromium] › context-menu-001-use-context-menu.spec.ts:27:5 › 上下文菜单 删除 → 便签移除 (3.4s)
+  ✓  141 [chromium] › context-menu-001-use-context-menu.spec.ts:36:5 › 上下文菜单 创建副本 → 便签变两个 (2.2s)
+  ✓  142 [chromium] › context-menu-003-arrange-layer.spec.ts:39:5 › 上下文菜单含四个图层顺序入口（置顶/上移/下移/置底） (1.7s)
+  ✓  143 [chromium] › context-menu-003-arrange-layer.spec.ts:50:5 › 置于底层 → 选中对象移到 DOM 最前（最底层） (2.5s)
+  ✓  144 [chromium] › context-menu-003-arrange-layer.spec.ts:70:5 › 置于顶层 → 选中对象移到 DOM 最后（最上层） (2.3s)
+  ✓  145 [chromium] › context-menu-003-arrange-layer.spec.ts:82:5 › 上移一层 / 下移一层 → 相邻交换，保留其它顺序 (2.2s)
+  ✓  146 [chromium] › context-menu-003-arrange-layer.spec.ts:101:5 › z-index 样式随图层顺序更新（遮挡关系可见） (2.2s)
+  ✓  147 [chromium] › credits-001-view-wallet.spec.ts:24:5 › 登录后 /credits 展示个人钱包余额 + 标题 + Buy credits (3.1s)
+  ✓  148 [chromium] › credits-001-view-wallet.spec.ts:41:5 › 登录后 /credits 默认 Usage 标签展示消耗记录列表，切 Purchase 展示购买记录 (1.0s)
+  ✓  149 [chromium] › credits-001-view-wallet.spec.ts:55:5 › 无记录时 /credits?state=empty 展示空状态 (970ms)
+  ✓  150 [chromium] › credits-001-view-wallet.spec.ts:67:5 › 用户菜单展示个人 Credit 余额入口与数值 (982ms)
+  ✓  151 [chromium] › credits-001-view-wallet.spec.ts:77:5 › Team owner 进入 /credits 展示团队钱包（scope=team）+ 团队名 (1.2s)
+  ✓  152 [chromium] › credits-001-view-wallet.spec.ts:98:5 › Team member（非 owner/admin）请求团队钱包 → 403，看不到团队钱包 (1.4s)
+  ✓  153 [chromium] › credits-001-view-wallet.spec.ts:118:5 › 未登录访问 /credits → 跳登录 (1.3s)
+  ✓  154 [chromium] › credits-001-view-wallet.spec.ts:123:5 › 未登录调用 /api/credits/wallet → 401 (201ms)
+  ✓  155 [chromium] › credits-001-view-wallet.spec.ts:128:5 › 未登录调用兼容旧路径 /api/credits → 401 (485ms)
+  ✓  156 [chromium] › feedback-001-submit-feedback.spec.ts:5:5 › 提交反馈：空内容阻止提交，填写内容和图片后成功 (2.2s)
+  ✓  157 [chromium] › home-004-view-recent-page.spec.ts:14:5 › 登录后 Recent 展示最近白板列表并可点击回到内容 (5.0s)
+  ✓  158 [chromium] › home-004-view-recent-page.spec.ts:32:5 › 登录后无最近资源时显示空状态 + 进入房间入口 (3.1s)
+  ✓  159 [chromium] › home-004-view-recent-page.spec.ts:43:5 › 未登录访问 /recent → 跳登录 (1.0s)
+  ✓  160 [chromium] › home-agent-groups.spec.ts:5:5 › 三个 Agent 分组无数据时显示空状态 + 进入AI Store/创建Agent 入口 (1.6s)
+  ✓  161 [chromium] › home-agent-groups.spec.ts:18:5 › 点「进入 AI Store」入口跳转 /ai-store (1.7s)
+  ✓  162 [chromium] › home-onboarding.spec.ts:5:5 › 新用户看到 Onboarding 引导，可关闭并重新打开 (1.2s)
+  ✓  163 [chromium] › home-onboarding.spec.ts:26:5 › 关闭引导后刷新仍保持关闭（localStorage 持久） (1.9s)
+  ✓  164 [chromium] › home-recent-board.spec.ts:5:5 › Home 最近白板：访问过的白板出现且可点击跳转 Board (2.5s)
+  ✓  165 [chromium] › home-recent-board.spec.ts:21:5 › 无最近白板时显示空状态 + 进入房间入口 (1.9s)
+  ✓  166 [chromium] › home-shell.spec.ts:5:5 › 已登录访问 /home：欢迎区显示用户名与团队名 + 搜索框 + 三个 Agent 分组 (1.3s)
+  ✓  167 [chromium] › home-shell.spec.ts:20:5 › 未登录访问 /home → 跳转登录 (1.2s)
+  ✓  168 [chromium] › invite-001-accept-invite-link.spec.ts:25:5 › logged-out: /invite/demo 显示邀请详情 + 登录提示 (3.6s)
+  ✓  169 [chromium] › invite-001-accept-invite-link.spec.ts:46:5 › logged-in: 接受邀请 → 加入并跳转 (2.7s)
+  ✓  170 [chromium] › invite-001-accept-invite-link.spec.ts:60:5 › unknown token: /invite/unknown 显示不可用出口 (1.1s)
+  ✓  171 [chromium] › kb-001-upload-file.spec.ts:20:5 › 登录后 /knowledge-base：空状态 + 上传控件，上传文件后出现在列表并最终 ready (14.2s)
+  ✓  172 [chromium] › kb-001-upload-file.spec.ts:50:5 › 校验：不支持的文件类型进入队列 error 行，且不产生半条记录 (1.7s)
+  ✓  173 [chromium] › kb-001-upload-file.spec.ts:66:5 › 校验：超过大小上限的文件进入队列 error 行 (1.2s)
+  ✓  174 [chromium] › kb-001-upload-file.spec.ts:82:5 › 服务端二次校验：绕过前端直接 POST 不支持类型 → 400 且不落库 (315ms)
+  ✓  175 [chromium] › kb-001-upload-file.spec.ts:100:5 › 未登录访问 /knowledge-base → 跳登录 (969ms)
+  ✓  176 [chromium] › local-001-use-local-workspace.spec.ts:15:5 › 编辑者使用 Local Workspace：Board Chat 结果可保存为 Board Memory (3.0s)
+  ✘  177 [chromium] › local-001-use-local-workspace.spec.ts:59:5 › viewer 不显示 Local Workspace 编辑入口 (504ms)
+  ✓  178 [chromium] › presentations-001-generate-presentation.spec.ts:11:5 › 已登录：配置表单 → 生成 → 显示生成的幻灯片大纲 (4.8s)
+  ✓  179 [chromium] › presentations-001-generate-presentation.spec.ts:32:5 › 标题为空被拒（保留错误提示） (336ms)
+  ✓  180 [chromium] › presentations-001-generate-presentation.spec.ts:38:5 › 空大纲提示使用默认提示生成 (582ms)
+  ✓  181 [chromium] › presentations-001-generate-presentation.spec.ts:49:5 › 未登录访问 /presentations → 跳转登录 (1.1s)
+  ✓  182 [chromium] › presentations-001-generate-presentation.spec.ts:54:5 › 未登录调用生成接口 → 401 (102ms)
+  ✓  183 [chromium] › profile-003-user-menu.spec.ts:14:5 › 打开用户菜单：身份头 + 全部账号入口可见 (1.1s)
+  ✓  184 [chromium] › profile-003-user-menu.spec.ts:46:5 › 点击 Profile 进入账号中心 /account (1.9s)
+  ✓  185 [chromium] › profile-003-user-menu.spec.ts:55:5 › 点击 Settings 进入账号中心 Settings 分区 (2.0s)
+  ✓  186 [chromium] › profile-003-user-menu.spec.ts:64:5 › 退出登录清除会话并回到登录页 (4.1s)
+  ✓  187 [chromium] › profile-account-center.spec.ts:11:5 › 账号中心三分区切换，默认 Personal info (896ms)
+  ✓  188 [chromium] › profile-account-center.spec.ts:21:5 › ?section=settings 直达 Settings 分区 (731ms)
+  ✓  189 [chromium] › profile-account-center.spec.ts:27:5 › 首页用户菜单显示名 + Profile/Settings/登出 入口 (749ms)
+  ✓  190 [chromium] › profile-account-center.spec.ts:36:5 › 未登录访问 /account 跳登录 (931ms)
+  ✘  191 [chromium] › profile-edit.spec.ts:5:5 › 改显示名 + 选头像，保存后菜单刷新 (1.1s)
+  ✘  192 [chromium] › profile-edit.spec.ts:27:5 › 空显示名被拒 (11.2s)
+  ✘  193 [chromium] › profile-edit.spec.ts:38:5 › AI generate 更新头像预览 (11.1s)
+  ✓  194 [chromium] › profile-settings.spec.ts:5:5 › 设置 AI 模型 + 默认隐私并读回 (1.1s)
+  ✓  195 [chromium] › profile-settings.spec.ts:22:5 › 非法 AI 模型被拒（API） (194ms)
+  ✘  196 [chromium] › room-003-invite-manage-room-members.spec.ts:25:5 › 房间管理者看到成员列表 + 邮箱邀请已注册用户加入 (460ms)
+  ✓  197 [chromium] › room-003-invite-manage-room-members.spec.ts:48:5 › 未注册邮箱 → 邀请流程；空邮箱与无效邮箱 → 错误提示 (3.2s)
+  ✘  198 [chromium] › room-003-invite-manage-room-members.spec.ts:64:5 › 管理者改成员角色 / 移除成员，列表随之更新 (545ms)
+  ✘  199 [chromium] › room-003-invite-manage-room-members.spec.ts:85:5 › 普通成员 → 只读：无邀请区，有只读提示 (584ms)
+  ✓  200 [chromium] › room-003-invite-manage-room-members.spec.ts:102:5 › 未登录访问 /rooms/[id]/members → 跳 /login (1.3s)
+  ✘  201 [chromium] › room-003-invite-manage-room-members.spec.ts:107:5 › API：owner 不可被移除；admin 不能移除另一个 admin (324ms)
+  ✓  202 [chromium] › room-chat-003-send-message.spec.ts:13:5 › 创建者在线程中发送消息 → 用户气泡 + AVA 回复出现并持久化 (13.1s)
+  ✘  203 [chromium] › room-chat-003-send-message.spec.ts:46:5 › 他人创建的线程 → 只读，无法发送 (432ms)
+  ✘  204 [chromium] › room-chat-003-send-message.spec.ts:70:5 › 未登录访问发送接口 → 401；页面跳转 /login (511ms)
+  ✓  205 [chromium] › room-chat-create.spec.ts:13:5 › New Chat 创建线程并进入三栏工作区 (3.2s)
+  ✓  206 [chromium] › room-chat-create.spec.ts:31:5 › 创建后线程出现在列表 (4.2s)
+  ✘  207 [chromium] › room-chat-create.spec.ts:43:5 › 非房间成员创建线程 → 403 (313ms)
+  ✓  208 [chromium] › room-chat-delete.spec.ts:13:5 › 创建者删除线程：确认后从列表移除（API+UI） (2.3s)
+  ✘  209 [chromium] › room-chat-delete.spec.ts:27:5 › 非创建者成员无删除入口且 API 403 (388ms)
+  ✓  210 [chromium] › room-chat-list.spec.ts:13:5 › 房间 Chat 列表显示线程（名称+创建者）与 New Chat (1.7s)
+  ✓  211 [chromium] › room-chat-list.spec.ts:25:5 › 无线程显示空状态 (1.2s)
+  ✘  212 [chromium] › room-chat-list.spec.ts:34:5 › 非房间成员列出聊天 → 403 (311ms)
+  ✘  213 [chromium] › room-chat-open.spec.ts:13:5 › 成员打开他人创建的线程 → 只读态（无输入区，有仅查看标记） (498ms)
+  ✓  214 [chromium] › room-chat-open.spec.ts:33:5 › 创建者打开自己的线程 → 可编辑（有输入区，无只读标记） (1.7s)
+  ✘  215 [chromium] › room-chat-open.spec.ts:45:5 › 非房间成员打开线程 → 403 (320ms)
+  ✓  216 [chromium] › room-create.spec.ts:5:5 › 创建房间后出现在列表 (2.3s)
+  ✓  217 [chromium] › room-create.spec.ts:16:5 › 空房间名被拒 (275ms)
+  ✘  218 [chromium] › room-manage.spec.ts:13:5 › owner 加/移成员、改名改可见性、删除；非 owner 403 (309ms)
+  ✘  219 [chromium] › room-view-search.spec.ts:13:5 › 私有房间对非成员不可见、未授权访问 403 (326ms)
+  ✓  220 [chromium] › room-view-search.spec.ts:29:5 › 关键字搜索房间 (567ms)
+  ✓  221 [chromium] › share-001-view-shared-chat.spec.ts:6:5 › 有效分享链接（未登录）显示只读消息，无输入框/发送 (3.4s)
+  ✓  222 [chromium] › share-001-view-shared-chat.spec.ts:29:5 › 未知分享链接显示无法访问 / 链接失效提示 (1.5s)
+  ✓  223 [chromium] › share-001-view-shared-chat.spec.ts:40:5 › 空会话显示 No messages 提示 (1.1s)
+  ✓  224 [chromium] › studio-001-generate-artifact.spec.ts:24:5 › Studio 面板可见：来源为空时生成被禁用 (1.8s)
+  ✓  225 [chromium] › studio-001-generate-artifact.spec.ts:39:5 › 以当前聊天为来源生成音频概览：生成中 → 结果卡片可播放 (13.9s)
+  ✓  226 [chromium] › studio-001-generate-artifact.spec.ts:71:5 › 信息图生成：结果卡片图片可预览 (7.0s)
+  ✓  227 [chromium] › studio-001-generate-artifact.spec.ts:91:5 › 演示文稿生成：结果卡片提供下载链接 (4.4s)
+  ✓  228 [chromium] › studio-001-generate-artifact.spec.ts:111:5 › 生成失败：结果卡片展示失败态，提供重试并最终成功 (4.5s)
+  ✓  229 [chromium] › studio-001-generate-artifact.spec.ts:141:5 › 未登录访问房间聊天 → 跳转登录 (4.4s)
+  ✓  230 [chromium] › studio-001-generate-artifact.spec.ts:146:5 › 权限分支：未登录 POST 生成接口 → 401 (138ms)
+  ✓  231 [chromium] › studio-001-generate-artifact.spec.ts:153:5 › 失败分支：缺少类型/来源 → 400 (531ms)
+  ✓  232 [chromium] › studio-001-generate-artifact.spec.ts:162:5 › 失败分支：来源不可用时服务端二次校验拒绝（400），不产生半条制品 (562ms)
+  ✓  233 [chromium] › survey-001-create-survey.spec.ts:14:5 › 已登录访问 /surveys 显示列表与空状态 (3.4s)
+  ✓  234 [chromium] › survey-001-create-survey.spec.ts:21:5 › 创建问卷（private）后出现在列表 (3.6s)
+  ✓  235 [chromium] › survey-001-create-survey.spec.ts:46:5 › 多题型 + 选项 + 排序 + 预览答题页 (1.8s)
+  ✓  236 [chromium] › survey-001-create-survey.spec.ts:83:5 › team 作用域：需选择已加入的团队，问卷对团队成员可见 (1.3s)
+  ✓  237 [chromium] › survey-001-create-survey.spec.ts:102:5 › 空标题被拒，问卷不保存（400） (315ms)
+  ✓  238 [chromium] › survey-001-create-survey.spec.ts:110:5 › 零题目被拒，问卷不保存（400） (295ms)
+  ✓  239 [chromium] › survey-001-create-survey.spec.ts:116:5 › 未登录访问 /surveys 跳转登录 (1.0s)
+  ✘  240 [chromium] › team-003-invite-members.spec.ts:22:5 › owner 邮箱邀请：已注册用户被加入，未注册邮箱走邀请流程 (594ms)
+  ✓  241 [chromium] › team-003-invite-members.spec.ts:49:5 › 复制邀请链接：写入剪贴板并提示已复制 (6.9s)
+  ✓  242 [chromium] › team-003-invite-members.spec.ts:64:5 › 邮箱格式无效 → invalidEmail；空邮箱 → 提示请输入邮箱 (1.5s)
+  ✓  243 [chromium] › team-003-invite-members.spec.ts:82:5 › 未登录访问 /teams → 跳 /login (1.7s)
+  ✘  244 [chromium] › team-003-invite-members.spec.ts:87:5 › API：member 无权邮箱邀请 → 403 (313ms)
+  ✘  245 [chromium] › team-003-invite-members.spec.ts:103:5 › API：已在团队的成员被重复邀请 → userAlreadyInTeam(409) (326ms)
+  ✘  246 [chromium] › team-007-general-settings.spec.ts:25:5 › owner 编辑团队名与描述 → 保存成功并持久化 (329ms)
+  ✘  247 [chromium] › team-007-general-settings.spec.ts:46:5 › owner 删除团队 → 团队从列表消失 (328ms)
+  ✘  248 [chromium] › team-007-general-settings.spec.ts:59:5 › 非 owner（member）无权删除团队 → 403 (324ms)
+  ✘  249 [chromium] › team-007-general-settings.spec.ts:73:5 › 团队名不能为空 → 400 (317ms)
+  ✓  250 [chromium] › team-007-general-settings.spec.ts:83:5 › General 设置区在 /teams 页面可见（owner） (1.7s)
+  ✓  251 [chromium] › team-create.spec.ts:5:5 › 创建团队后出现在列表且自己是 owner (1.2s)
+  ✓  252 [chromium] › team-create.spec.ts:17:5 › 空团队名被拒 (308ms)
+  ✘  253 [chromium] › team-invite-join.spec.ts:13:5 › owner 邀请、被邀请人加入为 member (310ms)
+  ✘  254 [chromium] › team-invite-join.spec.ts:33:5 › 非 owner/admin（member）无权邀请 → 403 (326ms)
+  ✘  255 [chromium] › team-invite-join.spec.ts:46:5 › 无效令牌加入 → 400 (323ms)
+  ✘  256 [chromium] › team-manage.spec.ts:25:5 › owner 改成员角色、移除成员 (325ms)
+  ✘  257 [chromium] › team-manage.spec.ts:39:5 › member 无权管理（改角色 403），非 owner 无权删除团队（403） (332ms)
+  ✘  258 [chromium] › team-manage.spec.ts:51:5 › owner 改名并删除团队 (326ms)
+  ✓  259 [chromium] › team-switch.spec.ts:5:5 › 创建两个团队并切换当前团队 (3.6s)
+  ✘  260 [chromium] › team-switch.spec.ts:30:5 › 不能切换到未加入的团队 (369ms)
+  ✓  261 [chromium] › widget-menu-002-style-widget.spec.ts:15:5 › 字重：选中便签 → wm-bold 加粗，持久化（color 追加 :bold） (11.2s)
+  ✓  262 [chromium] › widget-menu-002-style-widget.spec.ts:27:5 › 字重与颜色共存：先改蓝色再加粗 → color=blue:bold，仍是蓝底加粗 (2.9s)
+  ✓  263 [chromium] › widget-menu-009-refresh-widget.spec.ts:24:5 › 可刷新组件：点击 wm-refresh → 内容重新加载，重载计数自增，保持选中 (3.0s)
+  ✓  264 [chromium] › widget-menu-009-refresh-widget.spec.ts:54:5 › 不可刷新组件：普通便签不显示刷新入口，仅展示禁用的「刷新暂不可用」 (2.4s)
+  ✓  265 [chromium] › widget-menu-009-refresh-widget.spec.ts:69:5 › 混选：可刷新 + 不可刷新一起选 → 隐藏刷新入口（退化为不可用） (2.3s)
+  ✓  266 [chromium] › widget-menu-framework.spec.ts:17:5 › 选中时浮出 Widget Menu，取消选中隐藏 (3.5s)
+  ✓  267 [chromium] › widget-menu-framework.spec.ts:29:5 › Widget Menu 删除选中 (2.4s)
+  ✓  268 [chromium] › widget-menu-framework.spec.ts:38:5 › Widget Menu 复制选中（出现副本） (2.7s)
+  ✓  269 [chromium] › widget-sticky.spec.ts:17:5 › 双击便签编辑文字并持久化 (6.6s)
+  ✓  270 [chromium] › widget-sticky.spec.ts:37:5 › Widget Menu 改便签颜色并持久化 (3.2s)
+  ✘  271 [chromium] › widget-sticky.spec.ts:48:5 › viewer 不能编辑（双击无编辑框） (403ms)
+  ✘  272 [chromium] › widgets-001-use-canvasx-widgets.spec.ts:16:5 › 编辑者创建并管理 CanvasX widgets，菜单显示能力边界 (1.0m)
+  ✘  273 [chromium] › widgets-001-use-canvasx-widgets.spec.ts:72:5 › viewer 只能查看 CanvasX widgets，不能创建或打开编辑菜单 (457ms)
+  ✘  274 [chromium] › widgets-004-shape-widget.spec.ts:15:5 › 添加形状（rect）→ 出现在板上、自动选中、刷新仍在 (1.0m)
+  ✘  275 [chromium] › widgets-004-shape-widget.spec.ts:32:5 › 形状与便签共存：add-note 仍工作 (1.0m)
+
+
+  1) [chromium] › auth-reset-password.spec.ts:5:5 › 忘记密码→邮件令牌→重置→新密码登录 ─────────────────────────────
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
+
+    Locator: getByTestId('done')
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+      [2m- expect.toBeVisible with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('done')[22m
+
+
+      25 |   await page.getByTestId("confirm").fill("resetpass789");
+      26 |   await page.getByTestId("submit").click();
+    > 27 |   await expect(page.getByTestId("done")).toBeVisible();
+         |                                          ^
+      28 |
+      29 |   // 新密码登录成功
+      30 |   await page.context().clearCookies();
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/auth-reset-password.spec.ts:27:42
+
+  2) [chromium] › board-create.spec.ts:38:5 › 非房间成员创建白板 → 403 ──────────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-create.spec.ts:7:13)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-create.spec.ts:39:17
+
+  3) [chromium] › board-delete.spec.ts:27:5 › 房间成员（非管理者）删除 → 403 ───────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-delete.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-delete.spec.ts:28:17
+
+  4) [chromium] › board-duplicate.spec.ts:33:5 › 非房间成员复制 → 403 ─────────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-duplicate.spec.ts:7:13)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-duplicate.spec.ts:34:17
+
+  5) [chromium] › board-favorite.spec.ts:32:5 › 非成员收藏他人私有白板 → 403 ──────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-favorite.spec.ts:38:18
+
+  6) [chromium] › board-header-001-use-board-header.spec.ts:65:5 › viewer 在 Header 中只看到授权入口，加入后获得编辑入口 
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 117[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-header-001-use-board-header.spec.ts:67:15
+
+  7) [chromium] › board-header-009-sync-status.spec.ts:36:5 › 触发模拟保存后短暂显示「保存中」再回到「已同步」 ─────────────
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoHaveAttribute[2m([22m[32mexpected[39m[2m)[22m
+
+    Locator: getByTestId('board-header').getByTestId('board-sync-status')
+    Expected string: [32m"s[7maving[27m"[39m
+    Received string: [31m"s[7mynced[27m"[39m
+    Call log:
+      [2m- expect.toHaveAttribute with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('board-header').getByTestId('board-sync-status')[22m
+    [2m  -   locator resolved to <button type="button" title="同步数据状态" aria-live="polite" aria-label="同步状态：已同步" data-sync-state="synced" data-testid="board-sync-status" class="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground text-13 h-7 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium transition-color…>…</button>[22m
+    [2m  -   unexpected value "synced"[22m
+    [2m  -   locator resolved to <button type="button" title="同步数据状态" aria-live="polite" aria-label="同步状态：已同步" data-sync-state="synced" data-testid="board-sync-status" class="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground text-13 h-7 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium transition-color…>…</button>[22m
+    [2m  -   unexpected value "synced"[22m
+    [2m  -   locator resolved to <button type="button" title="同步数据状态" aria-live="polite" aria-label="同步状态：已同步" data-sync-state="synced" data-testid="board-sync-status" class="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground text-13 h-7 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium transition-color…>…</button>[22m
+    [2m  -   unexpected value "synced"[22m
+    [2m  -   locator resolved to <button type="button" title="同步数据状态" aria-live="polite" aria-label="同步状态：已同步" data-sync-state="synced" data-testid="board-sync-status" class="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground text-13 h-7 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium transition-color…>…</button>[22m
+    [2m  -   unexpected value "synced"[22m
+    [2m  -   locator resolved to <button type="button" title="同步数据状态" aria-live="polite" aria-label="同步状态：已同步" data-sync-state="synced" data-testid="board-sync-status" class="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground text-13 h-7 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium transition-color…>…</button>[22m
+    [2m  -   unexpected value "synced"[22m
+    [2m  -   locator resolved to <button type="button" title="同步数据状态" aria-live="polite" aria-label="同步状态：已同步" data-sync-state="synced" data-testid="board-sync-status" class="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground text-13 h-7 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium transition-color…>…</button>[22m
+    [2m  -   unexpected value "synced"[22m
+    [2m  -   locator resolved to <button type="button" title="同步数据状态" aria-live="polite" aria-label="同步状态：已同步" data-sync-state="synced" data-testid="board-sync-status" class="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground text-13 h-7 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium transition-color…>…</button>[22m
+    [2m  -   unexpected value "synced"[22m
+    [2m  -   locator resolved to <button type="button" title="同步数据状态" aria-live="polite" aria-label="同步状态：已同步" data-sync-state="synced" data-testid="board-sync-status" class="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground text-13 h-7 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium transition-color…>…</button>[22m
+    [2m  -   unexpected value "synced"[22m
+    [2m  -   locator resolved to <button type="button" title="同步数据状态" aria-live="polite" aria-label="同步状态：已同步" data-sync-state="synced" data-testid="board-sync-status" class="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground text-13 h-7 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium transition-color…>…</button>[22m
+    [2m  -   unexpected value "synced"[22m
+    [2m  -   locator resolved to <button type="button" title="同步数据状态" aria-live="polite" aria-label="同步状态：已同步" data-sync-state="synced" data-testid="board-sync-status" class="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground text-13 h-7 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium transition-color…>…</button>[22m
+    [2m  -   unexpected value "synced"[22m
+    [2m  -   locator resolved to <button type="button" title="同步数据状态" aria-live="polite" aria-label="同步状态：已同步" data-sync-state="synced" data-testid="board-sync-status" class="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground text-13 h-7 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium transition-color…>…</button>[22m
+    [2m  -   unexpected value "synced"[22m
+    [2m  -   locator resolved to <button type="button" title="同步数据状态" aria-live="polite" aria-label="同步状态：已同步" data-sync-state="synced" data-testid="board-sync-status" class="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground text-13 h-7 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium transition-color…>…</button>[22m
+    [2m  -   unexpected value "synced"[22m
+    [2m  -   locator resolved to <button type="button" title="同步数据状态" aria-live="polite" aria-label="同步状态：已同步" data-sync-state="synced" data-testid="board-sync-status" class="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground text-13 h-7 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium transition-color…>…</button>[22m
+    [2m  -   unexpected value "synced"[22m
+    [2m  -   locator resolved to <button type="button" title="同步数据状态" aria-live="polite" aria-label="同步状态：已同步" data-sync-state="synced" data-testid="board-sync-status" class="inline-flex items-center justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground text-13 h-7 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium transition-color…>…</button>[22m
+    [2m  -   unexpected value "synced"[22m
+
+
+      39 |
+      40 |   await status.click();
+    > 41 |   await expect(status).toHaveAttribute("data-sync-state", "saving");
+         |                        ^
+      42 |   await expect(page.getByTestId("board-sync-label")).toHaveText("保存中");
+      43 |
+      44 |   // 同步完成后恢复为「已同步」（UC 主流程第 5 步）。
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-header-009-sync-status.spec.ts:41:24
+
+  8) [chromium] › board-list-search.spec.ts:53:5 › 无匹配显示空提示 ────────────────────────────────────────
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
+
+    Locator: getByTestId('no-match')
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+      [2m- expect.toBeVisible with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('no-match')[22m
+
+
+      59 |   await page.getByTestId("search").fill("Nonexistent");
+      60 |   await page.getByTestId("search-btn").click();
+    > 61 |   await expect(page.getByTestId("no-match")).toBeVisible();
+         |                                              ^
+      62 | });
+      63 |
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-list-search.spec.ts:61:46
+
+  9) [chromium] › board-menu-001-use-board-menu.spec.ts:18:5 › 编辑者使用 Board Menu：工具可见、面板可打开、创建后选中 ───
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32mexpected[39m[2m)[22m
+
+    Locator: getByTestId('items-layer').locator('[data-testid^="item-"]').last()
+    Expected string: [32m"矩形"[39m
+    Received string: [31m""[39m
+    Call log:
+      [2m- expect.toContainText with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('items-layer').locator('[data-testid^="item-"]').last()[22m
+    [2m  -   locator resolved to <div data-z="1" data-selected="true" data-refreshed-at="" data-reload-count="0" data-reloadable="false" data-testid="item-997c9f67-978b-408c-a378-01fdcaff3ec4" class="absolute flex p-2 text-xs items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm cursor-grab active:cursor-grabbing ring-2 ring-primary ring-offset-1"></div>[22m
+    [2m  -   unexpected value ""[22m
+    [2m  -   locator resolved to <div data-z="1" data-selected="true" data-refreshed-at="" data-reload-count="0" data-reloadable="false" data-testid="item-997c9f67-978b-408c-a378-01fdcaff3ec4" class="absolute flex p-2 text-xs items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm cursor-grab active:cursor-grabbing ring-2 ring-primary ring-offset-1"></div>[22m
+    [2m  -   unexpected value ""[22m
+    [2m  -   locator resolved to <div data-z="1" data-selected="true" data-refreshed-at="" data-reload-count="0" data-reloadable="false" data-testid="item-997c9f67-978b-408c-a378-01fdcaff3ec4" class="absolute flex p-2 text-xs items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm cursor-grab active:cursor-grabbing ring-2 ring-primary ring-offset-1"></div>[22m
+    [2m  -   unexpected value ""[22m
+    [2m  -   locator resolved to <div data-z="1" data-selected="true" data-refreshed-at="" data-reload-count="0" data-reloadable="false" data-testid="item-997c9f67-978b-408c-a378-01fdcaff3ec4" class="absolute flex p-2 text-xs items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm cursor-grab active:cursor-grabbing ring-2 ring-primary ring-offset-1"></div>[22m
+    [2m  -   unexpected value ""[22m
+    [2m  -   locator resolved to <div data-z="1" data-selected="true" data-refreshed-at="" data-reload-count="0" data-reloadable="false" data-testid="item-997c9f67-978b-408c-a378-01fdcaff3ec4" class="absolute flex p-2 text-xs items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm cursor-grab active:cursor-grabbing ring-2 ring-primary ring-offset-1"></div>[22m
+    [2m  -   unexpected value ""[22m
+    [2m  -   locator resolved to <div data-z="1" data-selected="true" data-refreshed-at="" data-reload-count="0" data-reloadable="false" data-testid="item-997c9f67-978b-408c-a378-01fdcaff3ec4" class="absolute flex p-2 text-xs items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm cursor-grab active:cursor-grabbing ring-2 ring-primary ring-offset-1"></div>[22m
+    [2m  -   unexpected value ""[22m
+    [2m  -   locator resolved to <div data-z="1" data-selected="true" data-refreshed-at="" data-reload-count="0" data-reloadable="false" data-testid="item-997c9f67-978b-408c-a378-01fdcaff3ec4" class="absolute flex p-2 text-xs items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm cursor-grab active:cursor-grabbing ring-2 ring-primary ring-offset-1"></div>[22m
+    [2m  -   unexpected value ""[22m
+    [2m  -   locator resolved to <div data-z="1" data-selected="true" data-refreshed-at="" data-reload-count="0" data-reloadable="false" data-testid="item-997c9f67-978b-408c-a378-01fdcaff3ec4" class="absolute flex p-2 text-xs items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm cursor-grab active:cursor-grabbing ring-2 ring-primary ring-offset-1"></div>[22m
+    [2m  -   unexpected value ""[22m
+    [2m  -   locator resolved to <div data-z="1" data-selected="true" data-refreshed-at="" data-reload-count="0" data-reloadable="false" data-testid="item-997c9f67-978b-408c-a378-01fdcaff3ec4" class="absolute flex p-2 text-xs items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm cursor-grab active:cursor-grabbing ring-2 ring-primary ring-offset-1"></div>[22m
+    [2m  -   unexpected value ""[22m
+    [2m  -   locator resolved to <div data-z="1" data-selected="true" data-refreshed-at="" data-reload-count="0" data-reloadable="false" data-testid="item-997c9f67-978b-408c-a378-01fdcaff3ec4" class="absolute flex p-2 text-xs items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm cursor-grab active:cursor-grabbing ring-2 ring-primary ring-offset-1"></div>[22m
+    [2m  -   unexpected value ""[22m
+    [2m  -   locator resolved to <div data-z="1" data-selected="true" data-refreshed-at="" data-reload-count="0" data-reloadable="false" data-testid="item-997c9f67-978b-408c-a378-01fdcaff3ec4" class="absolute flex p-2 text-xs items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm cursor-grab active:cursor-grabbing ring-2 ring-primary ring-offset-1"></div>[22m
+    [2m  -   unexpected value ""[22m
+    [2m  -   locator resolved to <div data-z="1" data-selected="true" data-refreshed-at="" data-reload-count="0" data-reloadable="false" data-testid="item-997c9f67-978b-408c-a378-01fdcaff3ec4" class="absolute flex p-2 text-xs items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm cursor-grab active:cursor-grabbing ring-2 ring-primary ring-offset-1"></div>[22m
+    [2m  -   unexpected value ""[22m
+    [2m  -   locator resolved to <div data-z="1" data-selected="true" data-refreshed-at="" data-reload-count="0" data-reloadable="false" data-testid="item-997c9f67-978b-408c-a378-01fdcaff3ec4" class="absolute flex p-2 text-xs items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm cursor-grab active:cursor-grabbing ring-2 ring-primary ring-offset-1"></div>[22m
+    [2m  -   unexpected value ""[22m
+    [2m  -   locator resolved to <div data-z="1" data-selected="true" data-refreshed-at="" data-reload-count="0" data-reloadable="false" data-testid="item-997c9f67-978b-408c-a378-01fdcaff3ec4" class="absolute flex p-2 text-xs items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm cursor-grab active:cursor-grabbing ring-2 ring-primary ring-offset-1"></div>[22m
+    [2m  -   unexpected value ""[22m
+
+
+      53 |   await page.getByTestId("board-tool-shape").click();
+      54 |   await expect(items(page)).toHaveCount(2);
+    > 55 |   await expect(items(page).last()).toContainText("矩形");
+         |                                    ^
+      56 |   await expect(page.getByTestId("board-tool-shape")).toHaveAttribute("aria-pressed", "true");
+      57 | });
+      58 |
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-menu-001-use-board-menu.spec.ts:55:36
+
+  10) [chromium] › board-menu-001-use-board-menu.spec.ts:59:5 › viewer 不显示会改变内容的 Board Menu ────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 117[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-menu-001-use-board-menu.spec.ts:61:15
+
+  11) [chromium] › board-metadata.spec.ts:40:5 › 房间成员（非管理者）更新 → 403 ────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-metadata.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-metadata.spec.ts:41:17
+
+  12) [chromium] › board-move.spec.ts:32:5 › 移动到自己不是成员的房间 → 403 ────────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-move.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-move.spec.ts:33:17
+
+  13) [chromium] › board-move.spec.ts:47:5 › 房间成员（非管理者）移动 → 403 ────────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-move.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-move.spec.ts:48:17
+
+  14) [chromium] › board-open.spec.ts:28:5 › 非房间成员打开白板 → API 403 ───────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 113[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-open.spec.ts:7:13)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-open.spec.ts:29:17
+
+  15) [chromium] › board-public-access.spec.ts:13:5 › 匿名打开 public 白板 → 200 viewer；private → 401 ────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 115[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-public-access.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-public-access.spec.ts:14:17
+
+  16) [chromium] › board-public-access.spec.ts:35:5 › 已登录非成员加入 public 白板 → 成为 editor ───────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 115[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-public-access.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-public-access.spec.ts:36:17
+
+  17) [chromium] › board-public-access.spec.ts:54:5 › 加入无权访问的 private 白板 → 403 ─────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 115[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-public-access.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-public-access.spec.ts:55:17
+
+  18) [chromium] › board-public-access.spec.ts:66:5 › UI：已登录非成员在 public 板上点加入协作 → 变 editor ─────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 115[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-public-access.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-public-access.spec.ts:67:17
+
+  19) [chromium] › board-settings.spec.ts:29:5 › 非管理者改设置 → 403 ─────────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 115[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-settings.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-settings.spec.ts:30:17
+
+  20) [chromium] › board-visibility.spec.ts:13:5 › 改为 public 后非成员可只读访问（viewer） ─────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 115[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-visibility.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-visibility.spec.ts:14:17
+
+  21) [chromium] › board-visibility.spec.ts:32:5 › team 可见：团队成员（非房间成员）可只读，非团队成员 403 ────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-visibility.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-visibility.spec.ts:33:17
+
+  22) [chromium] › board-visibility.spec.ts:56:5 › 非房间 owner 改可见范围 → 403；非法值 400 ───────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 115[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-visibility.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-visibility.spec.ts:57:17
+
+  23) [chromium] › board-visibility.spec.ts:71:5 › UI：房间 owner 在板页切换可见范围到 public ───────────────────
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoHaveValue[2m([22m[32mexpected[39m[2m)[22m
+
+    Locator: getByTestId('visibility')
+    Expected string: [32m"public"[39m
+    Received string: [31m"room"[39m
+    Call log:
+      [2m- expect.toHaveValue with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('visibility')[22m
+    [2m  -   locator resolved to <select id="visibility" data-testid="visibility" class="flex h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 w-56">…</select>[22m
+    [2m  -   unexpected value "room"[22m
+    [2m  -   locator resolved to <select id="visibility" data-testid="visibility" class="flex h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 w-56">…</select>[22m
+    [2m  -   unexpected value "room"[22m
+    [2m  -   locator resolved to <select id="visibility" data-testid="visibility" class="flex h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 w-56">…</select>[22m
+    [2m  -   unexpected value "room"[22m
+    [2m  -   locator resolved to <select id="visibility" data-testid="visibility" class="flex h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 w-56">…</select>[22m
+    [2m  -   unexpected value "room"[22m
+    [2m  -   locator resolved to <select id="visibility" data-testid="visibility" class="flex h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 w-56">…</select>[22m
+    [2m  -   unexpected value "room"[22m
+    [2m  -   locator resolved to <select id="visibility" data-testid="visibility" class="flex h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 w-56">…</select>[22m
+    [2m  -   unexpected value "room"[22m
+    [2m  -   locator resolved to <select id="visibility" data-testid="visibility" class="flex h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 w-56">…</select>[22m
+    [2m  -   unexpected value "room"[22m
+    [2m  -   locator resolved to <select id="visibility" data-testid="visibility" class="flex h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 w-56">…</select>[22m
+    [2m  -   unexpected value "room"[22m
+    [2m  -   locator resolved to <select id="visibility" data-testid="visibility" class="flex h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 w-56">…</select>[22m
+    [2m  -   unexpected value "room"[22m
+    [2m  -   locator resolved to <select id="visibility" data-testid="visibility" class="flex h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 w-56">…</select>[22m
+    [2m  -   unexpected value "room"[22m
+    [2m  -   locator resolved to <select id="visibility" data-testid="visibility" class="flex h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 w-56">…</select>[22m
+    [2m  -   unexpected value "room"[22m
+    [2m  -   locator resolved to <select id="visibility" data-testid="visibility" class="flex h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 w-56">…</select>[22m
+    [2m  -   unexpected value "room"[22m
+    [2m  -   locator resolved to <select id="visibility" data-testid="visibility" class="flex h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 w-56">…</select>[22m
+    [2m  -   unexpected value "room"[22m
+    [2m  -   locator resolved to <select id="visibility" data-testid="visibility" class="flex h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 w-56">…</select>[22m
+    [2m  -   unexpected value "room"[22m
+
+
+      82 |   await page.reload();
+      83 |   await page.getByTestId("board-meta-edit").click();
+    > 84 |   await expect(page.getByTestId("visibility")).toHaveValue("public");
+         |                                                ^
+      85 | });
+      86 |
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/board-visibility.spec.ts:84:48
+
+  24) [chromium] › canvas-005-realtime-collaboration.spec.ts:20:5 › 两名协作者：在线成员 + 同步状态 + 跨客户端内容一致 ───
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 119[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at register (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/canvas-005-realtime-collaboration.spec.ts:14:25)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/canvas-005-realtime-collaboration.spec.ts:26:11
+
+  25) [chromium] › canvas-005-realtime-collaboration.spec.ts:73:5 › 离开后在线成员数量回落（UC 主流程 6） ──────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 118[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at register (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/canvas-005-realtime-collaboration.spec.ts:14:25)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/canvas-005-realtime-collaboration.spec.ts:78:11
+
+  26) [chromium] › canvas-005-realtime-collaboration.spec.ts:101:5 › 无权限者不能通过协作/items 通道写入 → 403 ───
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 117[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at register (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/canvas-005-realtime-collaboration.spec.ts:14:25)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/canvas-005-realtime-collaboration.spec.ts:106:11
+
+  27) [chromium] › canvas-add.spec.ts:21:5 › 非房间成员添加 item → 403 ────────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/canvas-add.spec.ts:23:15
+
+  28) [chromium] › canvas-delete.spec.ts:24:5 › 非房间成员删除 item → 403 ─────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/canvas-delete.spec.ts:26:15
+
+  29) [chromium] › canvas-select.spec.ts:81:5 › viewer 无编辑工具栏；POST item → 403 ──────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 115[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/canvas-select.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/canvas-select.spec.ts:82:17
+
+  30) [chromium] › canvas-update.spec.ts:27:5 › 非房间成员更新 item → 403 ─────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/canvas-update.spec.ts:29:15
+
+  31) [chromium] › collab-001-yjs-realtime-sync.spec.ts:23:5 › 协作感知 + 视角跟随：谁在线 / 谁在操作 / 我是否正在跟随 ────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 124[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at register (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/collab-001-yjs-realtime-sync.spec.ts:17:25)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/collab-001-yjs-realtime-sync.spec.ts:29:11
+
+  32) [chromium] › collab-001-yjs-realtime-sync.spec.ts:113:5 › (d) 非成员对 presence/collab 通道 → 403 ──
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 123[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at register (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/collab-001-yjs-realtime-sync.spec.ts:17:25)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/collab-001-yjs-realtime-sync.spec.ts:118:11
+
+  33) [chromium] › common-001-global-search.spec.ts:33:5 › API：搜索不泄露他人私有 room 内的 board ─────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newCtx (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/common-001-global-search.spec.ts:13:13)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/common-001-global-search.spec.ts:34:17
+
+  34) [chromium] › local-001-use-local-workspace.spec.ts:59:5 › viewer 不显示 Local Workspace 编辑入口 ────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 120[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/local-001-use-local-workspace.spec.ts:61:15
+
+  35) [chromium] › profile-edit.spec.ts:5:5 › 改显示名 + 选头像，保存后菜单刷新 ───────────────────────────────────
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32m"Super Ada"[39m
+    Received: [31m"A B"[39m
+
+      16 |   // GET /api/profile 返回新值
+      17 |   const p = (await (await page.request.get("/api/profile")).json()).profile;
+    > 18 |   expect(p.displayName).toBe("Super Ada");
+         |                         ^
+      19 |   expect(p.avatar).toBe("seed:b2");
+      20 |
+      21 |   // 首页菜单刷新
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/profile-edit.spec.ts:18:25
+
+  36) [chromium] › profile-edit.spec.ts:27:5 › 空显示名被拒 ──────────────────────────────────────────────
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
+
+    Locator: getByTestId('err')
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+      [2m- expect.toBeVisible with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('err')[22m
+
+
+      33 |   await page.getByTestId("display-name").fill("   ");
+      34 |   await page.getByTestId("save-personal").click();
+    > 35 |   await expect(page.getByTestId("err")).toBeVisible();
+         |                                         ^
+      36 | });
+      37 |
+      38 | test("AI generate 更新头像预览", async ({ page }) => {
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/profile-edit.spec.ts:35:41
+
+  37) [chromium] › profile-edit.spec.ts:38:5 › AI generate 更新头像预览 ──────────────────────────────────
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32mexpected[39m[2m)[22m
+
+    Locator: getByTestId('avatar-preview')
+    Expected string: [32m"seed:gen"[39m
+    Received string: [31m"(默认)"[39m
+    Call log:
+      [2m- expect.toContainText with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('avatar-preview')[22m
+    [2m  -   locator resolved to <span data-testid="avatar-preview" class="font-mono text-13 text-muted-foreground">(默认)</span>[22m
+    [2m  -   unexpected value "(默认)"[22m
+    [2m  -   locator resolved to <span data-testid="avatar-preview" class="font-mono text-13 text-muted-foreground">(默认)</span>[22m
+    [2m  -   unexpected value "(默认)"[22m
+    [2m  -   locator resolved to <span data-testid="avatar-preview" class="font-mono text-13 text-muted-foreground">(默认)</span>[22m
+    [2m  -   unexpected value "(默认)"[22m
+    [2m  -   locator resolved to <span data-testid="avatar-preview" class="font-mono text-13 text-muted-foreground">(默认)</span>[22m
+    [2m  -   unexpected value "(默认)"[22m
+    [2m  -   locator resolved to <span data-testid="avatar-preview" class="font-mono text-13 text-muted-foreground">(默认)</span>[22m
+    [2m  -   unexpected value "(默认)"[22m
+    [2m  -   locator resolved to <span data-testid="avatar-preview" class="font-mono text-13 text-muted-foreground">(默认)</span>[22m
+    [2m  -   unexpected value "(默认)"[22m
+    [2m  -   locator resolved to <span data-testid="avatar-preview" class="font-mono text-13 text-muted-foreground">(默认)</span>[22m
+    [2m  -   unexpected value "(默认)"[22m
+    [2m  -   locator resolved to <span data-testid="avatar-preview" class="font-mono text-13 text-muted-foreground">(默认)</span>[22m
+    [2m  -   unexpected value "(默认)"[22m
+    [2m  -   locator resolved to <span data-testid="avatar-preview" class="font-mono text-13 text-muted-foreground">(默认)</span>[22m
+    [2m  -   unexpected value "(默认)"[22m
+    [2m  -   locator resolved to <span data-testid="avatar-preview" class="font-mono text-13 text-muted-foreground">(默认)</span>[22m
+    [2m  -   unexpected value "(默认)"[22m
+    [2m  -   locator resolved to <span data-testid="avatar-preview" class="font-mono text-13 text-muted-foreground">(默认)</span>[22m
+    [2m  -   unexpected value "(默认)"[22m
+    [2m  -   locator resolved to <span data-testid="avatar-preview" class="font-mono text-13 text-muted-foreground">(默认)</span>[22m
+    [2m  -   unexpected value "(默认)"[22m
+    [2m  -   locator resolved to <span data-testid="avatar-preview" class="font-mono text-13 text-muted-foreground">(默认)</span>[22m
+    [2m  -   unexpected value "(默认)"[22m
+    [2m  -   locator resolved to <span data-testid="avatar-preview" class="font-mono text-13 text-muted-foreground">(默认)</span>[22m
+    [2m  -   unexpected value "(默认)"[22m
+
+
+      42 |   await page.goto("/account");
+      43 |   await page.getByTestId("avatar-generate").click();
+    > 44 |   await expect(page.getByTestId("avatar-preview")).toContainText("seed:gen");
+         |                                                    ^
+      45 | });
+      46 |
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/profile-edit.spec.ts:44:52
+
+  38) [chromium] › room-003-invite-manage-room-members.spec.ts:25:5 › 房间管理者看到成员列表 + 邮箱邀请已注册用户加入 ────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 117[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUserCtx (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-003-invite-manage-room-members.spec.ts:18:15)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-003-invite-manage-room-members.spec.ts:27:45
+
+  39) [chromium] › room-003-invite-manage-room-members.spec.ts:64:5 › 管理者改成员角色 / 移除成员，列表随之更新 ───────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 117[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUserCtx (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-003-invite-manage-room-members.spec.ts:18:15)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-003-invite-manage-room-members.spec.ts:66:62
+
+  40) [chromium] › room-003-invite-manage-room-members.spec.ts:85:5 › 普通成员 → 只读：无邀请区，有只读提示 ─────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 117[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUserCtx (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-003-invite-manage-room-members.spec.ts:18:15)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-003-invite-manage-room-members.spec.ts:86:38
+
+  41) [chromium] › room-003-invite-manage-room-members.spec.ts:107:5 › API：owner 不可被移除；admin 不能移除另一个 admin 
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 117[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUserCtx (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-003-invite-manage-room-members.spec.ts:18:15)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-003-invite-manage-room-members.spec.ts:108:43
+
+  42) [chromium] › room-chat-003-send-message.spec.ts:46:5 › 他人创建的线程 → 只读，无法发送 ─────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 118[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-chat-003-send-message.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-chat-003-send-message.spec.ts:47:17
+
+  43) [chromium] › room-chat-003-send-message.spec.ts:70:5 › 未登录访问发送接口 → 401；页面跳转 /login ───────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 118[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-chat-003-send-message.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-chat-003-send-message.spec.ts:71:17
+
+  44) [chromium] › room-chat-create.spec.ts:43:5 › 非房间成员创建线程 → 403 ─────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 115[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-chat-create.spec.ts:7:13)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-chat-create.spec.ts:44:17
+
+  45) [chromium] › room-chat-delete.spec.ts:27:5 › 非创建者成员无删除入口且 API 403 ────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 115[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-chat-delete.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-chat-delete.spec.ts:28:17
+
+  46) [chromium] › room-chat-list.spec.ts:34:5 › 非房间成员列出聊天 → 403 ───────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 115[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-chat-list.spec.ts:7:13)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-chat-list.spec.ts:35:17
+
+  47) [chromium] › room-chat-open.spec.ts:13:5 › 成员打开他人创建的线程 → 只读态（无输入区，有仅查看标记） ────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 115[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-chat-open.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-chat-open.spec.ts:14:17
+
+  48) [chromium] › room-chat-open.spec.ts:45:5 › 非房间成员打开线程 → 403 ───────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 115[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-chat-open.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-chat-open.spec.ts:46:17
+
+  49) [chromium] › room-manage.spec.ts:13:5 › owner 加/移成员、改名改可见性、删除；非 owner 403 ────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-manage.spec.ts:7:32)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-manage.spec.ts:14:17
+
+  50) [chromium] › room-view-search.spec.ts:13:5 › 私有房间对非成员不可见、未授权访问 403 ───────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 112[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-view-search.spec.ts:7:13)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/room-view-search.spec.ts:14:17
+
+  51) [chromium] › team-003-invite-members.spec.ts:22:5 › owner 邮箱邀请：已注册用户被加入，未注册邮箱走邀请流程 ───────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 117[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUserCtx (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-003-invite-members.spec.ts:16:13)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-003-invite-members.spec.ts:25:45
+
+  52) [chromium] › team-003-invite-members.spec.ts:87:5 › API：member 无权邮箱邀请 → 403 ──────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 117[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUserCtx (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-003-invite-members.spec.ts:16:13)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-003-invite-members.spec.ts:88:26
+
+  53) [chromium] › team-003-invite-members.spec.ts:103:5 › API：已在团队的成员被重复邀请 → userAlreadyInTeam(409) 
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 117[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUserCtx (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-003-invite-members.spec.ts:16:13)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-003-invite-members.spec.ts:104:26
+
+  54) [chromium] › team-007-general-settings.spec.ts:25:5 › owner 编辑团队名与描述 → 保存成功并持久化 ──────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-007-general-settings.spec.ts:10:13)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-007-general-settings.spec.ts:26:17
+
+  55) [chromium] › team-007-general-settings.spec.ts:46:5 › owner 删除团队 → 团队从列表消失 ───────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-007-general-settings.spec.ts:10:13)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-007-general-settings.spec.ts:47:17
+
+  56) [chromium] › team-007-general-settings.spec.ts:59:5 › 非 owner（member）无权删除团队 → 403 ────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-007-general-settings.spec.ts:10:13)
+        at ownerWithMember (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-007-general-settings.spec.ts:17:17)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-007-general-settings.spec.ts:60:35
+
+  57) [chromium] › team-007-general-settings.spec.ts:73:5 › 团队名不能为空 → 400 ──────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-007-general-settings.spec.ts:10:13)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-007-general-settings.spec.ts:74:17
+
+  58) [chromium] › team-invite-join.spec.ts:13:5 › owner 邀请、被邀请人加入为 member ─────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-invite-join.spec.ts:7:13)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-invite-join.spec.ts:14:17
+
+  59) [chromium] › team-invite-join.spec.ts:33:5 › 非 owner/admin（member）无权邀请 → 403 ─────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 115[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-invite-join.spec.ts:7:13)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-invite-join.spec.ts:34:17
+
+  60) [chromium] › team-invite-join.spec.ts:46:5 › 无效令牌加入 → 400 ────────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-invite-join.spec.ts:7:13)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-invite-join.spec.ts:47:13
+
+  61) [chromium] › team-manage.spec.ts:25:5 › owner 改成员角色、移除成员 ─────────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-manage.spec.ts:7:13)
+        at ownerWithMember (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-manage.spec.ts:14:17)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-manage.spec.ts:26:49
+
+  62) [chromium] › team-manage.spec.ts:39:5 › member 无权管理（改角色 403），非 owner 无权删除团队（403） ─────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-manage.spec.ts:7:13)
+        at ownerWithMember (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-manage.spec.ts:14:17)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-manage.spec.ts:40:49
+
+  63) [chromium] › team-manage.spec.ts:51:5 › owner 改名并删除团队 ────────────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at newUser (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-manage.spec.ts:7:13)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-manage.spec.ts:52:17
+
+  64) [chromium] › team-switch.spec.ts:30:5 › 不能切换到未加入的团队 ──────────────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 114[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/team-switch.spec.ts:33:11
+
+  65) [chromium] › widget-sticky.spec.ts:48:5 › viewer 不能编辑（双击无编辑框） ────────────────────────────────
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 115[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/widget-sticky.spec.ts:50:15
+
+  66) [chromium] › widgets-001-use-canvasx-widgets.spec.ts:16:5 › 编辑者创建并管理 CanvasX widgets，菜单显示能力边界 
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 60000ms exceeded.
+    Call log:
+      [2m- waiting for getByTestId('add-shape')[22m
+
+
+      52 |   await expect(page.getByTestId("wm-color-blue")).toHaveCount(0);
+      53 |
+    > 54 |   await page.getByTestId("add-shape").click();
+         |                                       ^
+      55 |   await expect(items).toHaveCount(3);
+      56 |   await expect
+      57 |     .poll(async () => {
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/widgets-001-use-canvasx-widgets.spec.ts:54:39
+
+  67) [chromium] › widgets-001-use-canvasx-widgets.spec.ts:72:5 › viewer 只能查看 CanvasX widgets，不能创建或打开编辑菜单 
+
+    Error: apiRequestContext.post: connect ECONNREFUSED ::1:3000
+    Call log:
+      [2m- → POST http://localhost:3000/api/auth/register[22m
+    [2m  -   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.29 Safari/537.36[22m
+    [2m  -   accept: */*[22m
+    [2m  -   accept-encoding: gzip,deflate,br[22m
+    [2m  -   content-type: application/json[22m
+    [2m  -   content-length: 122[22m
+
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/apiRequestContext.post: connect ECONNREFUSED ::1:3000
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/widgets-001-use-canvasx-widgets.spec.ts:74:15
+
+  68) [chromium] › widgets-004-shape-widget.spec.ts:15:5 › 添加形状（rect）→ 出现在板上、自动选中、刷新仍在 ─────────────
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 60000ms exceeded.
+    Call log:
+      [2m- waiting for getByTestId('add-shape')[22m
+
+
+      15 | test("添加形状（rect）→ 出现在板上、自动选中、刷新仍在", async ({ page }) => {
+      16 |   const board = await openOwnBoard(page);
+    > 17 |   await page.getByTestId("add-shape").click();
+         |                                       ^
+      18 |   const items = page.getByTestId("items-layer").locator('[data-testid^="item-"]');
+      19 |   await expect(items).toHaveCount(1);
+      20 |   await expect(page.getByTestId("selection-count")).toHaveText("已选 1");
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/widgets-004-shape-widget.spec.ts:17:39
+
+  69) [chromium] › widgets-004-shape-widget.spec.ts:32:5 › 形状与便签共存：add-note 仍工作 ────────────────────
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 60000ms exceeded.
+    Call log:
+      [2m- waiting for getByTestId('add-shape')[22m
+
+
+      33 |   await openOwnBoard(page);
+      34 |   await page.getByTestId("add-note").click();
+    > 35 |   await page.getByTestId("add-shape").click();
+         |                                       ^
+      36 |   await expect(page.getByTestId("items-layer").locator('[data-testid^="item-"]')).toHaveCount(2);
+      37 | });
+      38 |
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web/e2e/widgets-004-shape-widget.spec.ts:35:39
+
+  Slow test file: [chromium] › studio-001-generate-artifact.spec.ts (37.2s)
+  Slow test file: [chromium] › kb-001-upload-file.spec.ts (18.3s)
+  Consider splitting slow test files to speed up parallel execution
+  69 failed
+    [chromium] › auth-reset-password.spec.ts:5:5 › 忘记密码→邮件令牌→重置→新密码登录 ──────────────────────────────
+    [chromium] › board-create.spec.ts:38:5 › 非房间成员创建白板 → 403 ───────────────────────────────────────
+    [chromium] › board-delete.spec.ts:27:5 › 房间成员（非管理者）删除 → 403 ────────────────────────────────────
+    [chromium] › board-duplicate.spec.ts:33:5 › 非房间成员复制 → 403 ──────────────────────────────────────
+    [chromium] › board-favorite.spec.ts:32:5 › 非成员收藏他人私有白板 → 403 ───────────────────────────────────
+    [chromium] › board-header-001-use-board-header.spec.ts:65:5 › viewer 在 Header 中只看到授权入口，加入后获得编辑入口 
+    [chromium] › board-header-009-sync-status.spec.ts:36:5 › 触发模拟保存后短暂显示「保存中」再回到「已同步」 ──────────────
+    [chromium] › board-list-search.spec.ts:53:5 › 无匹配显示空提示 ─────────────────────────────────────────
+    [chromium] › board-menu-001-use-board-menu.spec.ts:18:5 › 编辑者使用 Board Menu：工具可见、面板可打开、创建后选中 ────
+    [chromium] › board-menu-001-use-board-menu.spec.ts:59:5 › viewer 不显示会改变内容的 Board Menu ──────────
+    [chromium] › board-metadata.spec.ts:40:5 › 房间成员（非管理者）更新 → 403 ──────────────────────────────────
+    [chromium] › board-move.spec.ts:32:5 › 移动到自己不是成员的房间 → 403 ──────────────────────────────────────
+    [chromium] › board-move.spec.ts:47:5 › 房间成员（非管理者）移动 → 403 ──────────────────────────────────────
+    [chromium] › board-open.spec.ts:28:5 › 非房间成员打开白板 → API 403 ─────────────────────────────────────
+    [chromium] › board-public-access.spec.ts:13:5 › 匿名打开 public 白板 → 200 viewer；private → 401 ──────
+    [chromium] › board-public-access.spec.ts:35:5 › 已登录非成员加入 public 白板 → 成为 editor ─────────────────
+    [chromium] › board-public-access.spec.ts:54:5 › 加入无权访问的 private 白板 → 403 ───────────────────────
+    [chromium] › board-public-access.spec.ts:66:5 › UI：已登录非成员在 public 板上点加入协作 → 变 editor ───────────
+    [chromium] › board-settings.spec.ts:29:5 › 非管理者改设置 → 403 ───────────────────────────────────────
+    [chromium] › board-visibility.spec.ts:13:5 › 改为 public 后非成员可只读访问（viewer） ───────────────────────
+    [chromium] › board-visibility.spec.ts:32:5 › team 可见：团队成员（非房间成员）可只读，非团队成员 403 ──────────────────
+    [chromium] › board-visibility.spec.ts:56:5 › 非房间 owner 改可见范围 → 403；非法值 400 ─────────────────────
+    [chromium] › board-visibility.spec.ts:71:5 › UI：房间 owner 在板页切换可见范围到 public ─────────────────────
+    [chromium] › canvas-005-realtime-collaboration.spec.ts:20:5 › 两名协作者：在线成员 + 同步状态 + 跨客户端内容一致 ─────
+    [chromium] › canvas-005-realtime-collaboration.spec.ts:73:5 › 离开后在线成员数量回落（UC 主流程 6） ────────────
+    [chromium] › canvas-005-realtime-collaboration.spec.ts:101:5 › 无权限者不能通过协作/items 通道写入 → 403 ─────
+    [chromium] › canvas-add.spec.ts:21:5 › 非房间成员添加 item → 403 ──────────────────────────────────────
+    [chromium] › canvas-delete.spec.ts:24:5 › 非房间成员删除 item → 403 ───────────────────────────────────
+    [chromium] › canvas-select.spec.ts:81:5 › viewer 无编辑工具栏；POST item → 403 ────────────────────────
+    [chromium] › canvas-update.spec.ts:27:5 › 非房间成员更新 item → 403 ───────────────────────────────────
+    [chromium] › collab-001-yjs-realtime-sync.spec.ts:23:5 › 协作感知 + 视角跟随：谁在线 / 谁在操作 / 我是否正在跟随 ──────
+    [chromium] › collab-001-yjs-realtime-sync.spec.ts:113:5 › (d) 非成员对 presence/collab 通道 → 403 ────
+    [chromium] › common-001-global-search.spec.ts:33:5 › API：搜索不泄露他人私有 room 内的 board ───────────────
+    [chromium] › local-001-use-local-workspace.spec.ts:59:5 › viewer 不显示 Local Workspace 编辑入口 ──────
+    [chromium] › profile-edit.spec.ts:5:5 › 改显示名 + 选头像，保存后菜单刷新 ─────────────────────────────────────
+    [chromium] › profile-edit.spec.ts:27:5 › 空显示名被拒 ────────────────────────────────────────────────
+    [chromium] › profile-edit.spec.ts:38:5 › AI generate 更新头像预览 ────────────────────────────────────
+    [chromium] › room-003-invite-manage-room-members.spec.ts:25:5 › 房间管理者看到成员列表 + 邮箱邀请已注册用户加入 ──────
+    [chromium] › room-003-invite-manage-room-members.spec.ts:64:5 › 管理者改成员角色 / 移除成员，列表随之更新 ─────────
+    [chromium] › room-003-invite-manage-room-members.spec.ts:85:5 › 普通成员 → 只读：无邀请区，有只读提示 ───────────
+    [chromium] › room-003-invite-manage-room-members.spec.ts:107:5 › API：owner 不可被移除；admin 不能移除另一个 admin 
+    [chromium] › room-chat-003-send-message.spec.ts:46:5 › 他人创建的线程 → 只读，无法发送 ───────────────────────
+    [chromium] › room-chat-003-send-message.spec.ts:70:5 › 未登录访问发送接口 → 401；页面跳转 /login ─────────────
+    [chromium] › room-chat-create.spec.ts:43:5 › 非房间成员创建线程 → 403 ───────────────────────────────────
+    [chromium] › room-chat-delete.spec.ts:27:5 › 非创建者成员无删除入口且 API 403 ──────────────────────────────
+    [chromium] › room-chat-list.spec.ts:34:5 › 非房间成员列出聊天 → 403 ─────────────────────────────────────
+    [chromium] › room-chat-open.spec.ts:13:5 › 成员打开他人创建的线程 → 只读态（无输入区，有仅查看标记） ──────────────────────
+    [chromium] › room-chat-open.spec.ts:45:5 › 非房间成员打开线程 → 403 ─────────────────────────────────────
+    [chromium] › room-manage.spec.ts:13:5 › owner 加/移成员、改名改可见性、删除；非 owner 403 ──────────────────────
+    [chromium] › room-view-search.spec.ts:13:5 › 私有房间对非成员不可见、未授权访问 403 ─────────────────────────────
+    [chromium] › team-003-invite-members.spec.ts:22:5 › owner 邮箱邀请：已注册用户被加入，未注册邮箱走邀请流程 ─────────────
+    [chromium] › team-003-invite-members.spec.ts:87:5 › API：member 无权邮箱邀请 → 403 ────────────────────
+    [chromium] › team-003-invite-members.spec.ts:103:5 › API：已在团队的成员被重复邀请 → userAlreadyInTeam(409) ─
+    [chromium] › team-007-general-settings.spec.ts:25:5 › owner 编辑团队名与描述 → 保存成功并持久化 ────────────────
+    [chromium] › team-007-general-settings.spec.ts:46:5 › owner 删除团队 → 团队从列表消失 ─────────────────────
+    [chromium] › team-007-general-settings.spec.ts:59:5 › 非 owner（member）无权删除团队 → 403 ──────────────
+    [chromium] › team-007-general-settings.spec.ts:73:5 › 团队名不能为空 → 400 ────────────────────────────
+    [chromium] › team-invite-join.spec.ts:13:5 › owner 邀请、被邀请人加入为 member ───────────────────────────
+    [chromium] › team-invite-join.spec.ts:33:5 › 非 owner/admin（member）无权邀请 → 403 ───────────────────
+    [chromium] › team-invite-join.spec.ts:46:5 › 无效令牌加入 → 400 ──────────────────────────────────────
+    [chromium] › team-manage.spec.ts:25:5 › owner 改成员角色、移除成员 ───────────────────────────────────────
+    [chromium] › team-manage.spec.ts:39:5 › member 无权管理（改角色 403），非 owner 无权删除团队（403） ───────────────
+    [chromium] › team-manage.spec.ts:51:5 › owner 改名并删除团队 ──────────────────────────────────────────
+    [chromium] › team-switch.spec.ts:30:5 › 不能切换到未加入的团队 ────────────────────────────────────────────
+    [chromium] › widget-sticky.spec.ts:48:5 › viewer 不能编辑（双击无编辑框） ──────────────────────────────────
+    [chromium] › widgets-001-use-canvasx-widgets.spec.ts:16:5 › 编辑者创建并管理 CanvasX widgets，菜单显示能力边界 ──
+    [chromium] › widgets-001-use-canvasx-widgets.spec.ts:72:5 › viewer 只能查看 CanvasX widgets，不能创建或打开编辑菜单 
+    [chromium] › widgets-004-shape-widget.spec.ts:15:5 › 添加形状（rect）→ 出现在板上、自动选中、刷新仍在 ───────────────
+    [chromium] › widgets-004-shape-widget.spec.ts:32:5 › 形状与便签共存：add-note 仍工作 ──────────────────────
+  206 passed (12.6m)
+undefined
+/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a4ad9667ab850dbea/apps/web:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 1: playwright test
