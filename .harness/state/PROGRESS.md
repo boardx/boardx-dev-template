@@ -19,7 +19,7 @@
 | p11 | AI Store (P11) | not_started | 4 | 1 | 1 | 0 |
 | p12 | Studio & 演示 (P12) | not_started | 0 | 0 | 3 | 0 |
 | p13 | 问卷 (P13) | not_started | 5 | 1 | 0 | 0 |
-| p14 | 积分 & 计费 (P14) | not_started | 2 | 1 | 2 | 0 |
-| p15 | Admin 后台 (P15) | not_started | 3 | 0 | 2 | 0 |
+| p14 | 积分 & 计费 (P14) | not_started | 1 | 2 | 2 | 0 |
+| p15 | Admin 后台 (P15) | not_started | 2 | 1 | 2 | 0 |
 
-_最近聚合:2026-07-01T09:04:16.071Z_
+_最近聚合:2026-07-01T09:25:48.022Z_

@@ -1,0 +1,10 @@
+
+Running 5 tests using 1 worker
+
+  ✓  1 [chromium] › kb-001-upload-file.spec.ts:20:5 › 登录后 /knowledge-base：空状态 + 上传控件，上传文件后出现在列表并最终 ready (4.8s)
+  ✓  2 [chromium] › kb-001-upload-file.spec.ts:50:5 › 校验：不支持的文件类型进入队列 error 行，且不产生半条记录 (623ms)
+  ✓  3 [chromium] › kb-001-upload-file.spec.ts:66:5 › 校验：超过大小上限的文件进入队列 error 行 (687ms)
+  ✓  4 [chromium] › kb-001-upload-file.spec.ts:82:5 › 服务端二次校验：绕过前端直接 POST 不支持类型 → 400 且不落库 (177ms)
+  ✓  5 [chromium] › kb-001-upload-file.spec.ts:100:5 › 未登录访问 /knowledge-base → 跳登录 (503ms)
+
+  5 passed (7.6s)
