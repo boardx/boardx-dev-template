@@ -225,6 +225,7 @@ export default function BoardPage() {
             variant="secondary"
             aria-expanded={sharing}
             onClick={() => setSharing((v) => !v)}
+            className="relative z-40"
           >
             {sharing ? "关闭分享" : "分享"}
           </Button>
