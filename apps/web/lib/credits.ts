@@ -1,13 +1,16 @@
-// apps/web/lib/credits.ts — uc-credits-001-view-wallet 共享逻辑
-// 供 app/api/credits/route.ts（兼容旧路径）与 app/api/credits/wallet/route.ts（真实 scope 路由）复用。
+// apps/web/lib/credits.ts — uc-credits-001-view-wallet / uc-credits-003-view-credit-records 共享逻辑
+// 供 app/api/credits/route.ts（兼容旧路径）、app/api/credits/wallet/route.ts（真实 scope 路由）、
+// app/api/credits/transactions/route.ts（F03 分页流水）复用。
 import {
   getOrCreatePersonalWallet,
   getOrCreateTeamWallet,
   getPersonalWallet,
   getTeamWallet,
   listTransactions,
+  listTransactionsPage,
   recordTransaction,
   type CreditWallet,
+  type TransactionKind,
 } from "@repo/data";
 
 export interface WalletRecordDto {
@@ -117,4 +120,38 @@ export async function loadTeamWallet(teamId: number, forceEmpty: boolean): Promi
   let wallet = await getOrCreateTeamWallet(teamId);
   if (!forceEmpty) wallet = await seedDemoIfEmpty(wallet, "Team usage");
   return walletToPayload(wallet, "team");
+}
+
+export interface TransactionsPayload {
+  records: WalletRecordDto[];
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+}
+
+/**
+ * F03 uc-credits-003：某钱包的分页流水视图，供 GET /api/credits/transactions 复用。
+ * 个人 Credit Records 弹窗（滚动加载更多）与 Team Credits 页面 Usage/Purchase 标签页共用。
+ */
+export async function transactionsToPayload(
+  walletId: number,
+  opts: { page: number; pageSize: number; kind?: TransactionKind }
+): Promise<TransactionsPayload> {
+  const { rows, total } = await listTransactionsPage(walletId, opts);
+  return {
+    records: rows.map((t) => ({
+      id: String(t.id),
+      kind: t.kind,
+      when: timeAgo(t.created_at),
+      label: t.label,
+      description: t.description,
+      amount: Number(t.amount),
+      balance: Number(t.balance_after),
+    })),
+    page: opts.page,
+    pageSize: opts.pageSize,
+    total,
+    hasMore: opts.page * opts.pageSize < total,
+  };
 }
