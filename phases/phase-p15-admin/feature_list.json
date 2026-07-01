@@ -8,9 +8,9 @@
       "title": "Admin Panel 首页 + 身份门控 + 统计摘要 + 模块导航",
       "user_visible_behavior": "SysAdmin 访问 /admin：非 SysAdmin 一律 403/重定向；SysAdmin 看到后台首页（平台统计摘要卡片：用户/团队/AI Store 项目数 等）与模块导航（用户/团队/AI Store 审核·精选）；点导航进入对应管理页；加载骨架与空态。",
       "design_ref": "prototype:<!-- ADMIN --> + <!-- overview -->（统计卡片 + 模块卡片 + 侧边菜单）；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-admin-1",
       "capability": "CAP-AUTH",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
