@@ -1,6 +1,21 @@
 # 会话交接 — Sprint p15/01
 
 ## 当前已验证
+- <哪些 feature 确认 passing,各自跑过的验证命令>
+
+## 本轮改动
+- <改了哪些代码 / 基础设施>
+
+## 仍损坏或未验证
+- <已知问题、风险区、未跑的验证>
+
+## 下一步最佳动作
+- <下一轮从哪个 feature 开始;哪些东西不要动>
+
+## 命令
+- 启动:`pnpm -w run dev`
+- 验证:`pnpm harness verify --sprint p15/01`
+- 调试:<填你的调试命令>
 - F01（Admin Panel 首页 + 身份门控 + 统计摘要 + 模块导航）：实现已完成，`e2e/admin-005-view-admin-home.spec.ts`
   全部 6 个用例通过；`e2e/admin-001-manage-users.spec.ts`（F02 既有原型，路径迁移到 `/admin/users`）
   4 个用例仍通过。`pnpm --filter @repo/data run migrate`（含新迁移 `016_admin_role.sql`）exit 0。
