@@ -1,0 +1,53 @@
+Issue: #45 uc-board-header-001-use-board-header
+Worktree: /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template-header-45
+Branch: codex/issue-45-board-header
+
+Verification summary:
+
+1. Database migration
+   Command:
+   DATABASE_URL=postgresql://boardx:boardx_dev@localhost:5432/boardx_header45 pnpm --filter @repo/data migrate
+   Result:
+   Passed. Migrations applied through 015_team_general.sql.
+
+2. Target end-to-end verification
+   Command:
+   DATABASE_URL=postgresql://boardx:boardx_dev@localhost:5432/boardx_header45 pnpm --filter @repo/web exec playwright test e2e/board-header-001-use-board-header.spec.ts
+   Result:
+   Passed. 2 passed (17.2s).
+
+3. Share panel regression verification
+   Command:
+   DATABASE_URL=postgresql://boardx:boardx_dev@localhost:5432/boardx_header45 pnpm --filter @repo/web exec playwright test e2e/board-header-003-share-board.spec.ts
+   Result:
+   Passed. 1 passed (9.9s).
+
+4. Adjacent header and board regression verification
+   Command:
+   DATABASE_URL=postgresql://boardx:boardx_dev@localhost:5432/boardx_header45 pnpm --filter @repo/web exec playwright test e2e/board-header-003-share-board.spec.ts e2e/board-header-009-sync-status.spec.ts e2e/board-header-011-shortcuts-help.spec.ts e2e/board-header-014-statistics.spec.ts e2e/board-open.spec.ts e2e/board-public-access.spec.ts
+   Result:
+   Initial run found the existing share panel close regression in board-header-003-share-board.spec.ts: the open share panel intercepted clicks on the Header share button. The other 15 adjacent tests passed. After moving the share panel lower, the failing share regression was rerun and passed.
+
+5. Web typecheck
+   Command:
+   pnpm --filter @repo/web typecheck
+   Result:
+   Passed. tsc --noEmit completed with exit code 0.
+
+6. Web lint
+   Command:
+   pnpm --filter @repo/web lint
+   Result:
+   Passed. design lint completed with exit code 0.
+
+7. Base verification
+   Command:
+   pnpm -w run verify:base
+   Result:
+   Passed. turbo reported 37 successful, 37 total.
+
+8. Whitespace validation
+   Command:
+   git diff --check
+   Result:
+   Passed. No whitespace errors.
