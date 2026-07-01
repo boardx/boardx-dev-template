@@ -3,9 +3,16 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
 body {
-  @apply bg-white text-neutral-900 antialiased;
+  @apply bg-[#f6f8fb] text-slate-950 antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
