@@ -53,9 +53,9 @@
       "title": "团队管理（搜索/分页/编辑团队类型 + 手动上分）",
       "user_visible_behavior": "SysAdmin 在团队管理页：GET /api/admin/teams?q= 分页/筛选团队（名称/类型/成员数/Credit），查看基础信息；在后台支持范围内更新团队类型（team edit 弹窗）或为团队手动增加 Credit；操作即时反映；无权限不可访问。",
       "design_ref": "prototype:<!-- teams --> + <!-- admin: team edit --> + <!-- admin: manual credit modal -->；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "02",
+      "owner": "wrk-admin-2",
       "capability": "CAP-AUTH",
       "depends_on": [
         "F01",
