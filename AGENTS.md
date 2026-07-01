@@ -2,7 +2,7 @@
 
 > 这是 agent 每次开工读的第一个文件。它是**目录页,不是百科全书**。
 > 详细规则都拆到 `.harness/instructions/` 和各级 scoped 的 AGENTS.md 里,按需加载。
-> 硬上限 ~100 行。放不下的内容请拆出去,不要往这里堆。
+> 硬上限 ~150 行。放不下的内容请拆出去,不要往这里堆。
 
 ## 项目是什么
 - 一个 agentic 系统的 monorepo(turbo + pnpm + TypeScript)。
