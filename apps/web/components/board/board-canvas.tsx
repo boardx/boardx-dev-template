@@ -344,6 +344,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
       if (e.key === "Escape") return setSelected(new Set());
       const mod = e.metaKey || e.ctrlKey;
       if (mod && (e.key === "z" || e.key === "Z")) {
@@ -377,8 +380,8 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       if (e.key === "ArrowUp") return void moveSelected(0, -step);
       if (e.key === "ArrowDown") return void moveSelected(0, step);
     }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [items, selected, deleteSelected, moveSelected, pasteClipboard, undo, redo]);
 
   return (
