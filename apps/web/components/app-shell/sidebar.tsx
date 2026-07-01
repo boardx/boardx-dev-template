@@ -37,12 +37,28 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   const [dark, setDark] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [lang, setLang] = useState<"en" | "zh">("en");
+  const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setDark(document.documentElement.classList.contains("dark"));
     setHydrated(true);
   }, []);
+
+  // 用户菜单个人 Credit 余额入口（uc-credits-001）：打开菜单时按需拉取个人钱包余额。
+  useEffect(() => {
+    if (!menuOpen || !user) return;
+    let alive = true;
+    fetch("/api/credits/wallet?scope=personal")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { wallet?: { balance: number } } | null) => {
+        if (alive && data?.wallet) setCreditsBalance(data.wallet.balance);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [menuOpen, user]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -174,8 +190,11 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
               className="mb-1.5 flex items-center gap-2 rounded-9 bg-surface-2 px-2.5 py-2.5 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Gem className="h-3.5 w-3.5 text-foreground" />
-              <span className="flex-1 text-12 font-semibold text-foreground">
-                3,210 credits
+              <span
+                data-testid="user-menu-credits-balance"
+                className="flex-1 text-12 font-semibold text-foreground"
+              >
+                {creditsBalance == null ? "…" : `${creditsBalance.toLocaleString("en-US")} credits`}
               </span>
               <span className="text-11 font-semibold text-foreground">Buy →</span>
             </Link>
