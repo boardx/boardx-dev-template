@@ -1,0 +1,47 @@
+Issue: #59 uc-widgets-001-use-canvasx-widgets
+Worktree: /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template-widgets-59
+Branch: codex/issue-59-canvasx-widgets
+
+Verification summary:
+
+1. Database migration
+   Command:
+   DATABASE_URL=postgresql://boardx:boardx_dev@localhost:5432/boardx_widgets59 pnpm --filter @repo/data migrate
+   Result:
+   Passed. Migrations applied through 015_team_general.sql.
+
+2. Target end-to-end verification
+   Command:
+   DATABASE_URL=postgresql://boardx:boardx_dev@localhost:5432/boardx_widgets59 pnpm --filter @repo/web exec playwright test e2e/widgets-001-use-canvasx-widgets.spec.ts
+   Result:
+   Passed. 2 passed (16.9s).
+
+3. Related widget/canvas regression verification
+   Command:
+   DATABASE_URL=postgresql://boardx:boardx_dev@localhost:5432/boardx_widgets59 pnpm --filter @repo/web exec playwright test e2e/widget-sticky.spec.ts e2e/widget-menu-framework.spec.ts e2e/widget-menu-002-style-widget.spec.ts e2e/widgets-004-shape-widget.spec.ts e2e/context-menu-001-use-context-menu.spec.ts e2e/canvas-select.spec.ts e2e/canvas-copy-paste.spec.ts e2e/canvas-delete.spec.ts
+   Result:
+   Passed. 22 passed (34.6s).
+
+4. Web typecheck
+   Command:
+   pnpm --filter @repo/web typecheck
+   Result:
+   Passed. tsc --noEmit completed with exit code 0.
+
+5. Web lint
+   Command:
+   pnpm --filter @repo/web lint
+   Result:
+   Passed. design lint completed with exit code 0.
+
+6. Base verification
+   Command:
+   pnpm -w run verify:base
+   Result:
+   Passed. turbo reported 37 successful, 37 total.
+
+7. Whitespace validation
+   Command:
+   git diff --check
+   Result:
+   Passed. No whitespace errors.
