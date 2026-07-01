@@ -8,7 +8,7 @@
       "title": "上传知识库文件（自动上传 + 类型/大小校验 + 处理状态）",
       "user_visible_behavior": "在知识库页（个人/团队/Agent/AI Tool 作用域）点上传或拖拽文件：前端校验类型/大小后 POST /api/kb/files（multipart）落对象存储与 kb_files 表；上传中展示进度，完成后文件出现在列表并显示处理状态（processing→ready，解析/切分/向量化异步）；类型不支持/超大小/上传失败给对应提示且不产生半条记录。",
       "design_ref": "prototype:<!-- KNOWLEDGE BASE --> + <!-- kb upload dialog --> + <!-- upload queue -->；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "wrk-kb-1",
       "capability": "CAP-FILE",
@@ -19,7 +19,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/kb-001-upload-file.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-07-01T12:22:42.491Z",
       "notes": "uc-kb-001。本阶段地基 feature：建立 CAP-FILE（对象存储 MinIO/S3 + 上传管线 + 解析/切分/向量化 worker）+ kb_files 表（scope=personal/team/agent/tool + owner + status）。此能力被 p9-F08（AVA 附件）、p12（Studio/演示读文件）复用。依赖 phase-04 session/团队上下文。"
     },
     {

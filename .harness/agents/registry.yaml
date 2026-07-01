@@ -28,7 +28,7 @@ agents:
   - id: wrk-codex-1
     kind: worker
     model: codex
-    areas: [auth, team, room, room-chat, invite, share]
+    areas: [auth, team, room, room-chat, invite, share, ava]
     max_concurrent: 1
   - id: wrk-ava-1
     kind: worker
