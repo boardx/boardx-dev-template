@@ -30,6 +30,31 @@ agents:
     model: codex
     areas: [auth, team, room, room-chat, invite, share]
     max_concurrent: 1
+  - id: wrk-ava-1
+    kind: worker
+    model: sonnet-5
+    areas: [ava]
+    max_concurrent: 1
+  - id: wrk-kb-1
+    kind: worker
+    model: sonnet-5
+    areas: [knowledge-base]
+    max_concurrent: 1
+  - id: wrk-store-1
+    kind: worker
+    model: sonnet-5
+    areas: [ai-store]
+    max_concurrent: 1
+  - id: wrk-survey-1
+    kind: worker
+    model: sonnet-5
+    areas: [survey]
+    max_concurrent: 1
+  - id: wrk-credits-1
+    kind: worker
+    model: sonnet-5
+    areas: [credits, billing]
+    max_concurrent: 1
 
   # ── Reviewer：评审 agent（复用既有 subagent；coordinator 在 PR 阶段调起）──────
   - id: rev-code

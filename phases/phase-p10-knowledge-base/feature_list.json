@@ -8,9 +8,9 @@
       "title": "上传知识库文件（自动上传 + 类型/大小校验 + 处理状态）",
       "user_visible_behavior": "在知识库页（个人/团队/Agent/AI Tool 作用域）点上传或拖拽文件：前端校验类型/大小后 POST /api/kb/files（multipart）落对象存储与 kb_files 表；上传中展示进度，完成后文件出现在列表并显示处理状态（processing→ready，解析/切分/向量化异步）；类型不支持/超大小/上传失败给对应提示且不产生半条记录。",
       "design_ref": "prototype:<!-- KNOWLEDGE BASE --> + <!-- kb upload dialog --> + <!-- upload queue -->；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-kb-1",
       "capability": "CAP-FILE",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",

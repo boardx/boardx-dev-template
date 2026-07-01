@@ -8,9 +8,9 @@
       "title": "AVA 聊天壳 + 新建会话 + 发首条消息 + AI 流式回复",
       "user_visible_behavior": "进入 /ava 展示聊天页（桌面端聊天页 / 移动端先列表）；点「新建聊天」或在输入框发送第一条消息：POST /api/ava/threads 创建线程、POST /api/ava/threads/:id/messages 落库用户消息并触发 AI；回复以流式（SSE）逐字出现在消息区，支持 Markdown/代码块渲染；线程出现在会话列表可继续追问。未登录 302 到登录；生成失败展示失败态且不丢用户输入。",
       "design_ref": "prototype:<!-- AVA --> (thread list / chat / messages / composer)；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-ava-1",
       "capability": "CAP-AI",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",

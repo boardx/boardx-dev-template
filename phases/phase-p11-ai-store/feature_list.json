@@ -8,9 +8,9 @@
       "title": "AI Store 浏览/筛选（Explore + 类型 Tab + 搜索/标签/分页 + 详情弹窗）",
       "user_visible_behavior": "进入 /ai-store 展示 Explore：GET /api/ai-store/items?type=&q=&tag= 列出可用 Agent/工具/模板/图片工具卡片（封面/名称/作者/类型/喜欢数/精选标）；按类型 Tab、关键词、标签筛选与分页；点卡片打开详情弹窗（描述/示例/统计/订阅入口）；空态与加载骨架；未登录 302 登录。",
       "design_ref": "prototype:<!-- STORE --> + <!-- store submenu --> + <!-- store content --> + <!-- store detail modal -->；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-store-1",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
