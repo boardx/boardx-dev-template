@@ -2,10 +2,21 @@
 // presence 是短暂状态：谁此刻打开着这块 Board。用内存 Map 而非 DB，避免 migration；
 // 单 dev/prod server 场景足够。心跳过期后自动从在线名单剔除（对应 UC 主流程 6：离开→移除）。
 
+// uc-collab-001 协作感知：视口快照（跟随用）。
+export interface PresenceViewport {
+  x: number;
+  y: number;
+  scale: number;
+}
+
 export interface PresenceMember {
   id: number;
   name: string;
   role: string;
+  // uc-collab-001 协作感知（可选、附加字段，向后兼容旧心跳）：
+  // operating = 该成员此刻是否正在操作（拖拽/编辑）；viewport = 其当前视口（供他人「跟随视角」）。
+  operating?: boolean;
+  viewport?: PresenceViewport;
 }
 
 interface Entry extends PresenceMember {
@@ -42,7 +53,7 @@ export function listOnline(boardId: number): PresenceMember[] {
   const table = pruned(boardId);
   return [...table.values()]
     .sort((a, b) => a.id - b.id)
-    .map(({ id, name, role }) => ({ id, name, role }));
+    .map(({ id, name, role, operating, viewport }) => ({ id, name, role, operating, viewport }));
 }
 
 /** 测试辅助：清空某 Board 的在线表。 */

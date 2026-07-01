@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   type Viewport,
@@ -10,17 +10,41 @@ import {
   ZOOM_IN_FACTOR,
   ZOOM_OUT_FACTOR,
 } from "@/lib/viewport";
+import { publishViewport, subscribeFollow } from "@/lib/collab-bus";
 
 // 画布视口：拖拽平移 + 滚轮缩放 + 缩放控制条 + 小地图（P6 F05，纯前端，无 items 依赖）。
+// uc-collab-001 协作感知增强：把本地视口上报到 collab-bus（供心跳广播给他人 → 他人可「跟随视角」），
+// 并订阅跟随目标——正在跟随他人时，本地视口贴合被跟随者的视口（业务规则 2：跟随只改视角）。
 export function CanvasViewport({ children }: { children?: React.ReactNode }) {
   const [vp, setVp] = useState<Viewport>(DEFAULT_VIEWPORT);
   const pan = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
+  // 是否正在跟随他人：跟随时本地平移/缩放操作被禁用（视角由被跟随者驱动）。
+  const [following, setFollowing] = useState(false);
+
+  // 每次本地视口变化，向 collab-bus 上报（心跳读取后广播；uc-collab-001 视角字段）。
+  useEffect(() => {
+    publishViewport({ tx: vp.tx, ty: vp.ty, scale: vp.scale });
+  }, [vp.tx, vp.ty, vp.scale]);
+
+  // 订阅跟随目标：有目标 → 贴合其视口并进入跟随态；null → 退出跟随。
+  useEffect(() => {
+    return subscribeFollow((target) => {
+      if (!target) {
+        setFollowing(false);
+        return;
+      }
+      setFollowing(true);
+      setVp({ tx: target.viewport.tx, ty: target.viewport.ty, scale: target.viewport.scale });
+    });
+  }, []);
 
   function onWheel(e: React.WheelEvent) {
     e.preventDefault();
+    if (following) return; // 跟随中：视角由被跟随者驱动，忽略本地缩放
     setVp((v) => ({ ...v, scale: zoomBy(v.scale, e.deltaY < 0 ? ZOOM_IN_FACTOR : ZOOM_OUT_FACTOR) }));
   }
   function onDown(e: React.MouseEvent) {
+    if (following) return; // 跟随中：忽略本地平移
     pan.current = { x: e.clientX, y: e.clientY, tx: vp.tx, ty: vp.ty };
   }
   function onMove(e: React.MouseEvent) {
@@ -47,6 +71,10 @@ export function CanvasViewport({ children }: { children?: React.ReactNode }) {
       >
         <div
           data-testid="canvas-surface"
+          data-following={following ? "true" : "false"}
+          data-vp-tx={Math.round(vp.tx)}
+          data-vp-ty={Math.round(vp.ty)}
+          data-vp-scale={vp.scale}
           style={{ transform: `translate(${vp.tx}px, ${vp.ty}px) scale(${vp.scale})`, transformOrigin: "0 0" }}
           className="h-full w-full"
         >
