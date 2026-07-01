@@ -22,6 +22,14 @@ export * from "./roomChat";
 export * from "./profile";
 // CAP-WEB 用户反馈提交记录
 export * from "./feedback";
+// CAP-AI AVA 聊天线程与消息仓储（ava_threads/ava_messages / P9 F01）
+export * from "./avaChat";
+// CAP-DATA AI Store 商品仓储（ai_store_items / P11）
+export * from "./aiStore";
+// CAP-DATA 积分钱包仓储（credit_wallets/credit_transactions / P14 uc-credits-001）
+export * from "./credits";
+// CAP-FILE 知识库文件仓储（kb_files / P10）
+export * from "./kbFiles";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 

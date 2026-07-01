@@ -7,16 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { FileInput } from "@/components/ui/file-input";
 
-type Scope = "personal" | "team" | "agent";
+type Scope = "personal" | "team" | "agent" | "tool";
 
 interface KbFile {
   id: string;
   name: string;
   ext: string;
-  size: number;
-  status: "uploading" | "processing" | "completed" | "error";
+  size_bytes: number;
+  status: "processing" | "ready" | "error";
   scope: Scope;
-  createdAt: number;
+  created_at: string;
 }
 
 // 上传队列项（前端瞬态：上传中 / 处理中 / 失败）
@@ -56,22 +56,57 @@ function KbSkeleton() {
   );
 }
 
+/** multipart 上传 + 真实进度事件（fetch 不暴露上传进度，改用 XHR）。 */
+function uploadWithProgress(
+  file: File,
+  scope: Scope,
+  onProgress: (pct: number) => void
+): Promise<{ status: number; body: { file?: KbFile; error?: string; errors?: Record<string, string> } }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/kb/files");
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      let body: { file?: KbFile; error?: string; errors?: Record<string, string> } = {};
+      try {
+        body = JSON.parse(xhr.responseText);
+      } catch {
+        // 非 JSON 响应（如网关错误页）时保留空 body，交由调用方按状态码兜底处理。
+      }
+      resolve({ status: xhr.status, body });
+    };
+    xhr.onerror = () => reject(new Error("网络错误"));
+    const form = new FormData();
+    form.append("file", file);
+    form.append("scope", scope);
+    xhr.send(form);
+  });
+}
+
 export default function KnowledgeBasePage() {
   const [files, setFiles] = useState<KbFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [q, setQ] = useState("");
   const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   async function load(search = "") {
     setLoading(true);
     setError("");
-    const res = await fetch(`/api/knowledge-base${search ? `?q=${encodeURIComponent(search)}` : ""}`);
+    const res = await fetch(`/api/kb/files?scope=personal${search ? `&q=${encodeURIComponent(search)}` : ""}`);
     if (res.status === 401) {
       // 未登录 → 跳登录（与 home 一致）
       router.replace("/login");
+      return;
+    }
+    if (!res.ok) {
+      setError("加载失败，请重试");
+      setLoading(false);
       return;
     }
     setFiles((await res.json()).files ?? []);
@@ -80,6 +115,10 @@ export default function KnowledgeBasePage() {
 
   useEffect(() => {
     void load();
+    // 轮询刷新处理中状态（processing → ready 异步完成，与后端 worker 解耦轮询）。
+    const t = setInterval(() => void load(q), 2000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function patchQueue(key: string, patch: Partial<QueueItem>) {
@@ -90,7 +129,7 @@ export default function KnowledgeBasePage() {
     const key = `${file.name}_${file.size}_${Date.now()}_${Math.random()}`;
     const ext = extOf(file.name);
 
-    // 客户端预校验（类型 / 大小）——失败直接进队列 error 行，不发请求
+    // 客户端预校验（类型 / 大小）——失败直接进队列 error 行，不发请求，不产生半条记录。
     if (!ALLOWED_EXT.includes(ext)) {
       setQueue((qs) => [
         ...qs,
@@ -106,28 +145,28 @@ export default function KnowledgeBasePage() {
       return;
     }
 
-    setQueue((qs) => [...qs, { key, name: file.name, size: file.size, pct: 30, state: "uploading" }]);
+    setQueue((qs) => [...qs, { key, name: file.name, size: file.size, pct: 0, state: "uploading" }]);
 
-    const res = await fetch("/api/knowledge-base", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      // 桩化：只传元数据，不传 blob
-      body: JSON.stringify({ name: file.name, size: file.size, scope: "personal" }),
-    });
+    try {
+      const { status, body } = await uploadWithProgress(file, "personal", (pct) =>
+        patchQueue(key, { pct })
+      );
 
-    if (res.status !== 201) {
-      const d = (await res.json().catch(() => ({}))) as { errors?: Record<string, string>; error?: string };
-      const msg = d.errors ? Object.values(d.errors)[0] : (d.error ?? "上传失败");
-      patchQueue(key, { state: "error", error: msg });
-      return;
+      if (status !== 201) {
+        const msg = body.errors ? Object.values(body.errors)[0] : (body.error ?? "上传失败");
+        patchQueue(key, { state: "error", error: msg });
+        return;
+      }
+
+      // 完成 → 处理中（瞬态）→ 从队列移除并刷新列表（真实处理状态见列表行的 status badge）。
+      patchQueue(key, { pct: 100, state: "processing" });
+      setTimeout(() => {
+        setQueue((qs) => qs.filter((it) => it.key !== key));
+        void load(q);
+      }, 400);
+    } catch {
+      patchQueue(key, { state: "error", error: "上传失败，请重试" });
     }
-
-    // 完成 → 处理中（瞬态）→ 从队列移除并刷新列表
-    patchQueue(key, { pct: 100, state: "processing" });
-    setTimeout(() => {
-      setQueue((qs) => qs.filter((it) => it.key !== key));
-      void load(q);
-    }, 400);
   }
 
   async function onPickFiles(e: React.ChangeEvent<HTMLInputElement>) {
@@ -136,12 +175,28 @@ export default function KnowledgeBasePage() {
     for (const f of picked) void uploadOne(f);
   }
 
+  function onDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setDragActive(false);
+    const dropped = Array.from(e.dataTransfer.files ?? []);
+    for (const f of dropped) void uploadOne(f);
+  }
+
   function removeQueueItem(key: string) {
     setQueue((qs) => qs.filter((it) => it.key !== key));
   }
 
   return (
-    <div className="mx-auto max-w-content px-9 pb-14 pt-7">
+    <div
+      className="mx-auto max-w-content px-9 pb-14 pt-7"
+      data-testid="kb-dropzone"
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragActive(true);
+      }}
+      onDragLeave={() => setDragActive(false)}
+      onDrop={onDrop}
+    >
       {/* 标题 + 上传入口 */}
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-26 font-bold tracking-tight text-foreground">Knowledge Base</h1>
@@ -151,7 +206,7 @@ export default function KnowledgeBasePage() {
         </Button>
       </div>
       <p className="mt-1.5 text-13 text-muted-foreground">
-        上传文件构建个人知识库，供后续 AI 在对应上下文中使用。
+        上传文件构建个人知识库，供后续 AI 在对应上下文中使用。支持点击上传或将文件拖拽到本页面。
       </p>
 
       {/* 真实文件选择器（隐藏；封装在 components/ui/file-input） */}
@@ -163,6 +218,15 @@ export default function KnowledgeBasePage() {
         aria-label="选择要上传的文件"
         onChange={onPickFiles}
       />
+
+      {dragActive && (
+        <div
+          data-testid="drag-overlay"
+          className="mt-4 flex items-center justify-center rounded-12 border-2 border-dashed border-primary bg-surface-1 py-6 text-13 text-primary transition-colors duration-200"
+        >
+          松开鼠标上传文件
+        </div>
+      )}
 
       {error && (
         <p role="alert" data-testid="err" className="mt-4 text-13 text-destructive">
@@ -206,7 +270,7 @@ export default function KnowledgeBasePage() {
                   <div className="text-11 text-placeholder">
                     {fmtSize(it.size)} ·{" "}
                     {it.state === "uploading"
-                      ? "uploading"
+                      ? `uploading ${it.pct}%`
                       : it.state === "processing"
                         ? "checking processing status"
                         : (it.error ?? "error")}
@@ -276,12 +340,15 @@ export default function KnowledgeBasePage() {
                   </span>
                   <div className="min-w-0">
                     <div className="truncate text-13 font-medium text-foreground">{f.name}</div>
-                    <div className="text-11 text-placeholder">{fmtSize(f.size)}</div>
+                    <div className="text-11 text-placeholder">{fmtSize(f.size_bytes)}</div>
                   </div>
                 </div>
                 <div className="flex-1 text-12 uppercase text-muted-foreground">{f.ext}</div>
                 <div className="flex flex-[1.4] items-center gap-2">
-                  <Badge variant={f.status === "completed" ? "success" : f.status === "error" ? "destructive" : "muted"}>
+                  <Badge
+                    data-testid={`file-status-${f.id}`}
+                    variant={f.status === "ready" ? "success" : f.status === "error" ? "destructive" : "muted"}
+                  >
                     {f.status}
                   </Badge>
                   <span className="text-11 text-placeholder">{f.scope}</span>
