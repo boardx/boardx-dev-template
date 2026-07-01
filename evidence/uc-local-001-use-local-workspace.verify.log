@@ -1,0 +1,50 @@
+Issue: #56 uc-local-001-use-local-workspace
+Worktree: /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template-local-56
+Branch: codex/issue-56-local-workspace
+
+Verification summary:
+
+1. Database migration
+   Command:
+   DATABASE_URL=postgresql://boardx:boardx_dev@localhost:5432/boardx_local56 pnpm --filter @repo/data migrate
+   Result:
+   Passed. Migrations applied through 015_team_general.sql.
+
+2. Target end-to-end verification
+   Command:
+   DATABASE_URL=postgresql://boardx:boardx_dev@localhost:5432/boardx_local56 pnpm --filter @repo/web exec playwright test e2e/local-001-use-local-workspace.spec.ts
+   Result:
+   Passed. 2 passed (12.1s).
+
+3. Related regression end-to-end verification
+   Command:
+   DATABASE_URL=postgresql://boardx:boardx_dev@localhost:5432/boardx_local56 pnpm --filter @repo/web exec playwright test e2e/board-open.spec.ts e2e/board-public-access.spec.ts
+   Result:
+   Passed. 7 passed (12.5s).
+
+4. Web typecheck
+   Command:
+   pnpm --filter @repo/web typecheck
+   Result:
+   Passed. tsc --noEmit completed with exit code 0.
+
+5. Web lint
+   Command:
+   pnpm --filter @repo/web lint
+   Result:
+   Passed. design lint completed with exit code 0.
+
+6. Base verification
+   Command:
+   pnpm -w run verify:base
+   Result:
+   Passed. turbo reported 37 successful, 37 total.
+
+7. Whitespace validation
+   Command:
+   git diff --check
+   Result:
+   Passed. No whitespace errors.
+
+Environment note:
+An intermediate target e2e rerun failed because Playwright reused an existing localhost:3000 server that was not started with DATABASE_URL=postgresql://boardx:boardx_dev@localhost:5432/boardx_local56. After stopping that Next dev process and rerunning the same command, the target e2e passed.

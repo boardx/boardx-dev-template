@@ -12,6 +12,7 @@ import { BoardShortcutsHelp } from "@/components/board/shortcuts-help";
 import { BoardSyncStatus } from "@/components/board/sync-status";
 import { BoardStatistics } from "@/components/board/board-statistics";
 import { BoardCanvas } from "@/components/board/board-canvas";
+import { LocalWorkspace } from "@/components/board/local-workspace";
 
 interface Board {
   id: number | string;
@@ -218,6 +219,7 @@ export default function BoardPage() {
           <BoardShortcutsHelp />
           {/* 协作计时器（所有协作者可用） */}
           <BoardTimer />
+          <LocalWorkspace boardId={String(boardId)} canEdit={canEdit} />
           {/* 分享（所有可访问者可见：复制链接 + 可见性说明 + 二维码占位） */}
           <Button
             data-testid="board-share"
