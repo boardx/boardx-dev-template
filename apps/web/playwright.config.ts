@@ -39,6 +39,7 @@ loadWorktreeEnv();
 // 端口可用 E2E_PORT 覆盖（默认 3000）——多个 worktree 并行跑 e2e 时，"复用已有 server"
 // 会复用到别的 worktree/分支的 server，测出来的是别人的代码；scripts/init-worktree-env.sh
 // 会给每个 worktree 分配独立的 E2E_PORT 写进 apps/web/.env.local 来避免这个问题。
+// loadWorktreeEnv() 已把 .env / apps/web/.env.local 里的值灌进 process.env，这里直接读。
 const PORT = process.env.E2E_PORT || "3000";
 // CAP-PAYMENT（F05）：webhook 走共享密钥 fail-closed 校验（见 lib/webhook-auth.ts）。
 // e2e 里模拟支付网关回调需要带上这把密钥；没有真实网关时用一个仅测试用的默认值，

@@ -1,0 +1,36 @@
+# F08 端到端验证证据
+# feature: F08 — 向聊天附加文件/图片/音频
+# spec: e2e/ava-attach-files.spec.ts
+# branch: worker/wrk-ava-1-p9-f08-attachments (verified via tmp-f08-verify)
+# run date: 2026-07-02
+
+## 环境
+- load average: 5.36 5.28 5.42 (低/中负载，无争用)
+- docker project: tmp-f08-verify (隔离端口)
+- postgres: localhost:52366 (healthy)
+- redis: localhost:52367 (healthy)
+- minio: localhost:52369 (healthy)
+- migration 018_ava_message_attachments.sql: 已应用
+
+## 验证命令
+corepack pnpm --filter @repo/web exec playwright test e2e/ava-attach-files.spec.ts
+
+## 测试结果
+Running 8 tests using 1 worker
+
+  ✓  1 [chromium] › ava-attach-files.spec.ts:20:5 › composer 附件入口：选择图片 → 预览条展示上传中到完成 → 发送后随消息进入聊天历史，AI 提及文件名 (18.9s)
+  ✓  2 [chromium] › ava-attach-files.spec.ts:64:5 › 拖拽上传：拖一个文件到 composer 区域也能触发上传 (938ms)
+  ✓  3 [chromium] › ava-attach-files.spec.ts:95:5 › 校验：不支持的文件类型 → 预览条展示失败态 + 可读提示，可重试 (863ms)
+  ✓  4 [chromium] › ava-attach-files.spec.ts:111:5 › 校验：超过大小上限的文件 → 失败态提示 (977ms)
+  ✓  5 [chromium] › ava-attach-files.spec.ts:125:5 › 校验：超过数量上限一次性选择 6 个文件 → 拒绝并提示，不触发上传 (740ms)
+  ✓  6 [chromium] › ava-attach-files.spec.ts:141:5 › 移除附件：上传完成后可移除，移除后不随消息发送 (1.4s)
+  ✓  7 [chromium] › ava-attach-files.spec.ts:160:5 › 服务端二次校验：绕过前端直接 POST 不支持类型 → 400 且不落库 (1.0s)
+  ✓  8 [chromium] › ava-attach-files.spec.ts:179:5 › 未登录访问附件上传接口 → 401 (693ms)
+
+  Slow test file: [chromium] › ava-attach-files.spec.ts (25.6s)
+  Consider splitting slow test files to speed up parallel execution
+  8 passed (31.5s)
+
+## 结论
+exit code: 0
+8/8 passed — 干净全绿，无重试
