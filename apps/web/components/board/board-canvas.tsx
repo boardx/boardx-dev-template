@@ -59,6 +59,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const [items, setItems] = useState<Item[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null); // F11 文本编辑中的便签
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null); // 右键上下文菜单（uc-context-menu-001）
   const placeN = useRef(0); // 同步自增放置位，避免连点时读到尚未刷新的 items.length 造成重叠
   const clipboard = useRef<Item[]>([]); // 应用内剪贴板（F08）
   const undoStack = useRef<Op[]>([]); // F09
@@ -455,7 +456,19 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       )}
 
       <CanvasViewport>
-        <div className="relative h-full w-full" data-testid="items-layer" onClick={() => setSelected(new Set())}>
+        <div
+          className="relative h-full w-full"
+          data-testid="items-layer"
+          onClick={() => {
+            setSelected(new Set());
+            setCtxMenu(null);
+          }}
+          onContextMenu={(e) => {
+            if (!canEdit) return;
+            e.preventDefault();
+            setCtxMenu({ x: e.clientX, y: e.clientY });
+          }}
+        >
           {items.map((it) => (
             <div
               key={it.id}
@@ -473,6 +486,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               onDoubleClick={(e) => {
                 e.stopPropagation();
                 if (canEdit) setEditingId(it.id);
+              }}
+              onContextMenu={(e) => {
+                if (!canEdit) return;
+                e.preventDefault();
+                e.stopPropagation();
+                if (!selected.has(it.id)) selectItem(it.id, false);
+                setCtxMenu({ x: e.clientX, y: e.clientY });
               }}
               style={{ left: it.x, top: it.y, width: it.w, height: it.h }}
               className={
@@ -513,6 +533,66 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           ))}
         </div>
       </CanvasViewport>
+
+      {/* 右键上下文菜单（uc-context-menu-001）：复用复制/粘贴/副本/删除 */}
+      {canEdit && ctxMenu && (
+        <div
+          data-testid="context-menu"
+          role="menu"
+          style={{ position: "fixed", left: ctxMenu.x, top: ctxMenu.y }}
+          className="z-30 w-36 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
+        >
+          {selected.size > 0 && (
+            <>
+              <button
+                type="button"
+                data-testid="ctx-copy"
+                className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
+                onClick={() => {
+                  clipboard.current = items.filter((it) => selected.has(it.id));
+                  setCtxMenu(null);
+                }}
+              >
+                复制
+              </button>
+              <button
+                type="button"
+                data-testid="ctx-duplicate"
+                className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
+                onClick={() => {
+                  duplicateSelected();
+                  setCtxMenu(null);
+                }}
+              >
+                创建副本
+              </button>
+              <button
+                type="button"
+                data-testid="ctx-delete"
+                className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 text-destructive transition-colors hover:bg-muted"
+                onClick={() => {
+                  void deleteSelected();
+                  setCtxMenu(null);
+                }}
+              >
+                删除
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            data-testid="ctx-paste"
+            className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted disabled:opacity-40"
+            disabled={clipboard.current.length === 0}
+            onClick={() => {
+              void pasteClipboard();
+              setCtxMenu(null);
+            }}
+          >
+            粘贴
+          </button>
+        </div>
+      )}
     </div>
   );
 }
