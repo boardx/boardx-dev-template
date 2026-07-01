@@ -36,7 +36,10 @@ const COLORS: Record<string, string> = {
   pink: "bg-tag-pink border-border-strong text-foreground",
 };
 const COLOR_TOKENS = Object.keys(COLORS);
-const colorClass = (c?: string | null) => COLORS[c ?? "amber"] ?? COLORS.amber;
+// color 字段可为复合 "<base>:bold"（uc-widget-menu-002 字重）；base 决定色/文本判别，:bold 决定字重。
+const baseColor = (c?: string | null) => (c ?? "amber").split(":")[0] || "amber";
+const isBold = (it: { color?: string | null }) => (it.color ?? "").endsWith(":bold");
+const colorClass = (c?: string | null) => COLORS[baseColor(c)] ?? COLORS.amber;
 
 // 文本（Text）组件（uc-board-menu-003）。
 // 约束（范围纪律）：当前 @repo/canvas 的 validateNewItem 只放行 type ∈ {note,rect}，
@@ -45,7 +48,9 @@ const colorClass = (c?: string | null) => COLORS[c ?? "amber"] ?? COLORS.amber;
 // 刷新后仍在）。客户端据此把它渲染为「透明无边框文本块」，与便签区分。
 const TEXT_MARK = "text";
 const DEFAULT_TEXT = "文本";
-const isText = (it: { color?: string | null }) => it.color === TEXT_MARK;
+const isText = (it: { color?: string | null }) => baseColor(it.color) === TEXT_MARK;
+// 形状（Shape）组件（uc-widgets-004）：服务端原生放行 type:"rect"，按 type 判别，无需 color 哨兵。
+const isShape = (it: { type: string }) => it.type === "rect";
 
 interface Move {
   id: string;
@@ -110,6 +115,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const [editingId, setEditingId] = useState<string | null>(null); // F11 文本编辑中的便签
   const [activeTool, setActiveTool] = useState<BoardTool>("select");
   const [openPanel, setOpenPanel] = useState<"assets" | "templates" | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null); // 右键上下文菜单（uc-context-menu-001）
   const placeN = useRef(0); // 同步自增放置位，避免连点时读到尚未刷新的 items.length 造成重叠
   const clipboard = useRef<Item[]>([]); // 应用内剪贴板（F08）
   const undoStack = useRef<Op[]>([]); // F09
@@ -295,14 +301,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     const res = await fetch(`/api/boards/${boardId}/items`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ type: "rect", x, y, w: 140, h: 90, text: "矩形" }),
+      body: JSON.stringify({ type: "rect", x, y, text: "" }),
     });
-    if (res.status === 201) {
-      const { item } = await res.json();
-      recordOp({ kind: "add", items: [item] });
-      await load();
-      setSelected(new Set([item.id]));
-    }
+    if (res.status !== 201) return;
+    const { item } = (await res.json()) as { item: Item };
+    recordOp({ kind: "add", items: [item] });
+    await load();
+    setSelected(new Set([item.id]));
   }
 
   function chooseTool(tool: BoardTool) {
@@ -376,19 +381,39 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     });
   }
 
-  // F11：改选中便签颜色
-  async function setColor(color: string) {
-    const ids = items.filter((it) => selected.has(it.id)).map((it) => it.id);
-    setItems((prev) => prev.map((it) => (selected.has(it.id) ? { ...it, color } : it)));
+  // 落库一批 color 变更（共用于 setColor / toggleBold）。
+  async function applyColors(updates: { id: string; color: string }[]) {
+    const map = new Map(updates.map((u) => [u.id, u.color]));
+    setItems((prev) => prev.map((it) => (map.has(it.id) ? { ...it, color: map.get(it.id)! } : it)));
     await Promise.all(
-      ids.map((id) =>
-        fetch(`/api/board-items/${id}`, {
+      updates.map((u) =>
+        fetch(`/api/board-items/${u.id}`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ color }),
+          body: JSON.stringify({ color: u.color }),
         })
       )
     );
+  }
+
+  // F11：改选中便签颜色（保留字重 :bold 修饰）
+  async function setColor(base: string) {
+    const updates = items
+      .filter((it) => selected.has(it.id))
+      .map((it) => ({ id: it.id, color: base + (isBold(it) ? ":bold" : "") }));
+    await applyColors(updates);
+  }
+
+  // uc-widget-menu-002：切换选中组件字重（bold/normal），编码为 color 的 :bold 后缀。
+  async function toggleBold() {
+    const targets = items.filter((it) => selected.has(it.id));
+    if (targets.length === 0) return;
+    const allBold = targets.every(isBold); // 全粗 → 取消；否则 → 全部加粗
+    const updates = targets.map((it) => {
+      const b = baseColor(it.color);
+      return { id: it.id, color: allBold ? b : `${b}:bold` };
+    });
+    await applyColors(updates);
   }
 
   const deleteSelected = useCallback(async () => {
@@ -590,6 +615,17 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               className={"h-5 w-5 rounded-full border " + colorClass(c)}
             />
           ))}
+          <Button
+            data-testid="wm-bold"
+            size="sm"
+            variant="ghost"
+            aria-label="字重加粗"
+            aria-pressed={items.filter((it) => selected.has(it.id)).every(isBold)}
+            className="font-bold"
+            onClick={() => void toggleBold()}
+          >
+            B
+          </Button>
           <Button data-testid="wm-duplicate" size="sm" variant="ghost" onClick={duplicateSelected}>
             复制
           </Button>
@@ -600,7 +636,19 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       )}
 
       <CanvasViewport>
-        <div className="relative h-full w-full" data-testid="items-layer" onClick={() => setSelected(new Set())}>
+        <div
+          className="relative h-full w-full"
+          data-testid="items-layer"
+          onClick={() => {
+            setSelected(new Set());
+            setCtxMenu(null);
+          }}
+          onContextMenu={(e) => {
+            if (!canEdit) return;
+            e.preventDefault();
+            setCtxMenu({ x: e.clientX, y: e.clientY });
+          }}
+        >
           {items.map((it) => (
             <div
               key={it.id}
@@ -619,13 +667,23 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                 e.stopPropagation();
                 if (canEdit) setEditingId(it.id);
               }}
+              onContextMenu={(e) => {
+                if (!canEdit) return;
+                e.preventDefault();
+                e.stopPropagation();
+                if (!selected.has(it.id)) selectItem(it.id, false);
+                setCtxMenu({ x: e.clientX, y: e.clientY });
+              }}
               style={{ left: it.x, top: it.y, width: it.w, height: it.h }}
               className={
                 "absolute flex p-2 text-xs " +
-                // 文本组件：透明无边框文本块（左上对齐）；便签：柔彩 + 边框 + 圆角 + 阴影
+                // 文本：透明无边框文本块；形状：粗边框矩形；便签：柔彩 + 边框 + 圆角 + 阴影
                 (isText(it)
                   ? "items-start justify-start border-0 bg-transparent text-foreground shadow-none "
+                  : isShape(it)
+                  ? "items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm "
                   : "items-center justify-center rounded-7 border shadow-sm " + colorClass(it.color) + " ") +
+                (isBold(it) ? "font-bold " : "") +
                 (canEdit && editingId !== it.id ? "cursor-grab active:cursor-grabbing " : "") +
                 (selected.has(it.id) ? "ring-2 ring-primary ring-offset-1" : "")
               }
@@ -656,6 +714,66 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           ))}
         </div>
       </CanvasViewport>
+
+      {/* 右键上下文菜单（uc-context-menu-001）：复用复制/粘贴/副本/删除 */}
+      {canEdit && ctxMenu && (
+        <div
+          data-testid="context-menu"
+          role="menu"
+          style={{ position: "fixed", left: ctxMenu.x, top: ctxMenu.y }}
+          className="z-30 w-36 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
+        >
+          {selected.size > 0 && (
+            <>
+              <button
+                type="button"
+                data-testid="ctx-copy"
+                className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
+                onClick={() => {
+                  clipboard.current = items.filter((it) => selected.has(it.id));
+                  setCtxMenu(null);
+                }}
+              >
+                复制
+              </button>
+              <button
+                type="button"
+                data-testid="ctx-duplicate"
+                className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
+                onClick={() => {
+                  duplicateSelected();
+                  setCtxMenu(null);
+                }}
+              >
+                创建副本
+              </button>
+              <button
+                type="button"
+                data-testid="ctx-delete"
+                className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 text-destructive transition-colors hover:bg-muted"
+                onClick={() => {
+                  void deleteSelected();
+                  setCtxMenu(null);
+                }}
+              >
+                删除
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            data-testid="ctx-paste"
+            className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted disabled:opacity-40"
+            disabled={clipboard.current.length === 0}
+            onClick={() => {
+              void pasteClipboard();
+              setCtxMenu(null);
+            }}
+          >
+            粘贴
+          </button>
+        </div>
+      )}
     </div>
   );
 }
