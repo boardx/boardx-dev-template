@@ -22,9 +22,14 @@
 如果 `init.sh` 的验证失败,**停下来先修基础状态**,不要在坏的基础上叠新功能。
 
 ## 开工流程(每轮会话开始)
+0. **先定角色与模式**(多 agent 协作时):读 `.harness/agents/registry.yaml` 确认你是
+   coordinator(编排)还是 worker(写码);完整流程(issue-label 状态机 + 认领 + review 门禁)
+   见 `.harness/instructions/multi-agent-coordination.md`。单 agent 独跑时跳过 0,走 1–3。
 1. 读当前 sprint 的 `progress.md` 和 `session-handoff.md`。
-2. 读当前 sprint 的 `active-features.json`(派生视图),找到唯一 `in_progress` 的 feature。
-3. 只做那一个 feature。做完用验证命令证明,再收尾。
+2. **worker**:`pnpm harness claim --phase NN --feature Fxx --owner <你的 id>` 认领一个
+   `status:ready-for-dev` 的 issue(认领即锁),只按 issue 验收标准干。
+   **单 agent**:读 `active-features.json`(派生视图),找唯一 `in_progress` 的 feature。
+3. 只做那一个 feature。做完用验证命令证明 → 开 PR(`Closes #N`)→ 收尾(review 后由 coordinator 合并)。
 
 ## 不可违反的硬约束
 - **仓库即唯一事实来源**:你看不到的东西就不存在。所有上下文进仓库。
@@ -58,6 +63,7 @@
 - 系统架构总览 → `.harness/instructions/architecture.md`
 - 智能体编排/工具/记忆约定 → `.harness/instructions/agentic-patterns.md`
 - 多 agent 协调（主 agent + issue-label 状态机 + review 门禁）→ `.harness/instructions/multi-agent-coordination.md`（见 ADR-004）
+- 并行 worker 侧流程（wave/DoR/认领锁/隔离）→ `.harness/instructions/parallel-dev-workflow.md`（见 ADR-001）
 - 编码规范 → `.harness/instructions/coding-standards.md`
 - UIUX 规范 → `.harness/instructions/uiux-standards.md`
 - 端到端验证标准 → `.harness/instructions/testing-standards.md`
@@ -81,4 +87,5 @@ pnpm harness new-phase  --id 02 --name agent-runtime --goal "..."   # scaffold r
 pnpm harness new-sprint --phase 02 --id 01 --goal "..." --features F01,F02
 pnpm harness verify     --sprint 02/01
 pnpm harness sync       --phase 02 --apply
+pnpm harness claim      --phase 02 --feature F01 --owner <agent-id>   # worker 认领（多 agent）
 ```

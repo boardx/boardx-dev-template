@@ -7,6 +7,17 @@
 > worker 侧的 wave/DoR/隔离细节见 `parallel-dev-workflow.md`——本文只补**主 agent 层**与
 > **规范化的 label 状态机**，不重复 worker 侧内容。
 
+## 0. 冷启动：我是谁、该怎么走（新 agent 从这里开始）
+
+1. **确认身份**：你的 agent id 由启动者（人类或 coordinator）在任务里给定，对应
+   `.harness/agents/registry.yaml` 的一条；`kind` 决定你走哪条路。未给定时，按 registry 的
+   `model`/`areas` 自认最匹配的一条，或直接问启动者——**不要凭空开工**。
+2. **coordinator**：走 §2 循环（分派 → 编排 review → 合并）。你是**唯一被授权合并 main** 的角色。
+3. **worker**：`claim` 一个 `status:ready-for-dev` 的 issue（§1 状态机 + §4 租约），只按 issue
+   验收实现，开 PR（`Closes #N`），然后等 coordinator 编排 review 合并。细节见
+   `parallel-dev-workflow.md`（wave/DoR/隔离/单步循环）。
+4. **reviewer**：由 coordinator 调起，按 §3 路由对 PR 出 verdict（打 `review:*-ok` 或 `review:changes`）。
+
 ## 1. 规范 label 集合（唯一事实，禁止漂移）
 
 ### 1.1 `status:*` —— 互斥生命周期（一个 issue 任一时刻**恰好一个**）
