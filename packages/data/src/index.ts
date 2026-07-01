@@ -22,6 +22,8 @@ export * from "./roomChat";
 export * from "./profile";
 // CAP-WEB 用户反馈提交记录
 export * from "./feedback";
+// CAP-DATA 问卷仓储（surveys / survey_questions / survey_responses / P13 F01）
+export * from "./survey";
 // CAP-AI AVA 聊天线程与消息仓储（ava_threads/ava_messages / P9 F01）
 export * from "./avaChat";
 // CAP-DATA AI Store 商品仓储（ai_store_items / P11）
