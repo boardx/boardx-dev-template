@@ -4,13 +4,14 @@ import {
   getRoom,
   getRoomChat,
   listRoomChatMessages,
-  listKbFiles,
   createStudioArtifact,
+  markStudioArtifactError,
   type StudioArtifactType,
   type StudioArtifactSource,
 } from "@repo/data";
 import { makeQueue, QUEUE_NAMES } from "@repo/queue";
 import { currentUser } from "@/lib/session";
+import { listRoomFiles } from "@/lib/studio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -76,14 +77,12 @@ export async function POST(
     const prompt = String(body.prompt ?? "").trim();
 
     const room = await getRoom(roomId);
+    if (!room) return NextResponse.json({ error: "房间不存在" }, { status: 404 });
 
     // 来源可用性校验（不可信前端：即便前端已禁用按钮，服务端仍需二次校验）。
     let sourceLabel: string;
     if (body.source === "room_files") {
-      const files =
-        room?.team_id != null
-          ? await listKbFiles({ ownerUserId: user.id, scope: "team", teamId: room.team_id })
-          : await listKbFiles({ ownerUserId: user.id, scope: "personal" });
+      const files = await listRoomFiles(room);
       const readyFiles = files.filter((f) => f.status === "ready");
       if (readyFiles.length === 0) {
         return NextResponse.json({ errors: { source: "没有可用的房间文件" } }, { status: 400 });
@@ -121,11 +120,20 @@ export async function POST(
       });
       await queue.close();
     } catch (err) {
+      // 入队本身失败（如 Redis 不可用）：不能让制品永远卡在 queued——那样面板会一直显示
+      // "生成中"，而重试接口只接受 error 态，用户将无路可退。立刻标记 error 并保留原因，
+      // 让面板/聊天里的失败卡片可见且可重试。
       console.error(`studio-generation 入队失败（artifact=${artifactId}）：`, err);
+      await markStudioArtifactError(artifactId, "生成任务入队失败，请重试");
+      return NextResponse.json(
+        { artifact: { ...artifact, status: "error" as const, error_message: "生成任务入队失败，请重试" } },
+        { status: 202 }
+      );
     }
 
     return NextResponse.json({ artifact }, { status: 202 });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("POST studio/generate 失败：", err);
+    return NextResponse.json({ error: "生成请求处理失败，请重试" }, { status: 500 });
   }
 }

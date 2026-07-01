@@ -44,3 +44,34 @@
     3000），均与本 feature 无关，已 spawn 独立任务跟踪，未在本 PR 内修复
 - 下一步最佳动作: 协调者 review 后跑 `pnpm harness verify --sprint p12/01` 转 F01 passing；
   之后 F02（生成演示文稿）depends_on F01 可解锁分配
+
+### 2026-07-02（同日续，PR #158 code review 后一轮修复）
+- 本轮目标: 修复协调者转达的 code review 发现——2 个 high-severity 授权/数据范围 bug + 2 个
+  medium-severity（入队失败静默/状态机跳步）+ 1 个 medium（500 泄露内部错误）
+- 已完成:
+  - `retry/route.ts` 补上与 `generate` 一致的 `chat.creator_user_id === user.id` 创建者校验（403）
+  - 新增 `apps/web/lib/studio.ts` 的 `listRoomFiles(room)`：把"房间文件"查询从
+    `ownerUserId: 当前请求者` 改锚定为 `room.owner_user_id`（房间 owner），修复个人房间下不同
+    成员看到彼此无关私人文件的越权/数据错误问题；`generate`/`sources` 路由改用该共享函数
+  - `generate`/`retry` 路由：入队失败时不再静默吞掉，立即 `markStudioArtifactError` 回写 error
+    并在响应体带上更新后状态
+  - `apps/workflow-worker/src/main.ts`：studioWorker 补上 `markStudioArtifactProcessing` 调用，
+    使 queued → processing → ready/error 状态机名副其实
+  - 五个 Studio 路由的 500 分支改为固定用户可读文案，不再 `String(err)` 泄露内部信息
+  - `e2e/studio-001-generate-artifact.spec.ts` 新增 2 个回归场景（共 12 个）：非创建者重试 403、
+    请求者私人文件不泄露进房间文件来源判定
+- 运行过的验证:
+  - `pnpm -w run verify:base` ✓ 45/45（typecheck+lint+test）
+  - `pnpm --filter @repo/web exec playwright test e2e/studio-001-generate-artifact.spec.ts` ✓ 12/12
+    （本轮验证期间机器负载剧烈波动导致同一命令多次运行时出现不同的偶发超时/`ECONNREFUSED`/
+    Postgres recovery-mode 报错——单独重跑失败用例均通过，且失败点不集中在改动代码上，判定为
+    共享机器资源争用而非逻辑问题；额外用 curl 直接调用两个 high-severity 修复对应的路由做了
+    独立于浏览器的确定性验证，结果一致通过）
+- 已记录证据（覆盖写入，反映本轮修复后的最终状态）:
+  - `phases/phase-p12-studio-presentations/sprints/sprint-01/evidence/studio-001-generate-artifact.e2e.txt`
+  - `phases/phase-p12-studio-presentations/sprints/sprint-01/evidence/verify-base.txt`
+- 已知风险或未解决问题: "房间文件"仍非真正房间级关联（kb_files 无 room_id），只是从"请求者个人
+  文件"改为更一致的"房间 owner 个人文件"近似——真要做房间级文件仍需新表，已在代码注释标记
+  KNOWN LIMITATION
+- 下一步最佳动作: 协调者重新 review PR #158，确认两个 high-severity 已解决后可推进
+  `pnpm harness verify --sprint p12/01`

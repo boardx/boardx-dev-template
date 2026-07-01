@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { canViewRoom, getRoomChat, getStudioArtifact, resetStudioArtifactForRetry } from "@repo/data";
+import {
+  canViewRoom,
+  getRoomChat,
+  getStudioArtifact,
+  resetStudioArtifactForRetry,
+  markStudioArtifactError,
+} from "@repo/data";
 import { makeQueue, QUEUE_NAMES } from "@repo/queue";
 import { currentUser } from "@/lib/session";
 
@@ -34,6 +40,10 @@ export async function POST(
     if (!chat || Number(chat.room_id) !== roomId) {
       return NextResponse.json({ error: "线程不存在" }, { status: 404 });
     }
+    // 与 generate 一致：只读线程（非创建者）不可重试生成。
+    if (chat.creator_user_id !== user.id) {
+      return NextResponse.json({ error: "只读线程不可生成" }, { status: 403 });
+    }
 
     const existing = await getStudioArtifact(params.artifactId);
     if (!existing || existing.chat_id !== chat.id) {
@@ -60,11 +70,18 @@ export async function POST(
       });
       await queue.close();
     } catch (err) {
+      // 同 generate：入队失败不能让制品卡在 queued 出不来，立刻回退 error 保留可重试路径。
       console.error(`studio-generation 重试入队失败（artifact=${artifact.id}）：`, err);
+      await markStudioArtifactError(artifact.id, "生成任务入队失败，请重试");
+      return NextResponse.json(
+        { artifact: { ...artifact, status: "error" as const, error_message: "生成任务入队失败，请重试" } },
+        { status: 202 }
+      );
     }
 
     return NextResponse.json({ artifact }, { status: 202 });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("POST studio/retry 失败：", err);
+    return NextResponse.json({ error: "重试请求处理失败，请重试" }, { status: 500 });
   }
 }
