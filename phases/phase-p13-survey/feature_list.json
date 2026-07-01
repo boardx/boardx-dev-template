@@ -8,7 +8,7 @@
       "title": "创建问卷（创建器 + 多题型 + 选项 + 预览）",
       "user_visible_behavior": "在 /surveys 点新建进入创建器：填标题/描述，添加多种题型（单选/多选/文本/评分等）与选项，可调整顺序、必填、预览答题页；保存 POST /api/surveys 落库并出现在列表；标题为空或无题禁止保存；创建后得到可分享的问卷。",
       "design_ref": "prototype:<!-- EDITOR --> + <!-- add question modal -->；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "wrk-survey-1",
       "capability": "CAP-DATA",
@@ -19,7 +19,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/survey-001-create-survey.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-07-01T12:50:25.951Z",
       "notes": "uc-survey-001。本阶段地基：surveys/survey_questions/survey_responses 表（team 作用域）。也点亮 phase-04 room 的 Room Survey 高级入口。依赖 phase-04 team 上下文。"
     },
     {

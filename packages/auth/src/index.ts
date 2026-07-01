@@ -119,6 +119,20 @@ export function resolveDisplayName(p: {
   return fl || p.email.split("@")[0]!;
 }
 
+// ─── 平台角色（SysAdmin 横切，P15 Admin 后台门控）─────────────────────────────
+// 与团队内角色（TeamRole：owner/admin/member）是两套独立体系；这是"平台"维度的全局角色。
+
+export type PlatformRole = "user" | "sysadmin";
+
+export function isPlatformRole(s: string): s is PlatformRole {
+  return s === "user" || s === "sysadmin";
+}
+
+/** 是否为系统管理员（可访问 /admin 后台）。 */
+export function isSysAdmin(role: string | undefined | null): boolean {
+  return role === "sysadmin";
+}
+
 export const AI_MODELS = ["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5"] as const;
 export const PRIVACY_LEVELS = ["private", "team"] as const;
 

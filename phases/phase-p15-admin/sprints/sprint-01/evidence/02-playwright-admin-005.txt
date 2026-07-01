@@ -1,0 +1,13 @@
+
+Running 6 tests using 1 worker
+
+  ✓  1 [chromium] › admin-005-view-admin-home.spec.ts:19:5 › 未登录访问 /admin 跳转到 /login (24.1s)
+  ✓  2 [chromium] › admin-005-view-admin-home.spec.ts:26:5 › 已登录但非 SysAdmin 访问 /admin 看到 403 无权限 (1.9s)
+  ✓  3 [chromium] › admin-005-view-admin-home.spec.ts:35:5 › SysAdmin 访问 /admin 看到统计摘要与模块导航 (2.7s)
+  ✓  4 [chromium] › admin-005-view-admin-home.spec.ts:60:5 › SysAdmin 点用户管理导航进入 /admin/users (3.5s)
+  ✓  5 [chromium] › admin-005-view-admin-home.spec.ts:68:5 › SysAdmin 点团队管理导航进入占位子页 (3.6s)
+  ✓  6 [chromium] › admin-005-view-admin-home.spec.ts:76:5 › 统计摘要 API 未登录 401、非 SysAdmin 403 (480ms)
+
+  Slow test file: [chromium] › admin-005-view-admin-home.spec.ts (36.3s)
+  Consider splitting slow test files to speed up parallel execution
+  6 passed (1.2m)
