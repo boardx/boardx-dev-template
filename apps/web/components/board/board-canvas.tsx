@@ -1,7 +1,20 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CanvasViewport } from "@/components/board/canvas-viewport";
+import {
+  Cable,
+  Hand,
+  Image,
+  LayoutTemplate,
+  MousePointer2,
+  PenLine,
+  Redo2,
+  Shapes,
+  StickyNote,
+  Type,
+  Undo2,
+} from "lucide-react";
 
 interface Item {
   id: string;
@@ -53,8 +66,46 @@ type Op =
   | { kind: "delete"; items: Item[] }
   | { kind: "move"; moves: Move[] };
 
+type BoardTool = "select" | "pan" | "sticky" | "draw" | "text" | "connector" | "shape" | "assets" | "templates";
+
 const NUDGE = 1;
 const BIG_NUDGE = 10;
+
+function BoardMenuButton({
+  testId,
+  label,
+  active,
+  disabled,
+  onClick,
+  children,
+}: {
+  testId: string;
+  label: string;
+  active: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Button
+      type="button"
+      data-testid={testId}
+      size="sm"
+      variant={active ? "secondary" : "ghost"}
+      title={disabled ? `${label}（暂不可用）` : label}
+      aria-label={label}
+      aria-pressed={active}
+      disabled={disabled}
+      onClick={onClick}
+      className={`transition-colors duration-200 ${
+        active ? "bg-muted text-foreground ring-1 ring-border-strong" : "text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {children}
+      <span className="text-xs">{label}</span>
+    </Button>
+  );
+}
 
 // 画布：渲染 board-keyed items（ADR-0002）+ 选择/键盘（F06）+ 复制粘贴（F08）+ 撤销/重做（F09）。
 // 视口（平移/缩放/小地图）复用 CanvasViewport（F05）。marquee 框选 deferred（与拖拽平移冲突，留后续）。
@@ -62,6 +113,8 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const [items, setItems] = useState<Item[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null); // F11 文本编辑中的便签
+  const [activeTool, setActiveTool] = useState<BoardTool>("select");
+  const [openPanel, setOpenPanel] = useState<"assets" | "templates" | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null); // 右键上下文菜单（uc-context-menu-001）
   const placeN = useRef(0); // 同步自增放置位，避免连点时读到尚未刷新的 items.length 造成重叠
   const clipboard = useRef<Item[]>([]); // 应用内剪贴板（F08）
@@ -195,6 +248,8 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   }
 
   async function addNote() {
+    setActiveTool("sticky");
+    setOpenPanel(null);
     const x = 40;
     const y = 40 + placeN.current++ * 130;
     const res = await fetch(`/api/boards/${boardId}/items`, {
@@ -214,6 +269,8 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // 线上以 type:"note" 持久化 + color:"text" 哨兵；创建后立即 PATCH 写入 color 标记，
   // 使刷新/重载后仍判别为文本（见上方 TEXT_MARK 注释）。
   async function addText() {
+    setActiveTool("text");
+    setOpenPanel(null);
     const x = 220;
     const y = 40 + placeN.current++ * 130;
     // 服务端 validateNewItem 仅放行 note/rect（不可改）；以 note 落库，再用 color 哨兵标记为文本。
@@ -236,8 +293,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     setSelected(new Set([item.id]));
   }
 
-  // 形状（Shape）组件创建（uc-widgets-004）：以原生 type:"rect" 落库并自动选中。
   async function addShape() {
+    setActiveTool("shape");
+    setOpenPanel(null);
     const x = 400;
     const y = 40 + placeN.current++ * 130;
     const res = await fetch(`/api/boards/${boardId}/items`, {
@@ -250,6 +308,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     recordOp({ kind: "add", items: [item] });
     await load();
     setSelected(new Set([item.id]));
+  }
+
+  function chooseTool(tool: BoardTool) {
+    setActiveTool(tool);
+    if (tool === "assets" || tool === "templates") setOpenPanel(tool);
+    else setOpenPanel(null);
+    if (tool === "select") setSelected(new Set());
   }
 
   function selectItem(id: string, additive: boolean) {
@@ -389,7 +454,11 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
-      if (e.key === "Escape") return setSelected(new Set());
+      if (e.key === "Escape") {
+        setOpenPanel(null);
+        setActiveTool("select");
+        return setSelected(new Set());
+      }
       const mod = e.metaKey || e.ctrlKey;
       if (mod && (e.key === "z" || e.key === "Z")) {
         e.preventDefault();
@@ -428,27 +497,104 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
 
   return (
     <div className="relative flex flex-1 flex-col">
-      {/* 工具栏（编辑者可加组件；Board Menu 全量入口在 p7） */}
+      {/* Board Menu：编辑者可见的工具入口；不可用能力保留禁用状态，避免误导为已实现。 */}
       {canEdit && (
-        <div className="flex items-center gap-2 border-b bg-card px-3 py-1.5">
-          <Button data-testid="add-note" size="sm" variant="secondary" onClick={addNote}>
-            + 便签
-          </Button>
-          <Button data-testid="add-text" size="sm" variant="secondary" onClick={() => void addText()}>
-            + 文本
-          </Button>
-          <Button data-testid="add-shape" size="sm" variant="secondary" onClick={() => void addShape()}>
-            + 形状
-          </Button>
-          <Button data-testid="undo" size="sm" variant="ghost" onClick={() => void undo()}>
-            撤销
-          </Button>
-          <Button data-testid="redo" size="sm" variant="ghost" onClick={() => void redo()}>
-            重做
-          </Button>
-          <span data-testid="selection-count" className="text-xs text-muted-foreground">
-            已选 {selected.size}
-          </span>
+        <div className="relative border-b bg-card px-3 py-1.5">
+          <div data-testid="board-menu" aria-label="Board Menu" className="flex items-center gap-1.5">
+            <BoardMenuButton
+              testId="board-tool-select"
+              label="选择"
+              active={activeTool === "select"}
+              onClick={() => chooseTool("select")}
+            >
+              <MousePointer2 className="h-4 w-4" />
+            </BoardMenuButton>
+            <BoardMenuButton
+              testId="board-tool-pan"
+              label="平移"
+              active={activeTool === "pan"}
+              onClick={() => chooseTool("pan")}
+            >
+              <Hand className="h-4 w-4" />
+            </BoardMenuButton>
+            <BoardMenuButton testId="add-note" label="便利贴" active={activeTool === "sticky"} onClick={() => void addNote()}>
+              <StickyNote className="h-4 w-4" />
+            </BoardMenuButton>
+            <BoardMenuButton testId="board-tool-draw" label="手绘" active={false} disabled>
+              <PenLine className="h-4 w-4" />
+            </BoardMenuButton>
+            <BoardMenuButton testId="add-text" label="文本" active={activeTool === "text"} onClick={() => void addText()}>
+              <Type className="h-4 w-4" />
+            </BoardMenuButton>
+            <BoardMenuButton testId="board-tool-connector" label="连接线" active={false} disabled>
+              <Cable className="h-4 w-4" />
+            </BoardMenuButton>
+            <BoardMenuButton testId="board-tool-shape" label="形状" active={activeTool === "shape"} onClick={() => void addShape()}>
+              <Shapes className="h-4 w-4" />
+            </BoardMenuButton>
+            <BoardMenuButton
+              testId="board-tool-assets"
+              label="资源"
+              active={activeTool === "assets"}
+              onClick={() => chooseTool("assets")}
+            >
+              <Image className="h-4 w-4" />
+            </BoardMenuButton>
+            <BoardMenuButton
+              testId="board-tool-templates"
+              label="模板"
+              active={activeTool === "templates"}
+              onClick={() => chooseTool("templates")}
+            >
+              <LayoutTemplate className="h-4 w-4" />
+            </BoardMenuButton>
+
+            <div className="mx-1 h-5 w-px bg-border" />
+            <Button data-testid="undo" size="icon" variant="ghost" title="撤销" aria-label="撤销" onClick={() => void undo()}>
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <Button data-testid="redo" size="icon" variant="ghost" title="重做" aria-label="重做" onClick={() => void redo()}>
+              <Redo2 className="h-4 w-4" />
+            </Button>
+            <span data-testid="selection-count" className="ml-1 text-xs text-muted-foreground">
+              已选 {selected.size}
+            </span>
+          </div>
+
+          {openPanel === "assets" && (
+            <div
+              data-testid="board-assets-panel"
+              className="absolute left-3 top-12 z-20 w-72 rounded-lg border bg-popover p-3 shadow-lg"
+            >
+              <input
+                data-testid="board-assets-search"
+                aria-label="搜索资源"
+                placeholder="搜索图片或图标"
+                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+              <div className="mt-2 flex gap-1.5">
+                <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">图片</span>
+                <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">图标</span>
+              </div>
+            </div>
+          )}
+
+          {openPanel === "templates" && (
+            <div
+              data-testid="board-templates-panel"
+              className="absolute left-3 top-12 z-20 w-72 rounded-lg border bg-popover p-3 shadow-lg"
+            >
+              <div className="text-xs font-semibold text-muted-foreground">模板</div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button type="button" className="rounded-md border bg-background p-2 text-left text-xs">
+                  Brainstorm
+                </button>
+                <button type="button" className="rounded-md border bg-background p-2 text-left text-xs">
+                  Kanban
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -457,7 +603,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       {canEdit && selected.size > 0 && (
         <div
           data-testid="widget-menu"
-          className="absolute left-1/2 top-2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-lg"
+          className="absolute left-1/2 top-14 z-20 flex -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-lg"
         >
           <span className="px-1 text-xs text-muted-foreground">{selected.size} 项</span>
           {/* 颜色色板（F11）：仅对便签生效；选中项全为文本时隐藏（文本为透明块，不套柔彩色） */}
