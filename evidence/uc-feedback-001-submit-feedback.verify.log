@@ -1,0 +1,49 @@
+Feature: uc-feedback-001-submit-feedback
+Issue: #65
+Worktree: /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template-feedback-65
+Branch: codex/issue-65-feedback
+Verified at: 2026-07-01
+
+Implemented:
+- Added feedback_submissions persistence table via packages/data/migrations/014_feedback.sql.
+- Added @repo/data feedback repository API for creating submissions.
+- Added authenticated POST /api/feedback endpoint.
+- Added desktop and mobile feedback entry points, dialog validation, image attachment upload, and success toast.
+- Added unit coverage for attachment normalization.
+- Added Playwright e2e coverage for authenticated feedback submission.
+
+Verification commands and results:
+
+1. DATABASE_URL=postgresql://boardx:boardx_dev@localhost:5432/boardx_feedback65 pnpm --filter @repo/data migrate
+   Result: pass. Migrations 001 through 014 applied successfully, including 014_feedback.sql.
+
+2. DATABASE_URL=postgresql://boardx:boardx_dev@localhost:5432/boardx_feedback65 pnpm --filter @repo/web exec playwright test e2e/feedback-001-submit-feedback.spec.ts
+   Result: pass. 1 test passed.
+
+3. pnpm --filter @repo/web typecheck
+   Result: pass.
+
+4. pnpm --filter @repo/web test
+   Result: pass. 4 files passed, 12 tests passed.
+
+5. pnpm --filter @repo/web lint
+   Result: pass.
+
+6. pnpm --filter @repo/web build
+   Result: pass.
+
+7. pnpm --filter @repo/data typecheck
+   Result: pass.
+
+8. pnpm --filter @repo/data test
+   Result: pass. 3 files passed, 14 tests passed.
+
+9. pnpm -w run verify:base
+   Result: pass. 37 tasks successful, 37 total.
+
+10. git diff --check
+    Result: pass.
+
+Notes:
+- The target e2e used the isolated database boardx_feedback65 on the existing local boardx_postgres container.
+- This GitHub issue is not present in the local phase feature_list.json, so no local feature status was edited.
