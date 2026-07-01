@@ -22,6 +22,8 @@ export * from "./roomChat";
 export * from "./profile";
 // CAP-WEB 用户反馈提交记录
 export * from "./feedback";
+// P15 Admin 后台：平台统计聚合（用户/团队计数；仅已建表的真实维度）
+export * from "./admin";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 
