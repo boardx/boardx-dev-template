@@ -12,6 +12,8 @@
       "sprint": "01",
       "owner": "wrk-credits-1",
       "capability": "CAP-DATA",
+      "depends_on": [],
+      "wave": 0,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
@@ -31,6 +33,10 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-PAYMENT",
+      "depends_on": [
+        "F05"
+      ],
+      "wave": 1,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
@@ -50,6 +56,10 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-DATA",
+      "depends_on": [
+        "F01"
+      ],
+      "wave": 1,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
@@ -69,6 +79,10 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-PAYMENT",
+      "depends_on": [
+        "F05"
+      ],
+      "wave": 1,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
@@ -88,6 +102,8 @@
       "sprint": "02",
       "owner": "wrk-payment-1",
       "capability": "CAP-PAYMENT",
+      "depends_on": [],
+      "wave": 0,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
