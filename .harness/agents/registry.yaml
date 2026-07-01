@@ -45,6 +45,11 @@ agents:
     model: sonnet-5
     areas: [ai-store]
     max_concurrent: 1
+  - id: wrk-store-2
+    kind: worker
+    model: sonnet-5
+    areas: [ai-store]
+    max_concurrent: 1
   - id: wrk-survey-1
     kind: worker
     model: sonnet-5

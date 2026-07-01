@@ -165,9 +165,9 @@
       "title": "向聊天附加文件/图片/音频",
       "user_visible_behavior": "输入区「添加文件」或拖拽上传：上传中/失败/重试/文件名/缩略图/预览条；可移除或继续添加；超数量/类型不支持/超大小给对应提示；上传完成随消息发送，附件与消息一起展示进聊天历史，AI 基于附件上下文回复。不支持上传的模式展示「此模式下不支持上传文件」。",
       "design_ref": "prototype:<!-- composer --> 附件入口（AVA 输入区，细节较浅，附件预览条参考 KB upload dialog）；DESIGN.md tokens",
-      "status": "blocked",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "03",
+      "owner": "wrk-ava-1",
       "capability": "CAP-FILE",
       "depends_on": [
         "p10:F01"
