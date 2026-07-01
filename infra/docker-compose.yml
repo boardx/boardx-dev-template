@@ -28,3 +28,20 @@ services:
       interval: 3s
       timeout: 3s
       retries: 10
+
+  # CAP-FILE（p10 知识库）：S3 兼容对象存储，本地用 MinIO。
+  # 控制台: http://localhost:${MINIO_CONSOLE_PORT:-9091}（账号见下方环境变量）
+  minio:
+    image: minio/minio:RELEASE.2024-08-17T01-24-54Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: boardx
+      MINIO_ROOT_PASSWORD: boardx123
+    ports:
+      - "${MINIO_PORT:-9090}:9000"
+      - "${MINIO_CONSOLE_PORT:-9091}:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
