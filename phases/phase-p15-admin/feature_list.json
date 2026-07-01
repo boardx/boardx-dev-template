@@ -12,6 +12,8 @@
       "sprint": "01",
       "owner": "wrk-admin-1",
       "capability": "CAP-AUTH",
+      "depends_on": [],
+      "wave": 0,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
@@ -31,6 +33,11 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-AUTH",
+      "depends_on": [
+        "F01",
+        "p14:F01"
+      ],
+      "wave": 1,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
@@ -50,6 +57,11 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-AUTH",
+      "depends_on": [
+        "F01",
+        "p14:F01"
+      ],
+      "wave": 1,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
@@ -69,6 +81,12 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-DATA",
+      "depends_on": [
+        "F01",
+        "p11:F01",
+        "p11:F02"
+      ],
+      "wave": 2,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
@@ -88,6 +106,11 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-DATA",
+      "depends_on": [
+        "F04",
+        "p11:F02"
+      ],
+      "wave": 3,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
