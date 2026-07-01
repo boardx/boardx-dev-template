@@ -8,7 +8,7 @@
       "title": "积分钱包查看（Team Credits 页 + 用户菜单个人余额）",
       "user_visible_behavior": "Team 管理角色进入 /credits：GET /api/credits/wallet?scope=team 展示团队 Credit 余额、购买记录、消耗记录（摘要卡片 + Usage/Purchase 标签表）；普通用户在用户菜单看到个人 Credit 余额入口与数值；无权限看不到团队钱包；加载骨架与空态。",
       "design_ref": "prototype:<!-- CREDITS -->（四摘要卡片 + Usage/Purchase 标签 + 用户菜单余额入口）；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "wrk-credits-1",
       "capability": "CAP-DATA",
@@ -19,7 +19,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/credits-001-view-wallet.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-07-01T12:17:53.035Z",
       "notes": "uc-credits-001。本阶段地基：credit_wallets/credit_transactions 表（scope=personal/team）+ 余额聚合。AI 消耗扣费的记账挂钩点由 p9/p12 调用。依赖 phase-04 team 上下文。"
     },
     {
