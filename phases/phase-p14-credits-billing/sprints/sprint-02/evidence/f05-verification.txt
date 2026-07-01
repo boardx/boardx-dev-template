@@ -1,0 +1,40 @@
+=== $ pnpm --filter @repo/data run migrate ===
+
+> @repo/data@0.1.0 migrate /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ad28ec5bbd9b6d3bd/packages/data
+> tsx src/migrate.ts
+
+✓ 已应用，跳过：001_init.sql
+✓ 已应用，跳过：002_auth.sql
+✓ 已应用，跳过：003_team.sql
+✓ 已应用，跳过：004_room.sql
+✓ 已应用，跳过：005_canvas.sql
+✓ 已应用，跳过：006_profile.sql
+✓ 已应用，跳过：007_board.sql
+✓ 已应用，跳过：008_board_visits.sql
+✓ 已应用，跳过：009_board_favorites.sql
+✓ 已应用，跳过：010_room_chat.sql
+✓ 已应用，跳过：011_board_settings.sql
+✓ 已应用，跳过：012_board_items_board_id.sql
+✓ 已应用，跳过：013_board_items_color.sql
+✓ 已应用，跳过：014_feedback.sql
+✓ 已应用，跳过：014_room_chat_messages.sql
+✓ 已应用，跳过：015_team_general.sql
+✓ 已应用，跳过：016_payment_orders.sql
+迁移完成。
+
+=== $ pnpm --filter @repo/web exec playwright test e2e/billing-002-scan-payment.spec.ts ===
+
+Running 8 tests using 1 worker
+
+  ✓  1 [chromium] › billing-002-scan-payment.spec.ts:15:5 › 下单：POST /api/payment/orders 创建 pending 订单 + 返回二维码 (51.1s)
+  ✓  2 [chromium] › billing-002-scan-payment.spec.ts:34:5 › 轮询：GET /api/payment/orders/:id 返回当前状态 (3.8s)
+  ✓  3 [chromium] › billing-002-scan-payment.spec.ts:49:5 › 回调成功：webhook payment.succeeded 让订单变 paid 并触发发放 (1.5s)
+  ✓  4 [chromium] › billing-002-scan-payment.spec.ts:73:5 › 回调幂等：重复 webhook 不重复触发发放 (861ms)
+  ✓  5 [chromium] › billing-002-scan-payment.spec.ts:96:5 › 回调失败：webhook payment.failed 让订单变 failed，不触发发放 (854ms)
+  ✓  6 [chromium] › billing-002-scan-payment.spec.ts:113:5 › 未登录 POST /api/payment/orders → 401 (262ms)
+  ✓  7 [chromium] › billing-002-scan-payment.spec.ts:120:5 › UI：/payment-test 下单后展示二维码，webhook 回调后轮询显示成功 (15.9s)
+  ✓  8 [chromium] › billing-002-scan-payment.spec.ts:142:5 › 未登录访问 /payment-test → 跳登录 (3.7s)
+
+  Slow test file: [chromium] › billing-002-scan-payment.spec.ts (1.3m)
+  Consider splitting slow test files to speed up parallel execution
+  8 passed (1.9m)
