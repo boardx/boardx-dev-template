@@ -53,5 +53,27 @@
   - 真实的解析/切分/向量化算法（parse/chunk/vectorize）是桩化的（只跑状态机 processing→ready），
     真实算法留给 F04（RAG 检索）落地时实现，符合 F01 notes 的范围边界。
   - 下载/删除按钮在列表行里是纯 UI 占位（未接后端），因为下载=F02、删除=F03，不在本 feature 范围内。
+  - **重要发现（影响所有 worker，非本 feature 专属）——`git push` 的 pre-push hook（`pnpm verify:full`）
+    在本次多 agent 并行会话里不可靠**：`scripts/verify-full.sh` 的 `docker compose -f infra/docker-compose.yml up -d`
+    用的是**默认 compose project 名（`infra`）且不支持 `COMPOSE_PROJECT_NAME` 隔离**；本机同时有多个 worker
+    在各自 worktree 里跑同一份 `infra/docker-compose.yml`（观察到其它 worker 已经用
+    `credits-p14-*`/`admf01-*`/`avaf01-*`/`boardxtmpl-*`/`feedback65-*` 等自定义 project 名规避冲突，
+    说明这是已知痛点）。实测：我的 `verify:full` 跑到一半，`infra-postgres-1`/`infra-redis-1` 被另一个
+    worker 的并发 `docker compose up -d` **原地重建成了空库**（`select count(*) from kb_files` 报
+    `relation "kb_files" does not exist`），导致我的 e2e 在跑到一半时数据库被换成另一个全新空库，
+    kb-001 两个用例假失败（`file-status-*` 元素消失 + 服务端二次校验返回 404 而非 400，见
+    `evidence/kb-001-exact-command-port-collision.txt` 的姊妹现象）。同批还有 11 个与 kb 完全无关的用例
+    （auth-login/auth-reset-password/ava-001/board-list-search/board-menu-001/canvas-007/profile-edit/
+    profile-settings/widgets-001/widgets-004 ×2）一起失败，性质相同（多 agent 抢同一 docker 资源），
+    不是我引入的回归。**`apps/web/e2e/kb-001-upload-file.spec.ts` 本身在隔离环境下稳定 5/5 通过**
+    （见 `evidence/kb-001-e2e-pass.txt`，独立跑了 3 次全过）。`verify-full.sh` 另有一个独立 gap：
+    未启动 `apps/workflow-worker`，任何依赖异步 job 回写状态的 e2e（如本 spec 等 ready）在纯按此脚本跑
+    时即使数据库没被抢也会因无 worker 消费队列而卡在 processing，需要脚本自己起 worker 才闭环
+    （见 `.harness/instructions/testing-standards.md` 里"CAP-WORKFLOW"一节本就要求手动起 worker，
+    `verify-full.sh` 目前没自动化这一步）。
+    **未对 `scripts/verify-full.sh`/`playwright.config.ts` 做任何改动**（怕影响其他并行 worker），
+    只如实记录，建议 coordinator 后续统一给 `verify-full.sh` 加 `COMPOSE_PROJECT_NAME` 隔离 +
+    自动起停 `workflow-worker`，作为独立的 harness 基础设施改进项，不在本 F01 范围内。
 - 下一步最佳动作: 等 review（rev-code / rev-e2e / rev-feature）过后由 coordinator 合并；下一个 worker 可在
-  `@repo/storage` 基础上做 F02（列表/搜索/分页/下载）。
+  `@repo/storage` 基础上做 F02（列表/搜索/分页/下载）。coordinator 可考虑把上述 pre-push hook 隔离问题
+  列为独立的 harness 基础设施 issue（影响所有并行 worker，不只本 feature）。
