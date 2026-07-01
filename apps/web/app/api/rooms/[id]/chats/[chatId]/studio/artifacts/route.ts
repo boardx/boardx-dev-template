@@ -11,18 +11,23 @@ export async function GET(
   _req: Request,
   { params }: { params: { id: string; chatId: string } }
 ) {
-  const user = await currentUser();
-  if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
+  try {
+    const user = await currentUser();
+    if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
 
-  const roomId = Number(params.id);
-  if (!(await canViewRoom(roomId, user.id))) {
-    return NextResponse.json({ error: "无权限" }, { status: 403 });
-  }
-  const chat = await getRoomChat(Number(params.chatId));
-  if (!chat || Number(chat.room_id) !== roomId) {
-    return NextResponse.json({ error: "线程不存在" }, { status: 404 });
-  }
+    const roomId = Number(params.id);
+    if (!(await canViewRoom(roomId, user.id))) {
+      return NextResponse.json({ error: "无权限" }, { status: 403 });
+    }
+    const chat = await getRoomChat(Number(params.chatId));
+    if (!chat || Number(chat.room_id) !== roomId) {
+      return NextResponse.json({ error: "线程不存在" }, { status: 404 });
+    }
 
-  const artifacts = await listStudioArtifactsByChat(chat.id);
-  return NextResponse.json({ artifacts });
+    const artifacts = await listStudioArtifactsByChat(chat.id);
+    return NextResponse.json({ artifacts });
+  } catch (err) {
+    console.error("GET studio/artifacts 失败：", err);
+    return NextResponse.json({ error: "加载制品列表失败，请重试" }, { status: 500 });
+  }
 }

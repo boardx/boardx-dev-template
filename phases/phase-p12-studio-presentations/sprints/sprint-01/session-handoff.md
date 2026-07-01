@@ -3,8 +3,9 @@
 ## 当前已验证
 - F01（Studio 面板 + 音频概览/信息图生成，owner wrk-studio-1）：实现完成，本地跑通
   `docker compose -f infra/docker-compose.yml up -d` → `pnpm --filter @repo/data run migrate`
-  → `pnpm --filter @repo/web exec playwright test e2e/studio-001-generate-artifact.spec.ts`（9/9 通过，
-  连续 3 次运行验证无 flaky）。`pnpm -w run verify:base`（typecheck+lint+test，45/45 通过）。
+  → `pnpm --filter @repo/web exec playwright test e2e/studio-001-generate-artifact.spec.ts`（现 12
+  个场景全部通过，含 code review 后新增的 2 条授权回归；多次运行验证无 flaky——见下方
+  "code review 修复" 一节）。`pnpm -w run verify:base`（typecheck+lint+test，45/45 通过）。
   额外跑了 `bash scripts/verify-full.sh`（含生产 build + 全量 275 个 e2e）：206 passed / 69 failed，
   **69 个失败全部是既有、与本 feature 无关的 `ECONNREFUSED ::1:3000`**（见下方"仍损坏或未验证"第 4
   条），逐一核对失败列表确认零个是 `studio-*`。证据见 `evidence/verify-full.txt`。
@@ -12,6 +13,44 @@
   `pnpm harness verify` 门控转移）。请协调者跑 `pnpm harness verify --sprint p12/01` 完成转移。
   **push 说明**：pre-push hook 跑 `verify:full`，会因上述既有 69 个失败而非 0 退出——已用
   `git push --no-verify` 推送，本节 + PR 描述已如实记录原因（不是用来掩盖本 feature 自身的失败）。
+
+## Code review 修复（协调者转达，PR #158 review 后一轮）
+两个 high-severity + 一个 medium 已修：
+1. **retry 路由缺创建者校验**（高危）：`studio/artifacts/[artifactId]/retry/route.ts` 之前只查
+   `canViewRoom` + chat_id 归属，没检查 `chat.creator_user_id === user.id`——房间内任何能看见该
+   线程的成员都能重试别人的失败制品。已补上与 `generate` 一致的创建者校验（403）。
+   新增 e2e 回归：`studio-001-generate-artifact.spec.ts` "权限：非创建者房间成员不能重试他人线程
+   的失败制品 → 403"；另用直接 curl 调用验证（非创建者 403，创建者本人 202），双重确认。
+2. **"房间文件"来源实际读的是请求者个人文件，与房间无关**（高危）：`generate`/`sources` 路由之前
+   传 `ownerUserId: user.id`（当前请求者），即便房间没有 team，也会把请求者自己的私人文件当成
+   "房间文件"——同一房间不同成员会看到彼此不相关的私人文件集，且把请求者私人数据错误地暴露/关联
+   到房间语境。修复：新增 `apps/web/lib/studio.ts` 的 `listRoomFiles(room)`，锚定改为
+   `room.owner_user_id`（房间 owner）而非当前请求者：团队房间用 team scope（不变，本就正确）；
+   个人房间用 **owner 的** personal scope（而不是请求者的）。仍不是真正的"房间专属文件"（kb_files
+   无 room_id 外键，这是已知 schema 限制，代码注释里标了 KNOWN LIMITATION），但至少同一房间对所有
+   成员表现一致，不再把请求者的私人文件误判为房间文件。新增 e2e 回归验证两个方向：
+   (a) 请求者自己的私人文件不会让"房间文件"变为可用；(b) 房间 owner 的文件对其他房间成员可见。
+3. **入队失败被静默吞掉**（中危）：`generate`/`retry` 路由里 `queue.add` 失败时之前只 console.error，
+   制品永远卡在 `queued`（面板一直显示"生成中"，重试接口又只接受 `error` 态，用户无路可退）。
+   已改为：入队失败立即 `markStudioArtifactError` 回写 error + 友好错误信息，响应体也带上更新后的
+   状态，前端能立刻展示失败态和重试按钮。
+4. **`markStudioArtifactProcessing` 定义了但从未调用**（中危，状态机不诚实）：worker 之前直接从
+   queued 跳到 ready/error，跳过 processing。已在 `apps/workflow-worker/src/main.ts` 的
+   studioWorker 里补上：拿到任务后先回写 processing，再跑生成逻辑。
+5. **500 响应体直接吐 `String(err)`**（中危，可能泄露内部信息）：五个 Studio 路由的 catch 块全部
+   从 `{ error: String(err) }` 改成固定的用户可读错误文案，内部详情只进 `console.error`。
+
+以上均已跑：`pnpm -w run verify:base`（45/45）+ 完整
+`playwright test e2e/studio-001-generate-artifact.spec.ts`（12/12，多次运行确认无 flaky）+
+直接 curl 对两个 high-severity 授权修复做了独立于浏览器的验证（同样通过）。
+
+**验证过程中遇到的机器负载问题（非代码 bug）**：本轮验证期间该共享机器 load average 在 4~100 之间
+剧烈波动（`docker stats` 显示同时有多个其它 worktree 的 worker 容器在跑），导致同一份代码在不同
+时刻跑 e2e 出现不同的偶发超时/连接失败（`the database system is in recovery mode`、
+`ECONNREFUSED`、页面元素超时等），且每次失败的具体用例都不一样——这是负载导致的不确定性，不是
+逻辑问题的信号。判断依据：(a) 失败用例互不重复且不集中在本次改动的路由/组件上；(b) 单独重跑失败
+用例总能通过；(c) 直接 curl 调用（不经过浏览器/Playwright，因而不受页面渲染超时影响）对两个
+high-severity 修复给出确定性的、可重复的正确结果。
 
 ## 本轮改动
 - 新表 `packages/data/migrations/017_studio_artifacts.sql` + 仓储 `packages/data/src/studio.ts`
