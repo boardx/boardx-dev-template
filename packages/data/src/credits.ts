@@ -83,6 +83,35 @@ export async function listTransactions(walletId: number, limit = 50): Promise<Cr
 }
 
 /**
+ * 分页查询流水（F03 uc-credits-003）：按 wallet_id (+可选 kind) 过滤，倒序分页。
+ * 供 GET /api/credits/transactions 复用，供个人 Credit Records 弹窗（滚动加载更多）
+ * 与 Team Credits 页面 Usage/Purchase 标签页共用同一分页协议。
+ */
+export async function listTransactionsPage(
+  walletId: number,
+  opts: { page?: number; pageSize?: number; kind?: TransactionKind } = {}
+): Promise<{ rows: CreditTransaction[]; total: number }> {
+  const page = Math.max(1, opts.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, opts.pageSize ?? 20));
+  const offset = (page - 1) * pageSize;
+
+  const kindClause = opts.kind ? "AND kind = $2" : "";
+  const params: (number | string)[] = opts.kind ? [walletId, opts.kind] : [walletId];
+
+  const rows = await query<CreditTransaction>(
+    `SELECT id, wallet_id, kind, label, description, amount, balance_after, created_at
+     FROM credit_transactions WHERE wallet_id = $1 ${kindClause}
+     ORDER BY created_at DESC, id DESC LIMIT ${pageSize} OFFSET ${offset}`,
+    params
+  );
+  const countRows = await query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count FROM credit_transactions WHERE wallet_id = $1 ${kindClause}`,
+    params
+  );
+  return { rows, total: Number(countRows[0]?.count ?? 0) };
+}
+
+/**
  * 幂等查重（P15 F03 review 加固）：按 wallet_id + label 精确匹配查最近一条流水。
  * 调用方把幂等 key 编码进 label（如 "Admin grant · idem:<key>"），命中即视为重复提交，
  * 直接复用已有流水，不再重复入账。不新增迁移/列——复用既有 label 文本列，靠调用方

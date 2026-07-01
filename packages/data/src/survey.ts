@@ -33,6 +33,10 @@ export interface SurveyWithQuestions extends Survey {
   questions: SurveyQuestion[];
 }
 
+export interface SurveyListItem extends Survey {
+  response_count: string;
+}
+
 const SURVEY_COLS =
   "id, team_id, scope, title, description, is_active, owner_user_id, created_at, updated_at";
 const QUESTION_COLS = "id, survey_id, position, title, type, required, options";
@@ -109,28 +113,69 @@ export async function getSurveyWithQuestions(surveyId: number): Promise<SurveyWi
   return { ...survey, questions: await listQuestions(surveyId) };
 }
 
-/** 用户可见的问卷：自己创建的（含 private/team），或 scope=team 且自己是该团队成员。按更新时间倒序。 */
-export async function listVisibleSurveys(userId: number): Promise<Survey[]> {
-  return query<Survey>(
+/** 用户可见的问卷：自己的 private 问卷，或当前团队上下文内的 team 问卷。按更新时间倒序。 */
+export async function listVisibleSurveys(userId: number, currentTeamId: number | null = null): Promise<SurveyListItem[]> {
+  return query<SurveyListItem>(
     `SELECT DISTINCT s.id, s.team_id, s.scope, s.title, s.description, s.is_active,
-            s.owner_user_id, s.created_at, s.updated_at
+            s.owner_user_id, s.created_at, s.updated_at,
+            count(sr.id)::text AS response_count
      FROM surveys s
+     LEFT JOIN survey_responses sr ON sr.survey_id = s.id
      LEFT JOIN team_members tm ON tm.team_id = s.team_id AND tm.user_id = $1
-     WHERE s.owner_user_id = $1 OR (s.scope = 'team' AND tm.user_id IS NOT NULL)
+     WHERE (s.scope = 'private' AND s.owner_user_id = $1)
+        OR (
+          s.scope = 'team'
+          AND s.team_id = $2
+          AND tm.user_id IS NOT NULL
+        )
+     GROUP BY s.id, s.team_id, s.scope, s.title, s.description, s.is_active,
+              s.owner_user_id, s.created_at, s.updated_at
      ORDER BY s.updated_at DESC`,
-    [userId]
+    [userId, currentTeamId]
   );
 }
 
-/** 用户能否查看某问卷：创建者，或 scope=team 且是该团队成员。 */
-export async function canViewSurvey(surveyId: number, userId: number): Promise<boolean> {
+/** 用户能否查看某问卷：创建者的 private，或当前团队上下文内的 team 成员。 */
+export async function canViewSurvey(
+  surveyId: number,
+  userId: number,
+  currentTeamId: number | null = null
+): Promise<boolean> {
   const s = await getSurvey(surveyId);
   if (!s) return false;
-  if (s.owner_user_id === userId) return true;
+  if (s.scope === "private" && Number(s.owner_user_id) === Number(userId)) return true;
   if (s.scope === "team" && s.team_id != null) {
-    return (await getMembership(s.team_id, userId)) !== undefined;
+    const teamId = Number(s.team_id);
+    if (currentTeamId !== teamId) return false;
+    return (await getMembership(teamId, userId)) !== undefined;
   }
   return false;
+}
+
+export async function updateSurvey(
+  surveyId: number,
+  ownerId: number,
+  fields: { title?: string; description?: string; isActive?: boolean }
+): Promise<Survey | undefined> {
+  const rows = await query<Survey>(
+    `UPDATE surveys
+     SET title = COALESCE($3, title),
+         description = COALESCE($4, description),
+         is_active = COALESCE($5, is_active),
+         updated_at = now()
+     WHERE id = $1 AND owner_user_id = $2
+     RETURNING ${SURVEY_COLS}`,
+    [surveyId, ownerId, fields.title ?? null, fields.description ?? null, fields.isActive ?? null]
+  );
+  return rows[0];
+}
+
+export async function deleteSurvey(surveyId: number, ownerId: number): Promise<boolean> {
+  const rows = await query<{ id: number }>(
+    "DELETE FROM surveys WHERE id = $1 AND owner_user_id = $2 RETURNING id",
+    [surveyId, ownerId]
+  );
+  return rows.length > 0;
 }
 
 /** 答卷提交数（供列表展示 responses 计数；F01 恒为 0，随 F03 增长）。 */

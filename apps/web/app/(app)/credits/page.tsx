@@ -22,6 +22,14 @@ interface Wallet {
   records: CreditRecord[];
 }
 
+interface TransactionsPage {
+  records: CreditRecord[];
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+}
+
 interface TeamWithRole {
   id: number | string;
   name: string;
@@ -53,14 +61,23 @@ function WalletSkeleton() {
   );
 }
 
+const PAGE_SIZE = 20;
+
 export default function CreditsPage() {
   const router = useRouter();
   const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [scope, setScope] = useState<"personal" | "team">("personal");
   const [teamName, setTeamName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [forbidden, setForbidden] = useState(false);
   const [tab, setTab] = useState<"usage" | "purchase">("usage");
+  const [records, setRecords] = useState<CreditRecord[]>([]);
+  const [recordsLoading, setRecordsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [stateQuery, setStateQuery] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -70,7 +87,8 @@ export default function CreditsPage() {
       setForbidden(false);
       const state =
         typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("state") : null;
-      const stateQuery = state === "empty" ? "&state=empty" : "";
+      const query = state === "empty" ? "&state=empty" : "";
+      setStateQuery(query);
 
       // 判断当前是否处在「团队管理角色」上下文：有当前团队且角色为 owner/admin → 走团队钱包；
       // 否则（无团队 / 普通 member）→ 走个人钱包。
@@ -89,9 +107,9 @@ export default function CreditsPage() {
       const activeTeam =
         currentData.teamId != null ? teams.find((t) => String(t.id) === String(currentData.teamId)) : undefined;
       const canManage = activeTeam != null && (activeTeam.role === "owner" || activeTeam.role === "admin");
+      const resolvedScope = canManage ? "team" : "personal";
 
-      const scopeQuery = canManage ? "scope=team" : "scope=personal";
-      const res = await fetch(`/api/credits/wallet?${scopeQuery}${stateQuery}`);
+      const res = await fetch(`/api/credits/wallet?scope=${resolvedScope}${query}`);
       if (!alive) return;
       if (res.status === 401) {
         router.replace("/login");
@@ -110,6 +128,7 @@ export default function CreditsPage() {
       const data = (await res.json()) as { wallet: Wallet };
       if (!alive) return;
       setWallet(data.wallet);
+      setScope(resolvedScope);
       setTeamName(canManage ? activeTeam!.name : null);
       setLoading(false);
     })();
@@ -118,7 +137,50 @@ export default function CreditsPage() {
     };
   }, [router]);
 
-  const records = wallet?.records.filter((r) => r.kind === tab) ?? [];
+  // 流水表（F03 分页）：scope 就绪后按当前 tab 拉取第 1 页；切 tab 重新拉取。
+  useEffect(() => {
+    if (loading || forbidden || error) return;
+    let alive = true;
+    (async () => {
+      setRecordsLoading(true);
+      const res = await fetch(
+        `/api/credits/transactions?scope=${scope}&kind=${tab}&page=1&pageSize=${PAGE_SIZE}${stateQuery}`
+      );
+      if (!alive) return;
+      if (!res.ok) {
+        setRecordsLoading(false);
+        return;
+      }
+      const data = (await res.json()) as TransactionsPage;
+      if (!alive) return;
+      setRecords(data.records);
+      setPage(1);
+      setHasMore(data.hasMore);
+      setRecordsLoading(false);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [scope, tab, loading, forbidden, error, stateQuery]);
+
+  async function loadMore() {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    try {
+      const res = await fetch(
+        `/api/credits/transactions?scope=${scope}&kind=${tab}&page=${nextPage}&pageSize=${PAGE_SIZE}${stateQuery}`
+      );
+      if (!res.ok) return;
+      const data = (await res.json()) as TransactionsPage;
+      setRecords((prev) => [...prev, ...data.records]);
+      setPage(nextPage);
+      setHasMore(data.hasMore);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
   const amountHead = tab === "usage" ? "User" : "Type";
   const descHead = tab === "usage" ? "Reason" : "Description";
 
@@ -197,7 +259,11 @@ export default function CreditsPage() {
               <div className="w-20 text-right">Amount</div>
               <div className="w-24 text-right">Balance</div>
             </div>
-            {records.length === 0 ? (
+            {recordsLoading ? (
+              <div data-testid="records-loading" className="animate-pulse px-4.5 py-6">
+                <div className="h-40 rounded-9 bg-muted" />
+              </div>
+            ) : records.length === 0 ? (
               <div data-testid="empty" className="px-4.5 py-10 text-center text-13 text-muted-foreground">
                 {tab === "usage" ? "暂无消耗记录" : "暂无购买记录"}
               </div>
@@ -216,6 +282,19 @@ export default function CreditsPage() {
                     <div className="w-24 text-right text-muted-foreground">{fmt(r.balance)}</div>
                   </div>
                 ))}
+                {hasMore && (
+                  <div className="border-t border-border px-4.5 py-3 text-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      data-testid="load-more"
+                      onClick={() => void loadMore()}
+                      disabled={loadingMore}
+                    >
+                      {loadingMore ? "Loading…" : "Load more"}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>
