@@ -33,6 +33,8 @@ const colorClass = (c?: string | null) => COLORS[c ?? "amber"] ?? COLORS.amber;
 const TEXT_MARK = "text";
 const DEFAULT_TEXT = "文本";
 const isText = (it: { color?: string | null }) => it.color === TEXT_MARK;
+// 形状（Shape）组件（uc-widgets-004）：服务端原生放行 type:"rect"，按 type 判别，无需 color 哨兵。
+const isShape = (it: { type: string }) => it.type === "rect";
 
 interface Move {
   id: string;
@@ -230,6 +232,22 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     setSelected(new Set([item.id]));
   }
 
+  // 形状（Shape）组件创建（uc-widgets-004）：以原生 type:"rect" 落库并自动选中。
+  async function addShape() {
+    const x = 400;
+    const y = 40 + placeN.current++ * 130;
+    const res = await fetch(`/api/boards/${boardId}/items`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "rect", x, y, text: "" }),
+    });
+    if (res.status !== 201) return;
+    const { item } = (await res.json()) as { item: Item };
+    recordOp({ kind: "add", items: [item] });
+    await load();
+    setSelected(new Set([item.id]));
+  }
+
   function selectItem(id: string, additive: boolean) {
     setSelected((prev) => {
       const next = new Set(additive ? prev : []);
@@ -392,6 +410,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           <Button data-testid="add-text" size="sm" variant="secondary" onClick={() => void addText()}>
             + 文本
           </Button>
+          <Button data-testid="add-shape" size="sm" variant="secondary" onClick={() => void addShape()}>
+            + 形状
+          </Button>
           <Button data-testid="undo" size="sm" variant="ghost" onClick={() => void undo()}>
             撤销
           </Button>
@@ -456,9 +477,11 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               style={{ left: it.x, top: it.y, width: it.w, height: it.h }}
               className={
                 "absolute flex p-2 text-xs " +
-                // 文本组件：透明无边框文本块（左上对齐）；便签：柔彩 + 边框 + 圆角 + 阴影
+                // 文本：透明无边框文本块；形状：粗边框矩形；便签：柔彩 + 边框 + 圆角 + 阴影
                 (isText(it)
                   ? "items-start justify-start border-0 bg-transparent text-foreground shadow-none "
+                  : isShape(it)
+                  ? "items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm "
                   : "items-center justify-center rounded-7 border shadow-sm " + colorClass(it.color) + " ") +
                 (canEdit && editingId !== it.id ? "cursor-grab active:cursor-grabbing " : "") +
                 (selected.has(it.id) ? "ring-2 ring-primary ring-offset-1" : "")
