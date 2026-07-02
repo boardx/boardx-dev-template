@@ -55,3 +55,37 @@
 - 下一步最佳动作: F02 已 passing，本 sprint 完成。下一轮如需继续 P15 阶段，看
   `phases/phase-p15-admin/feature_list.json` 里 F04/F05（AI Store 审核/精选页，当前
   `blocked`，不在本 sprint 范围）。
+
+### 2026-07-02 — issue #173 / F02 security follow-up
+- 本轮目标: 在隔离 worktree `/private/tmp/boardx-worktrees/issue-173-admin-credit-security`
+  修复 #173 指出的手动上分安全问题：同一 `Idempotency-Key` 并发请求不可双重入账，且单次
+  手动上分金额必须有服务端上限。F02 在权威 `feature_list.json` 中已是 `passing`，本轮未重新
+  claim、未手改 status。
+- 已完成:
+  - `packages/data/migrations/019_credit_transaction_idempotency.sql`: 为带 `idem:` 的
+    `credit_transactions (wallet_id, label)` 增加部分唯一索引，避免影响普通重复 label。
+  - `packages/data/src/credits.ts`: 新增 `recordTransactionIdempotent`，在事务内先抢唯一流水；
+    只有插入成功者才更新钱包余额，冲突请求返回既有流水，不再触碰余额。
+  - `apps/web/app/api/admin/users/[id]/credit/route.ts`: 带 idempotency key 的上分改走事务型
+    幂等记账；单次金额上限设为 `100_000`，超限返回 400。
+  - `apps/web/e2e/admin-001-manage-users.spec.ts`: 补充超限 400 和 8 个同 key 并发请求最终只
+    入账一次的端到端断言。
+- 运行过的验证:
+  - `pnpm --filter @repo/data run typecheck` → 0
+  - `pnpm --filter @repo/web run typecheck` → 0
+  - `pnpm -w run verify:base` → 0（45/45 tasks successful）
+  - `pnpm harness verify --sprint p15/03 --feature F02` → 0，但因 F02 已 `passing`，harness
+    输出“F02 已 passing，跳过（不可逆）”，未执行新增 e2e。
+- 未完成/阻塞的验证:
+  - `docker compose -f infra/docker-compose.yml up -d` → 1，Docker daemon 不可连接：
+    `Cannot connect to the Docker daemon at unix:///var/run/docker.sock`。
+  - `pnpm --filter @repo/data run migrate` → 1，Postgres 端口 `50404` 未监听：
+    `ECONNREFUSED ::1/127.0.0.1:50404`。
+  - `pnpm --filter @repo/web exec playwright test e2e/admin-001-manage-users.spec.ts` → 1，Next
+    服务可启动，但用例依赖 DB，`/api/dev/grant-sysadmin` 等路径因同一 Postgres
+    `ECONNREFUSED :50404` 返回 500；14 个用例中 1 个未登录跳转通过，其余 13 个 DB 依赖用例失败。
+- 已记录证据:
+  - `phases/phase-p15-admin/sprints/sprint-03/evidence/f02-05-admin-credit-security-followup.txt`
+- 已知风险或未解决问题:
+  - 当前机器 Docker daemon 不可用，本轮无法实际应用新增迁移或完成新增并发 e2e。代码层静态验证
+    和基础验证已通过；需要 Docker/Postgres 恢复后重跑迁移与目标 e2e。
