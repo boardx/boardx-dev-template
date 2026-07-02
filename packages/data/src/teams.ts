@@ -103,6 +103,21 @@ export async function deleteTeam(teamId: number): Promise<void> {
   await query("DELETE FROM teams WHERE id = $1", [teamId]);
 }
 
+/**
+ * 该用户拥有（owner_user_id）的团队数（P15 F02 review 加固）。
+ * teams.owner_user_id 是 ON DELETE CASCADE（见 003_team.sql），删除一个拥有团队的用户会级联
+ * 删掉整个团队（team_members/team_invites/该团队下的 rooms/boards 等），影响的是团队里其他
+ * 成员的数据，不只是被删用户自己的——后台删除用户前必须先查这个，>0 就拒绝，要求先转移
+ * 团队所有权，而不是让级联静默触发。
+ */
+export async function countOwnedTeams(userId: number): Promise<number> {
+  const rows = await query<{ count: string }>(
+    "SELECT COUNT(*)::text AS count FROM teams WHERE owner_user_id = $1",
+    [userId]
+  );
+  return Number(rows[0]?.count ?? 0);
+}
+
 // ─── P15 Admin 后台：团队管理（F03）────────────────────────────────────────────
 
 export type TeamType = "standard" | "enterprise";

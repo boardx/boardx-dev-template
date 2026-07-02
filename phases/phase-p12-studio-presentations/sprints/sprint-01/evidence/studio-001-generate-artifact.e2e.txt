@@ -1,0 +1,19 @@
+
+Running 12 tests using 1 worker
+
+  ✓  1 [chromium] › studio-001-generate-artifact.spec.ts:36:5 › Studio 面板可见：来源为空时生成被禁用 (8.7s)
+  ✓  2 [chromium] › studio-001-generate-artifact.spec.ts:51:5 › 以当前聊天为来源生成音频概览：生成中 → 结果卡片可播放 (15.9s)
+  ✓  3 [chromium] › studio-001-generate-artifact.spec.ts:83:5 › 信息图生成：结果卡片图片可预览 (7.3s)
+  ✓  4 [chromium] › studio-001-generate-artifact.spec.ts:103:5 › 演示文稿生成：结果卡片提供下载链接 (4.6s)
+  ✓  5 [chromium] › studio-001-generate-artifact.spec.ts:123:5 › 生成失败：结果卡片展示失败态，提供重试并最终成功 (4.9s)
+  ✓  6 [chromium] › studio-001-generate-artifact.spec.ts:153:5 › 未登录访问房间聊天 → 跳转登录 (4.3s)
+  ✓  7 [chromium] › studio-001-generate-artifact.spec.ts:158:5 › 权限分支：未登录 POST 生成接口 → 401 (202ms)
+  ✓  8 [chromium] › studio-001-generate-artifact.spec.ts:165:5 › 失败分支：缺少类型/来源 → 400 (704ms)
+  ✓  9 [chromium] › studio-001-generate-artifact.spec.ts:174:5 › 失败分支：来源不可用时服务端二次校验拒绝（400），不产生半条制品 (489ms)
+  ✓  10 [chromium] › studio-001-generate-artifact.spec.ts:184:5 › 权限：非创建者房间成员不能重试他人线程的失败制品 → 403 (4.3s)
+  ✓  11 [chromium] › studio-001-generate-artifact.spec.ts:219:5 › 权限：未登录调用重试接口 → 401 (3.1s)
+  ✓  12 [chromium] › studio-001-generate-artifact.spec.ts:228:5 › 「房间文件」来源不读取当前请求者的私人文件（个人房间场景的越权修复） (3.9s)
+
+  Slow test file: [chromium] › studio-001-generate-artifact.spec.ts (58.4s)
+  Consider splitting slow test files to speed up parallel execution
+  12 passed (1.1m)
