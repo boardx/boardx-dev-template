@@ -83,6 +83,7 @@
 - 只继续 F04；不要改其他 worktree，不要碰 F02/F03/F06/F07/F10 的实现。
 - 不要手改 `active-features.json`，不要手动把状态改为 passing。
 - 下一轮如继续本 worktree，应先重新读取 `active-features.json`，不要手改该派生文件；不要 revert 其他 worktree 或其他 owner 的改动。
+- F06（Deep Research）：此前存在手改 `feature_list.json` 为 `passing` 且 evidence 指向已删除日志文件的问题，已回退为 `in_progress`（owner `wrk-codex-ava-6`，evidence 清空）。本分支合并 main 后需重新跑完整验证链路，只允许 `pnpm harness verify --sprint p9/02 --feature F06` 门控转为 `passing`。
 
 ## 命令
 - 启动:`pnpm -w run dev`
@@ -90,6 +91,7 @@
 - 调试:
   - `pnpm --filter @repo/web exec tsc --noEmit`
   - `pnpm --filter @repo/web run lint`
+  - `pnpm --filter @repo/web exec playwright test e2e/ava-deep-research.spec.ts`
   - `pnpm --filter @repo/web exec playwright test e2e/ava-suggested-actions.spec.ts`
   - `pnpm --filter @repo/web exec playwright test e2e/ava-edit-delete-message.spec.ts`
   - `pnpm --filter @repo/web exec playwright test e2e/ava-share-chat.spec.ts --debug`

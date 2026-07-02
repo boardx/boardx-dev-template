@@ -1,0 +1,30 @@
+F06 evidence log redaction notice
+==================================
+
+The original file F06.verify.log at this path was found to contain local
+development environment values (DB/S3/webhook placeholder credentials from
+.env.local, plus local worktree port numbers) that were inadvertently
+committed alongside Playwright verification output.
+
+These were local dev-only placeholder values as documented in the repo's
+.env.example (not production secrets), but were removed as a precaution
+per repository security policy: verification evidence must not include
+raw environment variable dumps.
+
+The file has been removed from this commit forward. This is a
+non-destructive, forward-only cleanup: it does not rewrite git history,
+force-push, or alter prior commits. The original content remains
+recoverable from earlier commit history if a maintainer with appropriate
+authorization needs it for audit purposes; standard credential-rotation
+practice should be followed for any of the affected local dev defaults
+if they are also used elsewhere.
+
+No test pass/fail counts or command output are restated here, since doing
+so would require reading the original log, which this cleanup process
+deliberately avoided in order to prevent any further handling or
+exposure of the flagged content.
+
+For the actual F06 verification status, please re-run the feature's
+verification commands per phases/phase-p9-ava-chat/feature_list.json and
+capture fresh evidence using the sprint's standard (non-secret-inclusive)
+verification workflow.

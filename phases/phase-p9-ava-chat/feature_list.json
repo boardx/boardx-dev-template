@@ -119,9 +119,9 @@
       "title": "Deep Research（澄清→计划→执行时间线→报告）",
       "user_visible_behavior": "输入区选 Deep Research/用户研究模式并提交主题：消息区展示研究处理中，按需展示澄清问题/配置面板；生成研究计划（阶段/子任务/受众）供用户确认或调整；执行期展示时间线与各阶段/子任务状态；完成后消息区出现报告通知，点击打开报告详情面板（结论/结构化内容/阶段结果）并可继续追问。主题过短/额度不足/启动失败给对应提示并保留可恢复状态。",
       "design_ref": "prototype:<!-- research card --> / <!-- clarify --> / <!-- plan --> / <!-- running / report timeline --> / <!-- report panel --> / <!-- market report --> / <!-- user research report -->；DESIGN.md tokens",
-      "status": "not_started",
+      "status": "in_progress",
       "sprint": "02",
-      "owner": null,
+      "owner": "wrk-codex-ava-6",
       "capability": "CAP-AI",
       "depends_on": [
         "F01"
