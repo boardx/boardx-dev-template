@@ -325,6 +325,92 @@ export async function setAiStoreItemReviewStatus(
 }
 
 // ---------------------------------------------------------------------------
+// P15 F05 — 官方精选（Admin Panel）：仅 scope=platform 且已 APPROVED 的项目可参与精选。
+// isFeatured 复用 F04 状态机产出的 APPROVED 集合，与 ai_store_items.featured 字段一一对应
+// （该字段由 P11 建表迁移 016_ai_store.sql 引入，供 Explore 侧 `ORDER BY featured DESC` 排序/角标）。
+// ---------------------------------------------------------------------------
+
+export interface ListFeaturedCandidateItemsOptions {
+  /** 空/undefined = 不筛选 featured；true/false 按精选状态筛选。 */
+  featured?: boolean;
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ListFeaturedCandidateItemsResult {
+  items: AiStoreItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+/** 精选页候选列表：只看 scope=platform 且 status=approved（F04 审核通过的集合）。 */
+export async function listFeaturedCandidateItems(
+  opts: ListFeaturedCandidateItemsOptions = {}
+): Promise<ListFeaturedCandidateItemsResult> {
+  const page = Math.max(1, opts.page ?? 1);
+  const pageSize = Math.min(50, Math.max(1, opts.pageSize ?? 20));
+
+  const conds: string[] = ["scope = 'platform'", "status = 'approved'"];
+  const params: unknown[] = [];
+
+  if (typeof opts.featured === "boolean") {
+    params.push(opts.featured);
+    conds.push(`featured = $${params.length}`);
+  }
+
+  if (opts.q && opts.q.trim()) {
+    params.push(`%${opts.q.trim()}%`);
+    conds.push(`(name ILIKE $${params.length} OR description ILIKE $${params.length})`);
+  }
+
+  const whereSql = `WHERE ${conds.join(" AND ")}`;
+
+  const countRows = await query<{ count: string }>(`SELECT count(*)::text AS count FROM ai_store_items ${whereSql}`, params);
+  const total = Number(countRows[0]?.count ?? 0);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const limitParams = [...params, pageSize, (page - 1) * pageSize];
+  const items = await query<AiStoreItem>(
+    `SELECT ${ITEM_COLS} FROM ai_store_items ${whereSql}
+     ORDER BY featured DESC, updated_at DESC, id DESC
+     LIMIT $${limitParams.length - 1} OFFSET $${limitParams.length}`,
+    limitParams
+  );
+
+  return { items, total, page, pageSize, totalPages };
+}
+
+/**
+ * 切换某平台已批准项目的官方精选状态：只允许对 scope=platform 且 status=approved 的
+ * 项目生效（未通过审核/已被撤回的项目不该出现在精选候选池，遑论被设为精选）。
+ * 用 `WHERE scope='platform' AND status='approved'` 做原子校验+写入一步完成，
+ * 不做"先 SELECT 校验再 UPDATE"两步（避免批准状态在此期间被并发撤回/拒绝产生的 TOCTOU）。
+ * 目标值与当前值相同时也走同一条 UPDATE（幂等，返回 idempotent=true，不报错）。
+ * 未命中（不存在 / 非 platform / 非 approved）返回 undefined，调用方转 409。
+ */
+export async function setAiStoreItemFeatured(
+  id: number,
+  featured: boolean
+): Promise<{ item: AiStoreItem; idempotent: boolean } | undefined> {
+  const before = await getAiStoreItem(id);
+  if (!before || before.scope !== "platform" || before.status !== "approved") return undefined;
+
+  const rows = await query<AiStoreItem>(
+    `UPDATE ai_store_items
+     SET featured = $2, updated_at = now()
+     WHERE id = $1 AND scope = 'platform' AND status = 'approved'
+     RETURNING ${ITEM_COLS}`,
+    [id, featured]
+  );
+  const item = rows[0];
+  if (!item) return undefined;
+  return { item, idempotent: before.featured === featured };
+}
+
+// ---------------------------------------------------------------------------
 // 喜欢/收藏（P11 F04，uc-ai-store-004）：ai_store_favorites 记录 (user_id, item_id)，
 // ai_store_items.likes 是聚合计数缓存；toggle 时同步更新计数，避免和明细表漂移。
 // ---------------------------------------------------------------------------
