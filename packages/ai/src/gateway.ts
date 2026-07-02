@@ -64,26 +64,35 @@ export const stubProvider: ChatProvider = {
 // 作为附件上下文提示（P9 F08：stub provider 无需真实多模态理解，引用附件存在/文件名即可）。
 const ATTACHMENT_MARKER_RE = /\n\n\[附件: (.+)\]$/;
 
+// 消息路由在用户文本末尾拼接 `[知识库引用: a.pdf、b.md]`（p10-F04：RAG 检索命中的、
+// 用户有权访问且已 ready 的知识库文件名）。stub provider 据此在回复中标注引用来源，
+// 无命中时该标记不存在，回复也不会虚构引用——与 F04 验收口径「无相关内容时不虚构来源」一致。
+const KB_CITATION_MARKER_RE = /\n\n\[知识库引用: (.+)\]$/;
+
 /** 构造 stub 回复：包含纯文本 + Markdown 标题/列表 + 代码块，覆盖渲染断言面。
  *  若用户文本携带附件上下文标记，回复里显式提及附件文件名，供 F08 验证 AI 感知到附件。
+ *  若携带知识库引用标记，回复里显式列出引用来源，供 F04 验证 RAG 检索结果被使用且可追溯。
  *  settings 携带当前生效的模型/Agent/工具，供 F07 验证发送前设置在回复中确实生效。 */
 export function buildStubReply(
   userText: string,
   settings: { modelId?: string; agentId?: string; toolIds?: string[] } = {}
 ): string {
-  const attachmentMatch = userText.match(ATTACHMENT_MARKER_RE);
-  const bodyText = attachmentMatch ? userText.replace(ATTACHMENT_MARKER_RE, "") : userText;
+  const kbMatch = userText.match(KB_CITATION_MARKER_RE);
+  const afterKb = kbMatch ? userText.replace(KB_CITATION_MARKER_RE, "") : userText;
+  const attachmentMatch = afterKb.match(ATTACHMENT_MARKER_RE);
+  const bodyText = attachmentMatch ? afterKb.replace(ATTACHMENT_MARKER_RE, "") : afterKb;
   const quoted = bodyText.length > 200 ? `${bodyText.slice(0, 200)}…` : bodyText;
   const attachmentLine = attachmentMatch
     ? `\n\n我看到你附上了 ${attachmentMatch[1]}，已一并考虑。`
     : "";
+  const kbLine = kbMatch ? `\n\n**引用来源**：${kbMatch[1]}` : "";
   const modelId = settings.modelId ?? DEFAULT_MODEL_ID;
   const agentId = settings.agentId ?? "default";
   const tools = settings.toolIds && settings.toolIds.length > 0 ? settings.toolIds.join(", ") : "none";
   return [
     `## 收到`,
     ``,
-    `这是 AVA 的 stub 回复（未接入真实模型）。你说：「${quoted}」。${attachmentLine}`,
+    `这是 AVA 的 stub 回复（未接入真实模型）。你说：「${quoted}」。${attachmentLine}${kbLine}`,
     ``,
     `模型：${modelId}`,
     `Agent：${agentId}`,

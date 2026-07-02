@@ -147,6 +147,82 @@ export async function getAccessibleKbFile(id: string, userId: number): Promise<K
   return rows[0];
 }
 
+// ─── RAG 检索（p10-F04）────────────────────────────────────────────────────
+// F04 未实现向量索引/embedding（见 F01/F03 notes：真实解析/切分/向量化留给后续，
+// kb_files 目前只存文件元数据，没有抽取出的正文内容可供向量化）。本阶段的检索是
+// 按文件名的关键词匹配（对 kb_files.name 做 ILIKE），只是「有没有相关文件」的
+// 确定性占位判据，不虚构不存在的文件内容——回复引用的是真实存在、真实可访问、
+// 真实 ready 的文件记录，不是编造的向量相似度。
+//
+// 作用域隔离与 getAccessibleKbFile 同口径，但額外收窄：
+//   - personal/agent/tool：仅 owner_user_id = 当前用户。
+//   - team：仅当前团队上下文（teamId 参数，而非用户所属的任意团队）的成员可见，
+//     且必须是该 team_id 下的文件——同一用户属于多个团队时，不在当前团队上下文的
+//     团队文件不得混入检索结果（避免切换团队前的上下文泄露）。
+//   - status 必须为 'ready'：processing/error 的文件不参与检索（未处理完成不可用）。
+export interface KbRetrievalHit {
+  id: string;
+  name: string;
+  scope: KbScope;
+}
+
+/** 从用户当前可见的知识库文件中，按关键词（从用户消息文本切出的词）检索命中的文件名。
+ *  作用域隔离：personal/agent/tool 限 owner；team 限当前团队上下文的成员；
+ *  仅检索 status='ready' 的文件。无关键词或无命中返回空数组（调用方不应虚构引用）。 */
+export async function retrieveKbFilesForQuery(params: {
+  ownerUserId: number;
+  teamId: number | null;
+  queryText: string;
+  limit?: number;
+}): Promise<KbRetrievalHit[]> {
+  const keywords = extractKeywords(params.queryText);
+  if (keywords.length === 0) return [];
+
+  const limit = Math.max(1, Math.min(params.limit ?? 3, 10));
+
+  const values: unknown[] = [params.ownerUserId];
+  let scopeClause = `(f.scope <> 'team' AND f.owner_user_id = $1)`;
+  if (params.teamId != null) {
+    values.push(params.teamId);
+    scopeClause = `(
+      ${scopeClause}
+      OR (f.scope = 'team' AND f.team_id = $2 AND EXISTS (
+        SELECT 1 FROM team_members m WHERE m.team_id = f.team_id AND m.user_id = $1
+      ))
+    )`;
+  }
+
+  const keywordConditions: string[] = [];
+  for (const kw of keywords) {
+    values.push(`%${kw}%`);
+    keywordConditions.push(`f.name ILIKE $${values.length}`);
+  }
+
+  values.push(limit);
+
+  const rows = await query<KbRetrievalHit>(
+    `SELECT f.id, f.name, f.scope
+     FROM kb_files f
+     WHERE f.status = 'ready'
+       AND ${scopeClause}
+       AND (${keywordConditions.join(" OR ")})
+     ORDER BY f.created_at DESC
+     LIMIT $${values.length}`,
+    values
+  );
+  return rows;
+}
+
+/** 从自由文本切出用于 ILIKE 匹配的关键词：按非字母数字分词，过滤过短的词。 */
+function extractKeywords(text: string): string[] {
+  const tokens = text
+    .split(/[^\p{L}\p{N}]+/u)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 2);
+  // 去重，避免同词重复拼多次 ILIKE 条件
+  return Array.from(new Set(tokens));
+}
+
 /** worker 异步回写处理状态（幂等：相同输入多次调用结果一致）。 */
 export async function setKbFileStatus(
   id: string,
