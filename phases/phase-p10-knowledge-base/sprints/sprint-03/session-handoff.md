@@ -31,9 +31,10 @@
 - `node_modules` 是本地 `pnpm install` 产物，未提交。
 
 ## 下一步最佳动作
-- 推送分支 `worker/wrk-kb-1-p10-f03-delete-file`，开 PR（base=main，正文 `Closes #113`），
-  给 issue #113 打 `status:in-review` 标签（移除 `status:in-progress`）。
-- 协调者/审阅者跑 `pnpm harness verify --sprint p10/03 --feature F03` 门控转 `passing`。
+- ~~推送分支、开 PR~~ 已完成：PR #188（base=main，`Closes #113`），issue #113 已打 `status:in-review`。
+- 双评审 3 个中危建议已修复并推回同一分支（commit fbc9ab3，PR 已留评论说明修复内容），
+  证据追加在 `evidence/kb-003-e2e-pass-review-fix.txt` / `evidence/verify-base-review-fix.txt`。
+- 协调者/审阅者跑 `pnpm harness verify --sprint p10/03 --feature F03` 门控转 `passing`，合并 PR。
 
 ## 命令
 - 启动: `pnpm -w run dev`
