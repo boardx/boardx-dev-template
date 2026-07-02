@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 const uniq = () => `wst_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
+const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
 async function openOwnBoard(page: any) {
   await page.request.post("/api/auth/register", {
@@ -46,7 +47,7 @@ test("Widget Menu 改便签颜色并持久化", async ({ page }) => {
 });
 
 test("viewer 不能编辑（双击无编辑框）", async ({ page, playwright }) => {
-  const owner = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  const owner = await playwright.request.newContext({ baseURL: BASE_URL });
   await owner.post("/api/auth/register", {
     data: { firstName: "O", lastName: "O", email: uniq(), password: "secret123", agreeTerms: true },
   });

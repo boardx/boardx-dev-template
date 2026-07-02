@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 const uniq = () => `cu_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
+const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
 test("移动 + 编辑 item 并持久化", async ({ page }) => {
   await page.request.post("/api/auth/register", {
@@ -25,7 +26,7 @@ test("移动 + 编辑 item 并持久化", async ({ page }) => {
 });
 
 test("非房间成员更新 item → 403", async ({ page, playwright }) => {
-  const owner = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  const owner = await playwright.request.newContext({ baseURL: BASE_URL });
   await owner.post("/api/auth/register", {
     data: { firstName: "O", lastName: "O", email: uniq(), password: "secret123", agreeTerms: true },
   });

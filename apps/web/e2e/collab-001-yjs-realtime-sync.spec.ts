@@ -11,7 +11,8 @@ import { test, expect, type BrowserContext, type APIRequestContext } from "@play
 // (d) 权限分支：非成员对 presence/collab 通道 → 403。
 
 const uniq = (p: string) => `${p}_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
-const BASE = process.env.PW_BASE_URL ?? "http://localhost:3000";
+const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
+const BASE = process.env.PW_BASE_URL ?? BASE_URL;
 
 async function register(ctx: APIRequestContext, email: string) {
   const res = await ctx.post("/api/auth/register", {

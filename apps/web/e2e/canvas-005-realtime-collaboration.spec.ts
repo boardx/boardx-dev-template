@@ -8,7 +8,8 @@ import { test, expect, type BrowserContext, type APIRequestContext } from "@play
 // A 新增便签 → B 的画布（轮询同步）出现同一个 item。
 
 const uniq = (p: string) => `${p}_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
-const BASE = process.env.PW_BASE_URL ?? "http://localhost:3000";
+const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
+const BASE = process.env.PW_BASE_URL ?? BASE_URL;
 
 async function register(ctx: APIRequestContext, email: string) {
   const res = await ctx.post("/api/auth/register", {
