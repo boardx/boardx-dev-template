@@ -245,8 +245,9 @@ export async function isAiStoreItemFavorited(itemId: number, userId: number): Pr
 /** 该用户在给定项目集合中已喜欢的 id 集合（供列表页批量标注 liked 状态）。 */
 export async function listFavoritedAiStoreItemIds(itemIds: number[], userId: number): Promise<Set<number>> {
   if (itemIds.length === 0) return new Set();
+  // item_id 是 bigint，pg 默认把 INT8 当字符串返回；显式 ::int 转换，保证 Set<number> 与类型注解一致。
   const rows = await query<{ item_id: number }>(
-    `SELECT item_id FROM ai_store_favorites WHERE user_id = $1 AND item_id = ANY($2)`,
+    `SELECT item_id::int AS item_id FROM ai_store_favorites WHERE user_id = $1 AND item_id = ANY($2)`,
     [userId, itemIds]
   );
   return new Set(rows.map((r) => r.item_id));
@@ -259,8 +260,12 @@ export interface ToggleAiStoreFavoriteResult {
 
 /**
  * 切换某用户对某项目的喜欢/收藏状态，并同步更新 ai_store_items.likes 聚合计数。
- * 不存在的项目返回 undefined。INSERT ON CONFLICT DO NOTHING / DELETE 均至多影响一行，
- * 幂等；重复点击只会在当前状态和相反状态之间翻转，不会重复计数。
+ * 不存在的项目返回 undefined。
+ *
+ * 并发安全：计数增减用 CTE 与「明细行是否真的插入/删除」绑定——
+ * `likes = likes ± (SELECT count(*) FROM ins/del)`。同一 (user,item) 并发两次同方向
+ * toggle 时，只有真正命中 INSERT（未撞 ON CONFLICT）/ DELETE（真删到行）的那个请求
+ * 才会改计数，另一个请求 count(*)=0，计数 +0，杜绝明细一行、计数 +2 的漂移。
  * 注意：喜欢/收藏不算“内容更新”，故不改 updated_at——否则会扰动 Explore 列表
  * “按 updated_at 倒序”的排序/分页，和内容编辑语义混淆。
  */
@@ -273,21 +278,29 @@ export async function toggleAiStoreFavorite(
 
   const already = await isAiStoreItemFavorited(itemId, userId);
   if (already) {
-    await query(`DELETE FROM ai_store_favorites WHERE item_id = $1 AND user_id = $2`, [itemId, userId]);
     const rows = await query<{ likes: number }>(
-      `UPDATE ai_store_items SET likes = GREATEST(0, likes - 1) WHERE id = $1 RETURNING likes`,
-      [itemId]
+      `WITH del AS (
+         DELETE FROM ai_store_favorites WHERE item_id = $1 AND user_id = $2 RETURNING 1
+       )
+       UPDATE ai_store_items
+          SET likes = GREATEST(0, likes - (SELECT count(*) FROM del))
+        WHERE id = $1
+        RETURNING likes`,
+      [itemId, userId]
     );
     return { favorited: false, likes: rows[0]?.likes ?? 0 };
   }
 
-  await query(
-    `INSERT INTO ai_store_favorites (item_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-    [itemId, userId]
-  );
   const rows = await query<{ likes: number }>(
-    `UPDATE ai_store_items SET likes = likes + 1 WHERE id = $1 RETURNING likes`,
-    [itemId]
+    `WITH ins AS (
+       INSERT INTO ai_store_favorites (item_id, user_id) VALUES ($1, $2)
+       ON CONFLICT DO NOTHING RETURNING 1
+     )
+     UPDATE ai_store_items
+        SET likes = likes + (SELECT count(*) FROM ins)
+      WHERE id = $1
+      RETURNING likes`,
+    [itemId, userId]
   );
   return { favorited: true, likes: rows[0]?.likes ?? 0 };
 }

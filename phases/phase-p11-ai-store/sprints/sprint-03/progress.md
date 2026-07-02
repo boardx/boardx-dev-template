@@ -95,3 +95,33 @@
 - 下一步最佳动作: 开 PR（base=main，`Closes #118`），PR 描述如实说明本轮跳过 verify:full 的原因（协调者
   已确认的轻量门控策略）并附本轮 targeted 证据；打 `status:in-review` 标签，等待人工/协调者 review 后
   由 `pnpm harness verify` 门控转 passing。不由本 agent 自行合并或标记 passing。
+
+### 2026-07-02（续：PR #186 code review 高危修复）
+- 本轮目标: PR #186 feature 评审通过（Accept 16/16），但 code review 报高危阻断项：
+  `toggleAiStoreFavorite` 并发 toggle 时 likes 计数漂移（两请求都读到 already=false → 都走 INSERT
+  分支 → 明细因主键只落 1 行，但两条 `UPDATE likes+1` 都执行 → 计数 +2 与明细永久漂移）。
+- 修复内容:
+  - `packages/data/src/aiStore.ts` `toggleAiStoreFavorite`：改用 reviewer 建议的 CTE 绑定方案——
+    `WITH ins AS (INSERT ... ON CONFLICT DO NOTHING RETURNING 1) UPDATE ... SET likes = likes + (SELECT count(*) FROM ins)`
+    （取消方向同理用 del CTE 减）。计数增减从此与「明细行真的插入/删除」绑定，任何并发交错下
+    不变量 `likes 增量 == 明细行增量` 都成立。
+  - 顺手修复 reviewer 提的中危：`listFavoritedAiStoreItemIds` 的 SQL 加 `item_id::int` 显式转换
+    （pg 对 bigint 默认返回字符串，与 `Set<number>` 注解不符）。**注意这次修复揭出另一半类型谎言**：
+    `listAiStoreItems` 返回的 `it.id` 运行时也是字符串，原来 string-vs-string 碰巧匹配，单边转 int 后
+    Set.has 失配导致 e2e 持久化用例失败——已在 `apps/web/app/api/ai-store/items/route.ts` 消费端同步
+    `Number()` 归一化，现在两边都是 number，正确性不再依赖 pg 的 INT8 parser 行为。
+  - `apps/web/e2e/ai-store-004-favorite-item.spec.ts` 新增第 5 个用例：同用户并发两次 POST 后断言
+    不变量 `likes 增量 == (最终 favorited ? 1 : 0)`，并清理回初始态。
+- 运行过的验证:
+  - `pnpm --filter @repo/data run typecheck` / `test`（31/31）、`pnpm --filter @repo/web run typecheck` / `lint` → 均通过
+  - `pnpm --filter @repo/web exec playwright test e2e/ai-store-004-favorite-item.spec.ts` → **5/5 通过**（含新增并发用例）
+  - 数据层证据脚本 x2（tsx 直连 DB）：① `toggleAiStoreFavorite` Promise.all 并发 → 不变量成立；
+    ② 确定性复现双 INSERT 分支竞态（直接并发跑两条 CTE INSERT 语句）→ likes 只 +1、明细 1 行，
+    证明 CTE 绑定生效（旧实现此处必 +2）
+  - `pnpm -w run verify:base` → **45/45 successful**
+- 已记录证据: `evidence/f04-wrk2-04-review-fix-e2e.txt`、`f04-wrk2-05-review-fix-concurrency-check.txt`、
+  `f04-wrk2-06-review-fix-verify-base.txt`、`f04-wrk2-07-review-fix-check-scripts.txt`（两个检查脚本全文）。
+- 说明: 并发断言未放进 `packages/data` 的 vitest 单测——该包单测按仓库约定是纯函数测试
+  （「真实 DB 交互由 harness verify + docker e2e 覆盖」），加 DB 依赖会破坏无 docker 环境下的
+  verify:base。改放 e2e（第 5 用例，随 F04 verification 常跑）+ 数据层证据脚本（一次性，全文留档）。
+- 提交记录: 修复 commit 推回 `worker/wrk-store-2-p11-f04-favorites`，PR #186 自动更新，已留评论。

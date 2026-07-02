@@ -37,10 +37,25 @@
 
 ## 下一步最佳动作
 - push 分支 `worker/wrk-store-2-p11-f04-favorites` 到 origin，开 PR（base=main，正文含 `Closes #118`，
-  如实说明跳过 `verify:full` 的原因 + 本轮 targeted 证据路径）。
-- `gh issue edit 118 --add-label status:in-review --remove-label status:in-progress`。
-- 等待人工/协调者 review，由 `pnpm harness verify --sprint p11/03` 门控转 passing；本 agent 不自行合并、
-  不自行标 passing。
+  如实说明跳过 `verify:full` 的原因 + 本轮 targeted 证据路径）。【已完成：PR #186】
+- `gh issue edit 118 --add-label status:in-review --remove-label status:in-progress`。【已完成】
+
+## Review 修复（2026-07-02 续）
+- PR #186 feature 评审 Accept 16/16；code review 高危阻断项已修复：`toggleAiStoreFavorite`
+  并发计数漂移 → CTE 绑定（`likes ± (SELECT count(*) FROM ins/del)`），计数增减与明细行
+  真实插入/删除绑定，任何并发交错下不变量 `likes 增量 == 明细行增量` 成立。
+- 中危一并修复：`listFavoritedAiStoreItemIds` SQL `item_id::int` 显式转换 + 消费端
+  （`apps/web/app/api/ai-store/items/route.ts`）`Number(it.id)` 归一化。注意教训：单边转 int
+  曾导致 Set.has 的 string/number 失配（`listAiStoreItems` 的 id 运行时也是字符串），e2e 持久化
+  用例当场抓到，两边归一后修复。
+- e2e spec 新增第 5 用例（并发 toggle 不变量断言 + 清理回初始态）；两个数据层证据脚本
+  （含确定性双 INSERT 分支竞态复现）全文留档在 `evidence/f04-wrk2-07-review-fix-check-scripts.txt`。
+- 修复后验证：e2e 5/5、data test 31/31、typecheck/lint 全过、verify:base 45/45。
+  证据：`evidence/f04-wrk2-04~07-review-fix-*.txt`。
+
+## 下一步最佳动作
+- 等待人工/协调者 review PR #186 的修复 commit，由 `pnpm harness verify --sprint p11/03` 门控转
+  passing；本 agent 不自行合并、不自行标 passing。
 
 ## 命令
 - 启动：`pnpm -w run dev`

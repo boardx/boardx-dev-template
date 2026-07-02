@@ -84,3 +84,39 @@ test("详情弹窗心形与卡片状态同步，切换后计数一致", async ({
   await expect(page.getByTestId(`favorite-${id}`)).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId(`likes-${id}`)).toHaveText(String(initialLikes + 1));
 });
+
+test("并发 toggle 不会让 likes 计数与收藏明细漂移（CTE 绑定回归）", async ({ page }) => {
+  await register(page);
+
+  // 用其它用例未触碰的种子项（Translate），避免用例间的计数干扰。
+  const listRes = await page.request.get("/api/ai-store/items?q=Translate");
+  expect(listRes.ok()).toBeTruthy();
+  const list = (await listRes.json()) as { items: Array<{ id: number; likes: number }> };
+  const first = list.items[0];
+  expect(first).toBeDefined();
+  const itemId = first!.id;
+  const initialLikes = first!.likes;
+
+  // 同一用户对同一项目并发打两次 POST。修复前的竞态：两个请求都先读到「未收藏」→
+  // 都走 INSERT 分支，明细因主键只落一行，但两条 UPDATE likes+1 都执行 → 计数 +2 漂移。
+  // 修复后计数由 CTE 与「明细行真的插入/删除」绑定，任何交错下都满足不变量：
+  // likes 增量 == 最终是否收藏（true→+1，false→0）。
+  await Promise.all([
+    page.request.post(`/api/ai-store/items/${itemId}/favorite`),
+    page.request.post(`/api/ai-store/items/${itemId}/favorite`),
+  ]);
+
+  const detailRes = await page.request.get(`/api/ai-store/items/${itemId}`);
+  expect(detailRes.ok()).toBeTruthy();
+  const detail = (await detailRes.json()) as { item: { likes: number; liked: boolean } };
+  expect(detail.item.likes - initialLikes).toBe(detail.item.liked ? 1 : 0);
+
+  // 清理：如仍处于收藏态，切回未收藏，保证种子项计数回到初始，供后续重复跑。
+  if (detail.item.liked) {
+    const res = await page.request.post(`/api/ai-store/items/${itemId}/favorite`);
+    expect(res.ok()).toBeTruthy();
+    const data = (await res.json()) as { favorited: boolean; likes: number };
+    expect(data.favorited).toBe(false);
+    expect(data.likes).toBe(initialLikes);
+  }
+});

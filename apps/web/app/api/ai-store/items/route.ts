@@ -47,8 +47,13 @@ export async function GET(req: Request) {
   });
 
   // uc-ai-store-004：批量标注当前用户对本页项目的喜欢/收藏状态（心形高亮）。
-  const likedIds = await listFavoritedAiStoreItemIds(result.items.map((it) => it.id), user.id);
-  const items = result.items.map((it) => ({ ...it, liked: likedIds.has(it.id) }));
+  // 注意：listAiStoreItems 的 id 是 bigint，pg 运行时按字符串返回（与类型注解不符），
+  // 这里显式 Number() 归一化后再与 Set<number> 比对，避免 string/number 失配。
+  const likedIds = await listFavoritedAiStoreItemIds(
+    result.items.map((it) => Number(it.id)),
+    user.id,
+  );
+  const items = result.items.map((it) => ({ ...it, liked: likedIds.has(Number(it.id)) }));
 
   return NextResponse.json({ ...result, items });
 }
