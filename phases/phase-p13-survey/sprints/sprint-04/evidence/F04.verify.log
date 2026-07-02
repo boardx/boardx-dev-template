@@ -1,11 +1,12 @@
 === F04 verification: 查看答卷与报告（Summary/Individual/Report + 导出） ===
-Date: 2026-07-02T15:57:46Z
+Date: 2026-07-02T16:49:26Z
 Branch: worker/wrk-survey-1-p13-f04-view-report
+Note: re-run after code-review fix for CSV formula-injection (PR #212 review).
 
 --- Command 1: docker compose up -d ---
+ Container worker-wrk-survey-1-p13-f04-view-report-minio-1  Running
  Container worker-wrk-survey-1-p13-f04-view-report-postgres-1  Running
  Container worker-wrk-survey-1-p13-f04-view-report-redis-1  Running
- Container worker-wrk-survey-1-p13-f04-view-report-minio-1  Running
 
 --- Command 2: pnpm --filter @repo/data run migrate ---
 ✓ 已应用，跳过：018_ai_store_favorites.sql
@@ -21,14 +22,13 @@ Branch: worker/wrk-survey-1-p13-f04-view-report
 
 --- Command 3: pnpm --filter @repo/web exec playwright test e2e/survey-004-view-answers-report.spec.ts ---
 
-Running 4 tests using 1 worker
+Running 5 tests using 1 worker
 
-  ✓  1 [chromium] › survey-004-view-answers-report.spec.ts:63:5 › 无回收时展示空态 (12.0s)
-  ✓  2 [chromium] › survey-004-view-answers-report.spec.ts:74:5 › Summary/Individual/Report 三视图按题聚合、逐份浏览、报告统计 (2.8s)
-  ✓  3 [chromium] › survey-004-view-answers-report.spec.ts:104:5 › 导出 CSV 下载答卷数据 (2.7s)
-  ✓  4 [chromium] › survey-004-view-answers-report.spec.ts:117:5 › 仅创建者/团队成员可查看报告，未授权访问被拒绝 (2.2s)
+  ✓  1 [chromium] › survey-004-view-answers-report.spec.ts:63:5 › 无回收时展示空态 (4.5s)
+  ✓  2 [chromium] › survey-004-view-answers-report.spec.ts:74:5 › Summary/Individual/Report 三视图按题聚合、逐份浏览、报告统计 (1.3s)
+  ✓  3 [chromium] › survey-004-view-answers-report.spec.ts:104:5 › 导出 CSV 下载答卷数据 (968ms)
+  ✓  4 [chromium] › survey-004-view-answers-report.spec.ts:117:5 › CSV 导出对公式注入形态的答案做转义（安全回归） (246ms)
+  ✓  5 [chromium] › survey-004-view-answers-report.spec.ts:151:5 › 仅创建者/团队成员可查看报告，未授权访问被拒绝 (782ms)
 
-  Slow test file: [chromium] › survey-004-view-answers-report.spec.ts (19.6s)
-  Consider splitting slow test files to speed up parallel execution
-  4 passed (24.4s)
+  5 passed (11.9s)
 EXIT_CODE=0

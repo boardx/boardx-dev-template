@@ -114,6 +114,40 @@ test("导出 CSV 下载答卷数据", async ({ page }) => {
   expect(download.suggestedFilename()).toBe(`survey-${survey.id}-responses.csv`);
 });
 
+test("CSV 导出对公式注入形态的答案做转义（安全回归）", async ({ page, playwright, baseURL }) => {
+  await register(page, "csv-owner");
+  const survey = await createSurvey(page, `CSV Injection Guard ${uniq()}`);
+  await setSurveyActive(survey.id, true);
+
+  const textQuestion = survey.questions.find((q) => q.type === "text")!;
+  const singleQuestion = survey.questions.find((q) => q.type === "single")!;
+  const ratingQuestion = survey.questions.find((q) => q.type === "rating")!;
+
+  // 模拟匿名访客提交以 = 开头的恶意文本答案（HYPERLINK 公式注入的经典 payload）。答题 API 对未登录
+  // 访客公开（F02/F03），respondent 完全不受信任。用独立 request context 提交，避免覆盖 page 的
+  // owner 会话 cookie（沿用 admin-001 spec 的隔离多用户模式）。
+  const anonymousCtx = await playwright.request.newContext({ baseURL });
+  const submitRes = await anonymousCtx.post(`/api/surveys/${survey.id}/responses`, {
+    data: {
+      answers: {
+        [String(textQuestion.id)]: '=HYPERLINK("http://evil.example","click me")',
+        [String(singleQuestion.id)]: "Speed",
+        [String(ratingQuestion.id)]: 3,
+      },
+    },
+  });
+  expect(submitRes.status()).toBe(201);
+  await anonymousCtx.dispose();
+
+  // owner 会话未被影响，仍可导出 CSV；恶意答案的单元格必须以 ' 前缀中和，不能是裸的 = 开头
+  // （值本身含双引号，CSV 还会整体加外层引号并把内部 " 转义成 ""，这里按实际转义规则断言）。
+  const exportRes = await page.request.get(`/api/surveys/${survey.id}/results/export`);
+  expect(exportRes.status()).toBe(200);
+  const csv = await exportRes.text();
+  expect(csv).not.toContain(',=HYPERLINK(');
+  expect(csv).toContain(`"'=HYPERLINK(`);
+});
+
 test("仅创建者/团队成员可查看报告，未授权访问被拒绝", async ({ page }) => {
   await register(page, "private-owner");
   const survey = await createSurvey(page, `Private Report ${uniq()}`);

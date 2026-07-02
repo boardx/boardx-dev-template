@@ -84,3 +84,40 @@
     验收要求服务端产出真实 PDF 文件，需要另起一个 feature 引入 PDF 生成依赖。
 - 下一步最佳动作:
   - 协调者确认 F04 的 sprint 挂载方式，并跑 `pnpm harness verify` 门控其状态为 passing（本 worker 不能自证）。
+
+### 2026-07-02（worker wrk-survey-1，F04 — review 修复）
+- 背景: 协调者转达 PR #212 的独立代码审查结论为 Revise（auth/scope/tests 均 Accept 质量，仅一处 Required fix）。
+  期间协调者已跑 `harness(coord)` 把 F04 正式认领派发给 wrk-survey-1（`sprint: "04"`, `status: "in_progress"`,
+  `owner: "wrk-survey-1"`），解决了上一条记录里"F04 未挂载到任何 sprint"的遗留问题；已 fetch + rebase 到最新
+  `origin/main`（干净 rebase，无冲突），此后 diff 只剩本 feature 自己改动的文件。
+- 审查发现: `apps/web/app/api/surveys/[id]/results/export/route.ts` 的 `csvEscape()`（原 16-20 行）只转义
+  `"`、`,`、`\n`，没有中和以 `=`/`+`/`-`/`@` 开头的单元格值。问卷 `text` 类型答案完全由 respondent 控制，
+  且答题 API 对未登录匿名访客公开（F02/F03 的既有设计），恶意答案（如
+  `=HYPERLINK("http://evil","x")`）会原样写入 CSV，团队成员用 Excel/Sheets/LibreOffice 打开时被当公式执行
+  ——经典 CSV 注入漏洞，判定为合理且必须修的安全问题。
+- 已完成:
+  - `csvEscape()` 新增 `FORMULA_PREFIX = /^[=+\-@\t\r]/` 前缀检测：命中时先加前导 `'` 再走原有引号转义逻辑，
+    强制目标应用把该单元格当字面文本而非公式。
+  - `apps/web/e2e/survey-004-view-answers-report.spec.ts` 新增用例
+    "CSV 导出对公式注入形态的答案做转义（安全回归）"：用独立 `playwright.request.newContext()`
+    （不共享 page 的 owner 会话 cookie，沿用 admin-001 spec 的隔离多用户模式）模拟匿名访客提交
+    `=HYPERLINK(...)` 形态的恶意文本答案，再以 owner 身份调用 CSV 导出，断言导出内容里该单元格已被加上
+    前导 `'`（且断言了 CSV 自身对内部双引号的 `""` 转义规则，避免断言写死成不符合实际编码的字符串）。
+- 运行过的验证（修复后重跑）:
+  - `pnpm --filter @repo/web run typecheck` / `pnpm --filter @repo/data run typecheck`（均通过）
+  - `pnpm --filter @repo/web run lint`（通过）
+  - `docker compose -f infra/docker-compose.yml up -d`（通过）
+  - `pnpm --filter @repo/data run migrate`（通过）
+  - `pnpm --filter @repo/web exec playwright test e2e/survey-004-view-answers-report.spec.ts`（5 passed，
+    含新增的公式注入回归用例）
+  - `pnpm --filter @repo/web exec playwright test e2e/survey-001..005*.spec.ts`（合并跑 19 passed，确认修复
+    未破坏既有 survey 回归）
+- 已记录证据:
+  - `phases/phase-p13-survey/sprints/sprint-04/evidence/F04.verify.log`（已用本轮重跑结果覆盖，标注了
+    "re-run after code-review fix"）。
+- 提交记录:
+  - 同分支 `worker/wrk-survey-1-p13-f04-view-report`，追加 commit 并 push 到同一 PR #212（未开新 PR）。
+- 已知风险或未解决问题:
+  - 无新增已知问题。PDF 导出仍是浏览器打印路径（见上一条记录），未变。
+- 下一步最佳动作:
+  - 协调者/审查者确认修复到位后，跑 `pnpm harness verify` 完成 F04 状态门控（本 worker 仍不能自证 passing）。

@@ -13,8 +13,14 @@ function parseSurveyId(raw: string): number | undefined {
   return Number.isInteger(id) && id > 0 ? id : undefined;
 }
 
+// review 加固：text 答案是访客（含未登录匿名respondent，见 F02/F03 答题流）完全可控的自由文本。
+// 若原样写入 CSV，以 = + - @ 开头的值会被 Excel/Sheets/LibreOffice 当公式执行（CSV 注入，如
+// =HYPERLINK("http://evil","x")）。对这类前缀加一个前导单引号强制转成字面文本，再走原有引号转义。
+const FORMULA_PREFIX = /^[=+\-@\t\r]/;
+
 function csvEscape(value: unknown): string {
-  const s = value == null ? "" : Array.isArray(value) ? value.join("; ") : String(value);
+  let s = value == null ? "" : Array.isArray(value) ? value.join("; ") : String(value);
+  if (FORMULA_PREFIX.test(s)) s = `'${s}`;
   if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }

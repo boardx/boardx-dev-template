@@ -78,3 +78,40 @@
 ### 下一步最佳动作
 - 协调者/下一轮：确认 F04 的 sprint 归属并跑 `pnpm harness verify` 完成状态门控；PR 已开（见 PR 链接），
   由协调者 review 后合并，本 worker 未自我合并。
+
+---
+
+## 追加交接 — 2026-07-02（同一 worker，review 修复轮，PR #212 未变）
+
+### 背景
+- 协调者已跑 `harness(coord)` 提交把 F04 正式认领派发给 wrk-survey-1（`phases/phase-p13-survey/feature_list.json`
+  中 F04 现在是 `sprint: "04"`, `status: "in_progress"`, `owner: "wrk-survey-1"`）——解决了上面记录的
+  "F04 未挂载到任何 sprint" 遗留问题。已 `git fetch origin && git rebase origin/main`，干净无冲突。
+- PR #212 收到独立代码审查：Revise，一处 Required fix（auth/scope/tests 均 Accept 质量）：
+  `apps/web/app/api/surveys/[id]/results/export/route.ts` 的 `csvEscape()` 未防 CSV 公式注入——
+  未登录匿名访客可控的 `text` 答案若以 `=`/`+`/`-`/`@` 开头，会被 Excel/Sheets/LibreOffice 当公式执行。
+
+### 本轮改动（修复 + 回归测试，追加到同一分支同一 PR）
+- `apps/web/app/api/surveys/[id]/results/export/route.ts`：`csvEscape()` 新增
+  `FORMULA_PREFIX = /^[=+\-@\t\r]/` 检测，命中时先加前导 `'` 再走原有引号转义，中和公式注入。
+- `apps/web/e2e/survey-004-view-answers-report.spec.ts`：新增
+  "CSV 导出对公式注入形态的答案做转义（安全回归）" 用例，用独立 `playwright.request.newContext()`
+  模拟匿名访客提交 `=HYPERLINK(...)` 形态答案，断言 CSV 导出内容里该单元格已被 `'` 前缀中和。
+- `phases/phase-p13-survey/sprints/sprint-04/evidence/F04.verify.log`：用修复后重跑结果覆盖（5 passed，
+  含新回归用例），标注 "re-run after code-review fix"。
+- `phases/phase-p13-survey/sprints/sprint-04/progress.md`：追加本轮记录。
+
+### 已验证（本轮）
+- `pnpm --filter @repo/web run typecheck` / `pnpm --filter @repo/data run typecheck` — 均通过
+- `pnpm --filter @repo/web run lint` — 通过
+- F04 声明的三条 verification 命令（docker up / migrate / playwright test） — 全部 exit 0，
+  `survey-004-view-answers-report.spec.ts` 5 passed
+- `survey-001..005` 合并回归（19 tests） — 全部通过，确认修复未引入新破坏
+
+### 仍需协调者处理
+- F04 状态门控（`not_started` → `passing`）仍需协调者/harness verify 完成，本 worker 不能自证。
+- 未自我合并 PR #212；同一 PR 上追加了新 commit，未开新 PR。
+
+### 命令
+- 验证：`pnpm --filter @repo/web exec playwright test e2e/survey-004-view-answers-report.spec.ts`
+- 回归：`pnpm --filter @repo/web exec playwright test e2e/survey-001-create-survey.spec.ts e2e/survey-002-list-manage-surveys.spec.ts e2e/survey-003-answer-survey.spec.ts e2e/survey-004-view-answers-report.spec.ts e2e/survey-005-manage-templates.spec.ts`
