@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search, Compass, Bookmark, Plus, ShieldCheck, Share2, LayoutGrid, Pencil, Heart, Link2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -147,6 +148,7 @@ function configText(item: StoreItem) {
 }
 
 export function StoreBrowser() {
+  const router = useRouter();
   const [nav, setNav] = useState<string>("explore");
   const [items, setItems] = useState<StoreItem[]>([]);
   const [ownedItems, setOwnedItems] = useState<StoreItem[]>([]);
@@ -181,6 +183,14 @@ export function StoreBrowser() {
   const [authorizedLoading, setAuthorizedLoading] = useState(false);
   const [authorizedError, setAuthorizedError] = useState("");
   const [shareRedeemNotice, setShareRedeemNotice] = useState("");
+
+  // uc-ai-store-003：订阅（个人）。已订阅 id 集合供卡片/详情弹窗展示按钮状态。
+  const [subscribedIds, setSubscribedIds] = useState<Set<number>>(new Set());
+  const [subscribedItems, setSubscribedItems] = useState<StoreItem[]>([]);
+  const [subscribedLoading, setSubscribedLoading] = useState(false);
+  const [subscribedError, setSubscribedError] = useState("");
+  const [subscribing, setSubscribing] = useState<number | null>(null);
+  const [subscribeError, setSubscribeError] = useState("");
 
   async function load(opts: { type: "all" | StoreType; tags: string[]; q: string; page: number }) {
     setLoading(true);
@@ -246,8 +256,28 @@ export function StoreBrowser() {
     setAuthorizedLoading(false);
   }
 
+  // uc-ai-store-003：「已订阅」列表——当前用户的个人订阅 + 当前团队的团队订阅所命中的项目。
+  async function loadSubscribed() {
+    setSubscribedLoading(true);
+    setSubscribedError("");
+    try {
+      const res = await fetch("/api/ai-store/items?subscribed=me");
+      if (!res.ok) {
+        setSubscribedError("加载已订阅项目失败，请稍后重试");
+        setSubscribedLoading(false);
+        return;
+      }
+      const data = (await res.json()) as { items: StoreItem[] };
+      setSubscribedItems(data.items ?? []);
+      setSubscribedIds(new Set((data.items ?? []).map((it) => it.id)));
+    } catch {
+      setSubscribedError("加载已订阅项目失败，请稍后重试");
+    }
+    setSubscribedLoading(false);
+  }
+
   // Explore 拉浏览列表；Create 拉属主列表；Authorized 同时拉属主列表（Manage share 入口）
-  // 与被授权列表（自己被授权管理、非本人拥有的项目）。
+  // 与被授权列表（自己被授权管理、非本人拥有的项目）；Subscribe 拉已订阅列表。
   useEffect(() => {
     if (nav === "explore") void load({ type, tags: activeTags, q, page: 1 });
     else if (nav === "create" || nav === "authorized") {
@@ -256,6 +286,12 @@ export function StoreBrowser() {
       setError("");
       void loadOwned();
       if (nav === "authorized") void loadAuthorized();
+    }
+    else if (nav === "subscribe") {
+      setItems([]);
+      setLoading(false);
+      setError("");
+      void loadSubscribed();
     }
     else {
       setItems([]);
@@ -281,6 +317,12 @@ export function StoreBrowser() {
     if (navParam || params.get("shareError") || params.get("shared")) {
       window.history.replaceState(null, "", window.location.pathname);
     }
+  }, []);
+
+  // Explore 视图里也要知道自己已订阅了哪些（用于卡片/详情按钮态），首次挂载拉一次。
+  useEffect(() => {
+    void loadSubscribed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 详情弹窗：按 id 拉取详情。
@@ -527,6 +569,66 @@ export function StoreBrowser() {
     } finally {
       setSubmitting(null);
     }
+  }
+
+  // uc-ai-store-003：订阅/取消订阅（个人订阅）。乐观更新按钮态，失败回滚。
+  async function subscribeItem(item: StoreItem) {
+    if (item.status !== "published" || subscribing != null) return;
+    setSubscribing(item.id);
+    setSubscribeError("");
+    const wasSubscribed = subscribedIds.has(item.id);
+    setSubscribedIds((prev) => {
+      const next = new Set(prev);
+      if (wasSubscribed) next.delete(item.id);
+      else next.add(item.id);
+      return next;
+    });
+    try {
+      const res = await fetch(`/api/ai-store/items/${item.id}/subscribe`, {
+        method: wasSubscribed ? "DELETE" : "POST",
+        headers: wasSubscribed ? undefined : { "Content-Type": "application/json" },
+        body: wasSubscribed ? undefined : JSON.stringify({ scope: "personal" }),
+      });
+      if (!res.ok) {
+        setSubscribedIds((prev) => {
+          const next = new Set(prev);
+          if (wasSubscribed) next.add(item.id);
+          else next.delete(item.id);
+          return next;
+        });
+        const data = await res.json().catch(() => ({}));
+        setSubscribeError(data?.error ?? "操作失败，请稍后重试");
+        return;
+      }
+      if (nav === "subscribe") await loadSubscribed();
+    } catch {
+      setSubscribedIds((prev) => {
+        const next = new Set(prev);
+        if (wasSubscribed) next.add(item.id);
+        else next.delete(item.id);
+        return next;
+      });
+      setSubscribeError("操作失败，请稍后重试");
+    } finally {
+      setSubscribing(null);
+    }
+  }
+
+  // uc-ai-store-003：使用入口——按项目类型带入对应场景。
+  // agent → 打开带该 Agent 上下文的新 AVA 会话；ai-tool → 打开 AVA 并预选该工具；
+  // template → 目前 boards 尚无「按模板建板」入口（超出本 feature 范围），先给出明确的下一步提示。
+  function useItem(item: StoreItem) {
+    if (item.type === "agent") {
+      router.push(`/ava?agentItemId=${item.id}`);
+      return;
+    }
+    if (item.type === "ai-tool" || item.type === "image-tool") {
+      router.push(`/ava?toolItemId=${item.id}`);
+      return;
+    }
+    setFormMessage("");
+    setDetailId(null);
+    router.push(`/boards?template=${item.id}`);
   }
 
   const filtersActive = activeTags.length > 0 || q.trim().length > 0 || type !== "all";
@@ -875,6 +977,29 @@ export function StoreBrowser() {
                           </Button>
                           <span className="text-11 text-placeholder">👁 {it.views}</span>
                         </div>
+                        <div className="mt-3 flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            size="sm"
+                            variant={subscribedIds.has(it.id) ? "outline" : "default"}
+                            disabled={it.status !== "published" || subscribing === it.id}
+                            data-testid={`item-subscribe-${it.id}`}
+                            onClick={() => subscribeItem(it)}
+                            className="h-7 flex-1 text-11"
+                          >
+                            {subscribedIds.has(it.id) ? "Unsubscribe" : "Subscribe"}
+                          </Button>
+                          {subscribedIds.has(it.id) && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              data-testid={`item-use-${it.id}`}
+                              onClick={() => useItem(it)}
+                              className="h-7 flex-1 text-11"
+                            >
+                              Use
+                            </Button>
+                          )}
+                        </div>
                       </article>
                     ))}
                   </div>
@@ -1211,6 +1336,90 @@ export function StoreBrowser() {
               )}
             </div>
           </div>
+        ) : nav === "subscribe" ? (
+          <div data-testid="subscribe-view" className="mt-5">
+            {subscribeError && (
+              <p role="alert" data-testid="subscribe-view-error" className="mb-3 text-13 text-destructive">
+                {subscribeError}
+              </p>
+            )}
+            {subscribedLoading ? (
+              <div data-testid="loading" className="grid animate-pulse grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-36 rounded-12 bg-muted" />
+                ))}
+              </div>
+            ) : subscribedError && subscribedItems.length === 0 ? (
+              <div
+                data-testid="error"
+                role="alert"
+                className="flex flex-col items-center gap-3 rounded-12 border border-border py-12 text-center"
+              >
+                <p className="text-13 text-destructive">{subscribedError}</p>
+                <Button size="sm" variant="outline" data-testid="retry" onClick={loadSubscribed}>
+                  重试
+                </Button>
+              </div>
+            ) : subscribedItems.length === 0 ? (
+              <div data-testid="empty" className="flex flex-col items-center gap-1.5 py-12 text-center">
+                <Bookmark className="h-7.5 w-7.5 text-border-strong" strokeWidth={1.5} />
+                <p className="mt-2 text-13 font-semibold text-foreground">No subscriptions yet</p>
+                <p className="text-13 text-placeholder">Subscribe to an Agent, tool, or template from Explore.</p>
+                <Button size="sm" variant="outline" data-testid="goto-explore" onClick={() => setNav("explore")} className="mt-3">
+                  Go to Explore
+                </Button>
+              </div>
+            ) : (
+              <div data-testid="subscribed-grid" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {subscribedItems.map((it) => (
+                  <article
+                    key={it.id}
+                    data-testid={`subscribed-item-${it.id}`}
+                    className="rounded-12 border border-border p-4"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={cn(
+                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-10 text-15 font-bold text-foreground/40",
+                          fillFor(it.id),
+                        )}
+                      >
+                        {it.name.charAt(0).toUpperCase()}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="truncate text-13 font-semibold text-foreground">{it.name}</div>
+                        <div className="truncate text-11 text-placeholder">{it.type}</div>
+                      </div>
+                    </div>
+                    <p className="mt-2.75 min-h-9 text-13 leading-relaxed text-muted-foreground">
+                      {it.description}
+                    </p>
+                    <div className="mt-3 flex gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        data-testid={`subscribed-use-${it.id}`}
+                        onClick={() => useItem(it)}
+                        className="h-7 flex-1 text-11"
+                      >
+                        Use
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={subscribing === it.id}
+                        data-testid={`subscribed-unsubscribe-${it.id}`}
+                        onClick={() => subscribeItem(it)}
+                        className="h-7 flex-1 text-11"
+                      >
+                        Unsubscribe
+                      </Button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
           <div data-testid="empty" className="flex flex-col items-center gap-1.5 py-12 text-center">
             <LayoutGrid className="h-7.5 w-7.5 text-border-strong" strokeWidth={1.5} />
@@ -1335,16 +1544,37 @@ export function StoreBrowser() {
                   </Button>
                 </div>
 
-                {/* 订阅入口：F01 只读浏览，订阅动作留给 F03（当前禁用占位）。 */}
-                <Button
-                  size="sm"
-                  disabled
-                  data-testid="detail-subscribe"
-                  className="mt-4.5 w-full"
-                  title="订阅功能即将上线（F03）"
-                >
-                  Subscribe
-                </Button>
+                {subscribeError && (
+                  <p role="alert" data-testid="detail-subscribe-error" className="mt-3 text-13 text-destructive">
+                    {subscribeError}
+                  </p>
+                )}
+
+                {/* 订阅/使用入口（F03）：未发布项目不可订阅；已订阅显示取消订阅 + 使用入口。 */}
+                <div className="mt-4.5 flex gap-2">
+                  <Button
+                    size="sm"
+                    disabled={detailItem.status !== "published" || subscribing === detailItem.id}
+                    variant={subscribedIds.has(detailItem.id) ? "outline" : "default"}
+                    data-testid="detail-subscribe"
+                    onClick={() => subscribeItem(detailItem)}
+                    className="flex-1"
+                    title={detailItem.status !== "published" ? "未发布项目不可订阅" : undefined}
+                  >
+                    {subscribedIds.has(detailItem.id) ? "Unsubscribe" : "Subscribe"}
+                  </Button>
+                  {subscribedIds.has(detailItem.id) && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      data-testid="detail-use"
+                      onClick={() => useItem(detailItem)}
+                      className="flex-1"
+                    >
+                      Use
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
           </div>

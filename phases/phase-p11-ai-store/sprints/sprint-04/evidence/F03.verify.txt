@@ -1,0 +1,7 @@
+
+Running 2 tests using 1 worker
+
+  ✓  1 [chromium] › ai-store-003-subscribe-use-item.spec.ts:13:5 › 订阅个人发布项目、出现在已订阅列表、使用带入 AVA、取消订阅 (5.1s)
+  ✓  2 [chromium] › ai-store-003-subscribe-use-item.spec.ts:70:5 › 草稿项目的订阅入口为禁用态 (1.1s)
+
+  2 passed (7.1s)
