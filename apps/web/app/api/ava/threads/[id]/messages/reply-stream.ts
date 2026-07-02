@@ -14,6 +14,9 @@ export function createAvaReplyStreamResponse(input: {
   threadId: number;
   history: AvaMessage[];
   initialEvent?: { event: string; data: unknown };
+  modelId?: string;
+  agentId?: string;
+  toolIds?: string[];
   status?: number;
 }): Response {
   const stream = new ReadableStream<Uint8Array>({
@@ -38,7 +41,9 @@ export function createAvaReplyStreamResponse(input: {
         const result = await runChatGraph(
           {
             threadId: input.threadId,
-            modelId: DEFAULT_MODEL_ID,
+            modelId: input.modelId ?? DEFAULT_MODEL_ID,
+            agentId: input.agentId,
+            toolIds: input.toolIds,
             messages: input.history.map((m) => ({ role: m.role, content: m.content })),
             onToken: (token) => send("token", { token }),
           },

@@ -18,6 +18,8 @@ import {
   ArrowUp,
   Sparkles,
   ArrowLeft,
+  Bot,
+  Wrench,
   Share2,
   Copy,
   Mail,
@@ -31,6 +33,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -71,6 +74,23 @@ function keepThroughMessageId(messages: Message[], messageId: number): Message[]
   const index = messages.findIndex((m) => m.id === messageId);
   return index === -1 ? messages : messages.slice(0, index + 1);
 }
+interface CapabilityOption {
+  id: string;
+  label: string;
+  description: string;
+  disabled?: boolean;
+  disabledReason?: string;
+}
+interface AvaCapabilities {
+  models: CapabilityOption[];
+  agents: CapabilityOption[];
+  tools: CapabilityOption[];
+  defaults: {
+    modelId: string;
+    agentId: string;
+    toolIds: string[];
+  };
+}
 
 interface SuggestedAction {
   id: string;
@@ -109,6 +129,11 @@ export default function AvaPage() {
   const [threadError, setThreadError] = useState("");
   const [actionError, setActionError] = useState("");
   const [sendError, setSendError] = useState("");
+  const [capabilities, setCapabilities] = useState<AvaCapabilities | null>(null);
+  const [settingsError, setSettingsError] = useState("");
+  const [modelId, setModelId] = useState("stub:default");
+  const [agentId, setAgentId] = useState("default");
+  const [toolIds, setToolIds] = useState<string[]>(["web-search"]);
   const [shareOpen, setShareOpen] = useState(false);
   const [share, setShare] = useState<ThreadShare | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
@@ -155,6 +180,23 @@ export default function AvaPage() {
     setNextThreadCursor(data.nextCursor ?? null);
   }, [guard]);
 
+  const refreshCapabilities = useCallback(async () => {
+    const res = await fetch("/api/ava/capabilities");
+    if (guard(res.status)) return;
+    if (!res.ok) throw new Error("加载能力失败");
+    const data = (await res.json()) as AvaCapabilities;
+    setCapabilities(data);
+    setModelId((prev) =>
+      data.models.some((m) => m.id === prev && !m.disabled) ? prev : data.defaults.modelId
+    );
+    setAgentId((prev) => (data.agents.some((a) => a.id === prev) ? prev : data.defaults.agentId));
+    setToolIds((prev) => {
+      const allowed = new Set(data.tools.map((tool) => tool.id));
+      const next = prev.filter((tool) => allowed.has(tool));
+      return next.length > 0 ? next : data.defaults.toolIds;
+    });
+  }, [guard]);
+
   const loadMoreThreads = useCallback(async () => {
     if (!hasMoreThreads || !nextThreadCursor || loadingMoreThreads) return;
     setLoadingMoreThreads(true);
@@ -181,10 +223,14 @@ export default function AvaPage() {
     (async () => {
       setLoading(true);
       setError("");
+      setSettingsError("");
       try {
-        await refreshThreads();
+        await Promise.all([refreshThreads(), refreshCapabilities()]);
       } catch {
-        if (!cancelled) setThreadError("加载会话失败，请稍后重试");
+        if (!cancelled) {
+          setThreadError("加载会话失败，请稍后重试");
+          setSettingsError("加载 AI 设置失败，请稍后重试");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -194,6 +240,14 @@ export default function AvaPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const onFocus = () => {
+      void refreshCapabilities().catch(() => setSettingsError("刷新 AI 设置失败，已保留当前选择"));
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [refreshCapabilities]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -330,7 +384,7 @@ export default function AvaPage() {
       const res = await fetch(`/api/ava/threads/${threadId}/messages`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text, attachmentIds }),
+        body: JSON.stringify({ text, attachmentIds, modelId, agentId, toolIds }),
       });
       if (guard(res.status)) return;
       if (!res.ok || !res.body) {
@@ -569,6 +623,11 @@ export default function AvaPage() {
   }
 
   const isEmptyThread = messages.length === 0 && !sending;
+  const activeModel = capabilities?.models.find((model) => model.id === modelId);
+  const activeAgent = capabilities?.agents.find((agent) => agent.id === agentId);
+  const activeTools =
+    capabilities?.tools.filter((tool) => toolIds.includes(tool.id)).map((tool) => tool.label) ?? [];
+  const canSwitchAgent = messages.length === 0;
   const latestMessage = messages.at(-1);
   const replySuggestedActions = useMemo(() => {
     if (!latestMessage || latestMessage.role !== "assistant" || latestMessage.status !== "complete" || sending) {
@@ -1064,6 +1123,114 @@ export default function AvaPage() {
                   if (e.dataTransfer.files.length > 0) void attachments.addFiles(e.dataTransfer.files);
                 }}
               >
+                <div className="mb-3 flex flex-col gap-2 rounded-9 bg-surface-1 p-2">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span data-testid="current-model" className="font-medium text-foreground">
+                      Model: {activeModel?.label ?? modelId}
+                    </span>
+                    <span data-testid="current-agent">Agent: {activeAgent?.label ?? agentId}</span>
+                    <span data-testid="current-tools">
+                      Tools: {activeTools.length > 0 ? activeTools.join(", ") : "None"}
+                    </span>
+                  </div>
+                  {settingsError && (
+                    <p role="alert" data-testid="err-ai-settings" className="text-xs text-destructive">
+                      {settingsError}
+                    </p>
+                  )}
+                  {capabilities ? (
+                    <div data-testid="ai-settings" className="grid gap-2 md:grid-cols-[1fr_1fr_1.3fr]">
+                      <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
+                        Model
+                        <Select
+                          data-testid="model-select"
+                          aria-label="Select AVA model"
+                          value={modelId}
+                          onChange={(e) => {
+                            const next = capabilities.models.find((model) => model.id === e.target.value);
+                            if (!next || next.disabled) {
+                              setSettingsError("该模型当前不可选，已保留原模型");
+                              return;
+                            }
+                            setSettingsError("");
+                            setModelId(next.id);
+                          }}
+                        >
+                          {capabilities.models.map((model) => (
+                            <option key={model.id} value={model.id} disabled={model.disabled}>
+                              {model.label}
+                              {model.disabled ? " (restricted)" : ""}
+                            </option>
+                          ))}
+                        </Select>
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
+                        Agent
+                        <Select
+                          data-testid="agent-select"
+                          aria-label="Select AVA agent"
+                          value={agentId}
+                          disabled={!canSwitchAgent}
+                          onChange={(e) => {
+                            if (!canSwitchAgent) {
+                              setSettingsError("已有消息的线程不能切换 Agent");
+                              return;
+                            }
+                            setSettingsError("");
+                            setAgentId(e.target.value);
+                          }}
+                        >
+                          {capabilities.agents.map((agent) => (
+                            <option key={agent.id} value={agent.id}>
+                              {agent.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </label>
+                      <div className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
+                        <span>Tools</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {capabilities.tools.map((tool) => {
+                            const selected = toolIds.includes(tool.id);
+                            return (
+                              <Button
+                                key={tool.id}
+                                type="button"
+                                variant={selected ? "default" : "outline"}
+                                size="sm"
+                                data-testid={`tool-${tool.id}`}
+                                className="h-9 gap-1.5 rounded-9 px-2.5 text-xs transition-colors"
+                                onClick={() => {
+                                  setSettingsError("");
+                                  setToolIds((prev) =>
+                                    prev.includes(tool.id)
+                                      ? prev.filter((id) => id !== tool.id)
+                                      : [...prev, tool.id]
+                                  );
+                                }}
+                              >
+                                <Wrench className="h-3.5 w-3.5" strokeWidth={1.5} />
+                                {tool.label}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div data-testid="loading" className="grid animate-pulse gap-2 md:grid-cols-3">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="h-9 rounded-md bg-muted" />
+                      ))}
+                    </div>
+                  )}
+                  {!canSwitchAgent && (
+                    <p data-testid="agent-locked" className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Bot className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      Agent is locked after messages exist in this thread.
+                    </p>
+                  )}
+                </div>
                 <AttachmentPreviewStrip
                   entries={attachments.entries}
                   onRetry={attachments.retry}
