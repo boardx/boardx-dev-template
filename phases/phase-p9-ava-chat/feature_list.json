@@ -29,7 +29,7 @@
       "title": "聊天线程列表 CRUD（按日期分组/切换/重命名/删除/团队隔离）",
       "user_visible_behavior": "左侧线程区按日期分组列出当前团队下自己可访问的线程（标题/分组/选中态/加载更多）；点线程切换并加载历史消息；更多菜单可重命名（PATCH /api/ava/threads/:id）与删除（DELETE，当前线程被删则切到空状态）；分页加载更多；切换团队时清空旧团队线程并加载新团队。加载失败给重试入口。",
       "design_ref": "prototype:<!-- AVA --> → thread list（按日期分组 / 线程项 / 更多菜单）；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "02",
       "owner": "wrk-codex-1",
       "capability": "CAP-DATA",
@@ -42,7 +42,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-threads.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-07-02T04:33:02.381Z",
       "notes": "uc-ava-002。线程列表必须按 team+user+权限过滤；团队切换后旧线程从列表移除。依赖 F01 的线程表。"
     },
     {
@@ -75,7 +75,7 @@
       "title": "分享聊天：生成/复用/关闭分享链接",
       "user_visible_behavior": "聊天头部「分享」→ 面板提供「通过链接分享」：POST /api/ava/threads/:id/share 生成或复用 shareToken 并复制到剪贴板，提示复制成功；已存在链接则直接展示复制入口；关闭分享使原 /chatShare 链接立即失效（403）。仅线程拥有者/有管理权者可开关分享；私有附件/团队私有上下文不进入分享。",
       "design_ref": "prototype:<!-- share panel --> (Copy link)（AVA 聊天头部分享面板）；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "02",
       "owner": "wrk-codex-ava-3",
       "capability": "CAP-DATA",
@@ -88,7 +88,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-share-chat.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F04.verify.log @ 2026-07-02T04:36:06.148Z",
       "notes": "uc-ava-004。分享以线程为单位，threadId+shareToken 表达访问目标；分享状态变化立即影响公开访问（配合 F05 只读页）。「发送到我的邮箱」子动作依赖邮件服务，未就绪：本 feature 只做链接分享，邮件入口先禁用态占位（与 F11 邮件同款 blocked-on 邮件服务）。"
     },
     {
@@ -98,9 +98,9 @@
       "title": "公开分享对话只读页 /chatShare/:threadId",
       "user_visible_behavior": "无需登录打开 /chatShare/{threadId}?shareToken=… ：加载中显示 Loading chat session；有效则按时间顺序只读渲染消息（用户/AI/Markdown/代码块/图片/公开附件），底部 Shared chat session · Read only，不展示输入框、不能发消息/编辑；threadId 缺失显示 Invalid chat session；token 无效/分享已关闭显示不可访问；空线程显示 No messages。",
       "design_ref": "mockup:phases/requirements/mockups/chat-share-readonly.html（本轮已补设计稿：只读消息流 + 顶部 shared 标识 + 底部 Read only 条，无 composer）；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "04",
+      "owner": "wrk-ava-1",
       "capability": "CAP-WEB",
       "depends_on": [
         "F04"
