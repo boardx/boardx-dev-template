@@ -52,9 +52,9 @@
       "title": "积分流水查看（个人 Credit Records 弹窗 + 团队记录）",
       "user_visible_behavior": "用户查看被允许范围内的余额与交易记录：个人从用户菜单打开 Credit Records 弹窗，团队管理者在 /credits 看团队交易表；GET /api/credits/transactions 分页展示（时间/类型 购买·消耗/金额/来源）；越权范围不可见；空态与加载。",
       "design_ref": "prototype:<!-- CREDITS -->（Usage/Purchase 记录表）+ <!-- buy credits modal -->（最近交易）；个人 Credit Records 弹窗细节较浅；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "03",
+      "owner": "wrk-codex-credits-1",
       "capability": "CAP-DATA",
       "depends_on": [
         "F01"
@@ -65,7 +65,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/credits-003-view-credit-records.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-07-02T01:43:17.821Z",
       "notes": "uc-credits-003。读 credit_transactions，按 scope+权限过滤。依赖 F01。"
     },
     {

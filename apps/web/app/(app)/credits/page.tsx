@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 interface CreditRecord {
   id: string;
   kind: "usage" | "purchase";
+  type?: "Usage" | "Purchase";
   when: string;
   label: string;
   description: string;
+  source?: string;
   amount: number;
   balance: number;
 }
@@ -20,6 +22,15 @@ interface Wallet {
   totalGranted: number;
   totalConsumed: number;
   records: CreditRecord[];
+}
+
+interface TransactionsPage {
+  scope: "personal" | "team";
+  page: number;
+  pageSize: number;
+  total: number;
+  hasNext: boolean;
+  transactions: CreditRecord[];
 }
 
 interface TeamWithRole {
@@ -58,15 +69,21 @@ export default function CreditsPage() {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [teamName, setTeamName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [transactionsPage, setTransactionsPage] = useState<TransactionsPage | null>(null);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [transactionsError, setTransactionsError] = useState("");
   const [error, setError] = useState("");
   const [forbidden, setForbidden] = useState(false);
   const [tab, setTab] = useState<"usage" | "purchase">("usage");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       setLoading(true);
+      setTransactionsLoading(true);
       setError("");
+      setTransactionsError("");
       setForbidden(false);
       const state =
         typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("state") : null;
@@ -100,11 +117,13 @@ export default function CreditsPage() {
       if (res.status === 403) {
         setForbidden(true);
         setLoading(false);
+        setTransactionsLoading(false);
         return;
       }
       if (!res.ok) {
         setError("加载积分钱包失败，请稍后重试");
         setLoading(false);
+        setTransactionsLoading(false);
         return;
       }
       const data = (await res.json()) as { wallet: Wallet };
@@ -112,15 +131,33 @@ export default function CreditsPage() {
       setWallet(data.wallet);
       setTeamName(canManage ? activeTeam!.name : null);
       setLoading(false);
+
+      const txRes = await fetch(`/api/credits/transactions?${scopeQuery}&page=${page}&pageSize=10${stateQuery}`);
+      if (!alive) return;
+      if (txRes.status === 403) {
+        setForbidden(true);
+        setTransactionsLoading(false);
+        return;
+      }
+      if (!txRes.ok) {
+        setTransactionsError("加载积分流水失败，请稍后重试");
+        setTransactionsLoading(false);
+        return;
+      }
+      const txData = (await txRes.json()) as { records: TransactionsPage };
+      if (!alive) return;
+      setTransactionsPage(txData.records);
+      setTransactionsLoading(false);
     })();
     return () => {
       alive = false;
     };
-  }, [router]);
+  }, [page, router]);
 
-  const records = wallet?.records.filter((r) => r.kind === tab) ?? [];
-  const amountHead = tab === "usage" ? "User" : "Type";
-  const descHead = tab === "usage" ? "Reason" : "Description";
+  const sourceRecords = transactionsPage?.transactions ?? wallet?.records ?? [];
+  const records = sourceRecords.filter((r) => r.kind === tab);
+  const canPrev = (transactionsPage?.page ?? 1) > 1;
+  const canNext = transactionsPage?.hasNext ?? false;
 
   return (
     <div className="mx-auto max-w-content px-9 pb-14 pt-7">
@@ -192,12 +229,22 @@ export default function CreditsPage() {
           <div className="mt-4.5 overflow-hidden rounded-12 border border-border">
             <div className="flex bg-surface-1 px-4.5 py-2.75 text-11 font-semibold text-muted-foreground">
               <div className="flex-1">Time</div>
-              <div className="flex-1">{amountHead}</div>
-              <div className="flex-[1.6]">{descHead}</div>
+              <div className="flex-1">Type</div>
+              <div className="flex-[1.6]">Source</div>
               <div className="w-20 text-right">Amount</div>
               <div className="w-24 text-right">Balance</div>
             </div>
-            {records.length === 0 ? (
+            {transactionsLoading ? (
+              <div data-testid="transaction-loading" className="flex flex-col gap-2 px-4.5 py-4 animate-pulse">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-9 rounded-7 bg-muted" />
+                ))}
+              </div>
+            ) : transactionsError ? (
+              <p role="alert" data-testid="err-transactions" className="px-4.5 py-4 text-13 text-destructive">
+                {transactionsError}
+              </p>
+            ) : records.length === 0 ? (
               <div data-testid="empty" className="px-4.5 py-10 text-center text-13 text-muted-foreground">
                 {tab === "usage" ? "暂无消耗记录" : "暂无购买记录"}
               </div>
@@ -210,14 +257,40 @@ export default function CreditsPage() {
                     className="flex items-center border-t border-border px-4.5 py-3 text-13 transition-colors duration-200 hover:bg-surface-1"
                   >
                     <div className="flex-1 text-muted-foreground">{r.when}</div>
-                    <div className="flex-1 text-foreground">{r.label}</div>
-                    <div className="flex-[1.6] text-foreground">{r.description}</div>
+                    <div className="flex-1 text-foreground">{r.type ?? (r.kind === "usage" ? "Usage" : "Purchase")}</div>
+                    <div className="flex-[1.6] text-foreground">{r.source ?? r.description ?? r.label}</div>
                     <div className="w-20 text-right font-semibold text-foreground">{signed(r.amount)}</div>
                     <div className="w-24 text-right text-muted-foreground">{fmt(r.balance)}</div>
                   </div>
                 ))}
               </div>
             )}
+          </div>
+
+          <div className="mt-3 flex items-center justify-between text-12 text-muted-foreground">
+            <span data-testid="transaction-page">
+              Page {transactionsPage?.page ?? page} · {transactionsPage?.total ?? sourceRecords.length} records
+            </span>
+            <div className="flex gap-2">
+              <Button
+                data-testid="transactions-prev"
+                variant="outline"
+                size="sm"
+                disabled={!canPrev || transactionsLoading}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <Button
+                data-testid="transactions-next"
+                variant="outline"
+                size="sm"
+                disabled={!canNext || transactionsLoading}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </>
       ) : null}

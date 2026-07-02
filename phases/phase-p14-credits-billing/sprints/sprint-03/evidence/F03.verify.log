@@ -1,0 +1,614 @@
+$ docker compose -f infra/docker-compose.yml up -d
+[exit 0]
+bash: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8): No such file or directory
+ Container codex-issue-132-credits-f03-isolated-minio-1  Running
+ Container codex-issue-132-credits-f03-isolated-redis-1  Running
+ Container codex-issue-132-credits-f03-isolated-postgres-1  Running
+
+
+$ pnpm --filter @repo/data run migrate
+[exit 0]
+
+> @repo/data@0.1.0 migrate /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/data
+> tsx src/migrate.ts
+
+✓ 已应用，跳过：001_init.sql
+✓ 已应用，跳过：002_auth.sql
+✓ 已应用，跳过：003_team.sql
+✓ 已应用，跳过：004_room.sql
+✓ 已应用，跳过：005_canvas.sql
+✓ 已应用，跳过：006_profile.sql
+✓ 已应用，跳过：007_board.sql
+✓ 已应用，跳过：008_board_visits.sql
+✓ 已应用，跳过：009_board_favorites.sql
+✓ 已应用，跳过：010_room_chat.sql
+✓ 已应用，跳过：011_board_settings.sql
+✓ 已应用，跳过：012_board_items_board_id.sql
+✓ 已应用，跳过：013_board_items_color.sql
+✓ 已应用，跳过：014_feedback.sql
+✓ 已应用，跳过：014_room_chat_messages.sql
+✓ 已应用，跳过：015_team_general.sql
+✓ 已应用，跳过：016_ai_store.sql
+✓ 已应用，跳过：016_ava_chat.sql
+✓ 已应用，跳过：016_credits.sql
+✓ 已应用，跳过：016_kb_files.sql
+✓ 已应用，跳过：016_survey.sql
+迁移完成。
+bash: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8): No such file or directory
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/credits-003-view-credit-records.spec.ts
+[exit 0]
+
+Running 4 tests using 1 worker
+
+  ✓  1 [chromium] › credits-003-view-credit-records.spec.ts:21:5 › 个人从用户菜单打开 Credit Records 弹窗并看到个人积分流水 (9.4s)
+  ✓  2 [chromium] › credits-003-view-credit-records.spec.ts:42:5 › Team owner 在 /credits 查看团队交易表并通过 transactions API 分页 (5.2s)
+  ✓  3 [chromium] › credits-003-view-credit-records.spec.ts:73:5 › Team member 不能越权读取团队积分流水 (1.1s)
+  ✓  4 [chromium] › credits-003-view-credit-records.spec.ts:95:5 › 空态和未登录 transactions API 状态可见 (866ms)
+
+  Slow test file: [chromium] › credits-003-view-credit-records.spec.ts (16.6s)
+  Consider splitting slow test files to speed up parallel execution
+  4 passed (23.7s)
+bash: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8): No such file or directory
+[2m[WebServer] [22m(node:11010) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:11017) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11048) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11048) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving 'next/dist/compiled/next-server/app-page.runtime.dev' in /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/health for build dependencies doesn't lead to expected result '/private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/node_modules/next/dist/compiled/next-server/app-page.runtime.dev.js', but to '/private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/next-server/app-page.runtime.dev.js' instead. Resolving dependencies are ignored for this path.
+[2m[WebServer] [22m<w>  at unknown 4 next/dist/compiled/next-server/app-page.runtime.dev
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/health/route.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/health/route.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/require.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/require.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/load-components.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/load-components.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/handle-externals.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/handle-externals.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w>  at resolve commonjs /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving 'next/dist/compiled/next-server/app-route.runtime.dev' in /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/health for build dependencies doesn't lead to expected result '/private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js', but to '/private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js' instead. Resolving dependencies are ignored for this path.
+[2m[WebServer] [22m<w>  at unknown 4 next/dist/compiled/next-server/app-route.runtime.dev
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/health/route.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/health/route.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/require.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/require.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/load-components.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/load-components.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/handle-externals.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/handle-externals.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w>  at resolve commonjs /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving 'next/dist/client/components/request-async-storage.external' in /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/credits/wallet for build dependencies doesn't lead to expected result '/private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/node_modules/next/dist/client/components/request-async-storage.external.js', but to '/private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/request-async-storage.external.js' instead. Resolving dependencies are ignored for this path.
+[2m[WebServer] [22m<w>  at unknown 4 next/dist/client/components/request-async-storage.external
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/credits/wallet/route.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/credits/wallet/route.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/require.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/require.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/load-components.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/load-components.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-app-loader.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-app-loader.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/bundle5.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/bundle5.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/webpack.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/webpack.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/plugins/define-env-plugin.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/plugins/define-env-plugin.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/swc/index.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/swc/index.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w>  at resolve commonjs /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving 'next/dist/client/components/action-async-storage.external' in /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/credits/wallet for build dependencies doesn't lead to expected result '/private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/node_modules/next/dist/client/components/action-async-storage.external.js', but to '/private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/action-async-storage.external.js' instead. Resolving dependencies are ignored for this path.
+[2m[WebServer] [22m<w>  at unknown 4 next/dist/client/components/action-async-storage.external
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/credits/wallet/route.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/credits/wallet/route.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/require.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/require.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/load-components.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/load-components.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-app-loader.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-app-loader.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/bundle5.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/bundle5.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/webpack.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/webpack.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/plugins/define-env-plugin.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/plugins/define-env-plugin.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/swc/index.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/swc/index.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w>  at resolve commonjs /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving 'next/dist/client/components/static-generation-async-storage.external' in /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/credits/wallet for build dependencies doesn't lead to expected result '/private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/node_modules/next/dist/client/components/static-generation-async-storage.external.js', but to '/private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/static-generation-async-storage.external.js' instead. Resolving dependencies are ignored for this path.
+[2m[WebServer] [22m<w>  at unknown 4 next/dist/client/components/static-generation-async-storage.external
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/credits/wallet/route.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/credits/wallet/route.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/require.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/require.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/load-components.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/load-components.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-app-loader.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-app-loader.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/bundle5.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/bundle5.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/webpack.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/webpack.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/plugins/define-env-plugin.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/plugins/define-env-plugin.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/swc/index.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/swc/index.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w>  at resolve commonjs /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving 'next/dist/compiled/next-server/app-page.runtime.dev' in /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/credits/wallet for build dependencies doesn't lead to expected result '/private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/node_modules/next/dist/compiled/next-server/app-page.runtime.dev.js', but to '/private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/next-server/app-page.runtime.dev.js' instead. Resolving dependencies are ignored for this path.
+[2m[WebServer] [22m<w>  at unknown 4 next/dist/compiled/next-server/app-page.runtime.dev
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/credits/wallet/route.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/credits/wallet/route.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/require.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/require.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/load-components.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/load-components.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-app-loader.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-app-loader.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/bundle5.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/bundle5.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/webpack.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/webpack.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/plugins/define-env-plugin.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/plugins/define-env-plugin.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/swc/index.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/swc/index.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w>  at resolve commonjs /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving 'next/dist/compiled/next-server/app-route.runtime.dev' in /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/credits/wallet for build dependencies doesn't lead to expected result '/private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js', but to '/private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js' instead. Resolving dependencies are ignored for this path.
+[2m[WebServer] [22m<w>  at unknown 4 next/dist/compiled/next-server/app-route.runtime.dev
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/credits/wallet/route.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web/.next/server/app/api/credits/wallet/route.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/require.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/require.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/load-components.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/load-components.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-app-loader.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-app-loader.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/bundle5.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/bundle5.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/webpack.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/webpack/webpack.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/plugins/define-env-plugin.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/plugins/define-env-plugin.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/swc/index.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/swc/index.js
+[2m[WebServer] [22m<w>  at file dependencies /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w>  at file /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m<w>  at resolve commonjs /private/tmp/boardx-worktrees/issue-132-credits-f03/node_modules/.pnpm/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+[2m[WebServer] [22m(node:11181) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+
+[BASE VERIFY] $ pnpm -w run verify:base
+[exit 0]
+
+> boardx-dev-template@ verify:base /private/tmp/boardx-worktrees/issue-132-credits-f03
+> turbo run typecheck lint test
+
+• Packages in scope: @repo/agent-core, @repo/ai, @repo/auth, @repo/canvas, @repo/data, @repo/memory, @repo/orchestrator, @repo/queue, @repo/storage, @repo/tools, @repo/web, @repo/workflow-worker
+• Running typecheck, lint, test in 12 packages
+• Remote caching disabled
+@repo/queue:typecheck: cache miss, executing 59c0b6e465ce25b2
+@repo/queue:lint: cache miss, executing e7461c56d1124f06
+@repo/queue:test: cache miss, executing 9e4f11fa06788ce2
+@repo/data:typecheck: cache miss, executing ab81e75ce0290dca
+@repo/data:lint: cache miss, executing 6df5a401f1772e9c
+@repo/data:test: cache miss, executing b75085f6ba24497e
+@repo/storage:typecheck: cache miss, executing 27d9446c4ee1ecd3
+@repo/agent-core:typecheck: cache miss, executing 605f8206aa339bc0
+@repo/storage:test: cache miss, executing f2b0249c8944d4bd
+@repo/storage:lint: cache hit, replaying logs d42c07d1bb547806
+@repo/storage:lint: 
+@repo/storage:lint: > @repo/storage@0.1.0 lint /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/storage
+@repo/storage:lint: > echo 'lint: ok'
+@repo/storage:lint: 
+@repo/storage:lint: lint: ok
+@repo/agent-core:lint: cache miss, executing ac94863c4184d627
+@repo/queue:lint: 
+@repo/queue:lint: > @repo/queue@0.1.0 lint /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/queue
+@repo/queue:lint: > echo 'lint: ok'
+@repo/queue:lint: 
+@repo/queue:lint: lint: ok
+@repo/agent-core:typecheck: 
+@repo/agent-core:typecheck: > @repo/agent-core@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/agent-core
+@repo/agent-core:typecheck: > tsc --noEmit
+@repo/agent-core:typecheck: 
+@repo/agent-core:test: cache miss, executing 79e924826c73601a
+@repo/queue:typecheck: 
+@repo/queue:typecheck: > @repo/queue@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/queue
+@repo/queue:typecheck: > tsc --noEmit
+@repo/queue:typecheck: 
+@repo/data:lint: 
+@repo/data:lint: > @repo/data@0.1.0 lint /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/data
+@repo/data:lint: > echo 'lint: ok'
+@repo/data:lint: 
+@repo/agent-core:lint: 
+@repo/agent-core:lint: > @repo/agent-core@0.1.0 lint /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/agent-core
+@repo/agent-core:lint: > echo 'lint: ok'
+@repo/agent-core:lint: 
+@repo/data:lint: lint: ok
+@repo/data:typecheck: 
+@repo/data:typecheck: > @repo/data@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/data
+@repo/data:typecheck: > tsc --noEmit
+@repo/data:typecheck: 
+@repo/data:test: 
+@repo/data:test: > @repo/data@0.1.0 test /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/data
+@repo/data:test: > vitest run
+@repo/data:test: 
+@repo/agent-core:lint: lint: ok
+@repo/memory:build: cache miss, executing ef2c4955f90a55e2
+@repo/queue:test: 
+@repo/queue:test: > @repo/queue@0.1.0 test /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/queue
+@repo/queue:test: > vitest run
+@repo/queue:test: 
+@repo/tools:build: cache miss, executing 572d3f061bd1690e
+@repo/storage:typecheck: 
+@repo/storage:typecheck: > @repo/storage@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/storage
+@repo/storage:typecheck: > tsc --noEmit
+@repo/storage:typecheck: 
+@repo/storage:test: 
+@repo/storage:test: > @repo/storage@0.1.0 test /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/storage
+@repo/storage:test: > vitest run
+@repo/storage:test: 
+@repo/agent-core:test: 
+@repo/agent-core:test: > @repo/agent-core@0.1.0 test /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/agent-core
+@repo/agent-core:test: > vitest run
+@repo/agent-core:test: 
+@repo/tools:build: 
+@repo/tools:build: > @repo/tools@0.1.0 build /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/tools
+@repo/tools:build: > tsc --noEmit
+@repo/tools:build: 
+@repo/memory:build: 
+@repo/memory:build: > @repo/memory@0.1.0 build /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/memory
+@repo/memory:build: > tsc --noEmit
+@repo/memory:build: 
+@repo/data:test: 
+@repo/data:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/data
+@repo/data:test: 
+@repo/queue:test: 
+@repo/queue:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/queue
+@repo/agent-core:test: 
+@repo/agent-core:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/agent-core
+@repo/agent-core:test: 
+@repo/queue:test: 
+@repo/agent-core:build: cache miss, executing 72029ef72bc90291
+@repo/storage:test: 
+@repo/storage:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/storage
+@repo/storage:test: 
+@repo/agent-core:test:  ✓ src/index.test.ts  (3 tests) 67ms
+@repo/data:test:  ✓ src/survey.test.ts  (4 tests) 15ms
+@repo/data:test:  ✓ src/roomChat.test.ts  (2 tests) 17ms
+@repo/data:test:  ✓ src/board.test.ts  (9 tests) 13ms
+@repo/data:test:  ✓ src/aiStore.test.ts  (8 tests) 13ms
+@repo/agent-core:test: 
+@repo/agent-core:test:  Test Files  1 passed (1)
+@repo/agent-core:test:       Tests  3 passed (3)
+@repo/data:test:  ✓ src/avaChat.test.ts  (5 tests) 6ms
+@repo/agent-core:test:    Start at  09:42:32
+@repo/data:test:  ✓ src/index.test.ts  (3 tests) 12ms
+@repo/agent-core:test:    Duration  6.62s (transform 383ms, setup 0ms, collect 381ms, tests 67ms, environment 25ms, prepare 1.72s)
+@repo/agent-core:test: 
+@repo/data:test: 
+@repo/data:test:  Test Files  6 passed (6)
+@repo/data:test:       Tests  31 passed (31)
+@repo/data:test:    Start at  09:42:30
+@repo/data:test:    Duration  8.09s (transform 7.75s, setup 1ms, collect 20.27s, tests 76ms, environment 12ms, prepare 11.33s)
+@repo/data:test: 
+@repo/orchestrator:lint: cache miss, executing 30eb51336094ef04
+@repo/canvas:typecheck: cache miss, executing ec14d65654c44629
+@repo/queue:test:  ✓ src/index.test.ts  (4 tests) 6ms
+@repo/queue:test: 
+@repo/queue:test:  Test Files  1 passed (1)
+@repo/queue:test:       Tests  4 passed (4)
+@repo/queue:test:    Start at  09:42:31
+@repo/queue:test:    Duration  7.68s (transform 340ms, setup 0ms, collect 1.53s, tests 6ms, environment 0ms, prepare 2.01s)
+@repo/queue:test: 
+@repo/data:build: cache miss, executing bf80f4272a10271a
+@repo/agent-core:build: 
+@repo/agent-core:build: > @repo/agent-core@0.1.0 build /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/agent-core
+@repo/agent-core:build: > tsc --noEmit
+@repo/agent-core:build: 
+@repo/storage:test:  ✓ src/index.test.ts  (10 tests) 90ms
+@repo/storage:test: 
+@repo/storage:test:  Test Files  1 passed (1)
+@repo/storage:test:       Tests  10 passed (10)
+@repo/storage:test:    Start at  09:42:33
+@repo/storage:test:    Duration  7.15s (transform 228ms, setup 8ms, collect 817ms, tests 90ms, environment 0ms, prepare 713ms)
+@repo/storage:test: 
+@repo/canvas:test: cache hit, replaying logs 85524402dd543241
+@repo/canvas:test: 
+@repo/canvas:test: > @repo/canvas@0.1.0 test /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/canvas
+@repo/canvas:test: > vitest run
+@repo/canvas:test: 
+@repo/canvas:test: 
+@repo/canvas:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/canvas
+@repo/canvas:test: 
+@repo/canvas:test:  ✓ src/index.test.ts  (8 tests) 95ms
+@repo/canvas:test: 
+@repo/canvas:test:  Test Files  1 passed (1)
+@repo/canvas:test:       Tests  8 passed (8)
+@repo/canvas:test:    Start at  04:03:35
+@repo/canvas:test:    Duration  11.88s (transform 1.41s, setup 0ms, collect 1.36s, tests 95ms, environment 0ms, prepare 2.59s)
+@repo/canvas:test: 
+@repo/canvas:lint: cache hit, replaying logs 13e32f8d9de0dc8c
+@repo/canvas:lint: 
+@repo/canvas:lint: > @repo/canvas@0.1.0 lint /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/canvas
+@repo/canvas:lint: > echo 'lint: ok'
+@repo/canvas:lint: 
+@repo/canvas:lint: lint: ok
+@repo/auth:lint: cache hit, replaying logs 59f7760fc95c92b4
+@repo/auth:lint: 
+@repo/auth:lint: > @repo/auth@0.1.0 lint /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/auth
+@repo/auth:lint: > echo 'lint: ok'
+@repo/auth:lint: 
+@repo/auth:lint: lint: ok
+@repo/auth:test: cache miss, executing 283b76ae5d22e966
+@repo/memory:typecheck: cache miss, executing 0c6677da20af9c13
+@repo/memory:lint: cache miss, executing 27a0f892baac9da2
+@repo/memory:test: cache miss, executing 6901151252fb79a2
+@repo/ai:lint: cache hit, replaying logs 141998cf99350e8d
+@repo/ai:lint: 
+@repo/ai:lint: > @repo/ai@0.1.0 lint /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/ai
+@repo/ai:lint: > echo 'lint: ok'
+@repo/ai:lint: 
+@repo/ai:lint: lint: ok
+@repo/queue:build: cache miss, executing 6be0559d07210a7a
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: > @repo/orchestrator@0.1.0 lint /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/orchestrator
+@repo/orchestrator:lint: > echo 'lint: ok'
+@repo/orchestrator:lint: 
+@repo/canvas:typecheck: 
+@repo/canvas:typecheck: > @repo/canvas@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/canvas
+@repo/canvas:typecheck: > tsc --noEmit
+@repo/canvas:typecheck: 
+@repo/orchestrator:lint: lint: ok
+@repo/workflow-worker:lint: cache miss, executing bbb2ce04214ac255
+@repo/data:build: 
+@repo/data:build: > @repo/data@0.1.0 build /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/data
+@repo/data:build: > tsc --noEmit
+@repo/data:build: 
+@repo/memory:typecheck: 
+@repo/memory:typecheck: > @repo/memory@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/memory
+@repo/memory:typecheck: > tsc --noEmit
+@repo/memory:typecheck: 
+@repo/auth:test: 
+@repo/auth:test: > @repo/auth@0.1.0 test /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/auth
+@repo/auth:test: > vitest run
+@repo/auth:test: 
+@repo/tools:typecheck: cache miss, executing d11b4f859a2cd2f4
+@repo/memory:lint: 
+@repo/memory:lint: > @repo/memory@0.1.0 lint /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/memory
+@repo/memory:lint: > echo 'lint: ok'
+@repo/memory:lint: 
+@repo/memory:test: 
+@repo/memory:test: > @repo/memory@0.1.0 test /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/memory
+@repo/memory:test: > vitest run
+@repo/memory:test: 
+@repo/memory:lint: lint: ok
+@repo/tools:lint: cache miss, executing 4cc8ff2f66a3d7bc
+@repo/queue:build: 
+@repo/queue:build: > @repo/queue@0.1.0 build /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/queue
+@repo/queue:build: > tsc --noEmit
+@repo/queue:build: 
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: > @repo/workflow-worker@0.1.0 lint /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/workflow-worker
+@repo/workflow-worker:lint: > echo 'lint: ok'
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: lint: ok
+@repo/tools:test: cache miss, executing 6ccaef08a058b3c2
+@repo/ai:typecheck: cache miss, executing 443a5e1ad1b62725
+@repo/auth:test: 
+@repo/auth:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/auth
+@repo/auth:test: 
+@repo/tools:typecheck: 
+@repo/tools:typecheck: > @repo/tools@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/tools
+@repo/tools:typecheck: > tsc --noEmit
+@repo/tools:typecheck: 
+@repo/memory:test: 
+@repo/memory:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/memory
+@repo/memory:test: 
+@repo/tools:lint: 
+@repo/tools:lint: > @repo/tools@0.1.0 lint /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/tools
+@repo/tools:lint: > echo 'lint: ok'
+@repo/tools:lint: 
+@repo/tools:lint: lint: ok
+@repo/auth:build: cache miss, executing 4766192533897541
+@repo/tools:test: 
+@repo/tools:test: > @repo/tools@0.1.0 test /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/tools
+@repo/tools:test: > vitest run
+@repo/tools:test: 
+@repo/memory:test:  ✓ src/index.test.ts  (13 tests) 45ms
+@repo/ai:test: cache hit, replaying logs f154dc662646ac4d
+@repo/ai:test: 
+@repo/ai:test: > @repo/ai@0.1.0 test /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/ai
+@repo/ai:test: > vitest run
+@repo/ai:test: 
+@repo/ai:test: 
+@repo/ai:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/ai
+@repo/ai:test: 
+@repo/ai:test:  ✓ src/index.test.ts  (10 tests) 12ms
+@repo/ai:test: 
+@repo/ai:test:  Test Files  1 passed (1)
+@repo/ai:test:       Tests  10 passed (10)
+@repo/ai:test:    Start at  04:03:36
+@repo/ai:test:    Duration  11.65s (transform 1.10s, setup 0ms, collect 1.72s, tests 12ms, environment 6ms, prepare 2.17s)
+@repo/ai:test: 
+@repo/canvas:build: cache miss, executing 5ab8469f958aa507
+@repo/memory:test: 
+@repo/memory:test:  Test Files  1 passed (1)
+@repo/memory:test:       Tests  13 passed (13)
+@repo/memory:test:    Start at  09:42:47
+@repo/memory:test:    Duration  2.57s (transform 190ms, setup 0ms, collect 312ms, tests 45ms, environment 0ms, prepare 455ms)
+@repo/memory:test: 
+@repo/ai:build: cache miss, executing 182da36b93fe6260
+@repo/ai:typecheck: 
+@repo/ai:typecheck: > @repo/ai@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/ai
+@repo/ai:typecheck: > tsc --noEmit
+@repo/ai:typecheck: 
+@repo/storage:build: cache miss, executing b0e840dbbf3f308b
+@repo/web:lint: cache miss, executing 0ffd450eebce92be
+@repo/auth:test:  ✓ src/index.test.ts  (15 tests) 3117ms
+@repo/auth:test: 
+@repo/auth:test:  Test Files  1 passed (1)
+@repo/auth:test:       Tests  15 passed (15)
+@repo/auth:test:    Start at  09:42:45
+@repo/auth:test:    Duration  5.96s (transform 239ms, setup 1ms, collect 554ms, tests 3.12s, environment 0ms, prepare 721ms)
+@repo/auth:test: 
+@repo/auth:typecheck: cache miss, executing f35d7257fc333431
+@repo/auth:build: 
+@repo/auth:build: > @repo/auth@0.1.0 build /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/auth
+@repo/auth:build: > tsc --noEmit
+@repo/auth:build: 
+@repo/tools:test: 
+@repo/tools:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/tools
+@repo/tools:test: 
+@repo/ai:build: 
+@repo/ai:build: > @repo/ai@0.1.0 build /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/ai
+@repo/ai:build: > tsc --noEmit
+@repo/ai:build: 
+@repo/canvas:build: 
+@repo/canvas:build: > @repo/canvas@0.1.0 build /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/canvas
+@repo/canvas:build: > tsc --noEmit
+@repo/canvas:build: 
+@repo/orchestrator:test: cache miss, executing 72b6c028823cc98c
+@repo/storage:build: 
+@repo/storage:build: > @repo/storage@0.1.0 build /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/storage
+@repo/storage:build: > tsc --noEmit
+@repo/storage:build: 
+@repo/web:lint: 
+@repo/web:lint: > @repo/web@0.1.0 lint /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web
+@repo/web:lint: > bash scripts/lint-design.sh
+@repo/web:lint: 
+@repo/orchestrator:typecheck: cache miss, executing 1e68a3fdb453ab29
+@repo/auth:typecheck: 
+@repo/auth:typecheck: > @repo/auth@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-132-credits-f03/packages/auth
+@repo/auth:typecheck: > tsc --noEmit
+@repo/auth:typecheck: 
+@repo/tools:test:  ✓ src/index.test.ts  (12 tests) 798ms
+@repo/tools:test: 
+@repo/tools:test:  Test Files  1 passed (1)
+@repo/tools:test:       Tests  12 passed (12)
+@repo/tools:test:    Start at  09:42:52
+@repo/tools:test:    Duration  2.99s (transform 145ms, setup 0ms, collect 294ms, tests 798ms, environment 0ms, prepare 474ms)
+@repo/tools:test: 
+@repo/workflow-worker:test: cache miss, executing 7f0a49b49c4f6360
+@repo/orchestrator:test: 
+@repo/orchestrator:test: > @repo/orchestrator@0.1.0 test /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/orchestrator
+@repo/orchestrator:test: > vitest run
+@repo/orchestrator:test: 
+@repo/workflow-worker:typecheck: cache miss, executing 41b4d6d77fe67319
+@repo/orchestrator:typecheck: 
+@repo/orchestrator:typecheck: > @repo/orchestrator@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/orchestrator
+@repo/orchestrator:typecheck: > tsc --noEmit
+@repo/orchestrator:typecheck: 
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test: > @repo/workflow-worker@0.1.0 test /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/workflow-worker
+@repo/workflow-worker:test: > vitest run
+@repo/workflow-worker:test: 
+@repo/web:lint: ✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性）
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/orchestrator
+@repo/orchestrator:test: 
+@repo/workflow-worker:typecheck: 
+@repo/workflow-worker:typecheck: > @repo/workflow-worker@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/workflow-worker
+@repo/workflow-worker:typecheck: > tsc --noEmit
+@repo/workflow-worker:typecheck: 
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/workflow-worker
+@repo/workflow-worker:test: 
+@repo/orchestrator:test:  ✓ src/orchestrator.test.ts  (3 tests) 1402ms
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  Test Files  1 passed (1)
+@repo/orchestrator:test:       Tests  3 passed (3)
+@repo/orchestrator:test:    Start at  09:43:00
+@repo/orchestrator:test:    Duration  3.43s (transform 271ms, setup 0ms, collect 257ms, tests 1.40s, environment 0ms, prepare 417ms)
+@repo/orchestrator:test: 
+@repo/workflow-worker:test:  ✓ src/job.test.ts  (3 tests) 5ms
+@repo/workflow-worker:test:  ✓ src/kbFileJob.test.ts  (2 tests) 16ms
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  Test Files  2 passed (2)
+@repo/workflow-worker:test:       Tests  5 passed (5)
+@repo/web:test: cache miss, executing 1dd59beaecabea80
+@repo/workflow-worker:test:    Start at  09:43:02
+@repo/web:typecheck: cache miss, executing 07f2b77e7dcc0338
+@repo/workflow-worker:test:    Duration  1.90s (transform 233ms, setup 0ms, collect 303ms, tests 21ms, environment 0ms, prepare 863ms)
+@repo/workflow-worker:test: 
+@repo/web:typecheck: 
+@repo/web:typecheck: > @repo/web@0.1.0 typecheck /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web
+@repo/web:typecheck: > tsc --noEmit
+@repo/web:typecheck: 
+@repo/web:test: 
+@repo/web:test: > @repo/web@0.1.0 test /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web
+@repo/web:test: > vitest run
+@repo/web:test: 
+@repo/web:test: [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+@repo/web:test: 
+@repo/web:test:  RUN  v2.0.0 /private/tmp/boardx-worktrees/issue-132-credits-f03/apps/web
+@repo/web:test: 
+@repo/web:test:  ✓ lib/agents.test.ts  (5 tests) 8ms
+@repo/web:test:  ✓ lib/viewport.test.ts  (4 tests) 5ms
+@repo/web:test:  ✓ lib/health.test.ts  (1 test) 3ms
+@repo/web:test:  ✓ lib/feedback.test.ts  (2 tests) 152ms
+@repo/web:test: 
+@repo/web:test:  Test Files  4 passed (4)
+@repo/web:test:       Tests  12 passed (12)
+@repo/web:test:    Start at  09:43:07
+@repo/web:test:    Duration  1.81s (transform 235ms, setup 0ms, collect 349ms, tests 168ms, environment 3ms, prepare 993ms)
+@repo/web:test: 
+
+ Tasks:    45 successful, 45 total
+Cached:    6 cached, 45 total
+  Time:    53.862s 
+
+bash: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8): No such file or directory
+turbo 2.5.0
+
+ WARNING  no output files found for task @repo/agent-core#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/ai#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/auth#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/canvas#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/data#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/memory#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/queue#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/storage#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/tools#build. Please check your `outputs` key in `turbo.json`

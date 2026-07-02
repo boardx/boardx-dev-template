@@ -6,8 +6,10 @@ import {
   getPersonalWallet,
   getTeamWallet,
   listTransactions,
+  listTransactionsPage,
   recordTransaction,
   type CreditWallet,
+  type CreditTransaction,
 } from "@repo/data";
 
 export interface WalletRecordDto {
@@ -27,6 +29,28 @@ export interface WalletPayload {
   totalGranted: number;
   totalConsumed: number;
   records: WalletRecordDto[];
+}
+
+export interface CreditTransactionDto {
+  id: string;
+  kind: "usage" | "purchase";
+  type: "Usage" | "Purchase";
+  createdAt: string;
+  when: string;
+  label: string;
+  description: string;
+  source: string;
+  amount: number;
+  balance: number;
+}
+
+export interface CreditTransactionsPayload {
+  scope: "personal" | "team";
+  page: number;
+  pageSize: number;
+  total: number;
+  hasNext: boolean;
+  transactions: CreditTransactionDto[];
 }
 
 export function timeAgo(iso: string): string {
@@ -105,6 +129,23 @@ export async function walletToPayload(wallet: CreditWallet, scope: "personal" | 
   };
 }
 
+function transactionToDto(t: CreditTransaction): CreditTransactionDto {
+  const description = t.description || "";
+  const label = t.label || (t.kind === "usage" ? "Usage" : "Purchase");
+  return {
+    id: String(t.id),
+    kind: t.kind,
+    type: t.kind === "usage" ? "Usage" : "Purchase",
+    createdAt: t.created_at,
+    when: timeAgo(t.created_at),
+    label,
+    description,
+    source: description || label,
+    amount: Number(t.amount),
+    balance: Number(t.balance_after),
+  };
+}
+
 /** 取（必要时创建并播种）个人钱包的完整视图；`forceEmpty` 时跳过播种展示真空态。 */
 export async function loadPersonalWallet(userId: number, displayName: string, forceEmpty: boolean): Promise<WalletPayload> {
   let wallet = await getOrCreatePersonalWallet(userId);
@@ -117,4 +158,43 @@ export async function loadTeamWallet(teamId: number, forceEmpty: boolean): Promi
   let wallet = await getOrCreateTeamWallet(teamId);
   if (!forceEmpty) wallet = await seedDemoIfEmpty(wallet, "Team usage");
   return walletToPayload(wallet, "team");
+}
+
+export async function loadPersonalTransactions(
+  userId: number,
+  displayName: string,
+  input: { page: number; pageSize: number; forceEmpty: boolean }
+): Promise<CreditTransactionsPayload> {
+  let wallet = await getOrCreatePersonalWallet(userId);
+  if (!input.forceEmpty) wallet = await seedDemoIfEmpty(wallet, displayName);
+  const page = Math.max(1, input.page);
+  const pageSize = Math.max(1, Math.min(input.pageSize, 50));
+  const result = await listTransactionsPage(wallet.id, { limit: pageSize, offset: (page - 1) * pageSize });
+  return {
+    scope: "personal",
+    page,
+    pageSize,
+    total: result.total,
+    hasNext: page * pageSize < result.total,
+    transactions: result.rows.map(transactionToDto),
+  };
+}
+
+export async function loadTeamTransactions(
+  teamId: number,
+  input: { page: number; pageSize: number; forceEmpty: boolean }
+): Promise<CreditTransactionsPayload> {
+  let wallet = await getOrCreateTeamWallet(teamId);
+  if (!input.forceEmpty) wallet = await seedDemoIfEmpty(wallet, "Team usage");
+  const page = Math.max(1, input.page);
+  const pageSize = Math.max(1, Math.min(input.pageSize, 50));
+  const result = await listTransactionsPage(wallet.id, { limit: pageSize, offset: (page - 1) * pageSize });
+  return {
+    scope: "team",
+    page,
+    pageSize,
+    total: result.total,
+    hasNext: page * pageSize < result.total,
+    transactions: result.rows.map(transactionToDto),
+  };
 }

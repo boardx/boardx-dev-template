@@ -29,6 +29,11 @@ export interface CreditTransaction {
   created_at: string;
 }
 
+export interface CreditTransactionPage {
+  rows: CreditTransaction[];
+  total: number;
+}
+
 const WALLET_COLS =
   "id, scope, owner_user_id, team_id, balance, total_purchased, total_granted, total_consumed, created_at";
 
@@ -80,6 +85,28 @@ export async function listTransactions(walletId: number, limit = 50): Promise<Cr
      FROM credit_transactions WHERE wallet_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2`,
     [walletId, limit]
   );
+}
+
+export async function listTransactionsPage(
+  walletId: number,
+  input: { limit?: number; offset?: number } = {}
+): Promise<CreditTransactionPage> {
+  const limit = Math.max(1, Math.min(input.limit ?? 10, 50));
+  const offset = Math.max(0, input.offset ?? 0);
+  const [rows, counts] = await Promise.all([
+    query<CreditTransaction>(
+      `SELECT id, wallet_id, kind, label, description, amount, balance_after, created_at
+       FROM credit_transactions
+       WHERE wallet_id = $1
+       ORDER BY created_at DESC, id DESC
+       LIMIT $2 OFFSET $3`,
+      [walletId, limit, offset]
+    ),
+    query<{ total: number }>("SELECT COUNT(*)::int AS total FROM credit_transactions WHERE wallet_id = $1", [
+      walletId,
+    ]),
+  ]);
+  return { rows, total: Number(counts[0]?.total ?? 0) };
 }
 
 /**

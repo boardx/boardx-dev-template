@@ -14,6 +14,7 @@ import {
   BookOpen,
   UserPlus,
   Gem,
+  X,
 } from "lucide-react";
 import { FeedbackLauncher } from "@/components/feedback/feedback-launcher";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,21 @@ interface SidebarUser {
   email: string;
   displayName: string;
   avatar: string | null;
+}
+
+interface CreditRecord {
+  id: string;
+  type: "Usage" | "Purchase";
+  when: string;
+  source: string;
+  amount: number;
+}
+
+interface CreditRecordsPage {
+  page: number;
+  total: number;
+  hasNext: boolean;
+  transactions: CreditRecord[];
 }
 
 // 设计 rail：保留现有导航目的地（Home / Rooms 进 rail，Teams / Profile 进账号菜单）。
@@ -38,6 +54,11 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   const [hydrated, setHydrated] = useState(false);
   const [lang, setLang] = useState<"en" | "zh">("en");
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
+  const [recordsOpen, setRecordsOpen] = useState(false);
+  const [recordsPage, setRecordsPage] = useState(1);
+  const [creditRecords, setCreditRecords] = useState<CreditRecordsPage | null>(null);
+  const [recordsLoading, setRecordsLoading] = useState(false);
+  const [recordsError, setRecordsError] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,6 +80,30 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
       alive = false;
     };
   }, [menuOpen, user]);
+
+  useEffect(() => {
+    if (!recordsOpen || !user) return;
+    let alive = true;
+    setRecordsLoading(true);
+    setRecordsError("");
+    fetch(`/api/credits/transactions?scope=personal&page=${recordsPage}&pageSize=8`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error("request failed");
+        return (await res.json()) as { records: CreditRecordsPage };
+      })
+      .then((data) => {
+        if (alive) setCreditRecords(data.records);
+      })
+      .catch(() => {
+        if (alive) setRecordsError("Credit records could not be loaded.");
+      })
+      .finally(() => {
+        if (alive) setRecordsLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [recordsOpen, recordsPage, user]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -88,7 +133,14 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
 
   const initial = user?.displayName?.charAt(0)?.toUpperCase() ?? "?";
 
+  const personalRecords = creditRecords?.transactions ?? [];
+  const closeRecords = () => {
+    setRecordsOpen(false);
+    setRecordsPage(1);
+  };
+
   return (
+    <>
     <aside
       aria-label="主导航"
       className="hidden w-15 shrink-0 flex-col items-center gap-1.5 border-r border-border bg-surface-1 py-3 md:flex"
@@ -182,11 +234,14 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
             </div>
 
             {/* Credits 余额行 */}
-            <Link
+            <button
               role="menuitem"
-              href="/credits"
               data-testid="user-menu-credits"
-              onClick={() => setMenuOpen(false)}
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                setRecordsOpen(true);
+              }}
               className="mb-1.5 flex items-center gap-2 rounded-9 bg-surface-2 px-2.5 py-2.5 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Gem className="h-3.5 w-3.5 text-foreground" />
@@ -196,8 +251,8 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
               >
                 {creditsBalance == null ? "…" : `${creditsBalance.toLocaleString("en-US")} credits`}
               </span>
-              <span className="text-11 font-semibold text-foreground">Buy →</span>
-            </Link>
+              <span className="text-11 font-semibold text-foreground">Records</span>
+            </button>
 
             <MenuLink href="/account" testId="user-menu-profile" onClick={() => setMenuOpen(false)}>
               <User className="h-3.5 w-3.5" /> Profile
@@ -319,6 +374,108 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
         )}
       </div>
     </aside>
+
+      {recordsOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="credit-records-title"
+          data-testid="credit-records-dialog"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-6 backdrop-blur-md"
+        >
+          <div className="w-full max-w-2xl rounded-12 border border-border bg-popover shadow-[0_16px_40px_rgba(0,0,0,0.18)]">
+            <div className="flex items-center gap-3 border-b border-border px-5 py-4">
+              <div className="flex-1">
+                <h2 id="credit-records-title" className="text-17 font-semibold text-foreground">
+                  Credit Records
+                </h2>
+                <p data-testid="credit-records-balance" className="mt-1 text-12 text-muted-foreground">
+                  {creditsBalance == null ? "Personal credits" : `${creditsBalance.toLocaleString("en-US")} credits`}
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close Credit Records"
+                data-testid="close-credit-records"
+                onClick={closeRecords}
+                className="flex h-8 w-8 items-center justify-center rounded-8 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="px-5 py-4">
+              <div className="flex bg-surface-1 px-3 py-2 text-11 font-semibold text-muted-foreground">
+                <div className="w-24">Time</div>
+                <div className="w-24">Type</div>
+                <div className="flex-1">Source</div>
+                <div className="w-24 text-right">Amount</div>
+              </div>
+
+              {recordsLoading ? (
+                <div data-testid="credit-records-loading" className="flex flex-col gap-2 py-3 animate-pulse">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="h-9 rounded-7 bg-muted" />
+                  ))}
+                </div>
+              ) : recordsError ? (
+                <p role="alert" data-testid="err-credit-records" className="py-4 text-13 text-destructive">
+                  {recordsError}
+                </p>
+              ) : personalRecords.length === 0 ? (
+                <div data-testid="credit-records-empty" className="py-10 text-center text-13 text-muted-foreground">
+                  No credit records yet.
+                </div>
+              ) : (
+                <div data-testid="credit-records-list">
+                  {personalRecords.map((record) => (
+                    <div
+                      key={record.id}
+                      data-testid={`credit-record-${record.id}`}
+                      className="flex items-center border-t border-border px-3 py-3 text-13 transition-colors duration-200 hover:bg-surface-1"
+                    >
+                      <div className="w-24 text-muted-foreground">{record.when}</div>
+                      <div className="w-24 text-foreground">{record.type}</div>
+                      <div className="flex-1 text-foreground">{record.source}</div>
+                      <div className="w-24 text-right font-semibold text-foreground">
+                        {record.amount > 0 ? "+" : ""}
+                        {record.amount.toLocaleString("en-US")}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-4 flex items-center justify-between text-12 text-muted-foreground">
+                <span data-testid="credit-records-page">
+                  Page {creditRecords?.page ?? recordsPage} · {creditRecords?.total ?? personalRecords.length} records
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    data-testid="credit-records-prev"
+                    disabled={recordsLoading || recordsPage <= 1}
+                    onClick={() => setRecordsPage((p) => Math.max(1, p - 1))}
+                    className="rounded-8 border border-border px-3 py-1.5 text-12 font-semibold text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="credit-records-next"
+                    disabled={recordsLoading || !(creditRecords?.hasNext ?? false)}
+                    onClick={() => setRecordsPage((p) => p + 1)}
+                    className="rounded-8 border border-border px-3 py-1.5 text-12 font-semibold text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
