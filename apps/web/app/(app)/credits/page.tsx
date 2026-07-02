@@ -80,6 +80,7 @@ export default function CreditsPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [stateQuery, setStateQuery] = useState("");
   const [buyOpen, setBuyOpen] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -137,9 +138,10 @@ export default function CreditsPage() {
     return () => {
       alive = false;
     };
-  }, [router]);
+  }, [router, refreshTick]);
 
-  // 流水表（F03 分页）：scope 就绪后按当前 tab 拉取第 1 页；切 tab 重新拉取。
+  // 流水表（F03 分页）：scope 就绪后按当前 tab 拉取第 1 页；切 tab 重新拉取；
+  // 购买成功（refreshTick 变化）后也重新拉取，确保 Purchase 标签及时出现新记录。
   useEffect(() => {
     if (loading || forbidden || error) return;
     let alive = true;
@@ -163,7 +165,7 @@ export default function CreditsPage() {
     return () => {
       alive = false;
     };
-  }, [scope, tab, loading, forbidden, error, stateQuery]);
+  }, [scope, tab, loading, forbidden, error, stateQuery, refreshTick]);
 
   async function loadMore() {
     if (loadingMore || !hasMore) return;
@@ -203,6 +205,13 @@ export default function CreditsPage() {
           Buy credits
         </Button>
       </div>
+
+      <BuyCreditsDialog
+        open={buyOpen}
+        onClose={() => setBuyOpen(false)}
+        scope={scope}
+        onPurchased={() => setRefreshTick((n) => n + 1)}
+      />
 
       {error && (
         <p role="alert" data-testid="error" className="mt-4 text-13 text-destructive">

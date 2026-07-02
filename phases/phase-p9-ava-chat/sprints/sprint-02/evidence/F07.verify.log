@@ -1,0 +1,43 @@
+# F07 端到端验证证据 — AI 设置：模型/Agent/工具选择（发送前生效）
+# 执行时间：2026-07-02
+# 分支：tmp-ava-ai-settings-verify (origin/codex/issue-106-ava-ai-settings-isolated)
+# 验证 spec：apps/web/e2e/ava-ai-settings.spec.ts
+
+## 环境准备
+
+### 系统负载
+uptime: load averages: 6.40 14.45 15.19 (1min/5min/15min)
+
+### Docker Compose 容器状态（infra/docker-compose.yml, project: tmp-ava-ai-settings-verify）
+NAME                                    IMAGE                                      STATUS
+tmp-ava-ai-settings-verify-minio-1      minio/minio:RELEASE.2024-08-17T01-24-54Z   Up (healthy) ports: 0.0.0.0:60961->9000/tcp, 0.0.0.0:60962->9001/tcp
+tmp-ava-ai-settings-verify-postgres-1   pgvector/pgvector:pg16                     Up (healthy) ports: 0.0.0.0:60956->5432/tcp
+tmp-ava-ai-settings-verify-redis-1      redis:7                                    Up (healthy) ports: 0.0.0.0:60957->6379/tcp
+
+### 端口分配（init-worktree-env.sh 隔离分配）
+  project name : tmp-ava-ai-settings-verify
+  postgres     : localhost:60956
+  redis        : localhost:60957
+  minio        : localhost:60961 / console localhost:60962
+  web/e2e      : localhost:60958
+
+### 迁移结果
+→ 应用：001_init.sql ✓ ... 018_ava_message_attachments.sql ✓
+迁移完成（共 28 个迁移文件全部成功）
+
+## playwright 测试输出
+
+Running 3 tests using 1 worker
+
+  ✓  1 [chromium] › ava-ai-settings.spec.ts:12:5 › 模型/Agent/工具选择在发送前生效，并由 stub 回复回显 (19.3s)
+  ✓  2 [chromium] › ava-ai-settings.spec.ts:37:5 › 普通团队成员不可选择 team-restricted 模型 (2.4s)
+  ✓  3 [chromium] › ava-ai-settings.spec.ts:57:5 › 受限模型被伪造提交时服务端回退默认模型 (648ms)
+
+  Slow test file: [chromium] › ava-ai-settings.spec.ts (22.4s)
+  Consider splitting slow test files to speed up parallel execution
+  3 passed (29.0s)
+
+## 结论
+exit code: 0
+3/3 通过，0 失败，0 跳过
+首次运行即干净全绿，无重试。
