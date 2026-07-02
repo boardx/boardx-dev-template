@@ -1,14 +1,21 @@
 # 会话交接 — Sprint p9/02
 
 ## 当前已验证
-- F02 聊天线程列表 CRUD 已在隔离 worktree `/private/tmp/boardx-worktrees/issue-101-ava-f02` 落地并通过用户指定 verification。
-- 验证证据: `phases/phase-p9-ava-chat/sprints/sprint-02/evidence/F02.verify.log`
-- 成功命令:
-  - `docker compose -f infra/docker-compose.yml up -d`
-  - `pnpm --filter @repo/data run migrate`
-  - `pnpm --filter @repo/web exec playwright test e2e/ava-threads.spec.ts`
+- F03「编辑/删除消息 + 重新生成后续回复」已由 harness 升级为 `passing`。
+- 验证命令: `pnpm harness verify --sprint p9/02 --feature F03`。
+- 证据: `phases/phase-p9-ava-chat/sprints/sprint-02/evidence/F03.verify.log`。
+- F02 聊天线程列表 CRUD 已在隔离 worktree `/private/tmp/boardx-worktrees/issue-101-ava-f02` 落地并通过用户指定 verification（并入 main）。
+- F02 验证证据: `phases/phase-p9-ava-chat/sprints/sprint-02/evidence/F02.verify.log`
 
-## 本轮改动
+## 本轮改动（F03）
+- `apps/web/app/(app)/ava/page.tsx`: 增加最后用户消息编辑/删除 UI、确认删除、失败态展示和 SSE 更新处理。
+- `apps/web/app/api/ava/threads/[id]/messages/[messageId]/route.ts`: 增加 PATCH/DELETE 接口，只允许编辑/删除最后一条用户消息。
+- `apps/web/app/api/ava/threads/[id]/messages/reply-stream.ts`: 抽出 AVA SSE 回复生成逻辑，支持 updated/token/done/error 事件。
+- `packages/data/src/avaChat.ts`: 增加编辑/删除最后用户消息并清理后续回复的事务方法。
+- `apps/web/e2e/ava-edit-delete-message.spec.ts`: 覆盖编辑重生成、取消、空内容校验、删除确认和失败保留用户消息。
+- Worktree 本地环境使用独立端口，避免和其他 agent worktree 复用服务。
+
+## 此前改动（F02，已并入 main）
 - `apps/web/app/(app)/ava/page.tsx`: 线程列表按日期分组、分页加载、选中态、重命名、删除、删除当前线程后进入空状态。
 - `apps/web/app/api/ava/threads/route.ts`: 线程列表分页响应 `hasMore/nextCursor`。
 - `apps/web/app/api/ava/threads/[id]/route.ts`: 当前 team/user 上下文校验，新增 PATCH rename 和 DELETE。
@@ -19,17 +26,13 @@
 - `phases/phase-p9-ava-chat/sprints/sprint-02/evidence/F02.verify.log`: 验证输出。
 
 ## 仍损坏或未验证
-- 未运行完整 `pnpm -w run verify:base`。
-- 未把 F02 手动改为 `passing`；应继续由 harness verify/status 门控推进。
+- 无。第一次正式 verify 的基础验证被 `@repo/auth` 密码 hash 单测 5s 超时拦住；停止临时 dev server 后重跑同一命令已通过。
 
 ## 下一步最佳动作
-- 若需要 harness 状态推进，运行 `pnpm harness verify --sprint p9/02 --feature F02`，不要手改 `feature_list.json` 的 status。
-- 若准备交付，先审阅当前 diff，只包含 F02 和隔离验证支撑改动后再提交。
+- 提交当前 worktree，推送 `codex/issue-102-ava-f03-isolated`，打开关联 #102 的 draft PR。
+- 不要手改 `active-features.json`，不要手动把状态改为 passing。
 
 ## 命令
-- 启动: `pnpm -w run dev`
-- 验证: `pnpm harness verify --sprint p9/02`
-- F02 verification:
-  - `docker compose -f infra/docker-compose.yml up -d`
-  - `pnpm --filter @repo/data run migrate`
-  - `pnpm --filter @repo/web exec playwright test e2e/ava-threads.spec.ts`
+- 启动:`pnpm -w run dev`
+- 验证:`pnpm harness verify --sprint p9/02 --feature F03`
+- 调试:`pnpm --filter @repo/web exec playwright test e2e/ava-edit-delete-message.spec.ts`

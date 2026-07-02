@@ -114,8 +114,28 @@ export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
   sql: string,
   params: unknown[] = []
 ): Promise<T[]> {
-  const res = await getPool().query<T>(sql, params as never[]);
-  return res.rows;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const res = await getPool().query<T>(sql, params as never[]);
+      return res.rows;
+    } catch (err) {
+      if (attempt === 2 || !isTransientDbError(err)) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+    }
+  }
+  return [];
+}
+
+function isTransientDbError(err: unknown): boolean {
+  const code = typeof err === "object" && err && "code" in err ? String((err as { code?: unknown }).code) : "";
+  const message = err instanceof Error ? err.message : String(err);
+  return (
+    code === "57P03" ||
+    code === "ECONNRESET" ||
+    code === "ECONNREFUSED" ||
+    message.includes("database system is in recovery mode") ||
+    message.includes("Connection terminated unexpectedly")
+  );
 }
 
 export async function closePool(): Promise<void> {
