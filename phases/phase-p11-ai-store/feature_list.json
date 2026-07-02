@@ -29,7 +29,7 @@
       "title": "创建/更新 AI Store 项目（各类型创建器 + 草稿/发布/提交审核）",
       "user_visible_behavior": "在 Create 视图选类型（Agent/工具/模板/图片工具）打开对应创建器填写（名称/描述/配置/图标/可见范围）：POST/PATCH /api/ai-store/items 落库；可存草稿、发布到个人/团队，或提交平台审核（进入 PENDING）；必填校验失败禁止提交；拥有者在 Create/Authorized 列表看到自己项目并可编辑。",
       "design_ref": "prototype:<!-- store create modal --> + <!-- STORE -->（Create / Authorized / Shared 视图）；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "02",
       "owner": "wrk-codex-store-1",
       "capability": "CAP-DATA",
@@ -42,7 +42,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ai-store-002-create-update-item.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-07-02T04:33:40.851Z",
       "notes": "uc-ai-store-002。Agent 创建器产出的 Agent 后续供 p9-F07 AVA Agent 选择器消费。审核状态机 draft/published/PENDING/APPROVED/REJECTED。依赖 F01。"
     },
     {
@@ -52,9 +52,9 @@
       "title": "订阅并使用项目（个人/团队订阅 + 使用入口带入 AVA/工具/模板）",
       "user_visible_behavior": "在详情或卡片点订阅：POST /api/ai-store/items/:id/subscribe 记录个人或团队订阅，按钮变已订阅并出现在「已订阅」；点使用把该 Agent/工具/模板带入使用场景（Agent→打开带该 Agent 的 AVA 会话；模板→创建对应内容；工具→在 AVA 工具集可选）；已订阅可取消；无权限/未发布项目不可订阅。",
       "design_ref": "prototype:<!-- STORE -->（Subscribe 视图 + 卡片订阅/使用按钮）+ <!-- store detail modal -->（使用入口）；DESIGN.md tokens",
-      "status": "blocked",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "04",
+      "owner": "wrk-store-1",
       "capability": "CAP-DATA",
       "depends_on": [
         "F02",
@@ -67,7 +67,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/ai-store-003-subscribe-use-item.spec.ts"
       ],
       "evidence": "",
-      "notes": "uc-ai-store-003。订阅数据层可独立做，但「使用」端到端依赖 p9（Agent 带入 AVA 会话）：p9 未就绪则使用入口只做订阅+禁用态占位。故整体 blocked-on p9；订阅纯数据部分可拆出先行。依赖 F01/F02。"
+      "notes": "【2026-07-02 解锁：F02+p9:F01 已 passing，blocked→not_started】uc-ai-store-003。订阅数据层可独立做，但「使用」端到端依赖 p9（Agent 带入 AVA 会话）：p9 未就绪则使用入口只做订阅+禁用态占位。故整体 blocked-on p9；订阅纯数据部分可拆出先行。依赖 F01/F02。"
     },
     {
       "id": "F04",
