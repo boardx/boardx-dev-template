@@ -1,10 +1,10 @@
-# Sprint p13/06 — F06 发布暂停问卷
+# Sprint p13/06 — Publish/pause survey (public answer gate)
 
 - **所属阶段**: Phase p13 (survey)
-- **创建于**: 2026-07-02 15:37:47
+- **创建于**: 2026-07-02 15:44:06
 
 ## 本 sprint 目标
-F06 发布暂停问卷
+Publish/pause survey (public answer gate)
 
 ## 领取的 feature(引用自阶段权威清单,按 id)
 - F06 (P2, survey) — 发布/暂停问卷（公开答题开关）
