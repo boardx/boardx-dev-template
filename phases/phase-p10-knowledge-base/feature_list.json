@@ -75,7 +75,7 @@
       "title": "AI 引用知识库上下文（RAG 检索 + 作用域隔离）",
       "user_visible_behavior": "在 AVA/Agent/AI Tool 回答时选择或自动使用当前上下文中已 ready 的知识库文件：检索相关切片注入 prompt，回复中标注引用来源；只检索用户有权访问且处理完成的文件；未处理完成的文件显示「处理中不可用」；无相关内容时回复不虚构来源。",
       "design_ref": "prototype:<!-- AVA -->（RAG 引用发生在 AVA 回答链路，无独立屏；completed 文件状态见 <!-- KNOWLEDGE BASE -->）；DESIGN.md tokens",
-      "status": "passing",
+      "status": "in_progress",
       "sprint": "04",
       "owner": "wrk-kb-1",
       "capability": "CAP-AI",
