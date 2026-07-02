@@ -133,12 +133,18 @@ importers:
 
   apps/workflow-worker:
     dependencies:
+      '@repo/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@repo/data':
         specifier: workspace:*
         version: link:../../packages/data
       '@repo/queue':
         specifier: workspace:*
         version: link:../../packages/queue
+      '@repo/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
     devDependencies:
       '@types/node':
         specifier: '*'

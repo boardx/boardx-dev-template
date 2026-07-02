@@ -1,0 +1,36 @@
+# F02 端到端验证证据
+# feature: 问卷列表管理（My/Team Surveys + 卡片操作）
+# date: 2026-07-02
+# branch: tmp-survey-verify (origin/codex/issue-125-survey-f02-isolated)
+# worktree: /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a86d559824e856934
+
+## 系统状态
+load average: 7.47 5.79 5.43 (正常，远低于 20 阈值)
+
+## 基础设施
+docker compose -f infra/docker-compose.yml up -d
+→ project: tmp-survey-verify
+→ postgres: localhost:53285 (healthy)
+→ redis:    localhost:53286 (healthy)
+→ minio:    localhost:53288 (healthy)
+
+## 迁移
+pnpm --filter @repo/data run migrate
+→ 共 27 个迁移文件，全部成功（含 016_survey.sql）
+
+## Playwright 验证
+命令: corepack pnpm --filter @repo/web exec playwright test e2e/survey-002-list-manage-surveys.spec.ts
+E2E_PORT: 53287
+
+Running 3 tests using 1 worker
+
+  ✓  1 [chromium] › survey-002-list-manage-surveys.spec.ts:34:5 › 空态：新用户进入 /surveys 后可创建第一个问卷 (4.6s)
+  ✓  2 [chromium] › survey-002-list-manage-surveys.spec.ts:41:5 › My surveys 卡片展示字段，并支持 View/Edit/Preview/Share/Activate/Pause/Delete (2.7s)
+  ✓  3 [chromium] › survey-002-list-manage-surveys.spec.ts:82:5 › Team surveys 只显示当前团队上下文内且有权限的问卷 (1.2s)
+
+  3 passed (15.3s)
+
+exit code: 0
+
+## 结论
+全部 3/3 用例通过，exit code 0，无需重试。

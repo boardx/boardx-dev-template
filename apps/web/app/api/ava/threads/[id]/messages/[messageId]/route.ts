@@ -5,7 +5,7 @@ import {
   listAvaMessages,
   replaceLastAvaUserMessageAndDeleteFollowing,
 } from "@repo/data";
-import { currentUser } from "@/lib/session";
+import { currentTeamId, currentUser } from "@/lib/session";
 import { createAvaReplyStreamResponse } from "../reply-stream";
 
 export const runtime = "nodejs";
@@ -18,12 +18,24 @@ function parseIds(params: { id: string; messageId: string }): { threadId: number
   return { threadId, messageId };
 }
 
+function isThreadInCurrentContext(
+  thread: { user_id: number | string; team_id: number | string | null },
+  userId: number,
+  teamId: number | null
+): boolean {
+  const sameUser = String(thread.user_id) === String(userId);
+  const sameTeam = thread.team_id == null ? teamId == null : teamId != null && String(thread.team_id) === String(teamId);
+  return sameUser && sameTeam;
+}
+
 async function assertOwner(threadId: number): Promise<Response | undefined> {
   const user = await currentUser();
   if (!user) return Response.json({ error: "未登录" }, { status: 401 });
 
   const thread = await getAvaThread(threadId);
-  if (!thread || thread.user_id !== user.id) {
+  // 鉴权同时校验 user_id 与 team_id：与 threads/[id]/route.ts、threads/[id]/messages/route.ts
+  // 保持一致，修复 #153 同类跨团队越权读/写风险。
+  if (!thread || !isThreadInCurrentContext(thread, user.id, currentTeamId())) {
     return Response.json({ error: "线程不存在" }, { status: 404 });
   }
   return undefined;
