@@ -35,8 +35,9 @@ test("聊天头部分享：生成/复用/复制链接，公开只读页可访问
   await expect(page.getByTestId("share-link")).toHaveValue(shareUrl);
 
   const url = new URL(shareUrl);
+  const apiPath = `/api${url.pathname}${url.search}`;
   const anon = await playwright.request.newContext({ baseURL });
-  const anonRes = await anon.get(`${url.pathname}${url.search}`);
+  const anonRes = await anon.get(apiPath);
   expect(anonRes.status()).toBe(200);
   await anon.dispose();
 
@@ -53,7 +54,7 @@ test("聊天头部分享：生成/复用/复制链接，公开只读页可访问
   await page.getByTestId("share-disable").click();
   await expect(page.getByTestId("share-copy-status")).toContainText("分享已关闭");
 
-  const disabledRes = await page.request.get(`${url.pathname}${url.search}`);
+  const disabledRes = await page.request.get(apiPath);
   expect(disabledRes.status()).toBe(403);
 
   await context.clearCookies();
