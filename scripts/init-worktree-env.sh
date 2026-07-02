@@ -58,6 +58,10 @@ upsert() {
 upsert "DATABASE_URL" "postgresql://boardx:boardx@localhost:${pg_port}/boardx" "$env_local"
 upsert "REDIS_URL" "redis://localhost:${redis_port}" "$env_local"
 upsert "E2E_PORT" "${web_port}" "$env_local"
+# packages/storage/src/index.ts 读 S3_ENDPOINT（默认 localhost:9090），不读 MINIO_PORT——
+# 之前只写了 MINIO_PORT/MINIO_CONSOLE_PORT，导致上传接口连去默认端口/无人监听的 9090，
+# 在这个 worktree 隔离出的 MinIO 容器上传全部 502（kb-004 RAG e2e 门控验证时发现）。
+upsert "S3_ENDPOINT" "http://localhost:${minio_port}" "$env_local"
 
 touch .env
 upsert "COMPOSE_PROJECT_NAME" "$project_name" ".env"
@@ -69,6 +73,7 @@ upsert "REDIS_URL" "redis://localhost:${redis_port}" ".env"
 upsert "E2E_PORT" "${web_port}" ".env"
 upsert "MINIO_PORT" "${minio_port}" ".env"
 upsert "MINIO_CONSOLE_PORT" "${minio_console_port}" ".env"
+upsert "S3_ENDPOINT" "http://localhost:${minio_port}" ".env"
 
 # `docker compose -f infra/docker-compose.yml ...` uses the compose file's directory as
 # project directory, so it reads infra/.env（= $compose_env）rather than the repo root .env.

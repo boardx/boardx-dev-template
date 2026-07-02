@@ -75,7 +75,7 @@
       "title": "AI 引用知识库上下文（RAG 检索 + 作用域隔离）",
       "user_visible_behavior": "在 AVA/Agent/AI Tool 回答时选择或自动使用当前上下文中已 ready 的知识库文件：检索相关切片注入 prompt，回复中标注引用来源；只检索用户有权访问且处理完成的文件；未处理完成的文件显示「处理中不可用」；无相关内容时回复不虚构来源。",
       "design_ref": "prototype:<!-- AVA -->（RAG 引用发生在 AVA 回答链路，无独立屏；completed 文件状态见 <!-- KNOWLEDGE BASE -->）；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "04",
       "owner": "wrk-kb-1",
       "capability": "CAP-AI",
@@ -89,7 +89,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/kb-004-use-file-in-ai-context.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F04.verify.log @ 2026-07-02T15:02:32.570Z",
       "notes": "uc-kb-004。blocked-on p9：RAG 注入需 p9 的 CAP-AI 回答链路（AVA/Agent）作为落点，p9 未完成则无处挂载检索结果。F01-F03（文件 CRUD）可独立先做；F04 待 p9 就绪后接通并转 not_started。检索必须作用域隔离，不跨团队/跨用户泄露。"
     }
   ]
