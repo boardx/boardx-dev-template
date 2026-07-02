@@ -1,0 +1,73 @@
+# F03 E2E Verification Evidence
+# Feature: 编辑/删除消息 + 重新生成后续回复
+# Date: 2026-07-02T03:28:00.000Z
+# Branch: codex/issue-102-ava-f03-isolated (PR #176)
+# Worktree: agent-a3315616ba385bbec / tmp-ava-edit-verify
+
+## Environment
+- Platform: darwin (macOS 23.5.0)
+- Node: worktree-isolated
+- Docker Compose Project: tmp-ava-edit-verify
+- Postgres: localhost:55863 (healthy)
+- Redis: localhost:55864 (healthy)
+- MinIO: localhost:55868 (healthy)
+- E2E_PORT (Next.js dev): 55865
+
+## Steps Executed
+
+### Step 1: Load Check
+$ uptime
+11:27  up  1:02, 1 user, load averages: 17.98 17.30 14.55
+→ Load < 20, proceeded immediately.
+
+### Step 2: Checkout PR Branch
+$ git fetch origin --prune && git checkout -b tmp-ava-edit-verify origin/codex/issue-102-ava-f03-isolated
+→ Switched to a new branch 'tmp-ava-edit-verify'
+
+### Step 3: Infra Init
+$ bash scripts/init-worktree-env.sh
+→ Port allocation: pg=55863 redis=55864 minio=55868/55869 web=55865
+→ Wrote apps/web/.env.local, .env, infra/.env
+
+$ docker compose -f infra/docker-compose.yml up -d
+→ All 3 containers started: postgres, redis, minio
+
+$ docker compose -f infra/docker-compose.yml ps
+NAME                             IMAGE                  STATUS
+tmp-ava-edit-verify-minio-1      minio/minio:...        Up (healthy)
+tmp-ava-edit-verify-postgres-1   pgvector/pgvector:pg16 Up (healthy)
+tmp-ava-edit-verify-redis-1      redis:7                Up (healthy)
+
+### Step 4: Dependencies + Migration
+$ corepack pnpm install --frozen-lockfile
+→ 347 packages, Done in 4s
+
+$ corepack pnpm --filter @repo/data run migrate
+→ Applied 28 migrations (001_init.sql through 018_ava_message_attachments.sql)
+→ "迁移完成。" (exit 0)
+
+### Step 5: F03 Playwright Spec
+
+$ corepack pnpm --filter @repo/web exec playwright test e2e/ava-edit-delete-message.spec.ts
+
+Running 2 tests using 1 worker
+
+  ✓  1 [chromium] › ava-edit-delete-message.spec.ts:17:5 › 最后一条用户消息可编辑并重生成；非最后消息隐藏入口；删除最后一次请求需确认 (16.9s)
+  ✓  2 [chromium] › ava-edit-delete-message.spec.ts:57:5 › 编辑后重新生成失败时展示提示且用户消息保持可见 (1.0s)
+
+  Slow test file: [chromium] › ava-edit-delete-message.spec.ts (17.9s)
+  Consider splitting slow test files to speed up parallel execution
+  2 passed (25.9s)
+
+Exit code: 0
+
+## Assertions Verified
+- [PASS] Non-last user messages hide edit entry (data-testid="msg-edit" count=1, not 2)
+- [PASS] Cancel edit restores original text ("第二条原文" preserved, "取消文本" not shown)
+- [PASS] Empty-text validation shows error (data-testid="msg-edit-error" contains "消息不能为空")
+- [PASS] Save edit updates message text + triggers AI re-generation
+- [PASS] Delete last request shows confirmation dialog (data-testid="msg-delete-confirm")
+- [PASS] Confirmed delete removes user msg + AI reply (count drops 2→1)
+- [PASS] Failed re-generation shows error state (data-testid="msg-failed" + "send-error" visible)
+
+## Verdict: ALL PASSING (2/2) — exit 0
