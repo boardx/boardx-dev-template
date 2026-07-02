@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 const uniq = () => `ts_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
+const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
 test("创建两个团队并切换当前团队", async ({ page }) => {
   const email = uniq();
@@ -29,7 +30,7 @@ test("创建两个团队并切换当前团队", async ({ page }) => {
 
 test("不能切换到未加入的团队", async ({ page, playwright }) => {
   // 用户 A 建团队
-  const a = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  const a = await playwright.request.newContext({ baseURL: BASE_URL });
   await a.post("/api/auth/register", {
     data: { firstName: "A", lastName: "A", email: uniq(), password: "secret123", agreeTerms: true },
   });
