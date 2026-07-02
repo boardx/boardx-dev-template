@@ -2,7 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "./route";
 import { POST } from "./messages/route";
 import { currentTeamId, currentUser } from "@/lib/session";
-import { getAvaThread, insertAvaMessage, listAvaAttachmentsByMessageIds, listAvaMessages } from "@repo/data";
+import {
+  getAvaThread,
+  insertAvaMessage,
+  listAvaAttachmentsByMessageIds,
+  listAvaMessageFeedbackByMessageIds,
+  listAvaMessages,
+} from "@repo/data";
 
 vi.mock("@/lib/session", () => ({
   currentUser: vi.fn(),
@@ -14,6 +20,7 @@ vi.mock("@repo/data", () => ({
   getAvaThread: vi.fn(),
   insertAvaMessage: vi.fn(),
   listAvaAttachmentsByMessageIds: vi.fn(),
+  listAvaMessageFeedbackByMessageIds: vi.fn(),
   listAvaMessages: vi.fn(),
   renameAvaThread: vi.fn(),
   renameAvaThreadIfDefault: vi.fn(),
@@ -36,6 +43,7 @@ const mockGetAvaThread = vi.mocked(getAvaThread);
 const mockInsertAvaMessage = vi.mocked(insertAvaMessage);
 const mockListAvaMessages = vi.mocked(listAvaMessages);
 const mockListAvaAttachmentsByMessageIds = vi.mocked(listAvaAttachmentsByMessageIds);
+const mockListAvaMessageFeedbackByMessageIds = vi.mocked(listAvaMessageFeedbackByMessageIds);
 
 const params = { params: { id: "42" } };
 const user = { id: 7 };
@@ -56,6 +64,7 @@ describe("AVA thread team context access checks", () => {
     mockGetAvaThread.mockResolvedValue(teamThread);
     mockListAvaMessages.mockResolvedValue([]);
     mockListAvaAttachmentsByMessageIds.mockResolvedValue(new Map());
+    mockListAvaMessageFeedbackByMessageIds.mockResolvedValue(new Map());
   });
 
   it("rejects reading a same-user team thread from another team context", async () => {

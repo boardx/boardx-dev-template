@@ -8,6 +8,7 @@ import {
   deleteAvaThread,
   getAvaThread,
   listAvaAttachmentsByMessageIds,
+  listAvaMessageFeedbackByMessageIds,
   listAvaMessages,
   renameAvaThread,
 } from "@repo/data";
@@ -40,10 +41,13 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   }
 
   const messages = await listAvaMessages(threadId);
-  const attachmentsByMessage = await listAvaAttachmentsByMessageIds(messages.map((m) => m.id));
+  const messageIds = messages.map((m) => m.id);
+  const attachmentsByMessage = await listAvaAttachmentsByMessageIds(messageIds);
+  const feedbackByMessage = await listAvaMessageFeedbackByMessageIds(messageIds, user.id);
   const messagesWithAttachments = messages.map((m) => ({
     ...m,
     attachments: attachmentsByMessage.get(m.id) ?? [],
+    feedback: feedbackByMessage.get(m.id) ?? null,
   }));
   return NextResponse.json({ thread, messages: messagesWithAttachments });
 }
