@@ -8,12 +8,13 @@
 // 选中线程或新建聊天后切到聊天视图（带返回入口）。
 //
 // OUT OF SCOPE（本 feature 不做，留给后续 F02-F11）：线程重命名/删除/分页、
-// 消息编辑/重生成/反馈、分享只读、Deep Research、附件/图片、语音、模型/Agent/工具切换、
+// 消息反馈、分享只读、Deep Research、附件/图片、语音、模型/Agent/工具切换、
 // 建议动作个性化、发送到 Board / 邮件。
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, ArrowUp, Sparkles, ArrowLeft } from "lucide-react";
+import { Plus, ArrowUp, Sparkles, ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { MarkdownMessage } from "./markdown-message";
 
 interface ThreadSummary {
@@ -26,6 +27,11 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   status: "complete" | "failed";
+}
+
+function keepThroughMessageId(messages: Message[], messageId: number): Message[] {
+  const index = messages.findIndex((m) => m.id === messageId);
+  return index === -1 ? messages : messages.slice(0, index + 1);
 }
 
 const SUGGESTIONS = [
@@ -46,6 +52,11 @@ export default function AvaPage() {
   const [streamingText, setStreamingText] = useState("");
   const [error, setError] = useState("");
   const [sendError, setSendError] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editError, setEditError] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   // 移动端视图切换：list-first。桌面端（md 及以上）始终双栏，此状态被 CSS 忽略。
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -95,6 +106,8 @@ export default function AvaPage() {
   async function openThread(id: number) {
     setActiveId(id);
     setSendError("");
+    setEditingId(null);
+    setDeleteConfirmId(null);
     setMessages([]);
     setMobileView("chat");
     try {
@@ -112,6 +125,8 @@ export default function AvaPage() {
     setActiveId(null);
     setMessages([]);
     setSendError("");
+    setEditingId(null);
+    setDeleteConfirmId(null);
     setDraft("");
     setMobileView("chat");
   }
@@ -180,6 +195,114 @@ export default function AvaPage() {
     }
   }
 
+  function startEdit(message: Message) {
+    setEditingId(message.id);
+    setEditText(message.content);
+    setEditError("");
+    setDeleteConfirmId(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditText("");
+    setEditError("");
+  }
+
+  async function saveEdit(messageId: number) {
+    const text = editText.trim();
+    if (!text) {
+      setEditError("消息不能为空");
+      return;
+    }
+    if (activeId == null || sending) return;
+
+    setSending(true);
+    setSendError("");
+    setEditError("");
+    setStreamingText("");
+
+    try {
+      const res = await fetch(`/api/ava/threads/${activeId}/messages/${messageId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (guard(res.status)) return;
+      if (!res.ok || !res.body) {
+        const errBody = await res.json().catch(() => ({}));
+        setEditError(errBody?.errors?.text ?? errBody?.error ?? "保存失败，请重试");
+        return;
+      }
+
+      setMessages((prev) =>
+        keepThroughMessageId(
+          prev.map((m) => (m.id === messageId ? { ...m, content: text, status: "complete" } : m)),
+          messageId
+        )
+      );
+      setEditingId(null);
+      setEditText("");
+      await consumeSse(res.body, {
+        onUser: () => {},
+        onUpdated: (msg: Message) => {
+          setMessages((prev) =>
+            keepThroughMessageId(
+              prev.map((m) => (m.id === msg.id ? msg : m)),
+              msg.id
+            )
+          );
+        },
+        onToken: (token: string) => {
+          setStreamingText((prev) => prev + token);
+        },
+        onDone: (msg: Message) => {
+          setMessages((prev) => [...prev, msg]);
+          setStreamingText("");
+        },
+        onError: (msg: Message) => {
+          setMessages((prev) => [...prev, msg]);
+          setStreamingText("");
+          setSendError("AVA 生成回复失败，请重试。");
+        },
+      });
+      await refreshThreads();
+    } catch {
+      setEditError("保存失败，请重试");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function deleteLastRequest(messageId: number) {
+    if (activeId == null || deletingId != null) return;
+    setDeletingId(messageId);
+    setSendError("");
+    setEditError("");
+
+    try {
+      const res = await fetch(`/api/ava/threads/${activeId}/messages/${messageId}`, {
+        method: "DELETE",
+      });
+      if (guard(res.status)) return;
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        setSendError(errBody?.error ?? "删除失败，请重试");
+        return;
+      }
+      setMessages((prev) => {
+        const index = prev.findIndex((m) => m.id === messageId);
+        return index === -1 ? prev : prev.slice(0, index);
+      });
+      setDeleteConfirmId(null);
+      setEditingId(null);
+      await refreshThreads();
+    } catch {
+      setSendError("删除失败，请重试");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   function onComposerKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -188,6 +311,7 @@ export default function AvaPage() {
   }
 
   const isEmptyThread = messages.length === 0 && !sending;
+  const lastUserMessageId = [...messages].reverse().find((m) => m.role === "user")?.id ?? null;
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -298,8 +422,131 @@ export default function AvaPage() {
                           </span>
                         )}
                         {m.role === "user" ? (
-                          <div className="whitespace-pre-wrap rounded-12 bg-surface-1 px-4 py-2.5 text-sm leading-relaxed text-foreground">
-                            {m.content}
+                          <div className="flex max-w-[85%] flex-col items-end gap-2">
+                            {editingId === m.id ? (
+                              <div
+                                data-testid="msg-edit-panel"
+                                className="w-full rounded-12 border border-border bg-background p-3"
+                              >
+                                <div
+                                  data-testid={`msg-user-content-${m.id}`}
+                                  className="mb-2 whitespace-pre-wrap rounded-12 bg-surface-1 px-4 py-2.5 text-sm leading-relaxed text-foreground"
+                                >
+                                  {m.content}
+                                </div>
+                                <label htmlFor={`msg-edit-${m.id}`} className="sr-only">
+                                  Edit message
+                                </label>
+                                <Textarea
+                                  id={`msg-edit-${m.id}`}
+                                  data-testid="msg-edit-input"
+                                  value={editText}
+                                  onChange={(e) => {
+                                    setEditText(e.target.value);
+                                    if (editError) setEditError("");
+                                  }}
+                                  className="min-h-20 resize-none"
+                                  disabled={sending}
+                                />
+                                {editError && (
+                                  <p
+                                    role="alert"
+                                    data-testid="msg-edit-error"
+                                    className="mt-2 text-xs text-destructive"
+                                  >
+                                    {editError}
+                                  </p>
+                                )}
+                                <div className="mt-2 flex justify-end gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    data-testid="msg-edit-cancel"
+                                    onClick={cancelEdit}
+                                    disabled={sending}
+                                  >
+                                    取消
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    data-testid="msg-edit-save"
+                                    onClick={() => void saveEdit(m.id)}
+                                    disabled={sending}
+                                  >
+                                    {sending ? "保存中…" : "保存"}
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div
+                                data-testid={`msg-user-content-${m.id}`}
+                                className="whitespace-pre-wrap rounded-12 bg-surface-1 px-4 py-2.5 text-sm leading-relaxed text-foreground"
+                              >
+                                {m.content}
+                              </div>
+                            )}
+
+                            {m.id === lastUserMessageId && editingId !== m.id && (
+                              <div className="flex flex-col items-end gap-2">
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    data-testid="msg-edit"
+                                    className="h-7 px-2 text-11 text-muted-foreground"
+                                    onClick={() => startEdit(m)}
+                                    disabled={sending || deletingId != null}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />
+                                    编辑
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    data-testid="msg-delete"
+                                    className="h-7 px-2 text-11 text-destructive"
+                                    onClick={() => setDeleteConfirmId(m.id)}
+                                    disabled={sending || deletingId != null}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                                    删除最后一次请求
+                                  </Button>
+                                </div>
+                                {deleteConfirmId === m.id && (
+                                  <div className="rounded-12 border border-destructive/40 bg-background p-3">
+                                    <p data-testid="msg-delete-confirm" className="text-11 text-foreground">
+                                      确认删除最后一次请求及其后续回复？
+                                    </p>
+                                    <div className="mt-2 flex justify-end gap-2">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        data-testid="msg-delete-cancel"
+                                        onClick={() => setDeleteConfirmId(null)}
+                                        disabled={deletingId === m.id}
+                                      >
+                                        取消
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="destructive"
+                                        size="sm"
+                                        data-testid="msg-delete-confirm-action"
+                                        onClick={() => void deleteLastRequest(m.id)}
+                                        disabled={deletingId === m.id}
+                                      >
+                                        {deletingId === m.id ? "删除中…" : "确认删除"}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ) : m.status === "failed" ? (
                           <div data-testid="msg-failed" className="text-sm leading-relaxed text-destructive">
@@ -375,6 +622,7 @@ export default function AvaPage() {
 
 interface SseHandlers {
   onUser: (msg: Message) => void;
+  onUpdated?: (msg: Message) => void;
   onToken: (token: string) => void;
   onDone: (msg: Message) => void;
   onError: (msg: Message) => void;
@@ -409,6 +657,7 @@ function dispatchSseEvent(raw: string, handlers: SseHandlers): void {
   if (!data) return;
   const parsed = JSON.parse(data);
   if (event === "user") handlers.onUser(parsed.message);
+  else if (event === "updated") handlers.onUpdated?.(parsed.message);
   else if (event === "token") handlers.onToken(parsed.token);
   else if (event === "done") handlers.onDone(parsed.message);
   else if (event === "error") handlers.onError(parsed.message);

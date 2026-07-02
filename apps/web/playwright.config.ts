@@ -1,10 +1,27 @@
 import { defineConfig, devices } from "@playwright/test";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 // e2e 配置：webServer 用 next dev（免 build，DATABASE_URL 从环境继承）。
 // 已有该端口在跑则复用（reuseExistingServer）。
 // 端口可用 E2E_PORT 覆盖（默认 3000）——多个 worktree 并行跑 e2e 时，"复用已有 server"
 // 会复用到别的 worktree/分支的 server，测出来的是别人的代码；scripts/init-worktree-env.sh
 // 会给每个 worktree 分配独立的 E2E_PORT 写进 apps/web/.env.local 来避免这个问题。
+function loadLocalEnv() {
+  const envFile = join(process.cwd(), ".env.local");
+  if (!existsSync(envFile)) return;
+  for (const line of readFileSync(envFile, "utf8").split("\n")) {
+    const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
+    const key = match?.[1];
+    const value = match?.[2];
+    if (key && value !== undefined && !process.env[key]) {
+      process.env[key] = value;
+    }
+  }
+}
+
+loadLocalEnv();
+
 const PORT = process.env.E2E_PORT || "3000";
 
 export default defineConfig({

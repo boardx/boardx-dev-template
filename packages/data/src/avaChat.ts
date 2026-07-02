@@ -1,5 +1,5 @@
 // packages/data/src/avaChat.ts — CAP-DATA AVA 聊天仓储（ava_threads / ava_messages，P9 F01）
-import { query } from "./index";
+import { getPool, query } from "./index";
 
 export interface AvaThread {
   id: number;
@@ -116,4 +116,84 @@ export async function updateAvaMessage(
     content,
     status,
   ]);
+}
+
+export async function replaceLastAvaUserMessageAndDeleteFollowing(
+  threadId: number,
+  messageId: number,
+  content: string
+): Promise<AvaMessage | undefined> {
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const lastUser = await client.query<AvaMessage>(
+      `SELECT id, thread_id, role, content, status, created_at
+       FROM ava_messages
+       WHERE thread_id = $1 AND role = 'user'
+       ORDER BY id DESC
+       LIMIT 1
+       FOR UPDATE`,
+      [threadId]
+    );
+    if (Number(lastUser.rows[0]?.id) !== messageId) {
+      await client.query("ROLLBACK");
+      return undefined;
+    }
+
+    const updated = await client.query<AvaMessage>(
+      `UPDATE ava_messages
+       SET content = $3, status = 'complete'
+       WHERE thread_id = $1 AND id = $2 AND role = 'user'
+       RETURNING id, thread_id, role, content, status, created_at`,
+      [threadId, messageId, content]
+    );
+    await client.query(`DELETE FROM ava_messages WHERE thread_id = $1 AND id > $2`, [
+      threadId,
+      messageId,
+    ]);
+    await client.query(`UPDATE ava_threads SET updated_at = now() WHERE id = $1`, [threadId]);
+    await client.query("COMMIT");
+    return updated.rows[0];
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteLastAvaUserMessageAndFollowing(
+  threadId: number,
+  messageId: number
+): Promise<boolean> {
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const lastUser = await client.query<AvaMessage>(
+      `SELECT id, thread_id, role, content, status, created_at
+       FROM ava_messages
+       WHERE thread_id = $1 AND role = 'user'
+       ORDER BY id DESC
+       LIMIT 1
+       FOR UPDATE`,
+      [threadId]
+    );
+    if (Number(lastUser.rows[0]?.id) !== messageId) {
+      await client.query("ROLLBACK");
+      return false;
+    }
+
+    await client.query(`DELETE FROM ava_messages WHERE thread_id = $1 AND id >= $2`, [
+      threadId,
+      messageId,
+    ]);
+    await client.query(`UPDATE ava_threads SET updated_at = now() WHERE id = $1`, [threadId]);
+    await client.query("COMMIT");
+    return true;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }

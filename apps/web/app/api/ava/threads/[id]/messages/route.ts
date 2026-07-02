@@ -19,17 +19,12 @@ import {
   renameAvaThreadIfDefault,
   titleFromMessage,
   touchAvaThread,
-  updateAvaMessage,
 } from "@repo/data";
-import { defaultGateway, DEFAULT_MODEL_ID, runChatGraph, makeGenerateNode } from "@repo/ai";
 import { currentUser } from "@/lib/session";
+import { createAvaReplyStreamResponse } from "./reply-stream";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function sseEvent(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-}
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
@@ -58,56 +53,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const history = await listAvaMessages(threadId);
 
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const encoder = new TextEncoder();
-      const send = (event: string, data: unknown) => {
-        controller.enqueue(encoder.encode(sseEvent(event, data)));
-      };
-
-      send("user", { message: userMessage });
-
-      // 生成态占位消息：先插入一条空内容的 assistant 消息（failed 状态起步，
-      // 成功后再回写为 complete + 完整内容），保证异常中断时数据库也有失败态记录。
-      const placeholder = await insertAvaMessage(threadId, "assistant", "", "failed");
-
-      try {
-        const generateNode = makeGenerateNode(defaultGateway.streamChat.bind(defaultGateway));
-        const result = await runChatGraph(
-          {
-            threadId,
-            modelId: DEFAULT_MODEL_ID,
-            messages: history.map((m) => ({ role: m.role, content: m.content })),
-            onToken: (token) => send("token", { token }),
-          },
-          generateNode
-        );
-
-        await updateAvaMessage(placeholder.id, result.reply, "complete");
-        await touchAvaThread(threadId);
-        send("done", {
-          message: { ...placeholder, content: result.reply, status: "complete" },
-        });
-      } catch (err) {
-        const failMessage = "AVA 生成回复失败，请重试。";
-        await updateAvaMessage(placeholder.id, failMessage, "failed");
-        send("error", {
-          message: { ...placeholder, content: failMessage, status: "failed" },
-          error: String(err),
-        });
-      } finally {
-        controller.close();
-      }
-    },
-  });
-
-  return new Response(stream, {
+  return createAvaReplyStreamResponse({
+    threadId,
+    history,
+    initialEvent: { event: "user", data: { message: userMessage } },
     status: 201,
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
-    },
   });
 }

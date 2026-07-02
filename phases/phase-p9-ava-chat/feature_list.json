@@ -52,9 +52,9 @@
       "title": "编辑/删除消息 + 重新生成后续回复",
       "user_visible_behavior": "在最后一条用户消息上点编辑 → 内联编辑面板改文本（非空校验）保存后刷新该消息并重生成后续 AI 回复；点「删除最后一次请求」确认后移除该用户消息及其后 AI 回复；取消恢复原文；非最后消息隐藏编辑入口。失败展示提示且消息保持可见。",
       "design_ref": "prototype:<!-- AVA --> → messages / text message（消息卡片内联编辑/更多操作）；DESIGN.md tokens",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "wrk-codex-ava-2",
       "capability": "CAP-AI",
       "depends_on": [
         "F01"
@@ -65,7 +65,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-edit-delete-message.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-07-02T01:58:27.207Z",
       "notes": "uc-ava-003。编辑/删除只作用于用户可管理消息，不得破坏线程消息顺序。依赖 F01。"
     },
     {

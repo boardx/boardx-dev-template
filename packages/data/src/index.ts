@@ -3,6 +3,8 @@
 // 显式 pg + SQL（不用 ORM），保持透明，便于后续接 pgvector / Apache AGE。
 
 import pg from "pg";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 const { Pool } = pg;
 
@@ -39,8 +41,36 @@ export interface DbConfig {
   connectionString: string;
 }
 
+let envLoaded = false;
+
+function loadDotEnv(): void {
+  if (envLoaded) return;
+  envLoaded = true;
+
+  let dir = process.cwd();
+  for (let i = 0; i < 8; i += 1) {
+    const file = join(dir, ".env");
+    if (existsSync(file)) {
+      for (const line of readFileSync(file, "utf8").split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const eq = trimmed.indexOf("=");
+        if (eq <= 0) continue;
+        const key = trimmed.slice(0, eq).trim();
+        const value = trimmed.slice(eq + 1).trim();
+        if (process.env[key] === undefined) process.env[key] = value;
+      }
+      return;
+    }
+    const next = dirname(dir);
+    if (next === dir) return;
+    dir = next;
+  }
+}
+
 /** 从环境变量解析连接串。优先 DATABASE_URL，否则用 PG* 拼。 */
 export function resolveDbConfig(env: NodeJS.ProcessEnv = process.env): DbConfig {
+  loadDotEnv();
   if (env.DATABASE_URL) return { connectionString: env.DATABASE_URL };
   const host = env.PGHOST ?? "localhost";
   const port = env.PGPORT ?? "5432";
@@ -65,8 +95,28 @@ export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
   sql: string,
   params: unknown[] = []
 ): Promise<T[]> {
-  const res = await getPool().query<T>(sql, params as never[]);
-  return res.rows;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const res = await getPool().query<T>(sql, params as never[]);
+      return res.rows;
+    } catch (err) {
+      if (attempt === 2 || !isTransientDbError(err)) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+    }
+  }
+  return [];
+}
+
+function isTransientDbError(err: unknown): boolean {
+  const code = typeof err === "object" && err && "code" in err ? String((err as { code?: unknown }).code) : "";
+  const message = err instanceof Error ? err.message : String(err);
+  return (
+    code === "57P03" ||
+    code === "ECONNRESET" ||
+    code === "ECONNREFUSED" ||
+    message.includes("database system is in recovery mode") ||
+    message.includes("Connection terminated unexpectedly")
+  );
 }
 
 export async function closePool(): Promise<void> {
