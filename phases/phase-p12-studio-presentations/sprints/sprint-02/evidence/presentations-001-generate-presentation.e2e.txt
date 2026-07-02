@@ -1,0 +1,12 @@
+
+Running 5 tests using 1 worker
+
+  ✓  1 [chromium] › presentations-001-generate-presentation.spec.ts:27:5 › 来源为空（无聊天消息/房间文件）时生成被禁用 (22.2s)
+  ✓  2 [chromium] › presentations-001-generate-presentation.spec.ts:40:5 › 以说明文本为来源：填写说明后可生成，来源为空时禁用 (9.0s)
+  ✓  3 [chromium] › presentations-001-generate-presentation.spec.ts:101:5 › 以当前聊天为来源生成：来源可用后启用生成，预览卡片出现 (23.6s)
+  ✓  4 [chromium] › presentations-001-generate-presentation.spec.ts:123:5 › 生成失败给重试：重试后预览卡片最终出现 (3.2s)
+  ✓  5 [chromium] › presentations-001-generate-presentation.spec.ts:151:5 › 未登录调用生成接口 → 401 (1.6s)
+
+  Slow test file: [chromium] › presentations-001-generate-presentation.spec.ts (59.5s)
+  Consider splitting slow test files to speed up parallel execution
+  5 passed (1.1m)
