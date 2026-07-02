@@ -52,9 +52,9 @@
       "title": "填写并提交问卷（公开答题页）",
       "user_visible_behavior": "答题人无需登录打开公开答题链接 /survey/:id/answer：展示标题/说明/进度与各题控件，按题型校验必填；提交 POST /api/surveys/:id/responses 落库并展示提交成功页；问卷未发布/已暂停/已关闭展示对应不可答题态；重复提交按问卷设置处理。",
       "design_ref": "prototype:<!-- ANSWER / PREVIEW -->（公开答题页 + 进度条 + 各题型控件 + 提交成功）；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "03",
+      "owner": "wrk-codex-survey-2",
       "capability": "CAP-WEB",
       "depends_on": [
         "F01"
@@ -65,7 +65,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/survey-003-answer-survey.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-07-02T03:10:51.278Z",
       "notes": "uc-survey-003。公开页不需登录但受发布状态门控（配合 F06）。依赖 F01。"
     },
     {

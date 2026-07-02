@@ -16,10 +16,10 @@
 | p8 | 实时协作 (P8) | not_started | 4 | 0 | 0 | 0 |
 | p9 | AVA / Chat (P9) | not_started | 7 | 2 | 1 | 1 |
 | p10 | 知识库 (P10) | not_started | 1 | 1 | 1 | 1 |
-| p11 | AI Store (P11) | not_started | 3 | 1 | 1 | 1 |
+| p11 | AI Store (P11) | not_started | 2 | 2 | 1 | 1 |
 | p12 | Studio & 演示 (P12) | not_started | 0 | 1 | 2 | 0 |
-| p13 | 问卷 (P13) | not_started | 5 | 0 | 0 | 1 |
+| p13 | 问卷 (P13) | not_started | 4 | 0 | 0 | 2 |
 | p14 | 积分 & 计费 (P14) | not_started | 0 | 1 | 2 | 2 |
 | p15 | Admin 后台 (P15) | not_started | 0 | 1 | 2 | 2 |
 
-_最近聚合:2026-07-01T19:04:57.559Z_
+_最近聚合:2026-07-02T03:10:51.305Z_

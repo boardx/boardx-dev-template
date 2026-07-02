@@ -33,6 +33,14 @@ export interface SurveyWithQuestions extends Survey {
   questions: SurveyQuestion[];
 }
 
+export interface SurveyResponse {
+  id: number;
+  survey_id: number;
+  respondent_user_id: number | null;
+  answers: Record<string, unknown>;
+  submitted_at: string;
+}
+
 const SURVEY_COLS =
   "id, team_id, scope, title, description, is_active, owner_user_id, created_at, updated_at";
 const QUESTION_COLS = "id, survey_id, position, title, type, required, options";
@@ -109,6 +117,11 @@ export async function getSurveyWithQuestions(surveyId: number): Promise<SurveyWi
   return { ...survey, questions: await listQuestions(surveyId) };
 }
 
+/** 公开答题页读取问卷详情；访问控制由 is_active 门控，不要求登录。 */
+export async function getPublicSurveyForAnswer(surveyId: number): Promise<SurveyWithQuestions | undefined> {
+  return getSurveyWithQuestions(surveyId);
+}
+
 /** 用户可见的问卷：自己创建的（含 private/team），或 scope=team 且自己是该团队成员。按更新时间倒序。 */
 export async function listVisibleSurveys(userId: number): Promise<Survey[]> {
   return query<Survey>(
@@ -140,4 +153,24 @@ export async function countResponses(surveyId: number): Promise<number> {
     [surveyId]
   );
   return Number(rows[0]?.count ?? 0);
+}
+
+/** 提交一份匿名或登录用户答卷。answers 结构由 API 层按题型校验后传入。 */
+export async function createSurveyResponse(
+  surveyId: number,
+  answers: Record<string, unknown>,
+  respondentUserId: number | null = null
+): Promise<SurveyResponse> {
+  const rows = await query<SurveyResponse>(
+    `INSERT INTO survey_responses (survey_id, respondent_user_id, answers)
+     VALUES ($1, $2, $3::jsonb)
+     RETURNING id, survey_id, respondent_user_id, answers, submitted_at`,
+    [surveyId, respondentUserId, JSON.stringify(answers)]
+  );
+  return rows[0]!;
+}
+
+/** 测试/运维用显式发布开关；业务权限由调用方保证。 */
+export async function setSurveyActive(surveyId: number, isActive: boolean): Promise<void> {
+  await query("UPDATE surveys SET is_active = $2, updated_at = now() WHERE id = $1", [surveyId, isActive]);
 }
