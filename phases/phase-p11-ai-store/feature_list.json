@@ -99,9 +99,9 @@
       "title": "项目分享管理（授权链接生成/关闭 + 已授权用户列表）",
       "user_visible_behavior": "拥有者在项目上打开分享管理：POST /api/ai-store/items/:id/share 生成或关闭管理授权链接；被授权协作者通过链接进入授权管理视图（Authorized/Shared），查看和管理自己被授权的项目；关闭链接后原链接失效；非拥有者不能开关分享。",
       "design_ref": "prototype:<!-- STORE -->（Authorized / Shared 视图 + 卡片分享管理入口；分享管理弹窗细节较浅，参考 store detail modal 布局）；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "05",
+      "owner": "wrk-store-2",
       "capability": "CAP-DATA",
       "depends_on": [
         "F02"

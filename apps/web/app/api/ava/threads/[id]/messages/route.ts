@@ -21,6 +21,7 @@ import {
   insertAvaMessage,
   listAvaMessages,
   renameAvaThreadIfDefault,
+  retrieveKbFilesForQuery,
   titleFromMessage,
   touchAvaThread,
   attachAvaAttachmentsToMessage,
@@ -103,6 +104,29 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         ...last,
         content: `${last.content}\n\n[附件: ${namesList}]`.trim(),
       };
+    }
+  }
+
+  // RAG 检索（p10-F04）：仅当用户勾选了 file-reader 工具时才检索知识库上下文，
+  // 与「用户可选择或自动使用当前上下文中已 ready 的知识库文件」的验收口径一致。
+  // retrieveKbFilesForQuery 已做作用域隔离（personal/agent/tool 限 owner；team 限当前
+  // 团队上下文成员）+ status='ready' 过滤，这里不重复鉴权、直接信任其返回结果。
+  if (settings.toolIds.includes("file-reader") && text) {
+    const kbHits = await retrieveKbFilesForQuery({
+      ownerUserId: user.id,
+      teamId,
+      queryText: text,
+    });
+    if (kbHits.length > 0) {
+      const lastIdx = history.length - 1;
+      const citeList = kbHits.map((f) => f.name).join("、");
+      const last = history[lastIdx];
+      if (last) {
+        history[lastIdx] = {
+          ...last,
+          content: `${last.content}\n\n[知识库引用: ${citeList}]`.trim(),
+        };
+      }
     }
   }
 
