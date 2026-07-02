@@ -311,7 +311,6 @@ export default function CreditsPage() {
           </div>
         </>
       ) : null}
-      <BuyCreditsDialog open={buyOpen} onClose={() => setBuyOpen(false)} />
     </div>
   );
 }

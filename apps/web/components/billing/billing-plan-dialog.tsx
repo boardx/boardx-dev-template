@@ -118,7 +118,7 @@ export function BillingPlanDialog({
   }
 
   if (!open) return null;
-  if (mode === "credits") return <BuyCreditsDialog open={open} onClose={onClose} />;
+  if (mode === "credits") return <BuyCreditsDialog open={open} onClose={onClose} scope="personal" />;
 
   const currentPlanId = data?.currentPlanId ?? "free";
 
