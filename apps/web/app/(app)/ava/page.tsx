@@ -7,11 +7,11 @@
 // DB 持久化（ava_threads/ava_messages）。桌面端左右分栏常驻；移动端先列表，
 // 选中线程或新建聊天后切到聊天视图（带返回入口）。
 //
-// OUT OF SCOPE（本 feature 不做，留给后续 F06/F07/F10 等）：
+// OUT OF SCOPE（本 feature 不做，留给后续 F06/F07 等）：
 // 消息反馈、分享只读、Deep Research、模型/Agent/工具切换、建议动作个性化、
 // 发送到 Board / 邮件。线程重命名/删除（F02）、附件/图片/音频（F08）、
-// 消息编辑/删除/重新生成（F03）已在本文件实现。
-import { useCallback, useEffect, useRef, useState } from "react";
+// 消息编辑/删除/重新生成（F03）、建议动作（F10）已在本文件实现。
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -72,11 +72,23 @@ function keepThroughMessageId(messages: Message[], messageId: number): Message[]
   return index === -1 ? messages : messages.slice(0, index + 1);
 }
 
-const SUGGESTIONS = [
-  "帮我起草 Q3 launch 计划",
-  "总结这次用户访谈的要点",
-  "给这个 board 想 5 个名字",
-  "把这段需求拆成任务",
+interface SuggestedAction {
+  id: string;
+  label: string;
+  prompt: string;
+}
+
+const EMPTY_SUGGESTED_ACTIONS: SuggestedAction[] = [
+  { id: "understand-file", label: "理解文件", prompt: "帮我理解这份材料，并总结关键结论。" },
+  { id: "draft-email", label: "起草邮件", prompt: "帮我起草一封项目进展同步邮件。" },
+  { id: "summarize-trends", label: "总结趋势", prompt: "帮我总结最近用户反馈中的主要趋势。" },
+  { id: "brainstorm", label: "头脑风暴", prompt: "围绕这个目标帮我头脑风暴 5 个可执行方案。" },
+];
+
+const FOLLOW_UP_SUGGESTED_ACTIONS: SuggestedAction[] = [
+  { id: "make-tasks", label: "拆成任务", prompt: "把上面的建议拆成可执行任务，并按优先级排序。" },
+  { id: "find-risks", label: "识别风险", prompt: "基于上面的回复，列出主要风险和缓解措施。" },
+  { id: "shorten", label: "压缩摘要", prompt: "把上面的回复压缩成 5 条要点。" },
 ];
 
 const THREAD_PAGE_SIZE = 20;
@@ -114,6 +126,7 @@ export default function AvaPage() {
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const [dragOver, setDragOver] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
 
   const attachments = useAvaAttachments({
     threadId: activeId,
@@ -556,6 +569,18 @@ export default function AvaPage() {
   }
 
   const isEmptyThread = messages.length === 0 && !sending;
+  const latestMessage = messages.at(-1);
+  const replySuggestedActions = useMemo(() => {
+    if (!latestMessage || latestMessage.role !== "assistant" || latestMessage.status !== "complete" || sending) {
+      return [];
+    }
+    return FOLLOW_UP_SUGGESTED_ACTIONS;
+  }, [latestMessage, sending]);
+
+  function chooseSuggestedAction(prompt: string) {
+    setDraft(prompt);
+    requestAnimationFrame(() => composerRef.current?.focus());
+  }
   const currentShareUrl = shareUrl();
   const lastUserMessageId = [...messages].reverse().find((m) => m.role === "user")?.id ?? null;
   const groupedThreads = groupThreadsByDate(threads);
@@ -809,194 +834,198 @@ export default function AvaPage() {
                     </div>
                     <h1 className="mt-3.5 text-17 font-semibold text-foreground">我能帮你做什么？</h1>
                     <p className="mt-1 text-13 text-muted-foreground">选一个起点，或直接输入。</p>
-                    <div className="mt-5 flex flex-wrap justify-center gap-2.5">
-                      {SUGGESTIONS.map((s) => (
-                        <Button
-                          key={s}
-                          variant="outline"
-                          size="sm"
-                          data-testid="suggestion"
-                          onClick={() => setDraft(s)}
-                          className="h-auto rounded-9 px-3.5 py-2.5 text-13 font-normal text-foreground hover:border-foreground hover:bg-surface-1"
-                        >
-                          {s}
-                        </Button>
-                      ))}
-                    </div>
+                    <SuggestedActions
+                      actions={EMPTY_SUGGESTED_ACTIONS}
+                      align="center"
+                      className="mt-5"
+                      onChoose={chooseSuggestedAction}
+                    />
                   </div>
                 ) : (
                   <ul data-testid="messages" className="flex flex-col gap-5">
-                    {messages.map((m) => (
-                      <li
-                        key={m.id}
-                        data-testid={`msg-${m.role}`}
-                        data-status={m.status}
-                        className={`flex items-start gap-2.5 ${m.role === "user" ? "justify-end" : ""}`}
-                      >
-                        {m.role === "assistant" && (
-                          <span className="flex h-7 w-7 flex-none items-center justify-center rounded-7 bg-primary text-11 font-bold text-primary-foreground">
-                            AI
-                          </span>
-                        )}
-                        {m.role === "user" ? (
-                          <div className="flex max-w-[85%] flex-col items-end gap-2">
-                            {m.attachments && m.attachments.length > 0 && (
-                              <ul
-                                data-testid="msg-attachments"
-                                className="flex flex-wrap justify-end gap-1.5"
-                              >
-                                {m.attachments.map((a) => (
-                                  <li
-                                    key={a.id}
-                                    data-testid="msg-attachment-item"
-                                    className="flex items-center gap-1 rounded-9 border border-border bg-surface-1 px-2 py-1 text-11 text-muted-foreground"
-                                  >
-                                    {a.kind === "image" ? (
-                                      <ImageIcon className="h-3 w-3" strokeWidth={1.5} />
-                                    ) : a.kind === "audio" ? (
-                                      <FileAudio className="h-3 w-3" strokeWidth={1.5} />
-                                    ) : (
-                                      <FileText className="h-3 w-3" strokeWidth={1.5} />
-                                    )}
-                                    <span className="max-w-[10rem] truncate">{a.name}</span>
-                                  </li>
-                                ))}
-                              </ul>
+                    {messages.map((m) => {
+                      const showReplySuggestions =
+                        m.id === latestMessage?.id && replySuggestedActions.length > 0;
+                      return (
+                        <li key={m.id} className="flex flex-col gap-2.5">
+                          <div
+                            data-testid={`msg-${m.role}`}
+                            data-status={m.status}
+                            className={`flex items-start gap-2.5 ${m.role === "user" ? "justify-end" : ""}`}
+                          >
+                            {m.role === "assistant" && (
+                              <span className="flex h-7 w-7 flex-none items-center justify-center rounded-7 bg-primary text-11 font-bold text-primary-foreground">
+                                AI
+                              </span>
                             )}
-                            {editingId === m.id ? (
-                              <div
-                                data-testid="msg-edit-panel"
-                                className="w-full rounded-12 border border-border bg-background p-3"
-                              >
-                                <div
-                                  data-testid={`msg-user-content-${m.id}`}
-                                  className="mb-2 whitespace-pre-wrap rounded-12 bg-surface-1 px-4 py-2.5 text-sm leading-relaxed text-foreground"
-                                >
-                                  {m.content}
-                                </div>
-                                <label htmlFor={`msg-edit-${m.id}`} className="sr-only">
-                                  Edit message
-                                </label>
-                                <Textarea
-                                  id={`msg-edit-${m.id}`}
-                                  data-testid="msg-edit-input"
-                                  value={editText}
-                                  onChange={(e) => {
-                                    setEditText(e.target.value);
-                                    if (editError) setEditError("");
-                                  }}
-                                  className="min-h-20 resize-none"
-                                  disabled={sending}
-                                />
-                                {editError && (
-                                  <p
-                                    role="alert"
-                                    data-testid="msg-edit-error"
-                                    className="mt-2 text-xs text-destructive"
+                            {m.role === "user" ? (
+                              <div className="flex max-w-[85%] flex-col items-end gap-2">
+                                {m.attachments && m.attachments.length > 0 && (
+                                  <ul
+                                    data-testid="msg-attachments"
+                                    className="flex flex-wrap justify-end gap-1.5"
                                   >
-                                    {editError}
-                                  </p>
+                                    {m.attachments.map((a) => (
+                                      <li
+                                        key={a.id}
+                                        data-testid="msg-attachment-item"
+                                        className="flex items-center gap-1 rounded-9 border border-border bg-surface-1 px-2 py-1 text-11 text-muted-foreground"
+                                      >
+                                        {a.kind === "image" ? (
+                                          <ImageIcon className="h-3 w-3" strokeWidth={1.5} />
+                                        ) : a.kind === "audio" ? (
+                                          <FileAudio className="h-3 w-3" strokeWidth={1.5} />
+                                        ) : (
+                                          <FileText className="h-3 w-3" strokeWidth={1.5} />
+                                        )}
+                                        <span className="max-w-[10rem] truncate">{a.name}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
                                 )}
-                                <div className="mt-2 flex justify-end gap-2">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    data-testid="msg-edit-cancel"
-                                    onClick={cancelEdit}
-                                    disabled={sending}
+                                {editingId === m.id ? (
+                                  <div
+                                    data-testid="msg-edit-panel"
+                                    className="w-full rounded-12 border border-border bg-background p-3"
                                   >
-                                    取消
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    data-testid="msg-edit-save"
-                                    onClick={() => void saveEdit(m.id)}
-                                    disabled={sending}
-                                  >
-                                    {sending ? "保存中…" : "保存"}
-                                  </Button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div
-                                data-testid={`msg-user-content-${m.id}`}
-                                className="whitespace-pre-wrap rounded-12 bg-surface-1 px-4 py-2.5 text-sm leading-relaxed text-foreground"
-                              >
-                                {m.content}
-                              </div>
-                            )}
-
-                            {m.id === lastUserMessageId && editingId !== m.id && (
-                              <div className="flex flex-col items-end gap-2">
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    data-testid="msg-edit"
-                                    className="h-7 px-2 text-11 text-muted-foreground"
-                                    onClick={() => startEdit(m)}
-                                    disabled={sending || deletingId != null}
-                                  >
-                                    <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />
-                                    编辑
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    data-testid="msg-delete"
-                                    className="h-7 px-2 text-11 text-destructive"
-                                    onClick={() => setDeleteConfirmId(m.id)}
-                                    disabled={sending || deletingId != null}
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
-                                    删除最后一次请求
-                                  </Button>
-                                </div>
-                                {deleteConfirmId === m.id && (
-                                  <div className="rounded-12 border border-destructive/40 bg-background p-3">
-                                    <p data-testid="msg-delete-confirm" className="text-11 text-foreground">
-                                      确认删除最后一次请求及其后续回复？
-                                    </p>
+                                    <div
+                                      data-testid={`msg-user-content-${m.id}`}
+                                      className="mb-2 whitespace-pre-wrap rounded-12 bg-surface-1 px-4 py-2.5 text-sm leading-relaxed text-foreground"
+                                    >
+                                      {m.content}
+                                    </div>
+                                    <label htmlFor={`msg-edit-${m.id}`} className="sr-only">
+                                      Edit message
+                                    </label>
+                                    <Textarea
+                                      id={`msg-edit-${m.id}`}
+                                      data-testid="msg-edit-input"
+                                      value={editText}
+                                      onChange={(e) => {
+                                        setEditText(e.target.value);
+                                        if (editError) setEditError("");
+                                      }}
+                                      className="min-h-20 resize-none"
+                                      disabled={sending}
+                                    />
+                                    {editError && (
+                                      <p
+                                        role="alert"
+                                        data-testid="msg-edit-error"
+                                        className="mt-2 text-xs text-destructive"
+                                      >
+                                        {editError}
+                                      </p>
+                                    )}
                                     <div className="mt-2 flex justify-end gap-2">
                                       <Button
                                         type="button"
                                         variant="outline"
                                         size="sm"
-                                        data-testid="msg-delete-cancel"
-                                        onClick={() => setDeleteConfirmId(null)}
-                                        disabled={deletingId === m.id}
+                                        data-testid="msg-edit-cancel"
+                                        onClick={cancelEdit}
+                                        disabled={sending}
                                       >
                                         取消
                                       </Button>
                                       <Button
                                         type="button"
-                                        variant="destructive"
                                         size="sm"
-                                        data-testid="msg-delete-confirm-action"
-                                        onClick={() => void deleteLastRequest(m.id)}
-                                        disabled={deletingId === m.id}
+                                        data-testid="msg-edit-save"
+                                        onClick={() => void saveEdit(m.id)}
+                                        disabled={sending}
                                       >
-                                        {deletingId === m.id ? "删除中…" : "确认删除"}
+                                        {sending ? "保存中…" : "保存"}
                                       </Button>
                                     </div>
                                   </div>
+                                ) : (
+                                  <div
+                                    data-testid={`msg-user-content-${m.id}`}
+                                    className="whitespace-pre-wrap rounded-12 bg-surface-1 px-4 py-2.5 text-sm leading-relaxed text-foreground"
+                                  >
+                                    {m.content}
+                                  </div>
+                                )}
+
+                                {m.id === lastUserMessageId && editingId !== m.id && (
+                                  <div className="flex flex-col items-end gap-2">
+                                    <div className="flex items-center gap-1">
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        data-testid="msg-edit"
+                                        className="h-7 px-2 text-11 text-muted-foreground"
+                                        onClick={() => startEdit(m)}
+                                        disabled={sending || deletingId != null}
+                                      >
+                                        <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />
+                                        编辑
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        data-testid="msg-delete"
+                                        className="h-7 px-2 text-11 text-destructive"
+                                        onClick={() => setDeleteConfirmId(m.id)}
+                                        disabled={sending || deletingId != null}
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                                        删除最后一次请求
+                                      </Button>
+                                    </div>
+                                    {deleteConfirmId === m.id && (
+                                      <div className="rounded-12 border border-destructive/40 bg-background p-3">
+                                        <p data-testid="msg-delete-confirm" className="text-11 text-foreground">
+                                          确认删除最后一次请求及其后续回复？
+                                        </p>
+                                        <div className="mt-2 flex justify-end gap-2">
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            data-testid="msg-delete-cancel"
+                                            onClick={() => setDeleteConfirmId(null)}
+                                            disabled={deletingId === m.id}
+                                          >
+                                            取消
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="sm"
+                                            data-testid="msg-delete-confirm-action"
+                                            onClick={() => void deleteLastRequest(m.id)}
+                                            disabled={deletingId === m.id}
+                                          >
+                                            {deletingId === m.id ? "删除中…" : "确认删除"}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
                                 )}
                               </div>
+                            ) : m.status === "failed" ? (
+                              <div data-testid="msg-failed" className="text-sm leading-relaxed text-destructive">
+                                {m.content}
+                              </div>
+                            ) : (
+                              <MarkdownMessage content={m.content} />
                             )}
                           </div>
-                        ) : m.status === "failed" ? (
-                          <div data-testid="msg-failed" className="text-sm leading-relaxed text-destructive">
-                            {m.content}
-                          </div>
-                        ) : (
-                          <MarkdownMessage content={m.content} />
-                        )}
-                      </li>
-                    ))}
+                          {showReplySuggestions && (
+                            <SuggestedActions
+                              actions={replySuggestedActions}
+                              className="pl-9"
+                              onChoose={chooseSuggestedAction}
+                            />
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
                 {sending && (
@@ -1050,6 +1079,7 @@ export default function AvaPage() {
                 </label>
                 <textarea
                   id="ava-composer"
+                  ref={composerRef}
                   data-testid="composer"
                   rows={1}
                   value={draft}
@@ -1085,6 +1115,42 @@ export default function AvaPage() {
           </>
         )}
       </section>
+    </div>
+  );
+}
+
+function SuggestedActions({
+  actions,
+  align = "start",
+  className = "",
+  onChoose,
+}: {
+  actions: SuggestedAction[];
+  align?: "start" | "center";
+  className?: string;
+  onChoose: (prompt: string) => void;
+}) {
+  if (actions.length === 0) return null;
+
+  return (
+    <div
+      data-testid="suggested-actions"
+      aria-label="建议操作"
+      className={`${className} flex flex-wrap gap-2.5 ${align === "center" ? "justify-center" : ""}`}
+    >
+      {actions.map((action) => (
+        <Button
+          key={action.id}
+          variant="outline"
+          size="sm"
+          data-testid="suggested-action"
+          data-action-id={action.id}
+          onClick={() => onChoose(action.prompt)}
+          className="h-auto rounded-9 px-3.5 py-2.5 text-13 font-normal text-foreground transition-colors hover:border-foreground hover:bg-surface-1"
+        >
+          {action.label}
+        </Button>
+      ))}
     </div>
   );
 }
