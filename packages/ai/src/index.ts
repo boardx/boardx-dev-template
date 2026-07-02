@@ -4,3 +4,5 @@ export * from "./graph";
 export * from "./avaSettings";
 // Studio 生成器（P12 F01 地基）
 export * from "./studioGenerator";
+// 演示文稿生成器（P12 F02）
+export * from "./presentationGenerator";

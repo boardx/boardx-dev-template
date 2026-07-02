@@ -13,6 +13,15 @@ import {
   type StudioArtifactSource,
   type StudioSources,
 } from "@/components/studio/studio-panel";
+import {
+  PresentationConfigModal,
+  type PresentationSource,
+  type PresentationSources,
+} from "@/components/presentations/presentation-config-modal";
+import {
+  PresentationPreviewCard,
+  type PresentationArtifact,
+} from "@/components/presentations/presentation-preview-card";
 
 interface Chat {
   id: number | string;
@@ -54,6 +63,18 @@ export default function RoomChatDetailPage() {
   const [studioArtifacts, setStudioArtifacts] = useState<StudioArtifact[]>([]);
   const [studioGenerating, setStudioGenerating] = useState(false);
   const [studioGenError, setStudioGenError] = useState("");
+
+  // 演示文稿生成（P12 F02）
+  const [presentationModalOpen, setPresentationModalOpen] = useState(false);
+  const [presentationTopic, setPresentationTopic] = useState("");
+  const [presentationSource, setPresentationSource] = useState<PresentationSource>("current_chat");
+  const [presentationInstructions, setPresentationInstructions] = useState("");
+  const [presentationPages, setPresentationPages] = useState(8);
+  const [presentationStyle, setPresentationStyle] = useState("minimal");
+  const [presentationSources, setPresentationSources] = useState<PresentationSources | null>(null);
+  const [presentationArtifacts, setPresentationArtifacts] = useState<PresentationArtifact[]>([]);
+  const [presentationGenerating, setPresentationGenerating] = useState(false);
+  const [presentationGenError, setPresentationGenError] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -166,6 +187,88 @@ export default function RoomChatDetailPage() {
     if (res.ok) void loadStudioArtifacts();
   }
 
+  async function loadPresentationSources() {
+    const res = await fetch(`/api/rooms/${roomId}/chats/${chatId}/presentations/sources`);
+    if (res.ok) setPresentationSources((await res.json()).sources);
+  }
+
+  async function loadPresentationArtifacts() {
+    const res = await fetch(`/api/rooms/${roomId}/chats/${chatId}/presentations/artifacts`);
+    if (res.ok) setPresentationArtifacts((await res.json()).artifacts ?? []);
+  }
+
+  // 同 Studio：面板打开后拉取来源可用性 + 制品列表；轮询驱动「生成中 → ready/error」
+  // 状态刷新（异步生成无法瞬时完成）。
+  useEffect(() => {
+    if (loading || error) return;
+    void loadPresentationSources();
+    void loadPresentationArtifacts();
+    const t = setInterval(() => {
+      void loadPresentationSources();
+      void loadPresentationArtifacts();
+    }, 2000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, error, roomId, chatId]);
+
+  async function generatePresentation() {
+    if (presentationGenerating) return;
+    setPresentationGenerating(true);
+    setPresentationGenError("");
+    try {
+      const res = await fetch(`/api/presentations/generate`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          roomId: Number(roomId),
+          chatId: Number(chatId),
+          topic: presentationTopic,
+          source: presentationSource,
+          instructions: presentationInstructions,
+          pages: presentationPages,
+          style: presentationStyle,
+        }),
+      });
+      if (res.status !== 202) {
+        const d = await res.json().catch(() => ({}));
+        setPresentationGenError(d.errors?.source ?? d.error ?? "生成失败，请重试");
+        return;
+      }
+      const { artifact } = await res.json();
+      setPresentationArtifacts((prev) => [...prev, artifact]);
+      setPresentationTopic("");
+      setPresentationInstructions("");
+      setPresentationModalOpen(false);
+      void loadPresentationArtifacts();
+    } catch {
+      setPresentationGenError("生成失败，请重试");
+    } finally {
+      setPresentationGenerating(false);
+    }
+  }
+
+  async function retryPresentation(artifactId: string) {
+    const res = await fetch(
+      `/api/rooms/${roomId}/chats/${chatId}/presentations/artifacts/${artifactId}/retry`,
+      { method: "POST" }
+    );
+    if (res.ok) void loadPresentationArtifacts();
+  }
+
+  async function downloadPresentation(artifactId: string, format: "pptx" | "pdf") {
+    const res = await fetch(
+      `/api/rooms/${roomId}/chats/${chatId}/presentations/artifacts/${artifactId}/download?format=${format}`
+    );
+    if (!res.ok) return;
+    const { url } = await res.json();
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
   if (loading) {
     return <div data-testid="loading" className="h-[80vh] animate-pulse bg-muted/40" />;
   }
@@ -196,9 +299,22 @@ export default function RoomChatDetailPage() {
             </Badge>
           )}
         </div>
-        <Button data-testid="agent-select" size="sm" variant="secondary" disabled title="Agent 选择将在 p9 接入">
-          选择 Agent
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            data-testid="presentation-generate-open"
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            disabled={!canEdit}
+            onClick={() => setPresentationModalOpen(true)}
+          >
+            <Presentation className="h-3.5 w-3.5" />
+            生成演示
+          </Button>
+          <Button data-testid="agent-select" size="sm" variant="secondary" disabled title="Agent 选择将在 p9 接入">
+            选择 Agent
+          </Button>
+        </div>
       </header>
 
       {/* 三栏工作区 */}
@@ -212,7 +328,7 @@ export default function RoomChatDetailPage() {
         {/* 中：AVA 聊天 */}
         <section data-testid="pane-chat" className="flex flex-col">
           <div data-testid="message-list" className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
-            {messages.length === 0 && studioArtifacts.length === 0 ? (
+            {messages.length === 0 && studioArtifacts.length === 0 && presentationArtifacts.length === 0 ? (
               <div data-testid="empty" className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
                 还没有消息，向 AVA 发送第一条消息开始协作。
               </div>
@@ -271,6 +387,28 @@ export default function RoomChatDetailPage() {
                   </div>
                 );
               })}
+
+            {/* 演示预览卡片：生成完成/失败的演示文稿出现在聊天中（uc-presentations-001） */}
+            {presentationArtifacts
+              .filter((a) => a.status === "ready" || a.status === "error")
+              .map((a) => (
+                <PresentationPreviewCard
+                  key={a.id}
+                  artifact={a}
+                  onDownload={(id, format) => void downloadPresentation(id, format)}
+                  onRetry={(id) => void retryPresentation(id)}
+                />
+              ))}
+            {presentationArtifacts.some((a) => a.status === "queued" || a.status === "processing") && (
+              <div
+                data-testid="presentation-generating"
+                role="status"
+                aria-busy="true"
+                className="max-w-[85%] self-start rounded-lg border border-border bg-background px-3 py-2.5 text-xs text-muted-foreground"
+              >
+                正在生成演示文稿…
+              </div>
+            )}
             <div ref={endRef} />
           </div>
           <div className="border-t p-3">
@@ -326,6 +464,26 @@ export default function RoomChatDetailPage() {
           onRetry={(id) => void retryStudio(id)}
         />
       </div>
+
+      {/* 演示文稿生成配置弹窗（P12 F02） */}
+      <PresentationConfigModal
+        open={presentationModalOpen}
+        onClose={() => setPresentationModalOpen(false)}
+        topic={presentationTopic}
+        onTopicChange={setPresentationTopic}
+        source={presentationSource}
+        onSourceChange={setPresentationSource}
+        instructions={presentationInstructions}
+        onInstructionsChange={setPresentationInstructions}
+        pages={presentationPages}
+        onPagesChange={setPresentationPages}
+        style={presentationStyle}
+        onStyleChange={setPresentationStyle}
+        sources={presentationSources}
+        generating={presentationGenerating}
+        genError={presentationGenError}
+        onGenerate={() => void generatePresentation()}
+      />
     </div>
   );
 }

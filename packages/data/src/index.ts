@@ -36,6 +36,8 @@ export * from "./credits";
 export * from "./kbFiles";
 // CAP-AI Studio 制品仓储（studio_artifacts / P12 F01）
 export * from "./studio";
+// CAP-AI 演示文稿制品仓储（presentation_artifacts / P12 F02）
+export * from "./presentations";
 // CAP-PAYMENT 支付订单仓储（payment_orders / F05）
 export * from "./payment";
 // P15 Admin 后台：平台统计聚合（用户/团队计数；仅已建表的真实维度）
