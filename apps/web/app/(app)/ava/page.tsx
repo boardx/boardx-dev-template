@@ -18,6 +18,9 @@ import {
   ArrowUp,
   Sparkles,
   ArrowLeft,
+  Share2,
+  Copy,
+  Mail,
   FileAudio,
   FileText,
   ImageIcon,
@@ -29,6 +32,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { MarkdownMessage } from "./markdown-message";
@@ -56,6 +60,11 @@ interface Message {
   content: string;
   status: "complete" | "failed";
   attachments?: MessageAttachment[];
+}
+interface ThreadShare {
+  thread_id: number;
+  share_token: string;
+  share_enabled: boolean;
 }
 
 function keepThroughMessageId(messages: Message[], messageId: number): Message[] {
@@ -88,6 +97,11 @@ export default function AvaPage() {
   const [threadError, setThreadError] = useState("");
   const [actionError, setActionError] = useState("");
   const [sendError, setSendError] = useState("");
+  const [shareOpen, setShareOpen] = useState(false);
+  const [share, setShare] = useState<ThreadShare | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareError, setShareError] = useState("");
+  const [copyStatus, setCopyStatus] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
   const [editError, setEditError] = useState("");
@@ -175,6 +189,10 @@ export default function AvaPage() {
   async function openThread(id: number) {
     setActiveId(id);
     setSendError("");
+    setShareOpen(false);
+    setShare(null);
+    setShareError("");
+    setCopyStatus("");
     setEditingId(null);
     setDeleteConfirmId(null);
     setActionError("");
@@ -198,6 +216,10 @@ export default function AvaPage() {
     setActiveId(null);
     setMessages([]);
     setSendError("");
+    setShareOpen(false);
+    setShare(null);
+    setShareError("");
+    setCopyStatus("");
     setEditingId(null);
     setDeleteConfirmId(null);
     setActionError("");
@@ -450,7 +472,91 @@ export default function AvaPage() {
     }
   }
 
+  function shareUrl(nextShare = share): string {
+    if (!activeId || !nextShare?.share_enabled) return "";
+    if (typeof window === "undefined") return "";
+    return `${window.location.origin}/chatShare/${activeId}?shareToken=${encodeURIComponent(nextShare.share_token)}`;
+  }
+
+  async function loadShare() {
+    if (!activeId) return;
+    setShareLoading(true);
+    setShareError("");
+    try {
+      const res = await fetch(`/api/ava/threads/${activeId}/share`);
+      if (guard(res.status)) return;
+      if (!res.ok) throw new Error();
+      const data = (await res.json()) as { share: ThreadShare | null };
+      setShare(data.share);
+    } catch {
+      setShareError("加载分享状态失败，请重试");
+    } finally {
+      setShareLoading(false);
+    }
+  }
+
+  async function toggleSharePanel() {
+    const nextOpen = !shareOpen;
+    setShareOpen(nextOpen);
+    setShareError("");
+    setCopyStatus("");
+    if (nextOpen && activeId) await loadShare();
+  }
+
+  async function enableShareAndCopy() {
+    if (!activeId) return;
+    setShareLoading(true);
+    setShareError("");
+    setCopyStatus("");
+    try {
+      const res = await fetch(`/api/ava/threads/${activeId}/share`, { method: "POST" });
+      if (guard(res.status)) return;
+      if (!res.ok) throw new Error();
+      const data = (await res.json()) as { share: ThreadShare };
+      setShare(data.share);
+      const url = shareUrl(data.share);
+      await navigator.clipboard.writeText(url);
+      setCopyStatus("已复制分享链接");
+    } catch {
+      setShareError("生成或复制分享链接失败，请重试");
+    } finally {
+      setShareLoading(false);
+    }
+  }
+
+  async function copyShareLink() {
+    const url = shareUrl();
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopyStatus("已复制分享链接");
+      setShareError("");
+    } catch {
+      setShareError("复制失败，请手动复制链接");
+    }
+  }
+
+  async function disableShare() {
+    if (!activeId) return;
+    setShareLoading(true);
+    setShareError("");
+    setCopyStatus("");
+    try {
+      const res = await fetch(`/api/ava/threads/${activeId}/share`, { method: "DELETE" });
+      if (guard(res.status)) return;
+      if (!res.ok) throw new Error();
+      const data = (await res.json()) as { share: ThreadShare | null };
+      setShare(data.share);
+      setCopyStatus("分享已关闭，原链接已失效");
+    } catch {
+      setShareError("关闭分享失败，请重试");
+    } finally {
+      setShareLoading(false);
+    }
+  }
+
   const isEmptyThread = messages.length === 0 && !sending;
+  const currentShareUrl = shareUrl();
   const lastUserMessageId = [...messages].reverse().find((m) => m.role === "user")?.id ?? null;
   const groupedThreads = groupThreadsByDate(threads);
 
@@ -587,18 +693,111 @@ export default function AvaPage() {
           </div>
         ) : (
           <>
-            <div className="flex flex-none items-center gap-2 border-b border-border px-4 py-2.5 md:hidden">
+            <div className="relative flex flex-none items-center gap-2 border-b border-border px-4 py-2.5">
               <Button
                 variant="ghost"
                 size="icon"
                 data-testid="back-to-list"
-                className="h-8 w-8"
+                className="h-8 w-8 md:hidden"
                 onClick={() => setMobileView("list")}
                 aria-label="Back to thread list"
               >
                 <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
               </Button>
               <span className="text-13 font-medium text-foreground">AVA</span>
+              <div className="ml-auto">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  data-testid="ava-share"
+                  className="h-8 gap-1.5 transition-colors hover:bg-surface-1"
+                  onClick={() => void toggleSharePanel()}
+                  disabled={!activeId}
+                >
+                  <Share2 className="h-4 w-4" strokeWidth={1.5} />
+                  分享
+                </Button>
+              </div>
+              {shareOpen && (
+                <div
+                  data-testid="share-panel"
+                  className="absolute right-4 top-12 z-20 w-80 rounded-12 border border-border bg-background p-4 shadow-lg"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-13 font-semibold text-foreground">通过链接分享</h2>
+                      <p className="mt-1 text-11 leading-relaxed text-muted-foreground">
+                        公开链接仅包含这条聊天中的消息，不包含私有附件或团队私有上下文。
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 transition-colors hover:bg-surface-1"
+                      onClick={() => setShareOpen(false)}
+                      aria-label="Close share panel"
+                    >
+                      <X className="h-4 w-4" strokeWidth={1.5} />
+                    </Button>
+                  </div>
+
+                  <div className="mt-4 space-y-2">
+                    <Label htmlFor="ava-share-url">分享链接</Label>
+                    <Input
+                      id="ava-share-url"
+                      data-testid="share-link"
+                      readOnly
+                      value={currentShareUrl}
+                      placeholder={shareLoading ? "Loading share link..." : "点击复制链接生成分享"}
+                    />
+                  </div>
+
+                  {shareError && (
+                    <p role="alert" data-testid="err-share" className="mt-2 text-xs text-destructive">
+                      {shareError}
+                    </p>
+                  )}
+                  {copyStatus && (
+                    <p data-testid="share-copy-status" className="mt-2 text-xs text-muted-foreground">
+                      {copyStatus}
+                    </p>
+                  )}
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button
+                      data-testid="share-copy"
+                      size="sm"
+                      className="h-8 gap-1.5 transition-colors"
+                      onClick={() => (currentShareUrl ? void copyShareLink() : void enableShareAndCopy())}
+                      disabled={shareLoading}
+                    >
+                      <Copy className="h-4 w-4" strokeWidth={1.5} />
+                      {currentShareUrl ? "复制链接" : "通过链接分享"}
+                    </Button>
+                    <Button
+                      data-testid="share-disable"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5 transition-colors hover:bg-surface-1"
+                      onClick={() => void disableShare()}
+                      disabled={shareLoading || !currentShareUrl}
+                    >
+                      <X className="h-4 w-4" strokeWidth={1.5} />
+                      关闭分享
+                    </Button>
+                    <Button
+                      data-testid="share-email-disabled"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 gap-1.5 transition-colors hover:bg-surface-1"
+                      disabled
+                    >
+                      <Mail className="h-4 w-4" strokeWidth={1.5} />
+                      发送到邮箱
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div ref={scrollRef} className="flex-1 overflow-auto py-6">
