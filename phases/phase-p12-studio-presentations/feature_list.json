@@ -32,9 +32,9 @@
       "title": "生成演示文稿（配置弹窗 + 生成进度 + 预览卡片）",
       "user_visible_behavior": "从 Slides 侧栏或聊天点生成演示，配置弹窗填主题/来源（聊天/文件/说明）/页数/风格：POST /api/presentations/generate 异步生成，展示生成进度；完成后聊天出现演示预览卡片，可翻页浏览缩略图、打开全屏预览、下载 PPTX/PDF；生成失败给重试；来源为空禁用生成。",
       "design_ref": "prototype:<!-- slides config -->（生成配置弹窗）+ mockup:phases/requirements/mockups/presentation-preview.html（本轮补：聊天内预览卡片 + 全屏预览翻页）；DESIGN.md tokens",
-      "status": "blocked",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "02",
+      "owner": "wrk-studio-1",
       "capability": "CAP-AI",
       "depends_on": [
         "F01"
@@ -45,7 +45,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/presentations-001-generate-presentation.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-07-02T08:40:21.857Z",
       "notes": "uc-presentations-001。blocked-on p9+p10（同 F01：AI 生成 + 文件来源/产物存储）。预览卡片设计稿本轮补齐（见 design_ref）。依赖 p9/p10 能力就绪后转 not_started。"
     },
     {
