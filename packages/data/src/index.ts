@@ -3,6 +3,8 @@
 // 显式 pg + SQL（不用 ORM），保持透明，便于后续接 pgvector / Apache AGE。
 
 import pg from "pg";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 const { Pool } = pg;
 
@@ -39,8 +41,36 @@ export interface DbConfig {
   connectionString: string;
 }
 
+let envLoaded = false;
+
+function loadDotEnv(): void {
+  if (envLoaded) return;
+  envLoaded = true;
+
+  let dir = process.cwd();
+  for (let i = 0; i < 8; i += 1) {
+    const file = join(dir, ".env");
+    if (existsSync(file)) {
+      for (const line of readFileSync(file, "utf8").split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const eq = trimmed.indexOf("=");
+        if (eq <= 0) continue;
+        const key = trimmed.slice(0, eq).trim();
+        const value = trimmed.slice(eq + 1).trim();
+        if (process.env[key] === undefined) process.env[key] = value;
+      }
+      return;
+    }
+    const next = dirname(dir);
+    if (next === dir) return;
+    dir = next;
+  }
+}
+
 /** 从环境变量解析连接串。优先 DATABASE_URL，否则用 PG* 拼。 */
 export function resolveDbConfig(env: NodeJS.ProcessEnv = process.env): DbConfig {
+  loadDotEnv();
   if (env.DATABASE_URL) return { connectionString: env.DATABASE_URL };
   const host = env.PGHOST ?? "localhost";
   const port = env.PGPORT ?? "5432";

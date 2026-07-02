@@ -15,11 +15,11 @@
 | p7 | Board 壳 (P7) | in_progress | 8 | 0 | 5 | 3 |
 | p8 | 实时协作 (P8) | not_started | 4 | 0 | 0 | 0 |
 | p9 | AVA / Chat (P9) | not_started | 7 | 1 | 2 | 1 |
-| p10 | 知识库 (P10) | not_started | 2 | 1 | 1 | 1 |
+| p10 | 知识库 (P10) | not_started | 1 | 0 | 1 | 2 |
 | p11 | AI Store (P11) | not_started | 4 | 0 | 1 | 1 |
 | p12 | Studio & 演示 (P12) | not_started | 0 | 0 | 3 | 0 |
 | p13 | 问卷 (P13) | not_started | 5 | 0 | 0 | 1 |
-| p14 | 积分 & 计费 (P14) | not_started | 1 | 2 | 2 | 1 |
+| p14 | 积分 & 计费 (P14) | not_started | 1 | 1 | 2 | 1 |
 | p15 | Admin 后台 (P15) | not_started | 2 | 1 | 2 | 0 |
 
-_最近聚合:2026-07-01T12:50:25.965Z_
+_最近聚合:2026-07-02T01:36:02.057Z_
