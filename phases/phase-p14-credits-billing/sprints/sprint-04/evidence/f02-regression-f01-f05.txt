@@ -1,0 +1,26 @@
+
+Running 21 tests using 1 worker
+
+  ✓  1 [chromium] › billing-002-scan-payment.spec.ts:23:5 › 下单：POST /api/payment/orders 按 sku 创建 pending 订单 + 返回二维码 (1.8s)
+  ✓  2 [chromium] › billing-002-scan-payment.spec.ts:40:5 › 安全：客户端自定义 amountCents/fulfillmentPayload 不会被采纳，只认服务端目录 (214ms)
+  ✓  3 [chromium] › billing-002-scan-payment.spec.ts:57:5 › 安全：未知/缺失 sku → 400，不创建订单 (252ms)
+  ✓  4 [chromium] › billing-002-scan-payment.spec.ts:66:5 › 轮询：GET /api/payment/orders/:id 返回当前状态 (637ms)
+  ✓  5 [chromium] › billing-002-scan-payment.spec.ts:81:5 › 回调成功：webhook payment.succeeded（带合法密钥）让订单变 paid 并触发发放 (477ms)
+  ✓  6 [chromium] › billing-002-scan-payment.spec.ts:106:5 › 回调幂等：重复 webhook 不重复触发发放 (407ms)
+  ✓  7 [chromium] › billing-002-scan-payment.spec.ts:131:5 › 回调失败：webhook payment.failed（带合法密钥）让订单变 failed，不触发发放 (328ms)
+  ✓  8 [chromium] › billing-002-scan-payment.spec.ts:149:5 › 安全：webhook 缺密钥 → 401，订单不变 pending (296ms)
+  ✓  9 [chromium] › billing-002-scan-payment.spec.ts:166:5 › 安全：webhook 密钥错误 → 401，订单不变 pending，不触发发放 (279ms)
+  ✓  10 [chromium] › billing-002-scan-payment.spec.ts:184:5 › 未登录 POST /api/payment/orders → 401 (88ms)
+  ✓  11 [chromium] › billing-002-scan-payment.spec.ts:191:5 › UI：/payment-test 下单后展示二维码，webhook 回调后轮询显示成功 (4.8s)
+  ✓  12 [chromium] › billing-002-scan-payment.spec.ts:214:5 › 未登录访问 /payment-test → 跳登录 (2.7s)
+  ✓  13 [chromium] › credits-001-view-wallet.spec.ts:24:5 › 登录后 /credits 展示个人钱包余额 + 标题 + Buy credits (7.1s)
+  ✓  14 [chromium] › credits-001-view-wallet.spec.ts:41:5 › 登录后 /credits 默认 Usage 标签展示消耗记录列表，切 Purchase 展示购买记录 (1.1s)
+  ✓  15 [chromium] › credits-001-view-wallet.spec.ts:55:5 › 无记录时 /credits?state=empty 展示空状态 (602ms)
+  ✓  16 [chromium] › credits-001-view-wallet.spec.ts:67:5 › 用户菜单展示个人 Credit 余额入口与数值 (980ms)
+  ✓  17 [chromium] › credits-001-view-wallet.spec.ts:77:5 › Team owner 进入 /credits 展示团队钱包（scope=team）+ 团队名 (739ms)
+  ✓  18 [chromium] › credits-001-view-wallet.spec.ts:98:5 › Team member（非 owner/admin）请求团队钱包 → 403，看不到团队钱包 (785ms)
+  ✓  19 [chromium] › credits-001-view-wallet.spec.ts:118:5 › 未登录访问 /credits → 跳登录 (551ms)
+  ✓  20 [chromium] › credits-001-view-wallet.spec.ts:123:5 › 未登录调用 /api/credits/wallet → 401 (66ms)
+  ✓  21 [chromium] › credits-001-view-wallet.spec.ts:128:5 › 未登录调用兼容旧路径 /api/credits → 401 (193ms)
+
+  21 passed (29.3s)
