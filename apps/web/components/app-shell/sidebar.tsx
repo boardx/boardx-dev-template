@@ -81,9 +81,9 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
       <Link
         href="/"
         aria-label="BoardX 首页"
-        className="mb-2 flex h-8.5 w-8.5 items-center justify-center rounded-9 bg-primary text-base font-extrabold text-primary-foreground transition-colors hover:bg-surface-dark"
+        className="mb-2 flex h-8.5 w-8.5 items-center justify-center transition-opacity hover:opacity-90"
       >
-        X
+        <img src="/logo-icon.png" alt="BoardX Logo" className="h-8.5 w-8.5 object-contain" />
       </Link>
 
       {/* Rail nav */}

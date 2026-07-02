@@ -16,9 +16,7 @@ export default async function Home() {
       <div className="flex h-full min-h-[calc(100vh-3.5rem)] items-center justify-center p-8">
         <div className="flex flex-col items-center gap-5 text-center">
           <div className="flex flex-col items-center gap-2">
-            <div className="mb-1 flex h-8.5 w-8.5 items-center justify-center rounded-9 bg-primary text-base font-extrabold text-primary-foreground">
-              X
-            </div>
+            <img src="/logo-icon.png" alt="BoardX Logo" className="mb-1 h-8.5 w-8.5 object-contain" />
             <h1 className="text-30 font-bold tracking-tight text-foreground">BoardX</h1>
             <p className="text-sm text-muted-foreground">
               Open Creation Engine for AI-native work and learning.

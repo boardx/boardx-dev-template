@@ -10,11 +10,8 @@ export function AuthShell({ children }: { children: ReactNode }) {
     <main className="flex min-h-screen">
       {/* 品牌面 — 桌面 only */}
       <aside className="hidden flex-1 flex-col justify-between bg-surface-darkest p-12 text-surface-dark-foreground lg:flex">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8.5 w-8.5 items-center justify-center rounded-lg bg-background text-18 font-extrabold text-foreground">
-            X
-          </div>
-          <span className="text-17 font-bold tracking-tight">BoardX</span>
+        <div className="flex items-center">
+          <img src="/logo-full.png" alt="BoardX Logo" className="h-9 object-contain" />
         </div>
         <div>
           <h1 className="max-w-brand text-34 font-bold leading-tight tracking-tight">
