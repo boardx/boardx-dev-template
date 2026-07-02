@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 // uc-board-menu-001-use-board-menu：通过 Board Menu 选择工具并在画布创建或放置内容。
 const uniq = () => `bm001_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
+const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
 async function openOwnBoard(page: import("@playwright/test").Page) {
   await page.request.post("/api/auth/register", {
@@ -57,7 +58,7 @@ test("编辑者使用 Board Menu：工具可见、面板可打开、创建后选
 });
 
 test("viewer 不显示会改变内容的 Board Menu", async ({ page, playwright }) => {
-  const owner = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  const owner = await playwright.request.newContext({ baseURL: BASE_URL });
   await owner.post("/api/auth/register", {
     data: { firstName: "O", lastName: "O", email: uniq(), password: "secret123", agreeTerms: true },
   });

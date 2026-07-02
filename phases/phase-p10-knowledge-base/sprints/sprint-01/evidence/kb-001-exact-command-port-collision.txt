@@ -1,0 +1,102 @@
+
+Running 5 tests using 1 worker
+
+  ✘  1 [chromium] › kb-001-upload-file.spec.ts:20:5 › 登录后 /knowledge-base：空状态 + 上传控件，上传文件后出现在列表并最终 ready (12.0s)
+  ✘  2 [chromium] › kb-001-upload-file.spec.ts:50:5 › 校验：不支持的文件类型进入队列 error 行，且不产生半条记录 (10.7s)
+  ✘  3 [chromium] › kb-001-upload-file.spec.ts:66:5 › 校验：超过大小上限的文件进入队列 error 行 (10.5s)
+  ✘  4 [chromium] › kb-001-upload-file.spec.ts:82:5 › 服务端二次校验：绕过前端直接 POST 不支持类型 → 400 且不落库 (411ms)
+  ✓  5 [chromium] › kb-001-upload-file.spec.ts:100:5 › 未登录访问 /knowledge-base → 跳登录 (868ms)
+
+
+  1) [chromium] › kb-001-upload-file.spec.ts:20:5 › 登录后 /knowledge-base：空状态 + 上传控件，上传文件后出现在列表并最终 ready 
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
+
+    Locator: getByTestId('empty')
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+      [2m- expect.toBeVisible with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('empty')[22m
+
+
+      23 |
+      24 |   // 空状态可见
+    > 25 |   await expect(page.getByTestId("empty")).toBeVisible();
+         |                                           ^
+      26 |   await expect(page.getByTestId("empty")).toContainText("No files yet");
+      27 |
+      28 |   // 上传控件（入口按钮 + 隐藏 file input）存在
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a149a3222fb0bb96c/apps/web/e2e/kb-001-upload-file.spec.ts:25:43
+
+  2) [chromium] › kb-001-upload-file.spec.ts:50:5 › 校验：不支持的文件类型进入队列 error 行，且不产生半条记录 ───────────────
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
+
+    Locator: getByTestId('empty')
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+      [2m- expect.toBeVisible with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('empty')[22m
+
+
+      51 |   await register(page);
+      52 |   await page.goto("/knowledge-base");
+    > 53 |   await expect(page.getByTestId("empty")).toBeVisible();
+         |                                           ^
+      54 |
+      55 |   await page.getByTestId("file-input").setInputFiles({
+      56 |     name: "virus.exe",
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a149a3222fb0bb96c/apps/web/e2e/kb-001-upload-file.spec.ts:53:43
+
+  3) [chromium] › kb-001-upload-file.spec.ts:66:5 › 校验：超过大小上限的文件进入队列 error 行 ───────────────────────
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
+
+    Locator: getByTestId('empty')
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+      [2m- expect.toBeVisible with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('empty')[22m
+
+
+      67 |   await register(page);
+      68 |   await page.goto("/knowledge-base");
+    > 69 |   await expect(page.getByTestId("empty")).toBeVisible();
+         |                                           ^
+      70 |
+      71 |   // 51MB，超过前端 50MB 上限 → 客户端预校验直接拒绝，不发请求。
+      72 |   // Playwright setInputFiles 的 buffer 选项上限 50MB，改写临时文件后传路径。
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a149a3222fb0bb96c/apps/web/e2e/kb-001-upload-file.spec.ts:69:43
+
+  4) [chromium] › kb-001-upload-file.spec.ts:82:5 › 服务端二次校验：绕过前端直接 POST 不支持类型 → 400 且不落库 ───────────
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32m400[39m
+    Received: [31m404[39m
+
+      93 |     },
+      94 |   });
+    > 95 |   expect(res.status()).toBe(400);
+         |                        ^
+      96 |   const body = await res.json();
+      97 |   expect(body.errors?.type).toBeTruthy();
+      98 | });
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a149a3222fb0bb96c/apps/web/e2e/kb-001-upload-file.spec.ts:95:24
+
+  4 failed
+    [chromium] › kb-001-upload-file.spec.ts:20:5 › 登录后 /knowledge-base：空状态 + 上传控件，上传文件后出现在列表并最终 ready 
+    [chromium] › kb-001-upload-file.spec.ts:50:5 › 校验：不支持的文件类型进入队列 error 行，且不产生半条记录 ────────────────
+    [chromium] › kb-001-upload-file.spec.ts:66:5 › 校验：超过大小上限的文件进入队列 error 行 ────────────────────────
+    [chromium] › kb-001-upload-file.spec.ts:82:5 › 服务端二次校验：绕过前端直接 POST 不支持类型 → 400 且不落库 ────────────
+  1 passed (37.7s)
+undefined
+/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a149a3222fb0bb96c/apps/web:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 1: playwright test e2e/kb-001-upload-file.spec.ts

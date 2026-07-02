@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 
 const uniq = () => `gs_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
+const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
 async function register(page: import("@playwright/test").Page) {
   await page.request.post("/api/auth/register", {
@@ -9,7 +10,7 @@ async function register(page: import("@playwright/test").Page) {
 }
 
 async function newCtx(playwright: any): Promise<APIRequestContext> {
-  const ctx = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  const ctx = await playwright.request.newContext({ baseURL: BASE_URL });
   await ctx.post("/api/auth/register", {
     data: { firstName: "U", lastName: "U", email: uniq(), password: "secret123", agreeTerms: true },
   });

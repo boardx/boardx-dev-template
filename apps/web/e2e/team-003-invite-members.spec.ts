@@ -2,6 +2,7 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
 
 // uc-team-003-invite-members：owner 用邮箱邀请成员 / 复制邀请链接；未登录跳 /login。
 const uniq = (p = "t3") => `${p}_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
+const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
 async function registerOnPage(page: import("@playwright/test").Page, email = uniq()) {
   await page.request.post("/api/auth/register", {
@@ -12,7 +13,7 @@ async function registerOnPage(page: import("@playwright/test").Page, email = uni
 
 async function newUserCtx(playwright: any): Promise<{ ctx: APIRequestContext; email: string }> {
   const email = uniq("guest");
-  const ctx = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  const ctx = await playwright.request.newContext({ baseURL: BASE_URL });
   await ctx.post("/api/auth/register", {
     data: { firstName: "G", lastName: "G", email, password: "secret123", agreeTerms: true },
   });

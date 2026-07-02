@@ -1,0 +1,40 @@
+— F11 verification (p9/05) —
+Commands run in order (all exit 0):
+  1) docker compose -f infra/docker-compose.yml up -d
+  2) pnpm --filter @repo/data run migrate   (applied 020_ava_message_feedback.sql)
+  3) pnpm --filter @repo/web exec playwright test e2e/ava-message-actions.spec.ts
+
+Captured 2026-07-02 during a confirmed-stable window (postgres pg_isready:
+accepting connections; zero FATAL/recovery-mode lines in the preceding 30s of
+container logs). This machine runs 13+ concurrent worktree docker-compose
+stacks; postgres containers across ALL worktrees were observed crash-looping
+in lockstep (same timestamps, "terminated by signal 13: Broken pipe" ->
+recovery mode) during unrelated verify:full / regression-check attempts in
+this session — confirmed host-wide contention, not caused by this change.
+Playwright output below:
+
+Running 4 tests using 1 worker
+
+  ✓  1 [chromium] › ava-message-actions.spec.ts:22:5 › 消息操作条：复制整条消息、代码块单独复制、点赞/点踩持久化、重新生成不丢原问题 (24.2s)
+  ✓  2 [chromium] › ava-message-actions.spec.ts:80:5 › 重新生成失败时保留原回复不丢，展示错误提示 (6.0s)
+  ✓  3 [chromium] › ava-message-actions.spec.ts:95:5 › 未登录调用反馈/重新生成接口 → 401 (1.1s)
+  ✓  4 [chromium] › ava-message-actions.spec.ts:126:5 › 反馈只允许对 assistant 消息提交，对 user 消息返回 404 (1.7s)
+
+  Slow test file: [chromium] › ava-message-actions.spec.ts (33.0s)
+  Consider splitting slow test files to speed up parallel execution
+  4 passed (44.7s)
+
+— Re-run after fixing lint (native <button> -> components/ui/button in
+markdown-message.tsx's code-block copy control, required by verify:full's
+lint-design.sh) —
+
+Running 4 tests using 1 worker
+
+  ✓  1 [chromium] › ava-message-actions.spec.ts:22:5 › 消息操作条：复制整条消息、代码块单独复制、点赞/点踩持久化、重新生成不丢原问题 (33.3s)
+  ✓  2 [chromium] › ava-message-actions.spec.ts:80:5 › 重新生成失败时保留原回复不丢，展示错误提示 (4.7s)
+  ✓  3 [chromium] › ava-message-actions.spec.ts:95:5 › 未登录调用反馈/重新生成接口 → 401 (1.3s)
+  ✓  4 [chromium] › ava-message-actions.spec.ts:126:5 › 反馈只允许对 assistant 消息提交，对 user 消息返回 404 (2.0s)
+
+  Slow test file: [chromium] › ava-message-actions.spec.ts (41.3s)
+  Consider splitting slow test files to speed up parallel execution
+  4 passed (52.7s)

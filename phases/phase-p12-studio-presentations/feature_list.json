@@ -8,17 +8,22 @@
       "title": "Studio 面板 + 音频概览/信息图生成（结果入聊天）",
       "user_visible_behavior": "在房间聊天右侧打开 Studio 面板，选生成类型（音频概览/信息图/演示）并配置来源（房间文件/当前聊天）：POST /api/studio/generate 触发异步生成，面板展示生成中进度；完成后产物卡片出现在聊天，可播放（音频）、预览（信息图）、下载；生成失败给重试；无可用来源时禁用生成。",
       "design_ref": "prototype:<!-- RIGHT: studio --> + <!-- studio generate modal --> + <!-- infographic config --> + <!-- audio config -->；DESIGN.md tokens",
-      "status": "blocked",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "01",
+      "owner": "wrk-studio-1",
       "capability": "CAP-AI",
+      "depends_on": [
+        "p9:F01",
+        "p10:F01"
+      ],
+      "wave": 1,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/studio-001-generate-artifact.spec.ts"
       ],
-      "evidence": "",
-      "notes": "uc-studio-001。blocked-on p9+p10：生成需 CAP-AI（p9 编排）+ CAP-FILE（p10 读房间文件/存产物）。Studio 面板 UI 壳可先做，生成端到端待两能力就绪。也点亮 phase-04 room 的 Room Studio 高级入口。依赖 p4 room-chat 工作区。"
+      "evidence": "evidence/studio-001-generate-artifact.e2e.txt; evidence/verify-base.txt; evidence/verify-full.txt @ 2026-07-02T08:29:05.680Z",
+      "notes": "uc-studio-001。blocked-on p9+p10：生成需 CAP-AI（p9 编排）+ CAP-FILE（p10 读房间文件/存产物）。Studio 面板 UI 壳可先做，生成端到端待两能力就绪。也点亮 phase-04 room 的 Room Studio 高级入口。依赖 p4 room-chat 工作区。实现：room-chat pane-studio 集成真实面板（类型/来源选择 + 生成 + 轮询进度），POST /api/rooms/:id/chats/:chatId/studio/generate 入队 boardx.studio-generation，workflow-worker 消费（@repo/ai stub 生成器 + @repo/storage MinIO 写入），结果卡片出聊天（音频可播放/信息图可预览/演示可下载），失败态给重试。generation 用 sanctioned mock（同 AVA stub 模式），非真实 AI/TTS/PPTX 管线。"
     },
     {
       "id": "F02",
@@ -27,17 +32,21 @@
       "title": "生成演示文稿（配置弹窗 + 生成进度 + 预览卡片）",
       "user_visible_behavior": "从 Slides 侧栏或聊天点生成演示，配置弹窗填主题/来源（聊天/文件/说明）/页数/风格：POST /api/presentations/generate 异步生成，展示生成进度；完成后聊天出现演示预览卡片，可翻页浏览缩略图、打开全屏预览、下载 PPTX/PDF；生成失败给重试；来源为空禁用生成。",
       "design_ref": "prototype:<!-- slides config -->（生成配置弹窗）+ mockup:phases/requirements/mockups/presentation-preview.html（本轮补：聊天内预览卡片 + 全屏预览翻页）；DESIGN.md tokens",
-      "status": "blocked",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "02",
+      "owner": "wrk-studio-1",
       "capability": "CAP-AI",
+      "depends_on": [
+        "F01"
+      ],
+      "wave": 2,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/presentations-001-generate-presentation.spec.ts"
       ],
-      "evidence": "",
-      "notes": "uc-presentations-001。blocked-on p9+p10（同 F01：AI 生成 + 文件来源/产物存储）。预览卡片设计稿本轮补齐（见 design_ref）。依赖 p9/p10 能力就绪后转 not_started。"
+      "evidence": "evidence/presentations-001-generate-presentation.e2e.txt; evidence/verify-base.txt @ 2026-07-02T08:40:21.857Z",
+      "notes": "uc-presentations-001。原 blocked-on p9+p10 已解除（p9:F01/p10:F01/F01 均 passing，2026-07-02 转 not_started）。预览卡片设计稿本轮补齐（见 design_ref）。"
     },
     {
       "id": "F03",
@@ -46,10 +55,14 @@
       "title": "修订演示文稿（方案修改 + 单页优化）",
       "user_visible_behavior": "对已生成演示：在方案层提修改要求（改结构/受众/风格）得到更新方案；在单页预览点「优化本页」输入要求，仅重生成该页并原位替换；修订中展示处理态，可对比/接受；修订/优化要求为空则禁用提交；修订失败不破坏原可查看结果；不能引用无权访问的文件。",
       "design_ref": "mockup:phases/requirements/mockups/presentation-preview.html（本轮补：全屏预览 + 页码/上下页 + 单页「优化本页」输入 + 方案修订面板）；DESIGN.md tokens",
-      "status": "blocked",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "03",
+      "owner": "wrk-studio-1",
       "capability": "CAP-AI",
+      "depends_on": [
+        "F02"
+      ],
+      "wave": 3,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",

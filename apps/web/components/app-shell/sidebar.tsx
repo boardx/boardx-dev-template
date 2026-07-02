@@ -14,8 +14,12 @@ import {
   BookOpen,
   UserPlus,
   Gem,
+  CreditCard,
 } from "lucide-react";
 import { FeedbackLauncher } from "@/components/feedback/feedback-launcher";
+import { CreditRecordsDialog } from "@/components/credits/credit-records-dialog";
+import { BillingPlanDialog } from "@/components/billing/billing-plan-dialog";
+import { BuyCreditsDialog } from "@/components/credits/buy-credits-dialog";
 import { cn } from "@/lib/utils";
 
 interface SidebarUser {
@@ -37,12 +41,33 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   const [dark, setDark] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [lang, setLang] = useState<"en" | "zh">("en");
+  const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
+  const [recordsOpen, setRecordsOpen] = useState(false);
+  const [billingOpen, setBillingOpen] = useState(false);
+  const [buyOpen, setBuyOpen] = useState(false);
+  const [balanceRefreshTick, setBalanceRefreshTick] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setDark(document.documentElement.classList.contains("dark"));
     setHydrated(true);
   }, []);
+
+  // 用户菜单个人 Credit 余额入口（uc-credits-001）：打开菜单时按需拉取个人钱包余额；
+  // Buy Credits 购买成功后（balanceRefreshTick 变化）也重新拉取，让余额即时反映到账结果。
+  useEffect(() => {
+    if (!menuOpen || !user) return;
+    let alive = true;
+    fetch("/api/credits/wallet?scope=personal")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { wallet?: { balance: number } } | null) => {
+        if (alive && data?.wallet) setCreditsBalance(data.wallet.balance);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [menuOpen, user, balanceRefreshTick]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -165,20 +190,40 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
               </div>
             </div>
 
-            {/* Credits 余额行 */}
-            <Link
+            {/* Credits 余额行：点击打开个人 Credit Records 弹窗（uc-credits-003） */}
+            <button
+              type="button"
               role="menuitem"
-              href="/credits"
               data-testid="user-menu-credits"
-              onClick={() => setMenuOpen(false)}
-              className="mb-1.5 flex items-center gap-2 rounded-9 bg-surface-2 px-2.5 py-2.5 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => {
+                setMenuOpen(false);
+                setRecordsOpen(true);
+              }}
+              className="mb-1.5 flex w-full items-center gap-2 rounded-9 bg-surface-2 px-2.5 py-2.5 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Gem className="h-3.5 w-3.5 text-foreground" />
-              <span className="flex-1 text-12 font-semibold text-foreground">
-                3,210 credits
+              <span
+                data-testid="user-menu-credits-balance"
+                className="flex-1 text-left text-12 font-semibold text-foreground"
+              >
+                {creditsBalance == null ? "…" : `${creditsBalance.toLocaleString("en-US")} credits`}
               </span>
-              <span className="text-11 font-semibold text-foreground">Buy →</span>
-            </Link>
+              <span className="text-11 font-semibold text-foreground">Records →</span>
+            </button>
+
+            {/* 购买 Credit 入口（uc-credits-002）：用户菜单 > 购买 Credit 按钮，打开 Buy Credits 弹窗。 */}
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="user-menu-buy-credits"
+              onClick={() => {
+                setMenuOpen(false);
+                setBuyOpen(true);
+              }}
+              className="mb-1.5 flex w-full items-center gap-2 rounded-7 px-2.5 py-2 text-13 text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Gem className="h-3.5 w-3.5" /> Buy Credit
+            </button>
 
             <MenuLink href="/account" testId="user-menu-profile" onClick={() => setMenuOpen(false)}>
               <User className="h-3.5 w-3.5" /> Profile
@@ -200,6 +245,18 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
             >
               <BookOpen className="h-3.5 w-3.5" /> Personal knowledge base
             </MenuLink>
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="user-menu-billing"
+              onClick={() => {
+                setMenuOpen(false);
+                setBillingOpen(true);
+              }}
+              className="flex w-full items-center gap-2 rounded-7 px-2.5 py-2 text-13 text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <CreditCard className="h-3.5 w-3.5" /> Plans &amp; Billing
+            </button>
             <MenuLink
               href="/teams"
               testId="user-menu-invite"
@@ -299,6 +356,15 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
           </div>
         )}
       </div>
+
+      <CreditRecordsDialog open={recordsOpen} onClose={() => setRecordsOpen(false)} />
+      <BillingPlanDialog open={billingOpen} onClose={() => setBillingOpen(false)} />
+      <BuyCreditsDialog
+        open={buyOpen}
+        onClose={() => setBuyOpen(false)}
+        scope="personal"
+        onPurchased={() => setBalanceRefreshTick((n) => n + 1)}
+      />
     </aside>
   );
 }

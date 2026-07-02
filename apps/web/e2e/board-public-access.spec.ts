@@ -1,9 +1,10 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 
 const uniq = () => `bpa_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
+const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
 async function newUser(playwright: any): Promise<{ ctx: APIRequestContext; userId: number }> {
-  const ctx = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  const ctx = await playwright.request.newContext({ baseURL: BASE_URL });
   const reg = await (await ctx.post("/api/auth/register", {
     data: { firstName: "U", lastName: "U", email: uniq(), password: "secret123", agreeTerms: true },
   })).json();
@@ -15,7 +16,7 @@ test("匿名打开 public 白板 → 200 viewer；private → 401", async ({ pla
   const room = (await (await owner.ctx.post("/api/rooms", { data: { name: "R", visibility: "private" } })).json()).room;
   const board = (await (await owner.ctx.post(`/api/rooms/${room.id}/boards`, { data: { name: "PubLink" } })).json()).board;
 
-  const anon = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  const anon = await playwright.request.newContext({ baseURL: BASE_URL });
 
   // private 时匿名 401
   expect((await anon.get(`/api/boards/${board.id}`)).status()).toBe(401);

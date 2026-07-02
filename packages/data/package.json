@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "echo 'lint: ok'",
-    "migrate": "tsx src/migrate.ts"
+    "migrate": "sh -c 'set -a; [ -f ../../apps/web/.env.local ] && . ../../apps/web/.env.local; set +a; tsx src/migrate.ts'"
   },
   "dependencies": {
     "pg": "^8.12.0"

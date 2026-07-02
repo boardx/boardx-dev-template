@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const uniq = () => `local001_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
+const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
 async function openOwnBoard(page: import("@playwright/test").Page) {
   await page.request.post("/api/auth/register", {
@@ -57,7 +58,7 @@ test("编辑者使用 Local Workspace：Board Chat 结果可保存为 Board Memo
 });
 
 test("viewer 不显示 Local Workspace 编辑入口", async ({ page, playwright }) => {
-  const owner = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  const owner = await playwright.request.newContext({ baseURL: BASE_URL });
   await owner.post("/api/auth/register", {
     data: { firstName: "O", lastName: "O", email: uniq(), password: "secret123", agreeTerms: true },
   });

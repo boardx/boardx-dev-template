@@ -1,0 +1,12 @@
+
+Running 5 tests using 1 worker
+
+  ✓  1 [chromium] › kb-003-delete-file.spec.ts:46:5 › 点击删除并确认：列表立即移除该行、展示成功提示，且文件不再可下载 (12.6s)
+  ✓  2 [chromium] › kb-003-delete-file.spec.ts:75:5 › 取消删除：文件行保留，不发起请求 (1.5s)
+  ✓  3 [chromium] › kb-003-delete-file.spec.ts:88:5 › 删除失败：保留该文件行并展示错误提示 (1.3s)
+  ✓  4 [chromium] › kb-003-delete-file.spec.ts:111:5 › 无权限用户无法删除他人文件：DELETE 返回 404，原用户列表仍可见该文件 (1.0s)
+  ✓  5 [chromium] › kb-003-delete-file.spec.ts:126:5 › 未登录 DELETE /api/kb/files/:id → 401 (112ms)
+
+  Slow test file: [chromium] › kb-003-delete-file.spec.ts (16.6s)
+  Consider splitting slow test files to speed up parallel execution
+  5 passed (21.0s)

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "kbf_1782899078785_178814",
+    "scope": "personal",
+    "status": "ready",
+    "object_key": "kb/personal/25/kbf_1782899078785_178814/spec-notes.pdf",
+    "size_bytes": "20",
+    "mime_type": "application/pdf"
+  },
+  {
+    "id": "kbf_1782899056225_747662",
+    "scope": "personal",
+    "status": "ready",
+    "object_key": "kb/personal/21/kbf_1782899056225_747662/spec-notes.pdf",
+    "size_bytes": "20",
+    "mime_type": "application/pdf"
+  },
+  {
+    "id": "kbf_1782898807351_243093",
+    "scope": "personal",
+    "status": "ready",
+    "object_key": "kb/personal/13/kbf_1782898807351_243093/spec-notes.pdf",
+    "size_bytes": "20",
+    "mime_type": "application/pdf"
+  },
+  {
+    "id": "kbf_1782898584916_41046",
+    "scope": "personal",
+    "status": "ready",
+    "object_key": "kb/personal/5/kbf_1782898584916_41046/spec-notes.pdf",
+    "size_bytes": "20",
+    "mime_type": "application/pdf"
+  },
+  {
+    "id": "kbf_1782898500461_290530",
+    "scope": "personal",
+    "status": "ready",
+    "object_key": "kb/personal/1/kbf_1782898500461_290530/spec-notes.pdf",
+    "size_bytes": "20",
+    "mime_type": "application/pdf"
+  }
+]
