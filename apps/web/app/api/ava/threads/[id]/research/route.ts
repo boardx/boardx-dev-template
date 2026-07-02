@@ -12,7 +12,8 @@ import {
   titleFromMessage,
   touchAvaThread,
 } from "@repo/data";
-import { currentUser } from "@/lib/session";
+import { currentTeamId, currentUser } from "@/lib/session";
+import { isThreadInCurrentContext } from "@/lib/ava-thread-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -93,7 +94,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 
   const thread = await getAvaThread(threadId);
-  if (!thread || thread.user_id !== user.id) {
+  if (!thread || !isThreadInCurrentContext(thread, user.id, currentTeamId())) {
     return NextResponse.json({ error: "线程不存在" }, { status: 404 });
   }
 
