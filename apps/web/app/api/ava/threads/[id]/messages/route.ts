@@ -14,6 +14,7 @@
 //   event: error    — 生成失败，携带失败态 assistant 消息记录（用户输入已保留在 event:user）。
 import {
   getAvaThread,
+  getMembership,
   insertAvaMessage,
   listAvaMessages,
   renameAvaThreadIfDefault,
@@ -21,8 +22,16 @@ import {
   touchAvaThread,
   updateAvaMessage,
 } from "@repo/data";
-import { defaultGateway, DEFAULT_MODEL_ID, runChatGraph, makeGenerateNode } from "@repo/ai";
-import { currentUser } from "@/lib/session";
+import {
+  defaultGateway,
+  DEFAULT_AVA_AGENT_ID,
+  DEFAULT_AVA_TOOL_IDS,
+  DEFAULT_MODEL_ID,
+  normalizeAvaAiSettings,
+  runChatGraph,
+  makeGenerateNode,
+} from "@repo/ai";
+import { currentTeamId, currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,11 +54,28 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return new Response(JSON.stringify({ error: "线程不存在" }), { status: 404 });
   }
 
-  const body = (await req.json().catch(() => ({}))) as { text?: unknown };
+  const body = (await req.json().catch(() => ({}))) as {
+    text?: unknown;
+    modelId?: unknown;
+    agentId?: unknown;
+    toolIds?: unknown;
+  };
   const text = String(body.text ?? "").trim();
   if (!text) {
     return new Response(JSON.stringify({ errors: { text: "消息不能为空" } }), { status: 400 });
   }
+  const teamId = currentTeamId();
+  const role = teamId == null ? undefined : await getMembership(teamId, user.id);
+  const settings = normalizeAvaAiSettings(
+    {
+      modelId: typeof body.modelId === "string" ? body.modelId : DEFAULT_MODEL_ID,
+      agentId: typeof body.agentId === "string" ? body.agentId : DEFAULT_AVA_AGENT_ID,
+      toolIds: Array.isArray(body.toolIds)
+        ? body.toolIds.filter((id): id is string => typeof id === "string")
+        : DEFAULT_AVA_TOOL_IDS,
+    },
+    role === "owner" || role === "admin"
+  );
 
   // 用户消息先落库：即使下面生成失败，用户输入也不会丢失。
   const userMessage = await insertAvaMessage(threadId, "user", text);
@@ -76,7 +102,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         const result = await runChatGraph(
           {
             threadId,
-            modelId: DEFAULT_MODEL_ID,
+            modelId: settings.modelId,
+            agentId: settings.agentId,
+            toolIds: settings.toolIds,
             messages: history.map((m) => ({ role: m.role, content: m.content })),
             onToken: (token) => send("token", { token }),
           },

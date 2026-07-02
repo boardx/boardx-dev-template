@@ -8,6 +8,8 @@ export interface GraphState {
   threadId: number;
   messages: Array<{ role: "user" | "assistant" | "system"; content: string }>;
   modelId: string;
+  agentId?: string;
+  toolIds?: string[];
   /** 节点写入的流式 token 回调；由调用方（API 路由）提供，用于转 SSE。 */
   onToken?: (token: string) => void;
 }
@@ -37,11 +39,22 @@ export function makeGenerateNode(
   streamChat: (input: {
     modelId: string;
     messages: GraphState["messages"];
+    settings?: {
+      agentId: string;
+      toolIds: string[];
+    };
   }) => AsyncGenerator<string, void, void>
 ): NodeFn {
   return async (state: GraphState) => {
     let full = "";
-    for await (const token of streamChat({ modelId: state.modelId, messages: state.messages })) {
+    for await (const token of streamChat({
+      modelId: state.modelId,
+      messages: state.messages,
+      settings: {
+        agentId: state.agentId ?? "default",
+        toolIds: state.toolIds ?? [],
+      },
+    })) {
       full += token;
       state.onToken?.(token);
     }
