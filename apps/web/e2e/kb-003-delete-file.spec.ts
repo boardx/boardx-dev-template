@@ -18,12 +18,21 @@ interface UploadedFile {
   name: string;
 }
 
+const PASSWORD = "secret123";
+
 async function register(page: Page) {
+  const email = uniq();
   const res = await page.request.post("/api/auth/register", {
-    data: { firstName: "A", lastName: "B", email: uniq(), password: "secret123", agreeTerms: true },
+    data: { firstName: "A", lastName: "B", email, password: PASSWORD, agreeTerms: true },
   });
   expect(res.status()).toBe(201);
-  return (await res.json()) as { user: { id: number; email: string } };
+  const json = (await res.json()) as { user: { id: number; email: string } };
+  return { ...json, email };
+}
+
+async function login(page: Page, email: string) {
+  const res = await page.request.post("/api/auth/login", { data: { email, password: PASSWORD } });
+  expect(res.ok()).toBeTruthy();
 }
 
 async function uploadReadyFile(page: Page, name: string, body = "knowledge base fixture"): Promise<UploadedFile> {
@@ -108,19 +117,33 @@ test("删除失败：保留该文件行并展示错误提示", async ({ page }) 
   await expect(page.getByTestId(`file-${target.id}`)).toBeVisible();
 });
 
-test("无权限用户无法删除他人文件：DELETE 返回 404，原用户列表仍可见该文件", async ({ page }) => {
-  await register(page);
+test("无权限用户无法删除他人文件：DELETE 返回 404，且原 owner 的文件真实未被删", async ({ page }) => {
+  const owner = await register(page);
   const victimFile = await uploadReadyFile(page, "owner-only-file.md");
 
-  const logout = await page.request.post("/api/auth/logout");
+  let logout = await page.request.post("/api/auth/logout");
   expect(logout.ok()).toBeTruthy();
   await register(page);
 
+  // 他人删除 → 404（不泄露存在性，与下载路由口径一致）。
   const res = await page.request.delete(`/api/kb/files/${victimFile.id}`);
   expect(res.status()).toBe(404);
 
-  // 文件依然存在（下载仍受权限保护，但不是因为被删除导致的 404 —— 用状态未变来间接验证：
-  // 用原 owner 身份仍能看到该文件仍存在于其列表）。
+  // 正向断言：切回原 owner，文件仍在列表中且仍可签发下载 URL——
+  // 证明上面的 404 是「无权删」而非「文件已被误删」。
+  logout = await page.request.post("/api/auth/logout");
+  expect(logout.ok()).toBeTruthy();
+  await login(page, owner.email);
+
+  const list = await page.request.get(`/api/kb/files?scope=personal`);
+  expect(list.status()).toBe(200);
+  const listBody = (await list.json()) as { files: { id: string }[] };
+  expect(listBody.files.map((f) => f.id)).toContain(victimFile.id);
+
+  const download = await page.request.get(`/api/kb/files/${victimFile.id}/download`);
+  expect(download.status()).toBe(200);
+  const downloadBody = (await download.json()) as { downloadUrl?: string };
+  expect(downloadBody.downloadUrl).toContain("X-Amz-Signature");
 });
 
 test("未登录 DELETE /api/kb/files/:id → 401", async ({ page }) => {

@@ -23,13 +23,23 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     try {
       await deleteObject(file.object_key);
     } catch (err) {
-      return NextResponse.json({ error: `对象存储删除失败：${String(err)}` }, { status: 502 });
+      // 错误详情只进服务端日志，不把内部实现细节回给前端（同 p12-F01 review 确立的模式）。
+      console.error(`kb-file 删除失败（file=${file.id}，阶段=对象存储，记录保留）：`, err);
+      return NextResponse.json({ error: "删除失败，请稍后重试" }, { status: 502 });
     }
 
-    await deleteKbFile(file.id);
+    try {
+      await deleteKbFile(file.id);
+    } catch (err) {
+      // 孤儿状态：对象已删、DB 记录还在（列表可见但下载必失败）。记录带 file id 的结构化日志
+      // 便于排查；用户重删可自愈——S3 DeleteObject 幂等，重删会跳过对象阶段直达 DB 删除重试。
+      console.error(`kb-file 删除失败（file=${file.id}，阶段=DB，对象已删，存在孤儿记录）：`, err);
+      return NextResponse.json({ error: "删除失败，请稍后重试" }, { status: 500 });
+    }
 
     return NextResponse.json({ ok: true, id: file.id });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("kb-file 删除失败（未预期错误）：", err);
+    return NextResponse.json({ error: "删除失败，请稍后重试" }, { status: 500 });
   }
 }
