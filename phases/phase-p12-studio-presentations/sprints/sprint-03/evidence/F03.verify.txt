@@ -1,0 +1,102 @@
+=== F03 verification run — 2026-07-02T14:10:28Z ===
+Feature: p12:F03 修订演示文稿（方案修改 + 单页优化）
+
+--- docker compose -f infra/docker-compose.yml up -d ---
+ Container worker-wrk-studio-1-p12-f03-revise-prese-minio-1  Running
+ Container worker-wrk-studio-1-p12-f03-revise-prese-redis-1  Running
+ Container worker-wrk-studio-1-p12-f03-revise-prese-postgres-1  Running
+exit: 0
+
+--- pnpm --filter @repo/data run migrate ---
+
+> @repo/data@0.1.0 migrate /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/packages/data
+> sh -c 'set -a; [ -f ../../apps/web/.env.local ] && . ../../apps/web/.env.local; set +a; tsx src/migrate.ts'
+
+✓ 已应用，跳过：001_init.sql
+✓ 已应用，跳过：002_auth.sql
+✓ 已应用，跳过：003_team.sql
+✓ 已应用，跳过：004_room.sql
+✓ 已应用，跳过：005_canvas.sql
+✓ 已应用，跳过：006_profile.sql
+✓ 已应用，跳过：007_board.sql
+✓ 已应用，跳过：008_board_visits.sql
+✓ 已应用，跳过：009_board_favorites.sql
+✓ 已应用，跳过：010_room_chat.sql
+✓ 已应用，跳过：011_board_settings.sql
+✓ 已应用，跳过：012_board_items_board_id.sql
+✓ 已应用，跳过：013_board_items_color.sql
+✓ 已应用，跳过：014_feedback.sql
+✓ 已应用，跳过：014_room_chat_messages.sql
+✓ 已应用，跳过：015_team_general.sql
+✓ 已应用，跳过：016_admin_role.sql
+✓ 已应用，跳过：016_ai_store.sql
+✓ 已应用，跳过：016_ava_chat.sql
+✓ 已应用，跳过：016_credits.sql
+✓ 已应用，跳过：016_kb_files.sql
+✓ 已应用，跳过：016_survey.sql
+✓ 已应用，跳过：017_ai_store_item_config.sql
+✓ 已应用，跳过：017_payment_orders.sql
+✓ 已应用，跳过：017_studio_artifacts.sql
+✓ 已应用，跳过：017_survey_templates.sql
+✓ 已应用，跳过：018_ai_store_favorites.sql
+✓ 已应用，跳过：018_ava_message_attachments.sql
+✓ 已应用，跳过：018_ava_thread_share.sql
+✓ 已应用，跳过：018_user_plan.sql
+✓ 已应用，跳过：019_presentation_artifacts.sql
+✓ 已应用，跳过：020_ava_message_feedback.sql
+✓ 已应用，跳过：021_presentation_revisions.sql
+迁移完成。
+exit: 0
+
+--- pnpm --filter @repo/web exec playwright test e2e/presentations-002-revise-presentation.spec.ts ---
+
+Running 5 tests using 1 worker
+
+  ✓  1 [chromium] › presentations-002-revise-presentation.spec.ts:46:5 › 方案修订：提修改要求得到更新方案，原地替换预览内容 (4.5s)
+  ✓  2 [chromium] › presentations-002-revise-presentation.spec.ts:72:5 › 单页优化：仅重生成本页并原位替换，其余页不变 (5.3s)
+  ✓  3 [chromium] › presentations-002-revise-presentation.spec.ts:110:5 › 方案修订失败不破坏原可查看结果 (4.0s)
+  ✓  4 [chromium] › presentations-002-revise-presentation.spec.ts:129:5 › 非创建者（只读线程）不能对他人制品发起修订/优化 (4.3s)
+  ✓  5 [chromium] › presentations-002-revise-presentation.spec.ts:158:5 › 未登录调用修订/优化接口 → 401 (400ms)
+
+  Slow test file: [chromium] › presentations-002-revise-presentation.spec.ts (18.4s)
+  Consider splitting slow test files to speed up parallel execution
+  5 passed (19.7s)
+exit: 0
+
+--- Regression check: pnpm run verify:base (repo base gate) ---
+@repo/web:test:  ✓ lib/health.test.ts  (1 test) 29ms
+@repo/web:test:  ✓ lib/viewport.test.ts  (4 tests) 10ms
+@repo/web:test:  ✓ app/api/ava/threads/[id]/share/route.test.ts  (5 tests) 39ms
+@repo/web:test:  ✓ app/api/ava/threads/[id]/route.test.ts  (4 tests) 96ms
+@repo/web:test: 
+@repo/web:test:  Test Files  6 passed (6)
+@repo/web:test:       Tests  21 passed (21)
+@repo/web:test:    Start at  22:08:57
+@repo/web:test:    Duration  5.21s (transform 1.19s, setup 5ms, collect 2.43s, tests 189ms, environment 11ms, prepare 3.68s)
+@repo/web:test: 
+@repo/web:typecheck: cache hit, replaying logs e223c2e528c77f31
+@repo/web:typecheck: 
+@repo/web:typecheck: > @repo/web@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/apps/web
+@repo/web:typecheck: > tsc --noEmit
+@repo/web:typecheck: 
+
+ Tasks:    45 successful, 45 total
+Cached:    45 cached, 45 total
+  Time:    1.008s >>> FULL TURBO
+
+exit: 0
+
+--- Regression check: existing F02 e2e spec (presentations-001) ---
+
+Running 5 tests using 1 worker
+
+  ✓  1 [chromium] › presentations-001-generate-presentation.spec.ts:27:5 › 来源为空（无聊天消息/房间文件）时生成被禁用 (2.4s)
+  ✓  2 [chromium] › presentations-001-generate-presentation.spec.ts:40:5 › 以说明文本为来源：填写说明后可生成，来源为空时禁用 (5.2s)
+  ✓  3 [chromium] › presentations-001-generate-presentation.spec.ts:101:5 › 以当前聊天为来源生成：来源可用后启用生成，预览卡片出现 (9.8s)
+  ✓  4 [chromium] › presentations-001-generate-presentation.spec.ts:123:5 › 生成失败给重试：重试后预览卡片最终出现 (3.1s)
+  ✓  5 [chromium] › presentations-001-generate-presentation.spec.ts:151:5 › 未登录调用生成接口 → 401 (346ms)
+
+  Slow test file: [chromium] › presentations-001-generate-presentation.spec.ts (20.8s)
+  Consider splitting slow test files to speed up parallel execution
+  5 passed (22.0s)
+exit: 0

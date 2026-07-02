@@ -21,6 +21,7 @@ import {
 import {
   PresentationPreviewCard,
   type PresentationArtifact,
+  type PresentationRevision,
 } from "@/components/presentations/presentation-preview-card";
 
 interface Chat {
@@ -75,6 +76,8 @@ export default function RoomChatDetailPage() {
   const [presentationArtifacts, setPresentationArtifacts] = useState<PresentationArtifact[]>([]);
   const [presentationGenerating, setPresentationGenerating] = useState(false);
   const [presentationGenError, setPresentationGenError] = useState("");
+  // 修订/单页优化（P12 F03）：按制品 id 存放其修订请求列表，供预览卡片展示处理态/失败。
+  const [presentationRevisions, setPresentationRevisions] = useState<Record<string, PresentationRevision[]>>({});
 
   useEffect(() => {
     let alive = true;
@@ -194,11 +197,27 @@ export default function RoomChatDetailPage() {
 
   async function loadPresentationArtifacts() {
     const res = await fetch(`/api/rooms/${roomId}/chats/${chatId}/presentations/artifacts`);
-    if (res.ok) setPresentationArtifacts((await res.json()).artifacts ?? []);
+    if (res.ok) {
+      const artifacts: PresentationArtifact[] = (await res.json()).artifacts ?? [];
+      setPresentationArtifacts(artifacts);
+      // 拉每个已就绪制品的修订列表（供修订面板/优化本页展示处理态、方案摘要）。
+      const readyIds = artifacts.filter((a) => a.status === "ready").map((a) => a.id);
+      for (const id of readyIds) void loadPresentationRevisions(id);
+    }
+  }
+
+  async function loadPresentationRevisions(artifactId: string) {
+    const res = await fetch(
+      `/api/rooms/${roomId}/chats/${chatId}/presentations/artifacts/${artifactId}/revisions`
+    );
+    if (res.ok) {
+      const { revisions } = await res.json();
+      setPresentationRevisions((prev) => ({ ...prev, [artifactId]: revisions ?? [] }));
+    }
   }
 
   // 同 Studio：面板打开后拉取来源可用性 + 制品列表；轮询驱动「生成中 → ready/error」
-  // 状态刷新（异步生成无法瞬时完成）。
+  // 状态刷新（异步生成无法瞬时完成）。同一轮询也覆盖修订/优化的处理态刷新。
   useEffect(() => {
     if (loading || error) return;
     void loadPresentationSources();
@@ -253,6 +272,32 @@ export default function RoomChatDetailPage() {
       { method: "POST" }
     );
     if (res.ok) void loadPresentationArtifacts();
+  }
+
+  // 方案层修订（P12 F03）：提修改要求 → 异步得到更新方案，成功后原地替换预览内容。
+  async function revisePresentationPlan(artifactId: string, instructions: string) {
+    const res = await fetch(
+      `/api/rooms/${roomId}/chats/${chatId}/presentations/artifacts/${artifactId}/revisions`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ instructions }),
+      }
+    );
+    if (res.ok) void loadPresentationRevisions(artifactId);
+  }
+
+  // 单页优化（P12 F03）：仅重生成目标页并原位替换，其余页不受影响。
+  async function optimizePresentationPage(artifactId: string, pageN: number, instructions: string) {
+    const res = await fetch(
+      `/api/rooms/${roomId}/chats/${chatId}/presentations/artifacts/${artifactId}/optimize-page`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ pageN, instructions }),
+      }
+    );
+    if (res.ok) void loadPresentationRevisions(artifactId);
   }
 
   async function downloadPresentation(artifactId: string, format: "pptx" | "pdf") {
@@ -397,6 +442,11 @@ export default function RoomChatDetailPage() {
                   artifact={a}
                   onDownload={(id, format) => void downloadPresentation(id, format)}
                   onRetry={(id) => void retryPresentation(id)}
+                  revisions={presentationRevisions[a.id] ?? []}
+                  onRevisePlan={canEdit ? (id, instructions) => void revisePresentationPlan(id, instructions) : undefined}
+                  onOptimizePage={
+                    canEdit ? (id, pageN, instructions) => void optimizePresentationPage(id, pageN, instructions) : undefined
+                  }
                 />
               ))}
             {presentationArtifacts.some((a) => a.status === "queued" || a.status === "processing") && (
