@@ -1,5 +1,9 @@
-import { describe, it, expect } from "vitest";
-import { isAiStoreItemVisible } from "./aiStore";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { isAiStoreItemVisible, canAccessAiStoreItem } from "./aiStore";
+import { query } from "./index";
+
+vi.mock("./index", () => ({ query: vi.fn() }));
+const mockQuery = vi.mocked(query);
 
 // 纯函数单测：可见性判定（真实 DB 交互/分页由 harness verify + docker e2e 覆盖）。
 describe("isAiStoreItemVisible", () => {
@@ -49,5 +53,41 @@ describe("isAiStoreItemVisible", () => {
     expect(
       isAiStoreItemVisible({ status: "published", scope: "personal", owner_user_id: 5, team_id: null }, undefined, null)
     ).toBe(false);
+  });
+});
+
+// canAccessAiStoreItem：isAiStoreItemVisible 之外，personal-scope 的已授权 grantee
+// （ai_store_item_grants 有效记录）也应能访问详情类路由（P11 F05 分享授权后的可见性一致性）。
+describe("canAccessAiStoreItem", () => {
+  const personalItem = { id: 42, status: "published" as const, scope: "personal" as const, owner_user_id: 5, team_id: null };
+
+  beforeEach(() => {
+    mockQuery.mockReset();
+  });
+
+  it("owner 本人始终可访问，不查 grants 表", async () => {
+    const ok = await canAccessAiStoreItem(personalItem, 5, null);
+    expect(ok).toBe(true);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("已授权的 grantee（ai_store_item_grants 命中）可访问", async () => {
+    mockQuery.mockResolvedValueOnce([{ one: 1 }]);
+    const ok = await canAccessAiStoreItem(personalItem, 6, null);
+    expect(ok).toBe(true);
+    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("ai_store_item_grants"), [42, 6]);
+  });
+
+  it("被移除授权的用户（grants 表无记录）不可访问", async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    const ok = await canAccessAiStoreItem(personalItem, 6, null);
+    expect(ok).toBe(false);
+  });
+
+  it("非 personal scope 不查 grants 表（授权模型仅适用于 personal 分享）", async () => {
+    const teamItem = { id: 43, status: "published" as const, scope: "team" as const, owner_user_id: null, team_id: 7 };
+    const ok = await canAccessAiStoreItem(teamItem, 6, 8);
+    expect(ok).toBe(false);
+    expect(mockQuery).not.toHaveBeenCalled();
   });
 });

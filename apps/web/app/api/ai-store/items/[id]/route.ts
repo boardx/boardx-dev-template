@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { CURRENT_TEAM_COOKIE } from "@repo/auth";
 import {
+  canAccessAiStoreItem,
   getAiStoreItem,
   getMembership,
   isAiStoreItemFavorited,
-  isAiStoreItemVisible,
   updateAiStoreItem,
 } from "@repo/data";
 import { currentUser } from "@/lib/session";
@@ -27,7 +27,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
   const teamIdCookie = cookies().get(CURRENT_TEAM_COOKIE)?.value;
   const teamId = teamIdCookie ? Number(teamIdCookie) : null;
-  if (!isAiStoreItemVisible(item, user.id, teamId)) {
+  if (!(await canAccessAiStoreItem(item, user.id, teamId))) {
     return NextResponse.json({ error: "未找到" }, { status: 404 });
   }
 
