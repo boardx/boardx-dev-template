@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findTransactionByLabel, getOrCreatePersonalWallet, getUserById, recordTransaction } from "@repo/data";
+import { getOrCreatePersonalWallet, getUserById, recordTransaction, recordTransactionIdempotent } from "@repo/data";
 import { requireSysAdmin } from "@/lib/admin";
 
 export const runtime = "nodejs";
@@ -16,6 +16,7 @@ export const dynamic = "force-dynamic";
 //    必须可追溯到具体操作者。
 // 3. note 长度上限 200 字符，防止无界输入写入 description。
 const NOTE_MAX_LEN = 200;
+const MANUAL_CREDIT_MAX_AMOUNT = 100_000;
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const gate = await requireSysAdmin();
@@ -38,6 +39,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!Number.isInteger(rawAmount) || rawAmount <= 0) {
     return NextResponse.json({ errors: { amount: "增加额度必须是大于 0 的整数" } }, { status: 400 });
   }
+  if (rawAmount > MANUAL_CREDIT_MAX_AMOUNT) {
+    return NextResponse.json(
+      { errors: { amount: `单次增加额度不能超过 ${MANUAL_CREDIT_MAX_AMOUNT}` } },
+      { status: 400 }
+    );
+  }
   const amount = rawAmount;
   const note = String(body.note ?? "").trim().slice(0, NOTE_MAX_LEN);
 
@@ -48,27 +55,32 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const wallet = await getOrCreatePersonalWallet(userId);
   const label = idempotencyKey ? `Admin grant · idem:${idempotencyKey}` : "Admin grant";
 
-  if (idempotencyKey) {
-    const existing = await findTransactionByLabel(wallet.id, label);
-    if (existing) {
-      // 命中同一幂等 key 的既有流水：视为重放/双击，直接返回当前余额，不重复入账。
-      const current = await getOrCreatePersonalWallet(userId);
-      return NextResponse.json({ wallet: { balance: Number(current.balance) }, idempotent: true });
-    }
-  }
-
   const operator = `${gate.user.email} (uid:${gate.user.id})`;
   const description = note
     ? `管理员手动上分 · 操作人 ${operator} · ${note}`
     : `管理员手动上分 · 操作人 ${operator}`;
 
-  await recordTransaction(wallet.id, {
-    kind: "purchase",
-    amount,
-    grant: true,
-    label,
-    description,
-  });
+  if (idempotencyKey) {
+    const result = await recordTransactionIdempotent(wallet.id, {
+      kind: "purchase",
+      amount,
+      grant: true,
+      label,
+      description,
+    });
+    if (result.idempotent) {
+      const current = await getOrCreatePersonalWallet(userId);
+      return NextResponse.json({ wallet: { balance: Number(current.balance) }, idempotent: true });
+    }
+  } else {
+    await recordTransaction(wallet.id, {
+      kind: "purchase",
+      amount,
+      grant: true,
+      label,
+      description,
+    });
+  }
 
   const updated = await getOrCreatePersonalWallet(userId);
   return NextResponse.json({ wallet: { balance: Number(updated.balance) } });

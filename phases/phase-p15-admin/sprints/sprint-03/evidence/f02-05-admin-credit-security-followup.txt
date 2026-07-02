@@ -1,0 +1,39 @@
+Issue #173 / p15-F02 manual credit security follow-up
+Date: 2026-07-02
+Worktree: /private/tmp/boardx-worktrees/issue-173-admin-credit-security
+
+Implemented:
+- Added packages/data/migrations/019_credit_transaction_idempotency.sql
+  - Unique partial index on credit_transactions(wallet_id, label) where label LIKE '%idem:%'.
+- Added packages/data/src/credits.ts recordTransactionIdempotent().
+  - Transaction inserts the idempotency-key transaction first.
+  - Only the inserted winner updates credit_wallets balance/totals.
+  - Conflicting same-key requests return the existing transaction and do not update balance.
+- Updated apps/web/app/api/admin/users/[id]/credit/route.ts.
+  - Same Idempotency-Key requests use recordTransactionIdempotent().
+  - Manual user credit grant max is 100000; larger amounts return HTTP 400.
+- Updated apps/web/e2e/admin-001-manage-users.spec.ts.
+  - Adds over-limit 400 assertion.
+  - Adds 8-way concurrent same Idempotency-Key assertion; expected final balance is one grant only.
+
+Verification run:
+- pnpm --filter @repo/data run typecheck
+  Result: PASS
+- pnpm --filter @repo/web run typecheck
+  Result: PASS
+- pnpm -w run verify:base
+  Result: PASS, 45/45 tasks successful
+- pnpm harness verify --sprint p15/03 --feature F02
+  Result: PASS/NOOP. Harness printed: "F02 已 passing，跳过（不可逆）"; new e2e was not executed.
+
+Blocked verification:
+- docker compose -f infra/docker-compose.yml up -d
+  Result: FAIL
+  Reason: Cannot connect to the Docker daemon at unix:///var/run/docker.sock.
+- pnpm --filter @repo/data run migrate
+  Result: FAIL
+  Reason: ECONNREFUSED on Postgres localhost port 50404.
+- pnpm --filter @repo/web exec playwright test e2e/admin-001-manage-users.spec.ts
+  Result: FAIL
+  Reason: Next server started, but DB-backed routes failed with ECONNREFUSED on Postgres port 50404.
+  Summary: 1 passed, 13 failed; failures are DB connection failures before the security assertions can run.
