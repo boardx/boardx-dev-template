@@ -1,5 +1,6 @@
 // packages/data/src/aiStore.ts — CAP-DATA AI Store 商品仓储（P11）
 // ai_store_items：Agent / AI 工具 / 图片工具 / 模板，scope=personal/team/platform。
+import { randomBytes } from "node:crypto";
 import { query } from "./index";
 
 export type AiStoreItemType = "agent" | "ai-tool" | "image-tool" | "template";
@@ -303,4 +304,146 @@ export async function toggleAiStoreFavorite(
     [itemId, userId]
   );
   return { favorited: true, likes: rows[0]?.likes ?? 0 };
+}
+
+// ---------------------------------------------------------------------------
+// 分享管理（P11 F05，uc-ai-store-005）：拥有者为项目生成/关闭「管理授权链接」
+// （share_token/share_enabled 落在 ai_store_items 上，同一项目同一时刻只有一条有效链接）；
+// 被授权协作者打开链接后记录为 grantee（ai_store_item_grants），驱动 Authorized/Shared 视图。
+// 关闭分享只让新访问者无法再通过旧链接加入——不清空已授权列表，拥有者需显式移除授权用户。
+// ---------------------------------------------------------------------------
+
+export interface AiStoreItemShare {
+  item_id: number;
+  share_token: string | null;
+  share_enabled: boolean;
+  share_updated_at: string | null;
+}
+
+export interface AiStoreShareGrantee {
+  user_id: number;
+  email: string;
+  display_name: string;
+  granted_at: string;
+}
+
+const SHARE_COLS = "id AS item_id, share_token, share_enabled, share_updated_at";
+
+export function newAiStoreShareToken(): string {
+  return randomBytes(24).toString("base64url");
+}
+
+/** 取某项目当前分享状态；不存在返回 undefined。不做鉴权，调用方负责校验属主。 */
+export async function getAiStoreItemShare(itemId: number): Promise<AiStoreItemShare | undefined> {
+  const rows = await query<AiStoreItemShare>(
+    `SELECT ${SHARE_COLS} FROM ai_store_items WHERE id = $1`,
+    [itemId]
+  );
+  return rows[0];
+}
+
+/**
+ * 开启/重新开启分享：已有有效链接（share_enabled=true）时复用同一 token（A1 分支——
+ * 已开启分享时复制的是当前有效链接，不重新生成）；否则新生成一个 token 并开启
+ * （A2 分支——关闭后重新复制会重新开启并生成新链接，旧 token 因此彻底失效）。
+ */
+export async function enableAiStoreItemShare(itemId: number): Promise<AiStoreItemShare | undefined> {
+  const existing = await getAiStoreItemShare(itemId);
+  if (!existing) return undefined;
+  const token = existing.share_enabled && existing.share_token ? existing.share_token : newAiStoreShareToken();
+  const rows = await query<AiStoreItemShare>(
+    `UPDATE ai_store_items
+     SET share_token = $2, share_enabled = true, share_updated_at = now()
+     WHERE id = $1
+     RETURNING ${SHARE_COLS}`,
+    [itemId, token]
+  );
+  return rows[0];
+}
+
+/**
+ * 关闭分享：旧链接立即失效（share_enabled=false，token 保留供审计但不再可用于访问校验，
+ * 校验统一要求 share_enabled=true）。已授权用户列表不受影响。
+ */
+export async function disableAiStoreItemShare(itemId: number): Promise<AiStoreItemShare | undefined> {
+  const rows = await query<AiStoreItemShare>(
+    `UPDATE ai_store_items
+     SET share_enabled = false, share_updated_at = now()
+     WHERE id = $1
+     RETURNING ${SHARE_COLS}`,
+    [itemId]
+  );
+  return rows[0];
+}
+
+/**
+ * 被授权协作者打开授权链接：token 必须匹配且分享当前处于开启状态，否则拒绝（E3——链接
+ * 无效/已下架时访问者应看到不可访问提示）。校验通过后把该用户记录为该项目的 grantee
+ * （幂等：重复访问同一有效链接不报错，不重复插入）。返回项目本体供前端跳转到详情/授权视图。
+ */
+export async function redeemAiStoreItemShare(
+  itemId: number,
+  shareToken: string,
+  userId: number
+): Promise<AiStoreItem | undefined> {
+  if (!shareToken) return undefined;
+  const rows = await query<AiStoreItem>(
+    `SELECT ${ITEM_COLS} FROM ai_store_items
+     WHERE id = $1 AND share_token = $2 AND share_enabled = true`,
+    [itemId, shareToken]
+  );
+  const item = rows[0];
+  if (!item) return undefined;
+
+  await query(
+    `INSERT INTO ai_store_item_grants (item_id, user_id, granted_via_token)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (item_id, user_id) DO NOTHING`,
+    [itemId, userId, shareToken]
+  );
+  return item;
+}
+
+/** 某用户是否已被授权管理该项目（供路由做 grantee 权限判定 + 卡片“已授权”标识）。 */
+export async function isAiStoreItemGrantee(itemId: number, userId: number): Promise<boolean> {
+  const rows = await query<{ one: number }>(
+    `SELECT 1 AS one FROM ai_store_item_grants WHERE item_id = $1 AND user_id = $2`,
+    [itemId, userId]
+  );
+  return rows.length > 0;
+}
+
+/** 已授权用户列表（供分享管理弹窗展示，按授权时间正序）。 */
+export async function listAiStoreItemGrantees(itemId: number): Promise<AiStoreShareGrantee[]> {
+  return query<AiStoreShareGrantee>(
+    `SELECT u.id AS user_id, u.email,
+            COALESCE(NULLIF(TRIM(u.first_name || ' ' || u.last_name), ''), u.email) AS display_name,
+            g.created_at AS granted_at
+     FROM ai_store_item_grants g
+     JOIN users u ON u.id = g.user_id
+     WHERE g.item_id = $1
+     ORDER BY g.created_at ASC`,
+    [itemId]
+  );
+}
+
+/** 拥有者移除某个已授权用户；返回是否真的删除了一行（供路由判定 404 vs 200）。 */
+export async function removeAiStoreItemGrantee(itemId: number, userId: number): Promise<boolean> {
+  const rows = await query<{ one: number }>(
+    `DELETE FROM ai_store_item_grants WHERE item_id = $1 AND user_id = $2 RETURNING 1`,
+    [itemId, userId]
+  );
+  return rows.length > 0;
+}
+
+/** 授权协作者视角的“Authorized”列表：自己被授权管理、且非本人拥有的项目。 */
+export async function listAuthorizedAiStoreItems(userId: number): Promise<AiStoreItem[]> {
+  return query<AiStoreItem>(
+    `SELECT ${ITEM_COLS.split(", ").map((c) => `it.${c}`).join(", ")}
+     FROM ai_store_items it
+     JOIN ai_store_item_grants g ON g.item_id = it.id
+     WHERE g.user_id = $1 AND it.owner_user_id IS DISTINCT FROM $1
+     ORDER BY g.created_at DESC`,
+    [userId]
+  );
 }
