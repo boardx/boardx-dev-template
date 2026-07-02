@@ -75,9 +75,9 @@
       "title": "升级/管理个人计划（订阅弹窗 + credits 模式路由 + 额度不足触发）",
       "user_visible_behavior": "用户从个人菜单或 AI 额度不足提示打开计划弹窗：subscription 模式展示 Free/Pro 权益对比与「升级到 Pro / 管理订阅」（走支付/管理流程）；credits 模式改为进入购买 Credit 流程（F02 弹窗）；升级成功后账号计划/权益更新；关闭弹窗不改变计划/余额。",
       "design_ref": "mockup:phases/requirements/mockups/upgrade-plan.html（本轮补：Free/Pro 类型 + 权益对比 + Upgrade to Pro / Manage Subscription 按钮）+ prototype:<!-- buy credits modal -->（credits 模式复用）；DESIGN.md tokens",
-      "status": "not_started",
+      "status": "in_progress",
       "sprint": "04",
-      "owner": null,
+      "owner": "wrk-codex-billing-1",
       "capability": "CAP-PAYMENT",
       "depends_on": [
         "F05"
@@ -88,8 +88,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/billing-001-upgrade-plan.spec.ts"
       ],
-      "evidence": "",
-      "notes": "【2026-07-02 解锁：F05 支付引擎已 passing，blocked→not_started】uc-billing-001。subscription 升级弹窗设计稿本轮补齐（原 design-needed 已解除，见 design_ref）。blocked-on F05 支付引擎（订阅/购买都过支付）。credits 模式路径复用 F02。是 p9/p12 等 AI 阶段「额度不足引导」的落点。不含 Team 订阅计划升级。依赖 F02/F05。"
+      "evidence": "sprints/sprint-04/evidence/f04-validation-notes.md (implementation complete; e2e passed once with 7/7; final harness verify blocked by local Docker Postgres recovery flapping)",
+      "notes": "uc-billing-001。subscription 升级弹窗设计稿本轮补齐（原 design-needed 已解除，见 design_ref）。【2026-07-02 解锁：F05 支付引擎已 passing，blocked→in_progress，实现已完成，见 evidence】credits 模式路径复用 F02。是 p9/p12 等 AI 阶段「额度不足引导」的落点。不含 Team 订阅计划升级。依赖 F02/F05。"
     },
     {
       "id": "F05",

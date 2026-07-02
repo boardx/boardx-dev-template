@@ -8,9 +8,14 @@
 // 选中线程或新建聊天后切到聊天视图（带返回入口）。
 //
 // OUT OF SCOPE（本 feature 不做，留给后续 F06/F07 等）：
-// 消息反馈、分享只读、模型/Agent/工具切换、建议动作个性化、
-// 发送到 Board / 邮件。线程重命名/删除（F02）、附件/图片/音频（F08）、
-// 消息编辑/删除/重新生成（F03）、建议动作（F10）、Deep Research 已在本文件实现。
+// 分享只读、模型/Agent/工具切换、建议动作个性化、发送到 Board / 邮件。
+// 线程重命名/删除（F02）、附件/图片/音频（F08）、消息编辑/删除/重新生成（F03）、
+// 建议动作（F10）、Deep Research（F06）已在本文件实现。
+//
+// P9 F11（本文件新增）：assistant 消息下方操作条——复制（写剪贴板，代码块由
+// markdown-message.tsx 内单独复制）、反馈（点赞/点踩，持久化）、重新生成（对最后一条
+// assistant 回复重新请求，不丢原问题）。「发送到当前 Board」「发送邮件」跨能力依赖未就绪
+// （分别依赖 p6 canvas 与邮件服务），本 feature 按 notes 要求先做禁用态占位，不接真实动作。
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -34,8 +39,13 @@ import {
   CheckCircle2,
   Loader2,
   Search,
+  ThumbsUp,
+  ThumbsDown,
+  RefreshCw,
+  LayoutGrid,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BillingPlanDialog } from "@/components/billing/billing-plan-dialog";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,12 +70,14 @@ interface MessageAttachment {
   kind: "image" | "audio" | "file";
   mime_type: string;
 }
+type MessageFeedbackRating = "up" | "down";
 interface Message {
   id: number;
   role: "user" | "assistant";
   content: string;
   status: "complete" | "failed";
   attachments?: MessageAttachment[];
+  feedback?: MessageFeedbackRating | null;
 }
 interface ThreadShare {
   thread_id: number;
@@ -171,6 +183,7 @@ export default function AvaPage() {
   const [composerMode, setComposerMode] = useState<ComposerMode>("chat");
   const [researchRun, setResearchRun] = useState<ResearchRun | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [billingOpen, setBillingOpen] = useState(false);
   const [capabilities, setCapabilities] = useState<AvaCapabilities | null>(null);
   const [settingsError, setSettingsError] = useState("");
   const [modelId, setModelId] = useState("stub:default");
@@ -186,6 +199,12 @@ export default function AvaPage() {
   const [editError, setEditError] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [msgCopiedId, setMsgCopiedId] = useState<number | null>(null);
+  const [msgCopyError, setMsgCopyError] = useState<number | null>(null);
+  const [feedbackPendingId, setFeedbackPendingId] = useState<number | null>(null);
+  const [feedbackErrorId, setFeedbackErrorId] = useState<number | null>(null);
+  const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
+  const [regenerateErrorId, setRegenerateErrorId] = useState<number | null>(null);
   const [menuThreadId, setMenuThreadId] = useState<number | null>(null);
   const [editingThreadId, setEditingThreadId] = useState<number | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
@@ -325,6 +344,11 @@ export default function AvaPage() {
     setResearchRun(null);
     setReportOpen(false);
     setMobileView("chat");
+    setMsgCopiedId(null);
+    setMsgCopyError(null);
+    setFeedbackErrorId(null);
+    setRegeneratingId(null);
+    setRegenerateErrorId(null);
     attachments.reset();
     try {
       const res = await fetch(`/api/ava/threads/${id}`);
@@ -354,6 +378,11 @@ export default function AvaPage() {
     setResearchRun(null);
     setReportOpen(false);
     setMobileView("chat");
+    setMsgCopiedId(null);
+    setMsgCopyError(null);
+    setFeedbackErrorId(null);
+    setRegeneratingId(null);
+    setRegenerateErrorId(null);
     attachments.reset();
   }
 
@@ -695,6 +724,89 @@ export default function AvaPage() {
     }
   }
 
+  // ─── P9 F11：消息结果操作（复制/反馈/重新生成）──────────────────────────
+
+  async function copyMessage(message: Message) {
+    setMsgCopyError(null);
+    try {
+      if (!navigator.clipboard) throw new Error("clipboard unavailable");
+      await navigator.clipboard.writeText(message.content);
+      setMsgCopiedId(message.id);
+      setTimeout(() => setMsgCopiedId((prev) => (prev === message.id ? null : prev)), 1500);
+    } catch {
+      // 剪贴板不可用（权限被拒/非安全上下文）：提示手动复制，原消息保持不变。
+      setMsgCopyError(message.id);
+      setTimeout(() => setMsgCopyError((prev) => (prev === message.id ? null : prev)), 3000);
+    }
+  }
+
+  async function submitFeedback(message: Message, rating: MessageFeedbackRating) {
+    if (activeId == null || feedbackPendingId != null) return;
+    setFeedbackPendingId(message.id);
+    setFeedbackErrorId(null);
+    const previous = message.feedback ?? null;
+    // 乐观更新；失败时回滚，原消息始终保持可见。
+    setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, feedback: rating } : m)));
+    try {
+      const res = await fetch(`/api/ava/threads/${activeId}/messages/${message.id}/feedback`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ rating }),
+      });
+      if (guard(res.status)) return;
+      if (!res.ok) throw new Error();
+    } catch {
+      setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, feedback: previous } : m)));
+      setFeedbackErrorId(message.id);
+      setTimeout(() => setFeedbackErrorId((prev) => (prev === message.id ? null : prev)), 3000);
+    } finally {
+      setFeedbackPendingId(null);
+    }
+  }
+
+  async function regenerateReply(message: Message) {
+    if (activeId == null || sending || regeneratingId != null) return;
+    setRegeneratingId(message.id);
+    setRegenerateErrorId(null);
+    setSendError("");
+    setStreamingText("");
+
+    try {
+      const res = await fetch(
+        `/api/ava/threads/${activeId}/messages/${message.id}/regenerate`,
+        { method: "POST" }
+      );
+      if (guard(res.status)) return;
+      if (!res.ok || !res.body) {
+        setRegenerateErrorId(message.id);
+        return;
+      }
+
+      // 重新生成中：从消息列表移除旧回复，展示"生成中"，原问题（前一条 user 消息）不受影响。
+      setMessages((prev) => prev.filter((m) => m.id !== message.id));
+      setSending(true);
+      await consumeSse(res.body, {
+        onUser: () => {},
+        onToken: (token: string) => setStreamingText((prev) => prev + token),
+        onDone: (msg: Message) => {
+          setMessages((prev) => [...prev, msg]);
+          setStreamingText("");
+        },
+        onError: (msg: Message) => {
+          setMessages((prev) => [...prev, msg]);
+          setStreamingText("");
+          setSendError("AVA 生成回复失败，请重试。");
+        },
+      });
+      await refreshThreads();
+    } catch {
+      setRegenerateErrorId(message.id);
+    } finally {
+      setSending(false);
+      setRegeneratingId(null);
+    }
+  }
+
   function onComposerKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -805,6 +917,8 @@ export default function AvaPage() {
   }
   const currentShareUrl = shareUrl();
   const lastUserMessageId = [...messages].reverse().find((m) => m.role === "user")?.id ?? null;
+  const lastAssistantMessageId =
+    [...messages].reverse().find((m) => m.role === "assistant")?.id ?? null;
   const groupedThreads = groupThreadsByDate(threads);
 
   return (
@@ -1049,6 +1163,18 @@ export default function AvaPage() {
 
             <div ref={scrollRef} className="flex-1 overflow-auto py-6">
               <div className="mx-auto flex max-w-2xl flex-col gap-5 px-6">
+                <div
+                  data-testid="ai-low-credits-prompt"
+                  className="flex items-center justify-between gap-3 rounded-12 border border-border bg-surface-1 px-4 py-3"
+                >
+                  <div>
+                    <div className="text-13 font-semibold text-foreground">AI credits</div>
+                    <div className="text-12 text-muted-foreground">Buy credits or upgrade your plan before a heavy AVA run.</div>
+                  </div>
+                  <Button data-testid="ai-low-credits-open-billing" size="sm" onClick={() => setBillingOpen(true)}>
+                    Upgrade
+                  </Button>
+                </div>
                 {isEmptyThread ? (
                   <div data-testid="empty" className="pt-10 text-center">
                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-12 bg-primary text-primary-foreground">
@@ -1235,7 +1361,23 @@ export default function AvaPage() {
                                 {m.content}
                               </div>
                             ) : (
-                              <MarkdownMessage content={m.content} />
+                              <div className="flex max-w-[85%] flex-col gap-1.5">
+                                <MarkdownMessage content={m.content} />
+                                <MessageActionsBar
+                                  message={m}
+                                  isLast={m.id === lastAssistantMessageId}
+                                  copied={msgCopiedId === m.id}
+                                  copyError={msgCopyError === m.id}
+                                  feedbackPending={feedbackPendingId === m.id}
+                                  feedbackError={feedbackErrorId === m.id}
+                                  regenerating={regeneratingId === m.id}
+                                  regenerateError={regenerateErrorId === m.id}
+                                  disabled={sending || regeneratingId != null}
+                                  onCopy={() => void copyMessage(m)}
+                                  onFeedback={(rating) => void submitFeedback(m, rating)}
+                                  onRegenerate={() => void regenerateReply(m)}
+                                />
+                              </div>
                             )}
                           </div>
                           {showReplySuggestions && (
@@ -1250,7 +1392,21 @@ export default function AvaPage() {
                     })}
                   </ul>
                 )}
-                {sending && (
+                {regeneratingId != null && (
+                  <div data-testid="regenerating" className="flex items-start gap-2.5">
+                    <span className="flex h-7 w-7 flex-none items-center justify-center rounded-7 bg-primary text-11 font-bold text-primary-foreground">
+                      AI
+                    </span>
+                    {streamingText ? (
+                      <div data-testid="msg-assistant-streaming">
+                        <MarkdownMessage content={streamingText} />
+                      </div>
+                    ) : (
+                      <span className="text-13 text-muted-foreground">AVA 正在重新生成…</span>
+                    )}
+                  </div>
+                )}
+                {sending && regeneratingId == null && (
                   <div data-testid="sending" className="flex items-start gap-2.5">
                     <span className="flex h-7 w-7 flex-none items-center justify-center rounded-7 bg-primary text-11 font-bold text-primary-foreground">
                       AI
@@ -1486,6 +1642,7 @@ export default function AvaPage() {
           </>
         )}
       </section>
+      <BillingPlanDialog open={billingOpen} onClose={() => setBillingOpen(false)} />
     </div>
   );
 }
@@ -1709,6 +1866,146 @@ function ReportPanel({ report, onClose }: { report: ResearchReport; onClose: () 
         ))}
       </div>
     </aside>
+  );
+}
+
+// ─── P9 F11：消息结果操作条（复制/反馈/重新生成/发送到Board/发送邮件）───────
+//
+// 「发送到当前 Board」「发送邮件」在本 feature 中始终禁用：分别依赖 p6 canvas（board 存在
+// 且有编辑权）与邮件服务，跨能力依赖未就绪，按 feature notes 要求先做占位，能力就绪后再点亮。
+function MessageActionsBar({
+  message,
+  isLast,
+  copied,
+  copyError,
+  feedbackPending,
+  feedbackError,
+  regenerating,
+  regenerateError,
+  disabled,
+  onCopy,
+  onFeedback,
+  onRegenerate,
+}: {
+  message: Message;
+  isLast: boolean;
+  copied: boolean;
+  copyError: boolean;
+  feedbackPending: boolean;
+  feedbackError: boolean;
+  regenerating: boolean;
+  regenerateError: boolean;
+  disabled: boolean;
+  onCopy: () => void;
+  onFeedback: (rating: MessageFeedbackRating) => void;
+  onRegenerate: () => void;
+}) {
+  return (
+    <div data-testid={`msg-actions-${message.id}`} className="flex flex-col gap-1">
+      <div className="flex items-center gap-0.5">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          data-testid="msg-copy"
+          className="h-7 w-7 text-muted-foreground transition-colors hover:bg-surface-1"
+          onClick={onCopy}
+          aria-label="Copy message"
+        >
+          {copied ? <Check className="h-3.5 w-3.5" strokeWidth={1.5} /> : <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          data-testid="msg-feedback-up"
+          className={cn(
+            "h-7 w-7 transition-colors hover:bg-surface-1",
+            message.feedback === "up" ? "text-primary" : "text-muted-foreground"
+          )}
+          onClick={() => onFeedback("up")}
+          disabled={feedbackPending}
+          aria-label="Good response"
+          aria-pressed={message.feedback === "up"}
+        >
+          <ThumbsUp className="h-3.5 w-3.5" strokeWidth={1.5} />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          data-testid="msg-feedback-down"
+          className={cn(
+            "h-7 w-7 transition-colors hover:bg-surface-1",
+            message.feedback === "down" ? "text-destructive" : "text-muted-foreground"
+          )}
+          onClick={() => onFeedback("down")}
+          disabled={feedbackPending}
+          aria-label="Bad response"
+          aria-pressed={message.feedback === "down"}
+        >
+          <ThumbsDown className="h-3.5 w-3.5" strokeWidth={1.5} />
+        </Button>
+        {isLast && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            data-testid="msg-regenerate"
+            className="h-7 w-7 text-muted-foreground transition-colors hover:bg-surface-1"
+            onClick={onRegenerate}
+            disabled={disabled}
+            aria-label="Regenerate response"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", regenerating && "animate-spin")} strokeWidth={1.5} />
+          </Button>
+        )}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          data-testid="msg-send-to-board"
+          className="h-7 w-7 text-muted-foreground"
+          disabled
+          aria-label="Send to current Board (coming soon)"
+          title="需要在 Board 内使用，敬请期待"
+        >
+          <LayoutGrid className="h-3.5 w-3.5" strokeWidth={1.5} />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          data-testid="msg-send-email"
+          className="h-7 w-7 text-muted-foreground"
+          disabled
+          aria-label="Send via email (coming soon)"
+          title="邮件发送即将上线"
+        >
+          <Mail className="h-3.5 w-3.5" strokeWidth={1.5} />
+        </Button>
+      </div>
+      {copied && (
+        <p data-testid="msg-copy-status" className="text-11 text-muted-foreground">
+          文本已被复制
+        </p>
+      )}
+      {copyError && (
+        <p role="alert" data-testid="msg-copy-error" className="text-11 text-destructive">
+          复制失败，请手动复制
+        </p>
+      )}
+      {feedbackError && (
+        <p role="alert" data-testid="msg-feedback-error" className="text-11 text-destructive">
+          反馈提交失败，请重试
+        </p>
+      )}
+      {regenerateError && (
+        <p role="alert" data-testid="msg-regenerate-error" className="text-11 text-destructive">
+          重新生成失败，请重试
+        </p>
+      )}
+    </div>
   );
 }
 
