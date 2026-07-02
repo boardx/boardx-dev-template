@@ -20,6 +20,6 @@
 | p12 | Studio & 演示 (P12) | in_progress | 0 | 0 | 0 | 3 |
 | p13 | 问卷 (P13) | in_progress | 0 | 1 | 0 | 5 |
 | p14 | 积分 & 计费 (P14) | in_progress | 0 | 1 | 0 | 4 |
-| p15 | Admin 后台 (P15) | in_progress | 0 | 0 | 1 | 4 |
+| p15 | Admin 后台 (P15) | in_progress | 0 | 1 | 0 | 4 |
 
-_最近聚合:2026-07-02T18:40:58.869Z_
+_最近聚合:2026-07-02T18:43:06.710Z_
