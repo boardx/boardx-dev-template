@@ -52,9 +52,9 @@
       "title": "删除知识库文件",
       "user_visible_behavior": "在文件行点删除并确认：DELETE /api/kb/files/:id 移除记录、对象存储文件与向量索引，列表立即移除该行并提示成功；仅有权限者可删；删除中失败保留该文件并提示；已被 AI 上下文引用的文件删除后不再被检索命中。",
       "design_ref": "prototype:<!-- KNOWLEDGE BASE -->（文件行删除按钮 + 成功/失败 toast）；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "03",
+      "owner": "wrk-kb-1",
       "capability": "CAP-DATA",
       "depends_on": [
         "F02"
@@ -65,7 +65,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/kb-003-delete-file.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-07-02T08:30:05.309Z",
       "notes": "uc-kb-003。删除需级联清对象存储 + 向量索引，避免悬挂检索。依赖 F02。"
     },
     {
@@ -75,9 +75,9 @@
       "title": "AI 引用知识库上下文（RAG 检索 + 作用域隔离）",
       "user_visible_behavior": "在 AVA/Agent/AI Tool 回答时选择或自动使用当前上下文中已 ready 的知识库文件：检索相关切片注入 prompt，回复中标注引用来源；只检索用户有权访问且处理完成的文件；未处理完成的文件显示「处理中不可用」；无相关内容时回复不虚构来源。",
       "design_ref": "prototype:<!-- AVA -->（RAG 引用发生在 AVA 回答链路，无独立屏；completed 文件状态见 <!-- KNOWLEDGE BASE -->）；DESIGN.md tokens",
-      "status": "blocked",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "04",
+      "owner": "wrk-kb-1",
       "capability": "CAP-AI",
       "depends_on": [
         "F03",
