@@ -86,3 +86,76 @@ export async function generatePresentation(
 
   return { title, slides, pptxContent, pdfContent };
 }
+
+// ─── 修订 / 单页优化（P12 F03，同一 sanctioned stub 模式）───────────────────────
+
+export interface PresentationRevisePlanInput {
+  /** 修订前的当前幻灯片（供 stub 在原基础上做确定性变换，而非从零生成）。 */
+  currentSlides: PresentationSlide[];
+  currentTitle: string;
+  /** 修改要求（改结构/受众/风格等自然语言描述）。 */
+  instructions: string;
+}
+
+export interface PresentationRevisePlanResult {
+  title: string;
+  slides: PresentationSlide[];
+  /** 方案变更摘要（供修订面板展示「更新后方案」，见 mockup .planrow）。 */
+  summary: { label: string }[];
+}
+
+export interface PresentationOptimizePageInput {
+  currentSlide: PresentationSlide;
+  /** 优化要求（如「加一张架构图并精简文字」）。 */
+  instructions: string;
+}
+
+export interface PresentationOptimizePageResult {
+  slide: PresentationSlide;
+}
+
+/** 与 PRESENTATION_FORCE_FAIL_MARKER 同一模式：instructions 含此串时确定性失败，
+ *  供 e2e 验证「修订/优化失败不破坏原可查看结果」。 */
+export const PRESENTATION_REVISION_FORCE_FAIL_MARKER = "__presentation_revision_force_fail__";
+
+/** 方案层修订（整体）：在当前幻灯片基础上按 instructions 做确定性占位调整——
+ *  不接入真实 AI 重生成，只保证「提修改要求 → 得到更新方案」的端到端契约可跑通。 */
+export async function revisePresentationPlan(
+  input: PresentationRevisePlanInput
+): Promise<PresentationRevisePlanResult> {
+  if (input.instructions.includes(PRESENTATION_REVISION_FORCE_FAIL_MARKER)) {
+    throw new Error("方案修订失败（测试触发）");
+  }
+
+  const trimmed = input.instructions.trim();
+  const slides = input.currentSlides.map((s) => ({
+    ...s,
+    bullets: [...s.bullets, `修订：${trimmed}`],
+  }));
+
+  return {
+    title: input.currentTitle,
+    slides,
+    summary: [
+      { label: `修改要求：${trimmed}` },
+      { label: `结构：${input.currentSlides.length} 页（保持不变）` },
+    ],
+  };
+}
+
+/** 单页优化：仅重生成目标页，原位替换——不影响其余页面（uc-presentations-002 业务规则）。 */
+export async function optimizePresentationPage(
+  input: PresentationOptimizePageInput
+): Promise<PresentationOptimizePageResult> {
+  if (input.instructions.includes(PRESENTATION_REVISION_FORCE_FAIL_MARKER)) {
+    throw new Error("单页优化失败（测试触发）");
+  }
+
+  const trimmed = input.instructions.trim();
+  return {
+    slide: {
+      ...input.currentSlide,
+      bullets: [...input.currentSlide.bullets, `优化：${trimmed}`],
+    },
+  };
+}

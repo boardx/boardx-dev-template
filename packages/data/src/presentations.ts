@@ -123,3 +123,104 @@ export async function resetPresentationArtifactForRetry(
   );
   return rows[0];
 }
+
+/** 原地更新制品的标题/幻灯片（方案修订 / 单页优化成功后落库）；不改变 status/产物 key。 */
+export async function updatePresentationArtifactSlides(
+  id: string,
+  input: { title?: string; slides: PresentationSlide[] }
+): Promise<void> {
+  await query(
+    `UPDATE presentation_artifacts
+     SET slides = $2, title = COALESCE($3, title), updated_at = now()
+     WHERE id = $1`,
+    [id, JSON.stringify(input.slides), input.title ?? null]
+  );
+}
+
+// ─── presentation_revisions（P12 F03：方案修订 + 单页优化）───────────────────────
+
+export type PresentationRevisionKind = "plan" | "page";
+export type PresentationRevisionStatus = "queued" | "processing" | "ready" | "error";
+
+export interface PresentationRevisionSummaryItem {
+  label: string;
+}
+
+export interface PresentationRevision {
+  id: string;
+  artifact_id: string;
+  kind: PresentationRevisionKind;
+  page_n: number | null;
+  instructions: string;
+  status: PresentationRevisionStatus;
+  summary: PresentationRevisionSummaryItem[] | null;
+  error_message: string | null;
+  creator_user_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreatePresentationRevisionInput {
+  id: string;
+  artifactId: string;
+  kind: PresentationRevisionKind;
+  pageN?: number;
+  instructions: string;
+  creatorUserId: number;
+}
+
+const PRESENTATION_REVISION_COLUMNS =
+  "id, artifact_id, kind, page_n, instructions, status, summary, error_message, creator_user_id, created_at, updated_at";
+
+export async function createPresentationRevision(
+  input: CreatePresentationRevisionInput
+): Promise<PresentationRevision> {
+  const rows = await query<PresentationRevision>(
+    `INSERT INTO presentation_revisions (id, artifact_id, kind, page_n, instructions, status, creator_user_id)
+     VALUES ($1, $2, $3, $4, $5, 'queued', $6)
+     RETURNING ${PRESENTATION_REVISION_COLUMNS}`,
+    [input.id, input.artifactId, input.kind, input.pageN ?? null, input.instructions, input.creatorUserId]
+  );
+  return rows[0]!;
+}
+
+export async function getPresentationRevision(id: string): Promise<PresentationRevision | undefined> {
+  const rows = await query<PresentationRevision>(
+    `SELECT ${PRESENTATION_REVISION_COLUMNS} FROM presentation_revisions WHERE id = $1`,
+    [id]
+  );
+  return rows[0];
+}
+
+/** 制品下的修订/优化请求列表，按创建时间升序（前端轮询驱动处理态 → ready/error 刷新）。 */
+export async function listPresentationRevisionsByArtifact(
+  artifactId: string
+): Promise<PresentationRevision[]> {
+  return query<PresentationRevision>(
+    `SELECT ${PRESENTATION_REVISION_COLUMNS} FROM presentation_revisions WHERE artifact_id = $1 ORDER BY id ASC`,
+    [artifactId]
+  );
+}
+
+export async function markPresentationRevisionProcessing(id: string): Promise<void> {
+  await query(`UPDATE presentation_revisions SET status = 'processing', updated_at = now() WHERE id = $1`, [id]);
+}
+
+/** worker 回写成功终态：kind='plan' 时附带方案变更摘要，供修订面板展示「更新后方案」。 */
+export async function markPresentationRevisionReady(
+  id: string,
+  input: { summary?: PresentationRevisionSummaryItem[] }
+): Promise<void> {
+  await query(
+    `UPDATE presentation_revisions SET status = 'ready', summary = $2, updated_at = now() WHERE id = $1`,
+    [id, input.summary ? JSON.stringify(input.summary) : null]
+  );
+}
+
+/** worker 回写失败终态：不影响 presentation_artifacts 原有 title/slides（原可查看结果保留）。 */
+export async function markPresentationRevisionError(id: string, errorMessage: string): Promise<void> {
+  await query(
+    `UPDATE presentation_revisions SET status = 'error', error_message = $2, updated_at = now() WHERE id = $1`,
+    [id, errorMessage]
+  );
+}
