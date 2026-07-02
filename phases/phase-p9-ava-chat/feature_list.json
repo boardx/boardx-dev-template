@@ -98,9 +98,9 @@
       "title": "公开分享对话只读页 /chatShare/:threadId",
       "user_visible_behavior": "无需登录打开 /chatShare/{threadId}?shareToken=… ：加载中显示 Loading chat session；有效则按时间顺序只读渲染消息（用户/AI/Markdown/代码块/图片/公开附件），底部 Shared chat session · Read only，不展示输入框、不能发消息/编辑；threadId 缺失显示 Invalid chat session；token 无效/分享已关闭显示不可访问；空线程显示 No messages。",
       "design_ref": "mockup:phases/requirements/mockups/chat-share-readonly.html（本轮已补设计稿：只读消息流 + 顶部 shared 标识 + 底部 Read only 条，无 composer）；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "04",
+      "owner": "wrk-ava-1",
       "capability": "CAP-WEB",
       "depends_on": [
         "F04"
