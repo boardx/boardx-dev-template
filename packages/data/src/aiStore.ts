@@ -413,6 +413,21 @@ export async function isAiStoreItemGrantee(itemId: number, userId: number): Prom
   return rows.length > 0;
 }
 
+/**
+ * 详情类路由的可访问性判定：isAiStoreItemVisible 的属主规则之外，personal-scope 项目
+ * 的已授权 grantee（ai_store_item_grants 有效记录）也应能直接打开详情/收藏等路由——
+ * 否则「已授权」列表卡片指向的详情页会 404，和 listAuthorizedAiStoreItems 的可见性语义不一致。
+ */
+export async function canAccessAiStoreItem(
+  item: Pick<AiStoreItem, "id" | "status" | "scope" | "owner_user_id" | "team_id">,
+  userId: number | undefined,
+  teamId: number | null | undefined
+): Promise<boolean> {
+  if (isAiStoreItemVisible(item, userId, teamId)) return true;
+  if (item.scope !== "personal" || userId == null) return false;
+  return isAiStoreItemGrantee(item.id, userId);
+}
+
 /** 已授权用户列表（供分享管理弹窗展示，按授权时间正序）。 */
 export async function listAiStoreItemGrantees(itemId: number): Promise<AiStoreShareGrantee[]> {
   return query<AiStoreShareGrantee>(
