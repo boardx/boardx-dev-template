@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -12,13 +12,19 @@ interface Plan {
   description: string;
   features: string[];
   cta?: string;
+  sku?: string;
 }
 
 interface BillingData {
   currentPlanId: string;
   plans: Plan[];
-  checkoutUrl: string;
+  checkoutSku: string;
   manageUrl: string;
+}
+
+interface PaymentOrder {
+  id: string;
+  status: "pending" | "paid" | "failed" | "expired";
 }
 
 function BillingSkeleton() {
@@ -36,10 +42,12 @@ export default function BillingPage() {
   const [data, setData] = useState<BillingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [creatingSku, setCreatingSku] = useState("");
+  const [order, setOrder] = useState<PaymentOrder | null>(null);
+  const [qrDataUri, setQrDataUri] = useState("");
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
+  async function loadBilling(alive = true) {
       try {
         const res = await fetch("/api/billing");
         if (!alive) return;
@@ -59,19 +67,64 @@ export default function BillingPage() {
         setError("加载计划失败，请稍后重试");
         setLoading(false);
       }
+  }
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      await loadBilling(alive);
     })();
     return () => {
       alive = false;
     };
   }, [router]);
 
+  useEffect(() => {
+    if (!order || order.status !== "pending") return;
+    let alive = true;
+    const id = window.setInterval(async () => {
+      const res = await fetch(`/api/payment/orders/${order.id}`).catch(() => null);
+      if (!alive || !res?.ok) return;
+      const next = ((await res.json()) as { order: PaymentOrder }).order;
+      setOrder(next);
+      if (next.status === "paid") {
+        await loadBilling(alive);
+        setMessage("Your plan is now Pro.");
+      }
+    }, 1500);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+    };
+  }, [order]);
+
   const current = data?.plans.find((p) => p.id === data.currentPlanId) ?? null;
 
-  function upgrade(plan: Plan) {
+  async function upgrade(plan: Plan) {
     if (!data) return;
-    // STUB：引导到占位外部支付/购买入口；支付完成前不改写计划。
-    const url = plan.id === data.currentPlanId ? data.manageUrl : data.checkoutUrl;
-    window.location.href = url;
+    if (plan.id === data.currentPlanId) {
+      setMessage("Subscription management is open for your current plan.");
+      return;
+    }
+    setCreatingSku(plan.sku ?? data.checkoutSku);
+    setError("");
+    setMessage("");
+    try {
+      const res = await fetch("/api/payment/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sku: plan.sku ?? data.checkoutSku }),
+      });
+      if (!res.ok) {
+        setError("创建升级订单失败，请稍后重试");
+        return;
+      }
+      const created = (await res.json()) as { order: PaymentOrder; qrDataUri: string };
+      setOrder(created.order);
+      setQrDataUri(created.qrDataUri);
+    } finally {
+      setCreatingSku("");
+    }
   }
 
   return (
@@ -84,6 +137,11 @@ export default function BillingPage() {
       {error && (
         <p role="alert" data-testid="error" className="mt-6 text-13 text-destructive">
           {error}
+        </p>
+      )}
+      {message && (
+        <p data-testid="billing-message" className="mt-6 text-13 font-semibold text-foreground">
+          {message}
         </p>
       )}
 
@@ -145,16 +203,20 @@ export default function BillingPage() {
                         data-testid={`manage-${plan.id}`}
                         variant="secondary"
                         className="w-full"
-                        onClick={() => upgrade(plan)}
+                        onClick={() => void upgrade(plan)}
                       >
-                        Manage subscription
+                        Manage Subscription
                       </Button>
                     ) : (
                       <Button
                         data-testid={`upgrade-${plan.id}`}
                         className="w-full"
-                        onClick={() => upgrade(plan)}
+                        onClick={() => void upgrade(plan)}
+                        disabled={creatingSku === (plan.sku ?? data.checkoutSku)}
                       >
+                        {creatingSku === (plan.sku ?? data.checkoutSku) ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : null}
                         {plan.cta ?? `Upgrade to ${plan.name}`}
                       </Button>
                     )}
@@ -164,9 +226,27 @@ export default function BillingPage() {
             })}
           </div>
 
-          <p className="mt-5 text-xs text-muted-foreground">
-            占位：升级与管理订阅将引导到外部支付页面，暂未接入真实支付。
-          </p>
+          {order && (
+            <div data-testid="billing-upgrade-order" className="mt-5 rounded-12 border border-border bg-surface-1 p-4">
+              <div data-testid="billing-upgrade-order-id" className="text-11 text-muted-foreground">
+                Order: {order.id}
+              </div>
+              {order.status === "paid" ? (
+                <div data-testid="billing-upgrade-paid" className="mt-3 flex items-center gap-2 text-13 font-semibold text-foreground">
+                  <Check className="h-4 w-4" /> Payment confirmed
+                </div>
+              ) : (
+                <>
+                  {qrDataUri && (
+                    <img data-testid="billing-upgrade-qr" className="mt-3 h-32 w-32 rounded-9 border border-border" src={qrDataUri} alt="Plan upgrade payment QR code" />
+                  )}
+                  <div data-testid="billing-upgrade-status" className="mt-3 text-12 text-muted-foreground">
+                    {order.status}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>

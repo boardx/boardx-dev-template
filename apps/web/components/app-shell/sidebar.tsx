@@ -14,9 +14,11 @@ import {
   BookOpen,
   UserPlus,
   Gem,
+  CreditCard,
 } from "lucide-react";
 import { FeedbackLauncher } from "@/components/feedback/feedback-launcher";
 import { CreditRecordsDialog } from "@/components/credits/credit-records-dialog";
+import { BillingPlanDialog } from "@/components/billing/billing-plan-dialog";
 import { BuyCreditsDialog } from "@/components/credits/buy-credits-dialog";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +43,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   const [lang, setLang] = useState<"en" | "zh">("en");
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
   const [recordsOpen, setRecordsOpen] = useState(false);
+  const [billingOpen, setBillingOpen] = useState(false);
   const [buyOpen, setBuyOpen] = useState(false);
   const [balanceRefreshTick, setBalanceRefreshTick] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -242,6 +245,18 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
             >
               <BookOpen className="h-3.5 w-3.5" /> Personal knowledge base
             </MenuLink>
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="user-menu-billing"
+              onClick={() => {
+                setMenuOpen(false);
+                setBillingOpen(true);
+              }}
+              className="flex w-full items-center gap-2 rounded-7 px-2.5 py-2 text-13 text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <CreditCard className="h-3.5 w-3.5" /> Plans &amp; Billing
+            </button>
             <MenuLink
               href="/teams"
               testId="user-menu-invite"
@@ -343,6 +358,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
       </div>
 
       <CreditRecordsDialog open={recordsOpen} onClose={() => setRecordsOpen(false)} />
+      <BillingPlanDialog open={billingOpen} onClose={() => setBillingOpen(false)} />
       <BuyCreditsDialog
         open={buyOpen}
         onClose={() => setBuyOpen(false)}
