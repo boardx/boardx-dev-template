@@ -20,15 +20,25 @@ function isEmptyAnswer(value: unknown): boolean {
   return false;
 }
 
-function normalizeAnswer(type: string, value: unknown): unknown {
+const MAX_TEXT_LENGTH = 5000;
+
+// review 加固：single/multiple 此前不校验值是否真的来自该题的 options，text 也没有长度上限——
+// 越权直接打 API 可以往 answers 里塞任意 payload 落库。改为按题目类型分别收敛取值范围。
+function normalizeAnswer(type: string, value: unknown, options: string[]): unknown {
   if (type === "multiple") {
-    return Array.isArray(value) ? value.map((v) => String(v)) : [];
+    if (!Array.isArray(value)) return [];
+    const optionSet = new Set(options);
+    return value.map((v) => String(v)).filter((v) => optionSet.has(v));
+  }
+  if (type === "single") {
+    const selected = String(value ?? "").trim();
+    return options.includes(selected) ? selected : "";
   }
   if (type === "rating") {
     const rating = Number(value);
     return Number.isInteger(rating) && rating >= 1 && rating <= 5 ? rating : "";
   }
-  return String(value ?? "").trim();
+  return String(value ?? "").trim().slice(0, MAX_TEXT_LENGTH);
 }
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
@@ -49,7 +59,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     for (const question of survey.questions) {
       const key = String(question.id);
-      const value = normalizeAnswer(question.type, rawAnswers[key]);
+      const value = normalizeAnswer(question.type, rawAnswers[key], question.options);
       if (question.required && isEmptyAnswer(value)) {
         errors[key] = "This question is required.";
       }
@@ -63,7 +73,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const user = await currentUser();
     const response = await createSurveyResponse(survey.id, answers, user?.id ?? null);
     return NextResponse.json({ response: { id: response.id, submittedAt: response.submitted_at } }, { status: 201 });
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "提交失败，请稍后重试" }, { status: 500 });
   }
 }
