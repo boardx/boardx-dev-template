@@ -78,3 +78,18 @@ test("未发布问卷公开链接展示不可答题态", async ({ page }) => {
   await expect(page.getByTestId("err-unavailable")).toContainText("not accepting responses");
   await expect(page.getByTestId("submit-survey-response")).toHaveCount(0);
 });
+
+test("安全回归：未发布问卷的公开答题 API 不泄露题目/选项内容（#181）", async ({ page }) => {
+  // getPublicSurveyForAnswer 此前对任意 id 无条件返回完整题目/选项，靠遍历 id 即可读到
+  // 别人未发布/已暂停的问卷内容。这里直接打 API（不经 UI）验证 questions 数组为空，
+  // 证明修复落在数据层，而不是只在页面上隐藏。
+  const survey = await createSurvey(page, "Private Draft Survey");
+  await page.context().clearCookies();
+
+  const res = await page.request.get(`/api/surveys/${survey.id}/answer`);
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(body.survey.title).toBe("Private Draft Survey");
+  expect(body.survey.isActive).toBe(false);
+  expect(body.survey.questions).toEqual([]);
+});
