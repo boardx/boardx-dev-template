@@ -12,8 +12,12 @@
 import { listKbFiles, type KbFile, type Room } from "@repo/data";
 
 export async function listRoomFiles(room: Room): Promise<KbFile[]> {
+  // p10-F02 把 listKbFiles 改成分页返回 { files, total }（原先是裸数组）；这里只取全部
+  // ready 文件用于 studio 来源可用性判断，不需要分页，直接取 files。
   if (room.team_id != null) {
-    return listKbFiles({ ownerUserId: room.owner_user_id, scope: "team", teamId: room.team_id });
+    const { files } = await listKbFiles({ ownerUserId: room.owner_user_id, scope: "team", teamId: room.team_id });
+    return files;
   }
-  return listKbFiles({ ownerUserId: room.owner_user_id, scope: "personal" });
+  const { files } = await listKbFiles({ ownerUserId: room.owner_user_id, scope: "personal" });
+  return files;
 }
