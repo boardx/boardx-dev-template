@@ -121,7 +121,7 @@
       "title": "发布/暂停问卷（公开答题开关）",
       "user_visible_behavior": "在列表卡片或编辑页切换问卷 active/paused：PATCH /api/surveys/:id {isActive}；active 时公开答题链接可正常填答，paused/未发布时公开页展示「暂不接受答题」；状态即时反映在卡片标；无权限者不能切换。",
       "design_ref": "prototype:<!-- SURVEYS --> → <!-- LIST -->（卡片 Pause/Activate 状态切换）；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "06",
       "owner": "wrk-survey-2",
       "capability": "CAP-DATA",
@@ -135,7 +135,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/survey-006-publish-unpublish-survey.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F06.verify.log @ 2026-07-02T17:24:07.068Z",
       "notes": "uc-survey-006。isActive 门控 F03 公开答题页。依赖 F01/F03。"
     }
   ]
