@@ -1,0 +1,15 @@
+
+Running 8 tests using 1 worker
+
+  ✓  1 [chromium] › credits-002-purchase-credits.spec.ts:27:5 › Buy Credits 弹窗：套餐列表 + 选套餐 + 下单展示二维码 + webhook 回调后成功并加余额 (16.2s)
+  ✓  2 [chromium] › credits-002-purchase-credits.spec.ts:72:5 › 回调幂等：同一订单 webhook 回调两次只加一次余额（防双花） (441ms)
+  ✓  3 [chromium] › credits-002-purchase-credits.spec.ts:106:5 › 安全：客户端自定义 amountCents/credits 在下单阶段不被采纳，回调发放的数量仍以服务端目录为准 (392ms)
+  ✓  4 [chromium] › credits-002-purchase-credits.spec.ts:127:5 › 取消/关闭弹窗不改变余额：未下单直接关闭 (1.2s)
+  ✓  5 [chromium] › credits-002-purchase-credits.spec.ts:141:5 › 团队购买：Team owner 在 Team Credits 页购买记入团队钱包 (3.5s)
+  ✓  6 [chromium] › credits-002-purchase-credits.spec.ts:169:5 › 安全：Team member 无权限购买团队 Credit，下单请求回退为个人订单（不记团队钱包） (2.3s)
+  ✓  7 [chromium] › credits-002-purchase-credits.spec.ts:190:5 › 下单失败：无效 sku → 展示错误提示，不生成订单 (2.5s)
+  ✓  8 [chromium] › credits-002-purchase-credits.spec.ts:202:5 › 未登录访问 Buy Credits 相关接口 → 401 (246ms)
+
+  Slow test file: [chromium] › credits-002-purchase-credits.spec.ts (26.8s)
+  Consider splitting slow test files to speed up parallel execution
+  8 passed (33.6s)

@@ -1,0 +1,10 @@
+初始: likes=87 favorites_rows=0
+并发 toggle 结果: [{"favorited":true,"likes":88},{"favorited":false,"likes":87}]
+并发后: likes=87 (Δ0) favorites_rows=0 (Δ0)
+✅ 不变量成立: likes 增量(0) == 明细行增量(0)，无漂移
+清理后: likes=87（应回到 87）
+初始 likes=87
+并发 INSERT 分支返回: a.likes=88 b.likes=88
+并发后: likes=88 (Δ1) 明细行=1
+✅ 双 INSERT 分支并发下 likes 只 +1、明细 1 行——CTE 绑定生效（旧实现此处 +2）
+清理后 likes=87（应为 87）

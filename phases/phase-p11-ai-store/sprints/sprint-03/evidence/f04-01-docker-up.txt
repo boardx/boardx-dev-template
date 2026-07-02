@@ -1,0 +1,10 @@
+=== $ docker compose -f infra/docker-compose.yml up -d ===
+(note: this worktree needs --env-file .env for per-worktree port isolation; see PG_PORT/REDIS_PORT/MINIO_PORT in .env)
+ Container worktree-agent-aafef3b8c9ccffcf0-redis-1  Running
+ Container worktree-agent-aafef3b8c9ccffcf0-postgres-1  Running
+ Container worktree-agent-aafef3b8c9ccffcf0-minio-1  Running
+
+NAME                                          IMAGE                                      COMMAND                  SERVICE             CREATED             STATUS                       PORTS
+worktree-agent-aafef3b8c9ccffcf0-minio-1      minio/minio:RELEASE.2024-08-17T01-24-54Z   "/usr/bin/docker-ent…"   minio               About an hour ago   Up About an hour (healthy)   0.0.0.0:62979->9000/tcp, 0.0.0.0:62980->9001/tcp
+worktree-agent-aafef3b8c9ccffcf0-postgres-1   pgvector/pgvector:pg16                     "docker-entrypoint.s…"   postgres            About an hour ago   Up About an hour (healthy)   0.0.0.0:61173->5432/tcp
+worktree-agent-aafef3b8c9ccffcf0-redis-1      redis:7                                    "docker-entrypoint.s…"   redis               About an hour ago   Up About an hour (healthy)   0.0.0.0:61174->6379/tcp

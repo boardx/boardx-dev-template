@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Search, Compass, Bookmark, Plus, ShieldCheck, Share2, LayoutGrid, Pencil } from "lucide-react";
+import { Search, Compass, Bookmark, Plus, ShieldCheck, Share2, LayoutGrid, Pencil, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,12 @@ interface StoreItem {
   likes: number;
   views: number;
   featured: boolean;
+  liked?: boolean;
+}
+
+interface FavoriteToggleResponse {
+  favorited: boolean;
+  likes: number;
 }
 
 interface ListResponse {
@@ -226,6 +232,37 @@ export function StoreBrowser() {
       cancelled = true;
     };
   }, [detailId]);
+
+  // uc-ai-store-004：喜欢/收藏切换，乐观更新 + 失败回滚。心形与计数在卡片和详情弹窗间保持同步。
+  async function toggleFavorite(id: number) {
+    const prevItem = items.find((it) => it.id === id);
+    const prevDetail = detailItem && detailItem.id === id ? detailItem : null;
+    const prevLiked = prevItem?.liked ?? prevDetail?.liked ?? false;
+    const prevLikes = prevItem?.likes ?? prevDetail?.likes ?? 0;
+    const optimisticLiked = !prevLiked;
+    const optimisticLikes = optimisticLiked ? prevLikes + 1 : Math.max(0, prevLikes - 1);
+
+    setItems((prev) =>
+      prev.map((it) => (it.id === id ? { ...it, liked: optimisticLiked, likes: optimisticLikes } : it)),
+    );
+    setDetailItem((prev) =>
+      prev && prev.id === id ? { ...prev, liked: optimisticLiked, likes: optimisticLikes } : prev,
+    );
+
+    try {
+      const res = await fetch(`/api/ai-store/items/${id}/favorite`, { method: "POST" });
+      if (!res.ok) throw new Error("favorite toggle failed");
+      const data = (await res.json()) as FavoriteToggleResponse;
+      setItems((prev) =>
+        prev.map((it) => (it.id === id ? { ...it, liked: data.favorited, likes: data.likes } : it)),
+      );
+      setDetailItem((prev) => (prev && prev.id === id ? { ...prev, liked: data.favorited, likes: data.likes } : prev));
+    } catch {
+      // 回滚
+      setItems((prev) => prev.map((it) => (it.id === id ? { ...it, liked: prevLiked, likes: prevLikes } : it)));
+      setDetailItem((prev) => (prev && prev.id === id ? { ...prev, liked: prevLiked, likes: prevLikes } : prev));
+    }
+  }
 
   function toggleTag(tag: string) {
     setActiveTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
@@ -606,9 +643,32 @@ export function StoreBrowser() {
                             </span>
                           ))}
                           <span className="flex-1" />
-                          <span className="text-11 text-placeholder">
-                            ♡ {it.likes} · 👁 {it.views}
-                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            data-testid={`favorite-${it.id}`}
+                            aria-pressed={it.liked ?? false}
+                            aria-label={it.liked ? "取消喜欢" : "喜欢"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void toggleFavorite(it.id);
+                            }}
+                            className={cn(
+                              "h-6 gap-1 rounded-full px-1.5 text-11 font-normal",
+                              it.liked
+                                ? "text-destructive hover:text-destructive"
+                                : "text-placeholder hover:text-destructive",
+                            )}
+                          >
+                            <Heart
+                              className="h-3.5 w-3.5"
+                              strokeWidth={1.75}
+                              fill={it.liked ? "currentColor" : "none"}
+                            />
+                            <span data-testid={`likes-${it.id}`}>{it.likes}</span>
+                          </Button>
+                          <span className="text-11 text-placeholder">👁 {it.views}</span>
                         </div>
                       </article>
                     ))}
@@ -965,16 +1025,36 @@ export function StoreBrowser() {
 
                 <div
                   data-testid="detail-stats"
-                  className="mt-4 flex gap-6 border-y border-border py-3.5"
+                  className="mt-4 flex items-center gap-6 border-y border-border py-3.5"
                 >
                   <div>
-                    <div className="text-17 font-bold text-foreground">{detailItem.likes}</div>
+                    <div data-testid="detail-likes" className="text-17 font-bold text-foreground">
+                      {detailItem.likes}
+                    </div>
                     <div className="text-11 text-placeholder">Likes</div>
                   </div>
                   <div>
                     <div className="text-17 font-bold text-foreground">{detailItem.views}</div>
                     <div className="text-11 text-placeholder">Views</div>
                   </div>
+                  <div className="flex-1" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    data-testid="detail-favorite"
+                    aria-pressed={detailItem.liked ?? false}
+                    aria-label={detailItem.liked ? "取消喜欢" : "喜欢"}
+                    onClick={() => void toggleFavorite(detailItem.id)}
+                    className={cn(
+                      "h-9 w-9 shrink-0 rounded-full",
+                      detailItem.liked
+                        ? "border-destructive text-destructive hover:text-destructive"
+                        : "text-placeholder hover:border-destructive hover:text-destructive",
+                    )}
+                  >
+                    <Heart className="h-4.5 w-4.5" strokeWidth={1.75} fill={detailItem.liked ? "currentColor" : "none"} />
+                  </Button>
                 </div>
 
                 {/* 订阅入口：F01 只读浏览，订阅动作留给 F03（当前禁用占位）。 */}

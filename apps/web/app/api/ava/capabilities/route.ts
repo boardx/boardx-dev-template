@@ -1,0 +1,48 @@
+// apps/web/app/api/ava/capabilities/route.ts — AVA 可选 AI 能力（P9 F07）
+import { NextResponse } from "next/server";
+import {
+  AVA_AGENT_OPTIONS,
+  AVA_MODEL_OPTIONS,
+  AVA_TOOL_OPTIONS,
+  DEFAULT_AVA_AGENT_ID,
+  DEFAULT_AVA_MODEL_ID,
+  DEFAULT_AVA_TOOL_IDS,
+} from "@repo/ai";
+import { getMembership } from "@repo/data";
+import { currentTeamId, currentUser } from "@/lib/session";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function canUseRestrictedModel(role: string | undefined): boolean {
+  return role === "owner" || role === "admin";
+}
+
+export async function GET() {
+  const user = await currentUser();
+  if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
+
+  const teamId = currentTeamId();
+  const role = teamId == null ? undefined : await getMembership(teamId, user.id);
+  const canUseTeamRestrictedModels = canUseRestrictedModel(role);
+
+  return NextResponse.json({
+    teamId,
+    teamRole: role ?? null,
+    models: AVA_MODEL_OPTIONS.map((model) => ({
+      ...model,
+      disabled: Boolean(model.teamRestricted && !canUseTeamRestrictedModels),
+      disabledReason:
+        model.teamRestricted && !canUseTeamRestrictedModels
+          ? "Team owners and admins can select this model."
+          : "",
+    })),
+    agents: AVA_AGENT_OPTIONS,
+    tools: AVA_TOOL_OPTIONS,
+    defaults: {
+      modelId: DEFAULT_AVA_MODEL_ID,
+      agentId: DEFAULT_AVA_AGENT_ID,
+      toolIds: DEFAULT_AVA_TOOL_IDS,
+    },
+  });
+}
