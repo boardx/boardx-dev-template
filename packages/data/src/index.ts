@@ -34,6 +34,8 @@ export * from "./aiStore";
 export * from "./credits";
 // CAP-FILE 知识库文件仓储（kb_files / P10）
 export * from "./kbFiles";
+// CAP-AI Studio 制品仓储（studio_artifacts / P12 F01）
+export * from "./studio";
 // CAP-PAYMENT 支付订单仓储（payment_orders / F05）
 export * from "./payment";
 // P15 Admin 后台：平台统计聚合（用户/团队计数；仅已建表的真实维度）
@@ -112,8 +114,28 @@ export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
   sql: string,
   params: unknown[] = []
 ): Promise<T[]> {
-  const res = await getPool().query<T>(sql, params as never[]);
-  return res.rows;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const res = await getPool().query<T>(sql, params as never[]);
+      return res.rows;
+    } catch (err) {
+      if (attempt === 2 || !isTransientDbError(err)) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+    }
+  }
+  return [];
+}
+
+function isTransientDbError(err: unknown): boolean {
+  const code = typeof err === "object" && err && "code" in err ? String((err as { code?: unknown }).code) : "";
+  const message = err instanceof Error ? err.message : String(err);
+  return (
+    code === "57P03" ||
+    code === "ECONNRESET" ||
+    code === "ECONNREFUSED" ||
+    message.includes("database system is in recovery mode") ||
+    message.includes("Connection terminated unexpectedly")
+  );
 }
 
 export async function closePool(): Promise<void> {

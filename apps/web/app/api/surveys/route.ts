@@ -2,14 +2,13 @@ import { NextResponse } from "next/server";
 import {
   createSurvey,
   listVisibleSurveys,
-  countResponses,
   getMembership,
   isBlank,
   type NewQuestionInput,
   type QuestionType,
   type SurveyScope,
 } from "@repo/data";
-import { currentUser } from "@/lib/session";
+import { currentTeamId, currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,19 +38,19 @@ export async function GET() {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
 
-  const surveys = await listVisibleSurveys(user.id);
-  const withCounts = await Promise.all(
-    surveys.map(async (s) => ({
-      id: s.id,
-      title: s.title,
-      description: s.description,
-      scope: s.scope,
-      teamId: s.team_id,
-      status: s.is_active ? "Active" : "Draft",
-      responses: await countResponses(s.id),
-      updatedAt: s.updated_at,
-    }))
-  );
+  const surveys = await listVisibleSurveys(user.id, currentTeamId());
+  const withCounts = surveys.map((s) => ({
+    id: s.id,
+    title: s.title,
+    description: s.description,
+    scope: s.scope,
+    teamId: s.team_id,
+    status: s.is_active ? "active" : "paused",
+    responses: Number(s.response_count ?? 0),
+    updatedAt: s.updated_at,
+    isOwner: Number(s.owner_user_id) === Number(user.id),
+    shareUrl: `/survey/${s.id}/answer`,
+  }));
   return NextResponse.json({ surveys: withCounts });
 }
 
@@ -101,7 +100,7 @@ export async function POST(req: Request) {
           description: survey.description,
           scope: survey.scope,
           teamId: survey.team_id,
-          status: survey.is_active ? "Active" : "Draft",
+          status: survey.is_active ? "active" : "paused",
           responses: 0,
           questions: survey.questions,
           shareUrl: `/survey/${survey.id}/answer`,
