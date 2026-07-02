@@ -1,4 +1,5 @@
 // packages/data/src/avaChat.ts — CAP-DATA AVA 聊天仓储（ava_threads / ava_messages，P9 F01）
+import { randomBytes } from "node:crypto";
 import { query } from "./index";
 
 export interface AvaThread {
@@ -6,6 +7,9 @@ export interface AvaThread {
   team_id: number | null;
   user_id: number;
   title: string;
+  share_token?: string | null;
+  share_enabled?: boolean;
+  share_updated_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -116,4 +120,71 @@ export async function updateAvaMessage(
     content,
     status,
   ]);
+}
+
+export interface AvaThreadShare {
+  thread_id: number;
+  share_token: string;
+  share_enabled: boolean;
+  share_updated_at: string;
+}
+
+export interface SharedAvaThread {
+  id: number;
+  title: string;
+  messages: AvaMessage[];
+}
+
+export function newAvaShareToken(): string {
+  return randomBytes(24).toString("base64url");
+}
+
+export async function getAvaThreadShare(threadId: number): Promise<AvaThreadShare | undefined> {
+  const rows = await query<AvaThreadShare>(
+    `SELECT id AS thread_id, share_token, share_enabled, share_updated_at
+     FROM ava_threads
+     WHERE id = $1 AND share_token IS NOT NULL`,
+    [threadId]
+  );
+  return rows[0];
+}
+
+export async function enableAvaThreadShare(threadId: number): Promise<AvaThreadShare> {
+  const existing = await getAvaThreadShare(threadId);
+  const token = existing?.share_enabled && existing.share_token ? existing.share_token : newAvaShareToken();
+  const rows = await query<AvaThreadShare>(
+    `UPDATE ava_threads
+     SET share_token = $2, share_enabled = true, share_updated_at = now()
+     WHERE id = $1
+     RETURNING id AS thread_id, share_token, share_enabled, share_updated_at`,
+    [threadId, token]
+  );
+  return rows[0]!;
+}
+
+export async function disableAvaThreadShare(threadId: number): Promise<AvaThreadShare | undefined> {
+  const rows = await query<AvaThreadShare>(
+    `UPDATE ava_threads
+     SET share_enabled = false, share_updated_at = now()
+     WHERE id = $1 AND share_token IS NOT NULL
+     RETURNING id AS thread_id, share_token, share_enabled, share_updated_at`,
+    [threadId]
+  );
+  return rows[0];
+}
+
+export async function getSharedAvaThread(
+  threadId: number,
+  shareToken: string
+): Promise<SharedAvaThread | undefined> {
+  const threadRows = await query<{ id: number; title: string }>(
+    `SELECT id, title
+     FROM ava_threads
+     WHERE id = $1 AND share_token = $2 AND share_enabled = true`,
+    [threadId, shareToken]
+  );
+  const thread = threadRows[0];
+  if (!thread) return undefined;
+  const messages = await listAvaMessages(threadId);
+  return { ...thread, messages };
 }
