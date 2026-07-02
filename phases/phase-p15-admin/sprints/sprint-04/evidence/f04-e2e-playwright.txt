@@ -1,0 +1,126 @@
+
+Running 8 tests using 1 worker
+
+  ✓  1 [chromium] › admin-003-ai-store-approval.spec.ts:50:5 › 未登录访问 /admin/ai-store/review 跳转到 /login (14.4s)
+  ✓  2 [chromium] › admin-003-ai-store-approval.spec.ts:57:5 › 已登录但非 SysAdmin 访问审核页看到无权限 (2.4s)
+  ✓  3 [chromium] › admin-003-ai-store-approval.spec.ts:65:5 › 未登录调用审核列表/操作 API 返回 401，非 SysAdmin 返回 403 (2.3s)
+  ✓  4 [chromium] › admin-003-ai-store-approval.spec.ts:80:5 › SysAdmin 看到 PENDING 项目并能批准，状态立即变为 APPROVED (6.6s)
+  ✘  5 [chromium] › admin-003-ai-store-approval.spec.ts:106:5 › SysAdmin 可撤回已批准项目到 PENDING (16.8s)
+[WebServer]  [31m[1m⨯[22m[39m error: the database system is in recovery mode
+[WebServer]     at eval (webpack-internal:///(rsc)/../../node_modules/[4m.pnpm[24m/pg-pool@3.14.0_pg@8.12.0/node_modules/[4mpg-pool[24m/index.js:45:11)
+[WebServer] [90m    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+[WebServer]     at async query (webpack-internal:///(rsc)/../../packages/data/src/index.ts:300:25)
+[WebServer]     at async findUserByEmail (webpack-internal:///(rsc)/../../packages/data/src/auth.ts:38:18)
+[WebServer]     at async POST (webpack-internal:///(rsc)/./app/api/dev/grant-sysadmin/route.ts:24:18)
+[WebServer]     at async /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/compiled/next-server/app-route.runtime.dev.js:6:55038
+[WebServer]     at async ek.execute (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/compiled/next-server/app-route.runtime.dev.js:6:45808)
+[WebServer]     at async ek.handle (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/compiled/next-server/app-route.runtime.dev.js:6:56292)
+[WebServer]     at async doRender (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/base-server.js:1377:42)
+[WebServer]     at async cacheEntry.responseCache.get.routeKind (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/base-server.js:1599:28)
+[WebServer]     at async DevServer.renderToResponseWithComponentsImpl (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/base-server.js:1507:28)
+[WebServer]     at async DevServer.renderPageComponent (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/base-server.js:1931:24)
+[WebServer]     at async DevServer.renderToResponseImpl (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/base-server.js:1969:32)
+[WebServer]     at async DevServer.pipeImpl (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/base-server.js:920:25)
+[WebServer]     at async NextNodeServer.handleCatchallRenderRequest (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/next-server.js:272:17)
+[WebServer]     at async DevServer.handleRequestImpl (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/base-server.js:816:17)
+[WebServer]     at async /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/dev/next-dev-server.js:339:20
+[WebServer]     at async Span.traceAsyncFn (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/trace/trace.js:154:20)
+[WebServer]     at async DevServer.handleRequest (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/dev/next-dev-server.js:336:24)
+[WebServer]     at async invokeRender (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/lib/router-server.js:174:21)
+[WebServer]     at async handleRequest (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/lib/router-server.js:353:24)
+[WebServer]     at async requestHandlerImpl (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/lib/router-server.js:377:13)
+[WebServer]     at async Server.requestListener (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/lib/start-server.js:141:13) {
+[WebServer]   length: [33m109[39m,
+[WebServer]   severity: [32m'FATAL'[39m,
+[WebServer]   code: [32m'57P03'[39m,
+[WebServer]   detail: [90mundefined[39m,
+[WebServer]   hint: [90mundefined[39m,
+[WebServer]   position: [90mundefined[39m,
+[WebServer]   internalPosition: [90mundefined[39m,
+[WebServer]   internalQuery: [90mundefined[39m,
+[WebServer]   where: [90mundefined[39m,
+[WebServer]   schema: [90mundefined[39m,
+[WebServer]   table: [90mundefined[39m,
+[WebServer]   column: [90mundefined[39m,
+[WebServer]   dataType: [90mundefined[39m,
+[WebServer]   constraint: [90mundefined[39m,
+[WebServer]   file: [32m'postmaster.c'[39m,
+[WebServer]   line: [32m'2380'[39m,
+[WebServer]   routine: [32m'ProcessStartupPacket'[39m
+[WebServer] }
+  ✘  6 [chromium] › admin-003-ai-store-approval.spec.ts:106:5 › SysAdmin 可撤回已批准项目到 PENDING (retry #1) (11.5s)
+  ✓  7 [chromium] › admin-003-ai-store-approval.spec.ts:106:5 › SysAdmin 可撤回已批准项目到 PENDING (retry #2) (2.6s)
+  ✓  8 [chromium] › admin-003-ai-store-approval.spec.ts:126:5 › SysAdmin 可拒绝 PENDING 项目，拒绝后不再出现在待审核/已批准列表 (1.9s)
+  ✓  9 [chromium] › admin-003-ai-store-approval.spec.ts:144:5 › 状态 Tab 筛选：切到已批准只看到 APPROVED 项目 (1.8s)
+  ✓  10 [chromium] › admin-003-ai-store-approval.spec.ts:158:5 › 审核状态转移幂等：重复提交同一批准操作不报错、状态不变；前置状态不符返回 409 (540ms)
+
+
+  1) [chromium] › admin-003-ai-store-approval.spec.ts:106:5 › SysAdmin 可撤回已批准项目到 PENDING ───────────
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m
+
+    Locator: getByTestId('confirm-review-modal')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Call log:
+      [2m- expect.toHaveCount with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('confirm-review-modal')[22m
+    [2m  -   locator resolved to 1 element[22m
+    [2m  -   unexpected value "1"[22m
+    [2m  -   locator resolved to 1 element[22m
+    [2m  -   unexpected value "1"[22m
+    [2m  -   locator resolved to 1 element[22m
+    [2m  -   unexpected value "1"[22m
+    [2m  -   locator resolved to 1 element[22m
+    [2m  -   unexpected value "1"[22m
+    [2m  -   locator resolved to 1 element[22m
+    [2m  -   unexpected value "1"[22m
+    [2m  -   locator resolved to 1 element[22m
+    [2m  -   unexpected value "1"[22m
+    [2m  -   locator resolved to 1 element[22m
+    [2m  -   unexpected value "1"[22m
+    [2m  -   locator resolved to 1 element[22m
+    [2m  -   unexpected value "1"[22m
+    [2m  -   locator resolved to 1 element[22m
+    [2m  -   unexpected value "1"[22m
+    [2m  -   locator resolved to 1 element[22m
+    [2m  -   unexpected value "1"[22m
+    [2m  -   locator resolved to 1 element[22m
+    [2m  -   unexpected value "1"[22m
+    [2m  -   locator resolved to 1 element[22m
+    [2m  -   unexpected value "1"[22m
+    [2m  -   locator resolved to 1 element[22m
+    [2m  -   unexpected value "1"[22m
+
+
+      120 |   await expect(page.getByTestId("confirm-review-modal")).toBeVisible();
+      121 |   await page.getByTestId("confirm-review").click();
+    > 122 |   await expect(page.getByTestId("confirm-review-modal")).toHaveCount(0);
+          |                                                          ^
+      123 |   await expect(page.getByTestId(`review-status-${item.id}`)).toContainText("PENDING");
+      124 | });
+      125 |
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/apps/web/e2e/admin-003-ai-store-approval.spec.ts:122:58
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32m200[39m
+    Received: [31m500[39m
+
+      16 |   });
+      17 |   const res = await page.request.post("/api/dev/grant-sysadmin", { data: { email } });
+    > 18 |   expect(res.status()).toBe(200);
+         |                        ^
+      19 |   return email;
+      20 | }
+      21 |
+
+        at registerAndPromote (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/apps/web/e2e/admin-003-ai-store-approval.spec.ts:18:24)
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ac73e20b130747b07/apps/web/e2e/admin-003-ai-store-approval.spec.ts:107:3
+
+  1 flaky
+    [chromium] › admin-003-ai-store-approval.spec.ts:106:5 › SysAdmin 可撤回已批准项目到 PENDING ────────────
+  7 passed (1.2m)

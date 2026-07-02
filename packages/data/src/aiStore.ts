@@ -230,6 +230,101 @@ export function isAiStoreItemVisible(
 }
 
 // ---------------------------------------------------------------------------
+// P15 F04 — 平台审核（Admin Panel）：仅 scope=platform 的 BoardX Resource 走这里。
+// 状态机：pending →(approve) approved；approved →(revoke) pending；pending →(reject) rejected。
+// ---------------------------------------------------------------------------
+
+export type AiStoreReviewAction = "approve" | "reject" | "revoke";
+
+export interface ListPlatformReviewItemsOptions {
+  /** 空/undefined = pending+approved 都要（审核页默认视图）；传具体值则只看该状态。 */
+  status?: "pending" | "approved" | "";
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ListPlatformReviewItemsResult {
+  items: AiStoreItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+/** 平台审核页列表：只看 scope=platform 且状态在 pending/approved 之列（rejected/draft/published 不进审核队列）。 */
+export async function listPlatformReviewItems(
+  opts: ListPlatformReviewItemsOptions = {}
+): Promise<ListPlatformReviewItemsResult> {
+  const page = Math.max(1, opts.page ?? 1);
+  const pageSize = Math.min(50, Math.max(1, opts.pageSize ?? 20));
+
+  const conds: string[] = ["scope = 'platform'"];
+  const params: unknown[] = [];
+
+  if (opts.status === "pending" || opts.status === "approved") {
+    params.push(opts.status);
+    conds.push(`status = $${params.length}`);
+  } else {
+    conds.push(`status IN ('pending', 'approved')`);
+  }
+
+  if (opts.q && opts.q.trim()) {
+    params.push(`%${opts.q.trim()}%`);
+    conds.push(`(name ILIKE $${params.length} OR description ILIKE $${params.length})`);
+  }
+
+  const whereSql = `WHERE ${conds.join(" AND ")}`;
+
+  const countRows = await query<{ count: string }>(`SELECT count(*)::text AS count FROM ai_store_items ${whereSql}`, params);
+  const total = Number(countRows[0]?.count ?? 0);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const limitParams = [...params, pageSize, (page - 1) * pageSize];
+  const items = await query<AiStoreItem>(
+    `SELECT ${ITEM_COLS} FROM ai_store_items ${whereSql}
+     ORDER BY (status = 'pending') DESC, updated_at DESC, id DESC
+     LIMIT $${limitParams.length - 1} OFFSET $${limitParams.length}`,
+    limitParams
+  );
+
+  return { items, total, page, pageSize, totalPages };
+}
+
+/**
+ * 平台审核状态转移：pending→approved（approve）、approved→pending（revoke）、pending→rejected（reject）。
+ * 用 `WHERE status = <expected>` 做原子的乐观锁校验：转移只在 DB 里的当前状态确实是期望的前置状态时才生效
+ * （UPDATE ... WHERE ... RETURNING 一步完成读+写，杜绝 TOCTOU）。
+ * 重复提交同一个已经生效的操作（比如已经是 approved 又点一次 approve）视为幂等：不报错，直接返回当前行。
+ * 若请求的前置状态与当前 DB 状态不符（比如另一个管理员已经处理过、或对象不是平台资源），返回 undefined，
+ * 调用方据此返回 409，避免误报"成功"掩盖并发覆盖。
+ */
+export async function setAiStoreItemReviewStatus(
+  id: number,
+  action: AiStoreReviewAction
+): Promise<{ item: AiStoreItem; idempotent: boolean } | undefined> {
+  const fromStatus = action === "revoke" ? "approved" : "pending";
+  const toStatus: AiStoreItemStatus = action === "approve" ? "approved" : action === "revoke" ? "pending" : "rejected";
+
+  const updated = await query<AiStoreItem>(
+    `UPDATE ai_store_items
+     SET status = $3, updated_at = now()
+     WHERE id = $1 AND scope = 'platform' AND status = $2
+     RETURNING ${ITEM_COLS}`,
+    [id, fromStatus, toStatus]
+  );
+  if (updated[0]) return { item: updated[0], idempotent: false };
+
+  // 没更新到任何行：可能已经是目标状态（幂等重放/双击）——原样返回，不报错；
+  // 也可能是别的状态/不存在/非 platform，调用方按 undefined 处理为 409/404。
+  const current = await getAiStoreItem(id);
+  if (current && current.scope === "platform" && current.status === toStatus) {
+    return { item: current, idempotent: true };
+  }
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
 // 喜欢/收藏（P11 F04，uc-ai-store-004）：ai_store_favorites 记录 (user_id, item_id)，
 // ai_store_items.likes 是聚合计数缓存；toggle 时同步更新计数，避免和明细表漂移。
 // ---------------------------------------------------------------------------
