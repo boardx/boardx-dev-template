@@ -14,6 +14,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, ArrowUp, Sparkles, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BillingPlanDialog } from "@/components/billing/billing-plan-dialog";
 import { MarkdownMessage } from "./markdown-message";
 
 interface ThreadSummary {
@@ -46,6 +47,7 @@ export default function AvaPage() {
   const [streamingText, setStreamingText] = useState("");
   const [error, setError] = useState("");
   const [sendError, setSendError] = useState("");
+  const [billingOpen, setBillingOpen] = useState(false);
   // 移动端视图切换：list-first。桌面端（md 及以上）始终双栏，此状态被 CSS 忽略。
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -261,6 +263,18 @@ export default function AvaPage() {
 
             <div ref={scrollRef} className="flex-1 overflow-auto py-6">
               <div className="mx-auto flex max-w-2xl flex-col gap-5 px-6">
+                <div
+                  data-testid="ai-low-credits-prompt"
+                  className="flex items-center justify-between gap-3 rounded-12 border border-border bg-surface-1 px-4 py-3"
+                >
+                  <div>
+                    <div className="text-13 font-semibold text-foreground">AI credits</div>
+                    <div className="text-12 text-muted-foreground">Buy credits or upgrade your plan before a heavy AVA run.</div>
+                  </div>
+                  <Button data-testid="ai-low-credits-open-billing" size="sm" onClick={() => setBillingOpen(true)}>
+                    Upgrade
+                  </Button>
+                </div>
                 {isEmptyThread ? (
                   <div data-testid="empty" className="pt-10 text-center">
                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-12 bg-primary text-primary-foreground">
@@ -367,6 +381,7 @@ export default function AvaPage() {
           </>
         )}
       </section>
+      <BillingPlanDialog open={billingOpen} onClose={() => setBillingOpen(false)} />
     </div>
   );
 }

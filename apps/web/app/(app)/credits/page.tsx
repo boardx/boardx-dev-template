@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { BuyCreditsDialog } from "@/components/credits/buy-credits-dialog";
 
 interface CreditRecord {
   id: string;
@@ -78,6 +79,7 @@ export default function CreditsPage() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [stateQuery, setStateQuery] = useState("");
+  const [buyOpen, setBuyOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -197,7 +199,7 @@ export default function CreditsPage() {
           </span>
         )}
         <div className="flex-1" />
-        <Button data-testid="buy-credits" size="sm">
+        <Button data-testid="buy-credits" size="sm" onClick={() => setBuyOpen(true)}>
           Buy credits
         </Button>
       </div>
@@ -300,6 +302,7 @@ export default function CreditsPage() {
           </div>
         </>
       ) : null}
+      <BuyCreditsDialog open={buyOpen} onClose={() => setBuyOpen(false)} />
     </div>
   );
 }
