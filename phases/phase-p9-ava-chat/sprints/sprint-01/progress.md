@@ -4,10 +4,35 @@
 - 仓库根目录: boardx-dev-template（本次在 worktree .claude/worktrees/agent-af30bb5709423de82 中开发，分支 worker/wrk-ava-1-p9-f01-ava-chat-shell）
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F01 — AVA 聊天壳 + 新建会话 + 发首条消息 + AI 流式回复（已实现，PR 已提交，等待 review + `pnpm harness verify` 门控转 passing；worker 不可自行标记 passing）
-- 当前 blocker: 无（功能层面）。环境层面：本机同时有多个并行 worker worktree 占用端口 3000 / 5432 / 6379，本地复现 verification 命令时需要用自定义端口（PG_PORT/REDIS_PORT/COMPOSE_PROJECT_NAME + 临时改 apps/web/playwright.config.ts 端口后再还原），详见 session-handoff.md 与 evidence/f01-verification-run.log 开头注释。CI / coordinator 合并环境端口应是空闲的，命令本身未改动。
+- 当前最高优先级未完成功能: F02 — 聊天线程列表 CRUD（F01 已 passing；本 worktree 只处理 issue #153 安全补丁）
+- 当前 blocker: 无（功能层面）。环境层面：普通 sandbox 不能直接访问 Docker socket / Next dev 监听端口 / tsx IPC pipe；本次相关 Docker、migrate、Playwright 命令均用升级权限重跑通过。
 
 ## 会话记录
+### 2026-07-02 (wrk-codex-ava-sec-1 / issue #153)
+- 本轮目标: 修复 p9-F01 AVA 线程详情与发消息接口缺少团队上下文隔离的问题。同一用户在 team A 创建的线程，切到 team B 或个人上下文后，不得凭 threadId 读取详情或追加消息。
+- 已完成:
+  - `apps/web/app/api/ava/threads/[id]/route.ts` 的 owner check 增加 `thread.team_id === currentTeamId()`，保留 null 对 null 的个人上下文访问。
+  - `apps/web/app/api/ava/threads/[id]/messages/route.ts` 使用同一校验，在解析 body / 插入消息前拒绝跨团队上下文访问。
+  - 新增 route 单测 `apps/web/app/api/ava/threads/[id]/route.test.ts`，覆盖同用户 team A 线程在 team B / 个人上下文不可读取、不可追加消息，以及个人线程 null 对 null 可读取。
+  - `apps/web/vitest.config.ts` 增加 `@` alias，使 app route handler 可被 Vitest 直接导入测试。
+- 运行过的验证:
+  - `pnpm --filter @repo/web exec vitest run 'app/api/ava/threads/[id]/route.test.ts'` — 4/4 passed。
+  - `pnpm --filter @repo/web run typecheck` — passed。
+  - `pnpm --filter @repo/web run test` — 5 files / 16 tests passed。
+  - `pnpm --filter @repo/data run typecheck` — passed。
+  - `pnpm --filter @repo/data run test` — 6 files / 31 tests passed。
+  - `pnpm -w run verify:base` — turbo 45/45 successful。
+  - `docker compose -f infra/docker-compose.yml up -d` — sandbox 内 Docker socket 权限失败；升级权限重跑后 postgres/redis/minio started。
+  - `pnpm --filter @repo/data run migrate` — sandbox 内 tsx IPC pipe 权限失败；升级权限重跑后迁移全部通过。
+  - `pnpm --filter @repo/web exec playwright test e2e/ava-chat-basic.spec.ts` — sandbox 内 Next dev 监听端口权限失败；升级权限重跑后 5/5 passed。
+- 已记录证据: `phases/phase-p9-ava-chat/sprints/sprint-01/evidence/issue-153-ava-team-context-security.log`
+- 提交记录: 待本会话提交。
+- 已知风险或未解决问题:
+  - 本次没有新增真实 DB 的跨团队 e2e；安全回归由 route unit test 精确覆盖，现有 AVA e2e 验证 F01 主流程未回归。
+  - 普通 sandbox 下 Docker/Next/tsx 本地 socket 相关命令会被权限拦截，需要升级权限才能跑。
+- 下一步最佳动作:
+  - review 本安全补丁分支，重点看两个 route 是否所有读写路径都在 team check 后才继续。
+
 ### 2026-07-01 (wrk-ava-1)
 - 本轮目标: 实现 F01（AVA 聊天壳地基）：/ava 页面、线程 CRUD 最小集（列表+创建+详情）、
   发消息 + SSE 流式回复、Markdown/代码块渲染、DB 持久化、生成失败保留态。
