@@ -22,7 +22,7 @@ import {
   updateAvaMessage,
 } from "@repo/data";
 import { defaultGateway, DEFAULT_MODEL_ID, runChatGraph, makeGenerateNode } from "@repo/ai";
-import { currentUser } from "@/lib/session";
+import { currentTeamId, currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,8 +40,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return new Response(JSON.stringify({ error: "无效的线程 id" }), { status: 400 });
   }
 
+  const teamId = currentTeamId();
   const thread = await getAvaThread(threadId);
-  if (!thread || thread.user_id !== user.id) {
+  if (!thread || thread.user_id !== user.id || thread.team_id !== teamId) {
     return new Response(JSON.stringify({ error: "线程不存在" }), { status: 404 });
   }
 

@@ -1,0 +1,47 @@
+Issue #153 security patch evidence — 2026-07-02
+
+Scope:
+- apps/web/app/api/ava/threads/[id]/route.ts
+- apps/web/app/api/ava/threads/[id]/messages/route.ts
+- apps/web/app/api/ava/threads/[id]/route.test.ts
+- apps/web/vitest.config.ts
+
+Change:
+- GET /api/ava/threads/:id now requires thread.user_id === current user and thread.team_id === currentTeamId().
+- POST /api/ava/threads/:id/messages uses the same team-context owner check before reading request body or inserting a message.
+- null team context only matches thread.team_id IS NULL.
+
+Verification:
+- pnpm --filter @repo/web exec vitest run 'app/api/ava/threads/[id]/route.test.ts'
+  Result: PASS — 4 tests passed.
+
+- pnpm --filter @repo/web run typecheck
+  Result: PASS.
+
+- pnpm --filter @repo/web run test
+  Result: PASS — 5 files, 16 tests passed.
+
+- pnpm --filter @repo/data run typecheck
+  Result: PASS.
+
+- pnpm --filter @repo/data run test
+  Result: PASS — 6 files, 31 tests passed.
+
+- pnpm -w run verify:base
+  Result: PASS — turbo 45/45 tasks successful.
+
+- docker compose -f infra/docker-compose.yml up -d
+  Result: sandbox run failed with Docker socket permission denied.
+  Retried with escalated Docker daemon access: PASS — postgres/redis/minio started.
+
+- pnpm --filter @repo/data run migrate
+  Result: sandbox run failed because tsx could not listen on local IPC pipe.
+  Retried with escalated execution: PASS — migrations applied through 017_payment_orders.sql.
+
+- pnpm --filter @repo/web exec playwright test e2e/ava-chat-basic.spec.ts
+  Result: sandbox run failed because Next dev could not listen on local port.
+  Retried with escalated execution: PASS — 5/5 Playwright tests passed.
+
+Notes:
+- F01 was already passing before this patch; no feature status was edited.
+- The new unit test is the direct regression guard for issue #153. Existing AVA e2e confirms the F01 happy path remains intact.
