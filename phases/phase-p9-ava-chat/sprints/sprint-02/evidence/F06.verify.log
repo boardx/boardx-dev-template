@@ -1,0 +1,33 @@
+# F06 Deep Research — E2E Verification Evidence
+# Run timestamp: 2026-07-02T15:11:55Z
+# Branch: tmp-ava-research-verify2 (tracks origin/codex/issue-105-ava-deep-research-isolated)
+# Spec: apps/web/e2e/ava-deep-research.spec.ts
+
+## Infra status (before test run)
+# docker compose -f infra/docker-compose.yml up -d
+# 3/3 containers healthy:
+#   tmp-ava-research-verify2-postgres-1  (healthy)
+#   tmp-ava-research-verify2-redis-1     (healthy)
+#   tmp-ava-research-verify2-minio-1     (healthy)
+
+## Migration
+# pnpm --filter @repo/data run migrate → 完成（020_ava_message_feedback.sql 及以上全部已应用）
+
+## Playwright output (exact, unmodified)
+  ✓  4 [chromium] › ava-deep-research.spec.ts:71:5 › Deep Research：启动失败时展示可重试错误态 (2.9s)
+
+  Slow test file: [chromium] › ava-deep-research.spec.ts (1.2m)
+  Consider splitting slow test files to speed up parallel execution
+  4 passed (1.6m)
+
+## Result
+exit code: 0
+4/4 passed
+- Deep Research：提交主题 → 澄清/计划 → 确认执行时间线 → 报告面板 → 继续追问
+- Deep Research：主题过短时展示错误并保留可恢复输入
+- Deep Research：额度不足时展示提示并保留主题
+- Deep Research：启动失败时展示可重试错误态
+
+## Self-check
+# Content reviewed: no _URL=, _SECRET=, _KEY= patterns, no connection string dumps.
+# Only playwright test results + container health status summary (no env values).

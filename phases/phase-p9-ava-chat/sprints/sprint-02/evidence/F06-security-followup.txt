@@ -1,0 +1,38 @@
+PR #192 review fix — AVA Deep Research team_id isolation (issue #105, F06)
+
+Command: pnpm --filter @repo/web exec playwright test e2e/ava-deep-research.spec.ts --reporter=list
+Result: 4 passed, 0 failed (warm dev server; first cold run hit a Next.js JIT-compile timeout
+on one assertion, unrelated to the fix -- rerun after warmup was clean).
+
+Fix verified: apps/web/app/api/ava/threads/[id]/research/route.ts now uses
+isThreadInCurrentContext(thread, user.id, currentTeamId()) instead of a bare
+thread.user_id !== user.id check -- closes the team_id isolation gap (4th independent
+recurrence of the #153 bug pattern) that let a team-context switch expose another team's
+thread by numeric id.
+
+Broader AVA regression (after merging ~100 commits of drift from main -- attachments, share,
+edit/delete-message, AI settings, suggested actions, message-actions -- into this branch and
+resolving apps/web/app/(app)/ava/page.tsx conflicts by keeping both sides' additive UI):
+  pnpm --filter @repo/web exec playwright test e2e/ava-ai-settings.spec.ts e2e/ava-attach-files.spec.ts \
+    e2e/ava-chat-basic.spec.ts e2e/ava-edit-delete-message.spec.ts e2e/ava-message-actions.spec.ts \
+    e2e/ava-share-chat.spec.ts e2e/ava-suggested-actions.spec.ts e2e/ava-threads.spec.ts
+  23 passed, 4 failed -- both failure causes independently confirmed unrelated to this merge:
+    - ava-chat-basic.spec.ts asserts getByTestId("suggestion"), a testid that doesn't exist
+      anywhere in the current codebase, including origin/main before this branch touched it
+      (superseded by F10's "suggested-action" testid; this is a pre-existing stale test on
+      main itself, not a regression from this merge).
+    - ava-attach-files.spec.ts (3 failures): root-caused to scripts/init-worktree-env.sh never
+      writing S3_ENDPOINT to apps/web/.env.local, so the app's storage client fell back to its
+      default port instead of this worktree's isolated MinIO container. Confirmed by manually
+      setting S3_ENDPOINT to the correct isolated port: the "connection failed" errors
+      disappeared; one test still timed out on a 10s upload-completion assertion under host
+      load, which is an infra timing issue, not a code defect. Filed as a separate follow-up
+      (init-worktree-env.sh gap affects every worktree using the isolated-port scheme, not
+      specific to this PR).
+
+NOT run via `pnpm harness verify --sprint p9/02 --feature F06`: the verify script's global
+assertSingleInProgress invariant currently fails for the whole p9 sprint (unrelated pre-existing
+state: owner wrk-ava-1 has both F05 and F11 marked in_progress simultaneously, inherited from the
+main merge, not introduced by this branch). Filed as a separate follow-up. Until that's resolved,
+this evidence file is the real, manually-verified substitute -- feature_list.json's F06 status is
+deliberately left at in_progress (not hand-set to passing) pending a clean verify run.

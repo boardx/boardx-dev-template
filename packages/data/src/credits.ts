@@ -1,7 +1,7 @@
 // packages/data/src/credits.ts — CAP-DATA 积分钱包仓储（uc-credits-001 地基）
 // 钱包分两种 scope：personal（owner_user_id）/ team（team_id）。
 // AI 消耗扣费（p9/p12）、购买入账（F02/F05）后续复用 recordTransaction，本文件不建扣费/支付逻辑。
-import { query } from "./index";
+import { getPool, query } from "./index";
 
 export type WalletScope = "personal" | "team";
 export type TransactionKind = "usage" | "purchase";
@@ -158,4 +158,66 @@ export async function recordTransaction(
     [walletId, input.kind, input.label ?? "", input.description ?? "", input.amount, balanceAfter]
   );
   return rows[0]!;
+}
+
+/**
+ * 幂等记账：相同 wallet_id + label（label 内含 idem key）只能成功入账一次。
+ * 抢到唯一流水的请求才更新钱包余额；冲突请求直接返回既有流水，不触碰余额。
+ */
+export async function recordTransactionIdempotent(
+  walletId: number,
+  input: { kind: TransactionKind; amount: number; label: string; description?: string; grant?: boolean }
+): Promise<{ transaction: CreditTransaction; idempotent: boolean }> {
+  if (!input.label.includes("idem:")) {
+    throw new Error("recordTransactionIdempotent requires a label containing an idempotency key");
+  }
+
+  const totalCol =
+    input.kind === "usage" ? "total_consumed" : input.grant ? "total_granted" : "total_purchased";
+  const delta = input.kind === "usage" ? Math.abs(input.amount) : input.amount;
+  const client = await getPool().connect();
+
+  try {
+    await client.query("BEGIN");
+    const inserted = await client.query<{ id: number }>(
+      `INSERT INTO credit_transactions (wallet_id, kind, label, description, amount, balance_after)
+       VALUES ($1, $2, $3, $4, $5, 0)
+       ON CONFLICT (wallet_id, label) WHERE label LIKE '%idem:%' DO NOTHING
+       RETURNING id`,
+      [walletId, input.kind, input.label, input.description ?? "", input.amount]
+    );
+
+    if (!inserted.rows[0]) {
+      const existing = await client.query<CreditTransaction>(
+        `SELECT id, wallet_id, kind, label, description, amount, balance_after, created_at
+         FROM credit_transactions WHERE wallet_id = $1 AND label = $2
+         ORDER BY created_at DESC, id DESC LIMIT 1`,
+        [walletId, input.label]
+      );
+      await client.query("COMMIT");
+      return { transaction: existing.rows[0]!, idempotent: true };
+    }
+
+    const walletRows = await client.query<{ balance: number }>(
+      `UPDATE credit_wallets SET balance = balance + $2, ${totalCol} = ${totalCol} + $3
+       WHERE id = $1 RETURNING balance`,
+      [walletId, input.amount, delta]
+    );
+    const balanceAfter = walletRows.rows[0]!.balance;
+
+    const updated = await client.query<CreditTransaction>(
+      `UPDATE credit_transactions SET balance_after = $2
+       WHERE id = $1
+       RETURNING id, wallet_id, kind, label, description, amount, balance_after, created_at`,
+      [inserted.rows[0].id, balanceAfter]
+    );
+
+    await client.query("COMMIT");
+    return { transaction: updated.rows[0]!, idempotent: false };
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
 }

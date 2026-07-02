@@ -1,0 +1,16 @@
+PR #177 review fix — team manual credit route hardening (issue #173 sister path)
+Command: pnpm --filter @repo/web exec playwright test e2e/admin-001-manage-users.spec.ts e2e/admin-002-manage-teams.spec.ts --reporter=list
+Result: 23 passed (1.6m), 0 failed
+
+New coverage proving the fix:
+- admin-002-manage-teams.spec.ts: "SysAdmin 为团队手动增加 Credit，余额立即反映" — now asserts the
+  100,000 per-grant amount cap (previously only user route had this).
+- admin-002-manage-teams.spec.ts: "团队手动上分同一 Idempotency-Key 并发请求不会双重入账" — 8 concurrent
+  requests with the same Idempotency-Key against the team credit route; asserts final balance is
+  exactly 777 (single grant), not a multiple, proving recordTransactionIdempotent's single-transaction
+  INSERT ... ON CONFLICT DO NOTHING closes the check-then-act race the reviewer flagged.
+- Migration 019_credit_transaction_idempotency.sql backfill (dedup + balance-reversal for pre-existing
+  duplicate idem-labeled rows) applied cleanly on top of already-migrated schema.
+
+Existing admin-001-manage-users.spec.ts (11 tests) regression-passed unchanged, confirming the
+user-credit route (already fixed pre-review) still works correctly.

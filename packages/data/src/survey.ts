@@ -33,6 +33,14 @@ export interface SurveyWithQuestions extends Survey {
   questions: SurveyQuestion[];
 }
 
+export interface SurveyResponse {
+  id: number;
+  survey_id: number;
+  respondent_user_id: number | null;
+  answers: Record<string, unknown>;
+  submitted_at: string;
+}
+
 export interface SurveyTemplate {
   id: number;
   team_id: number | null;
@@ -127,6 +135,24 @@ export async function getSurveyWithQuestions(surveyId: number): Promise<SurveyWi
   return { ...survey, questions: await listQuestions(surveyId) };
 }
 
+/**
+ * 公开答题页读取问卷详情；不要求登录。
+ * 安全修复（PR #181 review）：此前直接透传 getSurveyWithQuestions，未做任何过滤——
+ * 任意 id（含草稿/已暂停/其它团队的私有问卷）都会返回完整题目/选项内容，靠遍历 id
+ * 即可读到不该公开的问卷。is_active=false 时仍返回 id/title/description 供"不可答题态"
+ * 展示问卷名（对齐 e2e: 未发布问卷公开链接展示不可答题态），但题目/选项清空，
+ * 与 POST 提交路径的 409 门控（apps/web/app/api/surveys/[id]/responses/route.ts）对齐——
+ * 未激活的问卷内容不可读，也不可答。
+ */
+export async function getPublicSurveyForAnswer(surveyId: number): Promise<SurveyWithQuestions | undefined> {
+  const survey = await getSurveyWithQuestions(surveyId);
+  if (!survey) return undefined;
+  if (!survey.is_active) {
+    return { ...survey, questions: [] };
+  }
+  return survey;
+}
+
 /** 用户可见的问卷：自己的 private 问卷，或当前团队上下文内的 team 问卷。按更新时间倒序。 */
 export async function listVisibleSurveys(userId: number, currentTeamId: number | null = null): Promise<SurveyListItem[]> {
   return query<SurveyListItem>(
@@ -199,6 +225,26 @@ export async function countResponses(surveyId: number): Promise<number> {
     [surveyId]
   );
   return Number(rows[0]?.count ?? 0);
+}
+
+/** 提交一份匿名或登录用户答卷。answers 结构由 API 层按题型校验后传入。 */
+export async function createSurveyResponse(
+  surveyId: number,
+  answers: Record<string, unknown>,
+  respondentUserId: number | null = null
+): Promise<SurveyResponse> {
+  const rows = await query<SurveyResponse>(
+    `INSERT INTO survey_responses (survey_id, respondent_user_id, answers)
+     VALUES ($1, $2, $3::jsonb)
+     RETURNING id, survey_id, respondent_user_id, answers, submitted_at`,
+    [surveyId, respondentUserId, JSON.stringify(answers)]
+  );
+  return rows[0]!;
+}
+
+/** 测试/运维用显式发布开关；业务权限由调用方保证。 */
+export async function setSurveyActive(surveyId: number, isActive: boolean): Promise<void> {
+  await query("UPDATE surveys SET is_active = $2, updated_at = now() WHERE id = $1", [surveyId, isActive]);
 }
 
 /** 用户可见模板：内置模板，或自己所在团队保存的模板。 */
