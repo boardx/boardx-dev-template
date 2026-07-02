@@ -1,0 +1,54 @@
+# F10 端到端验证证据
+# feature: 建议动作（快捷问题填入输入框）
+# 验证时间: 2026-07-02T04:17:xx.000Z
+# branch: tmp-ava-f10-verify (origin/codex/issue-109-ava-suggested-actions-isolated)
+# PR: #180 / issue #109
+
+## 环境
+
+- load averages (开始时): 14.17 12.77 13.94 (< 20，直接运行)
+- COMPOSE_PROJECT_NAME=tmp-ava-f10-verify
+- postgres: localhost:61445 (pgvector/pgvector:pg16) — healthy
+- redis: localhost:61446 (redis:7) — healthy
+- minio: localhost:61448 (minio:RELEASE.2024-08-17T01-24-54Z) — healthy
+- web/e2e: localhost:61447 (next dev -p 61447)
+
+## 命令序列
+
+1. bash scripts/init-worktree-env.sh
+   → 分配隔离端口，写入 .env / infra/.env / apps/web/.env.local
+
+2. docker compose -f infra/docker-compose.yml up -d
+   → postgres, redis, minio 全部 healthy
+
+3. corepack pnpm install --frozen-lockfile
+   → 347 packages resolved, reused 347, done in 3.3s
+
+4. source .env && pnpm --filter @repo/data run migrate
+   → 28 迁移文件全部 ✓ 完成（001_init.sql … 018_ava_message_attachments.sql）
+
+5. source .env && pnpm --filter @repo/web exec playwright test e2e/ava-suggested-actions.spec.ts
+
+## 测试结果
+
+Running 2 tests using 1 worker
+
+  ✓  1 [chromium] › ava-suggested-actions.spec.ts:11:5 › 建议动作填入 composer，用户可编辑后按普通消息发送，并在回复下方刷新下一步建议 (8.4s)
+  ✓  2 [chromium] › ava-suggested-actions.spec.ts:45:5 › 无可用建议时隐藏建议动作区域：失败回复下方不展示下一步建议 (710ms)
+
+  2 passed (14.5s)
+
+EXIT CODE: 0
+
+## 关键断言
+
+- [data-testid="empty"] 空状态可见 ✓
+- [data-testid="suggested-actions"] 建议区域可见（4 个建议项）✓
+- 点击"总结趋势"→ composer 填入指定文本，焦点落在 composer ✓
+- 编辑后发送 → msg-user 含"三个产品动作"，msg-assistant 可见，建议区刷新（3 项）✓
+- 点击"拆成任务"→ composer 填入，编辑后发送第二轮 ✓
+- 失败场景（__ava_force_fail__）→ msg-failed 可见，suggested-actions count=0 ✓
+
+## 结论
+
+2/2 passed，exit 0，clean 一次通过（无重试）。

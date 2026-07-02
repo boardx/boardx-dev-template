@@ -1,11 +1,11 @@
 # 进度日志 — Sprint p9/02
 
 ## 当前已验证状态(唯一真相)
-- 仓库根目录: `/private/tmp/boardx-worktrees/issue-103-ava-f04`（本次 resync 在隔离 worktree 完成）
+- 仓库根目录: `/private/tmp/boardx-worktrees/issue-106-ava-ai-settings`（本次冲突解决时的多个来源已合并至此分支）
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F04 / 分享聊天：生成/复用/关闭分享链接（owner: `wrk-codex-ava-3`）；F03 编辑/删除消息已随 main 合并落地。
-- 当前 blocker: F04 此前受 Docker daemon 未运行阻塞，`docker compose -f infra/docker-compose.yml up -d` 无法连接 `/var/run/docker.sock`；本轮 resync 后需重新验证。
+- 当前最高优先级未完成功能: F02 / 聊天线程列表 CRUD（owner `wrk-codex-1` in_progress）；F04 / 分享聊天：生成/复用/关闭分享链接代码已完成但端到端验证受 Docker daemon 阻塞未过（owner `wrk-codex-ava-3`，需重新验证）；F03/F07/F10 均已由 harness verify 门控升级为 `passing`；F06 未开始。
+- 当前 blocker: F04 受 Docker daemon 未运行阻塞，`docker compose -f infra/docker-compose.yml up -d` 无法连接 `/var/run/docker.sock`；需重新验证（与 F07/F10 无关，二者证据已分别在 evidence/F07.verify.log、evidence/F10.verify.log）。
 
 ## 会话记录
 ### 2026-07-02
@@ -38,6 +38,43 @@
 - 提交记录: 待提交。
 - 已知风险或未解决问题: 无；第一次 verify 曾被 `@repo/auth` 单测 5s 超时阻塞，停止临时 dev server 后重跑已通过。
 - 下一步最佳动作: 提交并推送 `codex/issue-102-ava-f03-isolated`，打开 draft PR 关联 #102。
+
+### 2026-07-02 10:59:43
+- 本轮目标: GitHub issue #109 / Phase p9 F10：建议动作（快捷问题填入输入框），owner `wrk-codex-ava-4`。
+- 已完成: AVA 空态展示内置建议动作；最后一条完整 AVA 回复下方展示下一步建议；点击建议只填入 composer 并聚焦，用户可编辑后按普通发送；发送中和失败回复等无可用建议场景隐藏建议区；补充 `apps/web/e2e/ava-suggested-actions.spec.ts`。
+- 运行过的验证:
+  - `pnpm --filter @repo/web exec tsc --noEmit`（通过）
+  - `pnpm --filter @repo/web run lint`（通过）
+  - `docker compose -f infra/docker-compose.yml up -d`（沙箱内 Docker socket 被拒，提权后通过）
+  - `pnpm --filter @repo/data run migrate`（沙箱内 `tsx` IPC pipe 被拒，提权后通过）
+  - `pnpm --filter @repo/web exec playwright test e2e/ava-suggested-actions.spec.ts`（沙箱内端口监听被拒，提权后 2 passed）
+  - `pnpm harness verify --sprint p9/02 --feature F10`（沙箱内 `tsx` IPC pipe 被拒，提权后通过；包含 `verify:base`）
+- 已记录证据: `evidence/F10.verify.log @ 2026-07-02T02:59:43.814Z`
+- 提交记录: 待提交。
+- 已知风险或未解决问题: F10 通用内置建议已完成；Agent 预设建议问题仍依赖 p11 AI Store 配置，按 feature notes deferred。
+- 下一步最佳动作: 继续处理 p9/02 其他未完成 feature；不要手改 `active-features.json` 或把未验证 feature 标为 passing。
+
+### 2026-07-02 11:39:28 CST
+- 本轮目标: GitHub issue #106 / Phase p9 F07：AI 设置：模型/Agent/工具选择（发送前生效），owner `wrk-codex-ava-5`。
+- 已完成:
+  - 新增 AVA capabilities API，返回可用模型、Agent、工具及团队受限模型禁用态。
+  - AVA composer 设置区展示当前模型/Agent/工具，支持发送前切换模型、Agent、工具；已有消息后锁定 Agent。
+  - 发送消息接口读取并校验 `modelId` / `agentId` / `toolIds`，stub 回复回显实际生效设置；普通成员伪造 team-restricted 模型会回退默认模型。
+  - 补充 `apps/web/e2e/ava-ai-settings.spec.ts` 覆盖 UI 生效、普通成员禁用受限模型、服务端防伪造回退。
+- 运行过的验证:
+  - `pnpm --filter @repo/ai test`（通过）
+  - `pnpm --filter @repo/web exec tsc --noEmit`（通过）
+  - `pnpm harness verify --sprint p9/02 --feature F07`（通过；包含 docker/migrate/e2e/base verify）
+- 已记录证据:
+  - `phases/phase-p9-ava-chat/sprints/sprint-02/evidence/F07.verify.log`
+  - `feature_list.json` 中 F07 已由 harness 升级为 `passing`，evidence=`evidence/F07.verify.log @ 2026-07-02T03:39:09.194Z`
+- 提交记录:
+  - 待提交
+- 已知风险或未解决问题:
+  - p11 AI Store 未落地前，Agent 列表仍以内置默认/占位 Agent 为主；后续 p11 接入后需要补有数据分支。
+  - 本 worktree 只处理 F07；F02 仍由 `wrk-codex-1` 在其范围内推进。
+- 下一步最佳动作:
+  - 提交本轮 F07 改动；不要修改 `active-features.json` 或接手其他 owner 的 in_progress feature。
 
 ### 2026-07-02 (wrk-codex-ava-3 / issue #103 / F04)
 - 本轮目标: 实现 F04「分享聊天：生成/复用/关闭分享链接」，只处理 AVA thread 分享 API、公开只读分享页/失效门控、聊天头部分享入口。

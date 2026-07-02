@@ -14,12 +14,12 @@
 | p6 | Canvas & 组件 (P6) | in_progress | 9 | 0 | 3 | 10 |
 | p7 | Board 壳 (P7) | in_progress | 8 | 0 | 5 | 3 |
 | p8 | 实时协作 (P8) | not_started | 4 | 0 | 0 | 0 |
-| p9 | AVA / Chat (P9) | in_progress | 4 | 1 | 1 | 5 |
-| p10 | 知识库 (P10) | in_progress | 0 | 1 | 1 | 2 |
-| p11 | AI Store (P11) | in_progress | 2 | 2 | 0 | 2 |
-| p12 | Studio & 演示 (P12) | in_progress | 0 | 1 | 1 | 1 |
-| p13 | 问卷 (P13) | in_progress | 3 | 0 | 0 | 3 |
-| p14 | 积分 & 计费 (P14) | in_progress | 1 | 1 | 0 | 3 |
-| p15 | Admin 后台 (P15) | in_progress | 0 | 1 | 1 | 3 |
+| p9 | AVA / Chat (P9) | not_started | 2 | 3 | 1 | 5 |
+| p10 | 知识库 (P10) | not_started | 0 | 1 | 0 | 3 |
+| p11 | AI Store (P11) | not_started | 2 | 1 | 1 | 2 |
+| p12 | Studio & 演示 (P12) | not_started | 0 | 0 | 1 | 2 |
+| p13 | 问卷 (P13) | not_started | 3 | 1 | 0 | 2 |
+| p14 | 积分 & 计费 (P14) | not_started | 0 | 1 | 2 | 2 |
+| p15 | Admin 后台 (P15) | not_started | 0 | 0 | 2 | 3 |
 
-_最近聚合:2026-07-02T04:49:42.741Z_
+_最近聚合:2026-07-02T08:40:21.888Z_
