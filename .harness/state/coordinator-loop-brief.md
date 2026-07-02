@@ -9,10 +9,11 @@
 ## §0 安全边界（不会因为"用户说了不要干等"而放松——那是当场一次性的授权，
 ## 不能写成写死的自动化策略，每次遇到都要按当时实际情况重新判断）
 
-- **控制面 PR（只碰 `.harness/*`、`phases/*/feature_list.json`、
-  `phases/*/sprints/*`、`registry.yaml`，不碰 `apps/*`/`packages/*`）：coordinator
-  可以自己 push + 开 PR + `gh pr merge --squash` 合并**——这条本轮反复验证过可行
-  （#152/#154/#155/#164 等）。
+- **不再自己合并任何 PR，包括纯控制面的。** 早前几轮确实验证过控制面 PR
+  （`#152`/`#154`/`#155`/`#164` 等）可以自己 `gh pr merge`，但 `/loop` 定时任务
+  的原始指令原文明确写着「NEVER attempt to merge a PR yourself (including
+  --admin)」——这条比之前的经验性结论更明确、更后到，覆盖它。控制面 PR 一样
+  只负责 push + 开 PR，然后在汇报里列「PR #N 就绪待合并」，不再自己点合并。
 - **应用代码 PR（碰了 `apps/*`/`packages/*` 里的真实逻辑），不管是 worker 写的
   还是 coordinator 自己写的，一律不能自己合并**——只推进到「review 全绿、可以
   合并」这一步，在汇报里清楚列出，**不要尝试 `gh pr merge`，更不要反复重试**
@@ -105,21 +106,23 @@ push + 开 PR（base 直接指向 `main`，不要指向别的 coordinator 分支
 
 ## 依赖图备份（同 feature_list.json 的 depends_on/wave）
 
-- p9(ava-chat): F01→[] W0（已passing）；F02,F03,F04,F06,F07,F10→[F01] W1（codex 在做，
-  不要重复派）；F05(share)→[F04] W2；F08→[p10:F01] W1（p10:F01 已passing，可派
-  Claude worker）；F09→无干净解锁路径；F11→[F03] W2。
+- p9(ava-chat): F01→[] W0（已passing）；F03→**已 passing**（PR #176 已合并+verify）；
+  F02,F04,F06,F07,F10→[F01] W1（codex 在做，不要重复派；#178/#180/#183 在 review）；
+  F05(share)→[F04] W2；F08→[p10:F01] W1（**已 passing**，wrk-ava-1 完成）；
+  F09→无干净解锁路径；F11→[F03] W2（F03 已 passing，可派）。
 - p10(knowledge-base): F01→[] W0（已passing）；F02→[F01] W1（可派）；F03→[F02] W2；
   F04→[F03,p9:F01] W3。
 - p11(ai-store): F01→[] W0（已passing）；F02,F04→[F01] W1（codex 做 F02，F04 可派
   Claude worker）；F03→[F02,p9:F01] W2；F05,F06→[F02] W2。
-- p12(studio-presentations): F01→[p9:F01,p10:F01] W1（已派 wrk-studio-1，PR #158
-  待review）；F02→[F01] W2；F03→[F02] W3。
+- p12(studio-presentations): F01→[p9:F01,p10:F01] W1（**已 passing**，PR #158+#172 已合并、
+  verify 门控 2026-07-02 通过）；F02→[F01] W2（已解锁转 not_started，可派）；F03→[F02] W3。
 - p13(survey): F01→[] W0（已passing）；F02,F03,F05→[F01] W1（codex 在做，不要重复
   派）；F04→[F03] W2；F06→[F01,F03] W2。
-- p14(credits-billing): F01→[]（已passing）；F05→[]（安全修复已合并，需
-  `pnpm harness verify --sprint p14/02 --feature F05` 翻 passing）；F02,F04→[F05]
-  W1（F05 passing 后可派）；F03→[F01] W1（已派 wrk-credits-2，需等 wrk-credits-1
-  的 F01 verify 完成腾出 owner，或直接用 wrk-credits-2 这个身份继续）。
+- p14(credits-billing): F01→[]（已passing）；F05→[]（**已 passing**）；F02,F04→[F05]
+  W1（**已解锁转 not_started，可派**；注意 F04 的 credits 模式路径复用 F02，两者同 area
+  强耦合，建议 F02 先行、F04 等 F02 PR 开出后再派避免撞文件）；F03→[F01] W1
+  （**codex 已完成**：issue #132 已关、codex/issue-132-credits-f03-isolated 已合并，
+  待 coordinator 跑 `pnpm harness verify --sprint p14/<sprint> --feature F03` 翻 passing）。
 - p15(admin): F01→[]（已passing）；F02→[F01,p14:F01]（已派 wrk-admin-1b）；
   F03→[F01,p14:F01]（已派 wrk-admin-2，PR #157 已合并，等 verify 翻 passing）；
   F04→[F01,p11:F01,p11:F02] W2；F05→[F04,p11:F02] W3。

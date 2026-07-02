@@ -1,0 +1,109 @@
+// packages/ai/src/avaSettings.ts — AVA AI 设置（P9 F07）
+
+export interface AvaModelOption {
+  id: string;
+  label: string;
+  description: string;
+  teamRestricted?: boolean;
+}
+
+export interface AvaAgentOption {
+  id: string;
+  label: string;
+  description: string;
+}
+
+export interface AvaToolOption {
+  id: string;
+  label: string;
+  description: string;
+}
+
+export interface AvaAiSettings {
+  modelId: string;
+  agentId: string;
+  toolIds: string[];
+}
+
+export const DEFAULT_AVA_MODEL_ID = "stub:default";
+export const DEFAULT_AVA_AGENT_ID = "default";
+export const DEFAULT_AVA_TOOL_IDS = ["web-search"];
+
+export const AVA_MODEL_OPTIONS: AvaModelOption[] = [
+  {
+    id: DEFAULT_AVA_MODEL_ID,
+    label: "Stub Default",
+    description: "Fast deterministic AVA stub model for local chat.",
+  },
+  {
+    id: "stub:planner",
+    label: "Stub Planner",
+    description: "Planning-oriented stub response path.",
+  },
+  {
+    id: "stub:team-pro",
+    label: "Team Pro Stub",
+    description: "Team restricted model, available to owners and admins.",
+    teamRestricted: true,
+  },
+];
+
+export const AVA_AGENT_OPTIONS: AvaAgentOption[] = [
+  {
+    id: DEFAULT_AVA_AGENT_ID,
+    label: "Default AVA",
+    description: "General AVA assistant. AI Store agents are added in p11.",
+  },
+  {
+    id: "research",
+    label: "Research Agent",
+    description: "Built-in research-oriented agent placeholder.",
+  },
+];
+
+export const AVA_TOOL_OPTIONS: AvaToolOption[] = [
+  {
+    id: "web-search",
+    label: "Web Search",
+    description: "Use web-style retrieval when available.",
+  },
+  {
+    id: "board-context",
+    label: "Board Context",
+    description: "Include current board context when connected.",
+  },
+  {
+    id: "file-reader",
+    label: "File Reader",
+    description: "Read uploaded files when available.",
+  },
+];
+
+export function isModelSelectable(modelId: string, canUseTeamRestrictedModels: boolean): boolean {
+  const model = AVA_MODEL_OPTIONS.find((m) => m.id === modelId);
+  if (!model) return false;
+  return !model.teamRestricted || canUseTeamRestrictedModels;
+}
+
+export function normalizeAvaAiSettings(
+  input: Partial<AvaAiSettings>,
+  canUseTeamRestrictedModels: boolean
+): AvaAiSettings {
+  const modelId = isModelSelectable(input.modelId ?? "", canUseTeamRestrictedModels)
+    ? input.modelId!
+    : DEFAULT_AVA_MODEL_ID;
+
+  const agentId = AVA_AGENT_OPTIONS.some((a) => a.id === input.agentId)
+    ? input.agentId!
+    : DEFAULT_AVA_AGENT_ID;
+
+  const allowedTools = new Set(AVA_TOOL_OPTIONS.map((t) => t.id));
+  const requestedTools = Array.isArray(input.toolIds) ? input.toolIds : DEFAULT_AVA_TOOL_IDS;
+  const toolIds = requestedTools.filter((id) => allowedTools.has(id));
+
+  return {
+    modelId,
+    agentId,
+    toolIds: toolIds.length > 0 ? toolIds : DEFAULT_AVA_TOOL_IDS,
+  };
+}

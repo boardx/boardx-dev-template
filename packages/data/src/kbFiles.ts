@@ -36,6 +36,11 @@ export interface CreateKbFileInput {
 const KB_FILE_COLUMNS =
   "id, scope, owner_user_id, team_id, name, ext, mime_type, size_bytes, object_key, status, error_message, created_at, updated_at";
 
+export interface ListKbFilesResult {
+  files: KbFile[];
+  total: number;
+}
+
 /** 插入一条 kb_files 记录（初始 status=processing）。上传管线里对象存储写成功后才调用，
  *  避免半条记录（对象存储失败则不落库，见 apps/web 路由）。 */
 export async function createKbFile(input: CreateKbFileInput): Promise<KbFile> {
@@ -63,18 +68,17 @@ export async function getKbFile(id: string): Promise<KbFile | undefined> {
   return rows[0];
 }
 
-/** 列出某用户在给定 scope 下有权访问的文件（personal: 仅自己；team: 同 team_id）。
- *  按名称模糊搜索可选。仅 F01 所需最小过滤；F02 会扩展分页。 */
-export async function listKbFiles(params: {
+function buildKbFileListFilter(params: {
   ownerUserId: number;
   scope?: KbScope;
   teamId?: number | null;
   q?: string;
-}): Promise<KbFile[]> {
+}): { where: string; values: unknown[] } {
   const conditions: string[] = [];
   const values: unknown[] = [];
 
-  if (params.scope === "team" && params.teamId != null) {
+  if (params.scope === "team") {
+    if (params.teamId == null) return { where: "WHERE false", values };
     values.push(params.teamId);
     conditions.push(`team_id = $${values.length}`);
   } else {
@@ -86,16 +90,61 @@ export async function listKbFiles(params: {
     }
   }
 
-  if (params.q) {
-    values.push(`%${params.q}%`);
+  const q = params.q?.trim();
+  if (q) {
+    values.push(`%${q}%`);
     conditions.push(`name ILIKE $${values.length}`);
   }
 
-  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-  return query<KbFile>(
-    `SELECT ${KB_FILE_COLUMNS} FROM kb_files ${where} ORDER BY created_at DESC, id DESC`,
+  return { where: `WHERE ${conditions.join(" AND ")}`, values };
+}
+
+/** 列出某用户在给定 scope 下有权访问的文件（personal/agent/tool: 仅自己；team: 同 team_id）。
+ *  按名称模糊搜索可选，返回分页结果和总数。 */
+export async function listKbFiles(params: {
+  ownerUserId: number;
+  scope?: KbScope;
+  teamId?: number | null;
+  q?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<ListKbFilesResult> {
+  const { where, values } = buildKbFileListFilter(params);
+  const limit = Math.max(1, Math.min(params.limit ?? 20, 100));
+  const offset = Math.max(0, params.offset ?? 0);
+
+  const totalRows = await query<{ count: string }>(
+    `SELECT count(*)::text AS count FROM kb_files ${where}`,
     values
   );
+
+  const pageValues = [...values, limit, offset];
+  const files = await query<KbFile>(
+    `SELECT ${KB_FILE_COLUMNS}
+     FROM kb_files ${where}
+     ORDER BY created_at DESC, id DESC
+     LIMIT $${pageValues.length - 1} OFFSET $${pageValues.length}`,
+    pageValues
+  );
+
+  return { files, total: Number(totalRows[0]?.count ?? 0) };
+}
+
+/** 取当前用户有权访问的单个文件，用于下载/删除等行级操作。 */
+export async function getAccessibleKbFile(id: string, userId: number): Promise<KbFile | undefined> {
+  const rows = await query<KbFile>(
+    `SELECT ${KB_FILE_COLUMNS}
+     FROM kb_files f
+     WHERE f.id = $1
+       AND (
+         (f.scope = 'team' AND f.team_id IS NOT NULL AND EXISTS (
+           SELECT 1 FROM team_members m WHERE m.team_id = f.team_id AND m.user_id = $2
+         ))
+         OR (f.scope <> 'team' AND f.owner_user_id = $2)
+       )`,
+    [id, userId]
+  );
+  return rows[0];
 }
 
 /** worker 异步回写处理状态（幂等：相同输入多次调用结果一致）。 */

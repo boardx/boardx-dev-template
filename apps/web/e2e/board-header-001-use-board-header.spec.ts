@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const uniq = () => `bh001_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
+const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
 async function createBoard(page: import("@playwright/test").Page, name = "Header Board") {
   await page.request.post("/api/auth/register", {
@@ -63,7 +64,7 @@ test("owner 通过 Board Header 理解状态并进入授权操作", async ({ pag
 });
 
 test("viewer 在 Header 中只看到授权入口，加入后获得编辑入口", async ({ page, playwright }) => {
-  const owner = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  const owner = await playwright.request.newContext({ baseURL: BASE_URL });
   await owner.post("/api/auth/register", {
     data: { firstName: "O", lastName: "O", email: uniq(), password: "secret123", agreeTerms: true },
   });

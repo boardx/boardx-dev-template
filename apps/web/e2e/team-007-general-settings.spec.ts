@@ -4,9 +4,10 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
 // 沿用 team-manage.spec 的 API 约定：PATCH/DELETE /api/teams/[id]。
 
 const uniq = () => `tg_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
+const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
 async function newUser(playwright: any): Promise<APIRequestContext> {
-  const ctx = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  const ctx = await playwright.request.newContext({ baseURL: BASE_URL });
   await ctx.post("/api/auth/register", {
     data: { firstName: "U", lastName: "U", email: uniq(), password: "secret123", agreeTerms: true },
   });

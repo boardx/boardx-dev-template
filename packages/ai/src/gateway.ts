@@ -14,6 +14,10 @@ export interface ChatMessage {
 export interface StreamChatInput {
   modelId: string;
   messages: ChatMessage[];
+  settings?: {
+    agentId: string;
+    toolIds: string[];
+  };
 }
 
 export type TokenStream = AsyncGenerator<string, void, void>;
@@ -37,13 +41,17 @@ export const stubProvider: ChatProvider = {
   matches(modelId: string) {
     return modelId.startsWith("stub:");
   },
-  async *streamChat({ messages }: StreamChatInput): TokenStream {
+  async *streamChat({ modelId, messages, settings }: StreamChatInput): TokenStream {
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
     const text = (lastUser?.content ?? "").trim();
     if (text.includes(FORCE_FAIL_MARKER)) {
       throw new Error("stub provider: 强制失败（测试触发）");
     }
-    const reply = buildStubReply(text);
+    const reply = buildStubReply(text, {
+      modelId,
+      agentId: settings?.agentId ?? "default",
+      toolIds: settings?.toolIds ?? [],
+    });
     // 按小块切分模拟逐 token 流式（真实 provider 由底层 SDK 决定切分粒度）。
     const chunks = reply.match(/.{1,4}/gs) ?? [reply];
     for (const chunk of chunks) {
@@ -52,13 +60,34 @@ export const stubProvider: ChatProvider = {
   },
 };
 
-/** 构造 stub 回复：包含纯文本 + Markdown 标题/列表 + 代码块，覆盖渲染断言面。 */
-export function buildStubReply(userText: string): string {
-  const quoted = userText.length > 200 ? `${userText.slice(0, 200)}…` : userText;
+// 消息路由（apps/web .../messages/route.ts）在用户文本末尾拼接 `[附件: a.png、b.pdf]`
+// 作为附件上下文提示（P9 F08：stub provider 无需真实多模态理解，引用附件存在/文件名即可）。
+const ATTACHMENT_MARKER_RE = /\n\n\[附件: (.+)\]$/;
+
+/** 构造 stub 回复：包含纯文本 + Markdown 标题/列表 + 代码块，覆盖渲染断言面。
+ *  若用户文本携带附件上下文标记，回复里显式提及附件文件名，供 F08 验证 AI 感知到附件。
+ *  settings 携带当前生效的模型/Agent/工具，供 F07 验证发送前设置在回复中确实生效。 */
+export function buildStubReply(
+  userText: string,
+  settings: { modelId?: string; agentId?: string; toolIds?: string[] } = {}
+): string {
+  const attachmentMatch = userText.match(ATTACHMENT_MARKER_RE);
+  const bodyText = attachmentMatch ? userText.replace(ATTACHMENT_MARKER_RE, "") : userText;
+  const quoted = bodyText.length > 200 ? `${bodyText.slice(0, 200)}…` : bodyText;
+  const attachmentLine = attachmentMatch
+    ? `\n\n我看到你附上了 ${attachmentMatch[1]}，已一并考虑。`
+    : "";
+  const modelId = settings.modelId ?? DEFAULT_MODEL_ID;
+  const agentId = settings.agentId ?? "default";
+  const tools = settings.toolIds && settings.toolIds.length > 0 ? settings.toolIds.join(", ") : "none";
   return [
     `## 收到`,
     ``,
-    `这是 AVA 的 stub 回复（未接入真实模型）。你说：「${quoted}」。`,
+    `这是 AVA 的 stub 回复（未接入真实模型）。你说：「${quoted}」。${attachmentLine}`,
+    ``,
+    `模型：${modelId}`,
+    `Agent：${agentId}`,
+    `工具：${tools}`,
     ``,
     `- 要点一`,
     `- 要点二`,

@@ -29,7 +29,7 @@
       "title": "用户管理（列表/搜索/分页/增删改 + 手动上分）",
       "user_visible_behavior": "SysAdmin 在用户管理页：GET /api/admin/users?q= 分页列出用户（邮箱/名称/状态/团队数）；搜索过滤；创建用户、编辑资料、删除（确认弹窗）；对用户手动增加 Credit（manual credit 弹窗）；操作即时反映；越权非 SysAdmin 无法访问接口。",
       "design_ref": "prototype:<!-- users --> + <!-- admin: manual credit modal --> + <!-- admin: delete user confirm -->；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "03",
       "owner": "wrk-admin-1",
       "capability": "CAP-AUTH",
@@ -43,7 +43,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/admin-001-manage-users.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-07-01T21:45:13.747Z",
       "notes": "uc-admin-001。手动上分复用 p14 credit_transactions（admin 来源）。依赖 F01 门控 + p14 credits。"
     },
     {
@@ -77,9 +77,9 @@
       "title": "AI Store 平台审核页（APPROVED/PENDING 切换）",
       "user_visible_behavior": "SysAdmin 在平台审核页查看提交到平台审核的 AI Store 项目（PENDING 列表）：批准（→APPROVED/发布到平台）、拒绝，或将已批准项目撤回到待审核；操作即时反映在列表与状态标；确认弹窗防误操作；无权限不可访问。",
       "design_ref": "prototype:<!-- store approval --> + <!-- admin: approval confirm -->；DESIGN.md tokens",
-      "status": "blocked",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "04",
+      "owner": "wrk-admin-1",
       "capability": "CAP-DATA",
       "depends_on": [
         "F01",
@@ -93,7 +93,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/admin-003-ai-store-approval.spec.ts"
       ],
       "evidence": "",
-      "notes": "uc-admin-003。blocked-on p11：审核对象是 p11 的 ai_store_items（平台作用域 + 审核状态机）。p11 未就绪则无审核数据。依赖 F01 门控 + p11。"
+      "notes": "【2026-07-02 解锁：F01+p11:F01+p11:F02 已 passing，blocked→not_started】uc-admin-003。blocked-on p11：审核对象是 p11 的 ai_store_items（平台作用域 + 审核状态机）。p11 未就绪则无审核数据。依赖 F01 门控 + p11。"
     },
     {
       "id": "F05",

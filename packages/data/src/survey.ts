@@ -33,9 +33,27 @@ export interface SurveyWithQuestions extends Survey {
   questions: SurveyQuestion[];
 }
 
+export interface SurveyTemplate {
+  id: number;
+  team_id: number | null;
+  owner_user_id: number | null;
+  builtin: boolean;
+  title: string;
+  description: string;
+  questions: NewQuestionInput[];
+  created_at: string;
+  updated_at: string;
+  can_delete?: boolean;
+}
+
+export interface SurveyListItem extends Survey {
+  response_count: string;
+}
+
 const SURVEY_COLS =
   "id, team_id, scope, title, description, is_active, owner_user_id, created_at, updated_at";
 const QUESTION_COLS = "id, survey_id, position, title, type, required, options";
+const TEMPLATE_COLS = "id, team_id, owner_user_id, builtin, title, description, questions, created_at, updated_at";
 
 export interface NewQuestionInput {
   title: string;
@@ -109,28 +127,69 @@ export async function getSurveyWithQuestions(surveyId: number): Promise<SurveyWi
   return { ...survey, questions: await listQuestions(surveyId) };
 }
 
-/** 用户可见的问卷：自己创建的（含 private/team），或 scope=team 且自己是该团队成员。按更新时间倒序。 */
-export async function listVisibleSurveys(userId: number): Promise<Survey[]> {
-  return query<Survey>(
+/** 用户可见的问卷：自己的 private 问卷，或当前团队上下文内的 team 问卷。按更新时间倒序。 */
+export async function listVisibleSurveys(userId: number, currentTeamId: number | null = null): Promise<SurveyListItem[]> {
+  return query<SurveyListItem>(
     `SELECT DISTINCT s.id, s.team_id, s.scope, s.title, s.description, s.is_active,
-            s.owner_user_id, s.created_at, s.updated_at
+            s.owner_user_id, s.created_at, s.updated_at,
+            count(sr.id)::text AS response_count
      FROM surveys s
+     LEFT JOIN survey_responses sr ON sr.survey_id = s.id
      LEFT JOIN team_members tm ON tm.team_id = s.team_id AND tm.user_id = $1
-     WHERE s.owner_user_id = $1 OR (s.scope = 'team' AND tm.user_id IS NOT NULL)
+     WHERE (s.scope = 'private' AND s.owner_user_id = $1)
+        OR (
+          s.scope = 'team'
+          AND s.team_id = $2
+          AND tm.user_id IS NOT NULL
+        )
+     GROUP BY s.id, s.team_id, s.scope, s.title, s.description, s.is_active,
+              s.owner_user_id, s.created_at, s.updated_at
      ORDER BY s.updated_at DESC`,
-    [userId]
+    [userId, currentTeamId]
   );
 }
 
-/** 用户能否查看某问卷：创建者，或 scope=team 且是该团队成员。 */
-export async function canViewSurvey(surveyId: number, userId: number): Promise<boolean> {
+/** 用户能否查看某问卷：创建者的 private，或当前团队上下文内的 team 成员。 */
+export async function canViewSurvey(
+  surveyId: number,
+  userId: number,
+  currentTeamId: number | null = null
+): Promise<boolean> {
   const s = await getSurvey(surveyId);
   if (!s) return false;
-  if (s.owner_user_id === userId) return true;
+  if (s.scope === "private" && Number(s.owner_user_id) === Number(userId)) return true;
   if (s.scope === "team" && s.team_id != null) {
-    return (await getMembership(s.team_id, userId)) !== undefined;
+    const teamId = Number(s.team_id);
+    if (currentTeamId !== teamId) return false;
+    return (await getMembership(teamId, userId)) !== undefined;
   }
   return false;
+}
+
+export async function updateSurvey(
+  surveyId: number,
+  ownerId: number,
+  fields: { title?: string; description?: string; isActive?: boolean }
+): Promise<Survey | undefined> {
+  const rows = await query<Survey>(
+    `UPDATE surveys
+     SET title = COALESCE($3, title),
+         description = COALESCE($4, description),
+         is_active = COALESCE($5, is_active),
+         updated_at = now()
+     WHERE id = $1 AND owner_user_id = $2
+     RETURNING ${SURVEY_COLS}`,
+    [surveyId, ownerId, fields.title ?? null, fields.description ?? null, fields.isActive ?? null]
+  );
+  return rows[0];
+}
+
+export async function deleteSurvey(surveyId: number, ownerId: number): Promise<boolean> {
+  const rows = await query<{ id: number }>(
+    "DELETE FROM surveys WHERE id = $1 AND owner_user_id = $2 RETURNING id",
+    [surveyId, ownerId]
+  );
+  return rows.length > 0;
 }
 
 /** 答卷提交数（供列表展示 responses 计数；F01 恒为 0，随 F03 增长）。 */
@@ -140,4 +199,60 @@ export async function countResponses(surveyId: number): Promise<number> {
     [surveyId]
   );
   return Number(rows[0]?.count ?? 0);
+}
+
+/** 用户可见模板：内置模板，或自己所在团队保存的模板。 */
+export async function listVisibleSurveyTemplates(userId: number): Promise<SurveyTemplate[]> {
+  return query<SurveyTemplate>(
+    `SELECT DISTINCT st.${TEMPLATE_COLS.replaceAll(", ", ", st.")},
+            (
+              st.owner_user_id = $1 OR tm.role IN ('owner', 'admin')
+            ) AS can_delete
+     FROM survey_templates st
+     LEFT JOIN team_members tm ON tm.team_id = st.team_id AND tm.user_id = $1
+     WHERE st.builtin = true OR tm.user_id IS NOT NULL
+     ORDER BY st.builtin DESC, st.updated_at DESC, st.id DESC`,
+    [userId]
+  );
+}
+
+export async function createSurveyTemplate(input: {
+  ownerId: number;
+  teamId: number;
+  title: string;
+  description: string;
+  questions: NewQuestionInput[];
+}): Promise<SurveyTemplate> {
+  const rows = await query<SurveyTemplate>(
+    `INSERT INTO survey_templates (team_id, owner_user_id, builtin, title, description, questions)
+     VALUES ($1, $2, false, $3, $4, $5::jsonb)
+     RETURNING ${TEMPLATE_COLS}`,
+    [input.teamId, input.ownerId, input.title, input.description, JSON.stringify(input.questions)]
+  );
+  return rows[0]!;
+}
+
+export async function getSurveyTemplate(templateId: number): Promise<SurveyTemplate | undefined> {
+  const rows = await query<SurveyTemplate>(`SELECT ${TEMPLATE_COLS} FROM survey_templates WHERE id = $1`, [templateId]);
+  return rows[0];
+}
+
+/** 可删除：创建者，或模板所属团队 owner/admin。内置模板不可删。 */
+export async function canDeleteSurveyTemplate(templateId: number, userId: number): Promise<boolean> {
+  const rows = await query<{ ok: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM survey_templates st
+       LEFT JOIN team_members tm ON tm.team_id = st.team_id AND tm.user_id = $2
+       WHERE st.id = $1
+         AND st.builtin = false
+         AND (st.owner_user_id = $2 OR tm.role IN ('owner', 'admin'))
+     ) AS ok`,
+    [templateId, userId]
+  );
+  return rows[0]?.ok === true;
+}
+
+export async function deleteSurveyTemplate(templateId: number): Promise<void> {
+  await query("DELETE FROM survey_templates WHERE id = $1", [templateId]);
 }

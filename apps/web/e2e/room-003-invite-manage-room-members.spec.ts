@@ -3,6 +3,7 @@ import { test, expect, type APIRequestContext, type Page } from "@playwright/tes
 // uc-room-003-invite-manage-room-members
 // 房间管理者邀请团队成员或外部邮箱进入房间，并维护房间成员角色。
 const uniq = (p = "r3") => `${p}_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
+const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
 async function registerOnPage(page: Page, email = uniq()) {
   await page.request.post("/api/auth/register", {
@@ -13,7 +14,7 @@ async function registerOnPage(page: Page, email = uniq()) {
 
 async function newUserCtx(playwright: any): Promise<{ ctx: APIRequestContext; email: string; userId: number }> {
   const email = uniq("guest");
-  const ctx = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  const ctx = await playwright.request.newContext({ baseURL: BASE_URL });
   const reg = await (
     await ctx.post("/api/auth/register", {
       data: { firstName: "G", lastName: "G", email, password: "secret123", agreeTerms: true },

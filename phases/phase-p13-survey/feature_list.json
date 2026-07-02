@@ -29,9 +29,9 @@
       "title": "问卷列表管理（My/Team Surveys + 卡片操作）",
       "user_visible_behavior": "进入问卷列表：GET /api/surveys 展示当前团队问卷卡片（标题/状态 active/paused/回收数/更新时间）；卡片操作 View 结果 / Edit / Preview 答题页 / Share / Pause·Activate / Delete（确认后 DELETE 移除）；空态与骨架；无权限问卷不显示。",
       "design_ref": "prototype:<!-- SURVEYS --> → <!-- LIST -->（问卷卡片 + View/Edit/Preview/Share/Pause/Delete）；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "02",
+      "owner": "wrk-codex-survey-1",
       "capability": "CAP-DATA",
       "depends_on": [
         "F01"
@@ -42,7 +42,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/survey-002-list-manage-surveys.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-07-02T04:34:09.634Z",
       "notes": "uc-survey-002。列表按 team+权限过滤。依赖 F01。"
     },
     {
@@ -98,9 +98,9 @@
       "title": "问卷模板管理（应用/保存/删除模板）",
       "user_visible_behavior": "创建问卷时可选 Blank / 内置模板 / 团队保存模板快速起草；把当前问卷保存为团队模板（POST /api/survey-templates）；删除自己/团队可管理的模板；应用模板预填题目后仍可编辑；无模板时展示空态。",
       "design_ref": "prototype:<!-- EDITOR -->（Choose template 区：Blank/内置/团队模板；模板区细节较浅）；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "04",
+      "owner": "wrk-codex-survey-3",
       "capability": "CAP-DATA",
       "depends_on": [
         "F01"
@@ -111,7 +111,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/survey-005-manage-templates.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F05.verify.log @ 2026-07-02T03:26:20.959Z",
       "notes": "uc-survey-005。survey_templates 表（内置 + 团队保存）。依赖 F01。"
     },
     {
