@@ -50,21 +50,32 @@
     第二次整体跑的结果见 evidence 目录）
 - 已记录证据:
   - `phases/phase-p15-admin/sprints/sprint-04/evidence/f04-e2e-playwright.txt`
-    （F04 e2e 完整输出，8/8 最终通过）
+    （合并主干前的 F04 e2e 完整输出，8/8 最终通过，含一次因环境 DB 抖动的 flaky-then-pass）
   - `phases/phase-p15-admin/sprints/sprint-04/evidence/verify-base.txt`
-    （`pnpm -w run verify:base` 完整输出，45/45 通过）
+    （合并主干前的 `pnpm -w run verify:base` 完整输出，45/45 通过）
+  - `phases/phase-p15-admin/sprints/sprint-04/evidence/f04-e2e-playwright-postmerge.txt`
+    （合并 origin/main 后重跑，8/8 一次性干净通过，15.1s，无重试）
+  - `phases/phase-p15-admin/sprints/sprint-04/evidence/verify-base-postmerge.txt`
+    （合并 origin/main 后重跑 `pnpm -w run verify:base`，45/45 一次性干净通过）
 - 提交记录: 分支 `worker/wrk-admin-1-p15-f04-store-review`（PR Closes #138）
+- **会话中断与合并主干**: 本轮会话中途曾被意外中断一次（工作树改动都还在，未 commit）。
+  恢复后：`git fetch origin && git merge origin/main --no-edit`（main 上合并了大量其它
+  worker 的 PR，含 P11 F04/F05 收藏/分享管理等）。合并冲突两处：
+  - `packages/data/src/aiStore.ts`: 我方新增的 F04 审核函数（`listPlatformReviewItems`/
+    `setAiStoreItemReviewStatus`）与 main 上新增的收藏/分享管理函数（`toggleAiStoreFavorite`/
+    `enableAiStoreItemShare` 等）在同一文件相邻区块各自追加，无逻辑重叠，直接顺序拼接解决。
+  - `.harness/state/PROGRESS.md`: 自动聚合的派生文件，取 main 侧版本（脚本后续会重新聚合）。
+  合并后重新跑 `pnpm install`（拉取 main 新增依赖）、`pnpm --filter @repo/data run migrate`
+  （main 带来 6 个新迁移，全部幂等应用成功）、`pnpm --filter @repo/data run typecheck` +
+  `pnpm --filter @repo/web run typecheck` + 两侧 `lint`：全部通过，无回归。
 - 已知风险或未解决问题:
   - **共享机器资源争用（延续 sprint-03 已记录的已知问题）**: 本轮开工时本机同时运行 70+
     个其它 worktree/worker 的 docker 容器（`docker ps -q | wc -l` 峰值 75，load average
     一度 23-39，仅 8 核）。本 worktree 独占的 postgres 容器在长跑 e2e / turbo 全量测试期间
     反复出现 `57P03 the database system is in recovery mode`（`server process terminated
     by signal 13: Broken pipe` → 级联终止 → 自动恢复，偶发需要 `docker restart` 该容器一次）。
-    这不是 F04 代码逻辑问题——DB 稳定窗口内跑测试确定性通过（多次验证：8/8 e2e、
-    typecheck/lint 全绿、`@repo/auth` 隔离单跑 15/15）。
-  - 建议协调者跑 `pnpm harness verify --sprint p15/04` 前，先确认
-    `docker inspect --format='{{.State.Health.Status}}' <本 worktree>-postgres-1` 为
-    `healthy` 且稳定几秒，避免撞见同一个已知的 crash-loop 窗口导致误判为代码回归。
-- 下一步最佳动作: F04 实现 + 自测已完成，等待协调者/CI 跑
+    合并主干、重启环境、DB 稳定窗口后，e2e 与 verify:base 均**一次性干净通过**（8/8、45/45，
+    无重试、无 flaky），证明不是 F04 代码逻辑问题。
+- 下一步最佳动作: F04 实现 + 自测已完成（合并主干后重新验证过），等待协调者/CI 跑
   `pnpm harness verify --sprint p15/04` 门控转 passing（本 worker 权限范围内不可自行标记）。
   PR 已开，标签已转 `status:in-review`。

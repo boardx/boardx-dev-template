@@ -3,13 +3,17 @@
 ## 当前已验证
 - F04（AI Store 平台审核页）实现完成，自测通过，**尚未 passing**（本 worker 无权限自己标记，
   等 `pnpm harness verify --sprint p15/04` 门控）：
-  - `pnpm --filter @repo/web exec playwright test e2e/admin-003-ai-store-approval.spec.ts`
-    最终 8/8 通过（一次稳健跑：7 passed + 1 flaky-but-passed，flaky 原因是环境 DB 抖动，
-    非代码逻辑问题，详见下方"仍损坏或未验证"）
-  - `pnpm --filter @repo/data run typecheck`、`pnpm --filter @repo/web run typecheck`：通过
-  - `pnpm --filter @repo/data run lint`、`pnpm --filter @repo/web run lint`：通过
-  - `pnpm --filter @repo/web run test`：16/16 通过
-  - `pnpm --filter @repo/auth run test`（隔离单跑）：15/15 通过
+  - 合并 origin/main 之前：e2e 8/8 通过（一次稳健跑：7 passed + 1 flaky-but-passed，flaky
+    原因是环境 DB 抖动，非代码逻辑）；typecheck/lint 两侧通过；`@repo/web run test` 16/16；
+    `@repo/auth run test`（隔离单跑）15/15。
+  - **合并 origin/main 之后**（会话中断恢复、拉取主干大量其它 worker 的合并 PR 后）：
+    重新起环境（容器曾因会话中断退出，`docker compose up -d` 重新拉起）、
+    `pnpm install`、`pnpm --filter @repo/data run migrate`（6 个新迁移全部幂等应用）、
+    `pnpm --filter @repo/data run typecheck` + `pnpm --filter @repo/web run typecheck`：均通过；
+    两侧 `lint`：均通过；
+    `pnpm --filter @repo/web exec playwright test e2e/admin-003-ai-store-approval.spec.ts`：
+    **8/8 一次性干净通过，15.1s，无重试、无 flaky**；
+    `pnpm -w run verify:base`：**45/45 一次性干净通过**（`@repo/web:test` 23/23）。
 
 ## 本轮改动
 - `packages/data/src/aiStore.ts`: 新增 `listPlatformReviewItems`（平台审核队列列表：
@@ -25,24 +29,25 @@
 - `apps/web/e2e/admin-003-ai-store-approval.spec.ts`（新增）: 8 个测试用例，见 progress.md。
 - 未触碰 F01（admin shell）、F02（用户管理）、F03（团队管理，`admin/teams/*`）、F05（AI Store
   精选页，`admin/ai-store/featured/*`，仍是 blocked 占位）范围。
+- **合并 origin/main**：`packages/data/src/aiStore.ts` 有一处冲突——main 上并行合并了 P11
+  F04/F05（AI Store 收藏 `toggleAiStoreFavorite`/分享管理 `enableAiStoreItemShare` 等）的
+  仓储函数，与我方新增的 F04 审核函数在文件里相邻但不重叠，直接顺序拼接解决，未改动任何一方逻辑。
+  `.harness/state/PROGRESS.md`（自动聚合派生文件）取 main 侧版本。
 
 ## 仍损坏或未验证
-- 无代码层面的已知问题（typecheck/lint/单测/e2e 全绿）。
+- 无代码层面的已知问题（typecheck/lint/单测/e2e 全绿，合并主干后重新验证过一遍）。
 - **环境/基础设施观测（与 sprint-03 记录的同一个已知问题，本轮再次遇到，仍未修复共享脚本）**：
   1. 本机同时运行 70+ 个 worktree 的 docker 容器（峰值 75 个容器，load average 一度
      23-39，机器仅 8 核）。本 worktree 独占的 postgres 容器在长跑 e2e/turbo 全量测试期间
      反复出现 `57P03 the database system is in recovery mode`（`Broken pipe` 级联终止 →
-     自动恢复的 crash-loop，一次需要手动 `docker restart <容器>` 才打断循环）。
-     不是 F04 代码回归——DB 处于稳定窗口时测试确定性通过（本轮验证：e2e 8/8、
-     typecheck/lint 全绿、单元测试 31/31）。
-  2. `pnpm -w run verify:base` 头两次整体跑都撞见 `@repo/auth` 的 bcrypt 计时测试
-     （`password > hash 不等于明文，verify 正确匹配`）因主机 CPU 争用在 5000ms 内跑不完而
-     超时失败；隔离单跑 `pnpm --filter @repo/auth run test` 确认 15/15 通过（981ms，远低于
-     超时线）。这是 pre-existing 的计时脆弱测试，与本轮改动无关（本 worker 完全没碰
-     `packages/auth`）。第三次整体跑的最终结果见下方"命令"小节及 evidence。
+     自动恢复的 crash-loop）。合并主干、环境重启、DB 稳定窗口后，e2e 与 verify:base
+     均一次性干净通过（8/8、45/45，无重试），确认不是 F04 代码回归。
+  2. 会话中途曾被意外中断一次；docker 容器因此全部退出（`docker ps -a` 显示 Exited）。
+     恢复后 `docker compose -f infra/docker-compose.yml up -d` 重新拉起 + 重跑 migrate 即可，
+     数据卷持久化，未丢数据。
   3. 建议协调者跑 `pnpm harness verify --sprint p15/04` 前，先确认
      `docker inspect --format='{{.State.Health.Status}}' <本 worktree>-postgres-1`
-     为 `healthy` 且稳定几秒，且当前机器 load 不是历史峰值窗口，避免误判代码回归。
+     为 `healthy` 且稳定几秒，避免撞见同一个已知的 crash-loop 窗口导致误判为代码回归。
 
 ## 下一步最佳动作
 - F04 已实现 + 自测通过，PR 已开（Closes #138），标签已转 `status:in-review`。
