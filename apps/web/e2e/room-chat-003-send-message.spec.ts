@@ -1,9 +1,10 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 
 const uniq = () => `rcsend_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
+const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
 async function newUser(playwright: any): Promise<{ ctx: APIRequestContext; userId: number }> {
-  const ctx = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  const ctx = await playwright.request.newContext({ baseURL: BASE_URL });
   const reg = await (await ctx.post("/api/auth/register", {
     data: { firstName: "U", lastName: "U", email: uniq(), password: "secret123", agreeTerms: true },
   })).json();
@@ -73,7 +74,7 @@ test("未登录访问发送接口 → 401；页面跳转 /login", async ({ page,
   const chat = (await (await owner.ctx.post(`/api/rooms/${room.id}/chats`, { data: { name: "X" } })).json()).chat;
 
   // 干净的未登录上下文
-  const anon = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  const anon = await playwright.request.newContext({ baseURL: BASE_URL });
   const res = await anon.post(`/api/rooms/${room.id}/chats/${chat.id}/messages`, { data: { text: "x" } });
   expect(res.status()).toBe(401);
   await anon.dispose();

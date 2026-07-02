@@ -11,6 +11,7 @@ export interface User {
   last_name: string;
   provider: string;
   created_at: string;
+  plan_id?: "free" | "pro";
   display_name?: string | null;
   avatar?: string | null;
   platform_role?: string;
@@ -28,7 +29,7 @@ export async function createUser(input: CreateUserInput): Promise<User> {
   const rows = await query<User>(
     `INSERT INTO users (email, password_hash, first_name, last_name, provider)
      VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, email, password_hash, first_name, last_name, provider, created_at`,
+     RETURNING id, email, password_hash, first_name, last_name, provider, created_at, plan_id`,
     [input.email, input.passwordHash, input.firstName, input.lastName, input.provider ?? "email"]
   );
   return rows[0]!;
@@ -36,7 +37,8 @@ export async function createUser(input: CreateUserInput): Promise<User> {
 
 export async function findUserByEmail(email: string): Promise<User | undefined> {
   const rows = await query<User>(
-    "SELECT id, email, password_hash, first_name, last_name, provider, created_at FROM users WHERE email = $1",
+    `SELECT id, email, password_hash, first_name, last_name, provider, created_at, plan_id
+     FROM users WHERE email = $1`,
     [email]
   );
   return rows[0];
@@ -49,6 +51,15 @@ export async function getUserById(id: number): Promise<User | undefined> {
     // undefined、guard 从未真正触发（isSysAdmin(undefined) 恒 false）。
     "SELECT id, email, password_hash, first_name, last_name, provider, created_at, platform_role FROM users WHERE id = $1",
     [id]
+  );
+  return rows[0];
+}
+
+export async function updateUserPlan(userId: number, planId: "free" | "pro"): Promise<User | undefined> {
+  const rows = await query<User>(
+    `UPDATE users SET plan_id = $2 WHERE id = $1
+     RETURNING id, email, password_hash, first_name, last_name, provider, created_at, plan_id`,
+    [userId, planId]
   );
   return rows[0];
 }
@@ -176,7 +187,7 @@ export async function createSession(id: string, userId: number, expiresAt: Date)
 export async function getSessionUser(sessionId: string): Promise<User | undefined> {
   const rows = await query<User>(
     `SELECT u.id, u.email, u.password_hash, u.first_name, u.last_name, u.provider, u.created_at,
-            u.display_name, u.avatar, u.platform_role
+            u.display_name, u.avatar, u.platform_role, u.plan_id
      FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.id = $1 AND s.expires_at > now()`,
     [sessionId]

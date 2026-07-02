@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const uniq = () => `widgets001_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
+const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 const canvasItems = (page: import("@playwright/test").Page) => page.getByTestId("items-layer").locator('[data-testid^="item-"]');
 
 async function openOwnBoard(page: import("@playwright/test").Page, name = "Widgets Board") {
@@ -70,7 +71,7 @@ test("编辑者创建并管理 CanvasX widgets，菜单显示能力边界", asyn
 });
 
 test("viewer 只能查看 CanvasX widgets，不能创建或打开编辑菜单", async ({ page, playwright }) => {
-  const owner = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  const owner = await playwright.request.newContext({ baseURL: BASE_URL });
   await owner.post("/api/auth/register", {
     data: { firstName: "O", lastName: "O", email: uniq(), password: "secret123", agreeTerms: true },
   });

@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 const uniq = () => `bf_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
+const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
 async function register(page: any) {
   await page.request.post("/api/auth/register", {
@@ -34,7 +35,7 @@ test("非成员收藏他人私有白板 → 403", async ({ page, playwright }) =
   const room = (await (await page.request.post("/api/rooms", { data: { name: "Secret", visibility: "private" } })).json()).room;
   const board = (await (await page.request.post(`/api/rooms/${room.id}/boards`, { data: { name: "P" } })).json()).board;
 
-  const outsider = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  const outsider = await playwright.request.newContext({ baseURL: BASE_URL });
   await outsider.post("/api/auth/register", {
     data: { firstName: "O", lastName: "O", email: uniq(), password: "secret123", agreeTerms: true },
   });

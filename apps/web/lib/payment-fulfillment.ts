@@ -9,6 +9,7 @@ import {
   getOrCreatePersonalWallet,
   getOrCreateTeamWallet,
   recordTransaction,
+  updateUserPlan,
   type PaymentOrder,
 } from "@repo/data";
 
@@ -54,8 +55,11 @@ async function fulfillCreditPurchase(order: PaymentOrder): Promise<FulfillmentRe
 /** F04 将在此接入：调用用户/计划仓储把账号计划升级为 order.fulfillment_payload.planId。 */
 async function fulfillPlanUpgrade(order: PaymentOrder): Promise<FulfillmentResult> {
   const planId = String(order.fulfillment_payload?.planId ?? "pro");
-  // TODO(F04): await upgradeUserPlan({ userId: order.user_id, planId })
-  return { ok: true, kind: "plan_upgrade", detail: `stub: would upgrade user ${order.user_id} to ${planId}` };
+  if (planId !== "pro") {
+    return { ok: false, kind: "plan_upgrade", detail: `unsupported plan ${planId}` };
+  }
+  await updateUserPlan(order.user_id, planId);
+  return { ok: true, kind: "plan_upgrade", detail: `upgraded user ${order.user_id} to ${planId}` };
 }
 
 /** 按订单的 fulfillment_kind 分发到对应发放逻辑。调用方需自行保证幂等（只在首次 paid 时调用）。 */
