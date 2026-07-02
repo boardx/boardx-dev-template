@@ -1,0 +1,40 @@
+# F02 端到端验证证据
+# 生成时间：2026-07-02T08:40:50Z
+# 分支：evidence/p14-f02-buy-credits（HEAD: f04a15f，源自已合并 PR #191 worker/wrk-payment-1-p14-f02-buy-credits）
+# 环境：隔离 worktree（evidence-p14-f02-buy-credits），独占端口 pg:58492 redis:58493 minio:58495 web:58494
+# 命令：corepack pnpm@9.0.0 --filter @repo/web exec playwright test e2e/credits-002-purchase-credits.spec.ts
+# 退出码：0
+
+Running 8 tests using 1 worker
+
+  ✓  1 [chromium] › credits-002-purchase-credits.spec.ts:27:5 › Buy Credits 弹窗：套餐列表 + 选套餐 + 下单展示二维码 + webhook 回调后成功并加余额 (36.3s)
+  ✓  2 [chromium] › credits-002-purchase-credits.spec.ts:72:5 › 回调幂等：同一订单 webhook 回调两次只加一次余额（防双花） (2.1s)
+  ✓  3 [chromium] › credits-002-purchase-credits.spec.ts:106:5 › 安全：客户端自定义 amountCents/credits 在下单阶段不被采纳，回调发放的数量仍以服务端目录为准 (548ms)
+  ✓  4 [chromium] › credits-002-purchase-credits.spec.ts:127:5 › 取消/关闭弹窗不改变余额：未下单直接关闭 (3.7s)
+  ✓  5 [chromium] › credits-002-purchase-credits.spec.ts:141:5 › 团队购买：Team owner 在 Team Credits 页购买记入团队钱包 (8.4s)
+  ✓  6 [chromium] › credits-002-purchase-credits.spec.ts:169:5 › 安全：Team member 无权限购买团队 Credit，下单请求回退为个人订单（不记团队钱包） (3.1s)
+  ✓  7 [chromium] › credits-002-purchase-credits.spec.ts:190:5 › 下单失败：无效 sku → 展示错误提示，不生成订单 (1.5s)
+  ✓  8 [chromium] › credits-002-purchase-credits.spec.ts:202:5 › 未登录访问 Buy Credits 相关接口 → 401 (176ms)
+
+  Slow test file: [chromium] › credits-002-purchase-credits.spec.ts (55.9s)
+  Consider splitting slow test files to speed up parallel execution
+  8 passed (1.2m)
+
+# verification 步骤：
+# 1. docker compose -f infra/docker-compose.yml up -d  → postgres/redis/minio healthy（独立 worktree 隔离端口）
+# 2. pnpm --filter @repo/data run migrate              → 全部迁移应用成功（含 016_credits.sql / 017_payment_orders.sql）
+# 3. pnpm --filter @repo/web exec playwright test e2e/credits-002-purchase-credits.spec.ts → 8/8 passed
+#
+# 覆盖场景（user_visible_behavior 契约）：
+# - Buy Credits 弹窗：套餐列表 + 选套餐 + 生成二维码订单 + stub webhook 回调 → 支付成功提示 + 余额刷新（11,900 → 16,900）+ 购买记录出现
+# - 回调幂等：同一订单 webhook 回调两次只加一次余额（防双花，呼应 admin #173 教训）
+# - 安全：客户端自定义 amountCents/credits 在下单阶段不被采纳，回调发放数量仍以服务端目录（credits_1000 → 1000 credits）为准
+# - 取消/关闭弹窗不改变余额：未下单直接关闭，余额保持 11,900
+# - 团队购买：Team owner 在 Team Credits 页购买记入团队钱包
+# - 安全：Team member 无权限购买团队 Credit，下单请求回退为个人订单（不记团队钱包）——服务端 teamId 绑定安全修复覆盖
+# - 下单失败：无效 sku → 展示错误提示，不生成订单
+# - 未登录访问 Buy Credits 相关接口 → 401
+#
+# 备注：首次串行跑该 spec 时，测试 4（取消/关闭弹窗）在服务器/数据库刚起、首次全量编译预热阶段出现过一次
+# 断言超时（页面显示了下一个测试用户尚未创建前的过期余额缓存），单独重跑该用例、以及整份 spec 重跑两次均
+# 稳定 8/8 通过、退出码 0（见上），判定为首次冷启动下的偶发时序 flake，非真实回归。上方贴的是最终稳定通过的完整输出。
