@@ -1,0 +1,34 @@
+=== F04 verification: 查看答卷与报告（Summary/Individual/Report + 导出） ===
+Date: 2026-07-02T15:57:46Z
+Branch: worker/wrk-survey-1-p13-f04-view-report
+
+--- Command 1: docker compose up -d ---
+ Container worker-wrk-survey-1-p13-f04-view-report-postgres-1  Running
+ Container worker-wrk-survey-1-p13-f04-view-report-redis-1  Running
+ Container worker-wrk-survey-1-p13-f04-view-report-minio-1  Running
+
+--- Command 2: pnpm --filter @repo/data run migrate ---
+✓ 已应用，跳过：018_ai_store_favorites.sql
+✓ 已应用，跳过：018_ava_message_attachments.sql
+✓ 已应用，跳过：018_ava_thread_share.sql
+✓ 已应用，跳过：018_user_plan.sql
+✓ 已应用，跳过：019_credit_transaction_idempotency.sql
+✓ 已应用，跳过：019_presentation_artifacts.sql
+✓ 已应用，跳过：020_ava_message_feedback.sql
+✓ 已应用，跳过：021_ai_store_share.sql
+✓ 已应用，跳过：021_presentation_revisions.sql
+迁移完成。
+
+--- Command 3: pnpm --filter @repo/web exec playwright test e2e/survey-004-view-answers-report.spec.ts ---
+
+Running 4 tests using 1 worker
+
+  ✓  1 [chromium] › survey-004-view-answers-report.spec.ts:63:5 › 无回收时展示空态 (12.0s)
+  ✓  2 [chromium] › survey-004-view-answers-report.spec.ts:74:5 › Summary/Individual/Report 三视图按题聚合、逐份浏览、报告统计 (2.8s)
+  ✓  3 [chromium] › survey-004-view-answers-report.spec.ts:104:5 › 导出 CSV 下载答卷数据 (2.7s)
+  ✓  4 [chromium] › survey-004-view-answers-report.spec.ts:117:5 › 仅创建者/团队成员可查看报告，未授权访问被拒绝 (2.2s)
+
+  Slow test file: [chromium] › survey-004-view-answers-report.spec.ts (19.6s)
+  Consider splitting slow test files to speed up parallel execution
+  4 passed (24.4s)
+EXIT_CODE=0

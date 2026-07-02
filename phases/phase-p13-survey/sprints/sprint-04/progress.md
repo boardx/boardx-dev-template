@@ -38,3 +38,49 @@
   - 无。首次 verify 中 migration 曾因 Postgres 刚启动连接中断失败；Postgres ready 后完整 verify 已通过。
 - 下一步最佳动作:
   - 提交本 worktree 的 F05 改动；不要 push/PR。
+
+### 2026-07-02（worker wrk-survey-1，F04）
+- 本轮目标: GitHub issue #127 / Phase p13 F04：查看答卷与报告（Summary/Individual/Report + 导出）。
+- 说明: `phases/phase-p13-survey/feature_list.json` 中 F04 的 `sprint` 字段为 `null`（未挂到任何 sprint，与本
+  sprint-04 的 `sprint.md` 领取清单是 F05 不一致）；按任务指派直接对 F04 开工，证据仍落盘在
+  `sprints/sprint-04/evidence/`（指派要求的路径），未手改 `feature_list.json` 或 `active-features.json`。
+- 已完成:
+  - `packages/data/src/survey.ts`：新增 `listSurveyResponses(surveyId)`，按提交时间倒序读取某问卷全部答卷。
+  - 新增 `apps/web/app/api/surveys/[id]/results/route.ts`：GET 返回问卷 + 按题聚合 summary + 逐份 responses，
+    权限复用 `canViewSurvey`（创建者本人 / 当前团队上下文内团队成员），未登录 401，无权限 403。
+  - 新增 `apps/web/app/api/surveys/[id]/results/export/route.ts`：GET 返回 CSV 附件（Content-Disposition），
+    权限同上；失败返回结构化 JSON 错误供前端重试。
+  - 新增 `apps/web/app/(app)/surveys/[id]/results/page.tsx`：Summary / Individual / Report 三视图切换，
+    无回收空态、无权限拒绝态、导出 CSV（下载）、导出 PDF（走浏览器打印，print: 样式已做打印优化布局），
+    导出失败展示重试按钮。
+  - `apps/web/app/(app)/surveys/page.tsx`：在问卷卡片操作区新增 "Report" 按钮（`survey-report-{id}`），
+    链接到 `/surveys/{id}/results`；未改动既有 `survey-view-{id}` 内联占位行为，避免破坏 F02 的
+    `survey-002-list-manage-surveys.spec.ts` 断言。
+  - 新增 `apps/web/e2e/survey-004-view-answers-report.spec.ts`：覆盖空态、Summary/Individual/Report 三视图、
+    CSV 导出下载、权限边界（创建者可见、团队外用户 403、未登录 401，且 403 响应体不泄露答卷内容）。
+- 运行过的验证:
+  - `docker compose -f infra/docker-compose.yml up -d`（通过）
+  - `pnpm --filter @repo/data run migrate`（通过）
+  - `pnpm --filter @repo/web exec playwright test e2e/survey-004-view-answers-report.spec.ts`（4 passed）
+  - `pnpm --filter @repo/data run typecheck` / `pnpm --filter @repo/web run typecheck`（均通过）
+  - `pnpm --filter @repo/web run lint`（通过）
+  - `pnpm --filter @repo/data run test`（35 passed）
+  - `pnpm --filter @repo/web exec playwright test e2e/survey-001..005*.spec.ts`（合并跑 18 passed，确认未破坏
+    F01/F02/F03/F05 既有回归；首次单跑全量时 survey-005 因机器资源争抢超时，单独重跑与合并重跑均通过，判定为
+    与本改动无关的偶发资源争抢，非代码问题）
+  - `pnpm -w run verify:base`（重跑后 45/45 通过；首次跑时 `@repo/auth` 的 bcrypt 单测因并发 CPU 争抢超时，
+    单独跑 `pnpm --filter @repo/auth run test` 0.75s 内通过，判定为资源争抢导致的偶发失败，非本次改动引入）
+- 已记录证据:
+  - `phases/phase-p13-survey/sprints/sprint-04/evidence/F04.verify.log`
+- 提交记录:
+  - 分支 `worker/wrk-survey-1-p13-f04-view-report`，已 push，PR 待创建/见 session-handoff。
+- 已知风险或未解决问题:
+  - F04 未挂载到任何 sprint（`feature_list.json` 中 `sprint: null`），因此 `pnpm harness verify --sprint p13/04`
+    不会门控 F04（该 sprint 权威领取清单是 F05）。未自行修改 `feature_list.json` 的 `sprint`/`owner`/`status`
+    字段；F04 是否需要先补一个 `new-sprint` 挂载步骤，或由协调者手动跑
+    `pnpm harness verify --sprint <正确 sprint> --feature F04` 完成状态门控，留给下一轮/协调者处理。
+  - PDF 导出未引入额外依赖，采用浏览器原生打印（`window.print()` + Report 视图的 `print:` 优化样式）生成 PDF，
+    不是服务端直接吐 `application/pdf` 二进制；这符合 notes 里"核心导出不依赖 CAP-AI"的范围描述，但如果后续
+    验收要求服务端产出真实 PDF 文件，需要另起一个 feature 引入 PDF 生成依赖。
+- 下一步最佳动作:
+  - 协调者确认 F04 的 sprint 挂载方式，并跑 `pnpm harness verify` 门控其状态为 passing（本 worker 不能自证）。

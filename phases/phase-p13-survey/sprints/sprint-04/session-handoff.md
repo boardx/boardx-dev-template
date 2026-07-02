@@ -36,3 +36,45 @@
   - `pnpm --filter @repo/web run lint`
   - `pnpm --filter @repo/web exec tsc --noEmit`
   - `pnpm --filter @repo/data exec tsc --noEmit`
+
+---
+
+## 追加交接 — 2026-07-02（worker wrk-survey-1，F04，分支 `worker/wrk-survey-1-p13-f04-view-report`）
+
+### 当前已验证（本轮，未由 harness verify 门控为 passing）
+- 实现了 GitHub issue #127 / `phases/phase-p13-survey/feature_list.json` 里的 F04
+  「查看答卷与报告（Summary/Individual/Report + 导出）」，`user_visible_behavior` 全部覆盖：
+  Summary 按题聚合（占比条形图/均值）、Individual 逐份浏览、Report 生成统计报告并支持 CSV/PDF 导出、
+  无回收空态、仅创建者/团队成员可查看、导出失败可重试。
+- F04 声明的三条 verification 命令全部执行成功（exit code 0），证据见
+  `phases/phase-p13-survey/sprints/sprint-04/evidence/F04.verify.log`：
+  - `docker compose -f infra/docker-compose.yml up -d`
+  - `pnpm --filter @repo/data run migrate`
+  - `pnpm --filter @repo/web exec playwright test e2e/survey-004-view-answers-report.spec.ts`（4 passed）
+- 回归：`survey-001/002/003/005` 全部 e2e 与 `verify:base`（45/45）重跑后均通过；首次单次全量跑时
+  `survey-005` 与 `@repo/auth` test 各出现一次因机器资源争抢的超时，隔离重跑均秒级通过，判定与本次代码
+  改动无关（未修改这两处涉及的代码路径）。
+
+### 本轮改动
+- `packages/data/src/survey.ts`：新增 `listSurveyResponses(surveyId)`。
+- 新增 `apps/web/app/api/surveys/[id]/results/route.ts`（GET，聚合数据 + 权限用 `canViewSurvey`）。
+- 新增 `apps/web/app/api/surveys/[id]/results/export/route.ts`（GET，CSV 附件下载，同权限）。
+- 新增 `apps/web/app/(app)/surveys/[id]/results/page.tsx`（Summary/Individual/Report 三视图 + 导出）。
+- `apps/web/app/(app)/surveys/page.tsx`：卡片操作区新增 "Report" 按钮跳转到 results 页；未改动既有
+  `survey-view-{id}` 内联占位逻辑（避免破坏 F02 的既有断言）。
+- 新增 `apps/web/e2e/survey-004-view-answers-report.spec.ts`。
+
+### 仍损坏或未验证 / 需要协调者处理
+- **F04 未挂载到任何 sprint**：`feature_list.json` 中 F04 的 `sprint` 字段是 `null`，本 sprint-04 的
+  `sprint.md`/`active-features.json` 领取清单实际是 F05（已 passing）。任务明确要求把证据落到
+  `sprints/sprint-04/evidence/F04.verify.log`（已完成），但 `pnpm harness verify --sprint p13/04` 不会拿到
+  F04（它只认领取清单里的 feature）。没有手改 `feature_list.json`/`active-features.json`。协调者需要决定：
+  要么先跑一次 sprint 挂载/resync 把 F04 关联到正确 sprint，再用 `pnpm harness verify --sprint <id> --feature F04`
+  门控为 passing；要么按现状直接对 F04 跑针对性 verify。本 worker 未自我提升 F04 状态，仍是 `not_started`。
+- PDF 导出走浏览器原生打印（`window.print()`），不是服务端生成二进制 PDF 文件；如果验收标准要求服务端直接
+  产出 `.pdf` 文件本体，需要另开 feature 引入 PDF 生成依赖（当前未引入任何新增第三方包）。
+- 未自行合并/自我 push --no-verify；`verify:base` 与声明的三条 verification 命令均干净通过，未触发降级路径。
+
+### 下一步最佳动作
+- 协调者/下一轮：确认 F04 的 sprint 归属并跑 `pnpm harness verify` 完成状态门控；PR 已开（见 PR 链接），
+  由协调者 review 后合并，本 worker 未自我合并。

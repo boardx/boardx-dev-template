@@ -227,6 +227,14 @@ export async function countResponses(surveyId: number): Promise<number> {
   return Number(rows[0]?.count ?? 0);
 }
 
+/** 某问卷的全部答卷，按提交时间倒序（供 F04 报告/汇总使用；调用方需先用 canViewSurvey 校验权限）。 */
+export async function listSurveyResponses(surveyId: number): Promise<SurveyResponse[]> {
+  return query<SurveyResponse>(
+    "SELECT id, survey_id, respondent_user_id, answers, submitted_at FROM survey_responses WHERE survey_id = $1 ORDER BY submitted_at DESC",
+    [surveyId]
+  );
+}
+
 /** 提交一份匿名或登录用户答卷。answers 结构由 API 层按题型校验后传入。 */
 export async function createSurveyResponse(
   surveyId: number,

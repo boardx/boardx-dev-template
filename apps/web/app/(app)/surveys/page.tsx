@@ -947,6 +947,12 @@ export default function SurveysPage() {
                         <BarChart3 className="h-4 w-4" strokeWidth={1.5} />
                         View
                       </Button>
+                      <a href={`/surveys/${s.id}/results`} data-testid={`survey-report-${s.id}`}>
+                        <Button variant="outline" size="sm" className="gap-1.5">
+                          <FileText className="h-4 w-4" strokeWidth={1.5} />
+                          Report
+                        </Button>
+                      </a>
                       {s.isOwner && (
                         <Button data-testid={`survey-edit-${s.id}`} variant="outline" size="sm" onClick={() => void loadSurveyForEditor(s.id, "edit")} className="gap-1.5">
                           <Pencil className="h-4 w-4" strokeWidth={1.5} />
