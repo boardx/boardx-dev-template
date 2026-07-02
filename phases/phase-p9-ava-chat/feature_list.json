@@ -205,9 +205,9 @@
       "title": "建议动作（快捷问题填入输入框）",
       "user_visible_behavior": "空状态或某条回复下方展示「建议操作」区（如理解文件/起草邮件/总结趋势/头脑风暴等）；点某项把其文本填入输入框作为待发送内容，用户可继续编辑再发送，按普通消息处理；无可用建议时不显示该区；对话推进后建议区按新上下文刷新或隐藏。无权限的建议隐藏或显示受限态。",
       "design_ref": "prototype:<!-- empty state suggested actions -->（AVA 空状态建议区）；DESIGN.md tokens",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "wrk-codex-ava-4",
       "capability": "CAP-WEB",
       "depends_on": [
         "F01"
@@ -218,7 +218,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-suggested-actions.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F10.verify.log @ 2026-07-02T02:59:43.814Z",
       "notes": "uc-ava-009。通用内置建议可独立实现；Agent 预设建议问题依赖 AI Store（p11）Agent 创建器配置，p11 后接入。依赖 F01。"
     },
     {

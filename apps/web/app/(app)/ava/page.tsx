@@ -10,7 +10,7 @@
 // OUT OF SCOPE（本 feature 不做，留给后续 F02-F11）：线程重命名/删除/分页、
 // 消息编辑/重生成/反馈、分享只读、Deep Research、附件/图片、语音、模型/Agent/工具切换、
 // 建议动作个性化、发送到 Board / 邮件。
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, ArrowUp, Sparkles, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,11 +28,23 @@ interface Message {
   status: "complete" | "failed";
 }
 
-const SUGGESTIONS = [
-  "帮我起草 Q3 launch 计划",
-  "总结这次用户访谈的要点",
-  "给这个 board 想 5 个名字",
-  "把这段需求拆成任务",
+interface SuggestedAction {
+  id: string;
+  label: string;
+  prompt: string;
+}
+
+const EMPTY_SUGGESTED_ACTIONS: SuggestedAction[] = [
+  { id: "understand-file", label: "理解文件", prompt: "帮我理解这份材料，并总结关键结论。" },
+  { id: "draft-email", label: "起草邮件", prompt: "帮我起草一封项目进展同步邮件。" },
+  { id: "summarize-trends", label: "总结趋势", prompt: "帮我总结最近用户反馈中的主要趋势。" },
+  { id: "brainstorm", label: "头脑风暴", prompt: "围绕这个目标帮我头脑风暴 5 个可执行方案。" },
+];
+
+const FOLLOW_UP_SUGGESTED_ACTIONS: SuggestedAction[] = [
+  { id: "make-tasks", label: "拆成任务", prompt: "把上面的建议拆成可执行任务，并按优先级排序。" },
+  { id: "find-risks", label: "识别风险", prompt: "基于上面的回复，列出主要风险和缓解措施。" },
+  { id: "shorten", label: "压缩摘要", prompt: "把上面的回复压缩成 5 条要点。" },
 ];
 
 export default function AvaPage() {
@@ -49,6 +61,7 @@ export default function AvaPage() {
   // 移动端视图切换：list-first。桌面端（md 及以上）始终双栏，此状态被 CSS 忽略。
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
 
   const guard = useCallback(
     (status: number) => {
@@ -188,6 +201,18 @@ export default function AvaPage() {
   }
 
   const isEmptyThread = messages.length === 0 && !sending;
+  const latestMessage = messages.at(-1);
+  const replySuggestedActions = useMemo(() => {
+    if (!latestMessage || latestMessage.role !== "assistant" || latestMessage.status !== "complete" || sending) {
+      return [];
+    }
+    return FOLLOW_UP_SUGGESTED_ACTIONS;
+  }, [latestMessage, sending]);
+
+  function chooseSuggestedAction(prompt: string) {
+    setDraft(prompt);
+    requestAnimationFrame(() => composerRef.current?.focus());
+  }
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -268,48 +293,52 @@ export default function AvaPage() {
                     </div>
                     <h1 className="mt-3.5 text-17 font-semibold text-foreground">我能帮你做什么？</h1>
                     <p className="mt-1 text-13 text-muted-foreground">选一个起点，或直接输入。</p>
-                    <div className="mt-5 flex flex-wrap justify-center gap-2.5">
-                      {SUGGESTIONS.map((s) => (
-                        <Button
-                          key={s}
-                          variant="outline"
-                          size="sm"
-                          data-testid="suggestion"
-                          onClick={() => setDraft(s)}
-                          className="h-auto rounded-9 px-3.5 py-2.5 text-13 font-normal text-foreground hover:border-foreground hover:bg-surface-1"
-                        >
-                          {s}
-                        </Button>
-                      ))}
-                    </div>
+                    <SuggestedActions
+                      actions={EMPTY_SUGGESTED_ACTIONS}
+                      align="center"
+                      className="mt-5"
+                      onChoose={chooseSuggestedAction}
+                    />
                   </div>
                 ) : (
                   <ul data-testid="messages" className="flex flex-col gap-5">
-                    {messages.map((m) => (
-                      <li
-                        key={m.id}
-                        data-testid={`msg-${m.role}`}
-                        data-status={m.status}
-                        className={`flex items-start gap-2.5 ${m.role === "user" ? "justify-end" : ""}`}
-                      >
-                        {m.role === "assistant" && (
-                          <span className="flex h-7 w-7 flex-none items-center justify-center rounded-7 bg-primary text-11 font-bold text-primary-foreground">
-                            AI
-                          </span>
-                        )}
-                        {m.role === "user" ? (
-                          <div className="whitespace-pre-wrap rounded-12 bg-surface-1 px-4 py-2.5 text-sm leading-relaxed text-foreground">
-                            {m.content}
+                    {messages.map((m) => {
+                      const showReplySuggestions =
+                        m.id === latestMessage?.id && replySuggestedActions.length > 0;
+                      return (
+                        <li key={m.id} className="flex flex-col gap-2.5">
+                          <div
+                            data-testid={`msg-${m.role}`}
+                            data-status={m.status}
+                            className={`flex items-start gap-2.5 ${m.role === "user" ? "justify-end" : ""}`}
+                          >
+                            {m.role === "assistant" && (
+                              <span className="flex h-7 w-7 flex-none items-center justify-center rounded-7 bg-primary text-11 font-bold text-primary-foreground">
+                                AI
+                              </span>
+                            )}
+                            {m.role === "user" ? (
+                              <div className="whitespace-pre-wrap rounded-12 bg-surface-1 px-4 py-2.5 text-sm leading-relaxed text-foreground">
+                                {m.content}
+                              </div>
+                            ) : m.status === "failed" ? (
+                              <div data-testid="msg-failed" className="text-sm leading-relaxed text-destructive">
+                                {m.content}
+                              </div>
+                            ) : (
+                              <MarkdownMessage content={m.content} />
+                            )}
                           </div>
-                        ) : m.status === "failed" ? (
-                          <div data-testid="msg-failed" className="text-sm leading-relaxed text-destructive">
-                            {m.content}
-                          </div>
-                        ) : (
-                          <MarkdownMessage content={m.content} />
-                        )}
-                      </li>
-                    ))}
+                          {showReplySuggestions && (
+                            <SuggestedActions
+                              actions={replySuggestedActions}
+                              className="pl-9"
+                              onChoose={chooseSuggestedAction}
+                            />
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
                 {sending && (
@@ -337,6 +366,7 @@ export default function AvaPage() {
                 </label>
                 <textarea
                   id="ava-composer"
+                  ref={composerRef}
                   data-testid="composer"
                   rows={1}
                   value={draft}
@@ -367,6 +397,42 @@ export default function AvaPage() {
           </>
         )}
       </section>
+    </div>
+  );
+}
+
+function SuggestedActions({
+  actions,
+  align = "start",
+  className = "",
+  onChoose,
+}: {
+  actions: SuggestedAction[];
+  align?: "start" | "center";
+  className?: string;
+  onChoose: (prompt: string) => void;
+}) {
+  if (actions.length === 0) return null;
+
+  return (
+    <div
+      data-testid="suggested-actions"
+      aria-label="建议操作"
+      className={`${className} flex flex-wrap gap-2.5 ${align === "center" ? "justify-center" : ""}`}
+    >
+      {actions.map((action) => (
+        <Button
+          key={action.id}
+          variant="outline"
+          size="sm"
+          data-testid="suggested-action"
+          data-action-id={action.id}
+          onClick={() => onChoose(action.prompt)}
+          className="h-auto rounded-9 px-3.5 py-2.5 text-13 font-normal text-foreground transition-colors hover:border-foreground hover:bg-surface-1"
+        >
+          {action.label}
+        </Button>
+      ))}
     </div>
   );
 }
