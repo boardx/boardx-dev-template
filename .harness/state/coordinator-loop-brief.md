@@ -106,21 +106,23 @@ push + 开 PR（base 直接指向 `main`，不要指向别的 coordinator 分支
 
 ## 依赖图备份（同 feature_list.json 的 depends_on/wave）
 
-- p9(ava-chat): F01→[] W0（已passing）；F02,F03,F04,F06,F07,F10→[F01] W1（codex 在做，
-  不要重复派）；F05(share)→[F04] W2；F08→[p10:F01] W1（p10:F01 已passing，可派
-  Claude worker）；F09→无干净解锁路径；F11→[F03] W2。
+- p9(ava-chat): F01→[] W0（已passing）；F03→**已 passing**（PR #176 已合并+verify）；
+  F02,F04,F06,F07,F10→[F01] W1（codex 在做，不要重复派；#178/#180/#183 在 review）；
+  F05(share)→[F04] W2；F08→[p10:F01] W1（**已 passing**，wrk-ava-1 完成）；
+  F09→无干净解锁路径；F11→[F03] W2（F03 已 passing，可派）。
 - p10(knowledge-base): F01→[] W0（已passing）；F02→[F01] W1（可派）；F03→[F02] W2；
   F04→[F03,p9:F01] W3。
 - p11(ai-store): F01→[] W0（已passing）；F02,F04→[F01] W1（codex 做 F02，F04 可派
   Claude worker）；F03→[F02,p9:F01] W2；F05,F06→[F02] W2。
-- p12(studio-presentations): F01→[p9:F01,p10:F01] W1（已派 wrk-studio-1，PR #158
-  待review）；F02→[F01] W2；F03→[F02] W3。
+- p12(studio-presentations): F01→[p9:F01,p10:F01] W1（**已 passing**，PR #158+#172 已合并、
+  verify 门控 2026-07-02 通过）；F02→[F01] W2（已解锁转 not_started，可派）；F03→[F02] W3。
 - p13(survey): F01→[] W0（已passing）；F02,F03,F05→[F01] W1（codex 在做，不要重复
   派）；F04→[F03] W2；F06→[F01,F03] W2。
-- p14(credits-billing): F01→[]（已passing）；F05→[]（安全修复已合并，需
-  `pnpm harness verify --sprint p14/02 --feature F05` 翻 passing）；F02,F04→[F05]
-  W1（F05 passing 后可派）；F03→[F01] W1（已派 wrk-credits-2，需等 wrk-credits-1
-  的 F01 verify 完成腾出 owner，或直接用 wrk-credits-2 这个身份继续）。
+- p14(credits-billing): F01→[]（已passing）；F05→[]（**已 passing**）；F02,F04→[F05]
+  W1（**已解锁转 not_started，可派**；注意 F04 的 credits 模式路径复用 F02，两者同 area
+  强耦合，建议 F02 先行、F04 等 F02 PR 开出后再派避免撞文件）；F03→[F01] W1
+  （**codex 已完成**：issue #132 已关、codex/issue-132-credits-f03-isolated 已合并，
+  待 coordinator 跑 `pnpm harness verify --sprint p14/<sprint> --feature F03` 翻 passing）。
 - p15(admin): F01→[]（已passing）；F02→[F01,p14:F01]（已派 wrk-admin-1b）；
   F03→[F01,p14:F01]（已派 wrk-admin-2，PR #157 已合并，等 verify 翻 passing）；
   F04→[F01,p11:F01,p11:F02] W2；F05→[F04,p11:F02] W3。
