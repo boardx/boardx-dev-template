@@ -22,7 +22,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/studio-001-generate-artifact.spec.ts"
       ],
-      "evidence": "evidence/F01.verify.log @ 2026-07-02T08:29:05.680Z",
+      "evidence": "evidence/studio-001-generate-artifact.e2e.txt; evidence/verify-base.txt; evidence/verify-full.txt @ 2026-07-02T08:29:05.680Z",
       "notes": "uc-studio-001。blocked-on p9+p10：生成需 CAP-AI（p9 编排）+ CAP-FILE（p10 读房间文件/存产物）。Studio 面板 UI 壳可先做，生成端到端待两能力就绪。也点亮 phase-04 room 的 Room Studio 高级入口。依赖 p4 room-chat 工作区。实现：room-chat pane-studio 集成真实面板（类型/来源选择 + 生成 + 轮询进度），POST /api/rooms/:id/chats/:chatId/studio/generate 入队 boardx.studio-generation，workflow-worker 消费（@repo/ai stub 生成器 + @repo/storage MinIO 写入），结果卡片出聊天（音频可播放/信息图可预览/演示可下载），失败态给重试。generation 用 sanctioned mock（同 AVA stub 模式），非真实 AI/TTS/PPTX 管线。"
     },
     {
@@ -45,8 +45,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/presentations-001-generate-presentation.spec.ts"
       ],
-      "evidence": "evidence/F02.verify.log @ 2026-07-02T08:40:21.857Z",
-      "notes": "uc-presentations-001。blocked-on p9+p10（同 F01：AI 生成 + 文件来源/产物存储）。预览卡片设计稿本轮补齐（见 design_ref）。依赖 p9/p10 能力就绪后转 not_started。"
+      "evidence": "evidence/presentations-001-generate-presentation.e2e.txt; evidence/verify-base.txt @ 2026-07-02T08:40:21.857Z",
+      "notes": "uc-presentations-001。原 blocked-on p9+p10 已解除（p9:F01/p10:F01/F01 均 passing，2026-07-02 转 not_started）。预览卡片设计稿本轮补齐（见 design_ref）。"
     },
     {
       "id": "F03",

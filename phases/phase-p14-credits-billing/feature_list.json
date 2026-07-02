@@ -43,7 +43,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/credits-002-purchase-credits.spec.ts"
       ],
       "evidence": "evidence/F02.verify.log @ 2026-07-02T09:07:32.640Z",
-      "notes": "uc-credits-002。blocked-on F05 支付引擎（CAP-PAYMENT）。弹窗 UI 与套餐可先做，端到端购买待 F05 就绪。e2e 用 stub 支付回调走通加余额。依赖 F01/F05。"
+      "notes": "uc-credits-002。【2026-07-02 F05 支付引擎已 passing，blocked 解除】blocked-on F05 支付引擎（CAP-PAYMENT）。弹窗 UI 与套餐可先做，端到端购买待 F05 就绪。e2e 用 stub 支付回调走通加余额。依赖 F01/F05。已通过 verify，落 passing。"
     },
     {
       "id": "F03",
@@ -52,7 +52,7 @@
       "title": "积分流水查看（个人 Credit Records 弹窗 + 团队记录）",
       "user_visible_behavior": "用户查看被允许范围内的余额与交易记录：个人从用户菜单打开 Credit Records 弹窗，团队管理者在 /credits 看团队交易表；GET /api/credits/transactions 分页展示（时间/类型 购买·消耗/金额/来源）；越权范围不可见；空态与加载。",
       "design_ref": "prototype:<!-- CREDITS -->（Usage/Purchase 记录表）+ <!-- buy credits modal -->（最近交易）；个人 Credit Records 弹窗细节较浅；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "04",
       "owner": "wrk-credits-1",
       "capability": "CAP-DATA",
@@ -65,7 +65,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/credits-003-view-credit-records.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/f03-e2e-pass.txt (7/7 playwright), evidence/f03-data-test.txt, evidence/f03-data-typecheck.txt, evidence/f03-web-typecheck.txt, evidence/f03-web-lint.txt, evidence/f03-notes.md @ 2026-07-02T04:44:26+08:00",
       "notes": "uc-credits-003。读 credit_transactions，按 scope+权限过滤。依赖 F01。"
     },
     {
@@ -75,7 +75,7 @@
       "title": "升级/管理个人计划（订阅弹窗 + credits 模式路由 + 额度不足触发）",
       "user_visible_behavior": "用户从个人菜单或 AI 额度不足提示打开计划弹窗：subscription 模式展示 Free/Pro 权益对比与「升级到 Pro / 管理订阅」（走支付/管理流程）；credits 模式改为进入购买 Credit 流程（F02 弹窗）；升级成功后账号计划/权益更新；关闭弹窗不改变计划/余额。",
       "design_ref": "mockup:phases/requirements/mockups/upgrade-plan.html（本轮补：Free/Pro 类型 + 权益对比 + Upgrade to Pro / Manage Subscription 按钮）+ prototype:<!-- buy credits modal -->（credits 模式复用）；DESIGN.md tokens",
-      "status": "blocked",
+      "status": "not_started",
       "sprint": "04",
       "owner": null,
       "capability": "CAP-PAYMENT",
@@ -89,7 +89,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/billing-001-upgrade-plan.spec.ts"
       ],
       "evidence": "",
-      "notes": "uc-billing-001。subscription 升级弹窗设计稿本轮补齐（原 design-needed 已解除，见 design_ref）。blocked-on F05 支付引擎（订阅/购买都过支付）。credits 模式路径复用 F02。是 p9/p12 等 AI 阶段「额度不足引导」的落点。不含 Team 订阅计划升级。依赖 F02/F05。"
+      "notes": "【2026-07-02 解锁：F05 支付引擎已 passing，blocked→not_started】uc-billing-001。subscription 升级弹窗设计稿本轮补齐（原 design-needed 已解除，见 design_ref）。blocked-on F05 支付引擎（订阅/购买都过支付）。credits 模式路径复用 F02。是 p9/p12 等 AI 阶段「额度不足引导」的落点。不含 Team 订阅计划升级。依赖 F02/F05。"
     },
     {
       "id": "F05",

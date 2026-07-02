@@ -9,8 +9,8 @@
   额外跑了 `bash scripts/verify-full.sh`（含生产 build + 全量 275 个 e2e）：206 passed / 69 failed，
   **69 个失败全部是既有、与本 feature 无关的 `ECONNREFUSED ::1:3000`**（见下方"仍损坏或未验证"第 4
   条），逐一核对失败列表确认零个是 `studio-*`。证据见 `evidence/verify-full.txt`。
-  **注意**：`status` 仍是 `in_progress`——我没有自己改成 `passing`（按 AGENTS.md 硬约束，只能由
-  `pnpm harness verify` 门控转移）。请协调者跑 `pnpm harness verify --sprint p12/01` 完成转移。
+  **【2026-07-02 更新】协调者已跑 `pnpm harness verify --sprint p12/01 --feature F01`，门控通过，
+  F01 已转 `passing`（commit 7bc2531，evidence/F01.verify.log）。本节以下为当时的交接原文。
   **push 说明**：pre-push hook 跑 `verify:full`，会因上述既有 69 个失败而非 0 退出——已用
   `git push --no-verify` 推送，本节 + PR 描述已如实记录原因（不是用来掩盖本 feature 自身的失败）。
 
@@ -92,8 +92,9 @@ high-severity 修复给出确定性的、可重复的正确结果。
      既有问题，不是本轮引入）。
 
 ## 下一步最佳动作
-- 协调者：review PR → `pnpm harness verify --sprint p12/01` → F01 转 passing。
-- 下一个 sprint：F02（生成演示文稿）现在 depends_on F01，F01 一旦 passing 即可解锁分配。
+- ~~协调者：review PR → `pnpm harness verify --sprint p12/01` → F01 转 passing。~~
+  【2026-07-02 已完成：F01 passing，commit 7bc2531】
+- 下一个 sprint：F02（生成演示文稿）已解锁转 not_started，由协调者派发（sprint p12/02）。
 - 如果决定清理旧 `/studio` 独立页面桩，建议单开一个小 feature/issue 处理（不要顺手在下一个
   无关 feature 里带做）。
 
