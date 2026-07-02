@@ -29,9 +29,9 @@
       "title": "文件列表查看/搜索/刷新/分页/下载",
       "user_visible_behavior": "进入知识库列表：GET /api/kb/files?scope=…&q=… 展示当前作用域下自己有权访问的文件（名称/类型/大小/上传时间/处理状态/骨架屏/空态）；搜索框按名称过滤；分页/加载更多；点下载对 ready 文件返回带鉴权的下载 URL 并开始下载；无权限文件不出现在列表；加载失败给重试。",
       "design_ref": "prototype:<!-- KNOWLEDGE BASE -->（文件列表/搜索框/下载/骨架屏/空态）；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "02",
-      "owner": "wrk-kb-1",
+      "owner": "wrk-codex-kb-1",
       "capability": "CAP-DATA",
       "depends_on": [
         "F01"
@@ -42,7 +42,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/kb-002-list-download-file.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-07-02T01:36:02.038Z",
       "notes": "uc-kb-002。列表严格按 scope+权限过滤；下载走鉴权 URL 不泄露对象存储直链。依赖 F01。"
     },
     {

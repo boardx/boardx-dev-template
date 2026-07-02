@@ -9,6 +9,28 @@ import { getPool, closePool } from "./index";
 
 const MIGRATIONS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "migrations");
 
+function isStartupError(err: unknown): boolean {
+  const e = err as { code?: string; message?: string };
+  return (
+    e.code === "57P03" ||
+    e.code === "ECONNREFUSED" ||
+    e.code === "ECONNRESET" ||
+    e.message?.includes("Connection terminated unexpectedly") === true
+  );
+}
+
+async function waitForDatabase(pool: ReturnType<typeof getPool>): Promise<void> {
+  for (let attempt = 1; attempt <= 20; attempt += 1) {
+    try {
+      await pool.query("SELECT 1");
+      return;
+    } catch (err) {
+      if (!isStartupError(err) || attempt === 20) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+}
+
 function loadRootEnv(): void {
   let dir = process.cwd();
   while (dir !== dirname(dir)) {
@@ -37,6 +59,7 @@ function loadRootEnv(): void {
 async function run(): Promise<void> {
   loadRootEnv();
   const pool = getPool();
+  await waitForDatabase(pool);
   await pool.query(
     "CREATE TABLE IF NOT EXISTS _migrations (name text PRIMARY KEY, applied_at timestamptz DEFAULT now())"
   );
