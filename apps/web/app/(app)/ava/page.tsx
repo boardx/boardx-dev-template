@@ -10,10 +10,21 @@
 // OUT OF SCOPE（本 feature 不做，留给后续 F02-F11）：线程重命名/删除/分页、
 // 消息编辑/重生成/反馈、分享只读、Deep Research、附件/图片、语音、模型/Agent/工具切换、
 // 建议动作个性化、发送到 Board / 邮件。
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, ArrowUp, Sparkles, ArrowLeft } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowUp,
+  CheckCircle2,
+  FileText,
+  Loader2,
+  Plus,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { MarkdownMessage } from "./markdown-message";
 
 interface ThreadSummary {
@@ -27,6 +38,40 @@ interface Message {
   content: string;
   status: "complete" | "failed";
 }
+type ComposerMode = "chat" | "research";
+type ResearchStatus = "idle" | "draft" | "running" | "complete" | "error";
+interface ResearchPhase {
+  name: string;
+  tasks: string[];
+}
+interface ResearchTimelineItem {
+  phase: string;
+  task: string;
+  status: "queued" | "running" | "complete";
+}
+interface ResearchReport {
+  title: string;
+  conclusion: string;
+  sections: Array<{ heading: string; bullets: string[] }>;
+}
+interface ResearchPayload {
+  clarifyingQuestions: string[];
+  plan: {
+    audience: string;
+    phases: ResearchPhase[];
+  };
+  timeline: ResearchTimelineItem[];
+  report: ResearchReport;
+}
+interface ResearchRun {
+  topic: string;
+  audience: string;
+  status: ResearchStatus;
+  research?: ResearchPayload;
+  error?: string;
+  assistantMessage?: Message;
+  timeline: ResearchTimelineItem[];
+}
 
 const SUGGESTIONS = [
   "帮我起草 Q3 launch 计划",
@@ -34,6 +79,8 @@ const SUGGESTIONS = [
   "给这个 board 想 5 个名字",
   "把这段需求拆成任务",
 ];
+
+const RESEARCH_AUDIENCE = "Product leaders and user research stakeholders";
 
 export default function AvaPage() {
   const router = useRouter();
@@ -46,9 +93,26 @@ export default function AvaPage() {
   const [streamingText, setStreamingText] = useState("");
   const [error, setError] = useState("");
   const [sendError, setSendError] = useState("");
+  const [composerMode, setComposerMode] = useState<ComposerMode>("chat");
+  const [researchRun, setResearchRun] = useState<ResearchRun | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
   // 移动端视图切换：list-first。桌面端（md 及以上）始终双栏，此状态被 CSS 忽略。
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const activeReport = researchRun?.research?.report;
+  const isResearchMode = composerMode === "research";
+  const composerPlaceholder = isResearchMode
+    ? "Describe the research topic, audience, and decision…"
+    : "Message AVA…";
+  const canSend = Boolean(draft.trim()) && !sending && researchRun?.status !== "running";
+  const researchStatusLabel = useMemo(() => {
+    if (!researchRun) return "";
+    if (researchRun.status === "draft") return "Plan ready for review";
+    if (researchRun.status === "running") return "Research running";
+    if (researchRun.status === "complete") return "Report ready";
+    if (researchRun.status === "error") return "Needs attention";
+    return "";
+  }, [researchRun]);
 
   const guard = useCallback(
     (status: number) => {
@@ -96,6 +160,8 @@ export default function AvaPage() {
     setActiveId(id);
     setSendError("");
     setMessages([]);
+    setResearchRun(null);
+    setReportOpen(false);
     setMobileView("chat");
     try {
       const res = await fetch(`/api/ava/threads/${id}`);
@@ -113,6 +179,8 @@ export default function AvaPage() {
     setMessages([]);
     setSendError("");
     setDraft("");
+    setResearchRun(null);
+    setReportOpen(false);
     setMobileView("chat");
   }
 
@@ -128,6 +196,10 @@ export default function AvaPage() {
   }
 
   async function send() {
+    if (composerMode === "research") {
+      await startResearch();
+      return;
+    }
     const text = draft.trim();
     if (!text || sending) return;
     setSending(true);
@@ -178,6 +250,105 @@ export default function AvaPage() {
     } finally {
       setSending(false);
     }
+  }
+
+  async function startResearch() {
+    const topic = draft.trim();
+    if (!topic || sending) return;
+    setSending(true);
+    setSendError("");
+    setStreamingText("");
+    setReportOpen(false);
+    setResearchRun({
+      topic,
+      audience: RESEARCH_AUDIENCE,
+      status: "idle",
+      timeline: [],
+    });
+
+    try {
+      const threadId = await ensureThread();
+      if (threadId == null) return;
+
+      const res = await fetch(`/api/ava/threads/${threadId}/research`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ topic, audience: RESEARCH_AUDIENCE }),
+      });
+      if (guard(res.status)) return;
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const message = String(data?.error ?? "研究任务启动失败，请重试（你的主题已保留）");
+        setSendError(message);
+        setResearchRun({
+          topic,
+          audience: RESEARCH_AUDIENCE,
+          status: "error",
+          error: message,
+          timeline: [],
+        });
+        return;
+      }
+
+      setDraft("");
+      setMessages((prev) => [...prev, data.messages.user]);
+      setResearchRun({
+        topic,
+        audience: RESEARCH_AUDIENCE,
+        status: "draft",
+        research: data.research,
+        assistantMessage: data.messages.assistant,
+        timeline: data.research.timeline.map((item: ResearchTimelineItem, index: number) => ({
+          ...item,
+          status: index === 0 ? "running" : "queued",
+        })),
+      });
+      await refreshThreads();
+    } catch {
+      const message = "研究任务启动失败，请重试（你的主题已保留）";
+      setSendError(message);
+      setResearchRun({
+        topic,
+        audience: RESEARCH_AUDIENCE,
+        status: "error",
+        error: message,
+        timeline: [],
+      });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function confirmResearchPlan() {
+    if (!researchRun?.research || researchRun.status !== "draft") return;
+    const queued: ResearchTimelineItem[] = researchRun.research.timeline.map((item, index) => ({
+      ...item,
+      status: index === 0 ? "running" : "queued",
+    }));
+    setResearchRun({ ...researchRun, status: "running", timeline: queued });
+
+    researchRun.research.timeline.forEach((item, index) => {
+      window.setTimeout(() => {
+        setResearchRun((current) => {
+          if (!current?.research) return current;
+          const timeline = current.research.timeline.map((candidate, candidateIndex) => ({
+            ...candidate,
+            status:
+              candidateIndex <= index
+                ? "complete"
+                : candidateIndex === index + 1
+                  ? "running"
+                  : "queued",
+          })) as ResearchTimelineItem[];
+          const isDone = index === current.research.timeline.length - 1;
+          if (!isDone) return { ...current, status: "running", timeline };
+          const nextMessages = current.assistantMessage ? [current.assistantMessage] : [];
+          setMessages((prev) => [...prev, ...nextMessages]);
+          setReportOpen(true);
+          return { ...current, status: "complete", timeline };
+        });
+      }, 350 * (index + 1));
+    });
   }
 
   function onComposerKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -326,24 +497,60 @@ export default function AvaPage() {
                     )}
                   </div>
                 )}
+                {researchRun && (
+                  <ResearchWorkspace
+                    run={researchRun}
+                    statusLabel={researchStatusLabel}
+                    onConfirm={confirmResearchPlan}
+                    onOpenReport={() => setReportOpen(true)}
+                  />
+                )}
               </div>
             </div>
+
+            {reportOpen && activeReport && (
+              <ReportPanel report={activeReport} onClose={() => setReportOpen(false)} />
+            )}
 
             {/* composer */}
             <div className="flex-none px-6 pb-5">
               <div className="mx-auto max-w-2xl rounded-14 border border-border p-3 transition-colors focus-within:border-foreground">
-                <label htmlFor="ava-composer" className="sr-only">
-                  Message AVA
-                </label>
-                <textarea
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={composerMode === "chat" ? "default" : "outline"}
+                    data-testid="mode-chat"
+                    onClick={() => setComposerMode("chat")}
+                    className="gap-1.5 transition-all hover:shadow-sm"
+                  >
+                    <Sparkles className="h-4 w-4" strokeWidth={1.5} />
+                    Chat
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={composerMode === "research" ? "default" : "outline"}
+                    data-testid="mode-research"
+                    onClick={() => setComposerMode("research")}
+                    className="gap-1.5 transition-all hover:shadow-sm"
+                  >
+                    <Search className="h-4 w-4" strokeWidth={1.5} />
+                    Deep Research
+                  </Button>
+                </div>
+                <Label htmlFor="ava-composer" className="sr-only">
+                  {isResearchMode ? "Deep Research topic" : "Message AVA"}
+                </Label>
+                <Textarea
                   id="ava-composer"
                   data-testid="composer"
                   rows={1}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={onComposerKey}
-                  placeholder="Message AVA…"
-                  className="block max-h-40 w-full resize-none bg-transparent text-sm text-foreground transition-colors placeholder:text-placeholder focus-visible:outline-none focus-visible:ring-0"
+                  placeholder={composerPlaceholder}
+                  className="min-h-10 max-h-40 resize-none border-0 bg-transparent px-0 py-0 text-sm shadow-none transition-colors placeholder:text-placeholder focus-visible:ring-2 focus-visible:ring-ring"
                 />
                 {sendError && (
                   <p role="alert" data-testid="send-error" className="mt-2 text-xs text-destructive">
@@ -356,10 +563,14 @@ export default function AvaPage() {
                     size="icon"
                     className="h-8 w-8 rounded-9"
                     onClick={() => void send()}
-                    disabled={!draft.trim() || sending}
-                    aria-label="Send message"
+                    disabled={!canSend}
+                    aria-label={isResearchMode ? "Start Deep Research" : "Send message"}
                   >
-                    <ArrowUp className="h-4 w-4" strokeWidth={2} />
+                    {isResearchMode ? (
+                      <Search className="h-4 w-4" strokeWidth={2} />
+                    ) : (
+                      <ArrowUp className="h-4 w-4" strokeWidth={2} />
+                    )}
                   </Button>
                 </div>
               </div>
@@ -368,6 +579,192 @@ export default function AvaPage() {
         )}
       </section>
     </div>
+  );
+}
+
+function ResearchWorkspace({
+  run,
+  statusLabel,
+  onConfirm,
+  onOpenReport,
+}: {
+  run: ResearchRun;
+  statusLabel: string;
+  onConfirm: () => void;
+  onOpenReport: () => void;
+}) {
+  const hasPlan = Boolean(run.research);
+  return (
+    <div
+      data-testid="research-card"
+      data-status={run.status}
+      className="rounded-12 border border-border bg-surface-1 p-4 shadow-sm"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-13 font-semibold text-foreground">
+            {run.status === "running" ? (
+              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} />
+            ) : (
+              <Search className="h-4 w-4" strokeWidth={1.5} />
+            )}
+            Deep Research
+          </div>
+          <p className="mt-1 text-13 text-muted-foreground">{run.topic}</p>
+        </div>
+        <span data-testid="research-status" className="rounded-full bg-muted px-2.5 py-1 text-11 text-muted-foreground">
+          {statusLabel}
+        </span>
+      </div>
+
+      {run.status === "error" && (
+        <p role="alert" data-testid="err-research" className="mt-3 text-13 text-destructive">
+          {run.error}
+        </p>
+      )}
+
+      {hasPlan && run.research && (
+        <div className="mt-4 flex flex-col gap-4">
+          <section data-testid="research-clarify" className="rounded-9 border border-border bg-background p-3">
+            <h2 className="text-13 font-semibold text-foreground">Clarifying questions</h2>
+            <ul className="mt-2 list-disc space-y-1 pl-4 text-13 text-muted-foreground">
+              {run.research.clarifyingQuestions.map((question) => (
+                <li key={question}>{question}</li>
+              ))}
+            </ul>
+          </section>
+
+          <section data-testid="research-plan" className="rounded-9 border border-border bg-background p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="text-13 font-semibold text-foreground">Research plan</h2>
+                <p className="mt-1 text-13 text-muted-foreground">Audience: {run.research.plan.audience}</p>
+              </div>
+              {run.status === "draft" && (
+                <Button
+                  type="button"
+                  size="sm"
+                  data-testid="confirm-research-plan"
+                  onClick={onConfirm}
+                  className="gap-1.5 transition-all hover:shadow-sm"
+                >
+                  <CheckCircle2 className="h-4 w-4" strokeWidth={1.5} />
+                  Confirm plan
+                </Button>
+              )}
+            </div>
+            <div className="mt-3 grid gap-2 md:grid-cols-3">
+              {run.research.plan.phases.map((phase) => (
+                <div key={phase.name} className="rounded-7 border border-border p-2.5">
+                  <h3 className="text-13 font-medium text-foreground">{phase.name}</h3>
+                  <ul className="mt-2 space-y-1 text-11 text-muted-foreground">
+                    {phase.tasks.map((task) => (
+                      <li key={task}>{task}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section data-testid="research-timeline" className="rounded-9 border border-border bg-background p-3">
+            <h2 className="text-13 font-semibold text-foreground">Execution timeline</h2>
+            <ol className="mt-3 space-y-2">
+              {run.timeline.map((item) => (
+                <li key={`${item.phase}-${item.task}`} className="flex items-start gap-2">
+                  <TimelineDot status={item.status} />
+                  <div>
+                    <p className="text-13 font-medium text-foreground">{item.phase}</p>
+                    <p className="text-11 text-muted-foreground">
+                      {item.task} · {item.status}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          {run.status === "complete" && (
+            <div
+              data-testid="research-report-notice"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-9 border border-border bg-background p-3"
+            >
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-foreground" strokeWidth={1.5} />
+                <span className="text-13 font-medium text-foreground">Research report is ready</span>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                data-testid="open-report"
+                onClick={onOpenReport}
+                className="transition-all hover:shadow-sm"
+              >
+                Open report
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TimelineDot({ status }: { status: ResearchTimelineItem["status"] }) {
+  if (status === "running") {
+    return (
+      <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-primary text-primary-foreground">
+        <Loader2 className="h-3 w-3 animate-spin" strokeWidth={1.5} />
+      </span>
+    );
+  }
+  if (status === "complete") {
+    return (
+      <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-primary text-primary-foreground">
+        <CheckCircle2 className="h-3 w-3" strokeWidth={1.5} />
+      </span>
+    );
+  }
+  return <span className="mt-0.5 h-5 w-5 flex-none rounded-full border border-border bg-muted" />;
+}
+
+function ReportPanel({ report, onClose }: { report: ResearchReport; onClose: () => void }) {
+  return (
+    <aside
+      data-testid="research-report-panel"
+      className="flex max-h-80 flex-none flex-col border-t border-border bg-background px-6 py-4"
+    >
+      <div className="mx-auto flex w-full max-w-2xl items-start justify-between gap-4">
+        <div>
+          <h2 className="text-17 font-semibold text-foreground">{report.title}</h2>
+          <p data-testid="report-conclusion" className="mt-2 text-13 leading-relaxed text-muted-foreground">
+            {report.conclusion}
+          </p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={onClose}
+          className="transition-all hover:bg-muted"
+        >
+          Close
+        </Button>
+      </div>
+      <div className="mx-auto mt-4 grid w-full max-w-2xl gap-3 overflow-auto md:grid-cols-2">
+        {report.sections.map((section) => (
+          <section key={section.heading} className="rounded-9 border border-border bg-surface-1 p-3">
+            <h3 className="text-13 font-semibold text-foreground">{section.heading}</h3>
+            <ul className="mt-2 list-disc space-y-1 pl-4 text-13 text-muted-foreground">
+              {section.bullets.map((bullet) => (
+                <li key={bullet}>{bullet}</li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </aside>
   );
 }
 
