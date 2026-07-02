@@ -23,3 +23,18 @@ Running 4 tests using 1 worker
   Slow test file: [chromium] › ava-message-actions.spec.ts (33.0s)
   Consider splitting slow test files to speed up parallel execution
   4 passed (44.7s)
+
+— Re-run after fixing lint (native <button> -> components/ui/button in
+markdown-message.tsx's code-block copy control, required by verify:full's
+lint-design.sh) —
+
+Running 4 tests using 1 worker
+
+  ✓  1 [chromium] › ava-message-actions.spec.ts:22:5 › 消息操作条：复制整条消息、代码块单独复制、点赞/点踩持久化、重新生成不丢原问题 (33.3s)
+  ✓  2 [chromium] › ava-message-actions.spec.ts:80:5 › 重新生成失败时保留原回复不丢，展示错误提示 (4.7s)
+  ✓  3 [chromium] › ava-message-actions.spec.ts:95:5 › 未登录调用反馈/重新生成接口 → 401 (1.3s)
+  ✓  4 [chromium] › ava-message-actions.spec.ts:126:5 › 反馈只允许对 assistant 消息提交，对 user 消息返回 404 (2.0s)
+
+  Slow test file: [chromium] › ava-message-actions.spec.ts (41.3s)
+  Consider splitting slow test files to speed up parallel execution
+  4 passed (52.7s)

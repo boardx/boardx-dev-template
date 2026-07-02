@@ -11,6 +11,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
 import { Check, Copy } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 function CodeBlock({ className, children }: { className?: string; children: React.ReactNode }) {
   const [copied, setCopied] = useState(false);
@@ -32,15 +33,17 @@ function CodeBlock({ className, children }: { className?: string; children: Reac
       <pre className="overflow-x-auto rounded-9 bg-surface-1 p-3 pr-10 text-13">
         <code className={className}>{children}</code>
       </pre>
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="icon"
         data-testid="code-block-copy"
         aria-label="Copy code block"
         onClick={() => void copyCode()}
-        className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-6 border border-border bg-background text-muted-foreground opacity-0 transition-opacity hover:bg-surface-1 group-hover:opacity-100"
+        className="absolute right-2 top-2 h-6 w-6 border-border bg-background text-muted-foreground opacity-0 transition-opacity hover:bg-surface-1 group-hover:opacity-100"
       >
         {copied ? <Check className="h-3.5 w-3.5" strokeWidth={1.5} /> : <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />}
-      </button>
+      </Button>
     </div>
   );
 }
