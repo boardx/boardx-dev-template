@@ -1,6 +1,14 @@
 // packages/storage/src/index.test.ts — 纯逻辑单测（配置解析 + key 规范），不连真实 S3。
 import { describe, it, expect } from "vitest";
-import { resolveStorageConfig, buildKbObjectKey, validateKbUpload, extOf } from "./index";
+import {
+  resolveStorageConfig,
+  buildKbObjectKey,
+  validateKbUpload,
+  extOf,
+  buildAvaObjectKey,
+  validateAvaUpload,
+  avaAttachmentKind,
+} from "./index";
 
 describe("resolveStorageConfig", () => {
   it("默认值对齐本地 docker-compose 的 MinIO", () => {
@@ -71,5 +79,58 @@ describe("validateKbUpload", () => {
   it("大小为 0 或非法 → too_large（无效大小视为不合法）", () => {
     expect(validateKbUpload("empty.pdf", 0).ok).toBe(false);
     expect(validateKbUpload("bad.pdf", NaN).ok).toBe(false);
+  });
+});
+
+describe("buildAvaObjectKey", () => {
+  it("按 owner/attachmentId 隔离，与 kb/ 前缀互不冲突", () => {
+    const key = buildAvaObjectKey({ ownerId: 7, attachmentId: "att_1", fileName: "cat.png" });
+    expect(key).toBe("ava/7/att_1/cat.png");
+  });
+
+  it("文件名里的路径分隔符被替换，防目录穿越", () => {
+    const key = buildAvaObjectKey({
+      ownerId: 7,
+      attachmentId: "att_2",
+      fileName: "../../etc/passwd",
+    });
+    expect(key).toBe("ava/7/att_2/.._.._etc_passwd");
+  });
+});
+
+describe("avaAttachmentKind", () => {
+  it("图片扩展名 → image", () => {
+    expect(avaAttachmentKind("photo.PNG")).toBe("image");
+    expect(avaAttachmentKind("photo.jpeg")).toBe("image");
+  });
+  it("音频扩展名 → audio", () => {
+    expect(avaAttachmentKind("voice.mp3")).toBe("audio");
+  });
+  it("其余支持类型 → file", () => {
+    expect(avaAttachmentKind("spec.pdf")).toBe("file");
+  });
+});
+
+describe("validateAvaUpload", () => {
+  it("允许类型 + 合法大小 → ok", () => {
+    expect(validateAvaUpload("cat.png", 1024)).toEqual({ ok: true });
+    expect(validateAvaUpload("voice.mp3", 1024)).toEqual({ ok: true });
+  });
+
+  it("不支持的类型 → unsupported_type", () => {
+    const r = validateAvaUpload("virus.exe", 1024);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe("unsupported_type");
+  });
+
+  it("超过 20MB → too_large", () => {
+    const r = validateAvaUpload("big.png", 21 * 1024 * 1024);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe("too_large");
+  });
+
+  it("大小为 0 或非法 → too_large", () => {
+    expect(validateAvaUpload("empty.png", 0).ok).toBe(false);
+    expect(validateAvaUpload("bad.png", NaN).ok).toBe(false);
   });
 });

@@ -1,6 +1,21 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Plus, Trash2, ArrowUp, ArrowDown, ChevronLeft, Eye, Pencil, Save, FileText } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  BarChart3,
+  ChevronLeft,
+  Copy,
+  Eye,
+  FileText,
+  PauseCircle,
+  Pencil,
+  PlayCircle,
+  Plus,
+  Save,
+  Share2,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,9 +38,12 @@ interface Survey {
   title: string;
   description: string;
   scope: string;
-  status: string;
+  status: "active" | "paused";
   responses: number;
   teamId: number | null;
+  updatedAt: string;
+  isOwner: boolean;
+  shareUrl: string;
 }
 
 interface Team {
@@ -51,6 +69,11 @@ const TYPE_LABEL: Record<QType, string> = {
   rating: "Rating",
 };
 
+const STATUS_LABEL: Record<Survey["status"], string> = {
+  active: "Active",
+  paused: "Paused",
+};
+
 let qSeq = 0;
 function newQuestion(): Question {
   qSeq += 1;
@@ -62,11 +85,33 @@ function cloneTemplateQuestions(questions: Omit<Question, "id">[]): Question[] {
   return next.length > 0 ? next : [newQuestion()];
 }
 
+function questionsFromApi(raw: unknown): Question[] {
+  if (!Array.isArray(raw)) return [newQuestion()];
+  const mapped = raw.map((item, idx) => {
+    const q = (item ?? {}) as Record<string, unknown>;
+    const type = ["text", "single", "multiple", "rating"].includes(String(q.type)) ? (q.type as QType) : "text";
+    return {
+      id: `saved_${String(q.id ?? idx)}`,
+      title: String(q.title ?? ""),
+      type,
+      required: q.required === true,
+      options: Array.isArray(q.options) ? q.options.map((o) => String(o ?? "")) : [],
+    };
+  });
+  return mapped.length ? mapped : [newQuestion()];
+}
+
+function formatUpdated(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Updated just now";
+  return `Updated ${date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+}
+
 function SurveySkeleton() {
   return (
-    <div data-testid="loading" className="mt-5 animate-pulse rounded-12 border border-border">
+    <div data-testid="loading" className="mt-5 grid animate-pulse gap-3 md:grid-cols-2">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="h-12 border-b border-border last:border-b-0 bg-muted/40" />
+        <div key={i} className="h-40 rounded-lg border border-border bg-muted/40" />
       ))}
     </div>
   );
@@ -78,8 +123,14 @@ export default function SurveysPage() {
   const [error, setError] = useState("");
   const [mode, setMode] = useState<"list" | "editor">("list");
   const [view, setView] = useState<"edit" | "preview">("edit");
+  const [filter, setFilter] = useState<"my" | "team">("my");
+  const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
+  const [sharedSurvey, setSharedSurvey] = useState<Survey | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
 
   // editor state
+  const [editingSurveyId, setEditingSurveyId] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [scope, setScope] = useState<"private" | "team">("private");
@@ -151,6 +202,7 @@ export default function SurveysPage() {
   }
 
   function openEditor() {
+    setEditingSurveyId(null);
     setTitle("");
     setDescription("");
     setScope("private");
@@ -166,6 +218,74 @@ export default function SurveysPage() {
     setMode("editor");
     void loadTeams();
     void loadTemplates();
+  }
+
+  async function loadSurveyForEditor(surveyId: number, nextView: "edit" | "preview") {
+    setError("");
+    const res = await fetch(`/api/surveys/${surveyId}`);
+    if (!res.ok) {
+      setError(res.status === 403 ? "你无权访问该问卷" : "加载问卷失败，请重试");
+      return;
+    }
+    const { survey } = await res.json();
+    setEditingSurveyId(nextView === "edit" ? survey.id : null);
+    setTitle(survey.title ?? "");
+    setDescription(survey.description ?? "");
+    setScope(survey.scope === "team" ? "team" : "private");
+    setTeamId(survey.teamId != null ? String(survey.teamId) : "");
+    setQuestions(questionsFromApi(survey.questions));
+    setSaveError("");
+    setCreated(null);
+    setView(nextView);
+    setMode("editor");
+    if (nextView === "edit") void loadTeams();
+  }
+
+  async function toggleSurveyStatus(survey: Survey) {
+    setBusyId(survey.id);
+    setError("");
+    const res = await fetch(`/api/surveys/${survey.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ isActive: survey.status !== "active" }),
+    });
+    setBusyId(null);
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error ?? "更新问卷状态失败");
+      return;
+    }
+    const { survey: updated } = await res.json();
+    setSurveys((items) =>
+      items.map((item) =>
+        item.id === survey.id ? { ...item, status: updated.status, updatedAt: updated.updatedAt } : item
+      )
+    );
+  }
+
+  async function deleteSurveyCard(survey: Survey) {
+    setBusyId(survey.id);
+    setError("");
+    const res = await fetch(`/api/surveys/${survey.id}`, { method: "DELETE" });
+    setBusyId(null);
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error ?? "删除问卷失败");
+      return;
+    }
+    setSurveys((items) => items.filter((item) => item.id !== survey.id));
+    setSelectedSurvey((item) => (item?.id === survey.id ? null : item));
+    setSharedSurvey((item) => (item?.id === survey.id ? null : item));
+    setConfirmDeleteId(null);
+  }
+
+  async function shareSurvey(survey: Survey) {
+    setSharedSurvey(survey);
+    try {
+      await navigator.clipboard.writeText(survey.shareUrl);
+    } catch {
+      // Clipboard permissions vary in browsers; visible link feedback is the durable result.
+    }
   }
 
   function patchQuestion(id: string, patch: Partial<Question>) {
@@ -198,8 +318,8 @@ export default function SurveysPage() {
   async function save() {
     setSaveError("");
     setSaving(true);
-    const res = await fetch("/api/surveys", {
-      method: "POST",
+    const res = await fetch(editingSurveyId == null ? "/api/surveys" : `/api/surveys/${editingSurveyId}`, {
+      method: editingSurveyId == null ? "POST" : "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         title,
@@ -214,6 +334,10 @@ export default function SurveysPage() {
       const { survey } = await res.json();
       setCreated({ id: survey.id, shareUrl: survey.shareUrl });
       await load();
+    } else if (res.ok) {
+      await load();
+      setMode("list");
+      setEditingSurveyId(null);
     } else {
       const d = await res.json().catch(() => ({}));
       setSaveError(d.errors?.title ?? d.errors?.questions ?? d.errors?.teamId ?? d.error ?? "保存失败");
@@ -276,10 +400,13 @@ export default function SurveysPage() {
   }
 
   const hasValidQuestion = questions.some((q) => q.title.trim().length > 0);
-  const canSave = title.trim().length > 0 && hasValidQuestion && (scope !== "team" || teamId);
+  const canSave = title.trim().length > 0 && (editingSurveyId != null || hasValidQuestion) && (scope !== "team" || teamId);
   const builtInTemplates = templates.filter((t) => t.builtin);
   const teamTemplates = templates.filter((t) => !t.builtin);
   const canSaveTemplate = templateTitle.trim().length > 0 && templateTeamId && hasValidQuestion;
+  const mySurveys = surveys.filter((s) => s.isOwner);
+  const teamSurveys = surveys.filter((s) => s.scope === "team");
+  const visibleSurveys = filter === "my" ? mySurveys : teamSurveys;
 
   if (mode === "editor") {
     return (
@@ -289,7 +416,10 @@ export default function SurveysPage() {
             data-testid="back-to-list"
             variant="ghost"
             size="sm"
-            onClick={() => setMode("list")}
+            onClick={() => {
+              setMode("list");
+              setEditingSurveyId(null);
+            }}
             className="gap-1 text-muted-foreground hover:text-foreground"
           >
             <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
@@ -324,7 +454,7 @@ export default function SurveysPage() {
               disabled={saving || !canSave}
               onClick={() => void save()}
             >
-              {saving ? "Saving…" : "Create survey"}
+              {saving ? "Saving…" : editingSurveyId == null ? "Create survey" : "Save changes"}
             </Button>
           )}
         </div>
@@ -717,7 +847,7 @@ export default function SurveysPage() {
       </div>
 
       {error && (
-        <p role="alert" data-testid="err" className="mt-4 text-13 text-destructive">
+        <p role="alert" data-testid="err-surveys" className="mt-4 text-13 text-destructive">
           {error}
         </p>
       )}
@@ -740,29 +870,143 @@ export default function SurveysPage() {
             </Button>
           </div>
         ) : (
-          <div data-testid="survey-list" className="overflow-hidden rounded-12 border border-border">
-            <div className="flex bg-surface-1 px-4.5 py-2.75 text-11 font-semibold text-muted-foreground">
-              <div className="flex-[2.4]">Survey</div>
-              <div className="flex-1">Scope</div>
-              <div className="flex-1">Responses</div>
-              <div className="flex-1">Status</div>
-            </div>
-            {surveys.map((s) => (
-              <div
-                key={s.id}
-                data-testid={`survey-${s.id}`}
-                className="flex items-center border-t border-border px-4.5 py-3.25 transition-colors hover:bg-surface-1"
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2" role="tablist" aria-label="Survey filters">
+              <Button
+                data-testid="filter-my-surveys"
+                size="sm"
+                variant={filter === "my" ? "default" : "outline"}
+                onClick={() => setFilter("my")}
               >
-                <div className="flex-[2.4] truncate text-13 font-semibold text-foreground">{s.title}</div>
-                <div className="flex-1">
-                  <Badge variant="muted">{s.scope === "team" ? "Team" : "Private"}</Badge>
-                </div>
-                <div className="flex-1 text-13 text-muted-foreground">{s.responses}</div>
-                <div className="flex-1">
-                  <Badge variant="muted">{s.status}</Badge>
-                </div>
+                My surveys
+              </Button>
+              <Button
+                data-testid="filter-team-surveys"
+                size="sm"
+                variant={filter === "team" ? "default" : "outline"}
+                onClick={() => setFilter("team")}
+              >
+                Team surveys
+              </Button>
+            </div>
+
+            {visibleSurveys.length === 0 ? (
+              <div
+                data-testid="empty-filter"
+                className="rounded-12 border border-dashed border-border-strong px-6 py-10 text-center"
+              >
+                <p className="text-13 text-muted-foreground">
+                  {filter === "my" ? "You do not own any surveys in this context." : "No team surveys in this context."}
+                </p>
               </div>
-            ))}
+            ) : (
+              <div data-testid="survey-list" className="grid gap-3 md:grid-cols-2">
+                {visibleSurveys.map((s) => (
+                  <article
+                    key={s.id}
+                    data-testid={`survey-${s.id}`}
+                    className="rounded-12 border border-border bg-card p-4 shadow-sm transition-all duration-200 hover:border-border-strong hover:shadow-md"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="min-w-0 flex-1">
+                        <h2 data-testid={`survey-title-${s.id}`} className="truncate text-15 font-semibold text-foreground">
+                          {s.title}
+                        </h2>
+                        {s.description && (
+                          <p className="mt-1 truncate text-12 text-muted-foreground">{s.description}</p>
+                        )}
+                      </div>
+                      <Badge data-testid={`survey-status-${s.id}`} variant={s.status === "active" ? "success" : "muted"}>
+                        {STATUS_LABEL[s.status]}
+                      </Badge>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-3 gap-2 text-12">
+                      <div>
+                        <p className="text-muted-foreground">Scope</p>
+                        <p data-testid={`survey-scope-${s.id}`} className="mt-1 font-medium text-foreground">
+                          {s.scope === "team" ? "Team" : "Private"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Responses</p>
+                        <p data-testid={`survey-responses-${s.id}`} className="mt-1 font-medium text-foreground">
+                          {s.responses}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Updated</p>
+                        <p data-testid={`survey-updated-${s.id}`} className="mt-1 font-medium text-foreground">
+                          {formatUpdated(s.updatedAt)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button data-testid={`survey-view-${s.id}`} variant="outline" size="sm" onClick={() => setSelectedSurvey(s)} className="gap-1.5">
+                        <BarChart3 className="h-4 w-4" strokeWidth={1.5} />
+                        View
+                      </Button>
+                      {s.isOwner && (
+                        <Button data-testid={`survey-edit-${s.id}`} variant="outline" size="sm" onClick={() => void loadSurveyForEditor(s.id, "edit")} className="gap-1.5">
+                          <Pencil className="h-4 w-4" strokeWidth={1.5} />
+                          Edit
+                        </Button>
+                      )}
+                      <Button data-testid={`survey-preview-${s.id}`} variant="outline" size="sm" onClick={() => void loadSurveyForEditor(s.id, "preview")} className="gap-1.5">
+                        <Eye className="h-4 w-4" strokeWidth={1.5} />
+                        Preview
+                      </Button>
+                      <Button data-testid={`survey-share-${s.id}`} variant="outline" size="sm" onClick={() => void shareSurvey(s)} className="gap-1.5">
+                        <Share2 className="h-4 w-4" strokeWidth={1.5} />
+                        Share
+                      </Button>
+                      {s.isOwner && (
+                        <Button data-testid={`survey-toggle-${s.id}`} variant="outline" size="sm" disabled={busyId === s.id} onClick={() => void toggleSurveyStatus(s)} className="gap-1.5">
+                          {s.status === "active" ? <PauseCircle className="h-4 w-4" strokeWidth={1.5} /> : <PlayCircle className="h-4 w-4" strokeWidth={1.5} />}
+                          {s.status === "active" ? "Pause" : "Activate"}
+                        </Button>
+                      )}
+                      {s.isOwner && (
+                        <Button data-testid={`survey-delete-${s.id}`} variant="destructive" size="sm" disabled={busyId === s.id} onClick={() => setConfirmDeleteId(s.id)} className="gap-1.5">
+                          <Trash2 className="h-4 w-4" strokeWidth={1.5} />
+                          Delete
+                        </Button>
+                      )}
+                    </div>
+
+                    {sharedSurvey?.id === s.id && (
+                      <div data-testid={`survey-share-panel-${s.id}`} className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
+                        <Copy className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+                        <span className="min-w-0 flex-1 truncate text-12 text-foreground">{s.shareUrl}</span>
+                        <span className="text-11 text-success">Copied</span>
+                      </div>
+                    )}
+
+                    {selectedSurvey?.id === s.id && (
+                      <div data-testid={`survey-results-${s.id}`} className="mt-3 rounded-lg border border-border bg-surface-1 p-3 text-12 text-foreground">
+                        <p className="font-semibold">Results</p>
+                        <p className="mt-1 text-muted-foreground">{s.responses} responses collected</p>
+                      </div>
+                    )}
+
+                    {confirmDeleteId === s.id && (
+                      <div data-testid={`survey-delete-confirm-${s.id}`} className="mt-3 rounded-lg border border-destructive/40 p-3">
+                        <p className="text-12 text-foreground">Delete {s.title} permanently?</p>
+                        <div className="mt-2 flex gap-2">
+                          <Button data-testid={`survey-delete-confirm-button-${s.id}`} variant="destructive" size="sm" disabled={busyId === s.id} onClick={() => void deleteSurveyCard(s)}>
+                            Confirm delete
+                          </Button>
+                          <Button data-testid={`survey-delete-cancel-${s.id}`} variant="outline" size="sm" onClick={() => setConfirmDeleteId(null)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

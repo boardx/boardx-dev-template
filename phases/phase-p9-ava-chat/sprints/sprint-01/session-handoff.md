@@ -1,11 +1,21 @@
 # 会话交接 — Sprint p9/01
 
 ## 当前已验证
-- F01 实现完成，5/5 e2e（`e2e/ava-chat-basic.spec.ts`）本地通过，`@repo/ai`/`@repo/data`/`@repo/web`
-  的 test/typecheck/lint 全绿，全仓 `verify:base`（41/41）确认未破坏基础状态。
-  **尚未** `passing`：worker 不可自行标记，需 review 通过 + `pnpm harness verify --sprint p9/01` 门控。
+- F01 已在 `feature_list.json` 中为 `passing`。本 worktree 是 issue #153 安全补丁，不修改 feature 状态。
+- 安全补丁验证通过：
+  - `pnpm --filter @repo/web exec vitest run 'app/api/ava/threads/[id]/route.test.ts'` — 4/4 passed。
+  - `pnpm --filter @repo/web run typecheck` — passed。
+  - `pnpm --filter @repo/web run test` — 5 files / 16 tests passed。
+  - `pnpm --filter @repo/data run typecheck` / `pnpm --filter @repo/data run test` — passed。
+  - `pnpm -w run verify:base` — turbo 45/45 successful。
+  - `docker compose -f infra/docker-compose.yml up -d`、`pnpm --filter @repo/data run migrate`、`pnpm --filter @repo/web exec playwright test e2e/ava-chat-basic.spec.ts` 在普通 sandbox 下分别被 Docker socket / tsx IPC pipe / Next listen 权限拦截；升级权限重跑均通过（Playwright 5/5 passed）。
 
 ## 本轮改动
+- Issue #153: `GET /api/ava/threads/:id` 与 `POST /api/ava/threads/:id/messages` 的属主校验现在同时要求 `thread.team_id === currentTeamId()`；个人上下文只匹配 `thread.team_id IS NULL`。
+- 新增 `apps/web/app/api/ava/threads/[id]/route.test.ts`，用 route-level unit test 覆盖同一用户跨 team / team 到个人上下文不可读取、不可追加消息，和 null 对 null 可读取。
+- `apps/web/vitest.config.ts` 增加 `@` alias，支持 app route handler 单测导入 `@/lib/session`。
+
+## 历史 F01 改动
 - 新增 `packages/ai`（CAP-AI：LiteLLM 风格网关 `gateway.ts` + LangGraph 风格最小图 `graph.ts`，
   stub provider 含确定性失败触发词 `FORCE_FAIL_MARKER`）。
 - 新增 `packages/data/src/avaChat.ts` + 迁移 `packages/data/migrations/016_ava_chat.sql`
@@ -19,6 +29,8 @@
 - 新 e2e：`apps/web/e2e/ava-chat-basic.spec.ts`。
 
 ## 仍损坏或未验证
+- 本次未新增真实 DB 的跨团队 e2e；已有 route 单测是 issue #153 的直接回归测试，现有 AVA e2e 验证主流程不回归。
+- 普通 sandbox 下 Docker/Next/tsx 本地 socket 相关命令会失败；需要升级权限运行，详见 evidence `issue-153-ava-team-context-security.log`。
 - 真实 LLM 供应商接入未做（本 feature notes 明确 sanctioned 用 stub/mock，属预期范围）。
 - 团队切换时线程列表清空/重载（F02 范围，未做）。
 - 移动端 list-first 布局只验证了 Chromium 桌面视口下的 DOM/类名逻辑，未做真机/真移动视口测试。
@@ -27,8 +39,7 @@
   这不代表命令本身有问题，是共享开发机的环境限制。
 
 ## 下一步最佳动作
-- coordinator：review 本 PR（`Closes #100`），过 review 后合并，跑
-  `pnpm harness verify --sprint p9/01` 门控 F01 转 `passing`。
+- reviewer：review issue #153 安全补丁，重点确认所有单线程详情/消息追加路径都先校验当前团队上下文。
 - 下一个 worker：F01 合并后可开始 F02（线程列表 CRUD：按日期分组/重命名/删除/团队隔离），
   直接复用本 feature 建立的 `ava_threads`/`ava_messages` 表和 `/api/ava/threads` 系列路由。
   不要动 `packages/ai` 的 gateway/graph 接口签名（F06 Deep Research 会在其上扩展多节点图）。
