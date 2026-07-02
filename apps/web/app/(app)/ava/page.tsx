@@ -12,7 +12,7 @@
 // 建议动作个性化、发送到 Board / 邮件。
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, ArrowUp, Sparkles, ArrowLeft } from "lucide-react";
+import { Plus, ArrowUp, Sparkles, ArrowLeft, Mic, Square, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MarkdownMessage } from "./markdown-message";
 
@@ -26,6 +26,23 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   status: "complete" | "failed";
+}
+type VoiceState = "idle" | "recording" | "transcribing";
+type AvaVoiceMockMode =
+  | "success"
+  | "permission-denied"
+  | "no-device"
+  | "unsupported"
+  | "too-short"
+  | "transcribe-failed";
+
+declare global {
+  interface Window {
+    __avaVoiceMock?: {
+      mode?: AvaVoiceMockMode;
+      transcript?: string;
+    };
+  }
 }
 
 const SUGGESTIONS = [
@@ -46,9 +63,20 @@ export default function AvaPage() {
   const [streamingText, setStreamingText] = useState("");
   const [error, setError] = useState("");
   const [sendError, setSendError] = useState("");
+  const [voiceState, setVoiceState] = useState<VoiceState>("idle");
+  const [voiceError, setVoiceError] = useState("");
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  const [voiceSecondsLeft, setVoiceSecondsLeft] = useState(30);
+  const [voiceLevel, setVoiceLevel] = useState(0);
   // 移动端视图切换：list-first。桌面端（md 及以上）始终双栏，此状态被 CSS 忽略。
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const voiceTimerRef = useRef<number | null>(null);
+  const voiceStartedAtRef = useRef<number>(0);
+  const voiceStreamRef = useRef<MediaStream | null>(null);
+  const voiceStateRef = useRef<VoiceState>("idle");
+  const voiceMockModeRef = useRef<AvaVoiceMockMode | undefined>(undefined);
+  const voiceMockTranscriptRef = useRef<string | undefined>(undefined);
 
   const guard = useCallback(
     (status: number) => {
@@ -91,6 +119,18 @@ export default function AvaPage() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, streamingText, sending]);
+
+  useEffect(() => {
+    return () => {
+      stopVoiceTimer();
+      stopVoiceStream();
+    };
+  }, []);
+
+  function setVoiceMode(next: VoiceState) {
+    voiceStateRef.current = next;
+    setVoiceState(next);
+  }
 
   async function openThread(id: number) {
     setActiveId(id);
@@ -185,6 +225,120 @@ export default function AvaPage() {
       e.preventDefault();
       void send();
     }
+  }
+
+  function stopVoiceTimer() {
+    if (voiceTimerRef.current) {
+      window.clearInterval(voiceTimerRef.current);
+      voiceTimerRef.current = null;
+    }
+  }
+
+  function stopVoiceStream() {
+    voiceStreamRef.current?.getTracks().forEach((track) => track.stop());
+    voiceStreamRef.current = null;
+  }
+
+  function beginVoiceMeter() {
+    let tick = 0;
+    stopVoiceTimer();
+    voiceTimerRef.current = window.setInterval(() => {
+      tick += 1;
+      const elapsed = Math.floor((Date.now() - voiceStartedAtRef.current) / 1000);
+      setVoiceSecondsLeft(Math.max(0, 30 - elapsed));
+      setVoiceLevel(24 + ((tick * 17) % 68));
+    }, 250);
+  }
+
+  async function startVoiceRecording() {
+    if (voiceStateRef.current !== "idle") return;
+    setVoiceError("");
+    setVoiceTranscript("");
+    setSendError("");
+
+    const mock = window.__avaVoiceMock;
+    voiceMockModeRef.current = mock?.mode;
+    voiceMockTranscriptRef.current = mock?.transcript;
+    if (mock?.mode === "unsupported") {
+      setVoiceError("当前浏览器不支持语音输入。");
+      return;
+    }
+    if (mock?.mode === "no-device") {
+      setVoiceError("没有检测到可用麦克风。");
+      return;
+    }
+    if (mock?.mode === "permission-denied") {
+      setVoiceError("麦克风权限被拒绝，请在浏览器设置中允许访问。");
+      return;
+    }
+
+    if (!mock && (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined")) {
+      setVoiceError("当前浏览器不支持语音输入。");
+      return;
+    }
+
+    try {
+      if (!mock) {
+        voiceStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+      voiceStartedAtRef.current = Date.now();
+      setVoiceSecondsLeft(30);
+      setVoiceLevel(36);
+      setVoiceMode("recording");
+      beginVoiceMeter();
+      if (mock?.mode === "too-short") {
+        setVoiceError("录音时间太短，请至少说一句完整内容。");
+      } else if (mock?.mode === "transcribe-failed") {
+        setVoiceError("语音转写失败，请重试。");
+      }
+    } catch (err) {
+      const name = err instanceof DOMException ? err.name : "";
+      setVoiceError(
+        name === "NotAllowedError" || name === "SecurityError"
+          ? "麦克风权限被拒绝，请在浏览器设置中允许访问。"
+          : "没有检测到可用麦克风。"
+      );
+      stopVoiceStream();
+    }
+  }
+
+  async function stopVoiceRecording() {
+    if (voiceStateRef.current === "transcribing") return;
+    stopVoiceTimer();
+    stopVoiceStream();
+    setVoiceLevel(0);
+    setVoiceMode("transcribing");
+
+    const elapsedMs = Date.now() - voiceStartedAtRef.current;
+    const mockMode = voiceMockModeRef.current;
+    const mockTranscript = voiceMockTranscriptRef.current;
+    await new Promise((resolve) => window.setTimeout(resolve, 150));
+
+    if (mockMode === "too-short" || (!mockMode && elapsedMs < 350)) {
+      setVoiceError("录音时间太短，请至少说一句完整内容。");
+      setVoiceMode("idle");
+      return;
+    }
+    if (mockMode === "transcribe-failed") {
+      setVoiceError("语音转写失败，请重试。");
+      setVoiceMode("idle");
+      return;
+    }
+
+    const transcript = mockTranscript?.trim() || "请帮我整理这段语音记录";
+    setDraft((current) => (current.trim() ? `${current.trim()}\n${transcript}` : transcript));
+    setVoiceTranscript(transcript);
+    setVoiceMode("idle");
+  }
+
+  function cancelVoiceRecording() {
+    stopVoiceTimer();
+    stopVoiceStream();
+    setVoiceMode("idle");
+    setVoiceLevel(0);
+    setVoiceSecondsLeft(30);
+    setVoiceTranscript("");
+    setVoiceError("");
   }
 
   const isEmptyThread = messages.length === 0 && !sending;
@@ -350,7 +504,80 @@ export default function AvaPage() {
                     {sendError}
                   </p>
                 )}
-                <div className="mt-2 flex items-center justify-end">
+                {voiceState !== "idle" && (
+                  <div
+                    data-testid="voice-recorder"
+                    className="mt-3 rounded-9 border border-border bg-surface-1 p-3"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-13 font-medium text-foreground">
+                          {voiceState === "recording" ? "正在录音" : "正在转写"}
+                        </p>
+                        <p data-testid="voice-time-left" className="mt-1 text-11 text-muted-foreground">
+                          剩余 {voiceSecondsLeft}s
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          data-testid="voice-cancel"
+                          className="h-8 w-8 rounded-9"
+                          onClick={cancelVoiceRecording}
+                          disabled={voiceState === "transcribing"}
+                          aria-label="Cancel voice recording"
+                        >
+                          <X className="h-4 w-4" strokeWidth={1.8} />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon"
+                          data-testid="voice-stop"
+                          className="h-8 w-8 rounded-9"
+                          onClick={() => void stopVoiceRecording()}
+                          aria-label="Stop voice recording"
+                        >
+                          <Square className="h-3.5 w-3.5" strokeWidth={2} />
+                        </Button>
+                      </div>
+                    </div>
+                    <div
+                      data-testid="voice-meter"
+                      className="mt-3 h-2 overflow-hidden rounded-full bg-muted"
+                      aria-label={`Voice level ${voiceLevel}`}
+                    >
+                      <div
+                        className="h-full rounded-full bg-primary transition-all duration-200"
+                        style={{ width: `${voiceLevel}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {voiceError && (
+                  <p role="alert" data-testid="voice-error" className="mt-2 text-xs text-destructive">
+                    {voiceError}
+                  </p>
+                )}
+                {voiceTranscript && (
+                  <p data-testid="voice-transcript-preview" className="mt-2 text-xs text-muted-foreground">
+                    已转写：{voiceTranscript}
+                  </p>
+                )}
+                <div className="mt-2 flex items-center justify-between">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    data-testid="voice-button"
+                    className="h-8 w-8 rounded-9"
+                    onClick={() => void startVoiceRecording()}
+                    disabled={sending || voiceState !== "idle"}
+                    aria-label="Start voice input"
+                  >
+                    <Mic className="h-4 w-4" strokeWidth={1.8} />
+                  </Button>
                   <Button
                     data-testid="send"
                     size="icon"
