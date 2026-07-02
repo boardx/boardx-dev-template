@@ -14,6 +14,10 @@
     `pnpm --filter @repo/web exec playwright test e2e/admin-003-ai-store-approval.spec.ts`：
     **8/8 一次性干净通过，15.1s，无重试、无 flaky**；
     `pnpm -w run verify:base`：**45/45 一次性干净通过**（`@repo/web:test` 23/23）。
+  - **PR #213 code review 修复之后**：修复 `setAiStoreItemReviewStatus` 的幂等回退 bug
+    （见下方"本轮改动"），补第 9 个 e2e 用例。`pnpm --filter @repo/web exec playwright test
+    e2e/admin-003-ai-store-approval.spec.ts`：**9/9 一次性干净通过，14.8s**；
+    `pnpm -w run verify:base`：**45/45 一次性干净通过**。
 
 ## 本轮改动
 - `packages/data/src/aiStore.ts`: 新增 `listPlatformReviewItems`（平台审核队列列表：
@@ -26,9 +30,14 @@
 - `apps/web/app/(app)/admin/ai-store/review/page.tsx`: 从 F01 的 `ComingSoon` 占位整页重写为
   真实审核页（状态 Tab、搜索、列表、批准/拒绝/撤回、确认弹窗、loading/empty 态），
   视觉/交互对齐 F02（用户管理）/F03（团队管理）既有规范。
-- `apps/web/e2e/admin-003-ai-store-approval.spec.ts`（新增）: 8 个测试用例，见 progress.md。
+- `apps/web/e2e/admin-003-ai-store-approval.spec.ts`（新增，现 9 个测试用例，见 progress.md）。
 - 未触碰 F01（admin shell）、F02（用户管理）、F03（团队管理，`admin/teams/*`）、F05（AI Store
   精选页，`admin/ai-store/featured/*`，仍是 blocked 占位）范围。
+- **PR #213 code review 修复**：`setAiStoreItemReviewStatus` 的幂等回退判定修正——
+  `revoke` 不再对"当前状态==pending"做幂等回退（`pending` 同时是 approve/reject 的天然
+  前置状态，会与"revoke 已生效"语义冲突，误判为 idempotent:true），改为一律按前置状态不符
+  处理（409）；approve/reject 的幂等回退不受影响（它们的目标状态无歧义）。新增第 9 个
+  e2e 用例覆盖修复前会误判的路径。
 - **合并 origin/main**：`packages/data/src/aiStore.ts` 有一处冲突——main 上并行合并了 P11
   F04/F05（AI Store 收藏 `toggleAiStoreFavorite`/分享管理 `enableAiStoreItemShare` 等）的
   仓储函数，与我方新增的 F04 审核函数在文件里相邻但不重叠，直接顺序拼接解决，未改动任何一方逻辑。

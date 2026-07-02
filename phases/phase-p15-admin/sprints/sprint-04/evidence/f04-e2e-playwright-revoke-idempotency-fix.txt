@@ -1,0 +1,14 @@
+
+Running 9 tests using 1 worker
+
+  ✓  1 [chromium] › admin-003-ai-store-approval.spec.ts:50:5 › 未登录访问 /admin/ai-store/review 跳转到 /login (3.8s)
+  ✓  2 [chromium] › admin-003-ai-store-approval.spec.ts:57:5 › 已登录但非 SysAdmin 访问审核页看到无权限 (727ms)
+  ✓  3 [chromium] › admin-003-ai-store-approval.spec.ts:65:5 › 未登录调用审核列表/操作 API 返回 401，非 SysAdmin 返回 403 (519ms)
+  ✓  4 [chromium] › admin-003-ai-store-approval.spec.ts:80:5 › SysAdmin 看到 PENDING 项目并能批准，状态立即变为 APPROVED (1.7s)
+  ✓  5 [chromium] › admin-003-ai-store-approval.spec.ts:106:5 › SysAdmin 可撤回已批准项目到 PENDING (993ms)
+  ✓  6 [chromium] › admin-003-ai-store-approval.spec.ts:126:5 › SysAdmin 可拒绝 PENDING 项目，拒绝后不再出现在待审核/已批准列表 (867ms)
+  ✓  7 [chromium] › admin-003-ai-store-approval.spec.ts:144:5 › 状态 Tab 筛选：切到已批准只看到 APPROVED 项目 (850ms)
+  ✓  8 [chromium] › admin-003-ai-store-approval.spec.ts:158:5 › 审核状态转移幂等：重复提交同一批准操作不报错、状态不变；前置状态不符返回 409 (246ms)
+  ✓  9 [chromium] › admin-003-ai-store-approval.spec.ts:203:5 › revoke 作用在从未被 approve 过的 pending 项目上，必须返回 409（不能谎报 idempotent:true） (193ms)
+
+  9 passed (14.8s)

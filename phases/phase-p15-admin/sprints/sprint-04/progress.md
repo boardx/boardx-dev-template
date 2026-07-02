@@ -4,14 +4,41 @@
 - 仓库根目录: `.claude/worktrees/agent-ac73e20b130747b07`（worker wrk-admin-1）
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F04（AI Store 平台审核页）— 实现完成，e2e 自测通过，
-  待协调者跑 `pnpm harness verify --sprint p15/04` 门控转 passing（本 worker 不可自己标 passing）。
+- 当前最高优先级未完成功能: F04（AI Store 平台审核页）— 实现完成，PR #213 已开，
+  code review 提出的幂等回退 bug 已修复并补测试（e2e 9/9 通过），待协调者跑
+  `pnpm harness verify --sprint p15/04` 门控转 passing（本 worker 不可自己标 passing）。
 - 当前 blocker: 无代码层面 blocker。环境层面：本机同时运行 70+ worktree 的 docker 容器，
   postgres 在长跑测试时会间歇性 crash-loop（`57P03 database system is in recovery mode`，
   与 sprint-03 记录的已知问题同源），需要重试/等待恢复窗口（详见下方"已知风险"）。
 
 ## 会话记录
-### 2026-07-02
+### 2026-07-02（PR #213 code review 修复）
+
+- 本轮目标: 修复 PR #213 双评审里 code review 提出的中危正确性 bug——
+  `setAiStoreItemReviewStatus` 的幂等回退判定错误。
+- 问题: 原子 UPDATE 命中 0 行时的回退逻辑只判断"当前状态 == 目标状态"就报 `idempotent:true`。
+  `revoke` 的目标状态是 `pending`，而 `pending` 同时也是 `approve`/`reject` 的天然前置状态——
+  一个从未被 approve 过、本来就是 `pending` 的 item 直接调 `revoke`，会被误判为
+  "revoke 已经生效过"而返回 200 `idempotent:true`，但这其实是非法转移（该 item 从没被
+  approved 过），正确应该是 409。approve/reject 没有这个歧义（它们的目标状态 approved/rejected
+  不会是任何其它合法动作的天然起点），问题只出在 revoke 这一侧。
+- 修复: `packages/data/src/aiStore.ts` 的 `setAiStoreItemReviewStatus`——幂等回退只对
+  approve/reject 生效；revoke 的 UPDATE 0 行结果一律视为前置状态不符，直接返回 undefined
+  （调用方转 409），不再做"当前状态==pending"的幂等回退判定。
+- 补测试: `apps/web/e2e/admin-003-ai-store-approval.spec.ts` 新增第 9 个用例
+  「revoke 作用在从未被 approve 过的 pending 项目上，必须返回 409（不能谎报 idempotent:true）」，
+  覆盖修复前会误判的路径，并额外断言状态确实没被悄悄改动（仍在 pending 审核队列里）。
+- 验证:
+  - `pnpm --filter @repo/data run typecheck` / `pnpm --filter @repo/web run typecheck`：通过
+  - `pnpm --filter @repo/data run lint` / `pnpm --filter @repo/web run lint`：通过
+  - `pnpm --filter @repo/web exec playwright test e2e/admin-003-ai-store-approval.spec.ts`：
+    **9/9 一次性干净通过**（14.8s，无重试），见
+    `evidence/f04-e2e-playwright-revoke-idempotency-fix.txt`
+  - `pnpm -w run verify:base`：**45/45 一次性干净通过**，见
+    `evidence/verify-base-revoke-idempotency-fix.txt`
+- 提交记录: 追加提交到分支 `worker/wrk-admin-1-p15-f04-store-review`，PR #213 留评论说明修复。
+
+### 2026-07-02（初次实现）
 
 - 本轮目标: 落地 F04（AI Store 平台审核页：SysAdmin 查看 PENDING/APPROVED 的平台资源，
   批准/拒绝/撤回，确认弹窗防误操作，无权限不可访问），消费 p11 的 `ai_store_items` 状态机

@@ -298,6 +298,16 @@ export async function listPlatformReviewItems(
  * 重复提交同一个已经生效的操作（比如已经是 approved 又点一次 approve）视为幂等：不报错，直接返回当前行。
  * 若请求的前置状态与当前 DB 状态不符（比如另一个管理员已经处理过、或对象不是平台资源），返回 undefined，
  * 调用方据此返回 409，避免误报"成功"掩盖并发覆盖。
+ *
+ * 幂等回退的关键陷阱（review 发现，见 PR #213）：不能只看"当前状态 == 目标状态"就判定幂等。
+ * `revoke` 的目标状态是 `pending`，而 `pending`同时也是 `approve`/`reject` 的天然前置状态——
+ * 一个从未被 approve 过、本来就是 `pending` 的 item，对它调用 `revoke`（期望 from=approved）
+ * 落到 UPDATE 0 行分支时，"当前状态==pending"这个事实并不能证明"revoke 之前已经生效过"，
+ * 它同样可能是"这个 item 根本没被 approved 过，revoke 的前置条件本来就不满足"——这是非法转移，
+ * 应该 409，不能谎报 idempotent:true。approve/reject 没有这个歧义：它们的目标状态
+ * （approved/rejected）不会是任何其它合法动作的天然起点，所以"当前状态==目标状态"在它们身上
+ * 确实只可能来自"这个动作已经生效过"，可以放心走幂等回退。
+ * 因此幂等回退只对 approve/reject 生效；revoke 的 0 行结果一律视为前置状态不符，返回 undefined。
  */
 export async function setAiStoreItemReviewStatus(
   id: number,
@@ -315,8 +325,11 @@ export async function setAiStoreItemReviewStatus(
   );
   if (updated[0]) return { item: updated[0], idempotent: false };
 
-  // 没更新到任何行：可能已经是目标状态（幂等重放/双击）——原样返回，不报错；
-  // 也可能是别的状态/不存在/非 platform，调用方按 undefined 处理为 409/404。
+  // 没更新到任何行。approve/reject 的目标状态在这个状态机里不会是别的动作的天然起点，
+  // 所以"当前状态==目标状态"能安全地判定为幂等重放；revoke 的目标状态 pending 有歧义
+  // （见上方注释），不做幂等回退，一律按前置状态不符处理（undefined → 调用方转 409）。
+  if (action === "revoke") return undefined;
+
   const current = await getAiStoreItem(id);
   if (current && current.scope === "platform" && current.status === toStatus) {
     return { item: current, idempotent: true };
