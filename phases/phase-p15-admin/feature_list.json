@@ -29,7 +29,7 @@
       "title": "用户管理（列表/搜索/分页/增删改 + 手动上分）",
       "user_visible_behavior": "SysAdmin 在用户管理页：GET /api/admin/users?q= 分页列出用户（邮箱/名称/状态/团队数）；搜索过滤；创建用户、编辑资料、删除（确认弹窗）；对用户手动增加 Credit（manual credit 弹窗）；操作即时反映；越权非 SysAdmin 无法访问接口。",
       "design_ref": "prototype:<!-- users --> + <!-- admin: manual credit modal --> + <!-- admin: delete user confirm -->；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "03",
       "owner": "wrk-admin-1",
       "capability": "CAP-AUTH",
@@ -43,7 +43,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/admin-001-manage-users.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-07-01T21:45:13.747Z",
       "notes": "uc-admin-001。手动上分复用 p14 credit_transactions（admin 来源）。依赖 F01 门控 + p14 credits。"
     },
     {

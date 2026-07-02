@@ -2,3 +2,5 @@
 export * from "./gateway";
 export * from "./graph";
 export * from "./avaSettings";
+// Studio 生成器（P12 F01 地基）
+export * from "./studioGenerator";
