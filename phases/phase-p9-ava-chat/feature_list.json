@@ -165,18 +165,20 @@
       "title": "向聊天附加文件/图片/音频",
       "user_visible_behavior": "输入区「添加文件」或拖拽上传：上传中/失败/重试/文件名/缩略图/预览条；可移除或继续添加；超数量/类型不支持/超大小给对应提示；上传完成随消息发送，附件与消息一起展示进聊天历史，AI 基于附件上下文回复。不支持上传的模式展示「此模式下不支持上传文件」。",
       "design_ref": "prototype:<!-- composer --> 附件入口（AVA 输入区，细节较浅，附件预览条参考 KB upload dialog）；DESIGN.md tokens",
-      "status": "blocked",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "03",
+      "owner": "wrk-ava-1",
       "capability": "CAP-FILE",
       "depends_on": [
         "p10:F01"
       ],
       "wave": 1,
       "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-attach-files.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F08.verify.log @ 2026-07-01T22:37:03.352Z",
       "notes": "uc-ava-007。blocked-on p10：文件存储能力（CAP-FILE：对象存储 + 上传/解析）在 P10 知识库阶段建立。本期输入区附件入口先禁用态占位；p10 交付 CAP-FILE 后接通并转 passing。UI 入口在 composer 已有，附件预览条样式待细化。"
     },
     {

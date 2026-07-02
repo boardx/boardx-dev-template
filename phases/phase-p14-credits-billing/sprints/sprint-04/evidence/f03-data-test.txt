@@ -1,0 +1,19 @@
+
+> @repo/data@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a2aa8f87e0d04e0af/packages/data
+> vitest run
+
+
+ RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a2aa8f87e0d04e0af/packages/data
+
+ ✓ src/roomChat.test.ts  (2 tests) 4ms
+ ✓ src/index.test.ts  (3 tests) 4ms
+ ✓ src/aiStore.test.ts  (8 tests) 5ms
+ ✓ src/survey.test.ts  (4 tests) 4ms
+ ✓ src/board.test.ts  (9 tests) 6ms
+ ✓ src/avaChat.test.ts  (5 tests) 4ms
+
+ Test Files  6 passed (6)
+      Tests  31 passed (31)
+   Start at  04:35:21
+   Duration  1.13s (transform 869ms, setup 1ms, collect 2.04s, tests 27ms, environment 1ms, prepare 908ms)
+

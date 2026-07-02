@@ -34,6 +34,12 @@ export * from "./aiStore";
 export * from "./credits";
 // CAP-FILE 知识库文件仓储（kb_files / P10）
 export * from "./kbFiles";
+// CAP-AI Studio 制品仓储（studio_artifacts / P12 F01）
+export * from "./studio";
+// CAP-PAYMENT 支付订单仓储（payment_orders / F05）
+export * from "./payment";
+// P15 Admin 后台：平台统计聚合（用户/团队计数；仅已建表的真实维度）
+export * from "./admin";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 
@@ -41,42 +47,55 @@ export interface DbConfig {
   connectionString: string;
 }
 
-let envLoaded = false;
-
-function loadDotEnv(): void {
-  if (envLoaded) return;
-  envLoaded = true;
-
-  let dir = process.cwd();
-  for (let i = 0; i < 8; i += 1) {
-    const file = join(dir, ".env");
-    if (existsSync(file)) {
-      for (const line of readFileSync(file, "utf8").split(/\r?\n/)) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith("#")) continue;
-        const eq = trimmed.indexOf("=");
-        if (eq <= 0) continue;
-        const key = trimmed.slice(0, eq).trim();
-        const value = trimmed.slice(eq + 1).trim();
-        if (process.env[key] === undefined) process.env[key] = value;
-      }
-      return;
+function parseEnvFile(path: string): Record<string, string> {
+  if (!existsSync(path)) return {};
+  const out: Record<string, string> = {};
+  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const idx = trimmed.indexOf("=");
+    if (idx <= 0) continue;
+    const key = trimmed.slice(0, idx).trim();
+    let value = trimmed.slice(idx + 1).trim();
+    if (
+      (value.startsWith("\"") && value.endsWith("\"")) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
     }
-    const next = dirname(dir);
-    if (next === dir) return;
-    dir = next;
+    out[key] = value;
   }
+  return out;
+}
+
+function findWorkspaceRoot(start: string): string {
+  let dir = start;
+  for (;;) {
+    if (existsSync(join(dir, "pnpm-workspace.yaml"))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) return start;
+    dir = parent;
+  }
+}
+
+function loadDbEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const root = findWorkspaceRoot(process.cwd());
+  const fileEnv = {
+    ...parseEnvFile(join(root, ".env")),
+    ...parseEnvFile(join(root, "apps/web/.env.local")),
+  };
+  return { ...fileEnv, ...env };
 }
 
 /** 从环境变量解析连接串。优先 DATABASE_URL，否则用 PG* 拼。 */
 export function resolveDbConfig(env: NodeJS.ProcessEnv = process.env): DbConfig {
-  loadDotEnv();
-  if (env.DATABASE_URL) return { connectionString: env.DATABASE_URL };
-  const host = env.PGHOST ?? "localhost";
-  const port = env.PGPORT ?? "5432";
-  const user = env.PGUSER ?? "boardx";
-  const password = env.PGPASSWORD ?? "boardx";
-  const database = env.PGDATABASE ?? "boardx";
+  const mergedEnv = env === process.env ? loadDbEnv(env) : env;
+  if (mergedEnv.DATABASE_URL) return { connectionString: mergedEnv.DATABASE_URL };
+  const host = mergedEnv.PGHOST ?? "localhost";
+  const port = mergedEnv.PGPORT ?? mergedEnv.PG_PORT ?? "5432";
+  const user = mergedEnv.PGUSER ?? "boardx";
+  const password = mergedEnv.PGPASSWORD ?? "boardx";
+  const database = mergedEnv.PGDATABASE ?? "boardx";
   return {
     connectionString: `postgresql://${user}:${password}@${host}:${port}/${database}`,
   };
