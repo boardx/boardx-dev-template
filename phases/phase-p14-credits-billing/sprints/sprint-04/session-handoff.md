@@ -73,3 +73,17 @@
   pnpm --filter @repo/data run migrate
   pnpm --filter @repo/web exec playwright test e2e/credits-002-purchase-credits.spec.ts
   ```
+
+## 独立复验追记（2026-07-02，evidence/p14-f02-buy-credits）
+- PR #191 已合并 main，但独立 feature-evaluator 复审判定 "Revise"（12/16）：代码本身满分
+  （正确性/可靠性/可维护性均 2/2），唯一扣分点是没有一份在干净/隔离环境下真实跑出、并随
+  分支落盘到本仓库的 verification 证据日志（"没有证据 = 没有完成"）。
+- 本轮在全新 worktree（从 `origin/main` 重新 `git fetch` + `checkout -b`，独立 docker 端口
+  pg:58492/redis:58493/minio:58495/web:58494，`corepack pnpm@9.0.0 install`，非裸
+  `pnpm install`）里，重新执行了 feature_list.json 声明的 F02 全部三条 verification 命令：
+  `docker compose up -d` → `pnpm --filter @repo/data run migrate` → `pnpm --filter @repo/web
+  exec playwright test e2e/credits-002-purchase-credits.spec.ts`，最终 **8/8 passed，退出码
+  0**。完整输出已落盘 `evidence/F02.verify.log`（含日期/分支/HEAD/端口头信息）。
+- 本轮只提交证据 + progress.md/session-handoff.md 文档更新，**未**触碰
+  `feature_list.json`（status/owner/evidence 字段）、**未**执行 `pnpm harness claim`
+  或 `pnpm harness verify`、**未**合并任何 PR——按约定这些操作留给 coordinator。

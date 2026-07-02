@@ -61,3 +61,35 @@
     `fulfillCreditPurchase`/`buy-credits-dialog.tsx`。
   - 不要动：`packages/data/migrations/017_payment_orders.sql`、`016_credits.sql`（F05/F01
     的既有表结构，本次未新增迁移）。
+
+### 2026-07-02（evidence/p14-f02-buy-credits，独立复验）
+- 背景：PR #191（`worker/wrk-payment-1-p14-f02-buy-credits`）已合并入 main。独立
+  feature-evaluator 复审代码给出 "Revise"（12/16）——不是代码问题（正确性/可靠性/可维护性
+  均 2/2 满分，含服务端 teamId 绑定安全修复），而是 `phases/phase-p14-credits-billing/
+  feature_list.json` 中 F02 的 `verification` 命令从未在一次干净会话里被完整跑出证据并落盘
+  到本目录当前分支（此前 progress.md/session-handoff.md 记录的证据文件是在原 worker 分支/
+  会话中产生，未随 PR 一起在独立可复现环境下重新核验）。本轮任务：在全新 worktree、隔离
+  docker 端口、从 `origin/main` 全新签出的分支上，重新、真实地跑一遍 feature_list.json 声明
+  的 F02 verification 命令，落盘证据。
+- 已完成：
+  - `git fetch origin && git checkout -b evidence/p14-f02-buy-credits origin/main`（HEAD f04a15f）。
+  - `bash scripts/init-worktree-env.sh` 分配隔离端口（pg:58492 redis:58493 minio:58495
+    web:58494，project name `evidence-p14-f02-buy-credits`）。
+  - `docker compose -f infra/docker-compose.yml up -d` → postgres/redis/minio healthy。
+  - `corepack pnpm@9.0.0 install`（未用裸 `pnpm install`，避免降级 lockfile 影响其它并行
+    worktree）。
+  - `pnpm --filter @repo/data run migrate` → 全部迁移成功应用（含 016_credits.sql /
+    017_payment_orders.sql）。
+  - `pnpm --filter @repo/web exec playwright test e2e/credits-002-purchase-credits.spec.ts`
+    —— 首次串行跑遇到 1 个偶发超时（测试 4「取消/关闭弹窗」，冷启动/首次编译预热阶段的
+    时序 flake，见 evidence 文件备注）；单独重跑该用例通过，随后完整重跑两次均 **8/8
+    passed，退出码 0**，判定原失败非真实回归。
+- 已记录证据：`phases/phase-p14-credits-billing/sprints/sprint-04/evidence/F02.verify.log`
+  （新落盘，本轮独立复验的完整通过日志，含日期/分支/HEAD/隔离端口头信息，格式对齐
+  `phases/phase-p10-knowledge-base/sprints/sprint-03/evidence/F03.verify.log`）。
+- 提交记录：本轮仅提交文档/证据（`F02.verify.log` + 本 progress.md + session-handoff.md
+  更新），不改应用代码，不改 `feature_list.json`，PR 分支 `evidence/p14-f02-buy-credits`。
+- 已知风险或未解决问题：无新增。F04 仍 blocked/owner null，未在本轮范围内处理。
+- 下一步最佳动作：coordinator 核对本轮 `F02.verify.log` 后，按正常流程跑
+  `pnpm harness claim` + `pnpm harness verify --sprint p14/04` 把 F02 转 passing（本 agent
+  未自行执行 claim/verify，也未手改 feature_list.json 的 status/owner/evidence 字段）。
