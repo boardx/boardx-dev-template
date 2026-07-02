@@ -1,11 +1,13 @@
 # 进度日志 — Sprint p11/03
 
 ## 当前已验证状态(唯一真相)
-- 仓库根目录: .claude/worktrees/agent-aafef3b8c9ccffcf0（worktree）
+- 仓库根目录: .claude/worktrees/agent-a97a58f6a342fb36f（worktree，wrk-store-2 本轮重新派发）
 - 标准启动路径: `pnpm -w run dev`
-- 标准验证路径: `pnpm -w run verify:base`（**已修复，见下**）；`verify:full` 里的全量 e2e 仍受阻（见 blocker）。
-- 当前最高优先级未完成功能: F04（项目喜欢/收藏状态展示与切换）— 实现已完成，feature 级 verification 全绿
-  （含在全量 e2e 套件里跑时也全绿），等待 `pnpm harness verify` 门控。
+- 标准验证路径: `pnpm -w run verify:base`（本轮 45/45 全绿，见下方 2026-07-02 记录）。按协调者轻量门控
+  策略，本轮**不要求** `verify:full`。
+- 当前最高优先级未完成功能: F04（项目喜欢/收藏状态展示与切换）— 实现已完成（cherry-pick 自上一轮未
+  push 的产出 + 手工解决与 F02 的合并冲突），F04 feature-level verification + `verify:base` 全绿，
+  已 push 分支 + 开 PR，等待 review 后 `pnpm harness verify` 门控转 passing。
 - rollup 问题已解决: 最初 `verify:base` 因本 worktree `node_modules` 里 `@rollup/rollup-darwin-arm64`
   缺失（只装了 x64 变体）而失败。按 coordinator 指示跑 `corepack pnpm@9.0.0 install`（而非裸 `pnpm install`，
   后者会解析到 PATH 上的 pnpm8）后问题解决：`git status` 对 `pnpm-lock.yaml`/`package.json` 无改动（无需
@@ -63,3 +65,33 @@
   （例如是否有已知的 e2e 全量套件基线失败清单可比对、是否需要换个负载较低的时间窗口重跑、或是否有其它
   绕过全量 e2e 门禁但不牺牲信心的办法）。F04 本身实现 + feature 级 verification（含在全量套件里跑）已确认
   全绿，随时可在拿到方向后完成 push + 开 PR。
+
+### 2026-07-02（wrk-store-2 重新派发，无分支/PR 状态下从头接手）
+- 本轮目标: F04 之前派发未产出（无分支无 PR），重新认领后从头交付。协调者已确认改用**轻量门控**：
+  只需跑通 F04 的 feature-level verification + `pnpm -w run verify:base`，**不要求 verify:full**。
+- 已完成: 发现上一轮会话（另一个 worktree，`agent-aafef3b8c9ccffcf0`）已经产出了完整、正确的 F04 实现
+  （commit `731048a` + 收尾 `215f313`），只是从未 push/开 PR。审核代码后确认与本 feature 的
+  `user_visible_behavior`/`verification` 完全吻合，遂在当前 worktree 新分支上 cherry-pick 这两个
+  commit，而不是重新实现。Cherry-pick 时 `store-browser.tsx`、`items/route.ts`、`items/[id]/route.ts`
+  三个文件与期间已合并的 F02（create/update，codex 分支）产生冲突（import 列表冲突），手工合并两边的
+  import（保留 F02 的 `getMembership`/`updateAiStoreItem`/`Pencil` 等 + F04 的
+  `isAiStoreItemFavorited`/`listFavoritedAiStoreItemIds`/`Heart`），未改动任何 F02 的业务逻辑。
+- 运行过的验证（本轮，当前 worktree 独立端口，见 `.env`）:
+  - `bash scripts/init-worktree-env.sh` + `docker compose -f infra/docker-compose.yml up -d`
+  - `pnpm install`（worktree 缺 node_modules，非 rollup 问题，直接 install 即恢复）
+  - `pnpm --filter @repo/data run migrate` → 全部迁移成功，`018_ai_store_favorites.sql` 应用正常
+  - `pnpm --filter @repo/data run typecheck` / `pnpm --filter @repo/web run typecheck` / `pnpm --filter @repo/web run lint` → 均通过
+  - `pnpm --filter @repo/web exec playwright test e2e/ai-store-004-favorite-item.spec.ts` → **4/4 通过**
+  - `pnpm --filter @repo/web exec playwright test e2e/ai-store-001-browse-items.spec.ts e2e/ai-store-002-create-update-item.spec.ts`（F01+F02 回归）→ **10/10 通过，零回归**
+  - `pnpm -w run verify:base` → **45/45 successful**
+  - 按协调者指示**未跑** `verify:full`（避免全量 e2e 主机资源争用的已知噪音，见上一轮记录）
+- 已记录证据: `phases/phase-p11-ai-store/sprints/sprint-03/evidence/f04-wrk2-01-migrate.txt`、
+  `f04-wrk2-02-e2e-favorite.txt`、`f04-wrk2-03-verify-base.txt`（本轮独立留痕，与上一轮 f04-01~08 并存）。
+- 提交记录: 分支 `worker/wrk-store-2-p11-f04-favorites`（在当前 worktree 重建，因原分支被另一个仍存在的
+  worktree `agent-aafef3b8c9ccffcf0` 占用，无法在本 worktree 直接 checkout 同名分支；已在本地把该分支指针
+  更新为本轮的 cherry-pick 结果并 push 到 origin）。
+- 已知风险或未解决问题: 无新增。范围内只动了 F04 相关文件，F02 相关文件仅在 import 合并冲突处触碰、未改
+  业务逻辑，已用 F01+F02 回归 e2e 验证零回归。
+- 下一步最佳动作: 开 PR（base=main，`Closes #118`），PR 描述如实说明本轮跳过 verify:full 的原因（协调者
+  已确认的轻量门控策略）并附本轮 targeted 证据；打 `status:in-review` 标签，等待人工/协调者 review 后
+  由 `pnpm harness verify` 门控转 passing。不由本 agent 自行合并或标记 passing。

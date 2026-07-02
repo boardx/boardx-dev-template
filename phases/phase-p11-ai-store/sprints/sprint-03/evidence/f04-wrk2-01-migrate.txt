@@ -1,0 +1,63 @@
+
+> @repo/data@0.1.0 migrate /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a97a58f6a342fb36f/packages/data
+> sh -c 'set -a; [ -f ../../apps/web/.env.local ] && . ../../apps/web/.env.local; set +a; tsx src/migrate.ts'
+
+→ 应用：001_init.sql
+✓ 完成：001_init.sql
+→ 应用：002_auth.sql
+✓ 完成：002_auth.sql
+→ 应用：003_team.sql
+✓ 完成：003_team.sql
+→ 应用：004_room.sql
+✓ 完成：004_room.sql
+→ 应用：005_canvas.sql
+✓ 完成：005_canvas.sql
+→ 应用：006_profile.sql
+✓ 完成：006_profile.sql
+→ 应用：007_board.sql
+✓ 完成：007_board.sql
+→ 应用：008_board_visits.sql
+✓ 完成：008_board_visits.sql
+→ 应用：009_board_favorites.sql
+✓ 完成：009_board_favorites.sql
+→ 应用：010_room_chat.sql
+✓ 完成：010_room_chat.sql
+→ 应用：011_board_settings.sql
+✓ 完成：011_board_settings.sql
+→ 应用：012_board_items_board_id.sql
+✓ 完成：012_board_items_board_id.sql
+→ 应用：013_board_items_color.sql
+✓ 完成：013_board_items_color.sql
+→ 应用：014_feedback.sql
+✓ 完成：014_feedback.sql
+→ 应用：014_room_chat_messages.sql
+✓ 完成：014_room_chat_messages.sql
+→ 应用：015_team_general.sql
+✓ 完成：015_team_general.sql
+→ 应用：016_admin_role.sql
+✓ 完成：016_admin_role.sql
+→ 应用：016_ai_store.sql
+✓ 完成：016_ai_store.sql
+→ 应用：016_ava_chat.sql
+✓ 完成：016_ava_chat.sql
+→ 应用：016_credits.sql
+✓ 完成：016_credits.sql
+→ 应用：016_kb_files.sql
+✓ 完成：016_kb_files.sql
+→ 应用：016_survey.sql
+✓ 完成：016_survey.sql
+→ 应用：017_ai_store_item_config.sql
+✓ 完成：017_ai_store_item_config.sql
+→ 应用：017_payment_orders.sql
+✓ 完成：017_payment_orders.sql
+→ 应用：017_studio_artifacts.sql
+✓ 完成：017_studio_artifacts.sql
+→ 应用：017_survey_templates.sql
+✓ 完成：017_survey_templates.sql
+→ 应用：018_ai_store_favorites.sql
+✓ 完成：018_ai_store_favorites.sql
+→ 应用：018_ava_message_attachments.sql
+✓ 完成：018_ava_message_attachments.sql
+→ 应用：018_ava_thread_share.sql
+✓ 完成：018_ava_thread_share.sql
+迁移完成。

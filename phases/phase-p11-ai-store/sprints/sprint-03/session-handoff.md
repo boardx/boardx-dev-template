@@ -1,58 +1,51 @@
 # 会话交接 — Sprint p11/03
 
-## 当前已验证
-- F04（项目喜欢/收藏状态展示与切换）：仍是 `in_progress`（未门控为 passing，见下）。
-  feature 级 verification 三条命令均已跑绿：
+## 当前已验证（本轮，wrk-store-2 重新派发，2026-07-02）
+- F04（项目喜欢/收藏状态展示与切换）：仍是 `in_progress`（未门控为 passing，等待协调者/`pnpm harness verify`）。
+- 背景：上一轮派发（另一 worktree `agent-aafef3b8c9ccffcf0`）已完整实现 F04，但因 `verify:full` 全量 e2e
+  遭遇共享主机资源争用（与 F04 无关的 83 个失败）而停在半路，从未 push/开 PR。本轮 wrk-store-2 重新认领后，
+  确认协调者已改为**轻量门控**（只需 F04 feature-level verification + `verify:base`，不要求 `verify:full`），
+  于是把上一轮的产出（commit `731048a` + `215f313`）cherry-pick 到当前 worktree 的新分支，解决与期间已
+  合并的 F02（create/update）的合并冲突，重新走完整验证。
+- 本轮 feature 级 verification（feature_list.json 里 F04 的三条命令）：
   - `docker compose -f infra/docker-compose.yml up -d`
   - `pnpm --filter @repo/data run migrate`
-  - `pnpm --filter @repo/web exec playwright test e2e/ai-store-004-favorite-item.spec.ts`（4/4 通过）
-  另外跑了 F01 回归（`ai-store-001-browse-items.spec.ts`，9/9 通过，无回归）与
-  `@repo/data`/`@repo/web` 的 typecheck + web lint（均通过）。
-  之后按 coordinator 指示修复 rollup 环境问题（见下）后，`pnpm -w run verify:base` 45/45 全绿，
-  `pnpm --filter @repo/web run build` 生产构建成功；`verify:full` 全量 e2e（300+ 用例）里
-  ai-store 的 13 个用例（F01 9 个 + F04 4 个）全部通过，无回归。
+  - `pnpm --filter @repo/web exec playwright test e2e/ai-store-004-favorite-item.spec.ts` → **4/4 通过**
+- 额外跑的回归：`ai-store-001-browse-items.spec.ts` + `ai-store-002-create-update-item.spec.ts`（F01+F02）
+  → **10/10 通过，零回归**。
+- `pnpm --filter @repo/data run typecheck`、`pnpm --filter @repo/web run typecheck`、
+  `pnpm --filter @repo/web run lint` → 均通过。
+- `pnpm -w run verify:base` → **45/45 successful**（协调者确认本轮不要求 `verify:full`）。
 
-## 本轮改动
-- `packages/data/migrations/018_ai_store_favorites.sql`（新表 `ai_store_favorites`）
-- `packages/data/src/aiStore.ts`（+`isAiStoreItemFavorited`/`listFavoritedAiStoreItemIds`/`toggleAiStoreFavorite`）
-- `apps/web/app/api/ai-store/items/[id]/favorite/route.ts`（新，POST 切换）
-- `apps/web/app/api/ai-store/items/route.ts`、`.../[id]/route.ts`（GET 附带 `liked`）
-- `apps/web/app/(app)/ai-store/store-browser.tsx`（卡片+详情弹窗心形按钮，乐观更新+回滚）
-- `apps/web/e2e/ai-store-004-favorite-item.spec.ts`（新）
-- 未改动 F02（create/update）相关文件；`packages/data/src/aiStore.ts` 只在文件末尾追加，未碰 F01 已有函数。
+## 本轮改动（相对 main / origin HEAD）
+- `packages/data/migrations/018_ai_store_favorites.sql`（新表 `ai_store_favorites`：user_id+item_id 复合主键，同构于 `board_favorites`）
+- `packages/data/src/aiStore.ts`（+`isAiStoreItemFavorited`/`listFavoritedAiStoreItemIds`/`toggleAiStoreFavorite`，只追加不改已有函数）
+- `apps/web/app/api/ai-store/items/[id]/favorite/route.ts`（新，POST 切换：未登录 401，不可见/不存在 404）
+- `apps/web/app/api/ai-store/items/route.ts`、`.../[id]/route.ts`（GET 响应附带 `liked` 字段；与 F02 的
+  `getMembership`/`createAiStoreItem`/`updateAiStoreItem`/`owner=me` 分支共存，import 合并冲突已手工解决，
+  未改 F02 业务逻辑）
+- `apps/web/app/(app)/ai-store/store-browser.tsx`（卡片+详情弹窗心形按钮，乐观更新+失败回滚，二者状态互相
+  同步；与 F02 的 `Pencil` 编辑入口共存）
+- `apps/web/e2e/ai-store-004-favorite-item.spec.ts`（新，4 个用例）
+- `phases/phase-p11-ai-store/sprints/sprint-03/evidence/f04-wrk2-*.txt`（本轮独立证据）
 
-## 仍损坏或未验证
-- **rollup 问题已解决**：最初 `pnpm -w run verify:base` 因本 worktree `node_modules` 里
-  `@rollup/rollup-darwin-arm64` 缺失（只装了 x64 变体，是裸 `pnpm install` 解析到 PATH 上 pnpm8 导致的
-  已知问题）而失败。coordinator 指示跑 `corepack pnpm@9.0.0 install`（不是裸 `pnpm install`）后修复，
-  `git status` 对 `pnpm-lock.yaml`/`package.json` 均无 diff（无需 revert），重跑 `verify:base` → 45/45，
-  `@repo/web` 生产 build 也成功。
-- **新发现的、和 F04 无关的 blocker**：`pnpm -w run verify:full` 第 3 步的全量 Playwright e2e（300+ 用例，
-  串行跑了 27 分钟）里，219 passed / 83 failed。失败**全部**分布在其它功能域（team/room 管理、board 权限、
-  canvas、widgets、collab、survey、kb 等），ai-store 的 13 个用例（F01 的 9 个 + F04 的 4 个）**全部通过**，
-  零回归。日志里有 42 处 `Connection terminated unexpectedly` / `database system is in recovery mode`，
-  指向本机长时间高负载下 postgres 连接不稳定（同机还有其它 worktree 在跑各自的 docker 栈），符合共享主机
-  资源争用的特征，不像是某个具体 feature 的代码 bug。pre-push hook 据此中止了 push。
-- 过程中还发现两个纯环境层小问题（未改代码）：`verify-full.sh` 自己起的 docker compose（project name
-  `infra`）会和我手动起的 `worktree-agent-aafef3b8c9ccffcf0-*` 容器抢 61173/61174 端口（跑 verify:full 前
-  要先 `docker compose -f infra/docker-compose.yml down` 清掉手动起的那套）；`verify-full.sh` 没有导出
-  `MINIO_PORT`/`MINIO_CONSOLE_PORT`，默认 9090/9091 会跟同机其它 worktree 的 minio 撞（本轮用临时
-  `env MINIO_PORT=... MINIO_CONSOLE_PORT=...` 绕过，未改脚本）。
-- 按 coordinator 指示没有对 pre-push hook 用 `--no-verify`；push 尚未成功，PR 尚未开。
+## 仍未做 / 明确排除
+- 未跑 `verify:full`（协调者已确认的轻量门控范围，理由：上一轮已记录全量 e2e 在共享主机上有 83 个与
+  F04 无关的失败，属主机资源争用噪音，非回归）。
+- 未碰任何 F02（create/update，codex 分支）范围内的业务文件；仅在两个 route.ts 的 import 语句处合并冲突。
+- 未手动改 `feature_list.json`/`active-features.json` 状态；未自行合并 PR。
 
 ## 下一步最佳动作
-- 等 coordinator 对「全量 e2e 因共享主机资源争用零星失败、但与 F04 无关」这一新情况给方向（例如是否有
-  已知基线失败清单可比对确认这些失败是既存的、是否换个负载更低的时间段重跑会更干净、或是否有其它不牺牲
-  信心的绕过方式）。F04 本身实现完整、feature 级验证（含在全量套件里跑）已确认全绿，方向明确后可以立刻
-  完成 push + 开 PR（`Closes #118`）。
-- 下一轮不要重新触碰 F02（create/update，codex 在做）相关文件；`packages/data/src/aiStore.ts` 里
-  F02 需要的函数（`createAiStoreItem`/`updateAiStoreItem`/`icon` 字段等）在我这个 worktree 的分支基线里
-  还不存在，是在其他分支上，合并时注意可能的合并冲突（我只在文件末尾追加了 favorite 相关函数）。
+- push 分支 `worker/wrk-store-2-p11-f04-favorites` 到 origin，开 PR（base=main，正文含 `Closes #118`，
+  如实说明跳过 `verify:full` 的原因 + 本轮 targeted 证据路径）。
+- `gh issue edit 118 --add-label status:in-review --remove-label status:in-progress`。
+- 等待人工/协调者 review，由 `pnpm harness verify --sprint p11/03` 门控转 passing；本 agent 不自行合并、
+  不自行标 passing。
 
 ## 命令
-- 启动:`pnpm -w run dev`
-- 验证:`pnpm harness verify --sprint p11/03`
-- 调试（本 worktree 专用端口，见 `.env` / `apps/web/.env.local`）:
-  - `docker compose --env-file .env -f infra/docker-compose.yml up -d`
-  - `DATABASE_URL=postgresql://boardx:boardx@localhost:61173/boardx pnpm --filter @repo/data run migrate`
-  - `E2E_PORT=61175 DATABASE_URL=postgresql://boardx:boardx@localhost:61173/boardx pnpm --filter @repo/web exec playwright test e2e/ai-store-004-favorite-item.spec.ts`
+- 启动：`pnpm -w run dev`
+- 验证：`pnpm harness verify --sprint p11/03`
+- 本地调试（当前 worktree 独立端口，见 `.env` / `apps/web/.env.local`，由 `scripts/init-worktree-env.sh` 生成）：
+  - `docker compose -f infra/docker-compose.yml up -d`
+  - `pnpm --filter @repo/data run migrate`
+  - `pnpm --filter @repo/web exec playwright test e2e/ai-store-004-favorite-item.spec.ts`
