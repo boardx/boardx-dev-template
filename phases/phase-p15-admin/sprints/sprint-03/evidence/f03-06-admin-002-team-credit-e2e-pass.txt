@@ -1,0 +1,62 @@
+=== admin-002-manage-teams.spec.ts — Real E2E Evidence (PR #177 review gap) ===
+Date (UTC): 2026-07-02T15:01:26Z
+Spec: e2e/admin-002-manage-teams.spec.ts
+Branch: codex/issue-173-admin-credit-security-isolated
+Commit: d0b42c24dc22e2481d861f610480b3b8ec1158ac
+Infra: Docker compose project tmp-admin-teamcredit-verify (isolated ports)
+  postgres : localhost:63748 (pgvector/pgvector:pg16, healthy)
+  redis    : localhost:63749 (redis:7, healthy)
+  minio    : localhost:63751 (minio:RELEASE.2024-08-17T01-24-54Z, healthy)
+E2E server: next dev -p 63750 (reuseExistingServer)
+DATABASE_URL: postgresql://boardx:boardx@localhost:63748/boardx
+Command: corepack pnpm --filter @repo/web exec playwright test e2e/admin-002-manage-teams.spec.ts --reporter=list
+
+=== Migration 019 applied (fresh DB, clean run) ===
+019_credit_transaction_idempotency.sql:
+  - Backfill: dedup duplicate (wallet_id, label) rows, reverse excess balance
+  - Creates UNIQUE INDEX credit_transactions_wallet_idem_label_uq
+    ON credit_transactions (wallet_id, label) WHERE label LIKE '%idem:%'
+  Output from pnpm @repo/data migrate:
+    → 应用：019_credit_transaction_idempotency.sql
+    ✓ 完成：019_credit_transaction_idempotency.sql
+
+=== Playwright test run output ===
+
+Running 9 tests using 1 worker
+
+  ✓  1 [chromium] › admin-002-manage-teams.spec.ts:26:5 › 未登录访问 /admin/teams 跳转到 /login (12.1s)
+  ✓  2 [chromium] › admin-002-manage-teams.spec.ts:33:5 › 已登录但非 SysAdmin 访问 /admin/teams 看到无权限 (2.4s)
+  ✓  3 [chromium] › admin-002-manage-teams.spec.ts:41:5 › 未登录调用团队列表 API 返回 401，非 SysAdmin 返回 403 (484ms)
+  ✓  4 [chromium] › admin-002-manage-teams.spec.ts:53:5 › SysAdmin 看到团队列表（名称/类型/成员数/Credit）并能搜索 (11.0s)
+  ✓  5 [chromium] › admin-002-manage-teams.spec.ts:77:5 › SysAdmin 编辑团队类型，立即反映 (4.5s)
+  ✓  6 [chromium] › admin-002-manage-teams.spec.ts:101:5 › SysAdmin 为团队手动增加 Credit，余额立即反映 (4.2s)
+  ✓  7 [chromium] › admin-002-manage-teams.spec.ts:132:5 › 手动上分带幂等 key：重复提交（同 key）不会重复入账 (975ms)
+  ✓  8 [chromium] › admin-002-manage-teams.spec.ts:168:5 › 团队手动上分同一 Idempotency-Key 并发请求不会双重入账 (1.3s)
+  ✓  9 [chromium] › admin-002-manage-teams.spec.ts:195:5 › 手动上分 note 超长会被服务端裁剪到 200 字符 (754ms)
+
+  Slow test file: [chromium] › admin-002-manage-teams.spec.ts (37.8s)
+  Consider splitting slow test files to speed up parallel execution
+  9 passed (42.8s)
+
+Exit code: 0
+
+=== Key security assertions confirmed ===
+
+Test 6 (line 101): SysAdmin 为团队手动增加 Credit，余额立即反映
+  ASSERTION: amount 100,001 → POST /api/admin/teams/{id}/credit HTTP 400
+    (100,000 per-grant cap enforced server-side on team route — mirrors F02 user route)
+  ASSERTION: amount -5 → HTTP 400
+  ASSERTION: UI shows 1,500 after granting 1500
+
+Test 8 (line 168): 团队手动上分同一 Idempotency-Key 并发请求不会双重入账
+  METHOD: 8 concurrent Promise.all requests, same idempotency-key header, amount 777
+  ASSERTION: all 8 responses HTTP 200
+  ASSERTION: all 8 responses wallet.balance === 777 (not 777*8=6216)
+    (DB-level INSERT...ON CONFLICT DO NOTHING closes check-then-act race)
+  ASSERTION: at least one response body idempotent === true
+
+=== Summary ===
+9/9 tests passed, exit code 0.
+This file represents the first real command-output evidence for this spec.
+The prior prose-only file (f03-05-team-credit-security-followup.txt) contained only a
+"23 passed" declaration with no actual test runner output. This file closes that gap.
