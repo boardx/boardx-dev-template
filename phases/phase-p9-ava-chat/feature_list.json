@@ -230,9 +230,9 @@
       "title": "消息结果操作（复制/反馈/重新生成/发送到Board/发送邮件）",
       "user_visible_behavior": "回复消息下方按消息类型展示可用操作：复制（写剪贴板并提示「文本已被复制」，代码块只复制代码块）、反馈（提交并记录状态）、重新生成（基于上下文重请求，展示生成中，不丢原问题）、发送到当前 Board、发送邮件。剪贴板不可用提示手动复制；各操作失败保留原消息。",
       "design_ref": "prototype:<!-- messages --> / <!-- text message -->（消息卡片下方操作条）；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "05",
+      "owner": "wrk-ava-1",
       "capability": "CAP-AI",
       "depends_on": [
         "F03"
