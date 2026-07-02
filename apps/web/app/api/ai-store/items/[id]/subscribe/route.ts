@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { CURRENT_TEAM_COOKIE } from "@repo/auth";
 import {
+  canAccessAiStoreItem,
   canSubscribeAiStoreItem,
   getAiStoreItem,
   getAiStoreSubscription,
   getMembership,
-  isAiStoreItemVisible,
   subscribeAiStoreItem,
   unsubscribeAiStoreItem,
 } from "@repo/data";
@@ -31,7 +31,10 @@ async function loadContext(idParam: string) {
   const teamIdCookie = cookies().get(CURRENT_TEAM_COOKIE)?.value;
   const teamId = teamIdCookie ? Number(teamIdCookie) : null;
 
-  if (!isAiStoreItemVisible(item, user.id, teamId)) {
+  // 与详情路由（GET /api/ai-store/items/:id）用同一套可见性口径：canAccessAiStoreItem 在
+  // isAiStoreItemVisible 之外还认 personal-scope 的已授权 grantee（F05 分享管理）。否则
+  // 被分享授权查看某 personal 项目的用户会在详情页看到 Subscribe 按钮，点了却 404。
+  if (!(await canAccessAiStoreItem(item, user.id, teamId))) {
     return { error: NextResponse.json({ error: "未找到" }, { status: 404 }) } as const;
   }
 

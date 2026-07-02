@@ -39,3 +39,34 @@
 - 下一步最佳动作:
   - 协调者 review PR 后跑 `pnpm harness verify --sprint p11/04` 门控转 F03 passing。
   - 若后续要做「模板 Use = 真正建板」，需要先补一个不挂 room 的「新建空白/模板板」入口（可能是新 feature，不在 F03 范围）。
+
+### 2026-07-02（review 修复轮，wrk-store-1）
+- 本轮目标: 修复 PR #214 双评审提出的两个中危问题。
+- 已完成:
+  1. **template「Use」按钮误导用户**：`apps/web/app/(app)/boards/page.tsx` 新增读取 `?template=` query 参数的
+     `useEffect`，命中时展示 `data-testid="template-use-notice"` 提示条「按模板建板功能开发中，暂未上线——已为你
+     打开最近白板列表。」并用 `history.replaceState` 清理 URL query，不留脏参数。
+  2. **订阅端点可见性口径不一致**：`apps/web/app/api/ai-store/items/[id]/subscribe/route.ts` 的 `loadContext`
+     把校验函数从 `isAiStoreItemVisible` 换成 `canAccessAiStoreItem`（和详情路由 `GET /api/ai-store/items/:id`
+     用同一套口径），personal-scope 项目的已授权 grantee（F05 分享管理）现在可以正常订阅，不再看到按钮却 404。
+  - 顺带（同一轮里发现并修复）：`packages/data/src/aiStoreSubscriptions.ts` 的 `unsubscribeAiStoreItem` 原来用
+    `COALESCE(team_id,0) = COALESCE($3,0)` 严格相等匹配，和 `getAiStoreSubscription` 的宽匹配
+    `(team_id IS NULL OR team_id = $3)` 不对称——用户在无团队上下文订阅（team_id=NULL 落库）后切换进团队，
+    GET 订阅状态显示 true，但 DELETE 严格匹配找不到行会误报 404。改为先用 `getAiStoreSubscription` 查出真实
+    命中的那一行 id，再按 id 删除，两边口径统一。
+  - 补充 4 个新 e2e 用例覆盖以上修复：grantee 订阅回归、template Use 提示回归、跨团队取消订阅回归
+    （见 `ai-store-003-subscribe-use-item.spec.ts`）。
+- 运行过的验证:
+  - `pnpm --filter @repo/web exec playwright test e2e/ai-store-003-subscribe-use-item.spec.ts` → 5/5 passed
+  - 回归：F01/F02/F04/F05 全部 e2e（20 tests）→ 全部 passed
+  - `pnpm -w run verify:base` → 45/45 successful，exit 0
+- 已记录证据:
+  - `F03-review-fix.verify.txt`（review 修复后 F03 spec 全绿，5 passed）
+  - `regression-review-fix.txt`（F01/F02/F04/F05 回归，20 passed）
+  - `verify-base-review-fix.txt`（verify:base 全量输出）
+- 已知风险或未解决问题（低危，协调者已认可本轮不修）:
+  - 团队订阅（scope=team）目前订阅记录只对发起订阅的那个 admin 本人可见/可取消，团队内其他成员看不到"团队已订阅"状态，
+    也不能代表团队取消——这是数据模型的已知限制，不是本轮范围。
+  - 路由的 500 分支用 `String(err)` 直接回传错误详情，是仓库既有模式（其他 AI Store 路由也这样写），不在本轮改动范围。
+- 下一步最佳动作:
+  - 协调者复核两个中危修复 + 顺带修的 unsubscribe 不对称 bug，确认后跑 `pnpm harness verify --sprint p11/04`。

@@ -46,18 +46,31 @@ export async function subscribeAiStoreItem(params: {
   return existing[0]!;
 }
 
-/** 取消订阅：个人或团队订阅都按 (item, user, team) 精确匹配删除。返回是否真的删了一行。 */
+/**
+ * 取消订阅：与 getAiStoreSubscription 用同一套匹配口径 —— 先按 (item, user) +
+ * "team_id IS NULL OR team_id = 当前 teamId" 的宽匹配查出命中的那一行，再按其真实 id 删除。
+ *
+ * 不能像早期实现那样直接用 COALESCE(team_id,0) = COALESCE($3,0) 做严格相等匹配：那样会与
+ * getAiStoreSubscription 的判定口径不对称——用户在 teamId cookie 为 null 时个人订阅
+ * （team_id=NULL 落库），之后切换进某个团队（cookie 变成非 null），GET 侧的 OR 匹配仍会命中
+ * 该 NULL 行、报 subscribed:true，但 DELETE 若按严格相等去找 team_id=当前团队 id 的行则
+ * 找不到、误报 404（"未找到订阅"），用户被卡住（UI 显示已订阅、点取消却失败）。
+ */
 export async function unsubscribeAiStoreItem(params: {
   itemId: number;
   subscriberUserId: number;
   teamId?: number | null;
 }): Promise<boolean> {
-  const teamId = params.teamId ?? null;
+  const existing = await getAiStoreSubscription({
+    itemId: params.itemId,
+    subscriberUserId: params.subscriberUserId,
+    teamId: params.teamId ?? null,
+  });
+  if (!existing) return false;
+
   const rows = await query<{ id: number }>(
-    `DELETE FROM ai_store_subscriptions
-     WHERE item_id = $1 AND subscriber_user_id = $2 AND COALESCE(team_id, 0) = COALESCE($3, 0)
-     RETURNING id`,
-    [params.itemId, params.subscriberUserId, teamId]
+    `DELETE FROM ai_store_subscriptions WHERE id = $1 RETURNING id`,
+    [existing.id]
   );
   return rows.length > 0;
 }
