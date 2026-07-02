@@ -142,9 +142,9 @@
       "title": "AI 设置：模型/Agent/工具选择（发送前生效）",
       "user_visible_behavior": "聊天输入区/头部展示当前模型/Agent/工具；打开模型选择器列出可用模型并标当前项，选择后更新当前聊天模型；打开 Agent/工具入口选择后写入当前聊天状态并在后续发送生效；团队限制的模型对普通成员不可选；已有消息的线程限制切换 Agent 时展示禁用态；切换团队刷新可用能力。选择失败保留原设置。",
       "design_ref": "prototype:<!-- AVA --> → chat header + composer（模型/Agent/工具入口）；DESIGN.md tokens",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "wrk-codex-ava-5",
       "capability": "CAP-AI",
       "depends_on": [
         "F01"
@@ -155,7 +155,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-ai-settings.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F07.verify.log @ 2026-07-02T03:39:09.194Z",
       "notes": "uc-ava-006。模型选择由本阶段 LiteLLM 网关提供可用模型列表。Agent 选择器的「可选 Agent 数据源」来自 AI Store（p11）：本期先以内置默认 Agent + 空 Agent 列表渲染，p11 落地后接入订阅/团队 Agent（届时补有数据分支 e2e）。依赖 F01。"
     },
     {
@@ -230,9 +230,9 @@
       "title": "消息结果操作（复制/反馈/重新生成/发送到Board/发送邮件）",
       "user_visible_behavior": "回复消息下方按消息类型展示可用操作：复制（写剪贴板并提示「文本已被复制」，代码块只复制代码块）、反馈（提交并记录状态）、重新生成（基于上下文重请求，展示生成中，不丢原问题）、发送到当前 Board、发送邮件。剪贴板不可用提示手动复制；各操作失败保留原消息。",
       "design_ref": "prototype:<!-- messages --> / <!-- text message -->（消息卡片下方操作条）；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "05",
+      "owner": "wrk-ava-1",
       "capability": "CAP-AI",
       "depends_on": [
         "F03"

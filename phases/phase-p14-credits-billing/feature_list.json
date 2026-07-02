@@ -29,7 +29,7 @@
       "title": "购买积分（Buy Credits 弹窗 + 套餐 + 扫码下单）",
       "user_visible_behavior": "在钱包或额度不足提示点购买打开 Buy Credits 弹窗：展示套餐列表选择数量/价格，选支付方式生成订单并进入扫码支付（F05 引擎）；支付成功后余额增加、购买记录出现、弹窗提示成功；取消/超时不改余额；无权限购买团队 Credit 时回退个人范围。",
       "design_ref": "prototype:<!-- buy credits modal -->（套餐列表 + 支付区 + 最近交易记录）；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "04",
       "owner": "wrk-payment-1",
       "capability": "CAP-PAYMENT",
@@ -42,8 +42,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/credits-002-purchase-credits.spec.ts"
       ],
-      "evidence": "",
-      "notes": "【2026-07-02 解锁：F05 支付引擎已 passing，blocked→not_started】uc-credits-002。blocked-on F05 支付引擎（CAP-PAYMENT）。弹窗 UI 与套餐可先做，端到端购买待 F05 就绪。e2e 用 stub 支付回调走通加余额。依赖 F01/F05。"
+      "evidence": "evidence/F02.verify.log @ 2026-07-02T09:07:32.640Z",
+      "notes": "uc-credits-002。【2026-07-02 F05 支付引擎已 passing，blocked 解除】blocked-on F05 支付引擎（CAP-PAYMENT）。弹窗 UI 与套餐可先做，端到端购买待 F05 就绪。e2e 用 stub 支付回调走通加余额。依赖 F01/F05。已通过 verify，落 passing。"
     },
     {
       "id": "F03",
@@ -65,7 +65,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/credits-003-view-credit-records.spec.ts"
       ],
-      "evidence": "evidence/F03.verify.log @ 2026-07-02T04:34:51.679Z",
+      "evidence": "evidence/f03-e2e-pass.txt (7/7 playwright), evidence/f03-data-test.txt, evidence/f03-data-typecheck.txt, evidence/f03-web-typecheck.txt, evidence/f03-web-lint.txt, evidence/f03-notes.md @ 2026-07-02T04:44:26+08:00",
       "notes": "uc-credits-003。读 credit_transactions，按 scope+权限过滤。依赖 F01。"
     },
     {

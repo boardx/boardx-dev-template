@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, Search, FileText, Download, Loader2, X, RefreshCw } from "lucide-react";
+import { Upload, Search, FileText, Download, Loader2, X, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -114,6 +114,10 @@ export default function KnowledgeBasePage() {
   const [downloadError, setDownloadError] = useState("");
   const [downloadMessage, setDownloadMessage] = useState("");
   const [downloadingId, setDownloadingId] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteMessage, setDeleteMessage] = useState("");
+  const [deletingId, setDeletingId] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState("");
   const [page, setPage] = useState({ limit: PAGE_SIZE, offset: 0, total: 0, hasMore: false });
   const [q, setQ] = useState("");
   const [queue, setQueue] = useState<QueueItem[]>([]);
@@ -272,6 +276,42 @@ export default function KnowledgeBasePage() {
     }
   }
 
+  function requestDelete(fileId: string) {
+    setDeleteError("");
+    setDeleteMessage("");
+    setConfirmDeleteId(fileId);
+  }
+
+  function cancelDelete() {
+    setConfirmDeleteId("");
+  }
+
+  async function confirmDelete(file: KbFile) {
+    setDeleteError("");
+    setDeleteMessage("");
+    setDeletingId(file.id);
+    setConfirmDeleteId("");
+
+    try {
+      const res = await fetch(`/api/kb/files/${encodeURIComponent(file.id)}`, { method: "DELETE" });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        // 删除失败：保留该文件行，展示错误提示（不从列表移除）。
+        setDeleteError(body.error ?? "删除失败，请重试");
+        return;
+      }
+
+      // 删除成功：立即从当前列表移除该行，展示成功提示。
+      setFiles((current) => current.filter((f) => f.id !== file.id));
+      setPage((p) => ({ ...p, total: Math.max(0, p.total - 1) }));
+      setDeleteMessage("File deleted");
+    } catch {
+      setDeleteError("删除失败，请重试");
+    } finally {
+      setDeletingId("");
+    }
+  }
+
   return (
     <div
       className="mx-auto max-w-content px-9 pb-14 pt-7"
@@ -336,6 +376,18 @@ export default function KnowledgeBasePage() {
       {downloadMessage && (
         <p data-testid="download-message" className="mt-4 text-13 text-success">
           {downloadMessage}
+        </p>
+      )}
+
+      {deleteError && (
+        <p role="alert" data-testid="err-delete" className="mt-4 text-13 text-destructive">
+          {deleteError}
+        </p>
+      )}
+
+      {deleteMessage && (
+        <p data-testid="delete-message" className="mt-4 text-13 text-success">
+          {deleteMessage}
         </p>
       )}
 
@@ -477,22 +529,60 @@ export default function KnowledgeBasePage() {
                     </Badge>
                     <span className="text-11 text-placeholder">{f.scope}</span>
                   </div>
-                  <div className="flex w-9 items-center justify-end text-placeholder">
-                    <Button
-                      data-testid={`download-${f.id}`}
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Download ${f.name}`}
-                      className="h-7 w-7 hover:text-foreground"
-                      disabled={f.status !== "ready" || downloadingId === f.id}
-                      onClick={() => void downloadFile(f)}
-                    >
-                      {downloadingId === f.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Download className="h-4 w-4" />
-                      )}
-                    </Button>
+                  <div className="flex w-auto min-w-18 items-center justify-end gap-1 text-placeholder">
+                    {confirmDeleteId === f.id ? (
+                      <div data-testid={`confirm-delete-${f.id}`} className="flex items-center gap-1.5">
+                        <span className="text-11 text-muted-foreground">Delete?</span>
+                        <Button
+                          data-testid={`confirm-delete-yes-${f.id}`}
+                          variant="destructive"
+                          size="sm"
+                          className="h-7 px-2 text-11"
+                          disabled={deletingId === f.id}
+                          onClick={() => void confirmDelete(f)}
+                        >
+                          {deletingId === f.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Delete"}
+                        </Button>
+                        <Button
+                          data-testid={`confirm-delete-no-${f.id}`}
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-11"
+                          onClick={cancelDelete}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <Button
+                          data-testid={`download-${f.id}`}
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Download ${f.name}`}
+                          className="h-7 w-7 hover:text-foreground"
+                          disabled={f.status !== "ready" || downloadingId === f.id}
+                          onClick={() => void downloadFile(f)}
+                        >
+                          {downloadingId === f.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          data-testid={`delete-${f.id}`}
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Delete ${f.name}`}
+                          className="h-7 w-7 hover:text-destructive"
+                          disabled={deletingId === f.id}
+                          onClick={() => requestDelete(f.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}

@@ -62,6 +62,19 @@ export function buildStudioObjectKey(params: {
   return `studio/${params.roomId}/${params.chatId}/${params.artifactId}/${safeName}`;
 }
 
+// ─── 演示文稿制品对象 key：presentations/{roomId}/{chatId}/{artifactId}/{文件名}（P12 F02）──
+// 独立前缀，与 studio/、kb/ 隔离命名空间。一个制品有 PPTX + PDF 两个 key（见 presentations.ts）。
+
+export function buildPresentationObjectKey(params: {
+  roomId: string | number;
+  chatId: string | number;
+  artifactId: string;
+  fileName: string;
+}): string {
+  const safeName = params.fileName.replace(/[/\\]/g, "_");
+  return `presentations/${params.roomId}/${params.chatId}/${params.artifactId}/${safeName}`;
+}
+
 // ─── 上传校验（纯函数，前后端共用同一份规则，避免规则漂移）────────────────────
 
 export const KB_ALLOWED_EXT = ["pdf", "txt", "md", "doc", "docx", "json", "csv", "xlsx", "xls"];
