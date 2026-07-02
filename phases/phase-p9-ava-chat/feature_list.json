@@ -75,9 +75,9 @@
       "title": "分享聊天：生成/复用/关闭分享链接",
       "user_visible_behavior": "聊天头部「分享」→ 面板提供「通过链接分享」：POST /api/ava/threads/:id/share 生成或复用 shareToken 并复制到剪贴板，提示复制成功；已存在链接则直接展示复制入口；关闭分享使原 /chatShare 链接立即失效（403）。仅线程拥有者/有管理权者可开关分享；私有附件/团队私有上下文不进入分享。",
       "design_ref": "prototype:<!-- share panel --> (Copy link)（AVA 聊天头部分享面板）；DESIGN.md tokens",
-      "status": "not_started",
+      "status": "in_progress",
       "sprint": "02",
-      "owner": null,
+      "owner": "wrk-codex-ava-3",
       "capability": "CAP-DATA",
       "depends_on": [
         "F01"
