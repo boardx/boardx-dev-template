@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Plus, Trash2, ArrowUp, ArrowDown, ChevronLeft, Eye, Pencil } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, ChevronLeft, Eye, Pencil, Save, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 
 type QType = "text" | "single" | "multiple" | "rating";
 
@@ -32,6 +33,17 @@ interface Team {
   name: string;
 }
 
+interface SurveyTemplate {
+  id: number;
+  team_id: number | null;
+  owner_user_id: number | null;
+  builtin: boolean;
+  title: string;
+  description: string;
+  questions: Omit<Question, "id">[];
+  can_delete?: boolean;
+}
+
 const TYPE_LABEL: Record<QType, string> = {
   text: "Text",
   single: "Single choice",
@@ -43,6 +55,11 @@ let qSeq = 0;
 function newQuestion(): Question {
   qSeq += 1;
   return { id: `q_${qSeq}_${Math.random().toString(36).slice(2, 7)}`, title: "", type: "text", required: false, options: [] };
+}
+
+function cloneTemplateQuestions(questions: Omit<Question, "id">[]): Question[] {
+  const next = questions.map((q) => ({ ...newQuestion(), ...q, options: Array.isArray(q.options) ? [...q.options] : [] }));
+  return next.length > 0 ? next : [newQuestion()];
 }
 
 function SurveySkeleton() {
@@ -72,6 +89,13 @@ export default function SurveysPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [created, setCreated] = useState<{ id: number; shareUrl: string } | null>(null);
+  const [templates, setTemplates] = useState<SurveyTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templateMessage, setTemplateMessage] = useState("");
+  const [templateError, setTemplateError] = useState("");
+  const [templateTitle, setTemplateTitle] = useState("");
+  const [templateTeamId, setTemplateTeamId] = useState("");
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -100,10 +124,30 @@ export default function SurveysPage() {
   async function loadTeams() {
     try {
       const res = await fetch("/api/teams");
-      if (res.ok) setTeams(((await res.json()).teams ?? []).map((t: Team) => ({ id: t.id, name: t.name })));
+      if (res.ok) {
+        const nextTeams = ((await res.json()).teams ?? []).map((t: Team) => ({ id: t.id, name: t.name }));
+        setTeams(nextTeams);
+        setTemplateTeamId((current) => current || (nextTeams[0] ? String(nextTeams[0].id) : ""));
+      }
     } catch {
       // 团队列表加载失败不阻塞创建（保留 private 作用域可用）
     }
+  }
+
+  async function loadTemplates() {
+    setTemplatesLoading(true);
+    setTemplateError("");
+    try {
+      const res = await fetch("/api/survey-templates");
+      if (res.ok) {
+        setTemplates((await res.json()).templates ?? []);
+      } else {
+        setTemplateError("加载模板失败，请重试");
+      }
+    } catch {
+      setTemplateError("加载模板失败，请重试");
+    }
+    setTemplatesLoading(false);
   }
 
   function openEditor() {
@@ -111,12 +155,17 @@ export default function SurveysPage() {
     setDescription("");
     setScope("private");
     setTeamId("");
+    setTemplateTeamId("");
+    setTemplateTitle("");
+    setTemplateMessage("");
+    setTemplateError("");
     setQuestions([newQuestion()]);
     setSaveError("");
     setCreated(null);
     setView("edit");
     setMode("editor");
     void loadTeams();
+    void loadTemplates();
   }
 
   function patchQuestion(id: string, patch: Partial<Question>) {
@@ -171,8 +220,66 @@ export default function SurveysPage() {
     }
   }
 
+  function applyBlankTemplate() {
+    setTemplateMessage("Blank template applied");
+    setTemplateError("");
+    setTitle("");
+    setDescription("");
+    setQuestions([newQuestion()]);
+  }
+
+  function applyTemplate(template: SurveyTemplate) {
+    setTemplateMessage(`${template.title} applied`);
+    setTemplateError("");
+    setTitle((current) => current || template.title);
+    setDescription(template.description);
+    setQuestions(cloneTemplateQuestions(template.questions));
+  }
+
+  async function saveTemplate() {
+    setTemplateError("");
+    setTemplateMessage("");
+    setSavingTemplate(true);
+    const res = await fetch("/api/survey-templates", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        title: templateTitle,
+        description,
+        teamId: Number(templateTeamId),
+        questions,
+      }),
+    });
+    setSavingTemplate(false);
+    if (res.status === 201) {
+      const { template } = await res.json();
+      setTemplates((current) => [template, ...current]);
+      setTemplateTitle("");
+      setTemplateMessage("Template saved");
+    } else {
+      const d = await res.json().catch(() => ({}));
+      setTemplateError(d.errors?.title ?? d.errors?.teamId ?? d.errors?.questions ?? d.error ?? "保存模板失败");
+    }
+  }
+
+  async function deleteTemplate(templateId: number) {
+    setTemplateError("");
+    setTemplateMessage("");
+    const res = await fetch(`/api/survey-templates/${templateId}`, { method: "DELETE" });
+    if (res.ok) {
+      setTemplates((current) => current.filter((t) => t.id !== templateId));
+      setTemplateMessage("Template deleted");
+    } else {
+      const d = await res.json().catch(() => ({}));
+      setTemplateError(d.error ?? "删除模板失败");
+    }
+  }
+
   const hasValidQuestion = questions.some((q) => q.title.trim().length > 0);
   const canSave = title.trim().length > 0 && hasValidQuestion && (scope !== "team" || teamId);
+  const builtInTemplates = templates.filter((t) => t.builtin);
+  const teamTemplates = templates.filter((t) => !t.builtin);
+  const canSaveTemplate = templateTitle.trim().length > 0 && templateTeamId && hasValidQuestion;
 
   if (mode === "editor") {
     return (
@@ -282,6 +389,149 @@ export default function SurveysPage() {
 
         {!created && view === "edit" && (
         <div className="mx-auto mt-7 max-w-2xl">
+          <section data-testid="survey-template-manager" className="mb-6 rounded-12 border border-border bg-surface-1 p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background">
+                <FileText className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-14 font-semibold text-foreground">Choose template</p>
+                <p className="mt-0.5 text-12 text-muted-foreground">
+                  Start blank, use a built-in template, or reuse one saved by your team.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <Button
+                type="button"
+                variant="outline"
+                data-testid="template-blank"
+                onClick={applyBlankTemplate}
+                className="h-auto justify-start rounded-lg border-border bg-background p-3 text-left hover:border-border-strong"
+              >
+                <span className="block">
+                  <span className="block text-13 font-semibold text-foreground">Blank</span>
+                  <span className="mt-1 block text-12 font-normal text-muted-foreground">Start with one empty editable question.</span>
+                </span>
+              </Button>
+
+              {templatesLoading ? (
+                <div data-testid="survey-templates-loading" className="rounded-lg border border-border bg-background p-3 text-12 text-muted-foreground">
+                  Loading templates…
+                </div>
+              ) : (
+                builtInTemplates.map((template) => (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    key={template.id}
+                    data-testid={`builtin-template-${template.id}`}
+                    onClick={() => applyTemplate(template)}
+                    className="h-auto justify-start rounded-lg border-border bg-background p-3 text-left hover:border-border-strong"
+                  >
+                    <span className="block">
+                      <span className="block text-13 font-semibold text-foreground">{template.title}</span>
+                      <span className="mt-1 block text-12 font-normal text-muted-foreground">{template.description}</span>
+                    </span>
+                  </Button>
+                ))
+              )}
+            </div>
+
+            <div className="mt-4">
+              <p className="text-12 font-semibold uppercase text-muted-foreground">Team templates</p>
+              {teamTemplates.length === 0 ? (
+                <div
+                  data-testid="survey-team-templates-empty"
+                  className="mt-2 rounded-lg border border-dashed border-border-strong bg-background px-3 py-3 text-12 text-muted-foreground"
+                >
+                  No team templates yet. Save the current survey as a team template to reuse it later.
+                </div>
+              ) : (
+                <div data-testid="survey-team-templates" className="mt-2 flex flex-col gap-2">
+                  {teamTemplates.map((template) => (
+                    <div
+                      key={template.id}
+                      data-testid={`team-template-${template.id}`}
+                      className="flex items-center gap-2 rounded-lg border border-border bg-background p-3"
+                    >
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => applyTemplate(template)}
+                        className="h-auto min-w-0 flex-1 justify-start p-0 text-left hover:bg-transparent"
+                      >
+                        <span className="block min-w-0">
+                          <span className="block truncate text-13 font-semibold text-foreground">{template.title}</span>
+                          <span className="mt-0.5 block truncate text-12 font-normal text-muted-foreground">{template.description || "Team saved template"}</span>
+                        </span>
+                      </Button>
+                      {template.can_delete && (
+                        <Button
+                          data-testid={`delete-template-${template.id}`}
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Delete ${template.title}`}
+                          onClick={() => void deleteTemplate(template.id)}
+                        >
+                          <Trash2 className="h-4 w-4" strokeWidth={1.5} />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_180px_auto]">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="template-title">Template name</Label>
+                <Input
+                  id="template-title"
+                  data-testid="template-title"
+                  placeholder="Reusable team survey"
+                  value={templateTitle}
+                  onChange={(e) => setTemplateTitle(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="template-team">Team</Label>
+                <Select
+                  id="template-team"
+                  data-testid="template-team"
+                  value={templateTeamId}
+                  onChange={(e) => setTemplateTeamId(e.target.value)}
+                >
+                  <option value="">Select team…</option>
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </Select>
+              </div>
+              <Button
+                data-testid="save-template"
+                size="sm"
+                disabled={savingTemplate || !canSaveTemplate}
+                onClick={() => void saveTemplate()}
+                className="self-end gap-1.5"
+              >
+                <Save className="h-4 w-4" strokeWidth={1.5} />
+                {savingTemplate ? "Saving…" : "Save template"}
+              </Button>
+            </div>
+            {templateMessage && (
+              <p data-testid="template-message" className="mt-3 text-12 text-muted-foreground">
+                {templateMessage}
+              </p>
+            )}
+            {templateError && (
+              <p role="alert" data-testid="err-template" className="mt-3 text-12 text-destructive">
+                {templateError}
+              </p>
+            )}
+          </section>
+
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="survey-title">Survey title</Label>
             <Input
@@ -294,13 +544,13 @@ export default function SurveysPage() {
           </div>
           <div className="mt-4 flex flex-col gap-1.5">
             <Label htmlFor="survey-desc">Description</Label>
-            <textarea
+            <Textarea
               id="survey-desc"
               data-testid="survey-desc"
               placeholder="Add a description…"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="min-h-16 w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground transition-colors placeholder:text-placeholder focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+              className="min-h-16 resize-none"
             />
           </div>
           <div className="mt-4 flex flex-col gap-1.5">

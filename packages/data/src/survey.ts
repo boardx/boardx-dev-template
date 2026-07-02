@@ -33,9 +33,23 @@ export interface SurveyWithQuestions extends Survey {
   questions: SurveyQuestion[];
 }
 
+export interface SurveyTemplate {
+  id: number;
+  team_id: number | null;
+  owner_user_id: number | null;
+  builtin: boolean;
+  title: string;
+  description: string;
+  questions: NewQuestionInput[];
+  created_at: string;
+  updated_at: string;
+  can_delete?: boolean;
+}
+
 const SURVEY_COLS =
   "id, team_id, scope, title, description, is_active, owner_user_id, created_at, updated_at";
 const QUESTION_COLS = "id, survey_id, position, title, type, required, options";
+const TEMPLATE_COLS = "id, team_id, owner_user_id, builtin, title, description, questions, created_at, updated_at";
 
 export interface NewQuestionInput {
   title: string;
@@ -140,4 +154,60 @@ export async function countResponses(surveyId: number): Promise<number> {
     [surveyId]
   );
   return Number(rows[0]?.count ?? 0);
+}
+
+/** 用户可见模板：内置模板，或自己所在团队保存的模板。 */
+export async function listVisibleSurveyTemplates(userId: number): Promise<SurveyTemplate[]> {
+  return query<SurveyTemplate>(
+    `SELECT DISTINCT st.${TEMPLATE_COLS.replaceAll(", ", ", st.")},
+            (
+              st.owner_user_id = $1 OR tm.role IN ('owner', 'admin')
+            ) AS can_delete
+     FROM survey_templates st
+     LEFT JOIN team_members tm ON tm.team_id = st.team_id AND tm.user_id = $1
+     WHERE st.builtin = true OR tm.user_id IS NOT NULL
+     ORDER BY st.builtin DESC, st.updated_at DESC, st.id DESC`,
+    [userId]
+  );
+}
+
+export async function createSurveyTemplate(input: {
+  ownerId: number;
+  teamId: number;
+  title: string;
+  description: string;
+  questions: NewQuestionInput[];
+}): Promise<SurveyTemplate> {
+  const rows = await query<SurveyTemplate>(
+    `INSERT INTO survey_templates (team_id, owner_user_id, builtin, title, description, questions)
+     VALUES ($1, $2, false, $3, $4, $5::jsonb)
+     RETURNING ${TEMPLATE_COLS}`,
+    [input.teamId, input.ownerId, input.title, input.description, JSON.stringify(input.questions)]
+  );
+  return rows[0]!;
+}
+
+export async function getSurveyTemplate(templateId: number): Promise<SurveyTemplate | undefined> {
+  const rows = await query<SurveyTemplate>(`SELECT ${TEMPLATE_COLS} FROM survey_templates WHERE id = $1`, [templateId]);
+  return rows[0];
+}
+
+/** 可删除：创建者，或模板所属团队 owner/admin。内置模板不可删。 */
+export async function canDeleteSurveyTemplate(templateId: number, userId: number): Promise<boolean> {
+  const rows = await query<{ ok: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM survey_templates st
+       LEFT JOIN team_members tm ON tm.team_id = st.team_id AND tm.user_id = $2
+       WHERE st.id = $1
+         AND st.builtin = false
+         AND (st.owner_user_id = $2 OR tm.role IN ('owner', 'admin'))
+     ) AS ok`,
+    [templateId, userId]
+  );
+  return rows[0]?.ok === true;
+}
+
+export async function deleteSurveyTemplate(templateId: number): Promise<void> {
+  await query("DELETE FROM survey_templates WHERE id = $1", [templateId]);
 }
