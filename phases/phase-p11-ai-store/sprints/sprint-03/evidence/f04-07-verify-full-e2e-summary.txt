@@ -1,0 +1,36 @@
+=== 全量 verify:full 第 3 步（docker + migrate + 全量 Playwright e2e）中 ai-store 相关用例 ===
+(完整日志过大不逐字收录；这里摘录 ai-store spec 的逐条结果，以及整体 pass/fail 计数)
+
+  ✓  19 [chromium] › ai-store-001-browse-items.spec.ts:11:5 › 未登录访问 /ai-store 重定向到 /login (1.3s)
+  ✓  20 [chromium] › ai-store-001-browse-items.spec.ts:17:5 › 登录后浏览：submenu 分类 + 内容网格 (2.0s)
+  ✓  21 [chromium] › ai-store-001-browse-items.spec.ts:34:5 › 类型筛选只显示该类型，并在页面上下文生效 (1.3s)
+  ✓  22 [chromium] › ai-store-001-browse-items.spec.ts:47:5 › 搜索按名称/描述收窄列表 (1.2s)
+  ✓  23 [chromium] › ai-store-001-browse-items.spec.ts:59:5 › 无匹配结果显示空状态 + 清空筛选入口 (1.4s)
+  ✓  24 [chromium] › ai-store-001-browse-items.spec.ts:74:5 › 标签筛选高亮并显示 filters active，Clear all 复位 (1.4s)
+  ✓  25 [chromium] › ai-store-001-browse-items.spec.ts:88:5 › 未登录调用 GET /api/ai-store/items 返回未授权 (128ms)
+  ✓  26 [chromium] › ai-store-001-browse-items.spec.ts:94:5 › 分页：种子数据超过一页时显示分页控件，翻页后内容更新 (1.4s)
+  ✓  27 [chromium] › ai-store-001-browse-items.spec.ts:117:5 › 点卡片打开详情弹窗：展示描述/示例/统计/订阅入口，可关闭 (4.2s)
+  ✓  28 [chromium] › ai-store-004-favorite-item.spec.ts:11:5 › 未登录调用 POST /api/ai-store/items/:id/favorite 返回未授权 (963ms)
+  ✓  29 [chromium] › ai-store-004-favorite-item.spec.ts:17:5 › 未登录访问 /ai-store 重定向到登录（引导登录后才能点喜欢） (1.3s)
+  ✓  30 [chromium] › ai-store-004-favorite-item.spec.ts:23:5 › 卡片心形高亮切换 + 计数更新，刷新后保持 (3.1s)
+  ✓  31 [chromium] › ai-store-004-favorite-item.spec.ts:57:5 › 详情弹窗心形与卡片状态同步，切换后计数一致 (1.4s)
+
+=== 整体统计 ===
+passed 用例数: 219
+failed 用例数: 83
+'Connection terminated'/'recovery mode' 出现次数: 42
+
+=== 失败用例清单（按 spec 文件看，均与 ai-store/F04 无关）===
+    [chromium] › widgets-004-shape-widget.spec.ts:15:5 › 添加形状（rect）→ 出现在板上、自动选中、刷新仍在 ───────────────
+    [chromium] › widgets-004-shape-widget.spec.ts:32:5 › 形状与便签共存：add-note 仍工作 ──────────────────────
+  219 passed (27.0m)
+
+=== 结尾（pre-push hook 判定）===
+    [chromium] › widgets-004-shape-widget.spec.ts:32:5 › 形状与便签共存：add-note 仍工作 ──────────────────────
+  219 passed (27.0m)
+undefined
+/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-aafef3b8c9ccffcf0/apps/web:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 1: playwright test
+ ELIFECYCLE  Command failed with exit code 1.
+✗ [harness] verify:full 失败，push 中止。修复后再推，或 git push --no-verify 临时跳过。
+error: failed to push some refs to 'https://github.com/boardx/boardx-dev-template.git'

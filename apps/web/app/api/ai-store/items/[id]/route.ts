@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { CURRENT_TEAM_COOKIE } from "@repo/auth";
-import { getAiStoreItem, getMembership, isAiStoreItemVisible, updateAiStoreItem } from "@repo/data";
+import {
+  getAiStoreItem,
+  getMembership,
+  isAiStoreItemFavorited,
+  isAiStoreItemVisible,
+  updateAiStoreItem,
+} from "@repo/data";
 import { currentUser } from "@/lib/session";
 import { parseAiStorePayload } from "../payload";
 
@@ -25,7 +31,10 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: "未找到" }, { status: 404 });
   }
 
-  return NextResponse.json({ item });
+  // uc-ai-store-004：详情弹窗统计区也要展示当前用户的喜欢/收藏状态。
+  const liked = await isAiStoreItemFavorited(id, user.id);
+
+  return NextResponse.json({ item: { ...item, liked } });
 }
 
 // uc-ai-store-002：属主更新自己的 AI Store 项目（编辑草稿/已发布/审核中项）。
