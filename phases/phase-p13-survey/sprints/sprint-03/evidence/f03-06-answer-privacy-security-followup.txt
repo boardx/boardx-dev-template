@@ -1,0 +1,19 @@
+PR #181 review fix — public survey answer info-disclosure (issue #126 follow-up)
+Command: pnpm --filter @repo/web exec playwright test e2e/survey-003-answer-survey.spec.ts e2e/survey-002-list-manage-surveys.spec.ts e2e/survey-005-manage-templates.spec.ts --reporter=list
+Result: 7 passed, 0 failed
+
+New coverage proving the fix:
+- survey-003-answer-survey.spec.ts: "安全回归：未发布问卷的公开答题 API 不泄露题目/选项内容（#181）" —
+  hits GET /api/surveys/:id/answer directly (not through the UI) for a draft (is_active=false)
+  survey and asserts body.survey.questions is an empty array, proving getPublicSurveyForAnswer
+  strips question/option content at the data layer rather than only hiding it in the UI.
+- Existing "未发布问卷公开链接展示不可答题态" test still passes unchanged, confirming the
+  unavailable-state banner still shows the survey title (no regression to that UX contract).
+- survey-002/survey-005 regression-passed unchanged, confirming the survey.ts merge (combining
+  this fix with the parallel survey-templates feature that landed on main) didn't break either
+  feature.
+
+Also merged current main into this branch (was CONFLICTING; branch had drifted behind the
+survey-templates feature that landed on the same file, packages/data/src/survey.ts) and resolved
+by keeping both features' additions (SurveyResponse/createSurveyResponse/setSurveyActive from this
+branch, SurveyTemplate/listVisibleSurveyTemplates/createSurveyTemplate/etc. from main).
