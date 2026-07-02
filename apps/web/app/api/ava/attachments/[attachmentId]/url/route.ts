@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { getAvaAttachment, getAvaThread } from "@repo/data";
 import { presignGetUrl } from "@repo/storage";
 import { currentUser, currentTeamId } from "@/lib/session";
+import { isThreadInCurrentContext } from "@/lib/ava-thread-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +22,7 @@ export async function GET(_req: Request, { params }: { params: { attachmentId: s
   }
 
   const thread = await getAvaThread(attachment.thread_id);
-  if (!thread || thread.user_id !== user.id || thread.team_id !== currentTeamId()) {
+  if (!thread || !isThreadInCurrentContext(thread, user.id, currentTeamId())) {
     return NextResponse.json({ error: "附件不存在" }, { status: 404 });
   }
 

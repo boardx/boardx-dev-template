@@ -8,23 +8,15 @@ import {
   deleteAvaThread,
   getAvaThread,
   listAvaAttachmentsByMessageIds,
+  listAvaMessageFeedbackByMessageIds,
   listAvaMessages,
   renameAvaThread,
 } from "@repo/data";
 import { currentTeamId, currentUser } from "@/lib/session";
+import { isThreadInCurrentContext } from "@/lib/ava-thread-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function isThreadInCurrentContext(
-  thread: { user_id: number | string; team_id: number | string | null },
-  userId: number,
-  teamId: number | null
-): boolean {
-  const sameUser = String(thread.user_id) === String(userId);
-  const sameTeam = thread.team_id == null ? teamId == null : teamId != null && String(thread.team_id) === String(teamId);
-  return sameUser && sameTeam;
-}
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
@@ -40,10 +32,13 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   }
 
   const messages = await listAvaMessages(threadId);
-  const attachmentsByMessage = await listAvaAttachmentsByMessageIds(messages.map((m) => m.id));
+  const messageIds = messages.map((m) => m.id);
+  const attachmentsByMessage = await listAvaAttachmentsByMessageIds(messageIds);
+  const feedbackByMessage = await listAvaMessageFeedbackByMessageIds(messageIds, user.id);
   const messagesWithAttachments = messages.map((m) => ({
     ...m,
     attachments: attachmentsByMessage.get(m.id) ?? [],
+    feedback: feedbackByMessage.get(m.id) ?? null,
   }));
   return NextResponse.json({ thread, messages: messagesWithAttachments });
 }

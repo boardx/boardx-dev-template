@@ -1,0 +1,142 @@
+===== concurrency-check.ts（数据层 toggle 并发不变量检查脚本）=====
+/**
+ * 数据层并发 toggle 漂移检查（PR #186 review 修复的证据脚本）。
+ * 强制复现 review 指出的竞态：两个"请求"都先读到 already=false，再并发执行
+ * INSERT+计数 SQL。修复后计数由 CTE 与明细绑定，任何交错下不变量都成立：
+ *   ai_store_items.likes 的增量 == ai_store_favorites 实际行数增量。
+ */
+import { query, closePool, toggleAiStoreFavorite, getAiStoreItem } from "@repo/data";
+
+async function favoritesCount(itemId: number): Promise<number> {
+  const rows = await query<{ n: string }>(
+    `SELECT count(*) AS n FROM ai_store_favorites WHERE item_id = $1`,
+    [itemId],
+  );
+  return Number(rows[0]?.n ?? 0);
+}
+
+async function main() {
+  // 建一个专用测试用户 + 用种子项 3（Sprint Planner，e2e 未触碰）。
+  const itemId = 3;
+  const users = await query<{ id: string }>(
+    `INSERT INTO users (email, password_hash, first_name, last_name)
+     VALUES ('concurrency-check@example.com', 'x', 'C', 'K')
+     ON CONFLICT (email) DO UPDATE SET first_name = 'C'
+     RETURNING id`,
+  );
+  const userId = Number(users[0]!.id);
+
+  // 起始态清零。
+  await query(`DELETE FROM ai_store_favorites WHERE user_id = $1 AND item_id = $2`, [userId, itemId]);
+  const item0 = await getAiStoreItem(itemId);
+  const likes0 = Number(item0!.likes);
+  const rows0 = await favoritesCount(itemId);
+  console.log(`初始: likes=${likes0} favorites_rows=${rows0}`);
+
+  // 并发同方向 toggle x2（都从"未收藏"状态出发，Promise.all 并发进入）。
+  const results = await Promise.all([
+    toggleAiStoreFavorite(itemId, userId),
+    toggleAiStoreFavorite(itemId, userId),
+  ]);
+  console.log("并发 toggle 结果:", JSON.stringify(results));
+
+  const item1 = await getAiStoreItem(itemId);
+  const likes1 = Number(item1!.likes);
+  const rows1 = await favoritesCount(itemId);
+  const likesDelta = likes1 - likes0;
+  const rowsDelta = rows1 - rows0;
+  console.log(`并发后: likes=${likes1} (Δ${likesDelta}) favorites_rows=${rows1} (Δ${rowsDelta})`);
+
+  if (likesDelta !== rowsDelta) {
+    console.error(`❌ 漂移: likes Δ${likesDelta} != 明细行 Δ${rowsDelta}（旧实现会出现 Δ2 vs Δ1/Δ0）`);
+    process.exitCode = 1;
+  } else {
+    console.log(`✅ 不变量成立: likes 增量(${likesDelta}) == 明细行增量(${rowsDelta})，无漂移`);
+  }
+
+  // 清理：回到初始状态。
+  const del = await query<{ one: number }>(
+    `WITH d AS (DELETE FROM ai_store_favorites WHERE user_id = $1 AND item_id = $2 RETURNING 1)
+     UPDATE ai_store_items SET likes = GREATEST(0, likes - (SELECT count(*) FROM d)) WHERE id = $2 RETURNING 1`,
+    [userId, itemId],
+  );
+  void del;
+  await query(`DELETE FROM users WHERE id = $1`, [userId]);
+  const itemF = await getAiStoreItem(itemId);
+  console.log(`清理后: likes=${Number(itemF!.likes)}（应回到 ${likes0}）`);
+  await closePool();
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
+
+===== concurrency-check2.ts（确定性双 INSERT 分支竞态复现脚本）=====
+/**
+ * 确定性复现 review 指出的竞态本体：两个请求都已读到 already=false、
+ * 都走 INSERT 分支。直接并发跑两条修复后的 CTE INSERT+计数语句，
+ * 断言明细只落 1 行、likes 只 +1（旧实现两条 `UPDATE likes+1` 会 +2）。
+ */
+import { query, closePool, getAiStoreItem } from "@repo/data";
+
+const INSERT_CTE = `
+  WITH ins AS (
+    INSERT INTO ai_store_favorites (item_id, user_id) VALUES ($1, $2)
+    ON CONFLICT DO NOTHING RETURNING 1
+  )
+  UPDATE ai_store_items
+     SET likes = likes + (SELECT count(*) FROM ins)
+   WHERE id = $1
+   RETURNING likes`;
+
+async function main() {
+  const itemId = 3; // Sprint Planner，e2e 未触碰
+  const users = await query<{ id: string }>(
+    `INSERT INTO users (email, password_hash, first_name, last_name)
+     VALUES ('concurrency-check2@example.com', 'x', 'C', 'K')
+     ON CONFLICT (email) DO UPDATE SET first_name = 'C' RETURNING id`,
+  );
+  const userId = Number(users[0]!.id);
+  await query(`DELETE FROM ai_store_favorites WHERE user_id = $1 AND item_id = $2`, [userId, itemId]);
+
+  const likes0 = Number((await getAiStoreItem(itemId))!.likes);
+  console.log(`初始 likes=${likes0}`);
+
+  // 两个"请求"同时处于 INSERT 分支（already 已被双方读为 false 的情形）。
+  const [a, b] = await Promise.all([
+    query<{ likes: number }>(INSERT_CTE, [itemId, userId]),
+    query<{ likes: number }>(INSERT_CTE, [itemId, userId]),
+  ]);
+  console.log(`并发 INSERT 分支返回: a.likes=${a[0]?.likes} b.likes=${b[0]?.likes}`);
+
+  const likes1 = Number((await getAiStoreItem(itemId))!.likes);
+  const rows = await query<{ n: string }>(
+    `SELECT count(*) AS n FROM ai_store_favorites WHERE item_id = $1 AND user_id = $2`,
+    [itemId, userId],
+  );
+  const rowCount = Number(rows[0]!.n);
+  console.log(`并发后: likes=${likes1} (Δ${likes1 - likes0}) 明细行=${rowCount}`);
+
+  if (likes1 - likes0 === 1 && rowCount === 1) {
+    console.log("✅ 双 INSERT 分支并发下 likes 只 +1、明细 1 行——CTE 绑定生效（旧实现此处 +2）");
+  } else {
+    console.error(`❌ 漂移: likes Δ${likes1 - likes0}, 明细行=${rowCount}`);
+    process.exitCode = 1;
+  }
+
+  // 清理
+  await query(
+    `WITH d AS (DELETE FROM ai_store_favorites WHERE user_id = $1 AND item_id = $2 RETURNING 1)
+     UPDATE ai_store_items SET likes = GREATEST(0, likes - (SELECT count(*) FROM d)) WHERE id = $2`,
+    [userId, itemId],
+  );
+  await query(`DELETE FROM users WHERE id = $1`, [userId]);
+  console.log(`清理后 likes=${Number((await getAiStoreItem(itemId))!.likes)}（应为 ${likes0}）`);
+  await closePool();
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

@@ -14,9 +14,12 @@ import {
   BookOpen,
   UserPlus,
   Gem,
+  CreditCard,
 } from "lucide-react";
 import { FeedbackLauncher } from "@/components/feedback/feedback-launcher";
 import { CreditRecordsDialog } from "@/components/credits/credit-records-dialog";
+import { BillingPlanDialog } from "@/components/billing/billing-plan-dialog";
+import { BuyCreditsDialog } from "@/components/credits/buy-credits-dialog";
 import { cn } from "@/lib/utils";
 
 interface SidebarUser {
@@ -40,6 +43,9 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
   const [lang, setLang] = useState<"en" | "zh">("en");
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
   const [recordsOpen, setRecordsOpen] = useState(false);
+  const [billingOpen, setBillingOpen] = useState(false);
+  const [buyOpen, setBuyOpen] = useState(false);
+  const [balanceRefreshTick, setBalanceRefreshTick] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,7 +53,8 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
     setHydrated(true);
   }, []);
 
-  // 用户菜单个人 Credit 余额入口（uc-credits-001）：打开菜单时按需拉取个人钱包余额。
+  // 用户菜单个人 Credit 余额入口（uc-credits-001）：打开菜单时按需拉取个人钱包余额；
+  // Buy Credits 购买成功后（balanceRefreshTick 变化）也重新拉取，让余额即时反映到账结果。
   useEffect(() => {
     if (!menuOpen || !user) return;
     let alive = true;
@@ -60,7 +67,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
     return () => {
       alive = false;
     };
-  }, [menuOpen, user]);
+  }, [menuOpen, user, balanceRefreshTick]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -99,9 +106,9 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
       <Link
         href="/"
         aria-label="BoardX 首页"
-        className="mb-2 flex h-8.5 w-8.5 items-center justify-center rounded-9 bg-primary text-base font-extrabold text-primary-foreground transition-colors hover:bg-surface-dark"
+        className="mb-2 flex h-8.5 w-8.5 items-center justify-center transition-opacity hover:opacity-90"
       >
-        X
+        <img src="/logo-icon.png" alt="BoardX Logo" className="h-8.5 w-8.5 object-contain" />
       </Link>
 
       {/* Rail nav */}
@@ -204,6 +211,20 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
               <span className="text-11 font-semibold text-foreground">Records →</span>
             </button>
 
+            {/* 购买 Credit 入口（uc-credits-002）：用户菜单 > 购买 Credit 按钮，打开 Buy Credits 弹窗。 */}
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="user-menu-buy-credits"
+              onClick={() => {
+                setMenuOpen(false);
+                setBuyOpen(true);
+              }}
+              className="mb-1.5 flex w-full items-center gap-2 rounded-7 px-2.5 py-2 text-13 text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Gem className="h-3.5 w-3.5" /> Buy Credit
+            </button>
+
             <MenuLink href="/account" testId="user-menu-profile" onClick={() => setMenuOpen(false)}>
               <User className="h-3.5 w-3.5" /> Profile
             </MenuLink>
@@ -224,6 +245,18 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
             >
               <BookOpen className="h-3.5 w-3.5" /> Personal knowledge base
             </MenuLink>
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="user-menu-billing"
+              onClick={() => {
+                setMenuOpen(false);
+                setBillingOpen(true);
+              }}
+              className="flex w-full items-center gap-2 rounded-7 px-2.5 py-2 text-13 text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <CreditCard className="h-3.5 w-3.5" /> Plans &amp; Billing
+            </button>
             <MenuLink
               href="/teams"
               testId="user-menu-invite"
@@ -325,6 +358,13 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
       </div>
 
       <CreditRecordsDialog open={recordsOpen} onClose={() => setRecordsOpen(false)} />
+      <BillingPlanDialog open={billingOpen} onClose={() => setBillingOpen(false)} />
+      <BuyCreditsDialog
+        open={buyOpen}
+        onClose={() => setBuyOpen(false)}
+        scope="personal"
+        onPurchased={() => setBalanceRefreshTick((n) => n + 1)}
+      />
     </aside>
   );
 }

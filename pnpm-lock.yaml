@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@rollup/rollup-darwin-arm64':
+        specifier: ^4.62.2
+        version: 4.62.2
       '@types/node':
         specifier: ^22.0.0
         version: 22.0.0
@@ -2562,8 +2565,7 @@ snapshots:
   '@rollup/rollup-android-arm64@4.62.2':
     optional: true
 
-  '@rollup/rollup-darwin-arm64@4.62.2':
-    optional: true
+  '@rollup/rollup-darwin-arm64@4.62.2': {}
 
   '@rollup/rollup-darwin-x64@4.62.2':
     optional: true

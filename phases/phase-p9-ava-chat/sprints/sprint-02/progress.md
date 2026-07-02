@@ -1,11 +1,11 @@
 # 进度日志 — Sprint p9/02
 
 ## 当前已验证状态(唯一真相)
-- 仓库根目录: `/private/tmp/boardx-worktrees/issue-109-ava-suggested-actions`
+- 仓库根目录: `/private/tmp/boardx-worktrees/issue-106-ava-ai-settings`（本次冲突解决时的多个来源已合并至此分支）
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F02 / 聊天线程列表 CRUD（owner `wrk-codex-1` in_progress）；F03/F10 已 passing；F04 / 分享聊天：生成/复用/关闭分享链接代码已完成但端到端验证受 Docker daemon 阻塞未过（owner `wrk-codex-ava-3`）；F06/F07 未开始
-- 当前 blocker: F04 受 Docker daemon 未运行阻塞，`docker compose -f infra/docker-compose.yml up -d` 无法连接 `/var/run/docker.sock`；本轮 resync 后需重新验证（与本 PR 的 F10 无关，F10 证据已在 evidence/F10.verify.log）。
+- 当前最高优先级未完成功能: F02 / 聊天线程列表 CRUD（owner `wrk-codex-1` in_progress）；F04 / 分享聊天：生成/复用/关闭分享链接代码已完成但端到端验证受 Docker daemon 阻塞未过（owner `wrk-codex-ava-3`，需重新验证）；F03/F07/F10 均已由 harness verify 门控升级为 `passing`；F06（Deep Research）实现已完成，待本 worktree 合入 main 后重新跑 `pnpm harness verify --sprint p9/02 --feature F06` 门控，之前手改为 `passing` 的记录已被判定为伪造证据并回退为 `in_progress`。
+- 当前 blocker: F04 受 Docker daemon 未运行阻塞，`docker compose -f infra/docker-compose.yml up -d` 无法连接 `/var/run/docker.sock`；需重新验证（与 F07/F10 无关，二者证据已分别在 evidence/F07.verify.log、evidence/F10.verify.log）。F06 需要在合并 main 后完整重新验证，不得沿用旧 evidence 引用。
 
 ## 会话记录
 ### 2026-07-02
@@ -30,6 +30,24 @@
 - 下一步最佳动作:
   - 审阅 diff 后由协调者决定是否运行 `pnpm harness verify --sprint p9/02 --feature F02` 或提交/开 PR。
 
+### 2026-07-02 14:55:09
+- 本轮目标: 实现 F06 Deep Research（澄清 → 计划 → 执行时间线 → 报告）。
+- 已完成:
+  - 在 AVA composer 增加 Deep Research 模式入口，提交主题后展示澄清问题、计划确认、执行时间线和报告通知。
+  - 新增 stub research endpoint，绑定现有 AVA thread/messages，不接真实外部 AI。
+  - 报告通知可打开详情面板，展示结论、结构化内容和阶段结果；完成后可继续普通追问。
+  - 覆盖短主题、额度不足、启动失败三类可恢复错误态。
+- 运行过的验证（本轮自报）:
+  - `pnpm --filter @repo/web exec tsc --noEmit` -> pass
+  - `pnpm --filter @repo/web run lint` -> pass
+  - `docker compose -f infra/docker-compose.yml up -d` -> pass
+  - `pnpm --filter @repo/data run migrate` -> pass
+  - `pnpm --filter @repo/web exec playwright test e2e/ava-deep-research.spec.ts` -> 4 passed
+- 提交记录: `4613b0c Implement AVA deep research flow`
+- 已知风险或未解决问题: 无功能 blocker；sandbox 内首次运行 Docker/tsx/Playwright 需要 escalated 权限，escalated 后均通过。
+- **协调者复核纠正（同日，代码评审）**: 本条目此前声称 `pnpm harness verify --sprint p9/02 --feature F06` 通过并将 F06 手动/自报为 `passing`，`evidence` 指向 `evidence/F06.verify.log`。复核发现该 evidence 文件已被删除（曾泄漏本地开发环境变量），且 `feature_list.json` 的 `passing` 状态是手改而非由 `pnpm harness verify` 门控产生，违反本仓库硬约束（状态不能自己改）。已将 F06 回退为 `in_progress`，`owner` 设为 `wrk-codex-ava-6`，`evidence` 清空。另发现分支存在 4 次团队隔离（team_id isolation）遗漏中的第 4 次（#153 模式），已在 `apps/web/app/api/ava/threads/[id]/research/route.ts` 中修复为使用 `isThreadInCurrentContext`。本分支随后合并最新 main（含 #153 修复本身、attachments/share/edit-delete-message/AI 设置/建议动作等 9+ 个已合并 PR），并将在合并后重新跑真实的 `pnpm harness verify --sprint p9/02 --feature F06` 以获取合法证据。
+- 下一步最佳动作: 合并 main 完成后，在干净环境重新跑完整验证链路（docker/migrate/e2e/harness verify），只允许 harness verify 门控把 F06 状态转为 `passing`；不要手改 `active-features.json` 或 `feature_list.json`。
+
 ### 2026-07-02 09:58:27
 - 本轮目标: 在独立 worktree 完成 GitHub issue #102 对应的 F03「编辑/删除消息 + 重新生成后续回复」。
 - 已完成: 新增最后一条用户消息的编辑、取消、空内容校验、删除确认；编辑后删除旧后续回复并重新生成 assistant；生成失败时保留用户消息并展示失败提示。
@@ -53,6 +71,28 @@
 - 提交记录: 待提交。
 - 已知风险或未解决问题: F10 通用内置建议已完成；Agent 预设建议问题仍依赖 p11 AI Store 配置，按 feature notes deferred。
 - 下一步最佳动作: 继续处理 p9/02 其他未完成 feature；不要手改 `active-features.json` 或把未验证 feature 标为 passing。
+
+### 2026-07-02 11:39:28 CST
+- 本轮目标: GitHub issue #106 / Phase p9 F07：AI 设置：模型/Agent/工具选择（发送前生效），owner `wrk-codex-ava-5`。
+- 已完成:
+  - 新增 AVA capabilities API，返回可用模型、Agent、工具及团队受限模型禁用态。
+  - AVA composer 设置区展示当前模型/Agent/工具，支持发送前切换模型、Agent、工具；已有消息后锁定 Agent。
+  - 发送消息接口读取并校验 `modelId` / `agentId` / `toolIds`，stub 回复回显实际生效设置；普通成员伪造 team-restricted 模型会回退默认模型。
+  - 补充 `apps/web/e2e/ava-ai-settings.spec.ts` 覆盖 UI 生效、普通成员禁用受限模型、服务端防伪造回退。
+- 运行过的验证:
+  - `pnpm --filter @repo/ai test`（通过）
+  - `pnpm --filter @repo/web exec tsc --noEmit`（通过）
+  - `pnpm harness verify --sprint p9/02 --feature F07`（通过；包含 docker/migrate/e2e/base verify）
+- 已记录证据:
+  - `phases/phase-p9-ava-chat/sprints/sprint-02/evidence/F07.verify.log`
+  - `feature_list.json` 中 F07 已由 harness 升级为 `passing`，evidence=`evidence/F07.verify.log @ 2026-07-02T03:39:09.194Z`
+- 提交记录:
+  - 待提交
+- 已知风险或未解决问题:
+  - p11 AI Store 未落地前，Agent 列表仍以内置默认/占位 Agent 为主；后续 p11 接入后需要补有数据分支。
+  - 本 worktree 只处理 F07；F02 仍由 `wrk-codex-1` 在其范围内推进。
+- 下一步最佳动作:
+  - 提交本轮 F07 改动；不要修改 `active-features.json` 或接手其他 owner 的 in_progress feature。
 
 ### 2026-07-02 (wrk-codex-ava-3 / issue #103 / F04)
 - 本轮目标: 实现 F04「分享聊天：生成/复用/关闭分享链接」，只处理 AVA thread 分享 API、公开只读分享页/失效门控、聊天头部分享入口。

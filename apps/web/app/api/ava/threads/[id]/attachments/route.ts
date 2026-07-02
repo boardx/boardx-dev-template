@@ -22,6 +22,7 @@ import {
 } from "@repo/storage";
 import { query } from "@repo/data";
 import { currentUser, currentTeamId } from "@/lib/session";
+import { isThreadInCurrentContext } from "@/lib/ava-thread-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,8 +48,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     const thread = await getAvaThread(threadId);
     // 鉴权同时校验 user_id 与 team_id：线程在某个团队上下文创建，就只能在同一团队上下文
-    // 访问，防止跨团队用可枚举的线程 id 越权（见 #153；这里顺手一并修了，同一文件territory）。
-    if (!thread || thread.user_id !== user.id || thread.team_id !== currentTeamId()) {
+    // 访问，防止跨团队用可枚举的线程 id 越权（见 #153）。
+    if (!thread || !isThreadInCurrentContext(thread, user.id, currentTeamId())) {
       return NextResponse.json({ error: "线程不存在" }, { status: 404 });
     }
 

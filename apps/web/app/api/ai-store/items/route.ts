@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { CURRENT_TEAM_COOKIE } from "@repo/auth";
-import { createAiStoreItem, getMembership, listAiStoreItems, listOwnedAiStoreItems, type AiStoreItemType } from "@repo/data";
+import {
+  createAiStoreItem,
+  getMembership,
+  listAiStoreItems,
+  listAuthorizedAiStoreItems,
+  listFavoritedAiStoreItemIds,
+  listOwnedAiStoreItems,
+  type AiStoreItemType,
+} from "@repo/data";
 import { currentUser } from "@/lib/session";
 import { parseAiStorePayload, VALID_TYPES } from "./payload";
 
@@ -17,6 +25,11 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   if (url.searchParams.get("owner") === "me") {
     return NextResponse.json({ items: await listOwnedAiStoreItems(user.id) });
+  }
+  // uc-ai-store-005：Authorized 视图——自己被授权管理、但非本人拥有的项目（授权视图只显示
+  // 被授权范围内项目，不含拥有者自己的项目，避免和 owner=me 的 Create 视图重复）。
+  if (url.searchParams.get("authorized") === "me") {
+    return NextResponse.json({ items: await listAuthorizedAiStoreItems(user.id) });
   }
 
   const typeParam = url.searchParams.get("type") ?? "";
@@ -39,7 +52,16 @@ export async function GET(req: Request) {
     pageSize,
   });
 
-  return NextResponse.json(result);
+  // uc-ai-store-004：批量标注当前用户对本页项目的喜欢/收藏状态（心形高亮）。
+  // 注意：listAiStoreItems 的 id 是 bigint，pg 运行时按字符串返回（与类型注解不符），
+  // 这里显式 Number() 归一化后再与 Set<number> 比对，避免 string/number 失配。
+  const likedIds = await listFavoritedAiStoreItemIds(
+    result.items.map((it) => Number(it.id)),
+    user.id,
+  );
+  const items = result.items.map((it) => ({ ...it, liked: likedIds.has(Number(it.id)) }));
+
+  return NextResponse.json({ ...result, items });
 }
 
 // uc-ai-store-002：创建 AI Store 项目。支持草稿、发布到个人/团队、提交平台审核。

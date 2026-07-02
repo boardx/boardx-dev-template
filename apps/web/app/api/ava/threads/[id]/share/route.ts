@@ -6,7 +6,8 @@ import {
   getAvaThread,
   getAvaThreadShare,
 } from "@repo/data";
-import { currentUser } from "@/lib/session";
+import { currentTeamId, currentUser } from "@/lib/session";
+import { isThreadInCurrentContext } from "@/lib/ava-thread-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,25 +17,30 @@ function parseThreadId(raw: string): number | undefined {
   return Number.isFinite(id) ? id : undefined;
 }
 
-async function requireOwnedThread(rawId: string) {
+type OwnedThreadResult =
+  | { ok: true; threadId: number }
+  | { ok: false; response: NextResponse };
+
+async function requireOwnedThread(rawId: string): Promise<OwnedThreadResult> {
   const user = await currentUser();
-  if (!user) return { response: NextResponse.json({ error: "未登录" }, { status: 401 }) };
+  if (!user) return { ok: false, response: NextResponse.json({ error: "未登录" }, { status: 401 }) };
 
   const threadId = parseThreadId(rawId);
   if (threadId == null) {
-    return { response: NextResponse.json({ error: "无效的线程 id" }, { status: 400 }) };
+    return { ok: false, response: NextResponse.json({ error: "无效的线程 id" }, { status: 400 }) };
   }
 
   const thread = await getAvaThread(threadId);
-  if (!thread || thread.user_id !== user.id) {
-    return { response: NextResponse.json({ error: "线程不存在" }, { status: 404 }) };
+  // 鉴权同时校验 user_id 与 team_id：修复 #153（跨团队用可枚举的线程 id 越权访问分享设置）。
+  if (!thread || !isThreadInCurrentContext(thread, user.id, currentTeamId())) {
+    return { ok: false, response: NextResponse.json({ error: "线程不存在" }, { status: 404 }) };
   }
-  return { threadId };
+  return { ok: true, threadId };
 }
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const checked = await requireOwnedThread(params.id);
-  if ("response" in checked) return checked.response;
+  if (!checked.ok) return checked.response;
   const share = await getAvaThreadShare(checked.threadId);
   return NextResponse.json({ share: share ?? null });
 }
@@ -42,7 +48,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 export async function POST(_req: Request, { params }: { params: { id: string } }) {
   try {
     const checked = await requireOwnedThread(params.id);
-    if ("response" in checked) return checked.response;
+    if (!checked.ok) return checked.response;
     const share = await enableAvaThreadShare(checked.threadId);
     return NextResponse.json({ share }, { status: 201 });
   } catch (err) {
@@ -53,7 +59,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   try {
     const checked = await requireOwnedThread(params.id);
-    if ("response" in checked) return checked.response;
+    if (!checked.ok) return checked.response;
     const share = await disableAvaThreadShare(checked.threadId);
     return NextResponse.json({ share: share ?? null });
   } catch (err) {

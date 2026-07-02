@@ -208,6 +208,10 @@ test("SysAdmin 为用户手动增加 Credit，余额立即反映", async ({ page
   // 非法额度被拒
   const badRes = await page.request.post(`/api/admin/users/${userId}/credit`, { data: { amount: -5 } });
   expect(badRes.status()).toBe(400);
+
+  // 单次上分金额有服务端上限，防止任意大额注入。
+  const tooLargeRes = await page.request.post(`/api/admin/users/${userId}/credit`, { data: { amount: 100_001 } });
+  expect(tooLargeRes.status()).toBe(400);
 });
 
 test("用户手动上分带幂等 key：重复提交（同 key）不会重复入账", async ({ page, playwright, baseURL }) => {
@@ -249,6 +253,38 @@ test("用户手动上分带幂等 key：重复提交（同 key）不会重复入
   expect(res3.status()).toBe(200);
   const body3 = await res3.json();
   expect(body3.wallet.balance).toBe(2000);
+});
+
+test("用户手动上分同一 Idempotency-Key 并发请求不会双重入账", async ({ page, playwright, baseURL }) => {
+  await registerAndPromote(page);
+  const email = uniq("adm1race");
+  const regRes = await registerIsolated(playwright, baseURL!, "Race", "Target", email);
+  expect(regRes.status()).toBe(201);
+
+  const meRes = await page.request.get("/api/admin/users?q=" + encodeURIComponent(email));
+  const body = await meRes.json();
+  const userId = body.users[0].id as number;
+
+  const idemKey = `race-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const headers = { "content-type": "application/json", "idempotency-key": idemKey };
+  const responses = await Promise.all(
+    Array.from({ length: 8 }, () =>
+      page.request.post(`/api/admin/users/${userId}/credit`, {
+        headers,
+        data: { amount: 777 },
+      })
+    )
+  );
+
+  for (const res of responses) {
+    expect(res.status()).toBe(200);
+  }
+  const bodies = await Promise.all(responses.map((res) => res.json()));
+  expect(bodies.some((resBody) => resBody.idempotent === true)).toBeTruthy();
+
+  const afterRes = await page.request.get("/api/admin/users?q=" + encodeURIComponent(email));
+  const afterBody = await afterRes.json();
+  expect(afterBody.users[0].creditBalance).toBe(777);
 });
 
 // review 加固（PR #171 review，2 项 high + 1 项 medium）覆盖 ──────────────────────────

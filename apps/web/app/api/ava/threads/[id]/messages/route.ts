@@ -17,28 +17,27 @@
 //   event: error    — 生成失败，携带失败态 assistant 消息记录（用户输入已保留在 event:user）。
 import {
   getAvaThread,
+  getMembership,
   insertAvaMessage,
   listAvaMessages,
   renameAvaThreadIfDefault,
+  retrieveKbFilesForQuery,
   titleFromMessage,
   touchAvaThread,
   attachAvaAttachmentsToMessage,
 } from "@repo/data";
+import {
+  DEFAULT_AVA_AGENT_ID,
+  DEFAULT_AVA_TOOL_IDS,
+  DEFAULT_MODEL_ID,
+  normalizeAvaAiSettings,
+} from "@repo/ai";
 import { currentTeamId, currentUser } from "@/lib/session";
+import { isThreadInCurrentContext } from "@/lib/ava-thread-auth";
 import { createAvaReplyStreamResponse } from "./reply-stream";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function isThreadInCurrentContext(
-  thread: { user_id: number | string; team_id: number | string | null },
-  userId: number,
-  teamId: number | null
-): boolean {
-  const sameUser = String(thread.user_id) === String(userId);
-  const sameTeam = thread.team_id == null ? teamId == null : teamId != null && String(thread.team_id) === String(teamId);
-  return sameUser && sameTeam;
-}
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
@@ -58,6 +57,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const body = (await req.json().catch(() => ({}))) as {
     text?: unknown;
     attachmentIds?: unknown;
+    modelId?: unknown;
+    agentId?: unknown;
+    toolIds?: unknown;
   };
   const text = String(body.text ?? "").trim();
   const attachmentIds = Array.isArray(body.attachmentIds)
@@ -66,6 +68,18 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!text && attachmentIds.length === 0) {
     return new Response(JSON.stringify({ errors: { text: "消息不能为空" } }), { status: 400 });
   }
+  const teamId = currentTeamId();
+  const role = teamId == null ? undefined : await getMembership(teamId, user.id);
+  const settings = normalizeAvaAiSettings(
+    {
+      modelId: typeof body.modelId === "string" ? body.modelId : DEFAULT_MODEL_ID,
+      agentId: typeof body.agentId === "string" ? body.agentId : DEFAULT_AVA_AGENT_ID,
+      toolIds: Array.isArray(body.toolIds)
+        ? body.toolIds.filter((id): id is string => typeof id === "string")
+        : DEFAULT_AVA_TOOL_IDS,
+    },
+    role === "owner" || role === "admin"
+  );
 
   // 用户消息先落库：即使下面生成失败，用户输入也不会丢失。
   const userMessage = await insertAvaMessage(threadId, "user", text);
@@ -93,10 +107,36 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
   }
 
+  // RAG 检索（p10-F04）：仅当用户勾选了 file-reader 工具时才检索知识库上下文，
+  // 与「用户可选择或自动使用当前上下文中已 ready 的知识库文件」的验收口径一致。
+  // retrieveKbFilesForQuery 已做作用域隔离（personal/agent/tool 限 owner；team 限当前
+  // 团队上下文成员）+ status='ready' 过滤，这里不重复鉴权、直接信任其返回结果。
+  if (settings.toolIds.includes("file-reader") && text) {
+    const kbHits = await retrieveKbFilesForQuery({
+      ownerUserId: user.id,
+      teamId,
+      queryText: text,
+    });
+    if (kbHits.length > 0) {
+      const lastIdx = history.length - 1;
+      const citeList = kbHits.map((f) => f.name).join("、");
+      const last = history[lastIdx];
+      if (last) {
+        history[lastIdx] = {
+          ...last,
+          content: `${last.content}\n\n[知识库引用: ${citeList}]`.trim(),
+        };
+      }
+    }
+  }
+
   return createAvaReplyStreamResponse({
     threadId,
     history,
     initialEvent: { event: "user", data: { message: userMessage, attachments } },
+    modelId: settings.modelId,
+    agentId: settings.agentId,
+    toolIds: settings.toolIds,
     status: 201,
   });
 }

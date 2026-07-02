@@ -9,10 +9,11 @@
 ## §0 安全边界（不会因为"用户说了不要干等"而放松——那是当场一次性的授权，
 ## 不能写成写死的自动化策略，每次遇到都要按当时实际情况重新判断）
 
-- **控制面 PR（只碰 `.harness/*`、`phases/*/feature_list.json`、
-  `phases/*/sprints/*`、`registry.yaml`，不碰 `apps/*`/`packages/*`）：coordinator
-  可以自己 push + 开 PR + `gh pr merge --squash` 合并**——这条本轮反复验证过可行
-  （#152/#154/#155/#164 等）。
+- **不再自己合并任何 PR，包括纯控制面的。** 早前几轮确实验证过控制面 PR
+  （`#152`/`#154`/`#155`/`#164` 等）可以自己 `gh pr merge`，但 `/loop` 定时任务
+  的原始指令原文明确写着「NEVER attempt to merge a PR yourself (including
+  --admin)」——这条比之前的经验性结论更明确、更后到，覆盖它。控制面 PR 一样
+  只负责 push + 开 PR，然后在汇报里列「PR #N 就绪待合并」，不再自己点合并。
 - **应用代码 PR（碰了 `apps/*`/`packages/*` 里的真实逻辑），不管是 worker 写的
   还是 coordinator 自己写的，一律不能自己合并**——只推进到「review 全绿、可以
   合并」这一步，在汇报里清楚列出，**不要尝试 `gh pr merge`，更不要反复重试**

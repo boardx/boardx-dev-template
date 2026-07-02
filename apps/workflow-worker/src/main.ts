@@ -8,10 +8,22 @@ import {
   markStudioArtifactProcessing,
   markStudioArtifactReady,
   markStudioArtifactError,
+  markPresentationArtifactProcessing,
+  markPresentationArtifactReady,
+  markPresentationArtifactError,
+  markPresentationRevisionProcessing,
+  markPresentationRevisionReady,
+  markPresentationRevisionError,
+  updatePresentationArtifactSlides,
 } from "@repo/data";
 import { decideStatus, type JobData } from "./job";
 import { decideKbFileStatus, type KbFileJobData } from "./kbFileJob";
 import { processStudioJob, type StudioJobData } from "./studioJob";
+import { processPresentationJob, type PresentationJobData } from "./presentationJob";
+import {
+  processPresentationRevisionJob,
+  type PresentationRevisionJobData,
+} from "./presentationRevisionJob";
 
 const worker = makeWorker<JobData>(QUEUE_NAMES.jobs, async (job) => {
   const status = decideStatus(job.data);
@@ -65,6 +77,65 @@ studioWorker.on("failed", async (job, err) => {
   if (job) await markStudioArtifactError(job.data.artifactId, err.message);
 });
 
+// CAP-AI：演示文稿生成（p12-F02）。同 studioWorker 的诚实状态机模式：先回写 processing，
+// 再跑生成逻辑；「生成失败」是业务终态而非任务异常，按 processPresentationJob 返回的
+// 终态回写 DB，不复用 BullMQ 的 failed 事件语义。
+const presentationWorker = makeWorker<PresentationJobData>(
+  QUEUE_NAMES.presentationGeneration,
+  async (job) => {
+    await markPresentationArtifactProcessing(job.data.artifactId);
+    const outcome = await processPresentationJob(job.data);
+    if (outcome.status === "ready") {
+      await markPresentationArtifactReady(job.data.artifactId, {
+        title: outcome.title!,
+        slides: outcome.slides!,
+        pptxObjectKey: outcome.pptxObjectKey!,
+        pdfObjectKey: outcome.pdfObjectKey!,
+      });
+    } else {
+      await markPresentationArtifactError(job.data.artifactId, outcome.errorMessage ?? "生成失败");
+    }
+    return { artifactId: job.data.artifactId, status: outcome.status };
+  }
+);
+
+presentationWorker.on("completed", (job) => {
+  console.log(`✓ presentation ${job.data.artifactId}`);
+});
+presentationWorker.on("failed", async (job, err) => {
+  console.error(`✗ presentation ${job?.data.artifactId} 任务异常:`, err.message);
+  if (job) await markPresentationArtifactError(job.data.artifactId, err.message);
+});
+
+// CAP-AI：演示文稿修订/单页优化（p12-F03）。同 presentationWorker 的诚实状态机模式。
+// 成功后原地更新 presentation_artifacts 的 title/slides；失败只回写 revision 的 error 态，
+// 不触碰 presentation_artifacts——保证「修订失败不破坏原可查看结果」。
+const presentationRevisionWorker = makeWorker<PresentationRevisionJobData>(
+  QUEUE_NAMES.presentationRevision,
+  async (job) => {
+    await markPresentationRevisionProcessing(job.data.revisionId);
+    const outcome = await processPresentationRevisionJob(job.data);
+    if (outcome.status === "ready") {
+      await updatePresentationArtifactSlides(job.data.artifactId, {
+        title: outcome.title,
+        slides: outcome.slides!,
+      });
+      await markPresentationRevisionReady(job.data.revisionId, { summary: outcome.summary });
+    } else {
+      await markPresentationRevisionError(job.data.revisionId, outcome.errorMessage ?? "修订失败");
+    }
+    return { revisionId: job.data.revisionId, status: outcome.status };
+  }
+);
+
+presentationRevisionWorker.on("completed", (job) => {
+  console.log(`✓ presentation-revision ${job.data.revisionId}`);
+});
+presentationRevisionWorker.on("failed", async (job, err) => {
+  console.error(`✗ presentation-revision ${job?.data.revisionId} 任务异常:`, err.message);
+  if (job) await markPresentationRevisionError(job.data.revisionId, err.message);
+});
+
 console.log(
-  `workflow-worker 已启动，监听队列 ${QUEUE_NAMES.jobs} / ${QUEUE_NAMES.kbFileProcessing} / ${QUEUE_NAMES.studioGeneration}`
+  `workflow-worker 已启动，监听队列 ${QUEUE_NAMES.jobs} / ${QUEUE_NAMES.kbFileProcessing} / ${QUEUE_NAMES.studioGeneration} / ${QUEUE_NAMES.presentationGeneration} / ${QUEUE_NAMES.presentationRevision}`
 );

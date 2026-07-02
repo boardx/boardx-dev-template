@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Search, Compass, Bookmark, Plus, ShieldCheck, Share2, LayoutGrid, Pencil } from "lucide-react";
+import { Search, Compass, Bookmark, Plus, ShieldCheck, Share2, LayoutGrid, Pencil, Heart, Link2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,32 @@ interface StoreItem {
   likes: number;
   views: number;
   featured: boolean;
+  liked?: boolean;
+}
+
+interface FavoriteToggleResponse {
+  favorited: boolean;
+  likes: number;
+}
+
+// P11 F05：分享管理。share 挂在 item 上（同一时刻一条有效链接），grantees 是被授权用户列表。
+interface ShareGrantee {
+  user_id: number;
+  email: string;
+  display_name: string;
+  granted_at: string;
+}
+
+interface ShareState {
+  item_id: number;
+  share_token: string | null;
+  share_enabled: boolean;
+  share_updated_at: string | null;
+}
+
+interface ShareInfoResponse {
+  share: ShareState | null;
+  grantees: ShareGrantee[];
 }
 
 interface ListResponse {
@@ -142,6 +168,20 @@ export function StoreBrowser() {
   const [formMessage, setFormMessage] = useState("");
   const [submitting, setSubmitting] = useState<SubmitAction | null>(null);
 
+  // P11 F05：分享管理弹窗状态。shareItemId != null 时弹窗打开，对应 owned 项目的 id。
+  const [shareItemId, setShareItemId] = useState<number | null>(null);
+  const [shareState, setShareState] = useState<ShareState | null>(null);
+  const [shareGrantees, setShareGrantees] = useState<ShareGrantee[]>([]);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
+  const [shareMessage, setShareMessage] = useState("");
+  const [shareError, setShareError] = useState("");
+  // Authorized 视图：自己被授权管理、非本人拥有的项目。
+  const [authorizedItems, setAuthorizedItems] = useState<StoreItem[]>([]);
+  const [authorizedLoading, setAuthorizedLoading] = useState(false);
+  const [authorizedError, setAuthorizedError] = useState("");
+  const [shareRedeemNotice, setShareRedeemNotice] = useState("");
+
   async function load(opts: { type: "all" | StoreType; tags: string[]; q: string; page: number }) {
     setLoading(true);
     setError("");
@@ -186,7 +226,28 @@ export function StoreBrowser() {
     setOwnedLoading(false);
   }
 
-  // Explore 拉浏览列表；Create/Authorized 拉属主列表。
+  // P11 F05：Authorized 视图——自己被授权管理、非本人拥有的项目（授权视图只显示被授权
+  // 范围内项目）。卡片带「已授权」标识，点开详情弹窗即可管理（内容编辑不在本 feature 范围）。
+  async function loadAuthorized() {
+    setAuthorizedLoading(true);
+    setAuthorizedError("");
+    try {
+      const res = await fetch("/api/ai-store/items?authorized=me");
+      if (!res.ok) {
+        setAuthorizedError("加载授权项目失败，请稍后重试");
+        setAuthorizedLoading(false);
+        return;
+      }
+      const data = (await res.json()) as { items: StoreItem[] };
+      setAuthorizedItems(data.items ?? []);
+    } catch {
+      setAuthorizedError("加载授权项目失败，请稍后重试");
+    }
+    setAuthorizedLoading(false);
+  }
+
+  // Explore 拉浏览列表；Create 拉属主列表；Authorized 同时拉属主列表（Manage share 入口）
+  // 与被授权列表（自己被授权管理、非本人拥有的项目）。
   useEffect(() => {
     if (nav === "explore") void load({ type, tags: activeTags, q, page: 1 });
     else if (nav === "create" || nav === "authorized") {
@@ -194,6 +255,7 @@ export function StoreBrowser() {
       setLoading(false);
       setError("");
       void loadOwned();
+      if (nav === "authorized") void loadAuthorized();
     }
     else {
       setItems([]);
@@ -202,6 +264,24 @@ export function StoreBrowser() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nav, type, activeTags]);
+
+  // 从分享链接跳转回来的着陆态（见 app/(app)/ai-store/share/[id]/page.tsx）：
+  // ?nav=authorized 直接切到 Authorized 视图；?shareError=invalid 提示链接失效；
+  // ?shared=<id> 提示成功加入。仅在挂载时读一次 URL，不影响后续 client 状态切换。
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const navParam = params.get("nav");
+    if (navParam === "authorized") setNav("authorized");
+    if (params.get("shareError") === "invalid") {
+      setShareRedeemNotice("分享链接无效、已关闭或项目不存在");
+    } else if (params.get("shared")) {
+      setShareRedeemNotice("已通过分享链接获得该项目的授权访问");
+    }
+    if (navParam || params.get("shareError") || params.get("shared")) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
 
   // 详情弹窗：按 id 拉取详情。
   useEffect(() => {
@@ -226,6 +306,152 @@ export function StoreBrowser() {
       cancelled = true;
     };
   }, [detailId]);
+
+  // uc-ai-store-004：喜欢/收藏切换，乐观更新 + 失败回滚。心形与计数在卡片和详情弹窗间保持同步。
+  async function toggleFavorite(id: number) {
+    const prevItem = items.find((it) => it.id === id);
+    const prevDetail = detailItem && detailItem.id === id ? detailItem : null;
+    const prevLiked = prevItem?.liked ?? prevDetail?.liked ?? false;
+    const prevLikes = prevItem?.likes ?? prevDetail?.likes ?? 0;
+    const optimisticLiked = !prevLiked;
+    const optimisticLikes = optimisticLiked ? prevLikes + 1 : Math.max(0, prevLikes - 1);
+
+    setItems((prev) =>
+      prev.map((it) => (it.id === id ? { ...it, liked: optimisticLiked, likes: optimisticLikes } : it)),
+    );
+    setDetailItem((prev) =>
+      prev && prev.id === id ? { ...prev, liked: optimisticLiked, likes: optimisticLikes } : prev,
+    );
+
+    try {
+      const res = await fetch(`/api/ai-store/items/${id}/favorite`, { method: "POST" });
+      if (!res.ok) throw new Error("favorite toggle failed");
+      const data = (await res.json()) as FavoriteToggleResponse;
+      setItems((prev) =>
+        prev.map((it) => (it.id === id ? { ...it, liked: data.favorited, likes: data.likes } : it)),
+      );
+      setDetailItem((prev) => (prev && prev.id === id ? { ...prev, liked: data.favorited, likes: data.likes } : prev));
+    } catch {
+      // 回滚
+      setItems((prev) => prev.map((it) => (it.id === id ? { ...it, liked: prevLiked, likes: prevLikes } : it)));
+      setDetailItem((prev) => (prev && prev.id === id ? { ...prev, liked: prevLiked, likes: prevLikes } : prev));
+    }
+  }
+
+  // P11 F05：分享管理弹窗。shareUrlFor 只在前端拼接展示用，实际访问权限由服务端 token 校验。
+  function shareUrlFor(itemId: number, token: string) {
+    if (typeof window === "undefined") return "";
+    return `${window.location.origin}/ai-store/share/${itemId}?shareToken=${encodeURIComponent(token)}`;
+  }
+
+  async function loadShareInfo(itemId: number) {
+    setShareLoading(true);
+    setShareError("");
+    try {
+      const res = await fetch(`/api/ai-store/items/${itemId}/share`);
+      if (!res.ok) {
+        setShareError("加载分享状态失败，请稍后重试");
+        setShareLoading(false);
+        return;
+      }
+      const data = (await res.json()) as ShareInfoResponse;
+      setShareState(data.share);
+      setShareGrantees(data.grantees ?? []);
+    } catch {
+      setShareError("加载分享状态失败，请稍后重试");
+    }
+    setShareLoading(false);
+  }
+
+  function openShareModal(itemId: number) {
+    setShareItemId(itemId);
+    setShareMessage("");
+    setShareError("");
+    void loadShareInfo(itemId);
+  }
+
+  function closeShareModal() {
+    setShareItemId(null);
+    setShareState(null);
+    setShareGrantees([]);
+    setShareMessage("");
+    setShareError("");
+  }
+
+  async function copyShareLink(token: string) {
+    const url = shareUrlFor(shareItemId!, token);
+    try {
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(url);
+    } catch {
+      // clipboard 写入失败不阻断流程，链接仍在弹窗内可见可手动复制。
+    }
+    return url;
+  }
+
+  // 生成/重新开启分享链接：已开启时服务端复用同一 token 并重新复制（A1）；
+  // 已关闭时服务端生成新 token 并开启（A2），前端据此展示不同的成功提示文案。
+  async function enableShare() {
+    if (shareItemId == null) return;
+    setShareBusy(true);
+    setShareError("");
+    try {
+      const wasEnabled = shareState?.share_enabled ?? false;
+      const res = await fetch(`/api/ai-store/items/${shareItemId}/share`, { method: "POST" });
+      if (!res.ok) {
+        setShareError("生成分享链接失败，请重试");
+        setShareBusy(false);
+        return;
+      }
+      const data = (await res.json()) as { share: ShareState };
+      setShareState(data.share);
+      if (data.share.share_token) await copyShareLink(data.share.share_token);
+      setShareMessage(wasEnabled ? "管理授权链接已复制" : "分享已重新开启，链接已复制");
+    } catch {
+      setShareError("生成分享链接失败，请重试");
+    }
+    setShareBusy(false);
+  }
+
+  async function disableShare() {
+    if (shareItemId == null) return;
+    setShareBusy(true);
+    setShareError("");
+    try {
+      const res = await fetch(`/api/ai-store/items/${shareItemId}/share`, { method: "DELETE" });
+      if (!res.ok) {
+        setShareError("关闭分享失败，请重试");
+        setShareBusy(false);
+        return;
+      }
+      const data = (await res.json()) as { share: ShareState };
+      setShareState(data.share);
+      setShareMessage("分享链接已关闭");
+    } catch {
+      setShareError("关闭分享失败，请重试");
+    }
+    setShareBusy(false);
+  }
+
+  async function removeGrantee(userId: number) {
+    if (shareItemId == null) return;
+    setShareBusy(true);
+    setShareError("");
+    try {
+      const res = await fetch(`/api/ai-store/items/${shareItemId}/share/grantees/${userId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        setShareError("移除授权失败，请重试");
+        setShareBusy(false);
+        return;
+      }
+      setShareGrantees((prev) => prev.filter((g) => g.user_id !== userId));
+      setShareMessage("已移除授权");
+    } catch {
+      setShareError("移除授权失败，请重试");
+    }
+    setShareBusy(false);
+  }
 
   function toggleTag(tag: string) {
     setActiveTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
@@ -364,17 +590,33 @@ export function StoreBrowser() {
                     {it.description}
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  data-testid={`edit-item-${it.id}`}
-                  onClick={() => editItem(it)}
-                  className="shrink-0"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Edit
-                </Button>
+                {/* uc-ai-store-005：不符合分享管理条件的资源不展示入口——草稿/审核中/被拒绝
+                    的项目还没有稳定对外身份，暂不开放授权链接（草稿内容随时变、拒绝态不该
+                    继续分享）；仅 published/pending/approved 且非平台精选的资源展示入口。 */}
+                <div className="flex shrink-0 flex-col gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    data-testid={`edit-item-${it.id}`}
+                    onClick={() => editItem(it)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit
+                  </Button>
+                  {it.status !== "draft" && it.status !== "rejected" && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      data-testid={`share-item-${it.id}`}
+                      onClick={() => openShareModal(it.id)}
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                      Share
+                    </Button>
+                  )}
+                </div>
               </div>
             </article>
           ))}
@@ -606,9 +848,32 @@ export function StoreBrowser() {
                             </span>
                           ))}
                           <span className="flex-1" />
-                          <span className="text-11 text-placeholder">
-                            ♡ {it.likes} · 👁 {it.views}
-                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            data-testid={`favorite-${it.id}`}
+                            aria-pressed={it.liked ?? false}
+                            aria-label={it.liked ? "取消喜欢" : "喜欢"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void toggleFavorite(it.id);
+                            }}
+                            className={cn(
+                              "h-6 gap-1 rounded-full px-1.5 text-11 font-normal",
+                              it.liked
+                                ? "text-destructive hover:text-destructive"
+                                : "text-placeholder hover:text-destructive",
+                            )}
+                          >
+                            <Heart
+                              className="h-3.5 w-3.5"
+                              strokeWidth={1.75}
+                              fill={it.liked ? "currentColor" : "none"}
+                            />
+                            <span data-testid={`likes-${it.id}`}>{it.likes}</span>
+                          </Button>
+                          <span className="text-11 text-placeholder">👁 {it.views}</span>
                         </div>
                       </article>
                     ))}
@@ -861,9 +1126,19 @@ export function StoreBrowser() {
           </div>
         ) : isAuthorized ? (
           <div data-testid="authorized-view" className="mt-5">
+            {shareRedeemNotice && (
+              <div
+                data-testid="share-redeem-notice"
+                role="status"
+                className="mb-4 rounded-10 border border-border bg-surface-1 px-3.5 py-2.5 text-13 text-foreground"
+              >
+                {shareRedeemNotice}
+              </div>
+            )}
+
             <div className="flex items-center gap-3">
               <p className="text-13 text-placeholder">
-                Items you own or are authorized to manage. Sharing collaboration arrives in a later feature.
+                Your own items — click Share to generate a management authorization link.
               </p>
               <div className="flex-1" />
               <Button type="button" size="sm" variant="outline" data-testid="authorized-create" onClick={() => setNav("create")}>
@@ -872,6 +1147,69 @@ export function StoreBrowser() {
               </Button>
             </div>
             {ownedList}
+
+            <div className="mt-7 flex items-center gap-3 border-t border-border pt-5">
+              <h2 className="text-15 font-bold text-foreground">Authorized by others</h2>
+            </div>
+            <div data-testid="authorized-items" className="mt-3">
+              {authorizedLoading ? (
+                <div data-testid="loading" className="grid animate-pulse grid-cols-1 gap-3 lg:grid-cols-2">
+                  {Array.from({ length: 2 }).map((_, i) => (
+                    <div key={i} className="h-20 rounded-12 bg-muted" />
+                  ))}
+                </div>
+              ) : authorizedError ? (
+                <div
+                  data-testid="err-authorized"
+                  role="alert"
+                  className="rounded-12 border border-border p-4 text-13 text-destructive"
+                >
+                  {authorizedError}
+                </div>
+              ) : authorizedItems.length === 0 ? (
+                <div data-testid="empty-authorized" className="rounded-12 border border-dashed border-border py-8 text-center">
+                  <p className="text-13 font-semibold text-foreground">No authorized items</p>
+                  <p className="mt-1 text-13 text-placeholder">
+                    Items shared with you via a management authorization link will show up here.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                  {authorizedItems.map((it) => (
+                    <article
+                      key={it.id}
+                      data-testid={`authorized-item-${it.id}`}
+                      className="rounded-12 border border-border p-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span
+                          className={cn(
+                            "flex h-9 w-9 shrink-0 items-center justify-center rounded-10 text-15 font-bold text-foreground/40",
+                            fillFor(it.id),
+                          )}
+                        >
+                          {(it.cover || it.name.charAt(0)).slice(0, 1).toUpperCase()}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate text-13 font-semibold text-foreground">{it.name}</span>
+                            <span
+                              data-testid={`authorized-badge-${it.id}`}
+                              className="shrink-0 rounded-7 bg-tag-blue px-1.75 py-0.5 text-9 font-bold text-foreground/70"
+                            >
+                              AUTHORIZED
+                            </span>
+                          </div>
+                          <p className="mt-2 line-clamp-2 text-12 leading-relaxed text-muted-foreground">
+                            {it.description}
+                          </p>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <div data-testid="empty" className="flex flex-col items-center gap-1.5 py-12 text-center">
@@ -965,16 +1303,36 @@ export function StoreBrowser() {
 
                 <div
                   data-testid="detail-stats"
-                  className="mt-4 flex gap-6 border-y border-border py-3.5"
+                  className="mt-4 flex items-center gap-6 border-y border-border py-3.5"
                 >
                   <div>
-                    <div className="text-17 font-bold text-foreground">{detailItem.likes}</div>
+                    <div data-testid="detail-likes" className="text-17 font-bold text-foreground">
+                      {detailItem.likes}
+                    </div>
                     <div className="text-11 text-placeholder">Likes</div>
                   </div>
                   <div>
                     <div className="text-17 font-bold text-foreground">{detailItem.views}</div>
                     <div className="text-11 text-placeholder">Views</div>
                   </div>
+                  <div className="flex-1" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    data-testid="detail-favorite"
+                    aria-pressed={detailItem.liked ?? false}
+                    aria-label={detailItem.liked ? "取消喜欢" : "喜欢"}
+                    onClick={() => void toggleFavorite(detailItem.id)}
+                    className={cn(
+                      "h-9 w-9 shrink-0 rounded-full",
+                      detailItem.liked
+                        ? "border-destructive text-destructive hover:text-destructive"
+                        : "text-placeholder hover:border-destructive hover:text-destructive",
+                    )}
+                  >
+                    <Heart className="h-4.5 w-4.5" strokeWidth={1.75} fill={detailItem.liked ? "currentColor" : "none"} />
+                  </Button>
                 </div>
 
                 {/* 订阅入口：F01 只读浏览，订阅动作留给 F03（当前禁用占位）。 */}
@@ -987,6 +1345,137 @@ export function StoreBrowser() {
                 >
                   Subscribe
                 </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 分享管理弹窗（P11 F05，uc-ai-store-005）：复制授权链接 / 关闭分享链接 / 已授权用户列表。 */}
+      {shareItemId != null && (
+        <div
+          data-testid="share-modal"
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/35"
+          onClick={closeShareModal}
+        >
+          <div
+            className="max-h-[84vh] w-95 max-w-[92vw] overflow-auto rounded-14 bg-background p-5.5 shadow-[0_24px_60px_rgba(0,0,0,0.28)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-15 font-bold text-foreground">Share management</h2>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                data-testid="close-share-modal"
+                aria-label="Close"
+                onClick={closeShareModal}
+                className="h-7 w-7 rounded-full text-muted-foreground"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {shareLoading ? (
+              <div data-testid="share-loading" className="mt-4 text-13 text-placeholder">
+                Loading…
+              </div>
+            ) : (
+              <div className="mt-4 space-y-4">
+                {shareError && (
+                  <div data-testid="share-error" role="alert" className="rounded-10 border border-border p-3 text-13 text-destructive">
+                    {shareError}
+                  </div>
+                )}
+                {shareMessage && (
+                  <div data-testid="share-message" role="status" className="rounded-10 border border-border bg-surface-1 p-3 text-13 text-foreground">
+                    {shareMessage}
+                  </div>
+                )}
+
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-11 font-semibold uppercase tracking-wide text-placeholder">
+                      Management authorization link
+                    </span>
+                    <span
+                      data-testid="share-status"
+                      className={cn(
+                        "rounded-7 px-1.75 py-0.5 text-9 font-bold",
+                        shareState?.share_enabled ? "bg-tag-green text-foreground/70" : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {shareState?.share_enabled ? "SHARED" : "OFF"}
+                    </span>
+                  </div>
+
+                  {shareState?.share_enabled && shareState.share_token && (
+                    <div
+                      data-testid="share-link"
+                      className="mt-2 truncate rounded-9 border border-border bg-surface-1 px-2.5 py-2 text-11 text-muted-foreground"
+                    >
+                      {shareUrlFor(shareItemId, shareState.share_token)}
+                    </div>
+                  )}
+
+                  <div className="mt-2.5 flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      data-testid="share-copy-link"
+                      disabled={shareBusy}
+                      onClick={() => void enableShare()}
+                    >
+                      <Link2 className="h-3.5 w-3.5" />
+                      {shareState?.share_enabled ? "Copy link" : "Generate link"}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      data-testid="share-revoke-link"
+                      disabled={shareBusy || !shareState?.share_enabled}
+                      onClick={() => void disableShare()}
+                    >
+                      Revoke
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-11 font-semibold uppercase tracking-wide text-placeholder">
+                    Authorized users
+                  </span>
+                  {shareGrantees.length === 0 ? (
+                    <div data-testid="share-grantees-empty" className="mt-2 rounded-9 border border-dashed border-border py-4 text-center text-12 text-placeholder">
+                      No authorized users yet
+                    </div>
+                  ) : (
+                    <ul data-testid="share-grantee-list" className="mt-2 space-y-1.5">
+                      {shareGrantees.map((g) => (
+                        <li
+                          key={g.user_id}
+                          data-testid={`share-grantee-${g.user_id}`}
+                          className="flex items-center justify-between rounded-9 border border-border px-2.5 py-1.75 text-12"
+                        >
+                          <span className="truncate text-foreground">{g.display_name}</span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            data-testid={`share-remove-grantee-${g.user_id}`}
+                            disabled={shareBusy}
+                            onClick={() => void removeGrantee(g.user_id)}
+                            className="h-6 px-1.5 text-11 text-destructive hover:text-destructive"
+                          >
+                            Remove
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
             )}
           </div>

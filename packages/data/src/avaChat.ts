@@ -361,6 +361,91 @@ export async function deleteLastAvaUserMessageAndFollowing(
   }
 }
 
+/** 重新生成：删除最后一条 assistant 消息（及其后任何消息，正常情况下没有），保留原问题
+ *  （最后一条 user 消息）不动。仅允许对"最后一条 assistant 消息"重新生成，防止破坏顺序。
+ *  返回 true 表示已删除，调用方随后应像发消息一样重新走一遍生成流程（history 已不含旧回复）。 */
+export async function deleteLastAvaAssistantMessageForRegenerate(
+  threadId: number,
+  messageId: number
+): Promise<boolean> {
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const lastMessage = await client.query<AvaMessage>(
+      `SELECT id, thread_id, role, content, status, created_at
+       FROM ava_messages
+       WHERE thread_id = $1
+       ORDER BY id DESC
+       LIMIT 1
+       FOR UPDATE`,
+      [threadId]
+    );
+    const last = lastMessage.rows[0];
+    if (!last || last.role !== "assistant" || Number(last.id) !== messageId) {
+      await client.query("ROLLBACK");
+      return false;
+    }
+
+    await client.query(`DELETE FROM ava_messages WHERE thread_id = $1 AND id >= $2`, [
+      threadId,
+      messageId,
+    ]);
+    await client.query("COMMIT");
+    return true;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// ─── 消息反馈（p9-F11，点赞/点踩）───────────────────────────────────────────
+
+export type AvaMessageFeedbackRating = "up" | "down";
+
+export interface AvaMessageFeedback {
+  message_id: number;
+  user_id: number;
+  rating: AvaMessageFeedbackRating;
+  created_at: string;
+  updated_at: string;
+}
+
+/** 提交/更新反馈：同一用户对同一条消息只保留最新一条（upsert）。调用方需先确认该消息属于
+ *  当前用户可访问的线程（isThreadInCurrentContext）且是 assistant 消息。 */
+export async function upsertAvaMessageFeedback(
+  messageId: number,
+  userId: number,
+  rating: AvaMessageFeedbackRating
+): Promise<AvaMessageFeedback> {
+  const rows = await query<AvaMessageFeedback>(
+    `INSERT INTO ava_message_feedback (message_id, user_id, rating)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (message_id, user_id)
+     DO UPDATE SET rating = EXCLUDED.rating, updated_at = now()
+     RETURNING message_id, user_id, rating, created_at, updated_at`,
+    [messageId, userId, rating]
+  );
+  return rows[0]!;
+}
+
+/** 批量按 message_id 取当前用户已提交的反馈，减少 N+1（线程详情页渲染用）。 */
+export async function listAvaMessageFeedbackByMessageIds(
+  messageIds: number[],
+  userId: number
+): Promise<Map<number, AvaMessageFeedbackRating>> {
+  const map = new Map<number, AvaMessageFeedbackRating>();
+  if (messageIds.length === 0) return map;
+  const rows = await query<{ message_id: number; rating: AvaMessageFeedbackRating }>(
+    `SELECT message_id, rating FROM ava_message_feedback
+     WHERE message_id = ANY($1::bigint[]) AND user_id = $2`,
+    [messageIds, userId]
+  );
+  for (const row of rows) map.set(row.message_id, row.rating);
+  return map;
+}
+
 // ─── 附件仓储 ──────────────────────────────────────────────────────────────
 
 export interface CreateAvaAttachmentInput {

@@ -9,6 +9,8 @@ export const QUEUE_NAMES = {
   jobs: "boardx.jobs",
   kbFileProcessing: "boardx.kb-file-processing", // CAP-FILE：解析/切分/向量化（p10-F01）
   studioGeneration: "boardx.studio-generation", // CAP-AI：Studio 音频概览/信息图/演示生成（p12-F01）
+  presentationGeneration: "boardx.presentation-generation", // CAP-AI：演示文稿生成（p12-F02）
+  presentationRevision: "boardx.presentation-revision", // CAP-AI：演示文稿修订/单页优化（p12-F03）
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

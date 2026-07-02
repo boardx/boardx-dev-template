@@ -1,0 +1,10 @@
+
+Running 5 tests using 1 worker
+
+  ✓  1 [chromium] › ai-store-004-favorite-item.spec.ts:11:5 › 未登录调用 POST /api/ai-store/items/:id/favorite 返回未授权 (1.4s)
+  ✓  2 [chromium] › ai-store-004-favorite-item.spec.ts:17:5 › 未登录访问 /ai-store 重定向到登录（引导登录后才能点喜欢） (5.0s)
+  ✓  3 [chromium] › ai-store-004-favorite-item.spec.ts:23:5 › 卡片心形高亮切换 + 计数更新，刷新后保持 (1.6s)
+  ✓  4 [chromium] › ai-store-004-favorite-item.spec.ts:57:5 › 详情弹窗心形与卡片状态同步，切换后计数一致 (1.2s)
+  ✓  5 [chromium] › ai-store-004-favorite-item.spec.ts:88:5 › 并发 toggle 不会让 likes 计数与收藏明细漂移（CTE 绑定回归） (257ms)
+
+  5 passed (13.2s)
