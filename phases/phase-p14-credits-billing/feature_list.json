@@ -65,7 +65,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/credits-003-view-credit-records.spec.ts"
       ],
-      "evidence": "evidence/F03.verify.log @ 2026-07-02T04:34:51.679Z",
+      "evidence": "evidence/f03-e2e-pass.txt (7/7 playwright), evidence/f03-data-test.txt, evidence/f03-data-typecheck.txt, evidence/f03-web-typecheck.txt, evidence/f03-web-lint.txt, evidence/f03-notes.md @ 2026-07-02T04:44:26+08:00",
       "notes": "uc-credits-003。读 credit_transactions，按 scope+权限过滤。依赖 F01。"
     },
     {
