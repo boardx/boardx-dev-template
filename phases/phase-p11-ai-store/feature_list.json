@@ -99,7 +99,7 @@
       "title": "项目分享管理（授权链接生成/关闭 + 已授权用户列表）",
       "user_visible_behavior": "拥有者在项目上打开分享管理：POST /api/ai-store/items/:id/share 生成或关闭管理授权链接；被授权协作者通过链接进入授权管理视图（Authorized/Shared），查看和管理自己被授权的项目；关闭链接后原链接失效；非拥有者不能开关分享。",
       "design_ref": "prototype:<!-- STORE -->（Authorized / Shared 视图 + 卡片分享管理入口；分享管理弹窗细节较浅，参考 store detail modal 布局）；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "05",
       "owner": "wrk-store-2",
       "capability": "CAP-DATA",
@@ -112,7 +112,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ai-store-005-share-management.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F05.verify.log @ 2026-07-02T15:04:18.717Z",
       "notes": "uc-ai-store-005。授权以 item+shareToken+grantee 表达；授权视图只显示被授权范围内项目。依赖 F02。"
     },
     {
@@ -122,9 +122,9 @@
       "title": "团队/项目审核与精选（PENDING/APPROVED 切换 + featured）",
       "user_visible_behavior": "Team 管理角色在团队 AI Store 审核视图查看提交审核的项目（PENDING），批准（→APPROVED/published）、拒绝（→REJECTED）或撤回；对已批准项目切换团队精选。操作即时反映在列表与状态标；无审核权限者看不到审核入口。",
       "design_ref": "prototype:<!-- store approval --> + <!-- admin: approval confirm -->（Team 管理页审核）；平台级审核/精选见 p15-F04/F05；DESIGN.md tokens",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "06",
+      "owner": "wrk-store-2",
       "capability": "CAP-DATA",
       "depends_on": [
         "F02"

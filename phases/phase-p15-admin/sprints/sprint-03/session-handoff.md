@@ -50,3 +50,28 @@
   harness 的 `sh()` 是裸 spawnSync，不会自动加载 `.env.local`）
 - 调试: `pnpm --filter @repo/web exec playwright test e2e/admin-001-manage-users.spec.ts --trace on`，
   失败后 `pnpm --filter @repo/web exec playwright show-trace <trace.zip 路径>` 看具体 DOM/网络时序。
+
+## 2026-07-02 安全补丁交接（issue #173）
+- 当前 worktree: `/private/tmp/boardx-worktrees/issue-173-admin-credit-security`。
+- F02 仍保持权威清单里的 `passing`，本轮没有 claim 或手改 status；这是 passing 后安全补丁。
+- 代码变更:
+  - `packages/data/migrations/019_credit_transaction_idempotency.sql`
+  - `packages/data/src/credits.ts`
+  - `apps/web/app/api/admin/users/[id]/credit/route.ts`
+  - `apps/web/e2e/admin-001-manage-users.spec.ts`
+- 已通过:
+  - `pnpm --filter @repo/data run typecheck`
+  - `pnpm --filter @repo/web run typecheck`
+  - `pnpm -w run verify:base`
+  - `pnpm harness verify --sprint p15/03 --feature F02` 只证明 harness 可运行并按规则跳过已 passing
+    F02；它没有执行新增安全 e2e。
+- 未通过/需下轮重跑:
+  - `docker compose -f infra/docker-compose.yml up -d` 当前失败：Docker daemon 不可连接。
+  - `pnpm --filter @repo/data run migrate` 当前失败：Postgres `localhost:50404` 未监听。
+  - `pnpm --filter @repo/web exec playwright test e2e/admin-001-manage-users.spec.ts` 当前失败：DB
+    连接拒绝导致 13 个 DB 依赖用例失败；不是断言命中新增安全逻辑失败。
+- Docker/Postgres 恢复后下一步:
+  1. `docker compose -f infra/docker-compose.yml up -d`
+  2. `pnpm --filter @repo/data run migrate`
+  3. `pnpm --filter @repo/web exec playwright test e2e/admin-001-manage-users.spec.ts`
+  4. 可选：直接对同一用户并发打 `/api/admin/users/:id/credit`，确认余额只增加一次。

@@ -98,7 +98,7 @@
       "title": "公开分享对话只读页 /chatShare/:threadId",
       "user_visible_behavior": "无需登录打开 /chatShare/{threadId}?shareToken=… ：加载中显示 Loading chat session；有效则按时间顺序只读渲染消息（用户/AI/Markdown/代码块/图片/公开附件），底部 Shared chat session · Read only，不展示输入框、不能发消息/编辑；threadId 缺失显示 Invalid chat session；token 无效/分享已关闭显示不可访问；空线程显示 No messages。",
       "design_ref": "mockup:phases/requirements/mockups/chat-share-readonly.html（本轮已补设计稿：只读消息流 + 顶部 shared 标识 + 底部 Read only 条，无 composer）；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "04",
       "owner": "wrk-ava-1",
       "capability": "CAP-WEB",
@@ -109,7 +109,7 @@
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/share-view-chat.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F05.verify.log @ 2026-07-02T14:44:46.279Z",
       "notes": "uc-share-001（share 模块唯一用例，归 P9）。只暴露允许分享内容，私有/团队私有/未公开附件不可访问；登录角色/管理员不能借公开链接绕过分享范围。设计稿已在本轮补齐（见 design_ref），解除原 design-needed 阻塞。依赖 F04 的 share 数据 + F06 报告面板（只读）。"
     },
     {
@@ -119,9 +119,9 @@
       "title": "Deep Research（澄清→计划→执行时间线→报告）",
       "user_visible_behavior": "输入区选 Deep Research/用户研究模式并提交主题：消息区展示研究处理中，按需展示澄清问题/配置面板；生成研究计划（阶段/子任务/受众）供用户确认或调整；执行期展示时间线与各阶段/子任务状态；完成后消息区出现报告通知，点击打开报告详情面板（结论/结构化内容/阶段结果）并可继续追问。主题过短/额度不足/启动失败给对应提示并保留可恢复状态。",
       "design_ref": "prototype:<!-- research card --> / <!-- clarify --> / <!-- plan --> / <!-- running / report timeline --> / <!-- report panel --> / <!-- market report --> / <!-- user research report -->；DESIGN.md tokens",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "wrk-codex-ava-6",
       "capability": "CAP-AI",
       "depends_on": [
         "F01"
@@ -132,7 +132,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-deep-research.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F06.verify.log @ 2026-07-02T15:34:04.207Z",
       "notes": "uc-ava-005。重 AI 编排：LangGraph 多阶段（澄清/计划/执行/报告）状态机，全部与同一 threadId 关联。e2e 用 stub 研究引擎跑通阶段状态与报告通知渲染。依赖 F01 的 CAP-AI 地基。"
     },
     {
@@ -230,7 +230,7 @@
       "title": "消息结果操作（复制/反馈/重新生成/发送到Board/发送邮件）",
       "user_visible_behavior": "回复消息下方按消息类型展示可用操作：复制（写剪贴板并提示「文本已被复制」，代码块只复制代码块）、反馈（提交并记录状态）、重新生成（基于上下文重请求，展示生成中，不丢原问题）、发送到当前 Board、发送邮件。剪贴板不可用提示手动复制；各操作失败保留原消息。",
       "design_ref": "prototype:<!-- messages --> / <!-- text message -->（消息卡片下方操作条）；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "05",
       "owner": "wrk-ava-1",
       "capability": "CAP-AI",
@@ -243,7 +243,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-message-actions.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F11.verify.log @ 2026-07-02T14:47:10.692Z",
       "notes": "uc-ava-010。复制/反馈/重新生成本阶段可做。两个外发子动作有跨能力依赖：『发送到当前 Board』依赖 p6 canvas（board 存在且有编辑权），『发送邮件』依赖邮件服务——这两项先做禁用态/占位，能力就绪后点亮（send-to-board on p6，email on 邮件服务）。依赖 F01。"
     }
   ]

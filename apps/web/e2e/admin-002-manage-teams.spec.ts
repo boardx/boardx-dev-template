@@ -121,6 +121,12 @@ test("SysAdmin 为团队手动增加 Credit，余额立即反映", async ({ page
   // 非法额度被拒
   const badRes = await page.request.post(`/api/admin/teams/${teamId}/credit`, { data: { amount: -5 } });
   expect(badRes.status()).toBe(400);
+
+  // 单次上分金额有服务端上限，防止任意大额注入（与 F02 用户上分一致）。
+  const tooLargeRes = await page.request.post(`/api/admin/teams/${teamId}/credit`, {
+    data: { amount: 100_001 },
+  });
+  expect(tooLargeRes.status()).toBe(400);
 });
 
 test("手动上分带幂等 key：重复提交（同 key）不会重复入账", async ({ page }) => {
@@ -157,6 +163,33 @@ test("手动上分带幂等 key：重复提交（同 key）不会重复入账", 
   expect(res3.status()).toBe(200);
   const body3 = await res3.json();
   expect(body3.wallet.balance).toBe(2000);
+});
+
+test("团队手动上分同一 Idempotency-Key 并发请求不会双重入账", async ({ page }) => {
+  // PR #177 review：此前只有 SELECT 查重（check-then-act），并发下会双双查空、双双入账。
+  // recordTransactionIdempotent 用单事务 INSERT ... ON CONFLICT DO NOTHING 兜底，
+  // 这里用 8 个并发请求带同一个 idem key 验证余额只会加一次。
+  await registerAndPromote(page);
+  const teamName = `Acme Race ${Date.now()}`;
+  const teamId = await createTeam(page, teamName);
+
+  const idemKey = `race-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const headers = { "content-type": "application/json", "idempotency-key": idemKey };
+  const responses = await Promise.all(
+    Array.from({ length: 8 }, () =>
+      page.request.post(`/api/admin/teams/${teamId}/credit`, {
+        headers,
+        data: { amount: 777 },
+      })
+    )
+  );
+
+  for (const res of responses) {
+    expect(res.status()).toBe(200);
+  }
+  const bodies = await Promise.all(responses.map((res) => res.json()));
+  expect(bodies.some((resBody) => resBody.idempotent === true)).toBeTruthy();
+  expect(bodies.every((resBody) => resBody.wallet.balance === 777)).toBeTruthy();
 });
 
 test("手动上分 note 超长会被服务端裁剪到 200 字符", async ({ page }) => {
