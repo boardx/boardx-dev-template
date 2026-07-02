@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { getAvaThread, deleteAvaAttachmentIfPending } from "@repo/data";
 import { deleteObject } from "@repo/storage";
 import { currentUser, currentTeamId } from "@/lib/session";
+import { isThreadInCurrentContext } from "@/lib/ava-thread-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +24,7 @@ export async function DELETE(
   }
 
   const thread = await getAvaThread(threadId);
-  if (!thread || thread.user_id !== user.id || thread.team_id !== currentTeamId()) {
+  if (!thread || !isThreadInCurrentContext(thread, user.id, currentTeamId())) {
     return NextResponse.json({ error: "线程不存在" }, { status: 404 });
   }
 

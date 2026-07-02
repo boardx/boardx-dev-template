@@ -6,6 +6,7 @@ import {
   replaceLastAvaUserMessageAndDeleteFollowing,
 } from "@repo/data";
 import { currentTeamId, currentUser } from "@/lib/session";
+import { isThreadInCurrentContext } from "@/lib/ava-thread-auth";
 import { createAvaReplyStreamResponse } from "../reply-stream";
 
 export const runtime = "nodejs";
@@ -16,16 +17,6 @@ function parseIds(params: { id: string; messageId: string }): { threadId: number
   const messageId = Number(params.messageId);
   if (!Number.isFinite(threadId) || !Number.isFinite(messageId)) return undefined;
   return { threadId, messageId };
-}
-
-function isThreadInCurrentContext(
-  thread: { user_id: number | string; team_id: number | string | null },
-  userId: number,
-  teamId: number | null
-): boolean {
-  const sameUser = String(thread.user_id) === String(userId);
-  const sameTeam = thread.team_id == null ? teamId == null : teamId != null && String(thread.team_id) === String(teamId);
-  return sameUser && sameTeam;
 }
 
 async function assertOwner(threadId: number): Promise<Response | undefined> {
