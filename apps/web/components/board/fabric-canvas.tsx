@@ -34,6 +34,11 @@ export interface RenderItem {
   color: string | null;
   kind: "note" | "text" | "shape" | "embed";
   bold: boolean;
+  // p6:F12（uc-widget-menu-013）：文本样式字段，均由 color 的 "|k=v" 段解析而来。
+  italic: boolean;
+  fontFamily: string;
+  fontSize: number;
+  align: "left" | "center" | "right";
   reloadable: boolean;
   reloadCount: number;
   refreshedAt: number | null;
@@ -130,7 +135,12 @@ export interface CanvasTestApi {
     h: number;
     text: string;
     color: string | null;
+    kind: "note" | "text" | "shape" | "embed";
     bold: boolean;
+    italic: boolean;
+    fontFamily: string;
+    fontSize: number;
+    align: "left" | "center" | "right";
     reloadable: boolean;
     reloadCount: number;
     refreshedAt: number | null;
@@ -522,7 +532,12 @@ export function FabricCanvas(props: Props) {
               h: it.h,
               text: it.text,
               color: it.color,
+              kind: it.kind,
               bold: it.bold,
+              italic: it.italic,
+              fontFamily: it.fontFamily,
+              fontSize: it.fontSize,
+              align: it.align,
               reloadable: it.reloadable,
               reloadCount: it.reloadCount,
               refreshedAt: it.refreshedAt,
@@ -671,19 +686,29 @@ function buildItemObject(
     strokeUniform: true,
   });
   const pad = 8; // p-2
+  // p6:F12（uc-widget-menu-013）：字体/字号/斜体/对齐均可由用户调整，取值来自 RenderItem
+  // （由 color 的 "|k=v" 样式段解析而来）。水平对齐（left/center/right）独立于 kind 的默认
+  // 垂直布局：文本块沿用原「顶对齐」，便签/形状沿用原「垂直居中」，只有水平锚点随 align 变化。
+  const textAlign = it.align;
+  const horizOrigin =
+    textAlign === "center"
+      ? { originX: "center" as const, left: it.w / 2 }
+      : textAlign === "right"
+        ? { originX: "right" as const, left: it.w - pad }
+        : { originX: "left" as const, left: pad };
   const text = new fabric.Textbox(it.text, {
     width: Math.max(8, it.w - pad * 2),
-    fontSize: 12, // text-xs
+    fontSize: it.fontSize,
     lineHeight: 1.35,
-    fontFamily: tokens.fontFamily,
+    fontFamily: it.fontFamily === "sans-serif" ? tokens.fontFamily : it.fontFamily,
     fontWeight: it.bold ? "700" : "400",
+    fontStyle: it.italic ? "italic" : "normal",
     fill: tokens.foreground,
-    textAlign: isTextKind ? "left" : "center",
+    textAlign,
     splitByGrapheme: true, // 中文无空格也按字素折行
     editable: false, // 文本编辑走 DOM textarea 覆盖层（保留 item-edit-<id> 锚点）
-    ...(isTextKind
-      ? { left: pad, top: pad, originX: "left" as const, originY: "top" as const }
-      : { left: it.w / 2, top: it.h / 2, originX: "center" as const, originY: "center" as const }),
+    ...(isTextKind ? { top: pad, originY: "top" as const } : { top: it.h / 2, originY: "center" as const }),
+    ...horizOrigin,
   });
   // 编辑中：隐藏 canvas 文本，避免与 DOM textarea 双重显示（背景仍由 fabric 画）。
   text.visible = !editing;

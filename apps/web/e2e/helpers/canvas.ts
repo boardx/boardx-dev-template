@@ -14,7 +14,12 @@ export interface CanvasItem {
   h: number;
   text: string;
   color: string | null;
+  kind: "note" | "text" | "shape" | "embed";
   bold: boolean;
+  italic: boolean;
+  fontFamily: string;
+  fontSize: number;
+  align: "left" | "center" | "right";
   reloadable: boolean;
   reloadCount: number;
   refreshedAt: number | null;

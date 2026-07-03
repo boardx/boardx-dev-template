@@ -14,6 +14,9 @@ import { BoardBottomDock, type DockToolKey } from "@/components/board/board-bott
 import { BoardAiOverlay } from "@/components/board/board-ai-panel";
 import { setOperating } from "@/lib/collab-bus";
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   Cable,
   Hand,
   Image,
@@ -48,10 +51,64 @@ const COLORS: Record<string, string> = {
   pink: "bg-tag-pink border-border-strong text-foreground",
 };
 const COLOR_TOKENS = Object.keys(COLORS);
-// color 字段可为复合 "<base>:bold"（uc-widget-menu-002 字重）；base 决定色/文本判别，:bold 决定字重。
-const baseColor = (c?: string | null) => (c ?? "amber").split(":")[0] || "amber";
-const isBold = (it: { color?: string | null }) => (it.color ?? "").endsWith(":bold");
+// color 字段可为复合 "<base>[:bold][|k=v...]"（uc-widget-menu-002 字重 + p6:F12 文本样式）：
+// "<base>" 决定色/文本/嵌入判别；紧随其后可选的 ":bold" 段（历史格式，勿改）决定字重；
+// "|" 之后是任意数量的 "k=v" 样式段（font/size/align/italic），供 F12 文本样式面板使用。
+// 三者互不影响，解析时先按 "|" 切出样式段，再从首段（base[:bold]）里剥离 base 与 bold。
+const splitColor = (c?: string | null) => (c ?? "amber").split("|");
+const baseColor = (c?: string | null) => (splitColor(c)[0] ?? "amber").split(":")[0] || "amber";
+const isBold = (it: { color?: string | null }) => (splitColor(it.color)[0] ?? "").endsWith(":bold");
 const colorClass = (c?: string | null) => COLORS[baseColor(c)] ?? COLORS.amber;
+
+// p6:F12 文本样式段解析："|" 之后的 "k=v" 列表。
+const styleSegs = (c?: string | null) => splitColor(c).slice(1);
+const styleGet = (c: string | null | undefined, key: string): string | null => {
+  for (const seg of styleSegs(c)) {
+    const [k, ...rest] = seg.split("=");
+    if (k === key) return rest.join("=");
+  }
+  return null;
+};
+const isItalic = (it: { color?: string | null }) => styleGet(it.color, "italic") === "1";
+const getFontFamily = (it: { color?: string | null }) => styleGet(it.color, "font") ?? DEFAULT_FONT;
+const getFontSize = (it: { color?: string | null }) => {
+  const v = styleGet(it.color, "size");
+  const n = v != null ? Number(v) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_FONT_SIZE;
+};
+const getAlign = (it: { color?: string | null }): "left" | "center" | "right" => {
+  const v = styleGet(it.color, "align");
+  if (v === "center" || v === "right" || v === "left") return v;
+  // 未显式设置对齐时的默认值：文本块沿用「左对齐」，便签/其它沿用「居中」（与既有视觉一致）。
+  return baseColor(it.color) === "text" ? "left" : "center";
+};
+// 用新的 k=v 覆盖/追加样式段，保留 base[:bold] 与其它未涉及的样式段。
+const withStyle = (color: string | null | undefined, patch: Record<string, string | null>): string => {
+  const [head, ...segs] = splitColor(color);
+  const map = new Map(
+    segs.map((seg) => {
+      const [k, ...rest] = seg.split("=");
+      return [k, rest.join("=")] as const;
+    }),
+  );
+  for (const [k, v] of Object.entries(patch)) {
+    if (v === null) map.delete(k);
+    else map.set(k, v);
+  }
+  const rest = [...map.entries()].map(([k, v]) => `${k}=${v}`);
+  return [head, ...rest].join("|");
+};
+
+// p6:F12（uc-widget-menu-013 编辑文本样式）：字体/字号可选项。
+// 值为渲染层直接消费的 CSS font-family / px 数值，持久化在 color 的 "|font="/"|size=" 段。
+const FONT_OPTIONS = [
+  { value: "sans-serif", label: "无衬线" },
+  { value: "serif", label: "衬线" },
+  { value: "monospace", label: "等宽" },
+] as const;
+const DEFAULT_FONT = FONT_OPTIONS[0].value;
+const FONT_SIZE_OPTIONS = [12, 14, 16, 20, 24, 32] as const;
+const DEFAULT_FONT_SIZE = 12;
 
 // 文本（Text）组件（uc-board-menu-003）。
 // 约束（范围纪律）：当前 @repo/canvas 的 validateNewItem 只放行 type ∈ {note,rect}，
@@ -336,6 +393,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         color: it.color ?? null,
         kind: isText(it) ? "text" : isShape(it) ? "shape" : isReloadable(it) ? "embed" : "note",
         bold: isBold(it),
+        italic: isItalic(it),
+        fontFamily: getFontFamily(it),
+        fontSize: getFontSize(it),
+        align: getAlign(it),
         reloadable: isReloadable(it),
         reloadCount: reload[it.id]?.count ?? 0,
         refreshedAt: reload[it.id]?.at ?? null,
@@ -568,11 +629,15 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     );
   }
 
-  // F11：改选中便签颜色（保留字重 :bold 修饰）
+  // F11：改选中便签颜色（保留字重 :bold 修饰 + p6:F12 样式段）
   async function setColor(base: string) {
     const updates = items
       .filter((it) => selected.has(it.id))
-      .map((it) => ({ id: it.id, color: base + (isBold(it) ? ":bold" : "") }));
+      .map((it) => {
+        const head = base + (isBold(it) ? ":bold" : "");
+        const segs = styleSegs(it.color);
+        return { id: it.id, color: [head, ...segs].join("|") };
+      });
     await applyColors(updates);
   }
 
@@ -583,9 +648,89 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     const allBold = targets.every(isBold); // 全粗 → 取消；否则 → 全部加粗
     const updates = targets.map((it) => {
       const b = baseColor(it.color);
-      return { id: it.id, color: allBold ? b : `${b}:bold` };
+      const segs = styleSegs(it.color);
+      const head = allBold ? b : `${b}:bold`;
+      return { id: it.id, color: [head, ...segs].join("|") };
     });
     await applyColors(updates);
+  }
+
+  // uc-widget-menu-013：切换选中组件斜体（italic），编码为 color 的 "|italic=1" 样式段。
+  async function toggleItalic() {
+    const targets = items.filter((it) => selected.has(it.id));
+    if (targets.length === 0) return;
+    const allItalic = targets.every(isItalic);
+    const updates = targets.map((it) => ({
+      id: it.id,
+      color: withStyle(it.color, { italic: allItalic ? null : "1" }),
+    }));
+    await applyColors(updates);
+  }
+
+  // uc-widget-menu-013：设置选中组件字体，编码为 color 的 "|font=<slug>" 样式段。
+  async function setFontFamily(font: string) {
+    const updates = items
+      .filter((it) => selected.has(it.id))
+      .map((it) => ({ id: it.id, color: withStyle(it.color, { font: font === DEFAULT_FONT ? null : font }) }));
+    await applyColors(updates);
+  }
+
+  // uc-widget-menu-013：设置选中组件字号，编码为 color 的 "|size=<n>" 样式段。
+  async function setFontSize(size: number) {
+    const updates = items
+      .filter((it) => selected.has(it.id))
+      .map((it) => ({
+        id: it.id,
+        color: withStyle(it.color, { size: size === DEFAULT_FONT_SIZE ? null : String(size) }),
+      }));
+    await applyColors(updates);
+  }
+
+  // uc-widget-menu-013：设置选中组件文本对齐方式，编码为 color 的 "|align=<left|center|right>" 样式段。
+  async function setAlign(align: "left" | "center" | "right") {
+    const updates = items
+      .filter((it) => selected.has(it.id))
+      .map((it) => ({ id: it.id, color: withStyle(it.color, { align: align === "left" ? null : align }) }));
+    await applyColors(updates);
+  }
+
+  // uc-widget-menu-014：把选中的单个文本组件按行/段拆分为多个便利贴（批量 add 命令）。
+  // 拆分规则：先按空行分段（连续换行视为段落分隔），再在段内按行拆分；
+  // 拆分后的每一行/条目 trim 后为空则跳过。文本为空或拆分不出任何非空片段时，不创建便利贴、保留原文本。
+  // 成功后原文本组件保留在画布（异常流程 2：转换失败保留原文本；主流程未要求删除原文本）。
+  async function convertToStickyNotes() {
+    if (!canEdit) return;
+    const targets = items.filter((it) => selected.has(it.id) && isText(it));
+    if (targets.length !== 1) return; // 仅支持单选文本对象转换
+    const source = targets[0]!;
+    const lines = source.text
+      .split(/\n{2,}/) // 先按空行分段
+      .flatMap((block) => block.split("\n")) // 段内再按行拆
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    if (lines.length === 0) return; // 无法拆分：保留原文本组件，不创建便利贴
+    const cols = Math.min(4, lines.length);
+    const gapX = 180;
+    const gapY = 130;
+    const created: Item[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = source.x + col * gapX;
+      const y = source.y + source.h + 20 + row * gapY;
+      const res = await fetch(`/api/boards/${boardId}/items`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ type: "note", x, y, text: lines[i] }),
+      });
+      if (res.status !== 201) continue;
+      const item = (await res.json()).item as Item;
+      created.push(item);
+    }
+    if (created.length === 0) return; // 全部创建失败：保留原文本组件（异常流程 2）
+    recordOp({ kind: "add", items: created });
+    await load();
+    setSelected(new Set(created.map((c) => c.id))); // 新便利贴按多选态展示（主流程 4）
   }
 
   // uc-context-menu-003：调整图层顺序（z-order）。items 数组顺序即 DOM 绘制顺序，
@@ -843,6 +988,102 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           >
             B
           </Button>
+          {/* uc-widget-menu-013 文本样式：字体/字号/斜体/对齐/转便利贴。仅对文本或便签生效
+              （含文字的对象）；形状/嵌入组件无文字排版语义，不显示（业务规则 1）。 */}
+          {(() => {
+            const sel = items.filter((it) => selected.has(it.id));
+            const allTextLike = sel.length > 0 && sel.every((it) => isText(it) || (!isShape(it) && !isReloadable(it)));
+            if (!allTextLike) return null;
+            const first = sel[0]!;
+            const mixedFont = !sel.every((it) => getFontFamily(it) === getFontFamily(first));
+            const mixedSize = !sel.every((it) => getFontSize(it) === getFontSize(first));
+            const mixedAlign = !sel.every((it) => getAlign(it) === getAlign(first));
+            const allItalic = sel.every(isItalic);
+            return (
+              <>
+                <select
+                  data-testid="wm-font"
+                  aria-label="字体"
+                  value={mixedFont ? "" : getFontFamily(first)}
+                  onChange={(e) => void setFontFamily(e.target.value)}
+                  className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {mixedFont && <option value="">混合</option>}
+                  {FONT_OPTIONS.map((f) => (
+                    <option key={f.value} value={f.value}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  data-testid="wm-fontsize"
+                  aria-label="字号"
+                  value={mixedSize ? "" : String(getFontSize(first))}
+                  onChange={(e) => void setFontSize(Number(e.target.value))}
+                  className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {mixedSize && <option value="">混合</option>}
+                  {FONT_SIZE_OPTIONS.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  data-testid="wm-italic"
+                  size="sm"
+                  variant="ghost"
+                  aria-label="斜体"
+                  aria-pressed={allItalic}
+                  className="italic"
+                  onClick={() => void toggleItalic()}
+                >
+                  I
+                </Button>
+                <Button
+                  data-testid="wm-align-left"
+                  size="sm"
+                  variant="ghost"
+                  aria-label="左对齐"
+                  aria-pressed={!mixedAlign && getAlign(first) === "left"}
+                  onClick={() => void setAlign("left")}
+                >
+                  <AlignLeft className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  data-testid="wm-align-center"
+                  size="sm"
+                  variant="ghost"
+                  aria-label="居中对齐"
+                  aria-pressed={!mixedAlign && getAlign(first) === "center"}
+                  onClick={() => void setAlign("center")}
+                >
+                  <AlignCenter className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  data-testid="wm-align-right"
+                  size="sm"
+                  variant="ghost"
+                  aria-label="右对齐"
+                  aria-pressed={!mixedAlign && getAlign(first) === "right"}
+                  onClick={() => void setAlign("right")}
+                >
+                  <AlignRight className="h-3.5 w-3.5" />
+                </Button>
+              </>
+            );
+          })()}
+          {/* uc-widget-menu-014：仅当单选一个文本组件时显示「转换为便利贴」入口。 */}
+          {selected.size === 1 && items.filter((it) => selected.has(it.id)).every(isText) && (
+            <Button
+              data-testid="wm-convert-to-notes"
+              size="sm"
+              variant="ghost"
+              onClick={() => void convertToStickyNotes()}
+            >
+              转为便利贴
+            </Button>
+          )}
           {/* 刷新组件（uc-widget-menu-009）：仅当选中项全部为可刷新（embed）组件时显示刷新入口；
               否则（含不可刷新对象）显示禁用的「刷新暂不可用」，体现类型不支持则动作不可用。 */}
           {(() => {
