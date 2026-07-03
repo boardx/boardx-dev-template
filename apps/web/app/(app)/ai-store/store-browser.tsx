@@ -115,6 +115,10 @@ const EMPTY_FORM = {
 
 const TAGS = ["research", "writing", "design", "productivity", "meetings", "featured"];
 
+function tagLabel(tag: string) {
+  return tag.charAt(0).toUpperCase() + tag.slice(1);
+}
+
 const TAG_FILLS = ["bg-tag-green", "bg-tag-blue", "bg-tag-purple", "bg-tag-pink", "bg-tag-yellow"];
 function fillFor(id: number | string) {
   const s = String(id);
@@ -203,7 +207,7 @@ export function StoreBrowser() {
     try {
       const res = await fetch(`/api/ai-store/items?${params}`);
       if (!res.ok) {
-        setError("加载失败，请稍后重试");
+        setError("Failed to load. Please try again.");
         setLoading(false);
         return;
       }
@@ -213,7 +217,7 @@ export function StoreBrowser() {
       setPage(data.page ?? 1);
       setTotalPages(data.totalPages ?? 1);
     } catch {
-      setError("加载失败，请稍后重试");
+      setError("Failed to load. Please try again.");
     }
     setLoading(false);
   }
@@ -224,14 +228,14 @@ export function StoreBrowser() {
     try {
       const res = await fetch("/api/ai-store/items?owner=me");
       if (!res.ok) {
-        setOwnedError("加载你的项目失败，请稍后重试");
+        setOwnedError("Failed to load your items. Please try again.");
         setOwnedLoading(false);
         return;
       }
       const data = (await res.json()) as { items: StoreItem[] };
       setOwnedItems(data.items ?? []);
     } catch {
-      setOwnedError("加载你的项目失败，请稍后重试");
+      setOwnedError("Failed to load your items. Please try again.");
     }
     setOwnedLoading(false);
   }
@@ -244,14 +248,14 @@ export function StoreBrowser() {
     try {
       const res = await fetch("/api/ai-store/items?authorized=me");
       if (!res.ok) {
-        setAuthorizedError("加载授权项目失败，请稍后重试");
+        setAuthorizedError("Failed to load authorized items. Please try again.");
         setAuthorizedLoading(false);
         return;
       }
       const data = (await res.json()) as { items: StoreItem[] };
       setAuthorizedItems(data.items ?? []);
     } catch {
-      setAuthorizedError("加载授权项目失败，请稍后重试");
+      setAuthorizedError("Failed to load authorized items. Please try again.");
     }
     setAuthorizedLoading(false);
   }
@@ -263,7 +267,7 @@ export function StoreBrowser() {
     try {
       const res = await fetch("/api/ai-store/items?subscribed=me");
       if (!res.ok) {
-        setSubscribedError("加载已订阅项目失败，请稍后重试");
+        setSubscribedError("Failed to load your subscriptions. Please try again.");
         setSubscribedLoading(false);
         return;
       }
@@ -271,7 +275,7 @@ export function StoreBrowser() {
       setSubscribedItems(data.items ?? []);
       setSubscribedIds(new Set((data.items ?? []).map((it) => it.id)));
     } catch {
-      setSubscribedError("加载已订阅项目失败，请稍后重试");
+      setSubscribedError("Failed to load your subscriptions. Please try again.");
     }
     setSubscribedLoading(false);
   }
@@ -392,7 +396,7 @@ export function StoreBrowser() {
     try {
       const res = await fetch(`/api/ai-store/items/${itemId}/share`);
       if (!res.ok) {
-        setShareError("加载分享状态失败，请稍后重试");
+        setShareError("Failed to load share status. Please try again.");
         setShareLoading(false);
         return;
       }
@@ -400,7 +404,7 @@ export function StoreBrowser() {
       setShareState(data.share);
       setShareGrantees(data.grantees ?? []);
     } catch {
-      setShareError("加载分享状态失败，请稍后重试");
+      setShareError("Failed to load share status. Please try again.");
     }
     setShareLoading(false);
   }
@@ -440,7 +444,7 @@ export function StoreBrowser() {
       const wasEnabled = shareState?.share_enabled ?? false;
       const res = await fetch(`/api/ai-store/items/${shareItemId}/share`, { method: "POST" });
       if (!res.ok) {
-        setShareError("生成分享链接失败，请重试");
+        setShareError("Failed to generate share link. Please try again.");
         setShareBusy(false);
         return;
       }
@@ -449,7 +453,7 @@ export function StoreBrowser() {
       if (data.share.share_token) await copyShareLink(data.share.share_token);
       setShareMessage(wasEnabled ? "管理授权链接已复制" : "分享已重新开启，链接已复制");
     } catch {
-      setShareError("生成分享链接失败，请重试");
+      setShareError("Failed to generate share link. Please try again.");
     }
     setShareBusy(false);
   }
@@ -461,7 +465,7 @@ export function StoreBrowser() {
     try {
       const res = await fetch(`/api/ai-store/items/${shareItemId}/share`, { method: "DELETE" });
       if (!res.ok) {
-        setShareError("关闭分享失败，请重试");
+        setShareError("Failed to close share link. Please try again.");
         setShareBusy(false);
         return;
       }
@@ -469,7 +473,7 @@ export function StoreBrowser() {
       setShareState(data.share);
       setShareMessage("分享链接已关闭");
     } catch {
-      setShareError("关闭分享失败，请重试");
+      setShareError("Failed to close share link. Please try again.");
     }
     setShareBusy(false);
   }
@@ -483,14 +487,14 @@ export function StoreBrowser() {
         method: "DELETE",
       });
       if (!res.ok) {
-        setShareError("移除授权失败，请重试");
+        setShareError("Failed to remove authorization. Please try again.");
         setShareBusy(false);
         return;
       }
       setShareGrantees((prev) => prev.filter((g) => g.user_id !== userId));
       setShareMessage("已移除授权");
     } catch {
-      setShareError("移除授权失败，请重试");
+      setShareError("Failed to remove authorization. Please try again.");
     }
     setShareBusy(false);
   }
@@ -550,7 +554,7 @@ export function StoreBrowser() {
       });
       const data = (await res.json()) as { item?: StoreItem; errors?: Record<string, string>; error?: string };
       if (!res.ok) {
-        setFormErrors(data.errors ?? { form: data.error ?? "保存失败，请稍后重试" });
+        setFormErrors(data.errors ?? { form: data.error ?? "Failed to save. Please try again." });
         return;
       }
       if (data.item) {
@@ -565,7 +569,7 @@ export function StoreBrowser() {
       }
       await loadOwned();
     } catch {
-      setFormErrors({ form: "保存失败，请稍后重试" });
+      setFormErrors({ form: "Failed to save. Please try again." });
     } finally {
       setSubmitting(null);
     }
@@ -597,7 +601,7 @@ export function StoreBrowser() {
           return next;
         });
         const data = await res.json().catch(() => ({}));
-        setSubscribeError(data?.error ?? "操作失败，请稍后重试");
+        setSubscribeError(data?.error ?? "Action failed. Please try again.");
         return;
       }
       if (nav === "subscribe") await loadSubscribed();
@@ -608,7 +612,7 @@ export function StoreBrowser() {
         else next.delete(item.id);
         return next;
       });
-      setSubscribeError("操作失败，请稍后重试");
+      setSubscribeError("Action failed. Please try again.");
     } finally {
       setSubscribing(null);
     }
@@ -831,7 +835,7 @@ export function StoreBrowser() {
                         : "text-muted-foreground hover:border-border-strong hover:text-foreground",
                     )}
                   >
-                    {tag}
+                    {tagLabel(tag)}
                   </Button>
                 );
               })}
@@ -870,7 +874,7 @@ export function StoreBrowser() {
                     data-testid="retry"
                     onClick={() => load({ type, tags: activeTags, q, page })}
                   >
-                    重试
+                    Retry
                   </Button>
                 </div>
               ) : items.length === 0 ? (
@@ -949,7 +953,7 @@ export function StoreBrowser() {
                               key={tag}
                               className="rounded-7 bg-muted px-2 py-0.5 text-10 text-muted-foreground"
                             >
-                              {tag}
+                              {tagLabel(tag)}
                             </span>
                           ))}
                           <span className="flex-1" />
@@ -959,7 +963,7 @@ export function StoreBrowser() {
                             size="sm"
                             data-testid={`favorite-${it.id}`}
                             aria-pressed={it.liked ?? false}
-                            aria-label={it.liked ? "取消喜欢" : "喜欢"}
+                            aria-label={it.liked ? "Unlike" : "Like"}
                             onClick={(e) => {
                               e.stopPropagation();
                               void toggleFavorite(it.id);
@@ -1360,7 +1364,7 @@ export function StoreBrowser() {
               >
                 <p className="text-13 text-destructive">{subscribedError}</p>
                 <Button size="sm" variant="outline" data-testid="retry" onClick={loadSubscribed}>
-                  重试
+                  Retry
                 </Button>
               </div>
             ) : subscribedItems.length === 0 ? (
@@ -1537,7 +1541,7 @@ export function StoreBrowser() {
                     size="icon"
                     data-testid="detail-favorite"
                     aria-pressed={detailItem.liked ?? false}
-                    aria-label={detailItem.liked ? "取消喜欢" : "喜欢"}
+                    aria-label={detailItem.liked ? "Unlike" : "Like"}
                     onClick={() => void toggleFavorite(detailItem.id)}
                     className={cn(
                       "h-9 w-9 shrink-0 rounded-full",
@@ -1565,7 +1569,7 @@ export function StoreBrowser() {
                     data-testid="detail-subscribe"
                     onClick={() => subscribeItem(detailItem)}
                     className="flex-1"
-                    title={detailItem.status !== "published" ? "未发布项目不可订阅" : undefined}
+                    title={detailItem.status !== "published" ? "Unpublished items cannot be subscribed to" : undefined}
                   >
                     {subscribedIds.has(detailItem.id) ? "Unsubscribe" : "Subscribe"}
                   </Button>
