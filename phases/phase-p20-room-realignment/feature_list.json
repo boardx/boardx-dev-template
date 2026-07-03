@@ -51,7 +51,7 @@
       "user_visible_behavior": "房间 Files tab（data-testid=room-files-tab）提供上传（拖拽/点击，R2 预签名→直传→confirm，data-testid=room-files-upload）、搜索、按来源线程过滤、预览（签名 URL；URL 过期时预览处展示过期提示文案并可点击刷新换取新签名 URL）、软删（二次确认，data-testid=room-files-item 行内删除）；文件属于房间（room_files.room_id NOT NULL，chat_thread_id 可空仅作来源标注），同一文件库同时出现在该房间所有聊天线程左侧文件面板；不打开任何聊天线程也能管理文件；删除权限=上传者本人或 owner/admin——member 删他人文件 API 返回 403，admin 可成功删除他人文件（该断言承接 F07 权限矩阵）；不支持的类型上传时行内提示 Unsupported file type。",
       "design_ref": "prototype:<!-- ROOM DETAIL --> Files tab；oldcode room-file.schema.ts 字段对齐",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-FILE",
       "depends_on": [
@@ -119,7 +119,7 @@
       "user_visible_behavior": "owner 打开房间设置看到 DANGER ZONE（文案含 Permanently）；点击 Delete room 弹二次确认（data-testid=room-delete-confirm），弹窗逐项列出将删除的内容类别与真实数量（X boards、Y chats、Z files、surveys，data-testid=room-delete-cascade-summary），需输入完全一致的房间名确认按钮才可用（不匹配时禁用）；确认后 DELETE /api/rooms/[id] 级联删除 boards（含 board_items）、room_chats（含消息）、room_files、room_members、房间问卷关联，跳回房间列表并 toast；admin/member 在 UI 无入口且直调 DELETE 返回 403；删除后原房间及其下 boards/chats/files 各资源 API 均返回 404。",
       "design_ref": "prototype:Room Settings dialog DANGER ZONE（'and its boards'）",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-WEB",
       "depends_on": [
@@ -166,7 +166,7 @@
       "user_visible_behavior": "surveys 表加可空 room_id（迁移后存量问卷 room_id=null 仍全部视为团队问卷）；房间 Survey tab（data-testid=room-survey-tab）只列本房间问卷卡片（data-testid=room-survey-card，含标题/状态/回收数），不再嵌入 Team Surveys 全集；房间 owner/admin 可新建（data-testid=room-survey-create，预置 room_id 进入 p13 创建器）、暂停/删除本房间问卷；member 可答题与查看已发布结果但无管理按钮；tab 内『View team surveys』链接仅跳转全局 /surveys；房间角色对团队问卷的管理请求返回 403；全局 /surveys 列表展示 scope 徽章（My/Team/Room），Room 问卷标注所属房间名。",
       "design_ref": "prototype:<!-- SURVEYS --> Room scope（'Room · Alpha'）+ ROOM DETAIL Survey tab",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "depends_on": [
@@ -233,7 +233,7 @@
       "user_visible_behavior": "rooms 表加 description、ai_instruction 两个 text 字段；owner/admin 在房间设置 About & AI 区块（data-testid=room-settings-description、room-settings-ai-instruction）编辑并保存（PATCH /api/rooms/[id]）；member 直调 PATCH 返回 403（与 F07 权限矩阵口径一致），ai_instruction >4000 字符被校验拒绝并行内提示；保存后房间详情页头/Boards 空态展示 description；房间任一聊天线程发消息时 ai_instruction 注入系统提示，桩层响应可断言注入内容（同房间全部线程共享同一指令）。",
       "design_ref": "oldcode room.schema.ts（description/aiInstruction）；设置表单沿用现有 token，无原型屏",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-AI",
       "depends_on": [
