@@ -99,16 +99,18 @@
 | F10 | Widget 框架与能力边界 + Widget Menu 悬浮操作 | passing | claude | [] | - |
 | F11 | 便利贴组件（内容 / 外观 / 状态） | passing | claude | [] | - |
 | F12 | 文本组件 + 文本样式 + 文本转便利贴 | not_started | - | [] | - |
-| F13 | 形状组件 | not_started | - | [] | - |
-| F14 | 连接线组件 + 连接线样式 | not_started | - | [] | - |
-| F15 | 手绘组件 | not_started | - | [] | - |
-| F16 | 图表组件 | not_started | - | [] | - |
-| F17 | 组件样式调整 + 应用格式 | not_started | - | [] | - |
-| F18 | 锁定/解锁 + 删除 + 刷新组件 | not_started | - | [] | - |
-| F19 | 多选组合批量操作（移动/对齐/编组/锁定/删除） | not_started | - | [] | - |
-| F20 | 图片组件 + 裁剪 | blocked | - | [] | - |
-| F21 | 文件组件 + 下载 + 音频转文本 | blocked | - | [] | - |
-| F22 | 组件 AI 助手 | blocked | - | [] | - |
+| F13 | 画布渲染引擎切换为 Fabric.js（既有行为不回归） | not_started | - | [] | - |
+| F14 | packages/canvas 数据模型改造为字段级 patch（CRDT-ready） | not_started | - | [] | - |
+| F15 | 形状组件 | not_started | - | [] | - |
+| F16 | 连接线组件 + 连接线样式 | not_started | - | [] | - |
+| F17 | 手绘组件 | not_started | - | [] | - |
+| F18 | 图表组件 | not_started | - | [] | - |
+| F19 | 组件样式调整 + 应用格式 | not_started | - | [] | - |
+| F20 | 锁定/解锁 + 删除 + 刷新组件 | not_started | - | [] | - |
+| F21 | 多选组合批量操作（移动/对齐/编组/锁定/删除） | not_started | - | [] | - |
+| F22 | 图片组件 + 裁剪 | blocked | - | [] | - |
+| F23 | 文件组件 + 下载 + 音频转文本 | blocked | - | [] | - |
+| F24 | 组件 AI 助手 | blocked | - | [] | - |
 
 ## p7 (Board 壳 (P7))
 
@@ -135,10 +137,11 @@
 
 | Feature | 标题 | 状态 | owner | depends_on | wave |
 |---|---|---|---|---|---|
-| F01 | Yjs 实时同步组件变更 | not_started | - | [] | - |
-| F02 | 在线成员头像 + 实时光标 | not_started | - | [] | - |
-| F03 | 跟随协作者视角 | not_started | - | [] | - |
-| F04 | 连接状态、断线重连与同步指示 | not_started | - | [] | - |
+| F01 | WebSocket + Redis 广播骨架（不含 Yjs 语义） | not_started | - | [] | - |
+| F02 | Yjs 实时同步组件变更 | not_started | - | [] | - |
+| F03 | 在线成员头像 + 实时光标 | not_started | - | [] | - |
+| F04 | 跟随协作者视角 | not_started | - | [] | - |
+| F05 | 连接状态、断线重连与同步指示 | not_started | - | [] | - |
 
 ## p9 (AVA / Chat (P9))
 

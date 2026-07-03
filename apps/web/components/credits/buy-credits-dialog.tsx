@@ -277,7 +277,7 @@ export function BuyCreditsDialog({
                       : "border-border hover:border-border-strong hover:bg-surface-1"
                   )}
                 >
-                  <div className="text-16 font-bold text-foreground">{fmtCredits(p.credits)}</div>
+                  <div className="text-15 font-bold text-foreground">{fmtCredits(p.credits)}</div>
                   <div className="text-11 text-muted-foreground">credits</div>
                   <div className="mt-1.5 text-13 font-semibold text-foreground">{fmtMoney(p.amountCents)}</div>
                 </button>
@@ -342,14 +342,14 @@ export function BuyCreditsDialog({
                   {order.status === "paid" ? (
                     <div data-testid="payment-success" className="flex flex-col items-center gap-2 py-4 text-center">
                       <CheckCircle2 className="h-9 w-9 text-foreground" />
-                      <div className="text-14 font-semibold text-foreground">支付成功</div>
+                      <div className="text-13 font-semibold text-foreground">支付成功</div>
                       <div className="text-13 text-muted-foreground">
                         {fmtCredits(selectedPack.credits)} credits 已到账
                       </div>
                     </div>
                   ) : order.status === "failed" || order.status === "expired" ? (
                     <div data-testid="payment-failed" className="flex flex-col items-center gap-2 py-4 text-center">
-                      <div className="text-14 font-semibold text-destructive">
+                      <div className="text-13 font-semibold text-destructive">
                         {order.status === "failed" ? "支付失败" : "订单已超时"}
                       </div>
                       <Button size="sm" variant="outline" onClick={() => void createOrder()}>

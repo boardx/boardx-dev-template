@@ -22,8 +22,8 @@ export default async function AdminHomePage() {
           role="alert"
           className="rounded-12 border border-border bg-surface-1 p-8 text-center"
         >
-          <h1 className="text-17 font-bold text-foreground">无权限访问</h1>
-          <p className="mt-2 text-13 text-muted-foreground">该后台仅限系统管理员（SysAdmin）访问。</p>
+          <h1 className="text-17 font-bold text-foreground">Access denied</h1>
+          <p className="mt-2 text-13 text-muted-foreground">This admin panel is restricted to system administrators (SysAdmin).</p>
         </div>
       </div>
     );

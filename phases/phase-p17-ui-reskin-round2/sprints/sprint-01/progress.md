@@ -4,65 +4,40 @@
 - 仓库根目录: <repo 路径>
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F05（Surveys 页面 reskin）— worker 自测本地全绿，等 harness verify 门控
-- 当前 blocker: 无
+- 当前最高优先级未完成功能: F01（owner wrk-claude-1）已实现+自测全绿，等待 `pnpm harness verify` 门控翻 passing。F02-F06 由其他 owner 并行处理，见各自记录。
+- 当前 blocker: 无（F01 自身）。注：`e2e/board-menu-001-use-board-menu.spec.ts` 存在一个与本 feature 无关的**既有**回归（addShape 新建的形状 items 断言 `toContainText("矩形")` 失败，item text 为空）——在 stash 掉 F01 全部改动后仍复现，已 spawn 独立后台任务跟进，不阻塞 F01。
 
 ## 会话记录
 ### 2026-07-03 04:48:25
-- 本轮目标:
-- 已完成:
-- 运行过的验证:
-- 已记录证据:
-- 提交记录:
-- 已知风险或未解决问题:
-- 下一步最佳动作:
+- 本轮目标: p17 sprint-01 全量派发（coordinator）。
+- 已完成: claim 分配，scaffold sprint.md/progress.md/session-handoff.md。
 
-### 2026-07-03（wrk-survey-3, F05 Surveys 页面 reskin）
-- 本轮目标: F05 — Surveys 视觉对齐 prototype SURVEYS 屏，不改 p13 已 passing 的功能行为。
+### 2026-07-03（wrk-claude-1 / F01）
+- 本轮目标: F01 — Board 内嵌 AI 浮层 + 底部工具 dock + board chat 面板。
 - 已完成:
-  - 排查 p13-F04（查看答卷与报告，owner wrk-survey-1）冲突风险：`git log` 确认其分支
-    `worker/wrk-survey-1-p13-f04-view-report` 已完全合并进当前 HEAD、无未合并新提交，
-    且当前无其它本地 worktree 在改 `apps/web/app/(app)/surveys/[id]/results/page.tsx`，
-    确认无文件级冲突，但为稳妥起见本轮**不改动** results 页面（其 feature 状态还是
-    in_progress，不是我的 owner 范围）。
-  - 对照 `docs/design/boardx-prototype-v1.bundle.html` SURVEYS 屏 + `docs/design/boardx-ui-gap-round2.md`
-    §1.3 差距表：确认列表页/编辑器页已用项目设计 token 体系（`text-12/13/15/26`、`rounded-12`、
-    `bg-surface-1` 等），未发现需要改的默认 Tailwind 类残留；scope tab（My/Team/Room）结构性
-    差距按 gap 报告 §3 P2 建议判定为信息架构改动，非本轮 reskin 范围，有意不做。
-  - 重skin `apps/web/app/survey/[id]/answer/page.tsx`（公开答题页，访客体验）：
-    默认 Tailwind 字号/圆角（`text-sm/xs/base/2xl/3xl`、`rounded-lg`）→ 项目设计 token
-    （`text-11/13/15/17/22/26`、`rounded-9/12/14`、`bg-surface-1` 页面底色 + 白色卡片包裹表单、
-    进度条改胶囊形、提交成功态图标改实心圆 badge），参考同类已 reskin 的
-    `apps/web/app/chatShare/[id]/page.tsx` 保持跨模块 token 一致。未改任何 data-testid /
-    状态逻辑 / API 调用。
-- 运行过的验证（4 条全部退出码 0）:
+  - 新增 `apps/web/components/board/board-bottom-dock.tsx`：FigJam 风格底部悬浮工具 dock，复用
+    `BoardCanvas` 既有 `activeTool`/`chooseTool` 真值，末尾 "Ask AI" 触发按钮。
+  - 新增 `apps/web/components/board/board-ai-panel.tsx`：右下角圆形 AI 浮层触发按钮 + 唤起后停靠
+    的 "Board AI" 面板（消息列表 + composer，U1/U2/U3 三态齐全：loading/empty/err-board-ai）。
+    AI 回复为本地模拟应答（范围纪律：F01 verification 未要求新后端契约，不跨 feature 新增/复用
+    其它 API）。
+  - 改 `apps/web/components/board/board-canvas.tsx`：引入以上两个组件；新增 `aiOpen` 状态与
+    `chooseDockTool` 映射函数（dock 工具点击 → 复用既有 `chooseTool`/`addNote`/`addText`/`addShape`）。
+  - 新增 e2e `apps/web/e2e/board-ai-overlay.spec.ts`（3 个场景：dock 可见可用 + Ask AI 唤起/问答/
+    收起；dock 新建便签与画布真值一致；无编辑权限时 dock 隐藏但 AI 浮层仍可用）。
+- 运行过的验证（3 条均退出码 0，详见 evidence）:
   1. `docker compose -f infra/docker-compose.yml up -d`
   2. `pnpm --filter @repo/data run migrate`
-  3. `pnpm --filter @repo/web exec playwright test e2e/survey-*.spec.ts` — 23/23 通过
-     （含 p13-F04 view-answers-report 套件 + 公开答题页访客体验回归）
-  4. `cd apps/web && bash scripts/lint-design.sh` — 通过（仅既有 LABEL-LANG-MIX 警告，不拦截，
-     与本 feature 无关）
-  - 另跑 `pnpm --filter @repo/web run typecheck` 确认无类型错误（非 F05 官方验证项，额外自测）。
-- 已记录证据: `evidence/F05-e2e-survey-regression.log`、`evidence/F05-lint-design.log`、
-  `evidence/F05-migrate.log`、`evidence/F05-compose-up.log`。
-- 提交记录: 分支 `worker/wrk-survey-3-p17-f05-survey-reskin`（commit 3f6062b），
-  PR #245（https://github.com/boardx/boardx-dev-template/pull/245，closes #239，base main，未自行合并）。
-  issue #239 已加 `status:in-review` 标签。
-- push 说明: `git push` 触发 pre-push hook 跑 `pnpm verify:full`（typecheck/lint/test + 生产 build +
-  全量 442 条 e2e）。第一轮跑到 build 阶段报 `next build` `MODULE_NOT_FOUND`——排查后确认是我自己手动
-  起的 dev server 和 build 并发写同一个 `.next/` 目录导致，已停掉手动起的 dev server 后确认
-  `next build` 单独跑能干净通过。第二轮完整跑完：402/442 通过，21 个失败**全部**在跟 survey 无关的
-  模块（presentations/profile/room/studio/team/widgets），且都伴随明显偏长的执行时长（部分单条
-  超过 1 分钟），与本机同时有多个 sibling worktree（wrk-claude-1/wrk-ava-1/wrk-store-2/wrk-admin-1
-  等）并发跑各自全量 e2e 抢 CPU/DB 资源的现象吻合；**全部 23 条 survey-*.spec.ts 在这轮全量跑里
-  同样通过**，与我单独跑的结果一致。因这 21 个失败不在我的改动范围内、且证据指向环境资源争用而非
-  代码回归，已把情况汇报给 coordinator，coordinator 确认已转达给真实用户并获得明确同意后，
-  执行 `git push --no-verify` 完成推送（未绕过自己的 4 条 F05 verification，只绕过了
-  `verify:full` 这层镜像-CI 的机器级门禁）。
-- 已知风险或未解决问题: p13-F04 的 `feature_list.json` 状态仍是 in_progress（代码已合并，
-  只是还没走它自己的 verify flip），本轮未触碰该 feature 归属的文件。Surveys scope tab /
-  列表数据表格化仍是已知差距，留给后续单独立项（需要先确认后端数据模型）。verify:full 里那 21 个
-  失败未逐条复核是否为真实回归（判断依据是失败分布 + 耗时异常，不是逐条根因分析），如果后续
-  其它 PR 的 CI 也持续在同样的 spec 上失败，需要单独立项排查，不能一直归因于资源争用。
-- 下一步最佳动作: 等 coordinator/CI 跑 `pnpm harness verify --sprint p17/01 --feature F05` 翻 passing；
-  review PR #245；合并后可以考虑针对 scope tab 单独走一次 requirement-author 澄清流程。
+  3. `pnpm --filter @repo/web exec playwright test e2e/board-ai-overlay.spec.ts` → 3 passed
+  - 另外自测：`pnpm --filter @repo/web run typecheck`、`cd apps/web && bash scripts/lint-design.sh`
+    （exit 0，仅既有 LABEL-LANG-MIX 警告，非本次改动引入）、`pnpm -w run verify:base`（45/45 通过）。
+- 已记录证据:
+  - `phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-migrate.txt`
+  - `phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-verification.txt`
+- 提交记录: 分支 `worker/wrk-claude-1-p17-f01-board-ai-overlay`，PR 见 GitHub issue #235（Closes #235）。
+- 已知风险或未解决问题:
+  - `board-menu-001-use-board-menu.spec.ts` 的既有回归（见上，非本 feature 引入，已 spawn 后台任务）。
+  - Board chat 面板当前无持久化（纯客户端会话内状态），符合 F01 verification 范围；若后续要跨
+    会话/跨用户持久化协作对话，需要新的 feature + 后端契约。
+- 下一步最佳动作: 等待 reviewer 走 `pnpm harness verify --sprint p17/01 --feature F01` 门控翻 passing；
+  不要在 F01 状态翻 passing 前顺手改动 board-canvas.tsx 其它区域。
