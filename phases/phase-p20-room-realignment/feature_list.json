@@ -217,7 +217,7 @@
         "docker compose -f infra/docker-compose.yml exec -T postgres psql -U boardx -d boardx -tAc \"SELECT count(*) FROM board_items WHERE board_id IS NULL\" | grep -qx 0",
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-010-legacy-canvas-retire.spec.ts"
       ],
-      "evidence": "evidence/F10.verify.log @ 2026-07-03T18:04:36.629Z",
+      "evidence": "evidence/F10.verify.log @ 2026-07-03T18:19:31.582Z",
       "notes": "uc-rr-009。消除双画布并存脏状态；e2e 断言旧直链重定向而非 404。"
     },
     {

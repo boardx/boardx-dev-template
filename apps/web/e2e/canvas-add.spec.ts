@@ -1,11 +1,11 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 // p20-F10：legacy 单画布下线后，本 spec 迁移到 board 模型
 // （先 POST /api/rooms/[id]/boards 建板 → 画布页 /boards/[id] + /api/boards/[id]/items）。
 const uniq = () => `ca_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
-const items = (page: any) => page.getByTestId("items-layer").locator('[data-testid^="item-"]');
+const items = (page: Page) => page.getByTestId("items-layer").locator('[data-testid^="item-"]');
 
 test("添加便签后出现在板上且刷新仍在", async ({ page }) => {
   await page.request.post("/api/auth/register", {

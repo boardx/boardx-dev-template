@@ -34,3 +34,14 @@
 - 已知风险: board_items.board_id 已 NOT NULL——后续新写路径必须带 board_id（现存唯一写路径
   /api/boards/[id]/items 恒带）。
 - 下一步最佳动作: 合并 PR 后其余 wave1 feature 不受影响。
+
+### 2026-07-04 (wrk-room-3, F10 review 返工)
+- review（PR #312）返工：
+  1. 证据入库：合入 coord/evidence-gitignore-exception（.gitignore 加 !phases/**/evidence/*.log），
+     F10.verify.log 已 git 跟踪；日志含 psql count 原始输出（0）、防混入 fixture 表、幂等重放输出。
+  2. 迁移 022 改专用标记方案：boards 加 created_by_migration 列（仅迁移写入），建板/回填只认标记
+     '022_retire_room_canvas'，用户自建同名 "Main board" 一律不复用。fresh DB fixture 实测：
+     用户板 items 不混入（user-a1 独立），legacy items 全部落迁移标记板，count NULL=0，重放 INSERT 0 0/UPDATE 0。
+  3. canvas-add/delete、room-rr-010 spec 的 (page: any) → (page: Page)。
+- status 曾按 coordinator 指示回退 in_progress + 清空 evidence，重新由
+  `pnpm harness verify --sprint p20/01 --feature F10` 门控转 passing（非手改）。

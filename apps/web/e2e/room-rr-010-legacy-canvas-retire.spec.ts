@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 // uc-rr-009 / p20-F10：下线 legacy 单画布模型。
 // 1) 旧直链 /rooms/[id]/board 重定向（3xx）到 /rooms/[id]/boards，而非 404；
@@ -6,7 +6,7 @@ import { test, expect } from "@playwright/test";
 // 3) 新模型写路径全部带 board_id（DB 级 count=0 断言在 verification 的 psql 命令里）。
 const uniq = () => `rr010_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 
-async function newRoom(page: any) {
+async function newRoom(page: Page) {
   await page.request.post("/api/auth/register", {
     data: { firstName: "A", lastName: "B", email: uniq(), password: "secret123", agreeTerms: true },
   });

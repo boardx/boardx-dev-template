@@ -1,11 +1,11 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 // p20-F10：legacy 单画布下线后，本 spec 迁移到 board 模型
 // （画布页 /boards/[id]：选中后 Delete 删除；DELETE 走 /api/board-items/[itemId]）。
 const uniq = () => `cd_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
-const items = (page: any) => page.getByTestId("items-layer").locator('[data-testid^="item-"]');
+const items = (page: Page) => page.getByTestId("items-layer").locator('[data-testid^="item-"]');
 
 test("删除 item：板上消失且列表不含", async ({ page }) => {
   await page.request.post("/api/auth/register", {
