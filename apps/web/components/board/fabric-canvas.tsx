@@ -48,6 +48,9 @@ export interface RenderItem {
   reloadable: boolean;
   reloadCount: number;
   refreshedAt: number | null;
+  // p6:F20（uc-widget-menu-003）：锁定态，由 color 的 "|locked=1" 段解析而来（见
+  // board-canvas.tsx 的 getLocked）。锁定对象不可移动/缩放/旋转/编辑，见 styleInteractive。
+  locked: boolean;
 }
 
 export interface ViewportState {
@@ -154,6 +157,7 @@ export interface CanvasTestApi {
     reloadable: boolean;
     reloadCount: number;
     refreshedAt: number | null;
+    locked: boolean;
     z: number;
   }>;
   getSelectedIds: () => string[];
@@ -211,7 +215,7 @@ export function FabricCanvas(props: Props) {
       s.items.forEach((it, z) => {
         // 视觉签名变化 → 重建对象（items 数量小，重建比细粒度增量更新简单且不易漏）。
         const sig = JSON.stringify([
-          it.x, it.y, it.w, it.h, it.text, it.color, it.kind, it.bold,
+          it.x, it.y, it.w, it.h, it.text, it.color, it.kind, it.bold, it.locked,
           s.editingId === it.id, s.canEdit,
         ]);
         let g = objsRef.current.get(it.id);
@@ -244,7 +248,12 @@ export function FabricCanvas(props: Props) {
         fc.setActiveObject(sel[0]!);
       } else if (sel.length > 1) {
         const as = new fabric.ActiveSelection(sel, { canvas: fc });
-        styleInteractive(as, tokensRef.current!, s.canEdit);
+        // p6:F20：多选时若任一成员锁定，整组按锁定处理——fabric 把 ActiveSelection 当整体拖拽，
+        // 子对象各自的 lockMovementX/Y 不生效，必须在组一级也挡住（object:moving 的补充防线
+        // 覆盖极端时序，这里是主防线）。
+        const selectedIds = new Set(s.selectedIds);
+        const anyLocked = s.items.some((it) => selectedIds.has(it.id) && it.locked);
+        styleInteractive(as, tokensRef.current!, s.canEdit, false, anyLocked);
         fc.setActiveObject(as);
       }
       fc.requestRenderAll();
@@ -359,6 +368,14 @@ export function FabricCanvas(props: Props) {
         const g = gestureRef.current;
         const t = opt.target as Group | undefined;
         if (!g || !t || !s.canEdit) return;
+        // p6:F20（uc-widget-menu-003）：锁定对象不可移动。单选对象已由 styleInteractive 的
+        // lockMovementX/Y 从源头挡住（fabric 不会派发本事件）；这里补一道防线覆盖多选场景
+        // （ActiveSelection 的拖拽由分组本身响应，子对象各自的 lockMovementX/Y 不生效）。
+        if (g.ids.some((id) => s.items.find((it) => it.id === id)?.locked)) {
+          t.set({ left: g.initLeft, top: g.initTop });
+          t.setCoords();
+          return;
+        }
         g.moved = true;
         // 候选位置 = 初始 item 位置 + fabric 位移（纯 delta，见 gestureRef 注释）。
         const dx = (t.left ?? 0) - g.initLeft;
@@ -406,6 +423,9 @@ export function FabricCanvas(props: Props) {
         const fcNow = fcRef.current;
         if (!g || !t || !s.canEdit || !g.initRect || !fcNow) return;
         if (corner !== "tl" && corner !== "tr" && corner !== "bl" && corner !== "br") return;
+        // p6:F20：锁定对象不可缩放。缩放仅对单选开放（见 styleInteractive 的 hasControls），
+        // 正常路径下锁定对象已在源头被 lockScalingX/Y 挡住，这里是防御性补充。
+        if (g.ids.some((id) => s.items.find((it) => it.id === id)?.locked)) return;
         g.scaled = true;
         const it = g.initRect;
         const scene = fcNow.getScenePoint((opt as unknown as { e: TPointerEvent }).e);
@@ -555,6 +575,7 @@ export function FabricCanvas(props: Props) {
               reloadable: it.reloadable,
               reloadCount: it.reloadCount,
               refreshedAt: it.refreshedAt,
+              locked: it.locked,
               z,
             })),
           getSelectedIds: () => [...propsRef.current.selectedIds],
@@ -634,9 +655,13 @@ type Interactive = {
 
 // 交互属性：选中框（border）颜色对齐 ring-primary；无旋转控制点。
 // p6:F07：单选 item 开放四个**角点**缩放控制（缩放中吸附见 object:scaling）；
-// 中点控制与多选（ActiveSelection）缩放仍关闭，锁定能力 deferred。
-function styleInteractive(obj: Interactive, tokens: Tokens, canEdit: boolean, resizable = false) {
-  const resize = resizable && canEdit;
+// 中点控制与多选（ActiveSelection）缩放仍关闭。
+// p6:F20（uc-widget-menu-003）：锁定对象不可移动/缩放/旋转——等价于把 canEdit 当作 false
+// 对待（locked 与 !canEdit 共用同一套 fabric 锁定标志），额外去掉控制点（hasControls）避免
+// 用户看到可拖拽的缩放手柄却拖不动。
+function styleInteractive(obj: Interactive, tokens: Tokens, canEdit: boolean, resizable = false, locked = false) {
+  const interactive = canEdit && !locked;
+  const resize = resizable && interactive;
   obj.set({
     hasControls: resize,
     hasBorders: true,
@@ -646,9 +671,9 @@ function styleInteractive(obj: Interactive, tokens: Tokens, canEdit: boolean, re
     lockRotation: true,
     lockScalingX: !resize,
     lockScalingY: !resize,
-    lockMovementX: !canEdit,
-    lockMovementY: !canEdit,
-    hoverCursor: canEdit ? "grab" : "default",
+    lockMovementX: !interactive,
+    lockMovementY: !interactive,
+    hoverCursor: interactive ? "grab" : "default",
     moveCursor: "grabbing",
     cornerColor: tokens.primary,
     cornerStrokeColor: tokens.primary,
@@ -760,6 +785,6 @@ function buildItemObject(
     // p6:F19（uc-widget-menu-002 透明度）：整体透明度，1-100 映射为 fabric 的 0-1 opacity。
     opacity: it.opacity / 100,
   });
-  styleInteractive(g as unknown as Interactive, tokens, canEdit, true);
+  styleInteractive(g as unknown as Interactive, tokens, canEdit, true, it.locked);
   return g;
 }
