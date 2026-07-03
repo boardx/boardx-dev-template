@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CanvasViewport } from "@/components/board/canvas-viewport";
 import { BoardBottomDock, type DockToolKey } from "@/components/board/board-bottom-dock";
 import { BoardAiOverlay } from "@/components/board/board-ai-panel";
-import { publishCursor, setOperating } from "@/lib/collab-bus";
+import { publishConnectionState, publishCursor, setOperating } from "@/lib/collab-bus";
 import {
   Cable,
   Hand,
@@ -88,6 +88,8 @@ type Op =
   | { kind: "move"; moves: Move[] };
 
 type BoardTool = "select" | "pan" | "sticky" | "draw" | "text" | "connector" | "shape" | "assets" | "templates";
+
+type WindowWithCollabDebug = Window & { __boardCollabWs?: WebSocket | null };
 
 const NUDGE = 1;
 const BIG_NUDGE = 10;
@@ -321,14 +323,26 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
 
     async function connect() {
       try {
+        publishConnectionState("connecting");
         const res = await fetch("/api/collab/config");
-        if (!res.ok || stopped) return;
+        if (!res.ok || stopped) {
+          if (!stopped) publishConnectionState("disconnected");
+          return;
+        }
         const { wsUrl } = (await res.json()) as { wsUrl?: string };
-        if (!wsUrl || stopped) return;
+        if (!wsUrl || stopped) {
+          if (!stopped) publishConnectionState("disconnected");
+          return;
+        }
         const url = new URL(wsUrl);
         url.searchParams.set("boardId", boardId);
         const ws = new WebSocket(url.toString());
         collabWs.current = ws;
+        if (typeof window !== "undefined") (window as WindowWithCollabDebug).__boardCollabWs = ws;
+
+        ws.addEventListener("open", () => {
+          if (!stopped && collabWs.current === ws) publishConnectionState("connected");
+        });
 
         ws.addEventListener("message", (event) => {
           let envelope: { type?: string; data?: string };
@@ -358,13 +372,21 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         });
         ws.addEventListener("close", () => {
           if (collabWs.current === ws) collabWs.current = null;
+          if (typeof window !== "undefined" && (window as WindowWithCollabDebug).__boardCollabWs === ws) {
+            (window as WindowWithCollabDebug).__boardCollabWs = null;
+          }
+          if (!stopped) publishConnectionState("disconnected");
           if (!stopped) retry = setTimeout(connect, 1500);
         });
         ws.addEventListener("error", () => {
+          if (!stopped) publishConnectionState("disconnected");
           ws.close();
         });
       } catch {
-        if (!stopped) retry = setTimeout(connect, 1500);
+        if (!stopped) {
+          publishConnectionState("disconnected");
+          retry = setTimeout(connect, 1500);
+        }
       }
     }
 
@@ -374,6 +396,8 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       if (retry) clearTimeout(retry);
       collabWs.current?.close();
       collabWs.current = null;
+      publishConnectionState("disconnected");
+      if (typeof window !== "undefined") (window as WindowWithCollabDebug).__boardCollabWs = null;
     };
   }, [boardId, editingId]);
 

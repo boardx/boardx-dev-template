@@ -1,10 +1,10 @@
-# 进度日志 — Sprint p8/02
+# 进度日志 - Sprint p8/02
 
 ## 当前已验证状态(唯一真相)
-- 仓库根目录: `/private/tmp/boardx-worktrees/issue-293-collab-follow`
+- 仓库根目录: `/private/tmp/boardx-worktrees/issue-294-collab-reconnect`
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F05 / 连接状态、断线重连与同步指示
+- 当前最高优先级未完成功能: 无；F01-F05 均已 passing
 - 当前 blocker: 无
 
 ## 会话记录
@@ -58,3 +58,23 @@
   - 验证使用本 worktree 专属端口：Postgres 64921、Redis 64922、MinIO 64923/64924、Web 64925、WS 64926。
   - 根 `pnpm-lock.yaml` 被本机 pnpm 8 触发格式噪音，未纳入提交。
 - 下一步最佳动作: 开始 F05（连接状态、断线重连与同步指示），继续基于 F04 分支栈开发。
+
+### 2026-07-04 05:22
+- 本轮目标: issue #294 / F05 连接状态、断线重连与同步指示。
+- 已完成:
+  - collab bus 增加连接状态发布/订阅，BoardCanvas 将 WebSocket connecting/connected/disconnected 映射到页面状态。
+  - Header 同步指示在连接中显示 `同步中`，连接正常显示 `已保存`，断线时显示 `连接异常`。
+  - 断线后保留当前本地状态，自动重连；远端协作者离线后移除头像和光标。
+  - 增加 `apps/web/e2e/collab-reconnect.spec.ts`，覆盖断线状态、自动重连、重连后同步、协作者离线清理。
+- 运行过的验证:
+  - `pnpm --filter @repo/web exec tsc --noEmit`
+  - `docker compose -f infra/docker-compose.yml up -d`
+  - `pnpm --filter @repo/data run migrate`
+  - `pnpm --filter @repo/web exec playwright test e2e/collab-reconnect.spec.ts`
+  - `COMPOSE_PROJECT_NAME=codex-issue-294-collab-reconnect PG_PORT=64931 REDIS_PORT=64932 MINIO_PORT=64933 MINIO_CONSOLE_PORT=64934 pnpm harness verify --sprint p8/02 --feature F05`
+- 已记录证据: `evidence/F05.verify.log @ 2026-07-03T21:20:31.384Z`
+- 提交记录: 本分支提交后见 #294/F05 PR。
+- 已知风险或未解决问题:
+  - 验证使用本 worktree 专属端口：Postgres 64931、Redis 64932、MinIO 64933/64934、Web 64935、WS 64936。
+  - 根 `pnpm-lock.yaml` 被本机 pnpm 8 触发格式噪音，未纳入提交。
+- 下一步最佳动作: p8/02 F01-F05 已全部 passing；等待 F03-F05 stacked PR review / merge，之后继续重新拉取可开发 issue。

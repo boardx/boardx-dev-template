@@ -90,16 +90,16 @@
       "area": "collaboration",
       "title": "连接状态、断线重连与同步指示",
       "user_visible_behavior": "实时连接建立中/已连接/异常时，Header 同步指示与画布状态对应（同步中/已保存/连接异常）；网络短暂中断时显示异常并保留本地/只读状态，恢复后自动重连并同步到最新一致状态；协作者离线时其头像与光标移除。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "wrk-codex-collab-1",
       "capability": "CAP-COLLAB",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/collab-reconnect.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F05.verify.log @ 2026-07-03T21:20:31.384Z",
       "notes": "uc-collab-001/002/003 异常流程合并。接通 p7 F01 的同步状态指示；断线期间本地编辑缓冲，重连后由 Yjs 合并。blocked-on p8:F01-F04（依赖完整的传输+同步+awareness 链路才能验证异常/重连场景）。",
       "source_use_cases": [
         "phases/requirements/board/collaboration/uc-collab-001-yjs-realtime-sync.md",

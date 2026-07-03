@@ -6,7 +6,9 @@ import {
   readLocalCursor,
   readLocalOperating,
   readLocalViewport,
+  subscribeConnectionState,
   subscribeFollowPause,
+  type CollabConnectionState,
   type ViewportSnapshot,
 } from "@/lib/collab-bus";
 import { MousePointer2 } from "lucide-react";
@@ -59,6 +61,7 @@ function normalizeMember(m: Member): Member {
 export function BoardPresence({ boardId }: { boardId: string }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const [connectionState, setConnectionState] = useState<CollabConnectionState>("connecting");
   const [selfId, setSelfId] = useState<number | null>(null);
   const [followId, setFollowId] = useState<number | null>(null); // 正在跟随的成员 id（null = 未跟随）
   const [followPaused, setFollowPaused] = useState(false);
@@ -137,6 +140,8 @@ export function BoardPresence({ boardId }: { boardId: string }) {
     });
   }, []);
 
+  useEffect(() => subscribeConnectionState(setConnectionState), []);
+
   function startFollow(m: Member) {
     setFollowId(m.id);
     setFollowPaused(false);
@@ -176,6 +181,7 @@ export function BoardPresence({ boardId }: { boardId: string }) {
   const overflowMembers = orderedMembers.slice(DIRECT_AVATARS);
   const remoteCursors = orderedMembers.filter((m) => m.id !== selfId && m.cursor?.visible);
   const followers = selfId == null ? [] : orderedMembers.filter((m) => m.id !== selfId && m.followingId === selfId);
+  const syncState = connectionState === "disconnected" ? "offline" : connectionState === "connecting" || syncing ? "saving" : "synced";
 
   return (
     <div
@@ -342,7 +348,7 @@ export function BoardPresence({ boardId }: { boardId: string }) {
       )}
 
       {/* 同步状态：真实心跳/拉取周期驱动 */}
-      <BoardSyncStatus controlledState={syncing ? "saving" : "synced"} />
+      <BoardSyncStatus controlledState={syncState} />
     </div>
   );
 }

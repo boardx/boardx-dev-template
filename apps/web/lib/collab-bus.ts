@@ -23,6 +23,8 @@ export interface CursorSnapshot {
   visible: boolean;
 }
 
+export type CollabConnectionState = "connecting" | "connected" | "disconnected";
+
 interface FollowSnapshot {
   viewport: ViewportSnapshot;
 }
@@ -38,6 +40,8 @@ let localCursor: CursorSnapshot | null = null;
 
 const followListeners = new Set<Listener<FollowSnapshot | null>>();
 const followPauseListeners = new Set<Listener<void>>();
+const connectionListeners = new Set<Listener<CollabConnectionState>>();
+let collabConnectionState: CollabConnectionState = "connecting";
 
 /** CanvasViewport：每次视口变化后上报本地视口（供心跳广播给他人）。 */
 export function publishViewport(vp: ViewportSnapshot): void {
@@ -89,4 +93,17 @@ export function requestFollowPause(): void {
 export function subscribeFollowPause(fn: Listener<void>): () => void {
   followPauseListeners.add(fn);
   return () => followPauseListeners.delete(fn);
+}
+
+/** BoardCanvas：发布实时通道连接状态，供 Header 同步指示展示连接异常/恢复。 */
+export function publishConnectionState(state: CollabConnectionState): void {
+  collabConnectionState = state;
+  for (const fn of connectionListeners) fn(state);
+}
+
+/** BoardPresence：订阅实时通道连接状态。 */
+export function subscribeConnectionState(fn: Listener<CollabConnectionState>): () => void {
+  connectionListeners.add(fn);
+  fn(collabConnectionState);
+  return () => connectionListeners.delete(fn);
 }
