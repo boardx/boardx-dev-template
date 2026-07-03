@@ -66,15 +66,19 @@ install_pre_push_hook() {
 # harness-hook (pre-push): 轻量门控（受影响模块 typecheck/lint/test，对齐 CI）
 # 全量验证不在这里：CI 定时回归 + 标 passing 前的 verify:full 负责。
 echo "==> [harness] pre-push: 受影响模块 typecheck/lint/test（turbo --affected；跳过用 git push --no-verify）"
-# --affected 相对 origin/main 计算改动面；拿不到 origin/main（如首次 clone 未 fetch）则回退全量 verify:base
-if git rev-parse --verify -q origin/main >/dev/null; then
-  export TURBO_SCM_BASE="origin/main"
+# --affected 相对 origin/main 计算改动面。用解析后的单一 merge-base SHA 而非
+# origin/main 引用：分支含 merge commit 时 turbo 内部 git 会报
+# "fatal: multiple merge bases found"（git merge-base 命令本身总返回单个最优解）。
+# 拿不到 base（首次 clone 未 fetch 等）→ 回退全量 verify:base。
+BASE_SHA="$(git merge-base origin/main HEAD 2>/dev/null || true)"
+if [ -n "${BASE_SHA}" ]; then
+  export TURBO_SCM_BASE="${BASE_SHA}"
   if ! pnpm turbo run typecheck lint test --affected; then
     echo "✗ [harness] 受影响模块验证失败，push 中止。修复后再推，或 git push --no-verify 临时跳过。"
     exit 1
   fi
 else
-  echo "  ! 本地没有 origin/main 引用，回退全量 verify:base"
+  echo "  ! 解析不到与 origin/main 的 merge-base，回退全量 verify:base"
   if ! pnpm -w run verify:base; then
     echo "✗ [harness] verify:base 失败，push 中止。"
     exit 1
