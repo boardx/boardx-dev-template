@@ -53,10 +53,10 @@
       "capability": "CAP-WEB",
       "depends_on": [],
       "verification": [
-        "cd apps/web && bash scripts/lint-design.sh 2>&1 | tee /tmp/lint-design-out.txt; grep -qi 'ava\\|ai-store\\|surveys\\|admin' /tmp/lint-design-out.txt || (echo 'lint 未覆盖新增页面路径' && exit 1)"
+        "cd apps/web && bash scripts/lint-design.sh 2>&1 | tee /tmp/lint-design-out.txt; grep 'LABEL-LANG-MIX:' /tmp/lint-design-out.txt | grep -qiE 'ava|ai-store|surveys|admin' || (echo 'lint 的 §7 语言一致性规则未真正命中新增页面路径（不是只匹配脚本自身说明文案）' && exit 1)"
       ],
-      "evidence": "",
-      "notes": "uc-design-003（新增）。目的是让「文案/token 不统一」这类问题以后在 CI 就被拦下，而不是像本轮一样只能靠人工截图对比才发现。如果现有 lint-design.sh 架构不支持逐页面扫描（比如是全局 grep），确认它至少覆盖到新增文件路径即可，不需要重写整个 lint 工具。"
+      "evidence": "phases/phase-p16-ui-nav-alignment/sprints/sprint-01/evidence/F03.verify.log",
+      "notes": "uc-design-003（新增）。目的是让「文案/token 不统一」这类问题以后在 CI 就被拦下，而不是像本轮一样只能靠人工截图对比才发现。如果现有 lint-design.sh 架构不支持逐页面扫描（比如是全局 grep），确认它至少覆盖到新增文件路径即可，不需要重写整个 lint 工具。verification 断言必须锚定 §7 规则真实输出的 LABEL-LANG-MIX: 前缀行（内含真实文件:行号:源码），不能只匹配脚本里的说明性 echo 文案——2026-07-03 feature-evaluator review（10/16 Revise）指出了这个自证式验证漏洞，已修复。"
     }
   ]
 }
