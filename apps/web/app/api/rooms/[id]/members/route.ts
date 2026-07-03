@@ -3,12 +3,16 @@ import {
   canViewRoom,
   canManageRoom,
   getRoomRole,
+  getRoom,
   listRoomMembers,
   addRoomMember,
   findUserByEmail,
+  upsertRoomInvite,
+  listPendingRoomInvites,
 } from "@repo/data";
-import { isValidEmail, normalizeEmail, generateToken } from "@repo/auth";
+import { isValidEmail, normalizeEmail, generateToken, expiresAt, ROOM_INVITE_TTL_MS } from "@repo/auth";
 import { currentUser } from "@/lib/session";
+import { sendRoomInviteEmail } from "@/lib/mailer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,14 +25,32 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: "无权限" }, { status: 403 });
   }
   const role = await getRoomRole(roomId, user.id);
-  return NextResponse.json({ members: await listRoomMembers(roomId), myRole: role ?? null });
+  const canManage = role === "owner" || role === "admin";
+  // pending 邀请列表仅 owner/admin 可见（避免向普通成员泄漏邀请邮箱等细节）。
+  const invites = canManage ? await listPendingRoomInvites(roomId) : [];
+  return NextResponse.json({
+    members: await listRoomMembers(roomId),
+    myRole: role ?? null,
+    invites: invites.map((i) => ({
+      id: i.id,
+      email: i.email,
+      role: i.role,
+      status: i.status,
+      expires_at: i.expires_at,
+      created_at: i.created_at,
+    })),
+  });
 }
 
 /**
- * 邀请成员（uc-room-003）。owner/admin only。
+ * 邀请成员（uc-room-003 / p20 F09）。owner/admin only。
  * POST { email }  → 邮箱邀请：已注册且不在房间 → 加入为 member（status:"added"）；
- *                    已在房间 → userAlreadyInRoom(409)；未注册 → 邀请流程（status:"invited"）。
+ *                    已在房间 → userAlreadyInRoom(409)；未注册 → room_invites 落库
+ *                    （token/过期7天/幂等刷新）+ dev 邮件通道发送注册链接（status:"invited"）。
  * POST { userId } → 直接按 userId 加入为 member（兼容既有 room-manage API）。
+ *
+ * 安全：token 只经邮件（dev=控制台日志+outbound_emails 落库）流转给被邀者本人，
+ * 响应体不返回 token，也不区分"邮箱已被邀请过/从未被邀请"（避免邮箱枚举）。
  */
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -63,10 +85,19 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ status: "added", email }, { status: 200 });
     }
 
-    // 未注册邮箱：交由邀请流程处理（生成一次性 token，可拼成邀请链接）。
-    // 注：当前阶段不落 room_invites 表，token 仅用于前端展示/复制链接，邮件发送在范围外。
+    // 未注册邮箱：持久化邀请（幂等：同房间+同邮箱刷新 token/过期时间，不产生重复行）
+    // 并经 dev 邮件通道发送注册链接。token 绝不放进响应体。
     const token = generateToken();
-    return NextResponse.json({ status: "invited", email, token }, { status: 200 });
+    await upsertRoomInvite(roomId, email, "member", token, user.id, expiresAt(ROOM_INVITE_TTL_MS));
+    const room = await getRoom(roomId);
+    const origin = new URL(req.url).origin;
+    await sendRoomInviteEmail({
+      to: email,
+      roomName: room?.name ?? `房间 #${roomId}`,
+      inviterEmail: user.email,
+      registerUrl: `${origin}/register?email=${encodeURIComponent(email)}`,
+    });
+    return NextResponse.json({ status: "invited", email }, { status: 200 });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }

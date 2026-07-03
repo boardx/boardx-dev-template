@@ -35,3 +35,23 @@ export async function sendShareLinkEmail(mail: ShareLinkEmail): Promise<void> {
   console.log(`[mailer:dev] ava-share-link to=${mail.to} url=${mail.shareUrl}`);
   await recordOutboundEmail(mail.to, "ava_share_link", subject, body);
 }
+
+export interface RoomInviteEmail {
+  to: string;
+  roomName: string;
+  inviterEmail: string;
+  registerUrl: string;
+}
+
+/**
+ * p20 F09：邀请未注册邮箱加入房间。与 reset-password/ava-share-link 同一 dev transport 口径：
+ * 打日志 + 落库到 outbound_emails（e2e 经 /api/dev/outbox 断言发信内容含注册链接）。
+ * 重要：token 只经这条"邮件"（此处=日志+落库）流转给被邀者本人，不进任何 API 响应体。
+ * TODO(deferred)：与 reset-password/ava-share-link 一起切换到真实 provider（SMTP/Resend）。
+ */
+export async function sendRoomInviteEmail(mail: RoomInviteEmail): Promise<void> {
+  const subject = `邀请你加入房间「${mail.roomName}」`;
+  const body = `${mail.inviterEmail} 邀请你加入房间「${mail.roomName}」，注册即可加入：${mail.registerUrl}`;
+  console.log(`[mailer:dev] room-invite to=${mail.to} room=${mail.roomName} url=${mail.registerUrl}`);
+  await recordOutboundEmail(mail.to, "room_invite", subject, body);
+}

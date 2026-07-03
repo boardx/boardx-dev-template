@@ -184,9 +184,9 @@
       "title": "邀请未注册用户加入房间（完整流）",
       "user_visible_behavior": "owner/admin 输入未注册邮箱邀请：room_invites 落库（token、过期 7 天、幂等刷新），dev 邮件通道发送注册链接；被邀者注册成功后自动成为该房间 member，登录即见房间；Members tab 显示 pending 邀请列表（data-testid=room-invite-pending）可撤销；过期令牌注册成功但不入房并提示；member 邀请返回 403。",
       "design_ref": "prototype:Room Settings dialog INVITE NEW MEMBERS；oldcode inviteNewUserToRoomByEmail 流程",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-room-2",
       "capability": "CAP-AUTH",
       "depends_on": [],
       "wave": 0,
@@ -195,7 +195,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-009-invite-unregistered.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F09.verify.log @ 2026-07-03T19:26:47.043Z",
       "notes": "uc-rr-008。真 SMTP 不在范围（沿用 phase-04 dev 邮件边界：控制台日志 + DB 令牌）；修复现状『生成 token 不持久化不发邮件』的半成品。"
     },
     {

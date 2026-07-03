@@ -79,6 +79,7 @@ export function isExpired(at: Date | string): boolean {
 export const SESSION_COOKIE = "boardx_session";
 export const CURRENT_TEAM_COOKIE = "boardx_current_team";
 export const TEAM_INVITE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 天
+export const ROOM_INVITE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 天（p20 F09：邀请未注册邮箱加入房间）
 
 // ─── 团队角色与权限（纯逻辑，可单测）─────────────────────────────────────────
 
