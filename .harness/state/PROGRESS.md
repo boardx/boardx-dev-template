@@ -25,5 +25,6 @@
 | p17 | UI Reskin Round 2 | not_started | 0 | 5 | 0 | 1 |
 | p18 | AVA AI 落地 (P18) | not_started | 11 | 0 | 0 | 1 |
 | p19 | AVA 画布/记忆扩展 (P19，待决策) | not_started | 1 | 0 | 0 | 0 |
+| p20 | Room Realignment (P20) | not_started | 10 | 0 | 0 | 1 |
 
-_最近聚合:2026-07-03T11:16:44.738Z_
+_最近聚合:2026-07-03T17:39:25.274Z_
