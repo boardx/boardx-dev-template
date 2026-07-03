@@ -156,9 +156,9 @@
       "title": "分享聊天「发送到我的邮箱」接通",
       "user_visible_behavior": "分享面板中 share-email 按钮变为可用：点击后向当前用户邮箱真实发送包含分享链接的邮件，成功展示独立成功提示，失败展示独立于「复制链接」的错误提示；未开启分享时先自动生成链接再发送。",
       "design_ref": "现有 share-panel（share-email-disabled 占位转真实动作）；requirements/04-close-out-placeholders.md",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-ava-p18-3",
       "capability": "CAP-DATA",
       "depends_on": [],
       "wave": 0,
@@ -167,7 +167,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-share-email.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F08.verify.log @ 2026-07-03T18:52:02.471Z",
       "notes": "requirements/04。邮件走既有邮件服务能力（与 auth 的 confirm-email/forgot-password 同一底层），e2e 用邮件捕捉桩（如 mailhog/本地 sink）断言真实发信请求与内容含分享链接。data-testid 从 share-email-disabled 更名为 share-email。"
     },
     {

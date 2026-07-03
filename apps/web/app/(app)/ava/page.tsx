@@ -194,6 +194,10 @@ export default function AvaPage() {
   const [shareLoading, setShareLoading] = useState(false);
   const [shareError, setShareError] = useState("");
   const [copyStatus, setCopyStatus] = useState("");
+  // p18 F08：邮件发送提示独立于「复制链接」的提示（share-email-status / err-share-email）。
+  const [emailStatus, setEmailStatus] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
   const [editError, setEditError] = useState("");
@@ -367,6 +371,8 @@ export default function AvaPage() {
     setShare(null);
     setShareError("");
     setCopyStatus("");
+    setEmailStatus("");
+    setEmailError("");
     setEditingId(null);
     setDeleteConfirmId(null);
     setActionError("");
@@ -401,6 +407,8 @@ export default function AvaPage() {
     setShare(null);
     setShareError("");
     setCopyStatus("");
+    setEmailStatus("");
+    setEmailError("");
     setEditingId(null);
     setDeleteConfirmId(null);
     setActionError("");
@@ -874,6 +882,8 @@ export default function AvaPage() {
     setShareOpen(nextOpen);
     setShareError("");
     setCopyStatus("");
+    setEmailStatus("");
+    setEmailError("");
     if (nextOpen && activeId) await loadShare();
   }
 
@@ -926,6 +936,26 @@ export default function AvaPage() {
       setShareError("关闭分享失败，请重试");
     } finally {
       setShareLoading(false);
+    }
+  }
+
+  // p18 F08：分享聊天「发送到我的邮箱」。未开启分享时后端自动生成链接再发送。
+  async function sendShareEmail() {
+    if (!activeId) return;
+    setEmailSending(true);
+    setEmailStatus("");
+    setEmailError("");
+    try {
+      const res = await fetch(`/api/ava/threads/${activeId}/share/email`, { method: "POST" });
+      if (guard(res.status)) return;
+      if (!res.ok) throw new Error();
+      const data = (await res.json()) as { ok: boolean; to: string; share: ThreadShare };
+      setShare(data.share);
+      setEmailStatus(`分享链接已发送到 ${data.to}`);
+    } catch {
+      setEmailError("发送邮件失败，请重试");
+    } finally {
+      setEmailSending(false);
     }
   }
 
@@ -1179,16 +1209,28 @@ export default function AvaPage() {
                       Turn off sharing
                     </Button>
                     <Button
-                      data-testid="share-email-disabled"
+                      data-testid="share-email"
                       variant="ghost"
                       size="sm"
                       className="h-8 gap-1.5 transition-colors hover:bg-surface-1"
-                      disabled
+                      onClick={() => void sendShareEmail()}
+                      disabled={shareLoading || emailSending}
                     >
                       <Mail className="h-4 w-4" strokeWidth={1.5} />
-                      Send via email
+                      {emailSending ? "Sending..." : "Send via email"}
                     </Button>
                   </div>
+
+                  {emailError && (
+                    <p role="alert" data-testid="err-share-email" className="mt-2 text-xs text-destructive">
+                      {emailError}
+                    </p>
+                  )}
+                  {emailStatus && (
+                    <p data-testid="share-email-status" className="mt-2 text-xs text-muted-foreground">
+                      {emailStatus}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
