@@ -135,7 +135,7 @@
       "area": "canvas",
       "title": "拖动时的对齐参考线",
       "user_visible_behavior": "拖动或缩放组件时，与邻近组件的边/中心对齐时显示动态参考线并吸附；多组件等间距时显示间距提示；释放后参考线消失。",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "08",
       "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
@@ -144,7 +144,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/canvas-guidelines.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F07.verify.log @ 2026-07-03T18:18:46.685Z",
       "notes": "uc-canvas-007。对齐/吸附为纯几何计算，含单测。",
       "source_use_cases": [
         "phases/requirements/board/canvas/uc-canvas-007-use-alignment-guidelines.md"

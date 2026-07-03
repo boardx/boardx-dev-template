@@ -42,3 +42,30 @@
 - 已知风险或未解决问题: 见 session-handoff。
 - 下一步最佳动作: F07（对齐参考线增强）或 F12（文本组件）——在 fabric
   对象模型上实现，成本已显著降低。
+
+### 2026-07-04 02:30
+- 本轮目标: 完成 F07（拖动时的对齐参考线——uc-canvas-007 增强）
+- 已完成: F07 → passing（verify 门控通过，evidence/F07.verify.log）。
+  UC 与现状 diff 出的三个增量全部落地：
+  1) **等间距吸附与提示**：`lib/canvas-snap.ts` 新增 computeSpacingSnap
+     （三构型：右延续/左延续/两侧居中，横轴投影重叠过滤），拖动中某轴无
+     边/中心吸附时生效；DOM 覆盖层新增 spacing-hint（间距线 + 间距值徽标）。
+  2) **角点缩放吸附**：单选 item 开放四角缩放控制点（fabric uniformScaling=false，
+     中点/多选仍关闭）；computeResizeSnap 只让移动边参与对齐；缩放矩形由
+     指针意图推导（downScene 基准 + 指针位移，规避 fabric scale 的描边/padding
+     偏差）；提交走新的 resize 可逆 Op（undo=from/redo=to）+ PATCH w/h 落库
+     （route 与 @repo/data updateItem 扩展 w/h，最小 8px）。
+  3) **中心对齐可视化**：computeSnap 原有中心锚点在不同宽度组件下的参考线
+     行为由新 e2e 显式覆盖。
+- widget-menu 的「缩放暂不可用」占位按钮移除（能力已真实可用），
+  widgets-001 对应断言同步改为 toHaveCount(0)。
+- 运行过的验证: `vitest run lib/canvas-snap.test.ts`（14 条）+ 全量 unit（37 条）；
+  `playwright test e2e/canvas-guidelines.spec.ts`（3 条新用例全绿）；
+  canvas/widget 回归 17 个 spec：38 过 / 3 败，失败三条与
+  evidence/F13.verify-full-triage.md 档案化预置红灯逐条同名（add-shape 缺失，
+  非本轮引入）；canvas-007 基线保持绿；harness verify 门控 + verify:base 通过。
+- 已记录证据: evidence/F07.verify.log（verify 脚本写入）
+- 提交记录: 870abbd（几何+单测）/ 3270fa8（渲染+API）/ e2e+缩放修正 commit
+- 已知风险或未解决问题: fabric 等比缩放改为默认关闭（Shift 仍可等比），
+  若后续 feature 需要默认等比需重新权衡；多选（ActiveSelection）缩放仍关闭。
+- 下一步最佳动作: F12 文本组件（见 session-handoff）。
