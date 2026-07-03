@@ -1,0 +1,39 @@
+
+Running 6 tests using 1 worker
+
+  ✘  1 [chromium] › ava-chat-basic.spec.ts:11:5 › 登录用户：空态建议 → 发送 → user+assistant(Markdown/代码块) 气泡 → 线程入列表 → reload 后可继续追问 (11.6s)
+  ✓  2 [chromium] › ava-chat-basic.spec.ts:50:5 › 未登录访问 /ava：跳转 /login (980ms)
+  ✓  3 [chromium] › ava-chat-basic.spec.ts:56:5 › 空消息被 API 拒绝（400，不创建线程） (670ms)
+  ✓  4 [chromium] › ava-chat-basic.spec.ts:68:5 › 生成失败：展示失败态，用户输入已持久化不丢失 (2.1s)
+  ✓  5 [chromium] › ava-chat-basic.spec.ts:89:5 › 未登录调用发消息接口 → 401 (237ms)
+  ✓  6 [chromium] › ava-threads.spec.ts:43:5 › 线程列表按日期分组，可分页加载、切换、重命名、删除，并按团队隔离 (3.8s)
+
+
+  1) [chromium] › ava-chat-basic.spec.ts:11:5 › 登录用户：空态建议 → 发送 → user+assistant(Markdown/代码块) 气泡 → 线程入列表 → reload 后可继续追问 
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
+
+    Locator: getByTestId('suggestion').first()
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+      [2m- expect.toBeVisible with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('suggestion').first()[22m
+
+
+      17 |   // 空态：建议动作可见
+      18 |   await expect(page.getByTestId("empty")).toBeVisible();
+    > 19 |   await expect(page.getByTestId("suggestion").first()).toBeVisible();
+         |                                                        ^
+      20 |
+      21 |   // 发送第一条消息（隐式创建线程：POST /api/ava/threads 后 POST .../messages）
+      22 |   await page.getByTestId("composer").fill("帮我规划这周的工作");
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ad824731bd47389c2/apps/web/e2e/ava-chat-basic.spec.ts:19:56
+
+  1 failed
+    [chromium] › ava-chat-basic.spec.ts:11:5 › 登录用户：空态建议 → 发送 → user+assistant(Markdown/代码块) 气泡 → 线程入列表 → reload 后可继续追问 
+  5 passed (21.0s)
+undefined
+/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ad824731bd47389c2/apps/web:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 1: playwright test e2e/ava-chat-basic.spec.ts e2e/ava-threads.spec.ts

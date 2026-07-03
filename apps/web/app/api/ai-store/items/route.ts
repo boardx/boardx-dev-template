@@ -3,11 +3,13 @@ import { cookies } from "next/headers";
 import { CURRENT_TEAM_COOKIE } from "@repo/auth";
 import {
   createAiStoreItem,
+  getAiStoreItem,
   getMembership,
   listAiStoreItems,
   listAuthorizedAiStoreItems,
   listFavoritedAiStoreItemIds,
   listOwnedAiStoreItems,
+  listSubscribedAiStoreItemIds,
   type AiStoreItemType,
 } from "@repo/data";
 import { currentUser } from "@/lib/session";
@@ -30,6 +32,16 @@ export async function GET(req: Request) {
   // 被授权范围内项目，不含拥有者自己的项目，避免和 owner=me 的 Create 视图重复）。
   if (url.searchParams.get("authorized") === "me") {
     return NextResponse.json({ items: await listAuthorizedAiStoreItems(user.id) });
+  }
+
+  const teamIdCookieForSubscribed = cookies().get(CURRENT_TEAM_COOKIE)?.value;
+  if (url.searchParams.get("subscribed") === "me") {
+    const teamId = teamIdCookieForSubscribed ? Number(teamIdCookieForSubscribed) : null;
+    const ids = await listSubscribedAiStoreItemIds({ subscriberUserId: user.id, teamId });
+    const items = (await Promise.all(ids.map((id) => getAiStoreItem(id)))).filter(
+      (it): it is NonNullable<typeof it> => Boolean(it)
+    );
+    return NextResponse.json({ items });
   }
 
   const typeParam = url.searchParams.get("type") ?? "";

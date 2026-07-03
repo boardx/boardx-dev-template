@@ -16,6 +16,10 @@ export default function RecentBoardsPage() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [error, setError] = useState("");
+  // uc-ai-store-003：从 AI Store 模板「Use」入口跳转过来时（?template=<id>），
+  // boards 目前还没有「按模板建板」的后端管线（见 F03 范围说明），先给出明确提示，
+  // 避免用户误以为已经按模板建好了板（静默落到普通列表会误导）。
+  const [templateNotice, setTemplateNotice] = useState(false);
 
   async function load(search = "") {
     setLoading(true);
@@ -32,11 +36,27 @@ export default function RecentBoardsPage() {
 
   useEffect(() => {
     void load();
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("template")) {
+      setTemplateNotice(true);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
   }, []);
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
       <h1 className="text-3xl font-bold tracking-tight text-foreground">最近白板</h1>
+
+      {templateNotice && (
+        <div
+          data-testid="template-use-notice"
+          role="status"
+          className="rounded-lg border border-border bg-surface-1 px-4 py-3 text-sm text-foreground"
+        >
+          按模板建板功能开发中，暂未上线——已为你打开最近白板列表。
+        </div>
+      )}
 
       {error && (
         <p role="alert" data-testid="err" className="text-sm text-destructive">
