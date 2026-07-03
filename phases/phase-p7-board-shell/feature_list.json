@@ -228,7 +228,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/board-menu.spec.ts"
       ],
       "evidence": "",
-      "notes": "uc-board-menu-001~007 + 012。是 p6 各 widget 创建能力（F11-F16）的 UI 入口；橡皮擦入口触发 p6 F15 手绘擦除。",
+      "notes": "uc-board-menu-001~007 + 012。是 p6 各 widget 创建能力（F11 便利贴/F12 文本/F15 形状/F16 连接线/F17 手绘/F18 图表）的 UI 入口；橡皮擦入口触发 p6 F17 手绘擦除。",
       "source_use_cases": [
         "phases/requirements/board/board-menu/uc-board-menu-001-use-board-menu.md",
         "phases/requirements/board/board-menu/uc-board-menu-002-create-sticky-note.md",
@@ -298,7 +298,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/board-context-menu.spec.ts"
       ],
       "evidence": "",
-      "notes": "uc-context-menu-001~004。复制/剪切/粘贴复用 p6 F08、编组/锁定复用 p6 F19；图层顺序为 z-index 批量 update（本 feature 新增）。",
+      "notes": "uc-context-menu-001~004。复制/剪切/粘贴复用 p6 F08、编组/锁定复用 p6 F21（多选组合批量操作）；图层顺序为 z-index 批量 update（本 feature 新增）。",
       "source_use_cases": [
         "phases/requirements/board/context-menu/uc-context-menu-001-use-context-menu.md",
         "phases/requirements/board/context-menu/uc-context-menu-002-copy-cut-paste.md",
