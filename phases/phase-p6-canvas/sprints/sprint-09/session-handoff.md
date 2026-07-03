@@ -13,6 +13,12 @@
   `pnpm --filter @repo/web exec playwright test e2e/widget-style.spec.ts`（7/7）+
   `pnpm -w run verify:base`（harness verify 自动跑，通过）。
   证据：`phases/phase-p6-canvas/sprints/sprint-09/evidence/F19.verify.log`。
+- F20（锁定/解锁 + 删除 + 刷新组件）：passing。
+  验证命令：`docker compose -f infra/docker-compose.yml up -d` /
+  `pnpm --filter @repo/data run migrate` /
+  `pnpm --filter @repo/web exec playwright test e2e/widget-lock-delete-refresh.spec.ts`（6/6）+
+  `pnpm -w run verify:base`（harness verify 自动跑，通过）。
+  证据：`phases/phase-p6-canvas/sprints/sprint-09/evidence/F20.verify.log`。
 
 ## 本轮改动（F19）
 - `apps/web/components/board/board-canvas.tsx`：
@@ -52,18 +58,58 @@
   - "空文本转便利贴"：补 `expectItemCount` 等待再读 REST，修复 baseline 上就存在的
     `add-text` 点击未等待创建 POST 落地的竞态（约 2/3 概率失败，与 F19 改动无关，顺手修）。
 
+## 本轮改动（F20）
+- `apps/web/components/board/board-canvas.tsx`：
+  - 新增 `getLocked`（读 color 的 `|locked=1` 段）+ `toggleLocked`（批量切换，全锁定→解锁，
+    否则→全部锁定，复用 `applyColors`/`withStyle` 管线，未新增持久化列）。
+  - `deleteSelected`：改为过滤锁定项，只删除未锁定的选中项；锁定项保留且保持选中
+    （uc-widget-menu-008 主流程 5：部分失败反馈）。全部锁定时短路不执行。
+  - `moveSelected`（方向键微移）：同样过滤锁定项，过滤后为空则整体跳过。
+  - `onEditRequest`：加 `getLocked` 检查，短路双击进入编辑态（唯一的 setEditingId 调用点）。
+  - 8 个样式 setter（setColor/toggleBold/toggleItalic/setFontFamily/setFontSize/setAlign/
+    setBorder/setBorderWidth/setOpacity/setTextColor）的 `.filter(...)` 都加了
+    `&& !getLocked(it)`，混合选中时只对未锁定项生效。
+  - Widget Menu：新增 `allSelectedLocked`（memo）。全部锁定时用 `!allSelectedLocked &&` 包一层
+    `<>...</>`，把颜色板/字重/文本样式/F19 样式面板/应用格式/转便利贴/刷新/复制全部收起，
+    只留删除（disabled）+ 解锁。`wm-lock`/`wm-unlock` 二选一渲染（全锁定→unlock，否则→lock，
+    混合态显示 lock 但带 title 提示）。原 `wm-lock-unavailable` 占位按钮已删除。
+- `apps/web/components/board/fabric-canvas.tsx`：
+  - `RenderItem`/`CanvasTestApi.getItems()` 新增 `locked: boolean`；reconcile 的对象重建
+    签名（sig）加入 `it.locked`，确保锁定态切换会触发对象重建应用新交互属性。
+  - `styleInteractive` 新增 `locked` 形参：`interactive = canEdit && !locked`，替换原来
+    直接用 `canEdit` 控制的 `lockMovementX/Y`/`hasControls`/`lockScalingX/Y`/`hoverCursor`。
+  - `buildItemObject`（单选路径）：`styleInteractive(g, tokens, canEdit, true, it.locked)`。
+  - reconcile 的 `ActiveSelection`（多选路径）：新增「选中项任一锁定 → 整组按锁定处理」
+    （fabric 的 ActiveSelection 拖拽是整体的，子对象各自的 lockMovementX/Y 不会被读取，
+    必须在这里把 `anyLocked` 映射到组一级的 locked 参数）。
+  - `object:moving`/`object:scaling` 事件处理器各加了一道防御性 guard（正常路径下已经被
+    上面的 fabric 标志位挡住不会触发，双保险，尤其覆盖 ActiveSelection 拖拽的极端时序）。
+- `apps/web/e2e/helpers/canvas.ts`：`CanvasItem` 新增 `locked: boolean`。
+- `apps/web/e2e/widget-lock-delete-refresh.spec.ts`（新增，6 条测试）：锁定入口显示 + 持久化
+  （`|locked=1` 段 + 刷新页面仍锁定）、不可移动（方向键+拖拽手势）/不可编辑（双击）+ 解锁恢复、
+  多选混合锁定态（样式入口仍展示、批量收敛为全锁定）、多选删除部分失败、全锁定禁删、刷新基线
+  复验（锁定后刷新入口也随其它入口一并隐藏）。
+- `apps/web/e2e/widgets-001-use-canvasx-widgets.spec.ts`（顺手修复占位断言）：
+  `wm-lock-unavailable` 已被替换为 `wm-lock`，断言改为 wm-lock 可见 + wm-lock-unavailable
+  不存在。
+
 ## 仍损坏或未验证
-- F20/F21 尚未开始（not_started，owner: null）。
+- F21（多选批量对齐/整理）尚未开始（not_started，owner: null）。
 - widgets-001-use-canvasx-widgets.spec.ts / widgets-004-shape-widget.spec.ts 各有既有失败
   （add-shape testid 基线缺失，与本次改动无关，spec 文件内已有注释说明，不要在下一轮误判为
-  本次改动引入的回归）。
+  本次改动引入的回归；F20 本轮回归验证时复核过，未新增回归）。
+- 右键上下文菜单的 `ctx-lock-unavailable` 占位按钮未改动（UC 只要求 Widget Menu 提供锁定
+  入口，右键菜单不在 F20 契约范围内，留给后续需要时再评估）。
+- 锁定/解锁本身不进撤销栈（与 F19 的样式变更行为一致，非本轮引入的新不一致，一并记录）。
 - 已 spawn 一个后台任务排查 e2e 中更广泛的「点击 add-note/add-text 后立即读 REST」竞态模式
   （widget-text.spec.ts 只是其中一例），未来若被认领请一并核对。
 
 ## 下一步最佳动作
-- F20/F21 可从本轮已建立的 border/borderw/opacity/textcolor `|k=v` 段继续扩展，若涉及
-  形状/连接线组件的独立线宽语义，注意当前 borderw 字段承担的是「边框宽=线宽」复用语义，
-  真正引入形状/连接线类型时需要重新评估是否需要拆分字段。
+- F21（多选批量对齐/整理）可以开始；注意对齐/整理动作如果涉及移动，同样需要过滤锁定对象
+  （复用本轮 `moveSelected`/`deleteSelected` 建立的「先过滤 getLocked 再操作」模式）。
+- F20 建立的 locked 短路点清单（后续任何新增编辑类入口都要记得同步检查）：
+  `styleInteractive`（fabric 交互属性）、`onEditRequest`（双击编辑）、`deleteSelected`、
+  `moveSelected`、8 个样式 setter 的 `.filter()`、Widget Menu 的 `allSelectedLocked` 收起逻辑。
 - 不要碰：`apps/web/app/api/board-items/[itemId]/route.ts` 与
   `apps/web/app/api/boards/[id]/items/route.ts` 的白名单（范围纪律内已确认不可扩展，
   color 是唯一可扩展的透传字段）。
@@ -73,4 +119,6 @@
 ## 命令
 - 启动: `pnpm -w run dev`
 - 验证 F19: `pnpm harness verify --sprint p6/09 --feature F19 --owner canvas-worker-1`
+- 验证 F20: `pnpm harness verify --sprint p6/09 --feature F20 --owner canvas-worker-1`
 - 调试: `pnpm --filter @repo/web exec playwright test e2e/widget-style.spec.ts --reporter=list`
+- 调试: `pnpm --filter @repo/web exec playwright test e2e/widget-lock-delete-refresh.spec.ts --reporter=list`
