@@ -99,6 +99,9 @@ test -f AGENTS.md && test -x init.sh
 - `priority`：越小越重要（1 = 阻断其他所有工作的最高优先级）
 - `area`：对应代码平面（`orchestrator`/`tools`/`memory`/`agent-core`/`harness`/`ci`/`tooling`）
 - `sprint`：未分配时为 `null`；由 `pnpm harness new-sprint --features` 分配
+- `notes`：除依赖外，**标注本 feature 预计要改的共享文件热点**
+  （如「会改 `apps/web/.../rooms/page.tsx`」）。多 agent 并行分派时以此判断
+  parallel-safe：同文件热点的 feature 必须串行（前者合并后再派，见 L11 事故 #301/#299）。
 
 ---
 
@@ -111,6 +114,7 @@ test -f AGENTS.md && test -x init.sh
 | status 直接写 passing | 绕过了验证门控 | 只能通过 harness verify 升级 |
 | notes 留空 | 下一轮 agent 没有上下文 | 写清楚依赖和注意事项 |
 | verification 命令依赖本地服务已启动 | CI 环境失败 | 在 verification 前加启动步骤，或用独立的 setup 命令 |
+| user_visible_behavior 里有本 feature 无法断言的行，静默跳过 | 契约缺口无人接盘（L10） | 在 notes 里显式写「该行为由 FXX 交付时断言」，并在 FXX 的 notes 里对应记录 |
 
 ---
 

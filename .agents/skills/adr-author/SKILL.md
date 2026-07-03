@@ -13,6 +13,12 @@ description: >
 做了一个有长期影响、且未来有人会问「当初为什么这么定」的架构/选型决策时。
 判断标准：**这个决定改起来很贵，或者会约束后续多个 feature** → 值得写 ADR。
 
+**另一类触发场景：事故 → 教训 → 固化为规则。** 一次真实事故暴露出流程/门控漏洞、
+且修复引入了新的硬约束时，用 ADR 记下「出了什么事、为什么定这条规则」。例如：
+evidence 文件被 gitignore 挡在仓库外导致"指向空气的引用"、feature status 在 PR diff
+中被手改绕过 verify 门控、双 coordinator 并行产出冲突 review 结论——这类教训写进 ADR
+的背景段（事故即背景），规则本身进决策段，未来质疑规则时可直接回溯事故现场。
+
 > 模板见 [adr.template.md](.harness/templates/adr.template.md)。本 skill 讲怎么写得有用。
 
 ---

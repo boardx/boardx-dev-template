@@ -29,6 +29,21 @@ description: >
 
 ---
 
+## label 纪律（不得制造漂移，见 ADR-004）
+
+- **`status:*` 是互斥生命周期 label**，流转必须与
+  [multi-agent-coordination.md](.harness/instructions/multi-agent-coordination.md) 的
+  状态机一致（`feature_list.json` 的 `passing` ⇔ `status:merged`）。
+  投影只能写规范 label 集合，禁止发明新 label 或复活已废弃的裸 label
+  （`in-progress`/`blocked`/`passing`）。
+- **`review:*-ok` / `review:changes` 是 reviewer verdict，只能由 coordinator
+  编排的 reviewer agent 产出。** 本 skill 的同步动作**绝不**打/摘任何 `review:*` label；
+  worker 更不得自打 `review:*-ok`（实战事故：双 coordinator 并行导致两轮 review
+  结论冲突，假绿险些放行）。发现 verdict label 与可核验事实（如 evidence 是否在
+  git 树中）冲突时，以事实为准并升级给 coordinator，不要用投影"修正"它。
+
+---
+
 ## 何时同步（判断）
 
 - ✅ 一个 sprint 的 feature 集合/归属变化后 → 同步，让对外视图跟上。

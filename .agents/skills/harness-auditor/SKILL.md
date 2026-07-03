@@ -50,6 +50,22 @@ description: >
 **注意方向**：不是无脑加脚手架。文章明确——任务若已在模型稳定能力范围内，
 就不该叠验证开销。harness 应随模型变强而**变瘦**。
 
+### 承重测试固定用例：门控绕过类事故（真实发生过，每次审计必跑）
+
+模拟以下攻击路径，验证现有流程**能否拦截**（拦不住 = 对应子系统扣分）：
+
+1. **手改 passing + evidence 不入库**：在分支上直接把 feature_list.json 的
+   `status` 改成 `passing`，evidence 指向一个被 `.gitignore` 挡住的 `*.log` 路径
+   （`git ls-tree HEAD -- <路径>` 为空）。审查/verify 环节是否会质询"未经
+   `pnpm harness verify` 门控"并阻断？reviewer 是否实测 evidence blob 在树中，
+   而非轻信 diff/progress 的声称？
+2. **status/owner/evidence 出现在 PR diff 中**：这类字段的手改是否被视为嫌疑并阻断？
+3. **verdict 越权**：worker 自打 `review:*-ok`、或第二个 coordinator 并行给出
+   冲突结论时，流程是否以可核验事实（git ls-tree 实测）为准而非打分/声称？
+
+三条任何一条能溜过去，说明验证/状态子系统**不承重的是流程而非脚手架**——
+这时该加固门控，而不是删脚手架。
+
 ---
 
 ## 产出
