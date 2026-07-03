@@ -123,7 +123,9 @@
       "owner": null,
       "capability": "CAP-WEB",
       "depends_on": [
-        "F01"
+        "F01",
+        "F03",
+        "F08"
       ],
       "wave": 1,
       "verification": [
@@ -235,7 +237,8 @@
       "owner": null,
       "capability": "CAP-AI",
       "depends_on": [
-        "F01"
+        "F01",
+        "F07"
       ],
       "wave": 1,
       "verification": [
