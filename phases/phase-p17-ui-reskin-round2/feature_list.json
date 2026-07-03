@@ -31,7 +31,7 @@
       "title": "Ava 对话界面 reskin",
       "user_visible_behavior": "Ava 对话页（空态建议/消息列表/research card/clarify-plan-running 时间线/report 面板）的视觉与交互对齐 prototype AVA 屏：token（灰阶/柔彩/圆角/字号）、布局、组件形态与 Home/Rooms 等已 reskin 页面一致。不改变已有的功能行为（消息发送/流式回复/附件/分享等 p9 已 passing 的能力保持不变），只对齐视觉与交互细节。",
       "design_ref": "docs/design/boardx-prototype-v1.bundle.html AVA 屏；phase-p16:F02 审计报告（Ava 部分）。",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "wrk-ava-1",
       "capability": "CAP-WEB",
@@ -42,11 +42,11 @@
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web exec playwright test e2e/ava-*.spec.ts",
+        "cd apps/web && pnpm exec playwright test e2e/ava-*.spec.ts",
         "cd apps/web && bash scripts/lint-design.sh"
       ],
-      "evidence": "",
-      "notes": "uc-ava-reskin-001（新增）。verification 复用既有 p9 全部 ava e2e（回归，确保 reskin 不破坏功能）+ design lint。blocked-on 同 F01。"
+      "evidence": "evidence/F02.verify.log @ 2026-07-03T07:10:54.588Z",
+      "notes": "uc-ava-reskin-001（新增）。verification 复用既有 p9 全部 ava e2e（回归，确保 reskin 不破坏功能）+ design lint。blocked-on 同 F01。fix(F02): verification 第 3 条原写法 `pnpm --filter @repo/web exec playwright test e2e/ava-*.spec.ts` 在 repo 根目录下执行时，bash 的 glob 展开发生在 pnpm/exec 之前、相对于 repo 根（此时 `e2e/` 目录并不存在于根，只存在于 `apps/web/e2e/`），导致 glob 无匹配、原样传给 playwright 后报 \"No tests found\"（p9 阶段的既有 ava verification 全部用显式单文件名，从未触发过这个 bug，本 feature 是第一个用 glob 的）。改为 `cd apps/web && pnpm exec playwright test e2e/ava-*.spec.ts`（与第 4 条 lint-design 已用的 cd 前缀写法一致）后可正确匹配 9 个 ava e2e 文件并执行，语义不变（同样跑全部 ava-*.spec.ts）。"
     },
     {
       "id": "F03",
