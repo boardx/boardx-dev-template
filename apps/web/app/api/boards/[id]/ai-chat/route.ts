@@ -12,7 +12,7 @@
 // 「Board AI 面板当前无跨会话持久化」的既有边界一致。
 import { NextResponse } from "next/server";
 import { getBoard, getBoardAccessRole, listBoardItems } from "@repo/data";
-import { defaultGateway, DEFAULT_MODEL_ID } from "@repo/ai";
+import { defaultGateway, DEFAULT_MODEL_ID, FORCE_FAIL_MARKER } from "@repo/ai";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -21,12 +21,35 @@ export const dynamic = "force-dynamic";
 const MAX_ITEMS_IN_CONTEXT = 40;
 const MAX_ITEM_TEXT_LEN = 200;
 
+// 安全修复（code-reviewer 复审 · 中等严重度）：画布 item 文本是用户可写内容，会被原样拼进
+// 下面的 `[画布内容: ...]` 标记块再传给网关。stub provider（packages/ai/src/gateway.ts）会对
+// 整段用户消息做字符串匹配，命中 FORCE_FAIL_MARKER（"__ava_force_fail__"）就抛错，使本路由
+// 500。若不过滤，任何协作者只要在便签里写下这个触发词字符串，就能让该 board 的 AI 浮层对
+// 所有人恒定返回 500 —— 是一个由用户内容触发的、可复现的拒绝服务问题。这里在组装上下文之前
+// 去掉该触发词的字面出现（大小写不敏感），画布内容本身仍照原样展示给真实场景，只是不再让
+// 用户输入能够操纵 gateway 内部的测试触发逻辑。
+const FORCE_FAIL_MARKER_RE = new RegExp(FORCE_FAIL_MARKER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+
+/** 过滤用户可写文本中可能混入的 stub provider 测试触发词，避免用户内容操纵网关的内部
+ *  测试触发逻辑（见上方安全修复说明）。 */
+function stripForceFailMarker(text: string): string {
+  return text.replace(FORCE_FAIL_MARKER_RE, "");
+}
+
+// TODO(接入真实 LLM 前必读)：目前 `[画布内容: ...]` 里拼接的是用户可写的画布文字，直接进入
+// 单条 user content 字符串一起发给网关。接入真实 LLM 前需要做 prompt injection 隔离（例如：
+// 把画布内容放进独立的 system/tool 消息而非拼在 user 文本里、对分隔符做转义、或用结构化字段
+// 替代自由文本拼接），否则画布协作者可以在便签里写入伪造的指令/角色边界字符串来操纵真实模型
+// 的行为，而不只是像本次修复的 stub 触发词那样的确定性问题。
+
 /** 把画布 items 的真实文字内容组装成 prompt 上下文片段（供网关 provider 引用）。
- *  空文本 item（如未命名形状）跳过，避免上下文噪音。 */
+ *  空文本 item（如未命名形状）跳过，避免上下文噪音。过滤 stub provider 的测试触发词，
+ *  防止用户可写的画布文本意外命中网关内部的强制失败逻辑（见上方安全修复说明）。 */
 function buildBoardContext(items: { text: string; type: string }[]): string {
   const withText = items
     .map((it) => it.text?.trim())
     .filter((t): t is string => !!t)
+    .map(stripForceFailMarker)
     .slice(0, MAX_ITEMS_IN_CONTEXT)
     .map((t) => (t.length > MAX_ITEM_TEXT_LEN ? `${t.slice(0, MAX_ITEM_TEXT_LEN)}…` : t));
   if (withText.length === 0) return "";

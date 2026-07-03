@@ -21,8 +21,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-ai-overlay.spec.ts"
       ],
-      "evidence": "phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-verification.txt; phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-migrate.txt; phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-real-ai-verification.txt",
-      "notes": "uc-board-ai-001（新增）。这是 prototype 里的核心差异化体验，优先级最高。blocked-on phase-p16:F02（审计报告）与本阶段 ui-signoff.md confirmed（ADR-003）——两者都满足前才能 new-sprint。复审（Revise）后修正：Board AI 回复改为真实调用 @repo/ai 的 CAP-AI 网关（与 AVA 相同机制），把画布 items 真实文字组装进 prompt 上下文，不再是前端写死模板；e2e 断言回复中包含画布上具体便签的文字内容。"
+      "evidence": "phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-verification.txt; phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-migrate.txt; phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-real-ai-verification.txt; phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-security-fix-verification.txt",
+      "notes": "uc-board-ai-001（新增）。这是 prototype 里的核心差异化体验，优先级最高。blocked-on phase-p16:F02（审计报告）与本阶段 ui-signoff.md confirmed（ADR-003）——两者都满足前才能 new-sprint。复审（Revise）后修正：Board AI 回复改为真实调用 @repo/ai 的 CAP-AI 网关（与 AVA 相同机制），把画布 items 真实文字组装进 prompt 上下文，不再是前端写死模板；e2e 断言回复中包含画布上具体便签的文字内容。第二轮 code-reviewer 复审（中等严重度）：board item 文本未过滤即拼进 [画布内容: ...] 传给网关，用户在便签里写 stub provider 的强制失败触发词 __ava_force_fail__ 会导致该 board AI 恒定 500（用户内容触发的 DoS）——已在 buildBoardContext 里过滤该触发词修复，并补充单测覆盖；同时标注了接入真实 LLM 前需做 prompt injection 隔离的 TODO。"
     },
     {
       "id": "F02",
