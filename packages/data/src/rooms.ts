@@ -156,3 +156,23 @@ export async function updateRoom(
 export async function deleteRoom(roomId: number): Promise<void> {
   await query("DELETE FROM rooms WHERE id = $1", [roomId]);
 }
+
+// ─── 收藏（P20 F05）──────────────────────────────────────────────────────────
+// 与 board_favorites（P5 F04）同一模式：独立表、每用户维度、room_id 级联删除自动清理。
+
+export async function addRoomFavorite(roomId: number, userId: number): Promise<void> {
+  await query(
+    `INSERT INTO room_favorites (user_id, room_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+    [userId, roomId]
+  );
+}
+
+export async function removeRoomFavorite(roomId: number, userId: number): Promise<void> {
+  await query(`DELETE FROM room_favorites WHERE user_id = $1 AND room_id = $2`, [userId, roomId]);
+}
+
+/** 当前用户收藏的 room id 集合（供列表/详情页渲染星标态）。 */
+export async function listFavoriteRoomIds(userId: number): Promise<number[]> {
+  const rows = await query<{ room_id: number }>(`SELECT room_id FROM room_favorites WHERE user_id = $1`, [userId]);
+  return rows.map((r) => r.room_id);
+}
