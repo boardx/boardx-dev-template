@@ -4,10 +4,25 @@
 - 仓库根目录: boardx-dev-next
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F03（DR 持久化）/ F06（STT 能力）—— 均 wave 0 可并行
-- 当前 blocker: 无
+- 当前最高优先级未完成功能: F06（STT 能力）/ F08（分享邮件）/ F10（附件富渲染，等 PR #295 合并）
+- 当前 blocker: 无（F03 有并行会话在做，勿重复认领）
 
 ## 会话记录
+### 2026-07-04 (owner: wrk-ava-p18-1)
+- 本轮目标: F12 — 分享只读页四态 e2e 补齐 + Agent 禁用态断言
+- 已完成:
+  - 新增 `apps/web/e2e/share-view-chat-states.spec.ts`（5 用例）：Loading 态用路由拦截
+    做确定性断言（此前骨架屏从未被验证）、Invalid、Unavailable（含关闭分享后 token
+    立即失效）、Empty、以及 /ava 的 agent-select 禁用态 + agent-locked 提示（点击前可见）
+  - 未改任何实现代码——四态实现 p9-F05 已就绪，本 feature 为验证覆盖补齐
+- 运行过的验证: playwright 5 passed；`pnpm harness verify --sprint p18/01 --feature F12`
+  门控通过 → passing（含 verify:base）
+- 已记录证据: evidence/F12.verify.log
+- 提交记录: 本分支 worker/wrk-ava-p18-f12-share-four-states（堆叠在 F01 分支上，
+  以满足单一 in_progress 不变量——F01 的 passing 状态来自 #295 的门控产出）
+- 已知风险或未解决问题: F03 被并行会话以无主 in_progress 占用（其 verify 尚未通过），
+  属 ADR-001 允许的单个无主额度，但建议该会话尽快用 claim 补 owner
+- 下一步最佳动作: F06（STT）或 F08（分享邮件）；F10 等 #295 合并后接线
 ### 2026-07-03 19:20 (owner: wrk-ava-p18-1)
 - 本轮目标: F01 — AI 层去 stub 化：真实模型 provider 接入 + 网关路由
 - 已完成:
