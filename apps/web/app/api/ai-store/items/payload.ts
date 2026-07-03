@@ -73,7 +73,9 @@ export function parseAiStorePayload(body: Record<string, unknown>, currentTeamId
     status = "published";
   }
   if (action === "submit_review") {
-    scope = "platform";
+    // P11 F06：team 范围提交审核走团队管理角色审核队列（不再强制升到 platform 范围）；
+    // 其余范围提交审核仍归到 platform，进入 p15-F04 平台审核队列（原有行为不变）。
+    if (scope !== "team") scope = "platform";
     status = "pending";
   }
   if (action === "draft") {

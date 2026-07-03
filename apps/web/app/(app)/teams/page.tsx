@@ -448,6 +448,30 @@ export default function TeamsPage() {
         </section>
       )}
 
+      {/* AI Store 审核入口（P11 F06，uc-ai-store-006）：仅团队管理角色可见，非管理角色不展示该入口 */}
+      {!loading && activeTeam && canManage && (
+        <section
+          data-testid="ai-store-review-entry"
+          className="flex items-center justify-between rounded-12 border border-border bg-surface-1 p-4"
+        >
+          <div className="flex flex-col gap-0.5">
+            <h2 className="text-15 font-semibold text-foreground">AI Store Approval</h2>
+            <p className="text-11 text-muted-foreground">
+              审核 <span className="font-medium text-foreground">{activeTeam.name}</span> 提交审核的 AI Store 项目，管理团队精选。
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            data-testid="ai-store-review-link"
+            onClick={() => router.push(`/teams/${activeTeam.id}/ai-store-review`)}
+          >
+            前往审核
+          </Button>
+        </section>
+      )}
+
       {/* General settings — uc-team-007 */}
       {!loading && activeTeam && canManage && (
         <section
