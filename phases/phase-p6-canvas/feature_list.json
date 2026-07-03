@@ -287,9 +287,9 @@
       "area": "canvas",
       "title": "packages/canvas 数据模型改造为字段级 patch（CRDT-ready）",
       "user_visible_behavior": "widget 更新命令从「整条 item 替换」改为「字段级 patch」（如 {kind:\"patch\", id, patch:{x,y}}）；同一 widget 连续两次不同字段的 patch 互不覆盖；现有 note/rect 类型与 add/move/edit/delete 命令在新语义下行为不变，既有 canvas e2e 全部保持通过。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "08",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
@@ -297,7 +297,7 @@
         "pnpm --filter @repo/canvas run test",
         "pnpm --filter @repo/web exec playwright test e2e/canvas-render.spec.ts e2e/canvas-add.spec.ts e2e/canvas-update.spec.ts e2e/canvas-delete.spec.ts e2e/canvas-select.spec.ts e2e/canvas-copy-paste.spec.ts e2e/canvas-undo-redo.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F14.verify.log @ 2026-07-03T11:18:57.341Z",
       "notes": "背景见 phases/phase-p6-canvas/requirements/widget-schema-field-level.md 与 board-canvas-gap-analysis-and-roadmap.md 第 4 节。与 p6:F13（渲染引擎切换 Fabric.js）同属 Wave 0 前置工作，互不依赖、可并行，但都需在 F15（形状组件）开工前落地——否则后续 widget 类型（F15-F18）的专有字段要在旧的整条替换模型上写一遍，等 P8 接 Yjs 时再拆成字段级会返工（boardx-web 的 UndoRedoService 被 Y.UndoManager 取代就是交过的学费）。不引入 Yjs 依赖，只是让 applyCommand 的 patch 语义对未来 CRDT 存储后端友好。",
       "source_use_cases": [
         "phases/phase-p6-canvas/requirements/widget-schema-field-level.md",
