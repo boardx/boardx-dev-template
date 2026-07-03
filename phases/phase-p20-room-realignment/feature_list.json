@@ -29,9 +29,9 @@
       "title": "创建房间时选择可见性（Private/Team 二选一卡片）",
       "user_visible_behavior": "New Room 弹窗含房间名输入（≥3 字符）与可见性二选一卡片（data-testid=room-create-visibility-private/-team，默认 Private）；提交后 POST /api/rooms 落库 visibility；列表卡片按可见性显示 🔒/🌐 徽章与创建选择一致；visibility=team 的房间对同团队成员可发现并可加入。",
       "design_ref": "prototype:New Room dialog（Visibility 卡片 🔒 Private / 🌐 Public→Team）",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-room-1",
       "capability": "CAP-WEB",
       "depends_on": [],
       "wave": 0,
@@ -40,7 +40,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-002-visibility.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-07-03T17:59:23.765Z",
       "notes": "uc-rr-002。修复 uc-room-001:60 与 uc-room-002:27 的需求矛盾；team 可发现加入的行为需 e2e 正反用例（非成员对 private 房间不可见）。"
     },
     {
