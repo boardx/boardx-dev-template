@@ -25,7 +25,9 @@ test("编辑者创建并管理 CanvasX widgets，菜单显示能力边界", asyn
   await expect(page.getByTestId("widget-menu")).toBeVisible();
   await expect(page.getByTestId("wm-duplicate")).toBeVisible();
   await expect(page.getByTestId("wm-delete")).toBeVisible();
-  await expect(page.getByTestId("wm-resize-unavailable")).toBeDisabled();
+  // p6:F07：拖拽控制点缩放已可用（选中框四角，见 canvas-guidelines.spec.ts），
+  // 原「缩放暂不可用」占位按钮移除，能力边界不再展示该项。
+  await expect(page.getByTestId("wm-resize-unavailable")).toHaveCount(0);
   await expect(page.getByTestId("wm-lock-unavailable")).toBeDisabled();
 
   await dblclickItem(page, (await canvasItems(page))[0]!.id);

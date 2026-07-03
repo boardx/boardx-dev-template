@@ -14,7 +14,14 @@
 // SSR：fabric 仅客户端可用，在 useEffect 内动态 import。
 import { useEffect, useMemo, useRef } from "react";
 import type { Canvas, Group, TPointerEventInfo, TPointerEvent } from "fabric";
-import { computeSnap, type Guide } from "@/lib/canvas-snap";
+import {
+  computeResizeSnap,
+  computeSnap,
+  computeSpacingSnap,
+  type Guide,
+  type ResizeCorner,
+  type SpacingHint,
+} from "@/lib/canvas-snap";
 
 export interface RenderItem {
   id: string;
@@ -46,6 +53,13 @@ export interface ItemMove {
   toY: number;
 }
 
+// p6:F07 组件缩放提交（单选角点缩放，缩放中吸附见 object:scaling）。
+export interface ItemResize {
+  id: string;
+  from: { x: number; y: number; w: number; h: number };
+  to: { x: number; y: number; w: number; h: number };
+}
+
 interface Props {
   items: RenderItem[];
   selectedIds: string[];
@@ -55,9 +69,11 @@ interface Props {
   onSelectionChange: (ids: string[]) => void;
   onEmptyPointerDown: () => void;
   onMoveCommit: (moves: ItemMove[]) => void;
+  onResizeCommit: (resize: ItemResize) => void;
   onEditRequest: (id: string) => void;
   onCtxMenu: (pos: { x: number; y: number }, itemId: string | null) => void;
   onGuides: (guides: Guide[]) => void;
+  onSpacing: (hints: SpacingHint[]) => void;
   onOperating: (operating: boolean) => void;
 }
 
@@ -142,8 +158,10 @@ export function FabricCanvas(props: Props) {
   // 避免 group 描边外扩 / ActiveSelection 相对坐标带来的漂移。
   const gestureRef = useRef<{
     moved: boolean;
+    scaled: boolean; // p6:F07：本手势是角点缩放（object:scaling 置位），提交走 onResizeCommit
     ids: string[];
     init: Record<string, { x: number; y: number }>;
+    initRect: { x: number; y: number; w: number; h: number } | null; // 单选手势的初始矩形（缩放用）
     initLeft: number;
     initTop: number;
   } | null>(null);
@@ -281,10 +299,13 @@ export function FabricCanvas(props: Props) {
               : [];
           const init: Record<string, { x: number; y: number }> = {};
           for (const it of s.items) if (ids.includes(it.id)) init[it.id] = { x: it.x, y: it.y };
+          const single = ids.length === 1 ? s.items.find((it) => it.id === ids[0]) : undefined;
           gestureRef.current = {
             moved: false,
+            scaled: false,
             ids,
             init,
+            initRect: single ? { x: single.x, y: single.y, w: single.w, h: single.h } : null,
             initLeft: target.left ?? 0,
             initTop: target.top ?? 0,
           };
@@ -326,9 +347,71 @@ export function FabricCanvas(props: Props) {
           .filter((it) => !g.ids.includes(it.id))
           .map((it) => ({ x: it.x, y: it.y, w: it.w, h: it.h }));
         const { snapDX, snapDY, guides } = computeSnap(dragged, others);
-        if (snapDX || snapDY) {
-          t.set({ left: (t.left ?? 0) + snapDX, top: (t.top ?? 0) + snapDY });
+        // p6:F07 等间距：某轴未发生边/中心吸附时，检测等间距吸附并给出间距提示。
+        const xAligned = guides.some((g) => g.orientation === "v");
+        const yAligned = guides.some((g) => g.orientation === "h");
+        const spacing = computeSpacingSnap(
+          { x: dragged.x + snapDX, y: dragged.y + snapDY, w: dragged.w, h: dragged.h },
+          others,
+        );
+        const adjX = snapDX + (xAligned ? 0 : spacing.snapDX);
+        const adjY = snapDY + (yAligned ? 0 : spacing.snapDY);
+        const hints = spacing.hints.filter((h) =>
+          h.orientation === "h" ? !xAligned : !yAligned,
+        );
+        if (adjX || adjY) {
+          t.set({ left: (t.left ?? 0) + adjX, top: (t.top ?? 0) + adjY });
           t.setCoords();
+        }
+        s.onGuides(guides);
+        s.onSpacing(hints);
+      });
+
+      // p6:F07 角点缩放吸附：移动中的边接近邻居的边/中心时吸附并显示参考线。
+      // 尺寸换算走纯 delta/ratio（初始 scale=1：w' = it.w * scaleX），不读 fabric 绝对宽高。
+      fc.on("object:scaling", (opt) => {
+        const s = propsRef.current;
+        const g = gestureRef.current;
+        const t = opt.target as Group | undefined;
+        const corner = (opt as { transform?: { corner?: string } }).transform?.corner;
+        if (!g || !t || !s.canEdit || !g.initRect) return;
+        if (corner !== "tl" && corner !== "tr" && corner !== "bl" && corner !== "br") return;
+        g.scaled = true;
+        const it = g.initRect;
+        const rect = {
+          x: it.x + ((t.left ?? 0) - g.initLeft),
+          y: it.y + ((t.top ?? 0) - g.initTop),
+          w: it.w * (t.scaleX ?? 1),
+          h: it.h * (t.scaleY ?? 1),
+        };
+        const others = s.items
+          .filter((i) => !g.ids.includes(i.id))
+          .map((i) => ({ x: i.x, y: i.y, w: i.w, h: i.h }));
+        const { snapDX, snapDY, guides } = computeResizeSnap(rect, others, corner as ResizeCorner);
+        if (snapDX || snapDY) {
+          // 吸附增量作用在移动边上：l/t 角点还需同步平移原点。
+          let { x, y, w, h } = rect;
+          if (snapDX && corner.includes("l")) {
+            x += snapDX;
+            w -= snapDX;
+          } else if (snapDX) {
+            w += snapDX;
+          }
+          if (snapDY && corner.includes("t")) {
+            y += snapDY;
+            h -= snapDY;
+          } else if (snapDY) {
+            h += snapDY;
+          }
+          if (w >= 8 && h >= 8) {
+            t.set({
+              left: g.initLeft + (x - it.x),
+              top: g.initTop + (y - it.y),
+              scaleX: w / it.w,
+              scaleY: h / it.h,
+            });
+            t.setCoords();
+          }
         }
         s.onGuides(guides);
       });
@@ -337,7 +420,22 @@ export function FabricCanvas(props: Props) {
         const s = propsRef.current;
         const g = gestureRef.current;
         const t = opt.target as Group | undefined;
-        if (!g || !t || !g.moved) return;
+        if (!g || !t) return;
+        // p6:F07 缩放提交：终态尺寸按 ratio 反推（初始 scale=1），整数化后走字段级落库。
+        if (g.scaled && g.initRect && g.ids.length === 1) {
+          const it = g.initRect;
+          const to = {
+            x: Math.round(it.x + ((t.left ?? 0) - g.initLeft)),
+            y: Math.round(it.y + ((t.top ?? 0) - g.initTop)),
+            w: Math.round(it.w * (t.scaleX ?? 1)),
+            h: Math.round(it.h * (t.scaleY ?? 1)),
+          };
+          s.onGuides([]);
+          s.onSpacing([]);
+          s.onResizeCommit({ id: g.ids[0]!, from: { ...it }, to });
+          return;
+        }
+        if (!g.moved) return;
         const dx = (t.left ?? 0) - g.initLeft;
         const dy = (t.top ?? 0) - g.initTop;
         const moves: ItemMove[] = g.ids
@@ -347,6 +445,7 @@ export function FabricCanvas(props: Props) {
             return { id, fromX: f.x, fromY: f.y, toX: f.x + dx, toY: f.y + dy };
           });
         s.onGuides([]);
+        s.onSpacing([]);
         if (moves.length) s.onMoveCommit(moves);
       });
 
@@ -356,6 +455,7 @@ export function FabricCanvas(props: Props) {
         gestureRef.current = null;
         s.onOperating(false);
         s.onGuides([]);
+        s.onSpacing([]);
         if (g && !g.moved) {
           // 纯点击（未拖动）：非 Shift 时收敛为单选（DOM 时代 click 的非叠加选择语义）。
           const e = opt.e as MouseEvent;
@@ -475,23 +575,39 @@ type Interactive = {
   set: (opts: Record<string, unknown>) => unknown;
 };
 
-// 交互属性：无旋转/缩放控制点（缩放/锁定能力 deferred，见 widget-menu 的 unavailable 项），
-// 选中框（border）颜色对齐 ring-primary。
-function styleInteractive(obj: Interactive, tokens: Tokens, canEdit: boolean) {
+// 交互属性：选中框（border）颜色对齐 ring-primary；无旋转控制点。
+// p6:F07：单选 item 开放四个**角点**缩放控制（缩放中吸附见 object:scaling）；
+// 中点控制与多选（ActiveSelection）缩放仍关闭，锁定能力 deferred。
+function styleInteractive(obj: Interactive, tokens: Tokens, canEdit: boolean, resizable = false) {
+  const resize = resizable && canEdit;
   obj.set({
-    hasControls: false,
+    hasControls: resize,
     hasBorders: true,
     borderColor: tokens.primary,
     borderScaleFactor: 2,
     padding: 2,
     lockRotation: true,
-    lockScalingX: true,
-    lockScalingY: true,
+    lockScalingX: !resize,
+    lockScalingY: !resize,
     lockMovementX: !canEdit,
     lockMovementY: !canEdit,
     hoverCursor: canEdit ? "grab" : "default",
     moveCursor: "grabbing",
+    cornerColor: tokens.primary,
+    cornerStrokeColor: tokens.primary,
+    transparentCorners: false,
+    cornerSize: 8,
+    touchCornerSize: 16,
   });
+  if (resize) {
+    (obj as unknown as { setControlsVisibility: (v: Record<string, boolean>) => void }).setControlsVisibility({
+      mt: false,
+      mb: false,
+      ml: false,
+      mr: false,
+      mtr: false,
+    });
+  }
 }
 
 // 单个 item → fabric.Group（背景矩形 + 文本）。样式对齐 DOM 时代（F11 柔彩便签 /
@@ -552,6 +668,6 @@ function buildItemObject(
     subTargetCheck: false,
     selectable: true,
   });
-  styleInteractive(g as unknown as Interactive, tokens, canEdit);
+  styleInteractive(g as unknown as Interactive, tokens, canEdit, true);
   return g;
 }

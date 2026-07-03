@@ -5,10 +5,11 @@ import { CanvasViewport } from "@/components/board/canvas-viewport";
 import {
   FabricCanvas,
   type ItemMove,
+  type ItemResize,
   type RenderItem,
   type ViewportState,
 } from "@/components/board/fabric-canvas";
-import { type Guide } from "@/lib/canvas-snap";
+import { type Guide, type SpacingHint } from "@/lib/canvas-snap";
 import { setOperating } from "@/lib/collab-bus";
 import {
   Cable,
@@ -77,11 +78,12 @@ interface Move {
   toY: number;
 }
 
-// 可逆操作（F09 撤销/重做命令栈）。add 与 delete 互为逆；move 记录 from/to。
+// 可逆操作（F09 撤销/重做命令栈）。add 与 delete 互为逆；move/resize 记录 from/to。
 type Op =
   | { kind: "add"; items: Item[] }
   | { kind: "delete"; items: Item[] }
-  | { kind: "move"; moves: Move[] };
+  | { kind: "move"; moves: Move[] }
+  | { kind: "resize"; resize: ItemResize }; // p6:F07 组件缩放
 
 type BoardTool = "select" | "pan" | "sticky" | "draw" | "text" | "connector" | "shape" | "assets" | "templates";
 
@@ -140,6 +142,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const [openPanel, setOpenPanel] = useState<"assets" | "templates" | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null); // 右键上下文菜单（uc-context-menu-001）
   const [guides, setGuides] = useState<Guide[]>([]); // 拖动时的对齐参考线（uc-canvas-007）
+  const [spacings, setSpacings] = useState<SpacingHint[]>([]); // p6:F07 等间距提示
   // uc-widget-menu-009 刷新组件：可刷新组件的重载信号（重载次数 + 最近重载时间戳），
   // 是纯客户端的「内容已重新加载」可见反馈，随每次刷新自增。
   const [reload, setReload] = useState<Record<string, { count: number; at: number }>>({});
@@ -237,6 +240,17 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     []
   );
 
+  // p6:F07 组件缩放落库（PATCH x/y/w/h；undo 用 from，redo 用 to）。
+  const apiResize = useCallback(
+    (id: string, rect: { x: number; y: number; w: number; h: number }) =>
+      fetch(`/api/board-items/${id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(rect),
+      }),
+    []
+  );
+
   function recordOp(op: Op) {
     undoStack.current.push(op);
     redoStack.current = [];
@@ -259,6 +273,18 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       await apiMove(moves, false);
     },
     [apiMove],
+  );
+
+  // p6:F07 缩放提交：可逆 resize 命令 + PATCH 落库（吸附已在 fabric 层作用于终态尺寸）。
+  const onResizeCommit = useCallback(
+    async (resize: ItemResize) => {
+      setItems((prev) => prev.map((it) => (it.id === resize.id ? { ...it, ...resize.to } : it)));
+      setSelected(new Set([resize.id]));
+      undoStack.current.push({ kind: "resize", resize });
+      redoStack.current = [];
+      await apiResize(resize.id, resize.to);
+    },
+    [apiResize],
   );
 
   const onFabricSelection = useCallback((ids: string[]) => {
@@ -580,11 +606,12 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     if (!op) return;
     if (op.kind === "add") await apiDelete(op.items.map((i) => i.id));
     else if (op.kind === "delete") await apiRestore(op.items);
+    else if (op.kind === "resize") await apiResize(op.resize.id, op.resize.from);
     else await apiMove(op.moves, true);
     redoStack.current.push(op);
     setSelected(new Set());
     await load();
-  }, [canEdit, apiDelete, apiRestore, apiMove, load]);
+  }, [canEdit, apiDelete, apiRestore, apiMove, apiResize, load]);
 
   const redo = useCallback(async () => {
     if (!canEdit) return;
@@ -592,11 +619,12 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     if (!op) return;
     if (op.kind === "add") await apiRestore(op.items);
     else if (op.kind === "delete") await apiDelete(op.items.map((i) => i.id));
+    else if (op.kind === "resize") await apiResize(op.resize.id, op.resize.to);
     else await apiMove(op.moves, false);
     undoStack.current.push(op);
     setSelected(new Set());
     await load();
-  }, [canEdit, apiDelete, apiRestore, apiMove, load]);
+  }, [canEdit, apiDelete, apiRestore, apiMove, apiResize, load]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -819,9 +847,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           <Button data-testid="wm-delete" size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteSelected()}>
             删除
           </Button>
-          <Button data-testid="wm-resize-unavailable" size="sm" variant="ghost" disabled title="当前组件暂不支持拖拽控制点缩放">
-            缩放暂不可用
-          </Button>
+          {/* p6:F07：拖拽控制点缩放已可用（选中框四角），原「缩放暂不可用」占位移除。 */}
           <Button data-testid="wm-lock-unavailable" size="sm" variant="ghost" disabled title="锁定能力将在后续组件权限矩阵接入">
             锁定暂不可用
           </Button>
@@ -840,9 +866,11 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             onSelectionChange={onFabricSelection}
             onEmptyPointerDown={onEmptyPointerDown}
             onMoveCommit={(moves) => void onMoveCommit(moves)}
+            onResizeCommit={(r) => void onResizeCommit(r)}
             onEditRequest={onEditRequest}
             onCtxMenu={onFabricCtxMenu}
             onGuides={setGuides}
+            onSpacing={setSpacings}
             onOperating={onOperating}
           />
         }
@@ -908,6 +936,36 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               }
             />
           ))}
+
+          {/* p6:F07 等间距提示：拖动形成等间距时，每段间隙画间距线 + 间距值徽标；释放后消失。 */}
+          {spacings.flatMap((sp, i) =>
+            sp.segs.map((seg, j) => (
+              <div key={`spacing-${i}-${j}`}>
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute z-10 bg-primary/60"
+                  style={
+                    sp.orientation === "h"
+                      ? { left: seg.from, top: seg.cross, width: seg.to - seg.from, height: 1 }
+                      : { left: seg.cross, top: seg.from, width: 1, height: seg.to - seg.from }
+                  }
+                />
+                <div
+                  data-testid="spacing-hint"
+                  data-orientation={sp.orientation}
+                  data-gap={Math.round(sp.gap)}
+                  className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded bg-primary px-1 py-0.5 text-10 font-medium text-primary-foreground shadow"
+                  style={
+                    sp.orientation === "h"
+                      ? { left: (seg.from + seg.to) / 2, top: seg.cross }
+                      : { left: seg.cross, top: (seg.from + seg.to) / 2 }
+                  }
+                >
+                  {Math.round(sp.gap)}
+                </div>
+              </div>
+            )),
+          )}
         </div>
       </CanvasViewport>
 
