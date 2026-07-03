@@ -7,6 +7,7 @@ import {
   newSessionId,
   expiresAt,
   resolveDisplayName,
+  isSysAdmin,
 } from "@repo/auth";
 import {
   createSession,
@@ -22,6 +23,10 @@ export interface PublicUser {
   lastName: string;
   displayName: string;
   avatar: string | null;
+  // p16-F01：全局导航 Admin 入口的可见性判定。唯一权威判定逻辑是
+  // lib/admin.ts 的 requireSysAdmin（复用同一个 isSysAdmin(platform_role)），
+  // 这里只是把服务端已经算好的结果透传给客户端组件渲染，不是重新实现鉴权。
+  isSysAdmin: boolean;
 }
 
 export function toPublicUser(u: User): PublicUser {
@@ -37,6 +42,7 @@ export function toPublicUser(u: User): PublicUser {
       email: u.email,
     }),
     avatar: u.avatar ?? null,
+    isSysAdmin: isSysAdmin(u.platform_role),
   };
 }
 

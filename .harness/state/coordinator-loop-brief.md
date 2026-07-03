@@ -93,6 +93,11 @@ push + 开 PR（base 直接指向 `main`，不要指向别的 coordinator 分支
    mock/stub 许可）；`docker compose up` 前先跑 `scripts/init-worktree-env.sh`；
    写/跑真实 verification，证据存 evidence/；不许自标 passing；PR `Closes #N`
    （base = main）；不许自己合并；开完 PR 把 issue 打 `status:in-review`。
+   **收尾清理 docker 时必须带 `-p <本 worktree 的 compose project name>`**（`docker
+   compose -p <name> down`），不要裸跑 `docker compose down`——本轮实测发生过一次：
+   一个 worker 收尾时裸跑 down，误拆了一个不属于自己 worktree 的孤儿容器栈（project
+   name 撞了默认值 `infra`）。这次核实下来没伤到其它在途 worker，纯属侥幸，以后
+   prompt 里要把这条写明确，不能靠运气。
    verify:full 因共享机器争用失败但自己的 3 条 verification 干净通过时，是否
    `--no-verify` 由 worker 自己按它的规则判断（它可能会停下来问，这是正常的，
    不是 bug），coordinator 不代劳。

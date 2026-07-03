@@ -1,46 +1,39 @@
 # 会话交接 — Sprint p16/01
 
 ## 当前已验证
-- F03「Design lint 覆盖扩大到新增页面」：实现完成，PR #225 已开（worker `wrk-lint-1`，
-  分支 `worker/wrk-lint-1-p16-f03-lint-coverage`）。首轮 feature-evaluator review 给了
-  Revise（10/16），指出 verification 命令是自证式的（只匹配到脚本自己的说明性 echo，
-  不是规则真实输出）——**已修复并重新验证**，等待复审。
-  **未标 passing**（只有 `pnpm harness verify` 门控可以转移状态，worker 无权限自标）。
-  F03 新版 verification 命令本地跑通：
-  `cd apps/web && bash scripts/lint-design.sh 2>&1 | tee /tmp/lint-design-out.txt; grep 'LABEL-LANG-MIX:' /tmp/lint-design-out.txt | grep -qiE 'ava|ai-store|surveys|admin'` → exit 0，
-  且已用"临时删掉 §7 规则"的反证法确认：规则真被删掉时这条命令会 exit 1（证明不是自证式）。
+- F01「全局导航接线：Ava / Surveys / Admin 入口」（issue #220，owner wrk-claude-1）：
+  实现完成，e2e `nav-001-global-entry-points.spec.ts` 4/4 通过（真实点击路径，非
+  `page.goto()` 直达）。**未标 passing**——按 harness 硬约束，状态转移只能由
+  `pnpm harness verify` 门控完成，本会话只跑了 feature 自己的验证命令 + `verify:base`
+  （轻量门控策略，未跑 `verify:full`）。PR 待 review。
 
 ## 本轮改动
-- `apps/web/scripts/lint-design.sh`：
-  - 新增开头一行日志，明确列出扫描范围含 ava/ai-store/surveys/admin/studio/presentations。
-  - 新增 §7 规则：文案语言一致性检测（警告级，不拦截 `verify:base`，理由见 progress.md），
-    拆成"同文件内中英混用"和"跨文件中英混用"两个子规则，所有真实命中都带 `LABEL-LANG-MIX:`
-    前缀 + 真实 `文件:行号:源码`，可被 grep 精确锚定、不与脚本自身说明文案混淆。
-  - 修复评审发现的自证式验证问题（详见 progress.md 本轮追加记录），顺带修了一个
-    `grep -E` 遇到路径里 `(app)` 括号被当正则捕获组导致空匹配 + `set -e` 拖垮全脚本的 bug。
-- `phases/phase-p16-ui-nav-alignment/feature_list.json`：F03.verification 从匹配任意输出
-  改成锚定 `LABEL-LANG-MIX:` 前缀；`evidence` 从空字符串补成
-  `phases/phase-p16-ui-nav-alignment/sprints/sprint-01/evidence/F03.verify.log`。
-- `phases/phase-p16-ui-nav-alignment/sprints/sprint-01/evidence/F03.verify.log`：新增，
-  存了完整 lint 输出 + 验证命令 + exit 结果。
+- `apps/web/lib/session.ts`：`PublicUser` 新增 `isSysAdmin: boolean`，`toPublicUser` 复用
+  `@repo/auth` 的 `isSysAdmin(platform_role)`（与 `lib/admin.ts` requireSysAdmin 同一套
+  判定逻辑，前端只透传不重新实现鉴权）。
+- `apps/web/components/app-shell/sidebar.tsx`：`RAIL_ITEMS` 新增 Ava（`/ava`）、Surveys
+  （`/surveys`）两个入口；新增 Admin 入口（`/admin`），只在 `user?.isSysAdmin` 为真时渲染
+  （不是禁用态，非 SysAdmin 用户 DOM 里完全没有这个节点）。全部入口加
+  `data-testid="rail-nav-<label>"`。
+- 新增 `apps/web/e2e/nav-001-global-entry-points.spec.ts`：4 个用例覆盖真实点击路径。
 
 ## 仍损坏或未验证
-- **真实发现且未修复**：`components/board/board-canvas.tsx` 画布工具条为中文 label
-  （选择/平移/连接线/便利贴/手绘/文本/形状/资源/嵌入/模板），与 `components/app-shell/sidebar.tsx`
-  （Home/Rooms）等英文 label 模块不一致；进一步看，这个语言混用是**项目级**的，不止 Board 一处
-  （P0-P4 reskin 页面多英文 label，harness pipeline 新建的 Ava/Admin/Rooms/Studio 等模块多中文
-  label）。**故意不修**——这是 phase-p17 reskin round2 的范围，本 feature 只负责"让 lint 能检测到"。
-- `@repo/auth` 包的 `password > hash 不等于明文，verify 正确匹配` 测试在 `pnpm -w run verify:base`
-  全量并发跑时有 flaky timeout（5000ms），单独跑 `pnpm --filter @repo/auth test` 稳定通过。
-  与本次改动无关，未处理，如果后续频繁复现建议单独开 issue。
+- `pnpm -w run verify:base` 里 `@repo/auth#test` 偶发超时（bcrypt hash 测试 5s 超时），
+  **仅在 turbo 全量并行跑时出现，单独跑 `pnpm --filter @repo/auth run test` 100% 通过**
+  （15/15，evidence/auth-test-isolated-pass.log）。本次改动未触碰 `packages/auth` 任何
+  文件，确认是这台机器多 worktree 并发导致的资源竞争型环境问题，不是回归。建议后续单独
+  开 issue 给这个 bcrypt 测试放宽 timeout。
+- AI Store 入口未提升到 sidebar（feature notes 标注为可选，本次跳过，不影响 F01 核心验收）。
+- 未跑 `verify:full`（按任务指示的轻量门控策略，只跑了本 feature 的 e2e + verify:base）。
 
 ## 下一步最佳动作
-- 等 F03 PR #225 复审通过、合并、跑 `pnpm harness verify --sprint p16/01` 转 passing。
-- 后续（phase-p17 范围）：统一全项目 UI 文案语言后，把 `lint-design.sh` §7 的
-  `echo "⚠ ..."` 改回 `err()`（转硬门禁），防止语言混用问题再劣化。
-- 不要现在去改 `components/board/board-canvas.tsx` 的文案——不在本 sprint / 本 feature 范围。
+- 下一轮：等 PR #220 对应 PR review 通过 + `pnpm harness verify --sprint p16/01` 门控跑完，
+  由 harness 把 F01 标 passing（不要手改 feature_list.json / active-features.json）。
+- 不要动：`apps/web/lib/admin.ts`（requireSysAdmin 的唯一权威实现，本次未改，勿重复实现）。
 
 ## 命令
 - 启动:`pnpm -w run dev`
 - 验证:`pnpm harness verify --sprint p16/01`
-- 调试:`cd apps/web && bash scripts/lint-design.sh`（直接看 design lint 输出，含新的语言一致性警告）
+- 调试:`cd apps/web && pnpm exec playwright test e2e/nav-001-global-entry-points.spec.ts`
+  （需要先 `bash scripts/init-worktree-env.sh` + `docker compose -f infra/docker-compose.yml up -d`
+  + `pnpm --filter @repo/data run migrate`）
