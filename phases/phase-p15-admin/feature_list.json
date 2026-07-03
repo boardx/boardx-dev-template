@@ -102,7 +102,7 @@
       "title": "AI Store 官方精选页（isFeatured 切换）",
       "user_visible_behavior": "SysAdmin 在精选页查看已通过平台审核（APPROVED）的项目，切换其官方精选状态（isFeatured）；精选项目在 AI Store Explore 获得精选标/优先展示；切换即时反映；无权限不可访问。",
       "design_ref": "prototype:<!-- store approval -->（精选页复用审核页资源管理布局，卡片改星标切换；Prototype 无独立 featured 屏，星标/Featured 标识见 store content 卡片）；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "05",
       "owner": "wrk-admin-1",
       "capability": "CAP-DATA",
@@ -116,7 +116,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/admin-004-featured-ai-store.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F05.verify.log @ 2026-07-03T04:25:17.260Z",
       "notes": "uc-admin-004。blocked-on p11：精选作用于 p11 ai_store_items 的 isFeatured 字段，且需 F04 的 APPROVED 集合。依赖 F01 门控 + F04 + p11。"
     }
   ]
