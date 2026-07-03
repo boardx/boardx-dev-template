@@ -51,7 +51,7 @@
       "user_visible_behavior": "房间 Files tab（data-testid=room-files-tab）提供上传（拖拽/点击，R2 预签名→直传→confirm）、搜索、预览（签名 URL）、软删（二次确认）；文件属于房间（room_files.room_id NOT NULL，chat_thread_id 可空仅作来源标注）；不打开任何聊天线程也能管理文件；删除权限=上传者本人或 owner/admin。",
       "design_ref": "prototype:<!-- ROOM DETAIL --> Files tab；oldcode room-file.schema.ts 字段对齐",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-FILE",
       "depends_on": [
@@ -118,7 +118,7 @@
       "user_visible_behavior": "owner 在房间设置看到 DANGER ZONE；点击 Delete room 弹二次确认（data-testid=room-delete-confirm），列出将删除的内容类别与数量（X boards、Y chats、Z files，data-testid=room-delete-cascade-summary），需输入房间名才可确认；确认后 DELETE 级联删除并跳回列表；admin/member 无入口且 API 403；删除后相关资源 API 全部 404。",
       "design_ref": "prototype:Room Settings dialog DANGER ZONE（'and its boards'）",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-WEB",
       "depends_on": [
@@ -162,7 +162,7 @@
       "user_visible_behavior": "surveys 表加可空 room_id；房间 Survey tab（data-testid=room-survey-tab）只列本房间问卷卡片；owner/admin 可新建（预置 room_id 进入 p13 创建器，data-testid=room-survey-create）、暂停/删除本房间问卷；member 可答题/看已发布结果；tab 内『View team surveys』仅跳转全局 /surveys；房间角色不能管理团队问卷（403）。",
       "design_ref": "prototype:<!-- SURVEYS --> Room scope（'Room · Alpha'）+ ROOM DETAIL Survey tab",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "depends_on": [
@@ -228,7 +228,7 @@
       "user_visible_behavior": "rooms 表加 description、ai_instruction；owner/admin 在房间设置 About & AI 区块（data-testid=room-settings-description、room-settings-ai-instruction）编辑保存（PATCH，member 403，>4000 字符拒绝）；详情页头展示 description；房间聊天发消息时 ai_instruction 注入系统提示（桩层可断言注入内容，真实模型链路归 p9）。",
       "design_ref": "oldcode room.schema.ts（description/aiInstruction）；设置表单沿用现有 token，无原型屏",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-AI",
       "depends_on": [
