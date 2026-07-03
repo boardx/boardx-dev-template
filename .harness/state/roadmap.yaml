@@ -137,3 +137,17 @@ phases:
     status: not_started
     depends_on: ["p16", "p6", "p7", "p9", "p10", "p11", "p13", "p14", "p15"]
     has_ui: true
+  - id: "p18"
+    slug: ava-ai-realization
+    name: AVA AI 落地 (P18)
+    goal: "把 AVA 的 stub AI 层做实：真实模型接入、Deep Research 持久化、解开语音输入 STT 循环阻塞、接通已知占位（分享邮件/Agent真实数据/消息发送到Board与邮件），并对齐 UI 原型细节"
+    status: not_started
+    depends_on: ["p9", "p11"]
+    has_ui: true
+  - id: "p19"
+    slug: ava-canvas-memory-expansion
+    name: AVA 画布/记忆扩展 (P19，待决策)
+    goal: "待人类对产品范围拍板：是否迁移老代码的 AI 直接操作白板 widget（digitize/translateWidgets/生成海报音频PPT故事板字幕）、Memories 记忆管理、演示文稿预览卡片；本阶段目前只记录范围，不进入实现"
+    status: not_started
+    depends_on: ["p9", "p12"]
+    has_ui: true
