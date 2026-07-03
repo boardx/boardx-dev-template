@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { CURRENT_TEAM_COOKIE } from "@repo/auth";
 import { createRoom, listVisibleRooms, getMembership, type RoomVisibility } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
@@ -26,6 +28,14 @@ export async function POST(req: Request) {
       // 归属团队需是该团队成员
       if (!(await getMembership(teamId, user.id))) {
         return NextResponse.json({ error: "你不是该团队成员" }, { status: 403 });
+      }
+    } else {
+      // uc-rr-002：未显式传 teamId 时回落到当前团队上下文（cookie），
+      // 让 UI 建的 team 可见房间真正归属团队、对同团队成员可发现。
+      // cookie 过期/不再是成员时静默回落为个人房间（team_id 为空的现有模型不变）。
+      const cookieTeam = Number(cookies().get(CURRENT_TEAM_COOKIE)?.value);
+      if (Number.isFinite(cookieTeam) && (await getMembership(cookieTeam, user.id))) {
+        teamId = cookieTeam;
       }
     }
     const room = await createRoom(name, user.id, visibility, teamId);

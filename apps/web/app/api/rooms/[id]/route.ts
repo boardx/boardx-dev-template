@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
-import { getRoom, canViewRoom, isRoomOwner, updateRoom, deleteRoom, type RoomVisibility } from "@repo/data";
+import {
+  getRoom,
+  canViewRoom,
+  canManageRoom,
+  isRoomOwner,
+  updateRoom,
+  deleteRoom,
+  type RoomVisibility,
+} from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -22,8 +30,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
     const roomId = Number(params.id);
-    if (!(await isRoomOwner(roomId, user.id))) {
-      return NextResponse.json({ error: "仅 owner 可修改" }, { status: 403 });
+    // uc-rr-006 权限矩阵：房间名/可见性等字段 owner/admin 均可修改
+    if (!(await canManageRoom(roomId, user.id))) {
+      return NextResponse.json({ error: "仅 owner/admin 可修改" }, { status: 403 });
     }
     const body = (await req.json()) as { name?: unknown; visibility?: unknown };
     const fields: { name?: string; visibility?: RoomVisibility } = {};
@@ -45,6 +54,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
     const roomId = Number(params.id);
+    // uc-rr-006 权限矩阵：删除房间仅 owner
     if (!(await isRoomOwner(roomId, user.id))) {
       return NextResponse.json({ error: "仅 owner 可删除" }, { status: 403 });
     }
