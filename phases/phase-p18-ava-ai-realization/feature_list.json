@@ -115,9 +115,9 @@
       "title": "STT 能力落地（解开 p9-F09 ↔ p7-F10 循环阻塞）",
       "user_visible_behavior": "仓库内存在一个明确的 STT 转写能力（自建最小服务或第三方 API 适配，选型理由落档）：POST 一段音频得到转写文本；该能力成为 p9-F09 与 p7-F10 共同依赖的可排期交付物，两者不再互相 blocked-on 对方。",
       "design_ref": "无 UI（后端能力）；requirements/03-voice-input-stt.md",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-ava-p18-2",
       "capability": "CAP-AI",
       "depends_on": [],
       "wave": 0,
@@ -125,7 +125,7 @@
         "pnpm --filter @repo/ai test",
         "node scripts/stt-smoke.mjs"
       ],
-      "evidence": "",
+      "evidence": "evidence/F06.verify.log @ 2026-07-03T18:44:19.723Z",
       "notes": "requirements/03。stt-smoke.mjs 同样 env-gated（无凭证打印 SKIP 退出 0）。落地后需协调更新 p9-F09 与 p7-F10 的 depends_on 指向本 feature（跨 phase 权威文件修改作为独立协调事项，不在本 feature 内代持）。"
     },
     {
@@ -200,9 +200,9 @@
       "title": "消息附件富渲染接线（图片缩略图/lightbox + 音频播放器）",
       "user_visible_behavior": "聊天历史中的图片附件展示为缩略图（msg-attachment-image），点击打开 attachment-lightbox 放大预览；音频附件展示为可播放卡片（msg-attachment-audio-player）；签名 URL 获取失败时降级为文件名 chip（msg-attachment-chip）；文件类附件保留 chip + 下载。",
       "design_ref": "已确认 UI：apps/web/app/(app)/ava/attachments.tsx 的 RichAttachmentPreview（ui-signoff.md confirmed @2026-07-04，组件已建好待接线）",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-ava-p18-1",
       "capability": "CAP-FILE",
       "depends_on": [],
       "wave": 0,
@@ -211,7 +211,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-attach-files.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F10.verify.log @ 2026-07-03T18:44:02.192Z",
       "notes": "requirements/04。接线时必须同步更新 e2e/ava-attach-files.spec.ts 里对 msg-attachment-item 可见文本的断言（改为校验 alt/aria-label），这是 ui-signoff.md 里明确记录的既有断言耦合，不能静默破坏 p9-F08 基线。"
     },
     {

@@ -4,10 +4,28 @@
 - 仓库根目录: boardx-dev-next
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F06（STT 能力）/ F08（分享邮件）/ F10（附件富渲染，等 PR #295 合并）
+- 当前最高优先级未完成功能: F06（STT 能力）/ F08（分享邮件）
 - 当前 blocker: 无（F03 有并行会话在做，勿重复认领）
 
 ## 会话记录
+### 2026-07-04 F10 (owner: wrk-ava-p18-1)
+- 本轮目标: F10 — 消息附件富渲染接线（图片缩略图/lightbox + 音频播放器）
+- 已完成:
+  - `apps/web/app/(app)/ava/page.tsx`：消息历史 `msg-attachment-item` 的「图标+文件名」chip
+    替换为 `<RichAttachmentPreview attachment={a} />`（组件来自 #295 已合入的
+    attachments.tsx，内部真实调用签名直链接口 `/api/ava/attachments/:id/url`；
+    文件类附件与签名 URL 失败时组件内部降级为 chip，li 保留 data-testid）
+  - 同步更新 `apps/web/e2e/ava-attach-files.spec.ts`（ui-signoff 记录的既有断言耦合）：
+    `toContainText("cat.png")` 改为校验 `msg-attachment-image` 的 aria-label 与 `<img>` alt
+    （reload 持久化断言同理），并新增 lightbox 打开/关闭断言（断言强化，非弱化）
+  - 清理 page.tsx 不再使用的 ImageIcon/FileAudio 导入
+- 运行过的验证: docker compose up -d → migrate → playwright e2e/ava-attach-files.spec.ts
+  8 passed；`pnpm harness verify --sprint p18/01 --feature F10` 门控通过 → passing（含 verify:base）
+- 已记录证据: evidence/F10.verify.log
+- 提交记录: 分支 worker/wrk-ava-p18-1-f10-attachment-rich-render（Closes #254）
+- 已知风险或未解决问题: e2e 用 fake png bytes，`<img>` 实际 onerror（组件降级只看 fetch
+  状态，符合契约）；真实图片的视觉效果建议人工抽查一次
+- 下一步最佳动作: F06（STT）或 F08（分享邮件）
 ### 2026-07-04 (owner: wrk-ava-p18-1)
 - 本轮目标: F12 — 分享只读页四态 e2e 补齐 + Agent 禁用态断言
 - 已完成:
@@ -77,3 +95,28 @@
 - 已知风险或未解决问题: 真实邮件 provider（SMTP/Resend）仍 deferred（与 auth 邮件同一 TODO，
   切换时 sendShareLinkEmail/sendResetPasswordEmail 一起换 transport，outbound_emails 退化为审计表）
 - 下一步最佳动作: coordinator 审查合并本 PR；后续 F11「发送邮件」可直接复用 sendShareLinkEmail 同款底层
+### 2026-07-04 02:45 (owner: wrk-ava-p18-2)
+- 本轮目标: F06 — STT 能力落地（解开 p9-F09 ↔ p7-F10 循环阻塞）
+- 已完成:
+  - 新增 `packages/ai/src/sttProvider.ts`：零 SDK 依赖的 OpenAI Whisper API 转写
+    provider（`transcribeAudio(input): Promise<{text}>`；POST /v1/audio/transcriptions
+    multipart，model=whisper-1；OPENAI_API_KEY/STT_BASE_URL/STT_MODEL 走 env；
+    缺 key 抛可读错误且不发请求；HTTP 非 200 / 响应缺 text 字段错误面完整；
+    可注入 fetchImpl 供单测）
+  - `packages/ai/src/index.ts` 导出 STT 能力
+  - 新增 `scripts/stt-smoke.mjs`（env-gated：无 key SKIP 退出 0；有 key 用脚本内置
+    程序化生成的 0.8s wav 真实调用一次并断言返回非空 text）
+  - 新增 6 个 sttProvider 单测（请求组装/multipart 字段/成功解析/缺 text/缺 key/HTTP 错误）
+  - 选型决策记录：requirements/03-voice-input-stt.md 末尾「选型决策（F06 落地）」
+    （Whisper API：API 成熟、一次 HTTP 即得文本、零依赖风格兼容、STT_BASE_URL 可替换自建端点）
+- 运行过的验证:
+  - `pnpm --filter @repo/ai test` → 29 passed（含新增 6 个）
+  - `node scripts/stt-smoke.mjs` → SKIP（本机无 key），exit 0
+  - `pnpm harness verify --sprint p18/01 --feature F06` → 门控通过，F06 = passing
+- 已记录证据: evidence/F06.verify.log
+- 提交记录: 见本分支 worker/wrk-ava-p18-2-f06-stt-capability
+- 已知风险或未解决问题:
+  - 本机/CI 无 OPENAI_API_KEY，有-key 分支尚未在真实凭证下跑过——建议配置后手跑补证
+  - p9-F09 与 p7-F10 的 depends_on 尚未指向本 feature：跨 phase 权威文件修改是独立
+    协调事项（notes 已注明），需 coordinator 排期
+- 下一步最佳动作: F07（AVA 语音输入 UI 接线，依赖本 feature 已解锁）
