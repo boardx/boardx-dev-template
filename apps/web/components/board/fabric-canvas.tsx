@@ -39,6 +39,12 @@ export interface RenderItem {
   fontFamily: string;
   fontSize: number;
   align: "left" | "center" | "right";
+  // p6:F19（uc-widget-menu-002）：边框色/边框宽（含线宽语义）/透明度/文字色，同样由 color 的
+  // "|k=v" 段解析而来（见 board-canvas.tsx 的 getBorder/getBorderWidth/getOpacity/getTextColor）。
+  border: "none" | "gray" | "blue" | "red";
+  borderWidth: number;
+  opacity: number;
+  textColor: "default" | "slate" | "blue" | "green" | "red";
   reloadable: boolean;
   reloadCount: number;
   refreshedAt: number | null;
@@ -141,6 +147,10 @@ export interface CanvasTestApi {
     fontFamily: string;
     fontSize: number;
     align: "left" | "center" | "right";
+    border: "none" | "gray" | "blue" | "red";
+    borderWidth: number;
+    opacity: number;
+    textColor: "default" | "slate" | "blue" | "green" | "red";
     reloadable: boolean;
     reloadCount: number;
     refreshedAt: number | null;
@@ -538,6 +548,10 @@ export function FabricCanvas(props: Props) {
               fontFamily: it.fontFamily,
               fontSize: it.fontSize,
               align: it.align,
+              border: it.border,
+              borderWidth: it.borderWidth,
+              opacity: it.opacity,
+              textColor: it.textColor,
               reloadable: it.reloadable,
               reloadCount: it.reloadCount,
               refreshedAt: it.refreshedAt,
@@ -670,6 +684,20 @@ function buildItemObject(
     : isShapeKind
       ? tokens.surface1
       : tokens.tags[base] ?? tokens.tags.amber!;
+  // p6:F19（uc-widget-menu-002）：用户可调边框色/边框宽（"none" 沿用原有默认描边，
+  // 文本块仍保持无边框——边框是「新增」外观，不应破坏文本块的透明块视觉基线）。
+  const BORDER_COLORS: Record<string, string> = { gray: "#6b7280", blue: "#2563eb", red: "#dc2626" };
+  const customStroke = it.border !== "none" ? BORDER_COLORS[it.border] : undefined;
+  const stroke = isTextKind ? customStroke : (customStroke ?? tokens.borderStrong);
+  const strokeWidth = isTextKind
+    ? customStroke
+      ? it.borderWidth
+      : 0
+    : it.border !== "none"
+      ? it.borderWidth
+      : isShapeKind
+        ? 2
+        : 1;
   const bg = new fabric.Rect({
     // fabric v7 默认 origin 改为 center/center，这里的局部布局按 left/top 语义写死
     left: 0,
@@ -681,8 +709,8 @@ function buildItemObject(
     rx: isTextKind ? 0 : 7,
     ry: isTextKind ? 0 : 7,
     fill,
-    stroke: isTextKind ? undefined : tokens.borderStrong,
-    strokeWidth: isTextKind ? 0 : isShapeKind ? 2 : 1,
+    stroke,
+    strokeWidth,
     strokeUniform: true,
   });
   const pad = 8; // p-2
@@ -696,6 +724,15 @@ function buildItemObject(
       : textAlign === "right"
         ? { originX: "right" as const, left: it.w - pad }
         : { originX: "left" as const, left: pad };
+  // p6:F19（uc-widget-menu-002）：文字色独立于底色/tag 色，未设置（"default"）跟随主题前景色
+  // （与既有视觉一致）。
+  const TEXT_COLORS: Record<string, string> = {
+    slate: "#334155",
+    blue: "#2563eb",
+    green: "#16a34a",
+    red: "#dc2626",
+  };
+  const textFill = TEXT_COLORS[it.textColor] ?? tokens.foreground;
   const text = new fabric.Textbox(it.text, {
     width: Math.max(8, it.w - pad * 2),
     fontSize: it.fontSize,
@@ -703,7 +740,7 @@ function buildItemObject(
     fontFamily: it.fontFamily === "sans-serif" ? tokens.fontFamily : it.fontFamily,
     fontWeight: it.bold ? "700" : "400",
     fontStyle: it.italic ? "italic" : "normal",
-    fill: tokens.foreground,
+    fill: textFill,
     textAlign,
     splitByGrapheme: true, // 中文无空格也按字素折行
     editable: false, // 文本编辑走 DOM textarea 覆盖层（保留 item-edit-<id> 锚点）
@@ -720,6 +757,8 @@ function buildItemObject(
     originY: "top",
     subTargetCheck: false,
     selectable: true,
+    // p6:F19（uc-widget-menu-002 透明度）：整体透明度，1-100 映射为 fabric 的 0-1 opacity。
+    opacity: it.opacity / 100,
   });
   styleInteractive(g as unknown as Interactive, tokens, canEdit, true);
   return g;

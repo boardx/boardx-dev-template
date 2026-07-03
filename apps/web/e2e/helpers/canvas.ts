@@ -20,6 +20,10 @@ export interface CanvasItem {
   fontFamily: string;
   fontSize: number;
   align: "left" | "center" | "right";
+  border: "none" | "gray" | "blue" | "red";
+  borderWidth: number;
+  opacity: number;
+  textColor: "default" | "slate" | "blue" | "green" | "red";
   reloadable: boolean;
   reloadCount: number;
   refreshedAt: number | null;
