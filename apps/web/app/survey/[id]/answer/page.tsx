@@ -34,13 +34,13 @@ type Errors = Record<string, string>;
 
 function LoadingSurvey() {
   return (
-    <main className="min-h-screen bg-background p-6">
+    <main className="min-h-screen bg-surface-1 p-6">
       <div data-testid="loading" className="mx-auto flex max-w-2xl animate-pulse flex-col gap-4">
-        <div className="h-8 w-2/3 rounded-lg bg-muted" />
-        <div className="h-4 w-full rounded-lg bg-muted" />
-        <div className="h-2 w-full rounded-lg bg-muted" />
+        <div className="h-8 w-2/3 rounded-9 bg-muted" />
+        <div className="h-4 w-full rounded-9 bg-muted" />
+        <div className="h-1.25 w-full rounded-full bg-muted" />
         {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="h-28 rounded-lg border border-border bg-card" />
+          <div key={index} className="h-28 rounded-14 border border-border bg-card" />
         ))}
       </div>
     </main>
@@ -153,9 +153,9 @@ export default function SurveyAnswerPage({ params }: { params: { id: string } })
 
   if (pageError && !survey) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background p-6">
-        <section className="w-full max-w-lg rounded-lg border border-border bg-card p-6 text-center">
-          <p role="alert" data-testid="err-page" className="text-sm text-destructive">
+      <main className="flex min-h-screen items-center justify-center bg-surface-1 p-6">
+        <section className="w-full max-w-lg rounded-14 border border-border bg-card p-6 text-center">
+          <p role="alert" data-testid="err-page" className="text-13 text-destructive">
             {pageError}
           </p>
         </section>
@@ -167,12 +167,12 @@ export default function SurveyAnswerPage({ params }: { params: { id: string } })
 
   if (!survey.isActive) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background p-6">
-        <section data-testid="survey-unavailable" className="w-full max-w-xl rounded-lg border border-border bg-card p-6">
-          <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Survey unavailable</p>
-          <h1 className="mt-2 text-2xl font-bold text-foreground">{survey.title}</h1>
-          {survey.description && <p className="mt-2 text-sm text-muted-foreground">{survey.description}</p>}
-          <p role="alert" data-testid="err-unavailable" className="mt-5 text-sm text-destructive">
+      <main className="flex min-h-screen items-center justify-center bg-surface-1 p-6">
+        <section data-testid="survey-unavailable" className="w-full max-w-xl rounded-14 border border-border bg-card p-6">
+          <p className="text-11 font-medium uppercase tracking-wide text-muted-foreground">Survey unavailable</p>
+          <h1 className="mt-2 text-22 font-bold text-foreground">{survey.title}</h1>
+          {survey.description && <p className="mt-2 text-13 text-muted-foreground">{survey.description}</p>}
+          <p role="alert" data-testid="err-unavailable" className="mt-5 text-13 text-destructive">
             {survey.unavailableMessage}
           </p>
         </section>
@@ -182,48 +182,50 @@ export default function SurveyAnswerPage({ params }: { params: { id: string } })
 
   if (submitted) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background p-6">
-        <section data-testid="survey-success" className="w-full max-w-xl rounded-lg border border-border bg-card p-6 text-center">
-          <CheckCircle2 aria-hidden="true" className="mx-auto h-10 w-10 text-success" />
-          <h1 className="mt-4 text-2xl font-bold text-foreground">Response submitted</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Thank you for completing {survey.title}.</p>
+      <main className="flex min-h-screen items-center justify-center bg-surface-1 p-6">
+        <section data-testid="survey-success" className="w-full max-w-xl rounded-14 border border-border bg-card p-6 text-center">
+          <div className="mx-auto flex h-13 w-13 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <CheckCircle2 aria-hidden="true" className="h-6 w-6" />
+          </div>
+          <h1 className="mt-4 text-17 font-bold text-foreground">Response submitted</h1>
+          <p className="mt-2 text-13 text-muted-foreground">Thank you for completing {survey.title}.</p>
         </section>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-background px-4 py-6 sm:px-6">
-      <div className="mx-auto flex max-w-2xl flex-col gap-6">
+    <main className="min-h-screen bg-surface-1 px-4 py-6 sm:px-6">
+      <div className="mx-auto flex max-w-2xl flex-col gap-6 rounded-14 border border-border bg-card p-6 sm:p-7">
         <header className="flex flex-col gap-3">
-          <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Survey</p>
-          <h1 data-testid="survey-answer-title" className="text-3xl font-bold text-foreground">
+          <p className="text-11 font-medium uppercase tracking-wide text-muted-foreground">Survey</p>
+          <h1 data-testid="survey-answer-title" className="text-26 font-bold text-foreground">
             {survey.title}
           </h1>
           {survey.description && (
-            <p data-testid="survey-answer-description" className="text-sm leading-6 text-muted-foreground">
+            <p data-testid="survey-answer-description" className="text-13 leading-relaxed text-muted-foreground">
               {survey.description}
             </p>
           )}
           <div data-testid="survey-progress" className="flex flex-col gap-2">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex items-center justify-between text-13 text-muted-foreground">
               <span>{answeredCount} answered</span>
               <span>{progress}%</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-lg bg-muted">
-              <div className="h-full rounded-lg bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
+            <div className="h-1.25 overflow-hidden rounded-full bg-muted">
+              <div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
             </div>
           </div>
         </header>
 
         {survey.questions.length === 0 ? (
-          <section data-testid="empty" className="rounded-lg border border-dashed border-border p-8 text-center">
-            <p className="text-sm text-muted-foreground">This survey has no questions yet.</p>
+          <section data-testid="empty" className="rounded-12 border border-dashed border-border-strong p-8 text-center">
+            <p className="text-13 text-muted-foreground">This survey has no questions yet.</p>
           </section>
         ) : (
           <form data-testid="survey-answer-form" className="flex flex-col gap-4" onSubmit={submit}>
             {pageError && (
-              <p role="alert" data-testid="err-form" className="text-sm text-destructive">
+              <p role="alert" data-testid="err-form" className="text-13 text-destructive">
                 {pageError}
               </p>
             )}
@@ -235,14 +237,14 @@ export default function SurveyAnswerPage({ params }: { params: { id: string } })
                 <section
                   key={question.id}
                   data-testid={`survey-question-${question.id}`}
-                  className="rounded-lg border border-border bg-card p-5 transition-colors hover:border-input"
+                  className="rounded-12 border border-transparent p-1 transition-colors hover:border-border"
                 >
-                  <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
-                      <Label htmlFor={`question-${question.id}`} className="text-base font-semibold">
+                      <Label htmlFor={`question-${question.id}`} className="text-15 font-semibold">
                         {index + 1}. {question.title}
+                        {question.required && <span className="ml-1 text-foreground">*</span>}
                       </Label>
-                      {question.required && <p className="mt-1 text-xs text-muted-foreground">Required</p>}
                     </div>
                   </div>
 
@@ -262,7 +264,7 @@ export default function SurveyAnswerPage({ params }: { params: { id: string } })
                       {question.options.map((option) => (
                         <Label
                           key={option}
-                          className="flex cursor-pointer items-center gap-3 rounded-lg border border-border px-3 py-2 transition-colors hover:bg-muted"
+                          className="flex cursor-pointer items-center gap-3 rounded-9 border border-border px-3 py-2 transition-colors hover:bg-surface-1"
                         >
                           <Input
                             data-testid={`answer-single-${question.id}-${option}`}
@@ -273,7 +275,7 @@ export default function SurveyAnswerPage({ params }: { params: { id: string } })
                             onChange={() => setAnswer(question.id, option)}
                             className="h-4 w-4"
                           />
-                          <span className="text-sm text-foreground">{option}</span>
+                          <span className="text-13 text-foreground">{option}</span>
                         </Label>
                       ))}
                     </div>
@@ -286,7 +288,7 @@ export default function SurveyAnswerPage({ params }: { params: { id: string } })
                         return (
                           <Label
                             key={option}
-                            className="flex cursor-pointer items-center gap-3 rounded-lg border border-border px-3 py-2 transition-colors hover:bg-muted"
+                            className="flex cursor-pointer items-center gap-3 rounded-9 border border-border px-3 py-2 transition-colors hover:bg-surface-1"
                           >
                             <Input
                               data-testid={`answer-multiple-${question.id}-${option}`}
@@ -295,7 +297,7 @@ export default function SurveyAnswerPage({ params }: { params: { id: string } })
                               onChange={() => toggleMultiple(question.id, option)}
                               className="h-4 w-4"
                             />
-                            <span className="text-sm text-foreground">{option}</span>
+                            <span className="text-13 text-foreground">{option}</span>
                           </Label>
                         );
                       })}
@@ -320,7 +322,7 @@ export default function SurveyAnswerPage({ params }: { params: { id: string } })
                   )}
 
                   {fieldError && (
-                    <p id={`err-question-${question.id}`} role="alert" data-testid={`err-question-${question.id}`} className="mt-3 text-sm text-destructive">
+                    <p id={`err-question-${question.id}`} role="alert" data-testid={`err-question-${question.id}`} className="mt-3 text-13 text-destructive">
                       {fieldError}
                     </p>
                   )}

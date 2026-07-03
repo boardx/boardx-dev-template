@@ -117,7 +117,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/survey-*.spec.ts",
         "cd apps/web && bash scripts/lint-design.sh"
       ],
-      "evidence": "",
+      "evidence": "phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F05-e2e-survey-regression.log (23/23 survey e2e specs passed, incl. p13 view-answers-report + 公开答题页访客体验回归); phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F05-lint-design.log (design lint 通过); phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F05-migrate.log; phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F05-compose-up.log; PR: worker/wrk-survey-3-p17-f05-survey-reskin (Closes #239).",
       "notes": "uc-survey-reskin-001（新增）。verification 复用既有 p13 全部 e2e 回归（含公开答题页，访客体验不能破坏）+ design lint。blocked-on 同 F01。"
     },
     {
