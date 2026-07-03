@@ -1,4 +1,8 @@
 import { test, expect } from "@playwright/test";
+import { canvasItems, dblclickItem, expectItemCount } from "./helpers/canvas";
+
+// p6:F13：item 锚点迁为 canvas 兼容锚点（策略 2 / issue #269）：双击 → 屏幕坐标 dblclick，
+// 文本可见性 → 渲染层 getItems().text。编辑框（item-edit-<id>）仍是 DOM 覆盖层，锚点不变。
 
 const uniq = () => `wst_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
@@ -13,15 +17,13 @@ async function openOwnBoard(page: any) {
   return board;
 }
 
-const items = (page: any) => page.getByTestId("items-layer").locator('[data-testid^="item-"]');
-
 test("双击便签编辑文字并持久化", async ({ page }) => {
   const board = await openOwnBoard(page);
   await page.getByTestId("add-note").click();
-  await expect(items(page)).toHaveCount(1);
+  await expectItemCount(page, 1);
   const id = (await (await page.request.get(`/api/boards/${board.id}/items`)).json()).items[0].id;
 
-  await page.getByTestId(`item-${id}`).dblclick();
+  await dblclickItem(page, id);
   const editor = page.getByTestId(`item-edit-${id}`);
   await expect(editor).toBeVisible();
   await editor.fill("Hello 计划");
@@ -30,9 +32,10 @@ test("双击便签编辑文字并持久化", async ({ page }) => {
   await expect.poll(async () => {
     return (await (await page.request.get(`/api/boards/${board.id}/items`)).json()).items[0].text;
   }).toBe("Hello 计划");
-  // 刷新后保留
+  // 刷新后保留（渲染层文本一致）
   await page.reload();
-  await expect(page.getByTestId(`item-${id}`)).toContainText("Hello 计划");
+  await expectItemCount(page, 1);
+  expect((await canvasItems(page))[0]!.text).toBe("Hello 计划");
 });
 
 test("Widget Menu 改便签颜色并持久化", async ({ page }) => {
@@ -60,7 +63,8 @@ test("viewer 不能编辑（双击无编辑框）", async ({ page, playwright })
     data: { firstName: "V", lastName: "V", email: uniq(), password: "secret123", agreeTerms: true },
   });
   await page.goto(`/boards/${board.id}`);
-  await page.getByTestId(`item-${item.id}`).dblclick();
+  await expectItemCount(page, 1);
+  await dblclickItem(page, item.id);
   await expect(page.getByTestId(`item-edit-${item.id}`)).toHaveCount(0);
   await owner.dispose();
 });

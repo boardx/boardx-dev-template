@@ -1,4 +1,7 @@
 import { test, expect, type BrowserContext, type APIRequestContext } from "@playwright/test";
+import { expectItemCount } from "./helpers/canvas";
+
+// p6:F13：item 计数锚点迁为 canvas 兼容锚点（策略 2 / issue #269），断言意图不变。
 
 // uc-canvas-005 画布实时协作
 // 后置条件 1：在线用户看到一致的 Board 内容、在线成员状态和同步状态；
@@ -53,18 +56,18 @@ test("两名协作者：在线成员 + 同步状态 + 跨客户端内容一致",
     await expect(pageA.getByTestId("board-sync-dot")).toBeVisible();
 
     // 起点：两端画布都为空。
-    await expect(pageA.getByTestId("items-layer").locator('[data-testid^="item-"]')).toHaveCount(0);
-    await expect(pageB.getByTestId("items-layer").locator('[data-testid^="item-"]')).toHaveCount(0);
+    await expectItemCount(pageA, 0);
+    await expectItemCount(pageB, 0);
 
     // UC 主流程 4/5：A 新增便签 → B 的画布（轮询）收到同一变化，内容达到一致。
     await pageA.getByTestId("add-note").click();
-    await expect(pageA.getByTestId("items-layer").locator('[data-testid^="item-"]')).toHaveCount(1);
-    await expect(pageB.getByTestId("items-layer").locator('[data-testid^="item-"]')).toHaveCount(1, { timeout: 15_000 });
+    await expectItemCount(pageA, 1);
+    await expectItemCount(pageB, 1);
 
     // 反向：B 也新增一个 → A 收到 → 两端都为 2（真实双向传播）。
     await pageB.getByTestId("add-note").click();
-    await expect(pageB.getByTestId("items-layer").locator('[data-testid^="item-"]')).toHaveCount(2);
-    await expect(pageA.getByTestId("items-layer").locator('[data-testid^="item-"]')).toHaveCount(2, { timeout: 15_000 });
+    await expectItemCount(pageB, 2);
+    await expectItemCount(pageA, 2);
   } finally {
     await ctxA.close();
     await ctxB.close();

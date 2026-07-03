@@ -1,6 +1,11 @@
 // packages/canvas/src/index.ts — CAP-CANVAS 命令运行时（CanvasX 核心）
 // 纯逻辑 reducer：apply(state, command) → state'。客户端状态、撤销重做、
 // 以及后续实时协作（Yjs）都构建在此之上。渲染（Fabric.js/DOM）是可替换适配器。
+//
+// 数据模型（p6:F14，CRDT-ready）：widget 更新是**字段级 patch**而非整条替换——
+// `{kind:"patch", id, patch:{x,y}}` 只改列出的字段，其余字段保持不变。
+// 这让未来把存储后端换成 Y.Map（字段级 set/observe）时，上层不需要改命令语义。
+// move/edit 保留为 patch 的便捷别名（既有调用方/e2e 不受影响）。
 
 export type ItemType = "note" | "rect";
 
@@ -12,10 +17,16 @@ export interface BoardItem {
   w: number;
   h: number;
   text: string;
+  /** widget 类型专有字段（形状/连接线/手绘…在 F15+ 各自扩展），字段级可寻址。 */
+  [field: string]: unknown;
 }
+
+/** 字段级 patch：不允许改 id/type（身份字段），其余字段任意子集。 */
+export type ItemPatch = Partial<Omit<BoardItem, "id" | "type">> & Record<string, unknown>;
 
 export type Command =
   | { kind: "add"; item: BoardItem }
+  | { kind: "patch"; id: string; patch: ItemPatch }
   | { kind: "move"; id: string; x: number; y: number }
   | { kind: "edit"; id: string; text: string }
   | { kind: "delete"; id: string };
@@ -29,15 +40,23 @@ export function isItemType(s: string): s is ItemType {
   return s === "note" || s === "rect";
 }
 
+/** 字段级合并：只覆盖 patch 里列出的字段；id/type 不可被 patch 篡改。 */
+function mergePatch(it: BoardItem, patch: ItemPatch): BoardItem {
+  const { id: _id, type: _type, ...fields } = patch as Record<string, unknown>;
+  return { ...it, ...fields, id: it.id, type: it.type };
+}
+
 /** 纯 reducer：对 items 应用一个命令，返回新数组（不可变）。 */
 export function applyCommand(items: BoardItem[], cmd: Command): BoardItem[] {
   switch (cmd.kind) {
     case "add":
       return [...items, cmd.item];
+    case "patch":
+      return items.map((it) => (it.id === cmd.id ? mergePatch(it, cmd.patch) : it));
     case "move":
-      return items.map((it) => (it.id === cmd.id ? { ...it, x: cmd.x, y: cmd.y } : it));
+      return applyCommand(items, { kind: "patch", id: cmd.id, patch: { x: cmd.x, y: cmd.y } });
     case "edit":
-      return items.map((it) => (it.id === cmd.id ? { ...it, text: cmd.text } : it));
+      return applyCommand(items, { kind: "patch", id: cmd.id, patch: { text: cmd.text } });
     case "delete":
       return items.filter((it) => it.id !== cmd.id);
     default: {
