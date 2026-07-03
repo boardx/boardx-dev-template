@@ -462,3 +462,90 @@ export async function listAuthorizedAiStoreItems(userId: number): Promise<AiStor
     [userId]
   );
 }
+
+// ---------------------------------------------------------------------------
+// 团队审核与精选（P11 F06，uc-ai-store-006）：team-scope 项目提交审核后落
+// status=pending；团队管理角色（owner/admin，见 @repo/auth canManageTeam）批准
+// （→published，团队内可浏览）、拒绝（→rejected）或撤回已批准项目（→pending）。
+// featured 仅对当前已发布的团队项目生效，切换不改变 status。状态机与 p15-F04
+// （平台范围审核）共用同一张表/同一组 status 值，作用域用 scope+team_id 区分：
+// 本文件的函数一律以 teamId 做 WHERE 约束，避免跨团队越权改到别的团队的项目。
+// ---------------------------------------------------------------------------
+
+export type AiStoreReviewAction = "approve" | "reject" | "withdraw";
+
+/** 某团队当前处于 PENDING 审核队列的 team-scope 项目（供团队审核视图列表）。 */
+export async function listTeamPendingAiStoreItems(teamId: number): Promise<AiStoreItem[]> {
+  return query<AiStoreItem>(
+    `SELECT ${ITEM_COLS} FROM ai_store_items
+     WHERE scope = 'team' AND team_id = $1 AND status = 'pending'
+     ORDER BY updated_at ASC, id ASC`,
+    [teamId]
+  );
+}
+
+/** 某团队已批准（published）的 team-scope 项目（供精选切换列表）。 */
+export async function listTeamApprovedAiStoreItems(teamId: number): Promise<AiStoreItem[]> {
+  return query<AiStoreItem>(
+    `SELECT ${ITEM_COLS} FROM ai_store_items
+     WHERE scope = 'team' AND team_id = $1 AND status = 'published'
+     ORDER BY featured DESC, updated_at DESC, id DESC`,
+    [teamId]
+  );
+}
+
+const REVIEW_ACTION_TARGET: Record<AiStoreReviewAction, AiStoreItemStatus> = {
+  approve: "published",
+  reject: "rejected",
+  withdraw: "pending",
+};
+
+const REVIEW_ACTION_FROM: Record<AiStoreReviewAction, AiStoreItemStatus[]> = {
+  approve: ["pending"],
+  reject: ["pending"],
+  withdraw: ["published"],
+};
+
+/**
+ * 团队管理角色对某 team-scope 项目执行审核动作：批准（pending→published）、
+ * 拒绝（pending→rejected）、撤回（published→pending，重新进入待审队列）。
+ * 用 WHERE status = ANY(...) 做状态机合法性校验 + 团队越权校验（team_id 绑定）
+ * 一次性完成——不满足条件（项目不存在/不属于该团队/当前状态不允许该动作）时
+ * UPDATE 影响 0 行，返回 undefined，路由据此判定 404 vs 409。
+ */
+export async function reviewTeamAiStoreItem(
+  itemId: number,
+  teamId: number,
+  action: AiStoreReviewAction
+): Promise<AiStoreItem | undefined> {
+  const fromStatuses = REVIEW_ACTION_FROM[action];
+  const toStatus = REVIEW_ACTION_TARGET[action];
+  const rows = await query<AiStoreItem>(
+    `UPDATE ai_store_items
+     SET status = $4, updated_at = now()
+     WHERE id = $1 AND scope = 'team' AND team_id = $2 AND status = ANY($3)
+     RETURNING ${ITEM_COLS}`,
+    [itemId, teamId, fromStatuses, toStatus]
+  );
+  return rows[0];
+}
+
+/**
+ * 团队管理角色切换某已批准（published）team-scope 项目的团队精选状态。
+ * 只对 published 项目生效（草稿/待审/被拒项目不该出现在精选位）；team_id 绑定
+ * 防止越权切别的团队的项目。不存在/不满足条件时返回 undefined（路由判 404）。
+ */
+export async function setTeamAiStoreItemFeatured(
+  itemId: number,
+  teamId: number,
+  featured: boolean
+): Promise<AiStoreItem | undefined> {
+  const rows = await query<AiStoreItem>(
+    `UPDATE ai_store_items
+     SET featured = $3, updated_at = now()
+     WHERE id = $1 AND scope = 'team' AND team_id = $2 AND status = 'published'
+     RETURNING ${ITEM_COLS}`,
+    [itemId, teamId, featured]
+  );
+  return rows[0];
+}
