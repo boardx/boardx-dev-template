@@ -1,6 +1,10 @@
 # 会话交接 — Sprint p20/01
 
 ## 当前已验证
+- **F02 passing**（2026-07-04 门控通过，wrk-room-1）：New Room 可见性二选一卡片（默认 Private）+
+  名称 ≥3 校验 + 列表 🔒/🌐 徽章 + team 房间同团队成员可发现/可加入（新增 POST /api/rooms/[id]/join；
+  POST /api/rooms 未传 teamId 回落当前团队 cookie）。验证 = e2e/room-rr-002-visibility.spec.ts 4 用例
+  全过 + room-create/view-search/manage/rr-001 共 9 个回归全过 + verify:base 过。证据 evidence/F02.verify.log。
 - **F01 passing**（2026-07-04 门控通过）：房间详情壳 + 五 tab 导航。验证 = e2e/room-rr-001-detail-shell.spec.ts
   4 用例全过 + 存量 room/room-chat/canvas 29 个 e2e 无回归 + verify:base 过（design lint 修掉 text-[10px]→text-10）。
 - 立项工件齐备：gap-report.md、requirements/uc-rr-001..010、feature_list.json（11F）、

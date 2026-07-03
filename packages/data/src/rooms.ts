@@ -36,16 +36,22 @@ export async function getRoom(roomId: number): Promise<Room | undefined> {
   return rows[0];
 }
 
+/** 列表行：在 Room 之上附带「当前用户是否已是成员」，供前端渲染 Join 入口。 */
+export interface VisibleRoom extends Room {
+  is_member: boolean;
+}
+
 /** 用户可见的 room：自己是 owner/成员，或 team 可见且是该团队成员。可选名字搜索。 */
-export async function listVisibleRooms(userId: number, q?: string): Promise<Room[]> {
+export async function listVisibleRooms(userId: number, q?: string): Promise<VisibleRoom[]> {
   const params: unknown[] = [userId];
   let nameClause = "";
   if (q && q.trim()) {
     params.push(`%${q.trim()}%`);
     nameClause = ` AND r.name ILIKE $${params.length}`;
   }
-  return query<Room>(
-    `SELECT DISTINCT r.id, r.name, r.owner_user_id, r.team_id, r.visibility, r.created_at
+  return query<VisibleRoom>(
+    `SELECT DISTINCT r.id, r.name, r.owner_user_id, r.team_id, r.visibility, r.created_at,
+            (r.owner_user_id = $1 OR rm.user_id IS NOT NULL) AS is_member
      FROM rooms r
      LEFT JOIN room_members rm ON rm.room_id = r.id AND rm.user_id = $1
      LEFT JOIN team_members tm ON tm.team_id = r.team_id AND tm.user_id = $1
