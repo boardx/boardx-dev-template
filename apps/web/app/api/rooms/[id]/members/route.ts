@@ -49,8 +49,11 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
  *                    （token/过期7天/幂等刷新）+ dev 邮件通道发送注册链接（status:"invited"）。
  * POST { userId } → 直接按 userId 加入为 member（兼容既有 room-manage API）。
  *
- * 安全：token 只经邮件（dev=控制台日志+outbound_emails 落库）流转给被邀者本人，
- * 响应体不返回 token，也不区分"邮箱已被邀请过/从未被邀请"（避免邮箱枚举）。
+ * 安全（review 修正 M2）：token 只经邮件（dev=控制台日志+outbound_emails 落库）流转给
+ * 被邀者本人，响应体绝不返回 token。但响应确实会区分"该邮箱已注册"(added/409) 与
+ * "未注册"(invited) —— 这是 owner/admin 已有权限查看的信息（他们本来就在管理这个房间的
+ * 成员），产品上认为可接受；不去假装两者不可区分。真正需要保密的是 token 本身与
+ * "该邮箱是否已被邀请过"这类细节，这两点不经响应体或口径不一致的状态码泄漏。
  */
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -86,16 +89,18 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
 
     // 未注册邮箱：持久化邀请（幂等：同房间+同邮箱刷新 token/过期时间，不产生重复行）
-    // 并经 dev 邮件通道发送注册链接。token 绝不放进响应体。
+    // 并经 dev 邮件通道发送注册链接。token 绝不放进响应体，只经邮件流转给被邀者本人；
+    // 注册链接携带 token（而不只是 email）——接受邀请时靠 token 而不是"邮箱匹配"来鉴权
+    // （rev-security B1 修复：此前注册钩子纯按邮箱入房，任何人猜到邮箱曾被邀请即可冒领）。
     const token = generateToken();
-    await upsertRoomInvite(roomId, email, "member", token, user.id, expiresAt(ROOM_INVITE_TTL_MS));
+    await upsertRoomInvite(roomId, email, token, user.id, expiresAt(ROOM_INVITE_TTL_MS));
     const room = await getRoom(roomId);
     const origin = new URL(req.url).origin;
     await sendRoomInviteEmail({
       to: email,
       roomName: room?.name ?? `房间 #${roomId}`,
       inviterEmail: user.email,
-      registerUrl: `${origin}/register?email=${encodeURIComponent(email)}`,
+      registerUrl: `${origin}/register?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`,
     });
     return NextResponse.json({ status: "invited", email }, { status: 200 });
   } catch (err) {

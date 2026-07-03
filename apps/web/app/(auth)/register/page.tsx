@@ -1,23 +1,36 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AuthShell, AuthLabel, AuthDivider } from "@/components/auth/auth-shell";
 
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterInner />
+    </Suspense>
+  );
+}
+
+function RegisterInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefillEmail = searchParams.get("email") ?? "";
+  const roomInviteToken = searchParams.get("token") ?? "";
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
-    email: "",
+    email: prefillEmail,
     password: "",
     agreeTerms: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [pendingProvider, setPendingProvider] = useState<string | null>(null);
+  // uc-rr-008 E1：过期邀请注册仍成功，但要提示"邀请已过期"而不是静默跳过。
+  const [expiredInviteRoom, setExpiredInviteRoom] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,10 +39,17 @@ export default function RegisterPage() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, roomInviteToken: roomInviteToken || undefined }),
     });
     setSubmitting(false);
     if (res.status === 201) {
+      const data = await res.json().catch(() => ({}));
+      if (data.roomInvite?.status === "expired") {
+        // 邀请已过期：注册本身成功，但不自动入房——留在本页展示提示，不立刻跳走，
+        // 确保被邀者能看到这条消息（而不是被 router.push 立刻带走）。
+        setExpiredInviteRoom(data.roomInvite.roomName ?? "该房间");
+        return;
+      }
       router.push("/");
       router.refresh();
       return;
@@ -63,6 +83,29 @@ export default function RegisterPage() {
         {errors[k]}
       </p>
     ) : null;
+
+  if (expiredInviteRoom) {
+    return (
+      <AuthShell>
+        <h2 className="text-22 font-bold tracking-tight">Account created</h2>
+        <p data-testid="room-invite-expired" className="mt-3 text-13 text-muted-foreground">
+          你的「{expiredInviteRoom}」房间邀请已过期，未自动加入该房间。如需加入，请让房间的
+          owner/admin 重新邀请你。
+        </p>
+        <Button
+          data-testid="continue-to-app"
+          size="lg"
+          className="mt-4 w-full"
+          onClick={() => {
+            router.push("/");
+            router.refresh();
+          }}
+        >
+          继续
+        </Button>
+      </AuthShell>
+    );
+  }
 
   return (
     <AuthShell>

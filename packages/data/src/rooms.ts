@@ -199,27 +199,35 @@ export interface RoomInvite {
 /**
  * 邀请未注册邮箱加入房间：幂等 upsert（同房间+同邮箱只保留一条记录）。
  * 重复邀请 → 刷新 token、过期时间、状态回 pending（覆盖此前 revoked/expired/accepted）。
+ *
+ * 语义说明（rev-security M3）：这意味着"撤销后再次邀请同一邮箱"会让 pending 状态复活——
+ * 旧 token 因为整行被覆盖（含 token 列）而失效，新邀请拿到全新 token，旧的撤销动作不会被
+ * 绕过（撤销掉的令牌永远查不到），这是有意的产品行为（owner/admin 反悔撤销后可以重新邀请），
+ * 不是漏洞；只是"撤销"在这张表里不是终态而是可覆盖态，记录在此避免以后被误当 bug 修掉。
+ *
+ * review 修复（rev-code minor）：本期邀请角色锁死为 member——不接受调用方传入 role，
+ * 避免出现"看似支持 admin 邀请但从无测试覆盖、也从无 UI 入口"的死分支。如未来要支持
+ * 邀请直接给 admin 角色，需要新增对应 UI + e2e 后再放开这个参数。
  */
 export async function upsertRoomInvite(
   roomId: number,
   email: string,
-  role: "admin" | "member",
   token: string,
   invitedBy: number,
   expiresAt: Date
 ): Promise<RoomInvite> {
   const rows = await query<RoomInvite>(
     `INSERT INTO room_invites (email, room_id, role, token, status, invited_by, expires_at)
-     VALUES ($1, $2, $3, $4, 'pending', $5, $6)
+     VALUES ($1, $2, 'member', $3, 'pending', $4, $5)
      ON CONFLICT (room_id, email) DO UPDATE SET
        token = EXCLUDED.token,
-       role = EXCLUDED.role,
+       role = 'member',
        status = 'pending',
        invited_by = EXCLUDED.invited_by,
        expires_at = EXCLUDED.expires_at,
        updated_at = now()
      RETURNING id, email, room_id, role, token, status, invited_by, expires_at, created_at, updated_at`,
-    [email, roomId, role, token, invitedBy, expiresAt]
+    [email, roomId, token, invitedBy, expiresAt]
   );
   return rows[0]!;
 }
@@ -247,16 +255,17 @@ export async function getValidRoomInvite(token: string): Promise<RoomInvite | un
 }
 
 /**
- * 按邮箱取该邮箱所有「未过期的 pending」邀请（注册成功钩子用：新用户可能同时被邀进多个房间）。
- * 已过期的 pending 记录不返回——过期语义在这里体现，而不是靠后台任务改 status。
+ * 按 token 取邀请，不管状态/是否过期（p20 F09 review 修复：区分"过期"与"未知 token"两种
+ * 前端提示需要看到原始记录，而不能只看 getValidRoomInvite 的"有效"视图）。
+ * 调用方必须自行校验 email 是否匹配、status 是否仍是 pending，不能只凭"查到记录"就当作有效邀请。
  */
-export async function listPendingRoomInvitesByEmail(email: string): Promise<RoomInvite[]> {
-  return query<RoomInvite>(
+export async function getRoomInviteByToken(token: string): Promise<RoomInvite | undefined> {
+  const rows = await query<RoomInvite>(
     `SELECT id, email, room_id, role, token, status, invited_by, expires_at, created_at, updated_at
-     FROM room_invites
-     WHERE email = $1 AND status = 'pending' AND expires_at > now()`,
-    [email]
+     FROM room_invites WHERE token = $1`,
+    [token]
   );
+  return rows[0];
 }
 
 export async function markRoomInviteAccepted(id: number): Promise<void> {
@@ -274,10 +283,14 @@ export async function revokeRoomInvite(roomId: number, inviteId: number): Promis
   return rows.length > 0;
 }
 
-/** 仅供 dev/测试：把某邮箱的 room_invites 过期时间强制拨回过去（e2e 覆盖"令牌过期"场景）。 */
-export async function expireRoomInviteByEmail(email: string): Promise<void> {
+/**
+ * 仅供 dev/测试：把某房间下某邮箱的邀请过期时间强制拨回过去（e2e 覆盖"令牌过期"场景）。
+ * review 修复（rev-security B2）：按 (room_id, email) 收敛，不再一把过期该邮箱在所有房间的邀请
+ * ——调用方（dev 端点）必须先校验调用者对该 room_id 有 owner/admin 权限。
+ */
+export async function expireRoomInvite(roomId: number, email: string): Promise<void> {
   await query(
-    "UPDATE room_invites SET expires_at = now() - interval '1 minute' WHERE email = $1",
-    [email]
+    "UPDATE room_invites SET expires_at = now() - interval '1 minute' WHERE room_id = $1 AND email = $2",
+    [roomId, email]
   );
 }
