@@ -39,6 +39,8 @@ cat .harness/rubrics/clean-state-checklist.md
 - [ ] `progress.md` 已更新
 - [ ] `session-handoff.md` 已更新
 - [ ] 没有假 passing（每个 passing feature 都有 evidence 文件）
+- [ ] evidence 文件已入 git 树（`git ls-tree HEAD -- phases/**/evidence/` 实测非空，
+      不是仅存在于工作区/被 `.gitignore` 挡住）
 - [ ] 没有半成品（要么 passing，要么 in_progress 且有说明）
 - [ ] 同一时刻只有一个 feature 处于 in_progress
 - [ ] 关键运行输出已归档到 `evidence/`
@@ -64,6 +66,10 @@ cat .harness/rubrics/clean-state-checklist.md
 ## 当前已验证
 - F01 passing — evidence/F01.verify.log @ 2026-06-29T...
 - F02 passing — evidence/F02.verify.log @ 2026-06-29T...
+
+> handoff 里引用的每个 evidence 路径**必须是已提交进 git 树的路径**
+> （写之前 `git ls-tree HEAD -- <路径>` 实测）。禁止写「本地留存」「见本地日志」——
+> 下一轮全新上下文只看得到仓库，指向未入库文件的引用就是指向空气（PR #310/#311/#312 事故）。
 
 ## 本轮改动
 - 修改了 packages/memory/src/index.ts（新增 DurableMemory.findByTag）
@@ -95,6 +101,7 @@ cat .harness/rubrics/clean-state-checklist.md
 | 不更新 progress.md | 上下文断裂，下轮从头分析 | 每轮必须更新，哪怕几行 |
 | 把失败的测试"暂时注释掉" | 留下未记录的半成品 | 要么修复，要么在 notes 里记录原因 |
 | verify:base 失败但继续收尾 | 下轮从破损状态开始 | 先修基础状态 |
+| evidence 写"本地留存"或指向未入库文件 | 下轮/reviewer 看到的是空气引用 | 证据文件提交进 git 树后再引用 |
 | 把 not_started 的 feature 标 in_progress | 超过单一 in_progress 约束 | 一次只做一个 |
 
 ---

@@ -78,3 +78,6 @@ description: >
 1. 在浏览器中本地渲染预览（使用 `browser_subagent` 或本地命令）。
 2. 根据 [uiux_audit.template.md](.harness/templates/uiux_audit.template.md) 逐项自检（是否滥用 Tailwind 任意值、交互是否完整等）。
 3. 生成走查截图，编写报告并提交至 `evidence/` 目录归档。
+4. 归档后用 `git ls-tree HEAD -- <evidence路径>` 确认截图/报告真的进了 git 树
+   （没被 `.gitignore` 挡住）——不在仓库里的证据等于不存在。
+5. 界面关键交互元素补齐稳定 `data-testid`，供 e2e/verification 锚定（不锚文案或 DOM 结构）。
