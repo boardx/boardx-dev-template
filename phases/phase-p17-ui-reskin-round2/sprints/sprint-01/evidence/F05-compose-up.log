@@ -1,0 +1,4 @@
+NAME                                          IMAGE                                      COMMAND                  SERVICE    CREATED          STATUS                    PORTS
+worktree-agent-a20378af4453a2764-minio-1      minio/minio:RELEASE.2024-08-17T01-24-54Z   "/usr/bin/docker-ent…"   minio      29 minutes ago   Up 29 minutes (healthy)   0.0.0.0:52318->9000/tcp, [::]:52318->9000/tcp, 0.0.0.0:52319->9001/tcp, [::]:52319->9001/tcp
+worktree-agent-a20378af4453a2764-postgres-1   pgvector/pgvector:pg16                     "docker-entrypoint.s…"   postgres   29 minutes ago   Up 29 minutes (healthy)   0.0.0.0:52315->5432/tcp, [::]:52315->5432/tcp
+worktree-agent-a20378af4453a2764-redis-1      redis:7                                    "docker-entrypoint.s…"   redis      29 minutes ago   Up 29 minutes (healthy)   0.0.0.0:52316->6379/tcp, [::]:52316->6379/tcp
