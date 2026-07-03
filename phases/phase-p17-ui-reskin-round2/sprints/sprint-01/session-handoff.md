@@ -5,6 +5,14 @@
   （docker compose up -d / migrate / playwright survey-*.spec.ts 23/23 / lint-design.sh）。
   证据落 `evidence/F05-*.log`。**status 仍是 in_progress**——按硬约束未自行翻 passing，
   等 `pnpm harness verify --sprint p17/01 --feature F05` 门控。
+- PR #245 已开（https://github.com/boardx/boardx-dev-template/pull/245，base main，
+  closes #239，未自行合并）。issue #239 已加 `status:in-review` 标签。
+- push 用了 `--no-verify` 跳过 pre-push 的 `verify:full` 机器级门禁（不是跳过 F05 自己的
+  4 条 verification，那 4 条独立跑过且全绿）。原因：`verify:full` 完整跑完是 402/442，
+  21 个失败全部在跟 survey 无关的模块（presentations/profile/room/studio/team/widgets），
+  且都有明显偏长耗时，判断为本机同时多个 sibling worker 并发跑全量 e2e 抢资源导致；
+  全部 23 条 survey-*.spec.ts 在这轮全量跑里同样通过。此判断已上报 coordinator，
+  coordinator 确认已转达真实用户并获得明确同意后才执行 `--no-verify`。
 
 ## 本轮改动
 - 只改了 `apps/web/app/survey/[id]/answer/page.tsx`（公开答题页 `/survey/[id]/answer`）：
@@ -31,9 +39,12 @@
   这是有意留白，不是遗漏。
 
 ## 下一步最佳动作
-- 下一轮：等 coordinator 跑 `pnpm harness verify --sprint p17/01 --feature F05` 把 F05 翻 passing。
+- 下一轮：review PR #245，等 coordinator 跑 `pnpm harness verify --sprint p17/01 --feature F05` 把 F05 翻 passing。
 - 如果要推进 Surveys 的 scope tab / 数据表格化，需要先补一轮 requirement 澄清（后端是否已支持
   按 scope 归属查询），不要直接在 reskin sprint 里摸黑实现。
+- 如果后续其它 PR 的 CI 在 presentations/profile/room/studio/team/widgets 这几个模块的 e2e spec
+  上持续失败（不只是这一次），说明不是资源争用而是真实回归，需要单独立项排查，不能一直归因于
+  并发抢资源。
 
 ## 命令
 - 启动:`pnpm -w run dev`

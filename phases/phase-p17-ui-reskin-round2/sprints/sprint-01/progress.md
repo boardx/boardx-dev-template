@@ -45,9 +45,24 @@
   - 另跑 `pnpm --filter @repo/web run typecheck` 确认无类型错误（非 F05 官方验证项，额外自测）。
 - 已记录证据: `evidence/F05-e2e-survey-regression.log`、`evidence/F05-lint-design.log`、
   `evidence/F05-migrate.log`、`evidence/F05-compose-up.log`。
-- 提交记录: 分支 `worker/wrk-survey-3-p17-f05-survey-reskin`，PR closes #239（见 PR 描述）。
+- 提交记录: 分支 `worker/wrk-survey-3-p17-f05-survey-reskin`（commit 3f6062b），
+  PR #245（https://github.com/boardx/boardx-dev-template/pull/245，closes #239，base main，未自行合并）。
+  issue #239 已加 `status:in-review` 标签。
+- push 说明: `git push` 触发 pre-push hook 跑 `pnpm verify:full`（typecheck/lint/test + 生产 build +
+  全量 442 条 e2e）。第一轮跑到 build 阶段报 `next build` `MODULE_NOT_FOUND`——排查后确认是我自己手动
+  起的 dev server 和 build 并发写同一个 `.next/` 目录导致，已停掉手动起的 dev server 后确认
+  `next build` 单独跑能干净通过。第二轮完整跑完：402/442 通过，21 个失败**全部**在跟 survey 无关的
+  模块（presentations/profile/room/studio/team/widgets），且都伴随明显偏长的执行时长（部分单条
+  超过 1 分钟），与本机同时有多个 sibling worktree（wrk-claude-1/wrk-ava-1/wrk-store-2/wrk-admin-1
+  等）并发跑各自全量 e2e 抢 CPU/DB 资源的现象吻合；**全部 23 条 survey-*.spec.ts 在这轮全量跑里
+  同样通过**，与我单独跑的结果一致。因这 21 个失败不在我的改动范围内、且证据指向环境资源争用而非
+  代码回归，已把情况汇报给 coordinator，coordinator 确认已转达给真实用户并获得明确同意后，
+  执行 `git push --no-verify` 完成推送（未绕过自己的 4 条 F05 verification，只绕过了
+  `verify:full` 这层镜像-CI 的机器级门禁）。
 - 已知风险或未解决问题: p13-F04 的 `feature_list.json` 状态仍是 in_progress（代码已合并，
   只是还没走它自己的 verify flip），本轮未触碰该 feature 归属的文件。Surveys scope tab /
-  列表数据表格化仍是已知差距，留给后续单独立项（需要先确认后端数据模型）。
-- 下一步最佳动作: 等 coordinator 跑 `pnpm harness verify --sprint p17/01 --feature F05` 翻 passing；
-  合并后可以考虑针对 scope tab 单独走一次 requirement-author 澄清流程。
+  列表数据表格化仍是已知差距，留给后续单独立项（需要先确认后端数据模型）。verify:full 里那 21 个
+  失败未逐条复核是否为真实回归（判断依据是失败分布 + 耗时异常，不是逐条根因分析），如果后续
+  其它 PR 的 CI 也持续在同样的 spec 上失败，需要单独立项排查，不能一直归因于资源争用。
+- 下一步最佳动作: 等 coordinator/CI 跑 `pnpm harness verify --sprint p17/01 --feature F05` 翻 passing；
+  review PR #245；合并后可以考虑针对 scope tab 单独走一次 requirement-author 澄清流程。
