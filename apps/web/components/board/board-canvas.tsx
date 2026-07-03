@@ -75,6 +75,13 @@ const isItalic = (it: { color?: string | null }) => styleGet(it.color, "italic")
 // F12/F19 建立的 "|k=v" 哨兵编码约定，不新增持久化列。锁定后不可移动/缩放/旋转/编辑，
 // Widget Menu 显示解锁入口（见 wm-lock/wm-unlock）。
 const getLocked = (it: { color?: string | null }) => styleGet(it.color, "locked") === "1";
+// p6:F21（uc-widgets-010 编组/解组）：编组编码为 color 的 "|group=<groupId>" 样式段，沿用
+// F12/F19/F20 建立的 "|k=v" 哨兵编码约定，不新增持久化列/表。groupId 取该组任一成员（编组时
+// 触发编组动作所在的选中集合里的第一个 item）的 id 作为组标识，够用且不需要额外的 id 生成器。
+// 范围克制（notes 同步说明）：不支持组嵌套（编组时若成员已属于某组，直接用新 groupId 覆盖旧值，
+// 相当于「重新编组」，不做多级分组树）；组内对象允许通过双击等既有单选路径再单独选中/编辑
+// （不额外禁止，最简单可靠）。
+const getGroupId = (it: { color?: string | null }): string | null => styleGet(it.color, "group");
 const getFontFamily = (it: { color?: string | null }) => styleGet(it.color, "font") ?? DEFAULT_FONT;
 const getFontSize = (it: { color?: string | null }) => {
   const v = styleGet(it.color, "size");
@@ -452,7 +459,20 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         });
         return;
       }
-      setSelected(new Set(ids));
+      // p6:F21（uc-widgets-010 主流程 6：编组整体选中）：选中集合中任一对象属于某个组时，
+      // 把该组全部成员并入选中集合（编组后整体选中/整体拖动/整体删除，业务规则由此达成——
+      // fabric 层不感知 groupId，只在这里把点击命中的单个/多个 id 展开为组闭包）。
+      const expanded = new Set(ids);
+      const itemById = new Map(items.map((it) => [it.id, it]));
+      for (const id of ids) {
+        const found = itemById.get(id);
+        const gid = found ? getGroupId(found) : null;
+        if (gid == null) continue;
+        for (const it of items) {
+          if (getGroupId(it) === gid) expanded.add(it.id);
+        }
+      }
+      setSelected(expanded);
     },
     [formatSource, items, canEdit],
   );
@@ -867,6 +887,95 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     await applyColors(updates);
   }
 
+  // p6:F21（uc-widgets-010 主流程 6：编组/解组）：把选中的 ≥2 个未锁定对象编成一组，
+  // 编码为 color 的 "|group=<groupId>" 样式段（groupId 取选中集合中第一个 item 的 id）。
+  // 锁定对象不参与编组（业务规则 5：锁定组件不得通过多选操作绕过锁定限制），若过滤后不足
+  // 2 个则短路不执行。已属于某组的成员重新编组时直接覆盖旧 groupId（不支持组嵌套，范围克制）。
+  async function groupSelected() {
+    const targets = items.filter((it) => selected.has(it.id) && !getLocked(it));
+    if (targets.length < 2) return;
+    const groupId = targets[0]!.id;
+    const updates = targets.map((it) => ({ id: it.id, color: withStyle(it.color, { group: groupId }) }));
+    await applyColors(updates);
+    setSelected(new Set(targets.map((it) => it.id)));
+  }
+
+  // 解组：清除选中集合中所有对象的 group 段，恢复为可独立选择的组件（主流程 6 后半）。
+  async function ungroupSelected() {
+    const targets = items.filter((it) => selected.has(it.id) && getGroupId(it) != null && !getLocked(it));
+    if (targets.length === 0) return;
+    const updates = targets.map((it) => ({ id: it.id, color: withStyle(it.color, { group: null }) }));
+    await applyColors(updates);
+  }
+
+  // p6:F21（uc-widget-menu-011 对齐选中组件）：选中 ≥2 个对象后按包围盒批量对齐/等间距分布。
+  // 基准以选中对象（过滤锁定项后）的包围盒为准；锁定对象不参与移动（业务规则 5，沿用
+  // F20 的 moveSelected/deleteSelected「先过滤 getLocked 再操作」模式）。过滤后不足 2 个则短路。
+  type AlignMode = "left" | "right" | "top" | "bottom" | "hcenter" | "vcenter" | "distribute-h" | "distribute-v";
+  const alignSelected = useCallback(
+    async (mode: AlignMode) => {
+      if (!canEdit) return;
+      const targets = items.filter((it) => selected.has(it.id) && !getLocked(it));
+      if (targets.length < 2) return;
+
+      let moves: Move[];
+      if (mode === "distribute-h" || mode === "distribute-v") {
+        // 等间距分布：按主轴排序，首尾位置不变，中间按总跨度均匀分布间隙。
+        const axis = mode === "distribute-h" ? "x" : "y";
+        const size = mode === "distribute-h" ? "w" : "h";
+        const sorted = [...targets].sort((a, b) => a[axis] - b[axis]);
+        if (sorted.length < 3) {
+          moves = []; // 少于 3 个对象等间距分布没有意义（首尾已固定，无中间项可调整）
+        } else {
+          const totalSpan =
+            (sorted[sorted.length - 1]![axis] + sorted[sorted.length - 1]![size]) - sorted[0]![axis];
+          const totalSize = sorted.reduce((sum, it) => sum + it[size], 0);
+          const gap = (totalSpan - totalSize) / (sorted.length - 1);
+          let cursor = sorted[0]![axis];
+          moves = sorted.map((it, i) => {
+            const from = { fromX: it.x, fromY: it.y };
+            if (i === 0) {
+              cursor += it[size] + gap;
+              return { id: it.id, ...from, toX: it.x, toY: it.y };
+            }
+            const pos = cursor;
+            cursor += it[size] + gap;
+            return {
+              id: it.id,
+              ...from,
+              toX: axis === "x" ? pos : it.x,
+              toY: axis === "y" ? pos : it.y,
+            };
+          });
+        }
+      } else {
+        const minX = Math.min(...targets.map((it) => it.x));
+        const maxX = Math.max(...targets.map((it) => it.x + it.w));
+        const minY = Math.min(...targets.map((it) => it.y));
+        const maxY = Math.max(...targets.map((it) => it.y + it.h));
+        moves = targets.map((it) => {
+          let toX = it.x;
+          let toY = it.y;
+          if (mode === "left") toX = minX;
+          else if (mode === "right") toX = maxX - it.w;
+          else if (mode === "hcenter") toX = minX + (maxX - minX) / 2 - it.w / 2;
+          else if (mode === "top") toY = minY;
+          else if (mode === "bottom") toY = maxY - it.h;
+          else if (mode === "vcenter") toY = minY + (maxY - minY) / 2 - it.h / 2;
+          return { id: it.id, fromX: it.x, fromY: it.y, toX, toY };
+        });
+      }
+
+      moves = moves.filter((m) => m.toX !== m.fromX || m.toY !== m.fromY);
+      if (moves.length === 0) return;
+      const map = new Map(moves.map((m) => [m.id, m]));
+      setItems((prev) => prev.map((it) => (map.has(it.id) ? { ...it, x: map.get(it.id)!.toX, y: map.get(it.id)!.toY } : it)));
+      recordOp({ kind: "move", moves });
+      await apiMove(moves, false);
+    },
+    [canEdit, selected, items, apiMove],
+  );
+
   // p6:F19（uc-widget-menu-010）：进入/退出格式取样模式。仅支持单选一个文本/便签类对象作为格式来源
   // （形状/嵌入组件无文字排版语义，不作为来源，业务规则 1）。
   function startFormatPaint() {
@@ -1168,7 +1277,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       {canEdit && selected.size > 0 && (
         <div
           data-testid="widget-menu"
-          className="absolute left-1/2 top-14 z-20 flex -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-lg"
+          // p6:F21：对齐/编组按钮加入后单行操作数明显增多，改为 flex-wrap + max-w 避免菜单宽度
+          // 超出视口在两侧「溢出」并遮挡画布空白区域（真实回归：曾导致点击视口边缘空白处误命中
+          // 菜单而非清空选择，见 canvas-select.spec.ts「点选/Shift多选/点空白清除」）。
+          className="absolute left-1/2 top-14 z-20 flex max-w-[92vw] flex-wrap -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-lg"
         >
           <span className="px-1 text-xs text-muted-foreground">{selected.size} 项</span>
           {/* p6:F20（uc-widget-menu-003 主流程 3/4，业务规则 1）：全部选中项已锁定时，样式/编辑
@@ -1420,6 +1532,80 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           <Button data-testid="wm-duplicate" size="sm" variant="ghost" onClick={duplicateSelected}>
             复制
           </Button>
+          {/* p6:F21（uc-widget-menu-011 对齐选中组件）：选中 ≥2 个对象时展示对齐/分布入口；
+              不足 2 个隐藏（主流程 8：选中对象不足两个时，系统隐藏多对象对齐入口）。
+              锁定对象已在 alignSelected 内部过滤，混合选中态下只对未锁定项生效。
+              testid 用 "wm-align-objects-*" 前缀与既有文本对齐入口 "wm-align-left/center/right"
+              （uc-widget-menu-013，控制文字排版对齐）区分——两者语义完全不同，不能复用同名 testid。 */}
+          {selected.size >= 2 && (
+            <>
+              <div className="mx-1 h-5 w-px bg-border" />
+              <Button data-testid="wm-align-objects-left" size="sm" variant="ghost" aria-label="对象左对齐" onClick={() => void alignSelected("left")}>
+                左对齐
+              </Button>
+              <Button data-testid="wm-align-objects-hcenter" size="sm" variant="ghost" aria-label="对象水平居中" onClick={() => void alignSelected("hcenter")}>
+                水平居中
+              </Button>
+              <Button data-testid="wm-align-objects-right" size="sm" variant="ghost" aria-label="对象右对齐" onClick={() => void alignSelected("right")}>
+                右对齐
+              </Button>
+              <Button data-testid="wm-align-objects-top" size="sm" variant="ghost" aria-label="对象顶对齐" onClick={() => void alignSelected("top")}>
+                顶对齐
+              </Button>
+              <Button data-testid="wm-align-objects-vcenter" size="sm" variant="ghost" aria-label="对象垂直居中" onClick={() => void alignSelected("vcenter")}>
+                垂直居中
+              </Button>
+              <Button data-testid="wm-align-objects-bottom" size="sm" variant="ghost" aria-label="对象底对齐" onClick={() => void alignSelected("bottom")}>
+                底对齐
+              </Button>
+              {selected.size >= 3 && (
+                <>
+                  <Button
+                    data-testid="wm-distribute-h"
+                    size="sm"
+                    variant="ghost"
+                    aria-label="水平等间距分布"
+                    onClick={() => void alignSelected("distribute-h")}
+                  >
+                    水平分布
+                  </Button>
+                  <Button
+                    data-testid="wm-distribute-v"
+                    size="sm"
+                    variant="ghost"
+                    aria-label="垂直等间距分布"
+                    onClick={() => void alignSelected("distribute-v")}
+                  >
+                    垂直分布
+                  </Button>
+                </>
+              )}
+            </>
+          )}
+          {/* p6:F21（uc-widgets-010 主流程 6：编组/解组）：选中 ≥2 个对象且未全部同属一组时
+              显示「编组」；选中集合中含已编组成员时显示「解组」（两者可能同时出现——如选中一个
+              独立组内成员追加一个组外对象，此时点编组会把两者合并为新组，点解组只解开已有组的
+              那部分，语义均以 groupSelected/ungroupSelected 内部过滤为准）。 */}
+          {(() => {
+            const sel = items.filter((it) => selected.has(it.id));
+            const anyGrouped = sel.some((it) => getGroupId(it) != null);
+            const allSameGroup =
+              sel.length >= 2 && sel.every((it) => getGroupId(it) != null && getGroupId(it) === getGroupId(sel[0]!));
+            return (
+              <>
+                {selected.size >= 2 && !allSameGroup && (
+                  <Button data-testid="wm-group" size="sm" variant="ghost" aria-label="编组" onClick={() => void groupSelected()}>
+                    编组
+                  </Button>
+                )}
+                {anyGrouped && (
+                  <Button data-testid="wm-ungroup" size="sm" variant="ghost" aria-label="解组" onClick={() => void ungroupSelected()}>
+                    解组
+                  </Button>
+                )}
+              </>
+            );
+          })()}
             </>
           )}
           {/* uc-widget-menu-008 主流程 2：对象被锁定时删除入口隐藏或不可用；全部选中项锁定时
