@@ -1,11 +1,11 @@
 ---
-phase: "p19"
+phase: "p20"
 status: pending          # pending | confirmed —— 人类工程师确认 UI 后，把这里改成 confirmed
 confirmed_by:            # 确认人（姓名/邮箱）
 confirmed_at:            # 确认时间（ISO，如 2026-07-01T10:00:00Z）
 ---
 
-# UI 先行确认 — Room Realignment（Phase p19）
+# UI 先行确认 — Room Realignment（Phase p20）
 
 > 这是本阶段的 **UI 签核关卡**（ADR-003）。本文件顶部 `status` 不是 `confirmed` 时，
 > `pnpm harness new-sprint` 直接拒绝开 sprint。

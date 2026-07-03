@@ -2,7 +2,7 @@
 
 > 对照四方来源：UI Prototype（`phases/requirements/BoardX UI Prototype V1.html`）、
 > oldcode（`phases/requirements/oldcode/`）、权威需求（`phases/requirements/room*/`）、
-> 当前实现（apps/web + packages/data）。本报告是 Phase p19 的立项依据。
+> 当前实现（apps/web + packages/data）。本报告是 Phase p20 的立项依据。
 
 ## 结论
 
