@@ -15,6 +15,9 @@ import {
   UserPlus,
   Gem,
   CreditCard,
+  Sparkles,
+  ClipboardList,
+  ShieldCheck,
 } from "lucide-react";
 import { FeedbackLauncher } from "@/components/feedback/feedback-launcher";
 import { CreditRecordsDialog } from "@/components/credits/credit-records-dialog";
@@ -26,13 +29,18 @@ interface SidebarUser {
   email: string;
   displayName: string;
   avatar: string | null;
+  isSysAdmin?: boolean;
 }
 
 // 设计 rail：保留现有导航目的地（Home / Rooms 进 rail，Teams / Profile 进账号菜单）。
 // 见 docs/design/boardx-prototype-mapping.md §2.2。
+// p16-F01：新增 Ava（AI 对话）/ Surveys（问卷）全局入口——此前两者均已 passing 但全站
+// 没有导航入口，用户只能手敲 URL。沿用同一 RAIL_ITEMS 结构与视觉，不发明新设计。
 const RAIL_ITEMS = [
   { label: "Home", icon: Home, href: "/" },
   { label: "Rooms", icon: LayoutGrid, href: "/rooms" },
+  { label: "Ava", icon: Sparkles, href: "/ava" },
+  { label: "Surveys", icon: ClipboardList, href: "/surveys" },
 ] as const;
 
 export function Sidebar({ user }: { user: SidebarUser | null }) {
@@ -106,9 +114,9 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
       <Link
         href="/"
         aria-label="BoardX 首页"
-        className="mb-2 flex h-8.5 w-8.5 items-center justify-center rounded-9 bg-primary text-base font-extrabold text-primary-foreground transition-colors hover:bg-surface-dark"
+        className="mb-2 flex h-8.5 w-8.5 items-center justify-center transition-opacity hover:opacity-90"
       >
-        X
+        <img src="/logo-icon.png" alt="BoardX Logo" className="h-8.5 w-8.5 object-contain" />
       </Link>
 
       {/* Rail nav */}
@@ -119,6 +127,7 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
             key={href}
             href={href}
             title={label}
+            data-testid={`rail-nav-${label.toLowerCase()}`}
             className={cn(
               "flex h-11.5 w-11.5 flex-col items-center justify-center gap-0.5 rounded-10 transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -132,6 +141,28 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
           </Link>
         );
       })}
+
+      {/* Admin 后台入口（p16-F01）：只对 SysAdmin 渲染，不是禁用态——非 SysAdmin 用户
+          DOM 里完全没有这个节点。isSysAdmin 由服务端 lib/session.toPublicUser 计算
+          （复用 lib/admin.ts requireSysAdmin 同一套 isSysAdmin(platform_role) 判定），
+          前端只做透传渲染，不重新实现鉴权。 */}
+      {user?.isSysAdmin && (
+        <Link
+          href="/admin"
+          title="Admin"
+          data-testid="rail-nav-admin"
+          className={cn(
+            "flex h-11.5 w-11.5 flex-col items-center justify-center gap-0.5 rounded-10 transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            pathname.startsWith("/admin")
+              ? "bg-muted text-foreground"
+              : "text-placeholder hover:bg-muted hover:text-foreground",
+          )}
+        >
+          <ShieldCheck className="h-[1.0625rem] w-[1.0625rem]" strokeWidth={2} />
+          <span className="text-9 font-semibold leading-none">Admin</span>
+        </Link>
+      )}
 
       <div className="flex-1" />
 

@@ -30,6 +30,8 @@ export * from "./survey";
 export * from "./avaChat";
 // CAP-DATA AI Store 商品仓储（ai_store_items / P11）
 export * from "./aiStore";
+// CAP-DATA AI Store 订阅仓储（ai_store_subscriptions / P11 F03）
+export * from "./aiStoreSubscriptions";
 // CAP-DATA 积分钱包仓储（credit_wallets/credit_transactions / P14 uc-credits-001）
 export * from "./credits";
 // CAP-FILE 知识库文件仓储（kb_files / P10）

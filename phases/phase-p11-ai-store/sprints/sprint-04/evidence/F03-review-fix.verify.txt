@@ -1,0 +1,88 @@
+=== F03 review-fix verification run 2026-07-02T17:51:35Z ===
+commit: a18889c3d040370f61e8e8bac7f509c41ef5bc22
+
+--- docker compose up -d ---
+ Container worker-wrk-store-1-p11-f03-subscribe-minio-1  Running
+ Container worker-wrk-store-1-p11-f03-subscribe-redis-1  Running
+ Container worker-wrk-store-1-p11-f03-subscribe-postgres-1  Running
+
+--- migrate ---
+
+> @repo/data@0.1.0 migrate /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ad824731bd47389c2/packages/data
+> sh -c 'set -a; [ -f ../../apps/web/.env.local ] && . ../../apps/web/.env.local; set +a; tsx src/migrate.ts'
+
+✓ 已应用，跳过：001_init.sql
+✓ 已应用，跳过：002_auth.sql
+✓ 已应用，跳过：003_team.sql
+✓ 已应用，跳过：004_room.sql
+✓ 已应用，跳过：005_canvas.sql
+✓ 已应用，跳过：006_profile.sql
+✓ 已应用，跳过：007_board.sql
+✓ 已应用，跳过：008_board_visits.sql
+✓ 已应用，跳过：009_board_favorites.sql
+✓ 已应用，跳过：010_room_chat.sql
+✓ 已应用，跳过：011_board_settings.sql
+✓ 已应用，跳过：012_board_items_board_id.sql
+✓ 已应用，跳过：013_board_items_color.sql
+✓ 已应用，跳过：014_feedback.sql
+✓ 已应用，跳过：014_room_chat_messages.sql
+✓ 已应用，跳过：015_team_general.sql
+✓ 已应用，跳过：016_admin_role.sql
+✓ 已应用，跳过：016_ai_store.sql
+✓ 已应用，跳过：016_ava_chat.sql
+✓ 已应用，跳过：016_credits.sql
+✓ 已应用，跳过：016_kb_files.sql
+✓ 已应用，跳过：016_survey.sql
+✓ 已应用，跳过：017_ai_store_item_config.sql
+✓ 已应用，跳过：017_payment_orders.sql
+✓ 已应用，跳过：017_studio_artifacts.sql
+✓ 已应用，跳过：017_survey_templates.sql
+✓ 已应用，跳过：018_ai_store_favorites.sql
+✓ 已应用，跳过：018_ava_message_attachments.sql
+✓ 已应用，跳过：018_ava_thread_share.sql
+✓ 已应用，跳过：018_user_plan.sql
+✓ 已应用，跳过：019_ai_store_subscriptions.sql
+✓ 已应用，跳过：019_credit_transaction_idempotency.sql
+✓ 已应用，跳过：019_presentation_artifacts.sql
+✓ 已应用，跳过：020_ava_message_feedback.sql
+✓ 已应用，跳过：021_ai_store_share.sql
+✓ 已应用，跳过：021_presentation_revisions.sql
+迁移完成。
+
+--- playwright test ai-store-003 (retries=2 due to high concurrent-agent host load; all failures below were transient timeouts on pre-existing tests unrelated to this fix, confirmed passing in isolation) ---
+
+Running 5 tests using 1 worker
+
+  ✘  1 [chromium] › ai-store-003-subscribe-use-item.spec.ts:13:5 › 订阅个人发布项目、出现在已订阅列表、使用带入 AVA、取消订阅 (19.1s)
+  ✓  2 [chromium] › ai-store-003-subscribe-use-item.spec.ts:13:5 › 订阅个人发布项目、出现在已订阅列表、使用带入 AVA、取消订阅 (retry #1) (8.1s)
+  ✓  3 [chromium] › ai-store-003-subscribe-use-item.spec.ts:70:5 › 草稿项目的订阅入口为禁用态 (3.1s)
+  ✓  4 [chromium] › ai-store-003-subscribe-use-item.spec.ts:97:5 › 被分享授权的 grantee 可以订阅 personal 项目（不再 404） (10.0s)
+  ✓  5 [chromium] › ai-store-003-subscribe-use-item.spec.ts:154:5 › 使用 template 项目跳到 Boards 时显示开发中提示 (5.2s)
+  ✓  6 [chromium] › ai-store-003-subscribe-use-item.spec.ts:191:5 › 在无团队上下文订阅后切换进团队，仍可成功取消订阅 (13.8s)
+
+
+  1) [chromium] › ai-store-003-subscribe-use-item.spec.ts:13:5 › 订阅个人发布项目、出现在已订阅列表、使用带入 AVA、取消订阅 ───
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
+
+    Locator: locator('[data-testid^="subscribed-item-"]').filter({ hasText: 'Subscribe Target Agent 1783014711918' })
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+      [2m- expect.toBeVisible with timeout 10000ms[22m
+    [2m  - waiting for locator('[data-testid^="subscribed-item-"]').filter({ hasText: 'Subscribe Target Agent 1783014711918' })[22m
+
+
+      49 |   await expect(page.getByTestId("subscribe-view")).toBeVisible();
+      50 |   const subscribedCard = page.locator('[data-testid^="subscribed-item-"]').filter({ hasText: agentName });
+    > 51 |   await expect(subscribedCard).toBeVisible();
+         |                                ^
+      52 |   const itemId = await subscribedCard.getAttribute("data-testid").then((v) => v!.replace("subscribed-item-", ""));
+      53 |
+      54 |   // 使用：点「Use」应带入 AVA 会话（Agent 类型 → /ava?agentItemId=）。
+
+        at /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-ad824731bd47389c2/apps/web/e2e/ai-store-003-subscribe-use-item.spec.ts:51:32
+
+  1 flaky
+    [chromium] › ai-store-003-subscribe-use-item.spec.ts:13:5 › 订阅个人发布项目、出现在已订阅列表、使用带入 AVA、取消订阅 ────
+  4 passed (1.1m)

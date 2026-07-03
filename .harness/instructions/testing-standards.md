@@ -13,6 +13,31 @@
 - 优先断言**用户可见行为**(HTTP 状态、输出内容、UI 可达),而非内部实现。
 - 例:`curl -sf localhost:3000/api/health | jq -e '.ok==true'`
 
+## 新增顶层页面必须验证"能被导航到"，不能只验证"URL 直达能用"
+
+`pnpm harness verify` 通过只证明"给定这个 URL/接口，行为符合预期"，**不证明用户能从
+产品里走到这个 URL**。这个盲区曾导致 Ava/Surveys/Admin 等多个已 passing 的顶层功能
+在全站没有任何导航入口——功能存在，但对真实用户等于不存在（e2e 里都是 `page.goto()`
+直达 URL，没人断言过入口本身）。
+
+因此：**任何新增的顶层页面/路由（sidebar 一级入口、首页卡片、account 菜单项等），
+其 feature 的 e2e verification 至少要有一条走"真实点击路径"的场景**，而不是全部
+`page.goto(url)` 直达：
+
+```ts
+// 不够：只证明 URL 能用
+await page.goto("/ai-store");
+await expect(page.getByTestId("store-grid")).toBeVisible();
+
+// 要加一条：证明用户能从已有入口点到这里
+await page.goto("/home");
+await page.getByTestId("enter-store-recentlyUsed").click();
+await expect(page).toHaveURL(/\/ai-store/);
+```
+
+如果这个页面按设计就是"暂无独立入口、只能从别处间接进入"（比如 room-chat 内嵌的
+Studio 面板），在 feature 的 `notes` 里显式写清楚这是故意的，而不是漏掉。
+
 ## 假阳性防护
 - 避免只检查"进程没崩";要检查"产出符合预期"。
 - 验证脚本失败时保留输出到 sprint 的 `evidence/`,便于复盘。

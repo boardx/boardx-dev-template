@@ -316,6 +316,38 @@ export default function AvaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // uc-ai-store-003：AI Store「使用 Agent / 使用 AI Tool」入口——带 agentItemId/toolItemId
+  // 查询参数进入 /ava 时，把该 Store 项目的名称/描述预填进 composer 草稿，用户确认后发送即
+  // 带着该资源上下文开启新会话（新建线程 + 首条消息里显式带入资源信息）。
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const agentItemId = params.get("agentItemId");
+    const toolItemId = params.get("toolItemId");
+    const itemId = agentItemId ?? toolItemId;
+    if (!itemId) return;
+    const kind = agentItemId ? "agent" : "tool";
+    (async () => {
+      try {
+        const res = await fetch(`/api/ai-store/items/${itemId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const name: string = data.item?.name ?? "";
+        if (!name) return;
+        setDraft(
+          kind === "agent"
+            ? `Use the "${name}" agent to help me: `
+            : `Use the "${name}" tool on: `
+        );
+        setMobileView("chat");
+        composerRef.current?.focus();
+      } catch {
+        // 静默失败：composer 保持空白，不阻塞用户手动开始新会话。
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const onFocus = () => {
       void refreshCapabilities().catch(() => setSettingsError("刷新 AI 设置失败，已保留当前选择"));

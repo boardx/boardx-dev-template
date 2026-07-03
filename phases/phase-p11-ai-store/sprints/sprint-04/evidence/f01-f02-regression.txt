@@ -1,0 +1,15 @@
+
+Running 10 tests using 1 worker
+
+  ✓  1 [chromium] › ai-store-001-browse-items.spec.ts:11:5 › 未登录访问 /ai-store 重定向到 /login (640ms)
+  ✓  2 [chromium] › ai-store-001-browse-items.spec.ts:17:5 › 登录后浏览：submenu 分类 + 内容网格 (622ms)
+  ✓  3 [chromium] › ai-store-001-browse-items.spec.ts:34:5 › 类型筛选只显示该类型，并在页面上下文生效 (739ms)
+  ✓  4 [chromium] › ai-store-001-browse-items.spec.ts:47:5 › 搜索按名称/描述收窄列表 (687ms)
+  ✓  5 [chromium] › ai-store-001-browse-items.spec.ts:59:5 › 无匹配结果显示空状态 + 清空筛选入口 (902ms)
+  ✓  6 [chromium] › ai-store-001-browse-items.spec.ts:74:5 › 标签筛选高亮并显示 filters active，Clear all 复位 (660ms)
+  ✓  7 [chromium] › ai-store-001-browse-items.spec.ts:88:5 › 未登录调用 GET /api/ai-store/items 返回未授权 (59ms)
+  ✓  8 [chromium] › ai-store-001-browse-items.spec.ts:94:5 › 分页：种子数据超过一页时显示分页控件，翻页后内容更新 (837ms)
+  ✓  9 [chromium] › ai-store-001-browse-items.spec.ts:117:5 › 点卡片打开详情弹窗：展示描述/示例/统计/订阅入口，可关闭 (696ms)
+  ✓  10 [chromium] › ai-store-002-create-update-item.spec.ts:11:5 › 创建器必填校验、草稿/发布/提交审核、Authorized 编辑自己的项目 (1.8s)
+
+  10 passed (8.6s)

@@ -55,7 +55,7 @@
       "title": "修订演示文稿（方案修改 + 单页优化）",
       "user_visible_behavior": "对已生成演示：在方案层提修改要求（改结构/受众/风格）得到更新方案；在单页预览点「优化本页」输入要求，仅重生成该页并原位替换；修订中展示处理态，可对比/接受；修订/优化要求为空则禁用提交；修订失败不破坏原可查看结果；不能引用无权访问的文件。",
       "design_ref": "mockup:phases/requirements/mockups/presentation-preview.html（本轮补：全屏预览 + 页码/上下页 + 单页「优化本页」输入 + 方案修订面板）；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "03",
       "owner": "wrk-studio-1",
       "capability": "CAP-AI",
@@ -68,7 +68,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/presentations-002-revise-presentation.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-07-02T15:16:58.495Z",
       "notes": "uc-presentations-002。设计稿本轮补齐（原 design-needed 已解除，见 design_ref）。仍 blocked-on p9+p10（AI 重生成 + 文件来源）与 F02 的演示任务/预览。能力就绪后转 not_started。"
     }
   ]
