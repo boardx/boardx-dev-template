@@ -241,16 +241,16 @@
       "area": "widgets",
       "title": "文本组件 + 文本样式 + 文本转便利贴",
       "user_visible_behavior": "创建独立文本组件并编辑；调整字体/字号/粗斜体/颜色/对齐（uc-widget-menu-013）；可把一段文本按行/段拆分为多个便利贴（uc-widget-menu-014）。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "09",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/widget-text.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F12.verify.log @ 2026-07-03T20:29:01.769Z",
       "notes": "uc-widgets-007 + uc-widget-menu-013 + uc-widget-menu-014。文本→便利贴为批量 add 命令。",
       "source_use_cases": [
         "phases/requirements/board/widgets/uc-widgets-007-use-text-widget.md",
