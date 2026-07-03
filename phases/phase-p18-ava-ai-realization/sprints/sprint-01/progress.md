@@ -48,3 +48,28 @@
   - main 上 verify:full 存在 27 个与本 feature 无关的既有 e2e 失败（另有任务在修）
 - 下一步最佳动作: 领取 F03（DR 持久化）或 F06（STT 能力）；F02（真实模型失败态）依赖
   本 feature 已解锁，也可开工
+### 2026-07-04 02:45 (owner: wrk-ava-p18-2)
+- 本轮目标: F06 — STT 能力落地（解开 p9-F09 ↔ p7-F10 循环阻塞）
+- 已完成:
+  - 新增 `packages/ai/src/sttProvider.ts`：零 SDK 依赖的 OpenAI Whisper API 转写
+    provider（`transcribeAudio(input): Promise<{text}>`；POST /v1/audio/transcriptions
+    multipart，model=whisper-1；OPENAI_API_KEY/STT_BASE_URL/STT_MODEL 走 env；
+    缺 key 抛可读错误且不发请求；HTTP 非 200 / 响应缺 text 字段错误面完整；
+    可注入 fetchImpl 供单测）
+  - `packages/ai/src/index.ts` 导出 STT 能力
+  - 新增 `scripts/stt-smoke.mjs`（env-gated：无 key SKIP 退出 0；有 key 用脚本内置
+    程序化生成的 0.8s wav 真实调用一次并断言返回非空 text）
+  - 新增 6 个 sttProvider 单测（请求组装/multipart 字段/成功解析/缺 text/缺 key/HTTP 错误）
+  - 选型决策记录：requirements/03-voice-input-stt.md 末尾「选型决策（F06 落地）」
+    （Whisper API：API 成熟、一次 HTTP 即得文本、零依赖风格兼容、STT_BASE_URL 可替换自建端点）
+- 运行过的验证:
+  - `pnpm --filter @repo/ai test` → 29 passed（含新增 6 个）
+  - `node scripts/stt-smoke.mjs` → SKIP（本机无 key），exit 0
+  - `pnpm harness verify --sprint p18/01 --feature F06` → 门控通过，F06 = passing
+- 已记录证据: evidence/F06.verify.log
+- 提交记录: 见本分支 worker/wrk-ava-p18-2-f06-stt-capability
+- 已知风险或未解决问题:
+  - 本机/CI 无 OPENAI_API_KEY，有-key 分支尚未在真实凭证下跑过——建议配置后手跑补证
+  - p9-F09 与 p7-F10 的 depends_on 尚未指向本 feature：跨 phase 权威文件修改是独立
+    协调事项（notes 已注明），需 coordinator 排期
+- 下一步最佳动作: F07（AVA 语音输入 UI 接线，依赖本 feature 已解锁）

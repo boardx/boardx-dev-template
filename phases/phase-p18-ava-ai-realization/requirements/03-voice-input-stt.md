@@ -41,3 +41,30 @@
 ## 切分提示
 - 建议先出一个"STT 能力 owner 决策"的小 feature（可能不涉及代码，只是架构决策 + 更新依赖声明），
   再做前端录音/可视化，最后接转写。
+
+## 选型决策（F06 落地）
+
+**决策**：STT 能力由 CAP-AI（`packages/ai`）拥有，第一个 provider 接入 **OpenAI Whisper API**
+（`POST /v1/audio/transcriptions`，multipart/form-data，`model=whisper-1`）。
+交付物：`packages/ai/src/sttProvider.ts` 的 `transcribeAudio(input): Promise<{ text }>`。
+
+**理由**：
+1. **API 成熟且形态最简**：一次 HTTP 调用（上传音频 multipart）即得转写文本，无需会话/流式/WebSocket
+   握手，与"POST 一段音频得到转写文本"的验收线索一一对应。
+2. **与仓库零依赖风格兼容**：无 SDK，直接 `fetch` + Node 22 全局 `FormData`/`Blob` 即可组装请求，
+   与 `anthropicProvider.ts` 的手法完全一致（凭证走环境变量、可注入 `fetchImpl` 供单测、
+   缺 key 抛可读错误、HTTP 错误面完整）。
+3. **可替换性**：`STT_BASE_URL` 可指向任何兼容 Whisper API 的自建/代理端点（如 faster-whisper
+   server），`STT_MODEL` 可换模型——即使未来换供应商，`transcribeAudio` 契约不变，上层
+   （p9-F09 语音输入、p7-F10 白板转录）不受影响。
+4. **对比落选项**：自建最小转写服务（如 whisper.cpp 服务化）需要引入模型权重分发与部署面，
+   超出"解开循环阻塞"这个 feature 的最小交付；阿里云 Fun-ASR（老代码用于会议级实时转录）
+   是流式/VAD 场景，本阶段明确不做。
+
+**配置**：`OPENAI_API_KEY`（必填，缺失时调用抛可读错误）、`STT_BASE_URL`（可选）、
+`STT_MODEL`（可选，默认 whisper-1）。冒烟：`node scripts/stt-smoke.mjs`（env-gated，
+无凭证 SKIP 退出 0）。
+
+**依赖联动**：p9-F09 与 p7-F10 的 `depends_on` 应统一指向本 feature（p18-F06）。
+跨 phase 权威文件（`phase-p7-board-shell/feature_list.json`）的修改是独立协调事项，
+不在本 feature 内代持（见 notes）。
