@@ -6,13 +6,13 @@
 // 还是"状态不允许"，避免探测团队内部数据。
 import { NextResponse } from "next/server";
 import { canManageTeam } from "@repo/auth";
-import { getMembership, reviewTeamAiStoreItem, type AiStoreReviewAction } from "@repo/data";
+import { getMembership, reviewTeamAiStoreItem, type TeamAiStoreReviewAction } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const VALID_ACTIONS: AiStoreReviewAction[] = ["approve", "reject", "withdraw"];
+const VALID_ACTIONS: TeamAiStoreReviewAction[] = ["approve", "reject", "withdraw"];
 
 export async function POST(req: Request, { params }: { params: { id: string; itemId: string } }) {
   try {
@@ -31,10 +31,10 @@ export async function POST(req: Request, { params }: { params: { id: string; ite
 
     const body = (await req.json().catch(() => ({}))) as { action?: unknown };
     const actionRaw = String(body.action ?? "");
-    if (!VALID_ACTIONS.includes(actionRaw as AiStoreReviewAction)) {
+    if (!VALID_ACTIONS.includes(actionRaw as TeamAiStoreReviewAction)) {
       return NextResponse.json({ error: "无效的审核动作" }, { status: 400 });
     }
-    const action = actionRaw as AiStoreReviewAction;
+    const action = actionRaw as TeamAiStoreReviewAction;
 
     const item = await reviewTeamAiStoreItem(itemId, teamId, action);
     if (!item) return NextResponse.json({ error: "项目不存在或当前状态不支持该操作" }, { status: 404 });
