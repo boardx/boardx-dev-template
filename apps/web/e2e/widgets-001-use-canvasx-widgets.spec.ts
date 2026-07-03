@@ -28,7 +28,9 @@ test("编辑者创建并管理 CanvasX widgets，菜单显示能力边界", asyn
   // p6:F07：拖拽控制点缩放已可用（选中框四角，见 canvas-guidelines.spec.ts），
   // 原「缩放暂不可用」占位按钮移除，能力边界不再展示该项。
   await expect(page.getByTestId("wm-resize-unavailable")).toHaveCount(0);
-  await expect(page.getByTestId("wm-lock-unavailable")).toBeDisabled();
+  // p6:F20：锁定能力已落地（原「锁定暂不可用」占位移除），未锁定对象显示「锁定」入口。
+  await expect(page.getByTestId("wm-lock")).toBeVisible();
+  await expect(page.getByTestId("wm-lock-unavailable")).toHaveCount(0);
 
   await dblclickItem(page, (await canvasItems(page))[0]!.id);
   await page.locator('[data-testid^="item-edit-"]').fill("更新后的便签");
