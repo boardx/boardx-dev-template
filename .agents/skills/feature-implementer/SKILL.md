@@ -35,6 +35,9 @@ cat phases/<phase>/sprints/sprint-<MM>/active-features.json \
 4. **自测留证据**：本地逐条跑 `verification`，把输出留到 `evidence/`。
    长输出/起服务的活体验证，委托 **test-runner** / **e2e-verifier** subagent，
    别让冗长日志污染主线程。
+   **证据必须入库**（PR #310/#311/#312 教训）：提交后用
+   `git ls-tree HEAD -- phases/**/evidence/` 实测文件在 git 树中且非空；
+   被 `.gitignore` 挡住是异常，立即上报，禁止「本地留存」。
 
 5. **收尾**：交给 [session-closer]。
 
@@ -47,8 +50,18 @@ cat phases/<phase>/sprints/sprint-<MM>/active-features.json \
 | 只动当前 feature 涉及的文件？ | 顺手改无关文件 = 引入未验证改动 |
 | 没碰 `active-features.json`？ | 它是脚本派生只读视图 |
 | 没手改 status 成 passing？ | 只有 `pnpm harness verify` 能升级状态 |
+| status/owner/evidence 字段没出现在手写 diff 里？ | 出现即 review 阻断嫌疑（L2） |
 | 没跨包深路径 import？ | 走包的公共入口 |
 | 错误用结构化返回（非裸 throw）？ | 见 coding-standards |
+| 500 分支没把 `String(err)` 回给客户端？ | 错误响应用通用文案，详情 `console.error` 落服务端日志（PR #310 教训） |
+| e2e/fixture 没有 `any`？ | 用 `Page`、`PlaywrightWorkerArgs["playwright"]`，禁 `(page: any)` |
+
+---
+
+## 返工 PR 最小化（正面案例 PR #314）
+
+review 打回后的返工只包含：**review 要求项的修复 + 必要证据**，不顺手带无关改动。
+在 PR 描述里给出「逐条修复映射表」（review 意见 → 对应 commit/文件），reviewer 会核对。
 
 ---
 

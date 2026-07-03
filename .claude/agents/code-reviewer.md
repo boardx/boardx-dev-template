@@ -20,6 +20,30 @@ tools:
 - passing 状态是否被手动修改（只能通过 harness verify）
 - 跨包深路径 import（禁止）
 
+门控与证据核查（每次 review 必做）：
+1. evidence 入库实测：对 diff/progress 声称的每个 evidence 路径，跑
+   `git ls-tree <branch> -- <路径>` 确认文件在分支树中且 blob 非空。
+   不信任 diff/progress 的文字声称；文件缺失（如被 .gitignore 挡住）= 🔴 阻断。
+2. feature_list.json 的 diff 检查：status/owner/evidence 字段出现手改即嫌疑；
+   status 变 passing 必须质询"是否经 pnpm harness verify 门控"，无法自证 = 阻断。
+
+迁移类改动专项 checklist（涉及 DB 迁移/数据回填时逐项过）：
+- 幂等性：重复执行不产生重复/脏数据。
+- 回填/变更目标的判据禁止用 name 等自然键匹配（可能命中用户自建同名数据），
+  必须用专用标记列（如 created_by_migration）。
+- SET NOT NULL 前是否已全量回填。
+- DB 级断言的原始输出（如 psql count=0 全库不变量）必须留在 evidence 里。
+
+常见反模式（发现即报）：
+- 🔴 API 错误响应把 String(err)/堆栈直接回客户端——应回通用文案，
+  详情用 console.error 落服务端日志。
+- 🟡 e2e/fixture 用 any（如 `(page: any)`、`playwright: any`）——应使用
+  `Page`、`PlaywrightWorkerArgs["playwright"]` 等精确类型。
+
+返工 PR 审查（review 后重提交的 PR）：
+- 要求并核对"逐条修复映射表"：每条 review 要求项 → 对应 diff 位置。
+- 只应包含要求项修复 + 必要证据；混入无关改动 = 违反最小化原则，判需要修复。
+
 输出格式：
 ## 代码审查报告
 

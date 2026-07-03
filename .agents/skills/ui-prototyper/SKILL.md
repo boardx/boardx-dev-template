@@ -25,7 +25,8 @@ description: >
 |------|------|
 | **真实组件，非丢弃原型** | 直接写在 `apps/web` 里（`components/…` / 路由页），不是独立 mockup。人类确认后，feature 开发 = 把这些 UI 接上真逻辑，**UI 复用不重写**。 |
 | **只用 mock 数据，不接后端** | 用本地假数据/固定桩渲染，**不写 API、不连 DB、不接状态同步**。这一步只交付「看得见的界面」。 |
-| **可观测锚点** | 关键元素带稳定 `data-testid`，供后续 `feature_list.json` 的 `verification` 锚定。 |
+| **可观测锚点** | 关键元素带稳定 `data-testid`，供后续 `feature_list.json` 的 `verification` 与 e2e spec 锚定（e2e 只认 `data-testid`，不锚文案/结构）。 |
+| **严格类型** | 组件与 mock 数据全程 TypeScript 严格模式，**禁 `any`**（含后续 e2e fixture：用 `Page`、`PlaywrightWorkerArgs["playwright"]` 等真实类型，不写 `(page: any)`）。 |
 | **截图存证** | 每块界面截图存 `phases/<phase>/ui-preview/`，在 `ui-signoff.md` 贴相对链接。 |
 
 ## 标准流程
