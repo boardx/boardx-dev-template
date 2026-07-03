@@ -29,7 +29,7 @@ test("已登录但非 SysAdmin 访问 /admin 看到 403 无权限", async ({ pag
   });
   await page.goto("/admin");
   await expect(page.getByTestId("admin-forbidden")).toBeVisible();
-  await expect(page.getByTestId("admin-forbidden")).toContainText("无权限访问");
+  await expect(page.getByTestId("admin-forbidden")).toContainText("Access denied");
 });
 
 test("SysAdmin 访问 /admin 看到统计摘要与模块导航", async ({ page }) => {
@@ -41,10 +41,10 @@ test("SysAdmin 访问 /admin 看到统计摘要与模块导航", async ({ page }
 
   // 统计摘要：加载骨架 → 真实卡片（用户/团队为真实聚合，AI Store 为占位）
   await expect(page.getByTestId("admin-stats")).toBeVisible();
-  await expect(page.getByTestId("stat-用户总数")).toBeVisible();
-  await expect(page.getByTestId("stat-团队总数")).toBeVisible();
-  await expect(page.getByTestId("stat-AI Store 项目数")).toBeVisible();
-  await expect(page.getByTestId("stat-mock-AI Store 项目数")).toBeVisible();
+  await expect(page.getByTestId("stat-users")).toBeVisible();
+  await expect(page.getByTestId("stat-teams")).toBeVisible();
+  await expect(page.getByTestId("stat-ai-store-items")).toBeVisible();
+  await expect(page.getByTestId("stat-mock-ai-store-items")).toBeVisible();
 
   // 模块导航：四个模块卡片都可见
   await expect(page.getByTestId("admin-module-nav")).toBeVisible();

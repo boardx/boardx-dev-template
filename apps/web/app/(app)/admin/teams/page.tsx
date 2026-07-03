@@ -66,13 +66,13 @@ function EditTeamTypeModal({
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
-        setError(d.errors?.teamType ?? d.error ?? "保存失败");
+        setError(d.errors?.teamType ?? d.error ?? "Failed to save");
         return;
       }
       onSaved({ ...team, teamType });
       onClose();
     } catch {
-      setError("保存失败，请稍后重试");
+      setError("Failed to save, please try again later");
     } finally {
       setSaving(false);
     }
@@ -89,18 +89,18 @@ function EditTeamTypeModal({
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h2 id="edit-team-title" className="text-lg font-semibold text-foreground">
-              编辑团队类型
+              Edit team type
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">{team.name}</p>
           </div>
-          <Button variant="ghost" size="icon" aria-label="关闭" onClick={onClose} disabled={saving} className="shrink-0">
+          <Button variant="ghost" size="icon" aria-label="Close" onClick={onClose} disabled={saving} className="shrink-0">
             <X className="h-4 w-4" />
           </Button>
         </div>
 
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="edit-team-type">团队类型</Label>
+            <Label htmlFor="edit-team-type">Team type</Label>
             <Select
               id="edit-team-type"
               data-testid="edit-team-type"
@@ -121,10 +121,10 @@ function EditTeamTypeModal({
 
           <div className="mt-1 flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
-              取消
+              Cancel
             </Button>
             <Button type="button" data-testid="save-team-type" onClick={() => void save()} disabled={saving}>
-              {saving ? "保存中..." : "保存"}
+              {saving ? "Saving..." : "Save"}
             </Button>
           </div>
         </div>
@@ -154,7 +154,7 @@ function ManualCreditModal({
     setError("");
     const n = Number(amount);
     if (!Number.isFinite(n) || n <= 0) {
-      setError("请输入大于 0 的整数");
+      setError("Please enter a whole number greater than 0");
       return;
     }
     if (saving) return; // 双重保险：客户端也拦一次并发提交（服务端幂等 key 才是真正的防线）
@@ -167,13 +167,13 @@ function ManualCreditModal({
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(d.errors?.amount ?? d.error ?? "上分失败");
+        setError(d.errors?.amount ?? d.error ?? "Failed to grant credits");
         return;
       }
       onGranted(Number(d.wallet.balance));
       onClose();
     } catch {
-      setError("上分失败，请稍后重试");
+      setError("Failed to grant credits, please try again later");
     } finally {
       setSaving(false);
     }
@@ -190,37 +190,37 @@ function ManualCreditModal({
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h2 id="credit-title" className="text-lg font-semibold text-foreground">
-              手动增加 Credit
+              Grant credits manually
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {team.name} · 当前余额 {team.creditBalance.toLocaleString()}
+              {team.name} · Current balance {team.creditBalance.toLocaleString()}
             </p>
           </div>
-          <Button variant="ghost" size="icon" aria-label="关闭" onClick={onClose} disabled={saving} className="shrink-0">
+          <Button variant="ghost" size="icon" aria-label="Close" onClick={onClose} disabled={saving} className="shrink-0">
             <X className="h-4 w-4" />
           </Button>
         </div>
 
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="credit-amount">增加额度</Label>
+            <Label htmlFor="credit-amount">Amount to add</Label>
             <Input
               id="credit-amount"
               data-testid="credit-amount"
               type="number"
               min={1}
-              placeholder="例如 1000"
+              placeholder="e.g. 1000"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               disabled={saving}
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="credit-note">备注（可选，最多 200 字）</Label>
+            <Label htmlFor="credit-note">Note (optional, up to 200 characters)</Label>
             <Input
               id="credit-note"
               data-testid="credit-note"
-              placeholder="上分原因"
+              placeholder="Reason for granting credits"
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 200))}
               maxLength={200}
@@ -236,10 +236,10 @@ function ManualCreditModal({
 
           <div className="mt-1 flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
-              取消
+              Cancel
             </Button>
             <Button type="button" data-testid="save-credit" onClick={() => void submit()} disabled={saving}>
-              {saving ? "提交中..." : "确认增加"}
+              {saving ? "Submitting..." : "Confirm"}
             </Button>
           </div>
         </div>
@@ -282,7 +282,7 @@ export default function AdminTeamsPage() {
           return;
         }
         if (!res.ok) {
-          setError("加载失败，请稍后重试");
+          setError("Failed to load, please try again later");
           setLoading(false);
           return;
         }
@@ -291,7 +291,7 @@ export default function AdminTeamsPage() {
         setTeams(data.teams ?? []);
         setTotal(data.total ?? 0);
       } catch {
-        setError("加载失败，请稍后重试");
+        setError("Failed to load, please try again later");
       } finally {
         setLoading(false);
       }
@@ -339,10 +339,10 @@ export default function AdminTeamsPage() {
           role="alert"
           className="rounded-12 border border-border bg-surface-1 p-8 text-center"
         >
-          <h1 className="text-17 font-bold text-foreground">无权限访问</h1>
-          <p className="mt-2 text-13 text-muted-foreground">该页面仅限系统管理员访问。</p>
+          <h1 className="text-17 font-bold text-foreground">Access denied</h1>
+          <p className="mt-2 text-13 text-muted-foreground">This page is restricted to system administrators.</p>
           <Button className="mt-5" variant="secondary" size="sm" onClick={() => router.push("/home")}>
-            返回首页
+            Back to home
           </Button>
         </div>
       </div>
@@ -354,8 +354,8 @@ export default function AdminTeamsPage() {
       {/* 标题 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-26 font-bold tracking-tight text-foreground">团队管理</h1>
-          <p className="mt-1 text-13 text-muted-foreground">查看团队基础信息，编辑团队类型，手动增加 Credit</p>
+          <h1 className="text-26 font-bold tracking-tight text-foreground">Teams</h1>
+          <p className="mt-1 text-13 text-muted-foreground">View team basics, edit team type, and grant credits manually</p>
         </div>
       </div>
 
@@ -365,7 +365,7 @@ export default function AdminTeamsPage() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-placeholder" />
           <Input
             data-testid="search"
-            placeholder="按团队名称搜索…"
+            placeholder="Search by team name…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && applyFilters()}
@@ -373,10 +373,10 @@ export default function AdminTeamsPage() {
           />
         </div>
         <Button data-testid="search-btn" variant="secondary" onClick={applyFilters}>
-          查询
+          Search
         </Button>
         <Button data-testid="reset-btn" variant="ghost" onClick={resetFilters}>
-          重置
+          Reset
         </Button>
       </div>
 
@@ -395,18 +395,18 @@ export default function AdminTeamsPage() {
           data-testid="empty"
           className="mt-4 flex flex-col items-center justify-center rounded-12 border border-dashed border-border-strong px-6 py-14 text-center"
         >
-          <p className="text-13 font-medium text-foreground">暂无团队数据</p>
-          <p className="mt-1 text-13 text-muted-foreground">调整筛选条件后重试。</p>
+          <p className="text-13 font-medium text-foreground">No teams found</p>
+          <p className="mt-1 text-13 text-muted-foreground">Adjust the filters and try again.</p>
         </div>
       ) : (
         <div data-testid="team-list" className="mt-4 overflow-hidden rounded-12 border border-border">
           {/* 表头 */}
           <div className="flex items-center gap-3 border-b border-border bg-surface-1 px-4.5 py-2.75 text-11 font-semibold text-muted-foreground">
-            <div className="flex-[1.8]">团队</div>
-            <div className="w-28">类型</div>
-            <div className="hidden w-20 sm:block">成员数</div>
+            <div className="flex-[1.8]">Team</div>
+            <div className="w-28">Type</div>
+            <div className="hidden w-20 sm:block">Members</div>
             <div className="hidden w-24 sm:block">Credit</div>
-            <div className="w-28 text-right">操作</div>
+            <div className="w-28 text-right">Actions</div>
           </div>
           {teams.map((t) => (
             <div
@@ -416,7 +416,7 @@ export default function AdminTeamsPage() {
             >
               <div className="min-w-0 flex-[1.8]">
                 <div className="truncate text-13 font-semibold text-foreground">{t.name}</div>
-                <div className="truncate text-11 text-muted-foreground">团队 ID：{t.id}</div>
+                <div className="truncate text-11 text-muted-foreground">Team ID: {t.id}</div>
               </div>
               <div className="w-28">
                 <Badge data-testid={`team-type-${t.id}`} variant={t.teamType === "enterprise" ? "default" : "muted"}>
@@ -431,7 +431,7 @@ export default function AdminTeamsPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label={`编辑 ${t.name} 类型`}
+                  aria-label={`Edit ${t.name} type`}
                   data-testid={`edit-team-${t.id}`}
                   className="h-7.5 w-7.5 text-placeholder hover:text-foreground"
                   onClick={() => setEditing(t)}
@@ -441,7 +441,7 @@ export default function AdminTeamsPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label={`为 ${t.name} 增加 Credit`}
+                  aria-label={`Grant credits to ${t.name}`}
                   data-testid={`grant-credit-${t.id}`}
                   className="h-7.5 w-7.5 text-placeholder hover:text-foreground"
                   onClick={() => setGranting(t)}
@@ -458,7 +458,7 @@ export default function AdminTeamsPage() {
       {!loading && teams.length > 0 && (
         <div className="mt-4 flex items-center justify-between">
           <span className="text-11 text-muted-foreground">
-            第 {page} / {totalPages} 页 · 共 {total} 个团队
+            Page {page} / {totalPages} · {total} teams total
           </span>
           <div className="flex gap-2">
             <Button
@@ -469,7 +469,7 @@ export default function AdminTeamsPage() {
               onClick={() => goPage(page - 1)}
             >
               <ChevronLeft className="h-4 w-4" />
-              上一页
+              Previous
             </Button>
             <Button
               variant="outline"
@@ -478,7 +478,7 @@ export default function AdminTeamsPage() {
               disabled={page >= totalPages}
               onClick={() => goPage(page + 1)}
             >
-              下一页
+              Next
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
