@@ -100,6 +100,16 @@ agents:
     model: sonnet-5
     areas: [ai-core, deep-research, voice, share, ai-settings, attachments, message-actions]  # p18 AVA AI 落地全域
     max_concurrent: 1
+  - id: wrk-ava-p18-2
+    kind: worker
+    model: sonnet-5
+    areas: [ai-core, deep-research, voice, share, ai-settings, attachments, message-actions]  # p18 并行 worker
+    max_concurrent: 1
+  - id: wrk-ava-p18-3
+    kind: worker
+    model: sonnet-5
+    areas: [ai-core, deep-research, voice, share, ai-settings, attachments, message-actions]  # p18 并行 worker
+    max_concurrent: 1
 
   - id: wrk-room-1
     kind: worker
