@@ -151,3 +151,10 @@ phases:
     status: not_started
     depends_on: ["p9", "p12"]
     has_ui: true
+  - id: "p20"
+    slug: room-realignment
+    name: Room Realignment (P20)
+    goal: "Room 对齐重构：修复 Room 相对原型与旧代码设计意图的结构性 gap——房间详情壳+tab 导航、创建时可见性、房间级文件库、收藏、删除契约、权限口径统一、Room Survey 入口、完整邀请流、下线 legacy 单画布、Room AI 上下文字段"
+    status: not_started
+    depends_on: ["04", "p10", "p13"]
+    has_ui: true

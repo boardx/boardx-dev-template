@@ -1,0 +1,237 @@
+{
+  "phase": "p19",
+  "features": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "area": "room",
+      "title": "房间详情壳与 Tab 导航（Boards/Members/Files/Chat/Survey）",
+      "user_visible_behavior": "点击房间卡片进入 /rooms/[id] 默认落在 Boards tab；页头展示面包屑（Rooms/房间名）、房间名、可见性 pill、成员头像堆叠、Invite 按钮（仅 owner/admin 可见）；五个 tab（data-testid=room-tab-boards/-members/-files/-chat/-survey）常驻可切换，URL 同步（/rooms/[id]/boards|members|files|chats|surveys），直链打开时对应 tab 高亮；非成员 403/跳回列表。",
+      "design_ref": "prototype:<!-- ROOM DETAIL -->（roomTabDefs，Studio 不做顶级 tab 见 ui-signoff 取舍#1）",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-001-detail-shell.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-rr-001。壳采用 rooms/[id]/layout.tsx，现有 boards/members/chats 子页收编进壳；Files/Survey tab 内容由 F03/F08 填充，本 feature 先给占位内容但 tab 结构完整。"
+    },
+    {
+      "id": "F02",
+      "priority": 1,
+      "area": "room",
+      "title": "创建房间时选择可见性（Private/Team 二选一卡片）",
+      "user_visible_behavior": "New Room 弹窗含房间名输入（≥3 字符）与可见性二选一卡片（data-testid=room-create-visibility-private/-team，默认 Private）；提交后 POST /api/rooms 落库 visibility；列表卡片按可见性显示 🔒/🌐 徽章与创建选择一致；visibility=team 的房间对同团队成员可发现并可加入。",
+      "design_ref": "prototype:New Room dialog（Visibility 卡片 🔒 Private / 🌐 Public→Team）",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-002-visibility.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-rr-002。修复 uc-room-001:60 与 uc-room-002:27 的需求矛盾；team 可发现加入的行为需 e2e 正反用例（非成员对 private 房间不可见）。"
+    },
+    {
+      "id": "F03",
+      "priority": 1,
+      "area": "room-files",
+      "title": "房间级文件库（数据模型修正 + Files tab）",
+      "user_visible_behavior": "房间 Files tab（data-testid=room-files-tab）提供上传（拖拽/点击，R2 预签名→直传→confirm）、搜索、预览（签名 URL）、软删（二次确认）；文件属于房间（room_files.room_id NOT NULL，chat_thread_id 可空仅作来源标注）；不打开任何聊天线程也能管理文件；删除权限=上传者本人或 owner/admin。",
+      "design_ref": "prototype:<!-- ROOM DETAIL --> Files tab；oldcode room-file.schema.ts 字段对齐",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-FILE",
+      "depends_on": ["F01"],
+      "wave": 1,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-003-room-files.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-rr-003（核心模型修正，推翻 uc-room-005 的线程绑定）。复用 p10 CAP-FILE 上传平面，不另造上传栈；本 feature 交付 room_files 迁移 + /api/rooms/[id]/files CRUD + Files tab UI。"
+    },
+    {
+      "id": "F04",
+      "priority": 2,
+      "area": "room-files",
+      "title": "聊天工作区左栏接通房间文件库（sources 勾选）",
+      "user_visible_behavior": "聊天三栏工作区左栏（替换现『文件能力将在 p10 接入』占位）展示与 Files tab 同一房间文件列表；可在此上传（落房间库并标注 chat_thread_id 来源）；可勾选文件作为 AI 上下文 sources，展示『N sources selected as context』（data-testid=room-files-panel、room-files-source-toggle）；同一文件在该房间所有线程可见。",
+      "design_ref": "prototype:<!-- ROOM WORKSPACE: Studio / Room Chat (3-col) --> 左栏 sources",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-FILE",
+      "depends_on": ["F03"],
+      "wave": 2,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-004-chat-files-panel.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-rr-003 步骤 4/6。勾选状态进入发消息请求负载即可（RAG 内容注入归 p10）；e2e 断言跨线程可见同一文件。"
+    },
+    {
+      "id": "F05",
+      "priority": 2,
+      "area": "room",
+      "title": "收藏房间与 Favorites 筛选",
+      "user_visible_behavior": "房间卡片与详情页头有星标（data-testid=room-favorite-toggle），点击切换收藏并持久化（每用户维度）；房间列表提供 Favorites 筛选只显示已收藏房间；非成员收藏返回 403；刷新后状态保持。",
+      "design_ref": "prototype:Rooms 列表屏；对齐 uc-room-002:31 与 oldcode RoomSubscription.favorite",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-005-favorite.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-rr-004。存储与 009_board_favorites 模式保持一致。"
+    },
+    {
+      "id": "F06",
+      "priority": 2,
+      "area": "room",
+      "title": "删除房间的级联契约（Danger Zone）",
+      "user_visible_behavior": "owner 在房间设置看到 DANGER ZONE；点击 Delete room 弹二次确认（data-testid=room-delete-confirm），列出将删除的内容类别与数量（X boards、Y chats、Z files，data-testid=room-delete-cascade-summary），需输入房间名才可确认；确认后 DELETE 级联删除并跳回列表；admin/member 无入口且 API 403；删除后相关资源 API 全部 404。",
+      "design_ref": "prototype:Room Settings dialog DANGER ZONE（'and its boards'）",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": ["F01"],
+      "wave": 1,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-006-delete-contract.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-rr-005。DB CASCADE 已存在，本 feature 交付契约化 UI + e2e 断言级联结果（board/chat/file 各建一条再删房验证 404）。"
+    },
+    {
+      "id": "F07",
+      "priority": 1,
+      "area": "room",
+      "title": "房间权限矩阵统一（API 断言 + 文档对齐）",
+      "user_visible_behavior": "按 uc-rr-006 权威矩阵：admin 可邀请/移除 member、改房间名/可见性/AI 字段、删他人文件，但不能管理 admin、不能删房间、不能动 owner（各返回 403）；member 无管理权；UI 按角色隐藏不可用入口；role-diagrams 三份文档与 phase-04 F12 描述修订为与矩阵一致。",
+      "design_ref": "prototype:Room Settings dialog 角色徽章（Owner locked）；uc-rr-006 矩阵为权威",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-007-permission-matrix.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-rr-006。e2e 覆盖矩阵每行至少一个正/反用例；文档修订包含 role-diagrams/room-{owner,admin,member}.md 补 Files/Survey 节点 + phase-04 F12 描述改为 owner/admin。"
+    },
+    {
+      "id": "F08",
+      "priority": 2,
+      "area": "room-survey",
+      "title": "Room Survey 入口（房间作用域问卷）",
+      "user_visible_behavior": "surveys 表加可空 room_id；房间 Survey tab（data-testid=room-survey-tab）只列本房间问卷卡片；owner/admin 可新建（预置 room_id 进入 p13 创建器，data-testid=room-survey-create）、暂停/删除本房间问卷；member 可答题/看已发布结果；tab 内『View team surveys』仅跳转全局 /surveys；房间角色不能管理团队问卷（403）。",
+      "design_ref": "prototype:<!-- SURVEYS --> Room scope（'Room · Alpha'）+ ROOM DETAIL Survey tab",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "depends_on": ["F01"],
+      "wave": 1,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-008-room-survey.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-rr-007。修正 uc-room-007 的 scope 丢失与权限域错位；存量问卷 room_id=null 视为团队问卷（迁移向后兼容）；复用 p13 全部问卷本体能力。"
+    },
+    {
+      "id": "F09",
+      "priority": 2,
+      "area": "room",
+      "title": "邀请未注册用户加入房间（完整流）",
+      "user_visible_behavior": "owner/admin 输入未注册邮箱邀请：room_invites 落库（token、过期 7 天、幂等刷新），dev 邮件通道发送注册链接；被邀者注册成功后自动成为该房间 member，登录即见房间；Members tab 显示 pending 邀请列表（data-testid=room-invite-pending）可撤销；过期令牌注册成功但不入房并提示；member 邀请返回 403。",
+      "design_ref": "prototype:Room Settings dialog INVITE NEW MEMBERS；oldcode inviteNewUserToRoomByEmail 流程",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-009-invite-unregistered.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-rr-008。真 SMTP 不在范围（沿用 phase-04 dev 邮件边界：控制台日志 + DB 令牌）；修复现状『生成 token 不持久化不发邮件』的半成品。"
+    },
+    {
+      "id": "F10",
+      "priority": 2,
+      "area": "room",
+      "title": "下线 legacy 单画布模型（迁移 + 路由收敛）",
+      "user_visible_behavior": "迁移把 board_items.board_id IS NULL 的 legacy 数据回填到每房间自动创建的默认 board（幂等）；/rooms/[id]/board 重定向到 /rooms/[id]/boards；/api/rooms/[id]/items 返回 410；legacy 页面组件删除；迁移后全库 board_items.board_id 非空。",
+      "design_ref": "架构修正（gap 报告 E2），无原型屏",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "docker compose -f infra/docker-compose.yml exec -T postgres psql -U boardx -d boardx -tAc \"SELECT count(*) FROM board_items WHERE board_id IS NULL\" | grep -qx 0",
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-010-legacy-canvas-retire.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-rr-009。消除双画布并存脏状态；e2e 断言旧直链重定向而非 404。"
+    },
+    {
+      "id": "F11",
+      "priority": 3,
+      "area": "room",
+      "title": "Room AI 上下文字段回补（description + ai_instruction）",
+      "user_visible_behavior": "rooms 表加 description、ai_instruction；owner/admin 在房间设置 About & AI 区块（data-testid=room-settings-description、room-settings-ai-instruction）编辑保存（PATCH，member 403，>4000 字符拒绝）；详情页头展示 description；房间聊天发消息时 ai_instruction 注入系统提示（桩层可断言注入内容，真实模型链路归 p9）。",
+      "design_ref": "oldcode room.schema.ts（description/aiInstruction）；设置表单沿用现有 token，无原型屏",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AI",
+      "depends_on": ["F01"],
+      "wave": 1,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-011-room-ai-context.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-rr-010。memories[] 不在本期（依赖 p9 记忆机制）；注入路径在桩上断言，p9 真链路就绪后自动受益。"
+    }
+  ]
+}
