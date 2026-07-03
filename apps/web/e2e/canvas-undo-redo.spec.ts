@@ -1,4 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { expectItemCount } from "./helpers/canvas";
+
+// p6:F13：item 计数锚点迁为 canvas 兼容锚点（策略 2 / issue #269），断言意图不变。
 
 const uniq = () => `cur_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 
@@ -12,20 +15,18 @@ async function openOwnBoard(page: any) {
   return board;
 }
 
-const items = (page: any) => page.getByTestId("items-layer").locator('[data-testid^="item-"]');
-
 test("撤销/重做 添加（Cmd/Ctrl+Z / +Shift+Z）", async ({ page }) => {
   const board = await openOwnBoard(page);
   await page.getByTestId("add-note").click();
-  await expect(items(page)).toHaveCount(1);
+  await expectItemCount(page, 1);
 
   await page.keyboard.press("ControlOrMeta+z");
-  await expect(items(page)).toHaveCount(0);
+  await expectItemCount(page, 0);
   // 落库一致：撤销后库里也没有
   expect((await (await page.request.get(`/api/boards/${board.id}/items`)).json()).items.length).toBe(0);
 
   await page.keyboard.press("ControlOrMeta+Shift+z");
-  await expect(items(page)).toHaveCount(1);
+  await expectItemCount(page, 1);
   expect((await (await page.request.get(`/api/boards/${board.id}/items`)).json()).items.length).toBe(1);
 });
 
@@ -50,10 +51,10 @@ test("撤销 删除 → 用原 id 还原（restore）", async ({ page }) => {
   const id0 = (await (await page.request.get(`/api/boards/${board.id}/items`)).json()).items[0].id;
 
   await page.keyboard.press("Delete");
-  await expect(items(page)).toHaveCount(0);
+  await expectItemCount(page, 0);
 
   await page.keyboard.press("ControlOrMeta+z");
-  await expect(items(page)).toHaveCount(1);
+  await expectItemCount(page, 1);
   const after = (await (await page.request.get(`/api/boards/${board.id}/items`)).json()).items;
   expect(after.length).toBe(1);
   expect(after[0].id).toBe(id0); // 同 id 还原
@@ -62,9 +63,9 @@ test("撤销 删除 → 用原 id 还原（restore）", async ({ page }) => {
 test("撤销/重做 按钮", async ({ page }) => {
   await openOwnBoard(page);
   await page.getByTestId("add-note").click();
-  await expect(items(page)).toHaveCount(1);
+  await expectItemCount(page, 1);
   await page.getByTestId("undo").click();
-  await expect(items(page)).toHaveCount(0);
+  await expectItemCount(page, 0);
   await page.getByTestId("redo").click();
-  await expect(items(page)).toHaveCount(1);
+  await expectItemCount(page, 1);
 });

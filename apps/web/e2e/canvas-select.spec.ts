@@ -1,5 +1,9 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import { canvasItems, clickCanvasBlank, clickItem, expectItemCount } from "./helpers/canvas";
 
+// p6:F13 渲染引擎切 fabric 后，item 锚点迁为 canvas 兼容锚点（策略 2 / issue #269）：
+// item 计数 → __canvasTestApi.getItems()；点选/多选 → getItemScreenRect + 真实鼠标点击。
+// 断言意图逐条保留：出现并自动选中 / 点选 / Shift 多选 / 空白清除 / 全选删除 / 方向键移动持久化。
 const uniq = () => `csl_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
@@ -24,7 +28,7 @@ async function openOwnBoard(page: any) {
 test("加便签 → 出现并自动选中（board-keyed item）", async ({ page }) => {
   await openOwnBoard(page);
   await page.getByTestId("add-note").click();
-  await expect(page.getByTestId("items-layer").locator('[data-testid^="item-"]')).toHaveCount(1);
+  await expectItemCount(page, 1);
   await expect(page.getByTestId("selection-count")).toHaveText("已选 1");
 });
 
@@ -32,17 +36,16 @@ test("点选 / Shift 多选 / 点空白清除 / Esc 清除", async ({ page }) =>
   await openOwnBoard(page);
   await page.getByTestId("add-note").click();
   await page.getByTestId("add-note").click();
-  const items = page.getByTestId("items-layer").locator('[data-testid^="item-"]');
-  await expect(items).toHaveCount(2);
+  await expectItemCount(page, 2);
+  const items = await canvasItems(page);
 
-  // 画布表面有 CSS transform，Playwright 命中测试会误判可点击性；用 force 直点真实元素，
-  // 断言仍由 selection-count 验证真实行为。
-  await items.nth(0).click({ force: true });
+  // 直接对 <canvas> 上的 item 屏幕位置做真实点击；断言仍由 selection-count 验证行为。
+  await clickItem(page, items[0]!.id);
   await expect(page.getByTestId("selection-count")).toHaveText("已选 1");
-  await items.nth(1).click({ modifiers: ["Shift"], force: true });
+  await clickItem(page, items[1]!.id, { shift: true });
   await expect(page.getByTestId("selection-count")).toHaveText("已选 2");
 
-  await page.getByTestId("items-layer").click({ position: { x: 5, y: 5 }, force: true });
+  await clickCanvasBlank(page);
   await expect(page.getByTestId("selection-count")).toHaveText("已选 0");
 
   await page.keyboard.press("Escape");
@@ -53,17 +56,16 @@ test("Ctrl/Cmd+A 全选 + Delete 删除选中", async ({ page }) => {
   await openOwnBoard(page);
   await page.getByTestId("add-note").click();
   await page.getByTestId("add-note").click();
-  const items = page.getByTestId("items-layer").locator('[data-testid^="item-"]');
-  await expect(items).toHaveCount(2);
+  await expectItemCount(page, 2);
 
   await page.keyboard.press("ControlOrMeta+a");
   await expect(page.getByTestId("selection-count")).toHaveText("已选 2");
 
   await page.keyboard.press("Delete");
-  await expect(items).toHaveCount(0);
+  await expectItemCount(page, 0);
   // 刷新后确认已落库删除
   await page.reload();
-  await expect(page.getByTestId("items-layer").locator('[data-testid^="item-"]')).toHaveCount(0);
+  await expectItemCount(page, 0);
 });
 
 test("方向键移动选中 item 并持久化", async ({ page }) => {
