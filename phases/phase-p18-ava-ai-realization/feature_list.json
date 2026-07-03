@@ -1,0 +1,262 @@
+{
+  "phase": "p18",
+  "features": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "area": "ai-core",
+      "title": "AI 层去 stub 化：真实模型 provider 接入 + 网关路由",
+      "user_visible_behavior": "packages/ai 的 ChatGateway 注册至少一个真实模型 provider（非 stub: 前缀）；配置真实 API 凭证后，在 /ava 发送消息，AI 回复由真实模型针对输入内容生成（同一问题两次回复内容不同，非模板回显）；F07 模型选择器选中真实模型后，请求路由到对应 provider（日志可证）。stub provider 保留（CI/e2e 用），真实 provider 是新增而非替换。",
+      "design_ref": "无新 UI（现有 /ava 聊天流 + model-select）；requirements/01-ai-layer-real-model.md",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-AI",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "pnpm --filter @repo/ai test",
+        "node scripts/ai-provider-smoke.mjs"
+      ],
+      "evidence": "",
+      "notes": "requirements/01。packages/ai 新增真实 provider 适配层 + 单测（路由/请求组装/流式解析）；ai-provider-smoke.mjs 为 env-gated 冒烟（有 API key 时真实调用一次并断言非模板回复，无 key 时明确打印 SKIP 并退出 0，避免 CI 依赖供应商额度）。同时把 graph.ts/gateway.ts 里『LangGraph 编排』『LiteLLM 网关』的误导性注释改为如实描述。凭证走 .env，不进代码库。"
+    },
+    {
+      "id": "F02",
+      "priority": 2,
+      "area": "ai-core",
+      "title": "真实模型下的失败态与停止生成",
+      "user_visible_behavior": "真实 provider 不可用（网络错误/超时/限流）时，/ava 展示明确失败态（沿用 msg-failed），用户已输入内容不丢失；流式回复进行中可停止，请求被真实中断（AbortController 生效）而非等待回显完成。",
+      "design_ref": "现有 msg-failed / send 交互；requirements/01-ai-layer-real-model.md",
+      "status": "not_started",
+      "sprint": "02",
+      "owner": null,
+      "capability": "CAP-AI",
+      "depends_on": [
+        "F01"
+      ],
+      "wave": 1,
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ava-real-model-failure.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "requirements/01。e2e 用可控故障注入（如指向不可达的 provider base URL / 模拟 429）验证失败态与输入保留；中断验证断言服务端流被 abort 后不再写入消息。"
+    },
+    {
+      "id": "F03",
+      "priority": 1,
+      "area": "deep-research",
+      "title": "Deep Research 持久化实体 + 刷新恢复",
+      "user_visible_behavior": "研究会话（澄清/计划/时间线/报告及当前阶段）持久化到数据库；研究进行中或完成后刷新页面、重新进入同一线程，研究卡片（research-card）恢复到中断前的正确阶段与内容，而不是消失或从头开始。",
+      "design_ref": "现有 research-card / research-clarify / research-plan / research-timeline / research-report-panel；requirements/02-deep-research-realization.md",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-DATA",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/ava-research-persistence.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "requirements/02。新增 research 持久化 migration（阶段状态机 + 结构化 payload，参考老代码 DeepResearchReportEntity 字段）；兼容现有 ava_messages 记录。e2e 核心断言：page.reload() 后 research-card data-status 与刷新前一致。"
+    },
+    {
+      "id": "F04",
+      "priority": 2,
+      "area": "deep-research",
+      "title": "Deep Research 真实生成（替换硬编码 stub）+ 两步交互确认",
+      "user_visible_behavior": "提交研究主题后，澄清问题/研究计划/报告内容由真实模型针对该主题生成（不同主题产出不同内容，非固定文案）；澄清确认（research-clarify）与计划确认（confirm-research-plan）是两个必须显式确认的独立步骤，不确认计划不进入执行；执行时间线状态来自后端真实阶段进度，非前端定时器动画。",
+      "design_ref": "现有 research-clarify / research-plan / confirm-research-plan / research-timeline；requirements/02 + 05",
+      "status": "not_started",
+      "sprint": "02",
+      "owner": null,
+      "capability": "CAP-AI",
+      "depends_on": [
+        "F01",
+        "F03"
+      ],
+      "wave": 1,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/ava-research-real-generation.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "requirements/02+05。e2e 在 mock-provider 模式下验证阶段状态机与两步确认交互（内容差异性用 env-gated 冒烟覆盖）；apps/web/app/api/ava/threads/[id]/research/route.ts 的 buildResearch() 硬编码函数删除。"
+    },
+    {
+      "id": "F05",
+      "priority": 3,
+      "area": "deep-research",
+      "title": "研究报告双模板（market / user-research）",
+      "user_visible_behavior": "报告面板（research-report-panel）按研究类型渲染两套结构：市场类展示 Executive summary / Key findings / Recommendation；用户研究类展示 Summary / Personas / Top pain points / Opportunities，两类字段在 UI 上分别正确呈现。",
+      "design_ref": "prototype:<!-- market report --> / <!-- user research report -->；requirements/02-deep-research-realization.md",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AI",
+      "depends_on": [
+        "F04"
+      ],
+      "wave": 2,
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ava-research-report-templates.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "requirements/02。102 人专家人格库为可选丰富化项，不在本 feature 验收范围。"
+    },
+    {
+      "id": "F06",
+      "priority": 1,
+      "area": "voice",
+      "title": "STT 能力落地（解开 p9-F09 ↔ p7-F10 循环阻塞）",
+      "user_visible_behavior": "仓库内存在一个明确的 STT 转写能力（自建最小服务或第三方 API 适配，选型理由落档）：POST 一段音频得到转写文本；该能力成为 p9-F09 与 p7-F10 共同依赖的可排期交付物，两者不再互相 blocked-on 对方。",
+      "design_ref": "无 UI（后端能力）；requirements/03-voice-input-stt.md",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-AI",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "pnpm --filter @repo/ai test",
+        "node scripts/stt-smoke.mjs"
+      ],
+      "evidence": "",
+      "notes": "requirements/03。stt-smoke.mjs 同样 env-gated（无凭证打印 SKIP 退出 0）。落地后需协调更新 p9-F09 与 p7-F10 的 depends_on 指向本 feature（跨 phase 权威文件修改作为独立协调事项，不在本 feature 内代持）。"
+    },
+    {
+      "id": "F07",
+      "priority": 2,
+      "area": "voice",
+      "title": "语音输入端到端接通（真实转写替换占位文案）",
+      "user_visible_behavior": "点击 voice-input-trigger → 授权麦克风 → voice-recording-indicator 展示计时与音量柱状条 → voice-stop 结束后，输入框填入的是本次录音的真实转写文本（替换 UI 原型的固定占位文案）；权限拒绝/无麦克风/浏览器不支持/录音过短/转写失败分别展示 voice-error 对应文案；voice-cancel 取消不产生任何文本。",
+      "design_ref": "已确认 UI：apps/web/app/(app)/ava/voice-input.tsx（ui-signoff.md confirmed @2026-07-04）",
+      "status": "not_started",
+      "sprint": "02",
+      "owner": null,
+      "capability": "CAP-AI",
+      "depends_on": [
+        "F06"
+      ],
+      "wave": 1,
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ava-voice-input.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "requirements/03。e2e 用 Playwright fake media stream（--use-fake-device-for-media-stream / --use-fake-ui-for-media-stream）+ stub 转写端点走通全链路；真实 STT 由 F06 冒烟覆盖。该 spec 文件名与 p9-F09 原 verification 一致，落地后 p9-F09 可凭同一验证转 passing。"
+    },
+    {
+      "id": "F08",
+      "priority": 2,
+      "area": "share",
+      "title": "分享聊天「发送到我的邮箱」接通",
+      "user_visible_behavior": "分享面板中 share-email 按钮变为可用：点击后向当前用户邮箱真实发送包含分享链接的邮件，成功展示独立成功提示，失败展示独立于「复制链接」的错误提示；未开启分享时先自动生成链接再发送。",
+      "design_ref": "现有 share-panel（share-email-disabled 占位转真实动作）；requirements/04-close-out-placeholders.md",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-DATA",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/ava-share-email.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "requirements/04。邮件走既有邮件服务能力（与 auth 的 confirm-email/forgot-password 同一底层），e2e 用邮件捕捉桩（如 mailhog/本地 sink）断言真实发信请求与内容含分享链接。data-testid 从 share-email-disabled 更名为 share-email。"
+    },
+    {
+      "id": "F09",
+      "priority": 2,
+      "area": "ai-settings",
+      "title": "Agent 选择器接入 AI Store 真实订阅数据",
+      "user_visible_behavior": "agent-select 的选项来自当前用户/团队在 AI Store 的真实订阅 Agent（替换硬编码 AVA_AGENT_OPTIONS）；订阅新 Agent 后刷新 /ava 可在选择器中看到；无订阅时仍提供内置默认 Agent；已有消息线程保持 agent-locked 禁用态。",
+      "design_ref": "现有 agent-select / agent-locked；requirements/04-close-out-placeholders.md",
+      "status": "not_started",
+      "sprint": "02",
+      "owner": null,
+      "capability": "CAP-AI",
+      "depends_on": [
+        "p11:F03"
+      ],
+      "wave": 1,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/ava-agent-real-data.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "requirements/04。硬依赖 p11:F03（订阅/使用→带入 AVA）转 passing；若排期时 p11:F03 未就绪，本 feature 保持等待，不得以硬编码数据虚报。"
+    },
+    {
+      "id": "F10",
+      "priority": 2,
+      "area": "attachments",
+      "title": "消息附件富渲染接线（图片缩略图/lightbox + 音频播放器）",
+      "user_visible_behavior": "聊天历史中的图片附件展示为缩略图（msg-attachment-image），点击打开 attachment-lightbox 放大预览；音频附件展示为可播放卡片（msg-attachment-audio-player）；签名 URL 获取失败时降级为文件名 chip（msg-attachment-chip）；文件类附件保留 chip + 下载。",
+      "design_ref": "已确认 UI：apps/web/app/(app)/ava/attachments.tsx 的 RichAttachmentPreview（ui-signoff.md confirmed @2026-07-04，组件已建好待接线）",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-FILE",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/ava-attach-files.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "requirements/04。接线时必须同步更新 e2e/ava-attach-files.spec.ts 里对 msg-attachment-item 可见文本的断言（改为校验 alt/aria-label），这是 ui-signoff.md 里明确记录的既有断言耦合，不能静默破坏 p9-F08 基线。"
+    },
+    {
+      "id": "F11",
+      "priority": 2,
+      "area": "message-actions",
+      "title": "消息「发送到 Board」「发送邮件」接通",
+      "user_visible_behavior": "AI 消息操作条的 msg-send-to-board 变为可用：选择自己有编辑权限的 Board 后，消息内容真实写入该 Board 并展示成功提示，无编辑权限时提示权限不足；msg-send-email 变为可用：把该条消息内容发送到当前用户邮箱，成功/失败各有提示。",
+      "design_ref": "现有 msg-send-to-board / msg-send-email 禁用占位转真实动作；requirements/04-close-out-placeholders.md",
+      "status": "not_started",
+      "sprint": "02",
+      "owner": null,
+      "capability": "CAP-AI",
+      "depends_on": [
+        "F08"
+      ],
+      "wave": 1,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/ava-message-send-actions.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "requirements/04。发送到 Board 复用 p5/p6 的 board/item 写入能力（widget 级投放细节若依赖 p6 未交付部分，先落为『写入 Board 内容』的最小可用形态并在 notes 记录边界）；发邮件与 F08 共享同一邮件底层。依赖 F08 先建好邮件发送在 AVA 域内的接入。"
+    },
+    {
+      "id": "F12",
+      "priority": 3,
+      "area": "share",
+      "title": "分享只读页四态 e2e 补齐 + Agent 禁用态断言",
+      "user_visible_behavior": "/chatShare/:threadId 四种状态各自可见且被验证：Loading（加载中）、Invalid chat session（threadId 缺失/非法）、Unavailable（token 无效或分享已关闭）、No messages（空线程仍带只读底栏）；/ava 中已有消息线程的 agent-select 呈现禁用态且 agent-locked 提示可见。",
+      "design_ref": "mockup:phases/requirements/mockups/chat-share-readonly.html（四态变体）；requirements/05-ux-detail-alignment.md",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/share-view-chat-states.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "requirements/05。实现层四态已基本存在（p9-F05），本 feature 主要是补齐验证覆盖 + 修补发现的缺口；风险最低，可最早排期。"
+    }
+  ]
+}

@@ -28,8 +28,8 @@ interface AdminUser {
 const PAGE_SIZE = 10;
 
 const ROLE_LABEL: Record<PlatformRole, string> = {
-  user: "用户",
-  sysadmin: "系统管理员",
+  user: "User",
+  sysadmin: "SysAdmin",
 };
 
 function initials(first: string, last: string) {
@@ -82,7 +82,7 @@ function CreateUserForm({
         onClose();
       } else {
         const d = await res.json().catch(() => ({}));
-        setError(d.errors?.email ?? d.errors?.firstName ?? d.errors?.lastName ?? d.error ?? "创建失败");
+        setError(d.errors?.email ?? d.errors?.firstName ?? d.errors?.lastName ?? d.error ?? "Failed to create user");
       }
     } finally {
       setSaving(false);
@@ -93,23 +93,23 @@ function CreateUserForm({
     <form onSubmit={create} className="mt-5 flex flex-col gap-3 rounded-12 border border-border bg-surface-1 p-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="new-first-name">名</Label>
-          <Input id="new-first-name" data-testid="new-first-name" placeholder="名" value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={saving} />
+          <Label htmlFor="new-first-name">First name</Label>
+          <Input id="new-first-name" data-testid="new-first-name" placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={saving} />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="new-last-name">姓</Label>
-          <Input id="new-last-name" data-testid="new-last-name" placeholder="姓" value={lastName} onChange={(e) => setLastName(e.target.value)} disabled={saving} />
+          <Label htmlFor="new-last-name">Last name</Label>
+          <Input id="new-last-name" data-testid="new-last-name" placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} disabled={saving} />
         </div>
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="new-email">邮箱</Label>
+        <Label htmlFor="new-email">Email</Label>
         <Input id="new-email" data-testid="new-email" type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={saving} />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="new-role">平台角色</Label>
+        <Label htmlFor="new-role">Platform role</Label>
         <Select id="new-role" data-testid="new-role" className="w-48" value={platformRole} onChange={(e) => setPlatformRole(e.target.value as PlatformRole)} disabled={saving}>
-          <option value="user">用户</option>
-          <option value="sysadmin">系统管理员</option>
+          <option value="user">User</option>
+          <option value="sysadmin">SysAdmin</option>
         </Select>
       </div>
       {error && (
@@ -118,7 +118,7 @@ function CreateUserForm({
         </p>
       )}
       <Button data-testid="create" type="submit" size="sm" className="self-start" disabled={saving}>
-        {saving ? "创建中..." : "创建用户"}
+        {saving ? "Creating..." : "Create user"}
       </Button>
     </form>
   );
@@ -152,13 +152,13 @@ function EditUserModal({
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
-        setError(d.errors?.firstName ?? d.errors?.lastName ?? d.errors?.platformRole ?? d.error ?? "保存失败");
+        setError(d.errors?.firstName ?? d.errors?.lastName ?? d.errors?.platformRole ?? d.error ?? "Failed to save");
         return;
       }
       onSaved({ ...user, firstName, lastName, platformRole });
       onClose();
     } catch {
-      setError("保存失败，请稍后重试");
+      setError("Failed to save, please try again later");
     } finally {
       setSaving(false);
     }
@@ -175,11 +175,11 @@ function EditUserModal({
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h2 id="edit-user-title" className="text-lg font-semibold text-foreground">
-              编辑用户
+              Edit user
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">{user.email}</p>
           </div>
-          <Button variant="ghost" size="icon" aria-label="关闭" onClick={onClose} disabled={saving} className="shrink-0">
+          <Button variant="ghost" size="icon" aria-label="Close" onClick={onClose} disabled={saving} className="shrink-0">
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -187,29 +187,29 @@ function EditUserModal({
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-first-name">名</Label>
+              <Label htmlFor="edit-first-name">First name</Label>
               <Input id="edit-first-name" data-testid="edit-first-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={saving} />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-last-name">姓</Label>
+              <Label htmlFor="edit-last-name">Last name</Label>
               <Input id="edit-last-name" data-testid="edit-last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} disabled={saving} />
             </div>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="edit-role">平台角色</Label>
+            <Label htmlFor="edit-role">Platform role</Label>
             <Select
               id="edit-role"
               data-testid="edit-role"
               value={platformRole}
               onChange={(e) => setPlatformRole(e.target.value as PlatformRole)}
               disabled={saving || isSelf}
-              title={isSelf ? "不能修改自己的平台角色" : undefined}
+              title={isSelf ? "You cannot change your own platform role" : undefined}
             >
-              <option value="user">用户</option>
-              <option value="sysadmin">系统管理员</option>
+              <option value="user">User</option>
+              <option value="sysadmin">SysAdmin</option>
             </Select>
             {isSelf && (
-              <p className="text-11 text-muted-foreground">不能修改自己的平台角色，避免误操作把自己降级。</p>
+              <p className="text-11 text-muted-foreground">You cannot change your own platform role, to avoid accidentally demoting yourself.</p>
             )}
           </div>
 
@@ -221,10 +221,10 @@ function EditUserModal({
 
           <div className="mt-1 flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
-              取消
+              Cancel
             </Button>
             <Button type="button" data-testid="save-user" onClick={() => void save()} disabled={saving}>
-              {saving ? "保存中..." : "保存"}
+              {saving ? "Saving..." : "Save"}
             </Button>
           </div>
         </div>
@@ -252,13 +252,13 @@ function DeleteUserModal({
       const res = await fetch(`/api/admin/users/${user.id}`, { method: "DELETE" });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
-        setError(d.error ?? "删除失败");
+        setError(d.error ?? "Failed to delete");
         return;
       }
       onDeleted();
       onClose();
     } catch {
-      setError("删除失败，请稍后重试");
+      setError("Failed to delete, please try again later");
     } finally {
       setDeleting(false);
     }
@@ -274,11 +274,11 @@ function DeleteUserModal({
       <div data-testid="delete-user-modal" className="w-full max-w-md rounded-10 border border-border bg-popover p-4 shadow-lg">
         <div className="mb-4">
           <h2 id="delete-user-title" className="text-lg font-semibold text-foreground">
-            删除用户
+            Delete user
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            确定要删除 <span className="font-semibold text-foreground">{fullName(user)}</span>（{user.email}
-            ）吗？此操作不可撤销。
+            Are you sure you want to delete <span className="font-semibold text-foreground">{fullName(user)}</span> ({user.email}
+            )? This action cannot be undone.
           </p>
         </div>
 
@@ -290,7 +290,7 @@ function DeleteUserModal({
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onClose} disabled={deleting}>
-            取消
+            Cancel
           </Button>
           <Button
             type="button"
@@ -299,7 +299,7 @@ function DeleteUserModal({
             onClick={() => void confirmDelete()}
             disabled={deleting}
           >
-            {deleting ? "删除中..." : "确认删除"}
+            {deleting ? "Deleting..." : "Confirm delete"}
           </Button>
         </div>
       </div>
@@ -330,7 +330,7 @@ function ManualCreditModal({
     // review 加固：非整数（如 1.9）此前客户端能提交，服务端悄悄 Math.trunc 成 1 却没有任何
     // 提示；改为客户端也用 Number.isInteger 校验，和服务端拒绝非整数保持一致。
     if (!Number.isInteger(n) || n <= 0) {
-      setError("请输入大于 0 的整数");
+      setError("Please enter a whole number greater than 0");
       return;
     }
     if (saving) return; // 双重保险：客户端也拦一次并发提交（服务端幂等 key 才是真正的防线）
@@ -343,13 +343,13 @@ function ManualCreditModal({
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(d.errors?.amount ?? d.error ?? "上分失败");
+        setError(d.errors?.amount ?? d.error ?? "Failed to grant credits");
         return;
       }
       onGranted(Number(d.wallet.balance));
       onClose();
     } catch {
-      setError("上分失败，请稍后重试");
+      setError("Failed to grant credits, please try again later");
     } finally {
       setSaving(false);
     }
@@ -366,37 +366,37 @@ function ManualCreditModal({
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h2 id="credit-title" className="text-lg font-semibold text-foreground">
-              手动增加 Credit
+              Grant credits manually
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {fullName(user)} · 当前余额 {user.creditBalance.toLocaleString()}
+              {fullName(user)} · Current balance {user.creditBalance.toLocaleString()}
             </p>
           </div>
-          <Button variant="ghost" size="icon" aria-label="关闭" onClick={onClose} disabled={saving} className="shrink-0">
+          <Button variant="ghost" size="icon" aria-label="Close" onClick={onClose} disabled={saving} className="shrink-0">
             <X className="h-4 w-4" />
           </Button>
         </div>
 
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="credit-amount">增加额度</Label>
+            <Label htmlFor="credit-amount">Amount to add</Label>
             <Input
               id="credit-amount"
               data-testid="credit-amount"
               type="number"
               min={1}
-              placeholder="例如 1000"
+              placeholder="e.g. 1000"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               disabled={saving}
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="credit-note">备注（可选，最多 200 字）</Label>
+            <Label htmlFor="credit-note">Note (optional, up to 200 characters)</Label>
             <Input
               id="credit-note"
               data-testid="credit-note"
-              placeholder="上分原因"
+              placeholder="Reason for granting credits"
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 200))}
               maxLength={200}
@@ -412,10 +412,10 @@ function ManualCreditModal({
 
           <div className="mt-1 flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
-              取消
+              Cancel
             </Button>
             <Button type="button" data-testid="save-credit" onClick={() => void submit()} disabled={saving}>
-              {saving ? "提交中..." : "确认增加"}
+              {saving ? "Submitting..." : "Confirm"}
             </Button>
           </div>
         </div>
@@ -476,7 +476,7 @@ export default function AdminUsersPage() {
           return;
         }
         if (!res.ok) {
-          setError("加载失败，请稍后重试");
+          setError("Failed to load, please try again later");
           setLoading(false);
           return;
         }
@@ -485,7 +485,7 @@ export default function AdminUsersPage() {
         setUsers(data.users ?? []);
         setTotal(data.total ?? 0);
       } catch {
-        setError("加载失败，请稍后重试");
+        setError("Failed to load, please try again later");
       } finally {
         setLoading(false);
       }
@@ -543,10 +543,10 @@ export default function AdminUsersPage() {
           role="alert"
           className="rounded-12 border border-border bg-surface-1 p-8 text-center"
         >
-          <h1 className="text-17 font-bold text-foreground">无权限访问</h1>
-          <p className="mt-2 text-13 text-muted-foreground">该页面仅限系统管理员访问。</p>
+          <h1 className="text-17 font-bold text-foreground">Access denied</h1>
+          <p className="mt-2 text-13 text-muted-foreground">This page is restricted to system administrators.</p>
           <Button className="mt-5" variant="secondary" size="sm" onClick={() => router.push("/home")}>
-            返回首页
+            Back to home
           </Button>
         </div>
       </div>
@@ -558,12 +558,12 @@ export default function AdminUsersPage() {
       {/* 标题 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-26 font-bold tracking-tight text-foreground">用户管理</h1>
-          <p className="mt-1 text-13 text-muted-foreground">查看、搜索、创建/编辑/删除用户，手动上分</p>
+          <h1 className="text-26 font-bold tracking-tight text-foreground">Users</h1>
+          <p className="mt-1 text-13 text-muted-foreground">View, search, create/edit/delete users, and grant credits manually</p>
         </div>
         <Button data-testid="show-create" size="sm" onClick={() => setShowCreate((v) => !v)}>
           <Plus className="h-4 w-4" strokeWidth={2} />
-          {showCreate ? "取消" : "添加用户"}
+          {showCreate ? "Cancel" : "Add user"}
         </Button>
       </div>
 
@@ -586,7 +586,7 @@ export default function AdminUsersPage() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-placeholder" />
           <Input
             data-testid="search"
-            placeholder="按邮箱或姓名搜索…"
+            placeholder="Search by email or name…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && applyFilters()}
@@ -594,10 +594,10 @@ export default function AdminUsersPage() {
           />
         </div>
         <Button data-testid="search-btn" variant="secondary" onClick={applyFilters}>
-          查询
+          Search
         </Button>
         <Button data-testid="reset-btn" variant="ghost" onClick={resetFilters}>
-          重置
+          Reset
         </Button>
       </div>
 
@@ -616,18 +616,18 @@ export default function AdminUsersPage() {
           data-testid="empty"
           className="mt-4 flex flex-col items-center justify-center rounded-12 border border-dashed border-border-strong px-6 py-14 text-center"
         >
-          <p className="text-13 font-medium text-foreground">暂无用户数据</p>
-          <p className="mt-1 text-13 text-muted-foreground">调整筛选条件，或添加第一个用户。</p>
+          <p className="text-13 font-medium text-foreground">No users found</p>
+          <p className="mt-1 text-13 text-muted-foreground">Adjust the filters, or add the first user.</p>
         </div>
       ) : (
         <div data-testid="user-list" className="mt-4 overflow-hidden rounded-12 border border-border">
           {/* 表头 */}
           <div className="flex items-center gap-3 border-b border-border bg-surface-1 px-4.5 py-2.75 text-11 font-semibold text-muted-foreground">
-            <div className="flex-[1.8]">用户</div>
-            <div className="w-28">平台角色</div>
-            <div className="hidden w-20 sm:block">团队数</div>
+            <div className="flex-[1.8]">User</div>
+            <div className="w-28">Platform role</div>
+            <div className="hidden w-20 sm:block">Teams</div>
             <div className="hidden w-24 sm:block">Credit</div>
-            <div className="w-28 text-right">操作</div>
+            <div className="w-28 text-right">Actions</div>
           </div>
           {users.map((u) => (
             <div
@@ -657,7 +657,7 @@ export default function AdminUsersPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label={`为 ${fullName(u)} 增加 Credit`}
+                  aria-label={`Grant credits to ${fullName(u)}`}
                   data-testid={`grant-credit-${u.id}`}
                   className="h-7.5 w-7.5 text-placeholder hover:text-foreground"
                   onClick={() => setGranting(u)}
@@ -667,7 +667,7 @@ export default function AdminUsersPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label={`编辑 ${fullName(u)}`}
+                  aria-label={`Edit ${fullName(u)}`}
                   data-testid={`edit-${u.id}`}
                   className="h-7.5 w-7.5 text-placeholder hover:text-foreground"
                   onClick={() => setEditing(u)}
@@ -677,12 +677,12 @@ export default function AdminUsersPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label={`删除 ${fullName(u)}`}
+                  aria-label={`Delete ${fullName(u)}`}
                   data-testid={`delete-${u.id}`}
                   className="h-7.5 w-7.5 text-placeholder hover:text-destructive disabled:opacity-40"
                   onClick={() => setDeleting(u)}
                   disabled={u.id === currentUserId}
-                  title={u.id === currentUserId ? "不能删除自己的账号" : undefined}
+                  title={u.id === currentUserId ? "You cannot delete your own account" : undefined}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -696,7 +696,7 @@ export default function AdminUsersPage() {
       {!loading && users.length > 0 && (
         <div className="mt-4 flex items-center justify-between">
           <span className="text-11 text-muted-foreground">
-            第 {page} / {totalPages} 页 · 共 {total} 个用户
+            Page {page} / {totalPages} · {total} users total
           </span>
           <div className="flex gap-2">
             <Button
@@ -707,7 +707,7 @@ export default function AdminUsersPage() {
               onClick={() => goPage(page - 1)}
             >
               <ChevronLeft className="h-4 w-4" />
-              上一页
+              Previous
             </Button>
             <Button
               variant="outline"
@@ -716,7 +716,7 @@ export default function AdminUsersPage() {
               disabled={page >= totalPages}
               onClick={() => goPage(page + 1)}
             >
-              下一页
+              Next
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>

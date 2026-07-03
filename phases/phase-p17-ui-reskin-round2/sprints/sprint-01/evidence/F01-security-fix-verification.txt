@@ -1,0 +1,47 @@
+=== F01 code-reviewer 复审修复验证记录（DoS via 触发词过滤） ===
+背景：code-reviewer 复审指出中等严重度问题——board item 文本（用户可写）未经过滤拼进
+[画布内容: ...] 标记传给 AI 网关；stub provider 检测到消息含 FORCE_FAIL_MARKER
+(__ava_force_fail__) 即抛错返回 500。协作者只需在便签里写这个字符串，即可让该 board
+的 AI 浮层对所有人恒定 500（用户内容触发的可复现拒绝服务）。
+修复：apps/web/app/api/boards/[id]/ai-chat/route.ts 的 buildBoardContext 在拼接
+[画布内容: ...] 之前过滤掉画布 item 文本里的 FORCE_FAIL_MARKER 字面出现（大小写不敏感），
+画布内容仍照原样展示，但不再能操纵网关内部测试触发逻辑。同时在 route.ts 加了
+TODO 注释，标注接入真实 LLM 前需要做 prompt injection 隔离。
+
+--- Command: pnpm --filter @repo/web exec vitest run "app/api/boards/[id]/ai-chat/route.test.ts"（新增单测）---
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-a6cc99978a9f228a5/apps/web
+
+ ✓ app/api/boards/[id]/ai-chat/route.test.ts  (3 tests) 38ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  16:16:13
+   Duration  1.88s (transform 201ms, setup 0ms, collect 527ms, tests 38ms, environment 0ms, prepare 116ms)
+
+
+--- Command: pnpm --filter @repo/ai run test（@repo/ai 单测全量）---
+
+ RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-a6cc99978a9f228a5/packages/ai
+
+ ✓ src/studioGenerator.test.ts  (4 tests) 6ms
+ ✓ src/index.test.ts  (12 tests) 15ms
+
+ Test Files  2 passed (2)
+      Tests  16 passed (16)
+   Start at  16:16:43
+   Duration  894ms (transform 338ms, setup 0ms, collect 419ms, tests 21ms, environment 1ms, prepare 325ms)
+
+
+--- Command: pnpm --filter @repo/web exec playwright test e2e/board-ai-overlay.spec.ts（F01 验收 e2e 回归）---
+
+Running 3 tests using 1 worker
+
+  ✓  1 [chromium] › board-ai-overlay.spec.ts:24:5 › 底部工具 dock 可见可用，Ask AI 唤起 board chat 面板并可基于画布真实内容问答 (15.0s)
+  ✓  2 [chromium] › board-ai-overlay.spec.ts:79:5 › 从底部 dock 新建便签：dock 与画布内容真值一致 (1.6s)
+  ✓  3 [chromium] › board-ai-overlay.spec.ts:95:5 › 无编辑权限（仅查看）时底部工具 dock 不展示，但 AI 浮层仍可用于提问 (2.7s)
+
+  Slow test file: [chromium] › board-ai-overlay.spec.ts (19.3s)
+  Consider splitting slow test files to speed up parallel execution
+  3 passed (25.6s)
