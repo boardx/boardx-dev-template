@@ -17,6 +17,8 @@ export interface Feature {
   depends_on?: string[];
   /** 派发波次，纯提示性，不参与门控逻辑 */
   wave?: number;
+  /** 设计参照（prototype 锚点 / mockup 路径 / 已确认 UI 组件路径）；投影进 issue 供实现者定位 */
+  design_ref?: string;
   verification: string[];
   evidence: string;
   notes: string;
