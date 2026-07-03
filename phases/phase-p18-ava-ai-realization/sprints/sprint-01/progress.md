@@ -48,3 +48,32 @@
   - main 上 verify:full 存在 27 个与本 feature 无关的既有 e2e 失败（另有任务在修）
 - 下一步最佳动作: 领取 F03（DR 持久化）或 F06（STT 能力）；F02（真实模型失败态）依赖
   本 feature 已解锁，也可开工
+### 2026-07-04 (owner: wrk-ava-p18-3)
+- 本轮目标: F08 — 分享聊天「发送到我的邮箱」接通（issue #253）
+- 已完成:
+  - 勘探结论：既有邮件底层是 dev transport 桩（`apps/web/lib/mailer.ts` 打日志；
+    auth 的 e2e 经 DB 落库物 + dev-only 端点断言，如 `/api/dev/reset-token`）。照同款口径接入，
+    未新建邮件基础设施。
+  - `packages/data`：新增 migration `023_outbound_emails.sql`（出站邮件本地 sink）+
+    `src/mailbox.ts`（recordOutboundEmail / getLatestOutboundEmail，dev/测试断言用）
+  - `apps/web/lib/mailer.ts`：新增 `sendShareLinkEmail`（与 reset-password 同一 dev transport：
+    打日志 + 落库 sink；真实 provider 仍 deferred，与既有 TODO 一致）
+  - 新端点 `POST /api/ava/threads/:id/share/email`：#153 口径鉴权（user_id+team_id，
+    走 isThreadInCurrentContext）→ 未开启分享则自动 enableAvaThreadShare → 向当前用户邮箱
+    发送含 `/chatShare/:id?shareToken=…` 链接的邮件
+  - dev-only 端点 `GET /api/dev/outbox`（生产 404），e2e 断言真实发信内容
+  - 前端分享面板：`share-email-disabled` 禁用占位 → 可用 `share-email` 按钮；
+    成功提示 `share-email-status`、错误提示 `err-share-email` 均独立于「复制链接」的提示元素；
+    只动了分享面板区域（附件渲染区域归并行 agent）
+  - 新 e2e `apps/web/e2e/ava-share-email.spec.ts`（4 条：自动开启+outbox 断言含分享链接、
+    复用已有链接、注入 500 的独立错误提示+outbox 无信、401/404 鉴权）
+- 运行过的验证:
+  - `pnpm --filter @repo/web exec playwright test e2e/ava-share-email.spec.ts` → 4 passed
+  - 回归 `e2e/ava-share-chat.spec.ts` + `e2e/auth-reset-password.spec.ts` → 4 passed
+  - `pnpm -w run verify:base` → 45/45 通过
+  - `pnpm harness verify --sprint p18/01 --feature F08` → 门控通过，F08 = passing
+- 已记录证据: evidence/F08.verify.log
+- 提交记录: 见本分支 worker/wrk-ava-p18-3-f08-share-email（Closes #253）
+- 已知风险或未解决问题: 真实邮件 provider（SMTP/Resend）仍 deferred（与 auth 邮件同一 TODO，
+  切换时 sendShareLinkEmail/sendResetPasswordEmail 一起换 transport，outbound_emails 退化为审计表）
+- 下一步最佳动作: coordinator 审查合并本 PR；后续 F11「发送邮件」可直接复用 sendShareLinkEmail 同款底层

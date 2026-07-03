@@ -23,10 +23,8 @@
 | p15 | Admin 后台 (P15) | in_progress | 0 | 0 | 0 | 5 |
 | p16 | UI 导航接线与差距审计 | not_started | 0 | 0 | 0 | 3 |
 | p17 | UI Reskin Round 2 | not_started | 0 | 5 | 0 | 1 |
-| p18 | AVA AI 落地 (P18) | not_started | 11 | 0 | 0 | 1 |
+| p18 | AVA AI 落地 (P18) | not_started | 8 | 1 | 0 | 3 |
 | p19 | AVA 画布/记忆扩展 (P19，待决策) | not_started | 1 | 0 | 0 | 0 |
-| p20 | Room Realignment (P20) | not_started | 9 | 0 | 0 | 2 |
+| p20 | Room Realignment (P20) | not_started | 7 | 0 | 0 | 4 |
 
-_最近聚合:2026-07-03T18:19:31.598Z_
-_最近聚合:2026-07-03T18:16:57.485Z_
-_最近聚合:2026-07-03T18:15:02.108Z_
+_最近聚合:2026-07-03T18:52:02.501Z_
