@@ -25,7 +25,8 @@
 ### 2026-07-03 23:40
 - 本轮目标: 完成 F13（画布渲染引擎切换 Fabric.js，既有行为不回归）
 - 已完成: F13 → passing（verify 门控通过）。item 渲染与交互（选中框/拖拽/
-  Shift 多选/双击编辑/右键）切到 fabric.Canvas（官方 npm fabric@6.9.1）；
+  Shift 多选/双击编辑/右键）切到 fabric.Canvas（官方 npm fabric；初始实现
+  基于 6.9.1，同分支 commit 90ada39 升级至 7.4.0，v7 origin 适配 + 47 用例回归）；
   数据流不变（React 状态权威 + REST 落库 + F14 patch 语义）；周边 DOM UI
   （工具栏/Widget Menu/右键菜单/selection-count/缩放控制条/小地图）不变。
   视口方案: CanvasViewport 保留 CSS transform surface（DOM 覆盖层 + collab
