@@ -1,0 +1,366 @@
+
+> boardx-dev-template@ verify:base /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd
+> turbo run typecheck lint test
+
+turbo 2.5.0
+
+• Packages in scope: @repo/agent-core, @repo/ai, @repo/auth, @repo/canvas, @repo/data, @repo/memory, @repo/orchestrator, @repo/queue, @repo/storage, @repo/tools, @repo/web, @repo/workflow-worker
+• Running typecheck, lint, test in 12 packages
+• Remote caching disabled
+@repo/data:test: cache hit, replaying logs e61ceeb1bf17a2ee
+@repo/data:test: 
+@repo/data:test: > @repo/data@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/data
+@repo/data:test: > vitest run
+@repo/data:test: 
+@repo/data:test: 
+@repo/data:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/data
+@repo/data:test: 
+@repo/data:test:  ✓ src/aiStore.test.ts  (12 tests) 103ms
+@repo/data:test:  ✓ src/avaChat.test.ts  (5 tests) 24ms
+@repo/data:test:  ✓ src/index.test.ts  (3 tests) 7ms
+@repo/data:test:  ✓ src/survey.test.ts  (4 tests) 18ms
+@repo/data:test:  ✓ src/board.test.ts  (9 tests) 9ms
+@repo/data:test:  ✓ src/roomChat.test.ts  (2 tests) 69ms
+@repo/data:test: 
+@repo/data:test:  Test Files  6 passed (6)
+@repo/data:test:       Tests  35 passed (35)
+@repo/data:test:    Start at  09:40:39
+@repo/data:test:    Duration  10.62s (transform 6.64s, setup 1ms, collect 24.92s, tests 230ms, environment 77ms, prepare 10.23s)
+@repo/data:test: 
+@repo/agent-core:test: cache hit, replaying logs 79e924826c73601a
+@repo/agent-core:test: 
+@repo/agent-core:test: > @repo/agent-core@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/agent-core
+@repo/agent-core:test: > vitest run
+@repo/agent-core:test: 
+@repo/agent-core:test: 
+@repo/agent-core:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/agent-core
+@repo/agent-core:test: 
+@repo/agent-core:test:  ✓ src/index.test.ts  (3 tests) 10ms
+@repo/agent-core:test: 
+@repo/agent-core:test:  Test Files  1 passed (1)
+@repo/agent-core:test:       Tests  3 passed (3)
+@repo/agent-core:test:    Start at  09:40:59
+@repo/agent-core:test:    Duration  6.68s (transform 1.00s, setup 0ms, collect 1.19s, tests 10ms, environment 1ms, prepare 725ms)
+@repo/agent-core:test: 
+@repo/memory:lint: cache hit, replaying logs 27a0f892baac9da2
+@repo/memory:lint: 
+@repo/memory:lint: > @repo/memory@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/memory
+@repo/memory:lint: > echo 'lint: ok'
+@repo/memory:lint: 
+@repo/memory:lint: lint: ok
+@repo/queue:typecheck: cache hit, replaying logs 804cbe4172fa4b15
+@repo/queue:typecheck: 
+@repo/queue:typecheck: > @repo/queue@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/queue
+@repo/queue:typecheck: > tsc --noEmit
+@repo/queue:typecheck: 
+@repo/queue:lint: cache hit, replaying logs a841242a04b4cf95
+@repo/queue:lint: 
+@repo/queue:lint: > @repo/queue@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/queue
+@repo/queue:lint: > echo 'lint: ok'
+@repo/queue:lint: 
+@repo/queue:lint: lint: ok
+@repo/queue:test: cache miss, executing 0d002c292c8fabc8
+@repo/auth:typecheck: cache miss, executing 7ab16b31f397ee82
+@repo/orchestrator:lint: cache hit, replaying logs 30eb51336094ef04
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: > @repo/orchestrator@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/apps/orchestrator
+@repo/orchestrator:lint: > echo 'lint: ok'
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: lint: ok
+@repo/data:build: cache hit, replaying logs dda46173231e32a0
+@repo/data:build: 
+@repo/data:build: > @repo/data@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/data
+@repo/data:build: > tsc --noEmit
+@repo/data:build: 
+@repo/storage:test: cache hit, replaying logs 304ef4d6e385ecab
+@repo/storage:test: 
+@repo/storage:test: > @repo/storage@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/storage
+@repo/storage:test: > vitest run
+@repo/storage:test: 
+@repo/storage:test: 
+@repo/storage:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/storage
+@repo/storage:test: 
+@repo/storage:test:  ✓ src/index.test.ts  (19 tests) 76ms
+@repo/storage:test: 
+@repo/storage:test:  Test Files  1 passed (1)
+@repo/storage:test:       Tests  19 passed (19)
+@repo/storage:test:    Start at  09:40:31
+@repo/storage:test:    Duration  11.10s (transform 964ms, setup 0ms, collect 3.29s, tests 76ms, environment 1ms, prepare 1.79s)
+@repo/storage:test: 
+@repo/storage:typecheck: cache hit, replaying logs 65d6bb3c823d094f
+@repo/storage:typecheck: 
+@repo/storage:typecheck: > @repo/storage@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/storage
+@repo/storage:typecheck: > tsc --noEmit
+@repo/storage:typecheck: 
+@repo/web:lint: cache hit, replaying logs acc5225fb155b62b
+@repo/web:lint: 
+@repo/web:lint: > @repo/web@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/apps/web
+@repo/web:lint: > bash scripts/lint-design.sh
+@repo/web:lint: 
+@repo/web:lint: ✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性）
+@repo/ai:typecheck: cache hit, replaying logs 7ebae593a347010b
+@repo/ai:typecheck: 
+@repo/ai:typecheck: > @repo/ai@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/ai
+@repo/ai:typecheck: > tsc --noEmit
+@repo/ai:typecheck: 
+@repo/data:typecheck: cache hit, replaying logs f9affa183c19be84
+@repo/data:typecheck: 
+@repo/data:typecheck: > @repo/data@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/data
+@repo/data:typecheck: > tsc --noEmit
+@repo/data:typecheck: 
+@repo/tools:build: cache hit, replaying logs 572d3f061bd1690e
+@repo/tools:build: 
+@repo/tools:build: > @repo/tools@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/tools
+@repo/tools:build: > tsc --noEmit
+@repo/tools:build: 
+@repo/memory:build: cache miss, executing ef2c4955f90a55e2
+@repo/canvas:test: cache miss, executing 85524402dd543241
+@repo/ai:build: cache hit, replaying logs 92180897d61455d3
+@repo/ai:build: 
+@repo/ai:build: > @repo/ai@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/ai
+@repo/ai:build: > tsc --noEmit
+@repo/ai:build: 
+@repo/agent-core:build: cache miss, executing 72029ef72bc90291
+@repo/data:lint: cache hit, replaying logs 6bf54116a238a7b3
+@repo/data:lint: 
+@repo/data:lint: > @repo/data@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/data
+@repo/data:lint: > echo 'lint: ok'
+@repo/data:lint: 
+@repo/data:lint: lint: ok
+@repo/memory:typecheck: cache hit, replaying logs 0c6677da20af9c13
+@repo/memory:typecheck: 
+@repo/memory:typecheck: > @repo/memory@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/memory
+@repo/memory:typecheck: > tsc --noEmit
+@repo/memory:typecheck: 
+@repo/tools:lint: cache hit, replaying logs 4cc8ff2f66a3d7bc
+@repo/tools:lint: 
+@repo/tools:lint: > @repo/tools@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/tools
+@repo/tools:lint: > echo 'lint: ok'
+@repo/tools:lint: 
+@repo/tools:lint: lint: ok
+@repo/queue:build: cache hit, replaying logs 47c8e57bfb69fd26
+@repo/queue:build: 
+@repo/queue:build: > @repo/queue@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/queue
+@repo/queue:build: > tsc --noEmit
+@repo/queue:build: 
+@repo/canvas:build: cache hit, replaying logs 5ab8469f958aa507
+@repo/canvas:build: 
+@repo/canvas:build: > @repo/canvas@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/canvas
+@repo/canvas:build: > tsc --noEmit
+@repo/canvas:build: 
+@repo/tools:typecheck: cache hit, replaying logs d11b4f859a2cd2f4
+@repo/tools:typecheck: 
+@repo/tools:typecheck: > @repo/tools@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/tools
+@repo/tools:typecheck: > tsc --noEmit
+@repo/tools:typecheck: 
+@repo/ai:test: cache hit, replaying logs 9b0c91f48c43b935
+@repo/ai:test: 
+@repo/ai:test: > @repo/ai@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/ai
+@repo/ai:test: > vitest run
+@repo/ai:test: 
+@repo/ai:test: 
+@repo/ai:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/ai
+@repo/ai:test: 
+@repo/ai:test:  ✓ src/studioGenerator.test.ts  (4 tests) 11ms
+@repo/ai:test:  ✓ src/index.test.ts  (10 tests) 23ms
+@repo/ai:test: 
+@repo/ai:test:  Test Files  2 passed (2)
+@repo/ai:test:       Tests  14 passed (14)
+@repo/ai:test:    Start at  09:41:15
+@repo/ai:test:    Duration  7.86s (transform 2.51s, setup 0ms, collect 3.11s, tests 34ms, environment 1ms, prepare 2.81s)
+@repo/ai:test: 
+@repo/agent-core:typecheck: cache hit, replaying logs 605f8206aa339bc0
+@repo/agent-core:typecheck: 
+@repo/agent-core:typecheck: > @repo/agent-core@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/agent-core
+@repo/agent-core:typecheck: > tsc --noEmit
+@repo/agent-core:typecheck: 
+@repo/storage:build: cache hit, replaying logs 2c67dc5e266c6fcc
+@repo/storage:build: 
+@repo/storage:build: > @repo/storage@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/storage
+@repo/storage:build: > tsc --noEmit
+@repo/storage:build: 
+@repo/ai:lint: cache hit, replaying logs c63a0b6b6d4a8c44
+@repo/ai:lint: 
+@repo/ai:lint: > @repo/ai@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/ai
+@repo/ai:lint: > echo 'lint: ok'
+@repo/ai:lint: 
+@repo/ai:lint: lint: ok
+@repo/canvas:typecheck: cache miss, executing ec14d65654c44629
+@repo/memory:test: cache hit, replaying logs 6901151252fb79a2
+@repo/memory:test: 
+@repo/memory:test: > @repo/memory@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/memory
+@repo/memory:test: > vitest run
+@repo/memory:test: 
+@repo/memory:test: 
+@repo/memory:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/memory
+@repo/memory:test: 
+@repo/memory:test:  ✓ src/index.test.ts  (13 tests) 230ms
+@repo/memory:test: 
+@repo/memory:test:  Test Files  1 passed (1)
+@repo/memory:test:       Tests  13 passed (13)
+@repo/memory:test:    Start at  09:40:27
+@repo/memory:test:    Duration  9.30s (transform 2.15s, setup 0ms, collect 2.85s, tests 230ms, environment 0ms, prepare 2.38s)
+@repo/memory:test: 
+@repo/auth:lint: cache hit, replaying logs 50c849ef309cb470
+@repo/auth:lint: 
+@repo/auth:lint: > @repo/auth@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/auth
+@repo/auth:lint: > echo 'lint: ok'
+@repo/auth:lint: 
+@repo/auth:lint: lint: ok
+@repo/auth:test: cache miss, executing 367f84ebd8d74a21
+@repo/auth:build: cache hit, replaying logs 1fec665c1032867a
+@repo/auth:build: 
+@repo/auth:build: > @repo/auth@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/auth
+@repo/auth:build: > tsc --noEmit
+@repo/auth:build: 
+@repo/tools:test: cache hit, replaying logs 6ccaef08a058b3c2
+@repo/tools:test: 
+@repo/tools:test: > @repo/tools@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/tools
+@repo/tools:test: > vitest run
+@repo/tools:test: 
+@repo/tools:test: 
+@repo/tools:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/tools
+@repo/tools:test: 
+@repo/tools:test:  ✓ src/index.test.ts  (12 tests) 5697ms
+@repo/tools:test: 
+@repo/tools:test:  Test Files  1 passed (1)
+@repo/tools:test:       Tests  12 passed (12)
+@repo/tools:test:    Start at  09:40:30
+@repo/tools:test:    Duration  14.33s (transform 787ms, setup 31ms, collect 991ms, tests 5.70s, environment 0ms, prepare 1.56s)
+@repo/tools:test: 
+@repo/canvas:lint: cache hit, replaying logs 13e32f8d9de0dc8c
+@repo/canvas:lint: 
+@repo/canvas:lint: > @repo/canvas@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/canvas
+@repo/canvas:lint: > echo 'lint: ok'
+@repo/canvas:lint: 
+@repo/canvas:lint: lint: ok
+@repo/workflow-worker:lint: cache hit, replaying logs 6f389089607d2762
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: > @repo/workflow-worker@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/apps/workflow-worker
+@repo/workflow-worker:lint: > echo 'lint: ok'
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: lint: ok
+@repo/agent-core:lint: cache hit, replaying logs ac94863c4184d627
+@repo/agent-core:lint: 
+@repo/agent-core:lint: > @repo/agent-core@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/agent-core
+@repo/agent-core:lint: > echo 'lint: ok'
+@repo/agent-core:lint: 
+@repo/agent-core:lint: lint: ok
+@repo/workflow-worker:test: cache miss, executing f9a1c51bd526dcf6
+@repo/storage:lint: cache hit, replaying logs 8226e0fa96519d86
+@repo/storage:lint: 
+@repo/storage:lint: > @repo/storage@0.1.0 lint /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/storage
+@repo/storage:lint: > echo 'lint: ok'
+@repo/storage:lint: 
+@repo/storage:lint: lint: ok
+@repo/workflow-worker:typecheck: cache miss, executing 61bac3e1a1d56edd
+@repo/web:test: cache miss, executing cd144c271c0c8a84
+@repo/canvas:test: 
+@repo/canvas:test: > @repo/canvas@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/canvas
+@repo/canvas:test: > vitest run
+@repo/canvas:test: 
+@repo/canvas:typecheck: 
+@repo/canvas:typecheck: > @repo/canvas@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/canvas
+@repo/canvas:typecheck: > tsc --noEmit
+@repo/canvas:typecheck: 
+@repo/web:test: 
+@repo/web:test: > @repo/web@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/apps/web
+@repo/web:test: > vitest run
+@repo/web:test: 
+@repo/memory:build: 
+@repo/memory:build: > @repo/memory@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/memory
+@repo/memory:build: > tsc --noEmit
+@repo/memory:build: 
+@repo/workflow-worker:typecheck: 
+@repo/workflow-worker:typecheck: > @repo/workflow-worker@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/apps/workflow-worker
+@repo/workflow-worker:typecheck: > tsc --noEmit
+@repo/workflow-worker:typecheck: 
+@repo/agent-core:build: 
+@repo/agent-core:build: > @repo/agent-core@0.1.0 build /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/agent-core
+@repo/agent-core:build: > tsc --noEmit
+@repo/agent-core:build: 
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test: > @repo/workflow-worker@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/apps/workflow-worker
+@repo/workflow-worker:test: > vitest run
+@repo/workflow-worker:test: 
+@repo/queue:test: 
+@repo/queue:test: > @repo/queue@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/queue
+@repo/queue:test: > vitest run
+@repo/queue:test: 
+@repo/auth:typecheck: 
+@repo/auth:typecheck: > @repo/auth@0.1.0 typecheck /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/auth
+@repo/auth:typecheck: > tsc --noEmit
+@repo/auth:typecheck: 
+@repo/auth:test: 
+@repo/auth:test: > @repo/auth@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/auth
+@repo/auth:test: > vitest run
+@repo/auth:test: 
+@repo/canvas:test: 
+@repo/canvas:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/canvas
+@repo/canvas:test: 
+@repo/web:test: [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+@repo/auth:test: 
+@repo/auth:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/auth
+@repo/auth:test: 
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/apps/workflow-worker
+@repo/workflow-worker:test: 
+@repo/queue:test: 
+@repo/queue:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/queue
+@repo/queue:test: 
+@repo/web:test: 
+@repo/web:test:  RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/apps/web
+@repo/web:test: 
+@repo/canvas:test:  ✓ src/index.test.ts  (8 tests) 548ms
+@repo/canvas:test: 
+@repo/canvas:test:  Test Files  1 passed (1)
+@repo/canvas:test:       Tests  8 passed (8)
+@repo/canvas:test:    Start at  09:43:06
+@repo/canvas:test:    Duration  10.03s (transform 1.85s, setup 0ms, collect 1.95s, tests 548ms, environment 0ms, prepare 2.60s)
+@repo/canvas:test: 
+@repo/web:typecheck: cache miss, executing 7ca7578a909cb423
+@repo/workflow-worker:test:  ✓ src/job.test.ts  (3 tests) 164ms
+@repo/workflow-worker:test:  ✓ src/kbFileJob.test.ts  (2 tests) 91ms
+@repo/workflow-worker:test:  ✓ src/studioJob.test.ts  (2 tests) 185ms
+@repo/workflow-worker:test:  ✓ src/presentationRevisionJob.test.ts  (4 tests) 92ms
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  Test Files  4 passed (4)
+@repo/workflow-worker:test:       Tests  11 passed (11)
+@repo/workflow-worker:test:    Start at  09:43:09
+@repo/workflow-worker:test:    Duration  12.79s (transform 6.00s, setup 1ms, collect 10.76s, tests 532ms, environment 2ms, prepare 8.60s)
+@repo/workflow-worker:test: 
+@repo/queue:test:  ✓ src/index.test.ts  (4 tests) 355ms
+@repo/queue:test: 
+@repo/queue:test:  Test Files  1 passed (1)
+@repo/queue:test:       Tests  4 passed (4)
+@repo/queue:test:    Start at  09:43:09
+@repo/queue:test:    Duration  12.86s (transform 1.07s, setup 0ms, collect 4.29s, tests 355ms, environment 0ms, prepare 2.46s)
+@repo/queue:test: 
+@repo/auth:test:  ❯ src/index.test.ts  (15 tests | 1 failed) 5137ms
+@repo/auth:test:    × password > hash 不等于明文，verify 正确匹配
+@repo/auth:test:      → Test timed out in 5000ms.
+@repo/auth:test: If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+@repo/auth:test: 
+@repo/auth:test: ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+@repo/auth:test: 
+@repo/auth:test:  FAIL  src/index.test.ts > password > hash 不等于明文，verify 正确匹配
+@repo/auth:test: Error: Test timed out in 5000ms.
+@repo/auth:test: If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+@repo/auth:test: ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+@repo/auth:test: 
+@repo/auth:test:  Test Files  1 failed (1)
+@repo/auth:test:       Tests  1 failed | 14 passed (15)
+@repo/auth:test:    Start at  09:43:08
+@repo/auth:test:    Duration  15.77s (transform 1.24s, setup 0ms, collect 1.56s, tests 5.14s, environment 0ms, prepare 1.94s)
+@repo/auth:test: 
+@repo/auth:test:  ELIFECYCLE  Test failed. See above for more details.
+@repo/auth:test: ERROR: command finished with error: command (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/auth) /Users/shenyanbin/.nvm/versions/node/v22.21.1/bin/pnpm run test exited (1)
+@repo/auth#test: command (/Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/auth) /Users/shenyanbin/.nvm/versions/node/v22.21.1/bin/pnpm run test exited (1)
+
+ Tasks:    36 successful, 43 total
+Cached:    32 cached, 43 total
+  Time:    33.43s 
+Failed:    @repo/auth#test
+
+ ERROR  run failed: command  exited (1)
+ ELIFECYCLE  Command failed with exit code 1.
