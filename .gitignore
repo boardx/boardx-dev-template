@@ -26,3 +26,6 @@ phases/requirements/oldcode/
 **/test-results/
 **/playwright-report/
 .claude/worktrees/
+
+# evidence 日志必须入库（AGENTS.md 完成定义：没有证据 = 没有完成）
+!phases/**/evidence/*.log
