@@ -8,7 +8,7 @@
       "title": "AI 层去 stub 化：真实模型 provider 接入 + 网关路由",
       "user_visible_behavior": "packages/ai 的 ChatGateway 注册至少一个真实模型 provider（非 stub: 前缀）；配置真实 API 凭证后，在 /ava 发送消息，AI 回复由真实模型针对输入内容生成（同一问题两次回复内容不同，非模板回显）；F07 模型选择器选中真实模型后，请求路由到对应 provider（日志可证）。stub provider 保留（CI/e2e 用），真实 provider 是新增而非替换。",
       "design_ref": "无新 UI（现有 /ava 聊天流 + model-select）；requirements/01-ai-layer-real-model.md",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "wrk-ava-p18-1",
       "capability": "CAP-AI",
@@ -18,7 +18,7 @@
         "pnpm --filter @repo/ai test",
         "node scripts/ai-provider-smoke.mjs"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-07-03T11:16:44.725Z",
       "notes": "requirements/01。packages/ai 新增真实 provider 适配层 + 单测（路由/请求组装/流式解析）；ai-provider-smoke.mjs 为 env-gated 冒烟（有 API key 时真实调用一次并断言非模板回复，无 key 时明确打印 SKIP 并退出 0，避免 CI 依赖供应商额度）。同时把 graph.ts/gateway.ts 里『LangGraph 编排』『LiteLLM 网关』的误导性注释改为如实描述。凭证走 .env，不进代码库。"
     },
     {

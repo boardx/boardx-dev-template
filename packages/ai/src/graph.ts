@@ -1,8 +1,9 @@
-// packages/ai/src/graph.ts — CAP-AI LangGraph 风格编排（P9 F01 地基）
+// packages/ai/src/graph.ts — CAP-AI 编排入口（P9 F01 地基）
 //
-// 最小图运行时：节点接收/产出共享 state，按边顺序执行。F01 只需单节点
-// （generate：读取历史消息 → 调网关流式生成 → 产出 assistant 消息），
-// 多阶段图（澄清/计划/执行/报告）留给 F06 Deep Research 复用本运行时扩展节点。
+// 如实说明：这不是 LangGraph，也没有图结构——当前只是「单 generate 节点」的最小
+// 编排壳（读取历史消息 → 调网关流式生成 → 产出 assistant 消息）。保留 NodeFn/
+// GraphState 抽象是为了让 Deep Research（p18 F03/F04）扩展成真正的多阶段状态机时
+// 不必改调用方；在那之前不要把这里当作已有编排框架来引用。
 
 export interface GraphState {
   threadId: number;
