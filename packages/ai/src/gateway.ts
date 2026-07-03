@@ -1,8 +1,10 @@
-// packages/ai/src/gateway.ts — CAP-AI LiteLLM 风格网关（P9 F01 地基）
+// packages/ai/src/gateway.ts — CAP-AI 模型网关（P9 F01 地基；P18 F01 接入真实 provider）
 //
-// 统一多供应商模型调用接口：调用方只认 modelId + messages，网关按 modelId 前缀路由到
-// 具体 provider（真实 provider 接入见 notes；本 feature 默认注册一个 stub provider，
-// 使上层可在无真实供应商额度的情况下跑通端到端流式回复 —— sanctioned in F01 notes）。
+// 这是一个自研的极简前缀路由网关（不是 LiteLLM，也不依赖任何 SDK）：调用方只认
+// modelId + messages，网关按 modelId 前缀路由到具体 provider。
+// 已注册 provider：
+//   - anthropicProvider（anthropic: 前缀，真实 Anthropic Messages API，见 anthropicProvider.ts）
+//   - stubProvider（stub: 前缀，确定性回显，供 CI/e2e 在无供应商额度下跑通端到端）
 //
 // Provider 契约：一个异步生成器，逐 token yield 字符串；调用方将其转成 SSE。
 
@@ -142,5 +144,8 @@ export class ChatGateway {
   }
 }
 
-/** 默认单例网关（进程内共享，注册全部已知 provider）。 */
-export const defaultGateway = new ChatGateway([stubProvider]);
+import { anthropicProvider } from "./anthropicProvider";
+
+/** 默认单例网关（进程内共享，注册全部已知 provider）。
+ *  anthropic: → 真实 Anthropic API；stub: → 确定性 stub。前缀不重叠，顺序无关。 */
+export const defaultGateway = new ChatGateway([anthropicProvider, stubProvider]);

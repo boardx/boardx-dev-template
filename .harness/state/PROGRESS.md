@@ -11,9 +11,9 @@
 | p2 | Home 工作台 (P2) | in_progress | 0 | 0 | 2 | 5 |
 | p4 | Room-Chat (P4 补全) | in_progress | 0 | 0 | 1 | 4 |
 | p5 | Board 基础 (P5) | done | 0 | 0 | 0 | 10 |
-| p6 | Canvas & 组件 (P6) | in_progress | 9 | 0 | 3 | 10 |
+| p6 | Canvas & 组件 (P6) | in_progress | 11 | 0 | 3 | 10 |
 | p7 | Board 壳 (P7) | in_progress | 8 | 0 | 5 | 3 |
-| p8 | 实时协作 (P8) | not_started | 4 | 0 | 0 | 0 |
+| p8 | 实时协作 (P8) | not_started | 5 | 0 | 0 | 0 |
 | p9 | AVA / Chat (P9) | in_progress | 0 | 0 | 1 | 10 |
 | p10 | 知识库 (P10) | in_progress | 0 | 1 | 0 | 3 |
 | p11 | AI Store (P11) | in_progress | 0 | 1 | 0 | 5 |
@@ -23,5 +23,7 @@
 | p15 | Admin 后台 (P15) | in_progress | 0 | 0 | 0 | 5 |
 | p16 | UI 导航接线与差距审计 | not_started | 0 | 0 | 0 | 3 |
 | p17 | UI Reskin Round 2 | not_started | 0 | 5 | 0 | 1 |
+| p18 | AVA AI 落地 (P18) | not_started | 11 | 0 | 0 | 1 |
+| p19 | AVA 画布/记忆扩展 (P19，待决策) | not_started | 1 | 0 | 0 | 0 |
 
-_最近聚合:2026-07-03T07:10:54.680Z_
+_最近聚合:2026-07-03T11:16:44.738Z_
