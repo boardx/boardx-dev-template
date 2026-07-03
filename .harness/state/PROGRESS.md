@@ -22,6 +22,6 @@
 | p14 | 积分 & 计费 (P14) | in_progress | 0 | 1 | 0 | 4 |
 | p15 | Admin 后台 (P15) | in_progress | 0 | 1 | 0 | 4 |
 | p16 | UI 导航接线与差距审计 | not_started | 0 | 0 | 0 | 3 |
-| p17 | UI Reskin Round 2 | not_started | 0 | 0 | 6 | 0 |
+| p17 | UI Reskin Round 2 | not_started | 6 | 0 | 0 | 0 |
 
-_最近聚合:2026-07-03T04:09:15.929Z_
+_最近聚合:2026-07-03T04:11:24.346Z_
