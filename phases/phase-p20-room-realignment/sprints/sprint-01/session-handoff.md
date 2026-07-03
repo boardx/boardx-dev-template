@@ -1,6 +1,9 @@
 # 会话交接 — Sprint p20/01
 
 ## 当前已验证
+- **F10 passing**（2026-07-04 门控通过，wrk-room-3）：legacy 单画布下线。迁移 022 回填 board_id 并加 NOT NULL；
+  /rooms/[id]/board → 307 到 /rooms/[id]/boards；/api/rooms/[id]/items 与 /api/items/[id] 全方法 410；
+  canvas-* 四个 e2e 已迁移到 board 模型。验证 = room-rr-010 spec 5 用例 + 回归 14 用例全过。
 - **F01 passing**（2026-07-04 门控通过）：房间详情壳 + 五 tab 导航。验证 = e2e/room-rr-001-detail-shell.spec.ts
   4 用例全过 + 存量 room/room-chat/canvas 29 个 e2e 无回归 + verify:base 过（design lint 修掉 text-[10px]→text-10）。
 - 立项工件齐备：gap-report.md、requirements/uc-rr-001..010、feature_list.json（11F）、
@@ -21,7 +24,7 @@
   wave1 的 F03/F06/F08/F11 依赖 F01（壳已就位，合并后即可开工）。
 - F01 实现要点：壳在 apps/web/app/(app)/rooms/[id]/layout.tsx（客户端组件，fetch room+members）；
   /rooms/[id] 服务端 redirect 到 boards；files/、surveys/ 是占位页（F03/F08 替换）。
-- 不要动：rooms/[id]/board 旧页面（F10 统一处理）；phase-04 feature_list 的 F12 描述（F07 一并修订）。
+- 不要动：F10 已处理 rooms/[id]/board（现为 redirect）；phase-04 feature_list 的 F12 描述（F07 一并修订）。
 
 ## 命令
 - 启动:`pnpm -w run dev`
