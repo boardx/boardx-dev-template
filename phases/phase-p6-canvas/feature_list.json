@@ -440,16 +440,16 @@
       "area": "widgets",
       "title": "多选组合批量操作（移动/对齐/编组/锁定/删除）",
       "user_visible_behavior": "同时选中多个组件形成 active selection，整体拖动；通过 Widget Menu 批量对齐（左/右/上/下/水平居中/垂直居中/等间距，uc-widget-menu-011）、编组/解组、批量锁定、批量删除。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "09",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/widget-active-selection.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F21.verify.log @ 2026-07-03T22:09:16.725Z",
       "notes": "uc-widgets-010 + uc-widget-menu-011。对齐为纯几何批量 update。Context Menu 的层级/编组锁定（uc-context-menu-003/004）在 p7 复用本能力。",
       "source_use_cases": [
         "phases/requirements/board/widgets/uc-widgets-010-use-active-selection-widget.md",
