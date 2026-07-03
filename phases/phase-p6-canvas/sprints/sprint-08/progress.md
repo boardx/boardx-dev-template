@@ -69,3 +69,20 @@
 - 已知风险或未解决问题: fabric 等比缩放改为默认关闭（Shift 仍可等比），
   若后续 feature 需要默认等比需重新权衡；多选（ActiveSelection）缩放仍关闭。
 - 下一步最佳动作: F12 文本组件（见 session-handoff）。
+
+### 2026-07-04 02:55
+- 本轮目标: 完成 GitHub issue #316（p6/08 F13/F14 review 的 Medium/Low 健壮性修复）。
+- 已完成: #316 follow-up 已实现并验证。修复点包括 Fabric reconcile 不再无条件
+  `discardActiveObject()`、Fabric init disposed guard、e2e 空白画布点击改走
+  `window.__canvasTestApi.getCanvasBlankScreenPoint()`、`ItemPatch` 收紧 id/type
+  语义并补 `x: undefined` patch 单测、屏幕矩形计算去重以及 Fabric 对象元数据改用
+  WeakMap。
+- 运行过的验证: `pnpm --filter @repo/canvas run test`（15 tests）、
+  `pnpm --filter @repo/canvas run typecheck`、`pnpm --filter @repo/web run typecheck`、
+  `pnpm --filter @repo/web run lint`（仅既有 LABEL-LANG-MIX warning）、
+  `pnpm --filter @repo/data run migrate`、canvas/widget 相关 13 个 Playwright spec
+  全量回归（34 passed）、`pnpm -w run verify:base`（45/45）。
+- 已记录证据: evidence/issue-316-review-followup.md
+- 已知风险或未解决问题: 无 #316 新增 blocker；本 issue 是已 passing F13/F14/F07 之上的
+  review follow-up，不手改 harness passing 状态。
+- 下一步最佳动作: 开 draft PR 并把 GitHub issue #316 推到 status:in-review。

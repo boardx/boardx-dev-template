@@ -17,6 +17,12 @@
   - w/h 落库：PATCH /api/board-items/:id 与 @repo/data updateItem 支持 w/h 成对更新；
     resize 是可逆 Op（undo=from / redo=to）。
   - widget-menu 的「缩放暂不可用」占位已移除（widgets-001 断言同步 toHaveCount(0)）。
+- **Issue #316 review follow-up verified**（evidence/issue-316-review-followup.md）：
+  F13/F14/F07 之后的 Medium/Low 健壮性项已落地，包括 selection reconcile guard、
+  disposed init guard、动态空白画布点击锚点、ItemPatch id/type 语义收紧与
+  `x: undefined` patch 单测、screen rect 去重、Fabric object metadata WeakMap 化。
+  验证覆盖 canvas unit/typecheck、web typecheck/lint、canvas/widget Playwright
+  回归 34 条、`verify:base` 45/45。
 
 ## 已知预置失败（非本 sprint 引入，档案 evidence/F13.verify-full-triage.md）
 - widgets-001 用例 1 / widgets-004 两用例（`add-shape` testid）与 board-menu-001
@@ -28,6 +34,8 @@
 - docker project `worker-canvas-p6-sprint08`（pg:65380/redis:65381/web:65382，
   E2E_PORT=65382 见 apps/web/.env.local）。
 - 分支栈：worker/canvas-p6-f07-guidelines → base worker/canvas-p6-f13-fabric（stacked PR）。
+- #316 使用独立 Codex worktree `/private/tmp/boardx-worktrees/issue-316-canvas-review-fixes`
+  与分支 `codex/issue-316-canvas-review-fixes`，base 为 `worker/canvas-p6-f07-guidelines`。
 
 ## 下一个 feature：F12（文本组件 + 文本样式 + 文本转便利贴）
 - 在 fabric 对象模型上做（kind:"text" 渲染分支已在 fabric-canvas.tsx）。
