@@ -3,7 +3,8 @@
 ## 当前已验证状态(唯一真相)
 - 立项完成：gap-report.md + requirements/uc-rr-001..010 + feature_list.json（11 features，全部 not_started）。
 - GitHub 投影：Milestone "Phase p20: Room Realignment" 已创建；feature issues 待切 sprint 后由 `harness sync` 自动创建（issue 只对已分配 sprint 的 feature 开）。
-- 当前 blocker：**ui-signoff.md status=pending**（ADR-003 门控，已实测 new-sprint 拒绝）。等人类工程师核对 `ui-signoff.md` 中 6 项取舍与 8 屏原型对照后改 confirmed。
+- ui-signoff：**confirmed**（yanbinshen，2026-07-03，会话内确认）。Sprint 01 已开（F01/F02/F05/F07/F09/F10），issues #298-#303 已建。
+- 当前 blocker：无（等 PR #296 合并后即可 claim 开发）。
 - 当前最高优先级未完成功能：F01 房间详情壳（wave 0 还有 F02/F05/F07/F09/F10 可并行）。
 
 ## 会话记录

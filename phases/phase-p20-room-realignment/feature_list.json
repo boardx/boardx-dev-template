@@ -9,7 +9,7 @@
       "user_visible_behavior": "点击房间卡片进入 /rooms/[id] 默认落在 Boards tab；页头展示面包屑（Rooms/房间名）、房间名、可见性 pill、成员头像堆叠、Invite 按钮（仅 owner/admin 可见）；五个 tab（data-testid=room-tab-boards/-members/-files/-chat/-survey）常驻可切换，URL 同步（/rooms/[id]/boards|members|files|chats|surveys），直链打开时对应 tab 高亮；非成员 403/跳回列表。",
       "design_ref": "prototype:<!-- ROOM DETAIL -->（roomTabDefs，Studio 不做顶级 tab 见 ui-signoff 取舍#1）",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-WEB",
       "depends_on": [],
@@ -30,7 +30,7 @@
       "user_visible_behavior": "New Room 弹窗含房间名输入（≥3 字符）与可见性二选一卡片（data-testid=room-create-visibility-private/-team，默认 Private）；提交后 POST /api/rooms 落库 visibility；列表卡片按可见性显示 🔒/🌐 徽章与创建选择一致；visibility=team 的房间对同团队成员可发现并可加入。",
       "design_ref": "prototype:New Room dialog（Visibility 卡片 🔒 Private / 🌐 Public→Team）",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-WEB",
       "depends_on": [],
@@ -54,7 +54,9 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-FILE",
-      "depends_on": ["F01"],
+      "depends_on": [
+        "F01"
+      ],
       "wave": 1,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
@@ -75,7 +77,9 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-FILE",
-      "depends_on": ["F03"],
+      "depends_on": [
+        "F03"
+      ],
       "wave": 2,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
@@ -93,7 +97,7 @@
       "user_visible_behavior": "房间卡片与详情页头有星标（data-testid=room-favorite-toggle），点击切换收藏并持久化（每用户维度）；房间列表提供 Favorites 筛选只显示已收藏房间；非成员收藏返回 403；刷新后状态保持。",
       "design_ref": "prototype:Rooms 列表屏；对齐 uc-room-002:31 与 oldcode RoomSubscription.favorite",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "depends_on": [],
@@ -117,7 +121,9 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-WEB",
-      "depends_on": ["F01"],
+      "depends_on": [
+        "F01"
+      ],
       "wave": 1,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
@@ -135,7 +141,7 @@
       "user_visible_behavior": "按 uc-rr-006 权威矩阵：admin 可邀请/移除 member、改房间名/可见性/AI 字段、删他人文件，但不能管理 admin、不能删房间、不能动 owner（各返回 403）；member 无管理权；UI 按角色隐藏不可用入口；role-diagrams 三份文档与 phase-04 F12 描述修订为与矩阵一致。",
       "design_ref": "prototype:Room Settings dialog 角色徽章（Owner locked）；uc-rr-006 矩阵为权威",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-AUTH",
       "depends_on": [],
@@ -159,7 +165,9 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-DATA",
-      "depends_on": ["F01"],
+      "depends_on": [
+        "F01"
+      ],
       "wave": 1,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
@@ -177,7 +185,7 @@
       "user_visible_behavior": "owner/admin 输入未注册邮箱邀请：room_invites 落库（token、过期 7 天、幂等刷新），dev 邮件通道发送注册链接；被邀者注册成功后自动成为该房间 member，登录即见房间；Members tab 显示 pending 邀请列表（data-testid=room-invite-pending）可撤销；过期令牌注册成功但不入房并提示；member 邀请返回 403。",
       "design_ref": "prototype:Room Settings dialog INVITE NEW MEMBERS；oldcode inviteNewUserToRoomByEmail 流程",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-AUTH",
       "depends_on": [],
@@ -198,7 +206,7 @@
       "user_visible_behavior": "迁移把 board_items.board_id IS NULL 的 legacy 数据回填到每房间自动创建的默认 board（幂等）；/rooms/[id]/board 重定向到 /rooms/[id]/boards；/api/rooms/[id]/items 返回 410；legacy 页面组件删除；迁移后全库 board_items.board_id 非空。",
       "design_ref": "架构修正（gap 报告 E2），无原型屏",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "depends_on": [],
@@ -223,7 +231,9 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-AI",
-      "depends_on": ["F01"],
+      "depends_on": [
+        "F01"
+      ],
       "wave": 1,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
