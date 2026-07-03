@@ -1,6 +1,6 @@
 # Coordinator SOP — 分层监控循环（v1）
 
-> ADR-004 §2 定义了 coordinator 单轮循环"做什么"；本文定义"什么节奏做、每层必查什么"。
+> `multi-agent-coordination.md` §2 定义了 coordinator 单轮循环"做什么"（ADR-004 §4 确立 coordinator 角色）；本文定义"什么节奏做、每层必查什么"。
 > 目标：事件驱动为主、定期扫描兜底，任何一层漏掉的问题都会被更大的循环接住。
 
 ## 三层循环
