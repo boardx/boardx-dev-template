@@ -11,7 +11,7 @@
 | p2 | Home 工作台 (P2) | in_progress | 0 | 0 | 2 | 5 |
 | p4 | Room-Chat (P4 补全) | in_progress | 0 | 0 | 1 | 4 |
 | p5 | Board 基础 (P5) | done | 0 | 0 | 0 | 10 |
-| p6 | Canvas & 组件 (P6) | in_progress | 9 | 1 | 3 | 11 |
+| p6 | Canvas & 组件 (P6) | in_progress | 9 | 0 | 3 | 12 |
 | p7 | Board 壳 (P7) | in_progress | 8 | 0 | 5 | 3 |
 | p8 | 实时协作 (P8) | not_started | 5 | 0 | 0 | 0 |
 | p9 | AVA / Chat (P9) | in_progress | 0 | 0 | 1 | 10 |
@@ -24,4 +24,4 @@
 | p16 | UI 导航接线与差距审计 | not_started | 0 | 0 | 0 | 3 |
 | p17 | UI Reskin Round 2 | not_started | 6 | 0 | 0 | 0 |
 
-_最近聚合:2026-07-03T11:55:46.635Z_
+_最近聚合:2026-07-03T12:43:15.728Z_
