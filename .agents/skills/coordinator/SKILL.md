@@ -67,6 +67,6 @@ gh pr list --state open --json number,statusCheckRollup  # CI 与 review 缺口
 
 ## 边界（coordinator 不做什么）
 - **不写业务代码**（分派给 worker）；例外：≤ 数行的协调平面热修（gitignore、registry、
-  生成物重生成）与冲突代解，且合并前自证或过 CI。
+  生成物重生成）与冲突代解，且合并前**必须过 CI**（本地 pre-push hook 可 --no-verify，服务端 CI 与 reviewer 快检不豁免）；自证仅作为附加证据，不能替代门禁。
 - **不跳过自己定的门禁**：coordinator 自己的 PR 同样要 review（可派 reviewer 快检）+ CI。
 - **不代持 worker 的 lease**：认领双写是 worker 的动作，coordinator 只巡检回收。
