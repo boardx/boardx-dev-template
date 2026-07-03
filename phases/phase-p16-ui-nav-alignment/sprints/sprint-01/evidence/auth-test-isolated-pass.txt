@@ -1,0 +1,14 @@
+
+> @repo/auth@0.1.0 test /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/auth
+> vitest run
+
+
+ RUN  v2.0.0 /Users/shenyanbin/Downloads/harnessdemo4/boardx-dev-template/.claude/worktrees/agent-a418a98e7475772dd/packages/auth
+
+ ✓ src/index.test.ts  (15 tests) 1394ms
+
+ Test Files  1 passed (1)
+      Tests  15 passed (15)
+   Start at  09:44:05
+   Duration  4.19s (transform 470ms, setup 0ms, collect 544ms, tests 1.39s, environment 0ms, prepare 337ms)
+
