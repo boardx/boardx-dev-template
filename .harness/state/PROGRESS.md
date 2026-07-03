@@ -13,7 +13,7 @@
 | p5 | Board 基础 (P5) | done | 0 | 0 | 0 | 10 |
 | p6 | Canvas & 组件 (P6) | in_progress | 11 | 0 | 3 | 10 |
 | p7 | Board 壳 (P7) | in_progress | 8 | 0 | 5 | 3 |
-| p8 | 实时协作 (P8) | not_started | 4 | 0 | 0 | 1 |
+| p8 | 实时协作 (P8) | not_started | 3 | 0 | 0 | 2 |
 | p9 | AVA / Chat (P9) | in_progress | 0 | 0 | 1 | 10 |
 | p10 | 知识库 (P10) | in_progress | 0 | 1 | 0 | 3 |
 | p11 | AI Store (P11) | in_progress | 0 | 1 | 0 | 5 |
@@ -27,4 +27,4 @@
 | p19 | AVA 画布/记忆扩展 (P19，待决策) | not_started | 1 | 0 | 0 | 0 |
 | p20 | Room Realignment (P20) | not_started | 7 | 0 | 0 | 4 |
 
-_最近聚合:2026-07-03T19:56:38.596Z_
+_最近聚合:2026-07-03T20:18:43.672Z_

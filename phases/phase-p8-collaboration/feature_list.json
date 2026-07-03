@@ -27,16 +27,16 @@
       "area": "collaboration",
       "title": "Yjs 实时同步组件变更",
       "user_visible_behavior": "多个用户打开同一有权限的 Board 时，任一人创建/移动/缩放/编辑/锁定/删除组件，先在本机即时呈现，其他在线协作者画布上随即出现对应变化；只读用户可观察同步结果但不能编辑；后到的用户加载到最新一致状态。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-codex-collab-1",
       "capability": "CAP-COLLAB",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/collab-realtime-sync.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-07-03T20:18:43.645Z",
       "notes": "uc-collab-001。blocked-on p8:F01（WS+Redis 传输骨架）。新建 packages/collab：每 Board 一个 Yjs doc，在 F01 的传输骨架上把 p6 item 命令运行时映射到 Yjs 共享结构并异步落库。依赖 p6 命令模型（建议基于 p6:F14 的字段级 patch schema）。e2e 用两个 browser context 验证一端编辑另一端可见。",
       "source_use_cases": [
         "phases/requirements/board/collaboration/uc-collab-001-yjs-realtime-sync.md"

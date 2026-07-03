@@ -72,6 +72,15 @@ interface Move {
   toY: number;
 }
 
+type CollabItemsMessage = {
+  kind: "items-snapshot";
+  version: 1;
+  boardId: string;
+  sourceId: string;
+  reason: string;
+  items: Item[];
+};
+
 // 可逆操作（F09 撤销/重做命令栈）。add 与 delete 互为逆；move 记录 from/to。
 type Op =
   | { kind: "add"; items: Item[] }
@@ -222,6 +231,12 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const clipboard = useRef<Item[]>([]); // 应用内剪贴板（F08）
   const undoStack = useRef<Op[]>([]); // F09
   const redoStack = useRef<Op[]>([]);
+  const collabClientId = useRef(
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `client-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  );
+  const collabWs = useRef<WebSocket | null>(null);
   // 鼠标拖拽移动便签（指针驱动；记录可逆 move 命令）。
   const dragRef = useRef<{
     startX: number;
@@ -236,14 +251,111 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   } | null>(null);
   const justDraggedRef = useRef(false); // 拖拽刚结束 → 抑制随后的 click 选择翻转
 
-  const load = useCallback(async () => {
+  const loadItems = useCallback(async (): Promise<Item[] | null> => {
     const res = await fetch(`/api/boards/${boardId}/items`);
-    if (res.ok) setItems((await res.json()).items ?? []);
+    if (!res.ok) return null;
+    return ((await res.json()).items ?? []) as Item[];
   }, [boardId]);
+
+  const load = useCallback(async () => {
+    const next = await loadItems();
+    if (next) setItems(next);
+    return next;
+  }, [loadItems]);
+
+  const publishItems = useCallback(
+    (reason: string, snapshot: Item[]) => {
+      const ws = collabWs.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      const message: CollabItemsMessage = {
+        kind: "items-snapshot",
+        version: 1,
+        boardId,
+        sourceId: collabClientId.current,
+        reason,
+        items: snapshot,
+      };
+      ws.send(JSON.stringify(message));
+    },
+    [boardId],
+  );
+
+  const syncAndPublish = useCallback(
+    async (reason: string) => {
+      const next = await load();
+      if (next) publishItems(reason, next);
+      return next;
+    },
+    [load, publishItems],
+  );
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // p8:F02：通过 F01 的 WebSocket + Redis gateway 广播 board item 快照。
+  // 轮询仍保留为降级路径；实时路径让另一端不必等 1.5s poll 才看到组件变更。
+  useEffect(() => {
+    let stopped = false;
+    let retry: ReturnType<typeof setTimeout> | null = null;
+
+    async function connect() {
+      try {
+        const res = await fetch("/api/collab/config");
+        if (!res.ok || stopped) return;
+        const { wsUrl } = (await res.json()) as { wsUrl?: string };
+        if (!wsUrl || stopped) return;
+        const url = new URL(wsUrl);
+        url.searchParams.set("boardId", boardId);
+        const ws = new WebSocket(url.toString());
+        collabWs.current = ws;
+
+        ws.addEventListener("message", (event) => {
+          let envelope: { type?: string; data?: string };
+          try {
+            envelope = JSON.parse(String(event.data)) as { type?: string; data?: string };
+          } catch {
+            return;
+          }
+          if (envelope.type !== "message" || typeof envelope.data !== "string") return;
+          let message: CollabItemsMessage;
+          try {
+            message = JSON.parse(envelope.data) as CollabItemsMessage;
+          } catch {
+            return;
+          }
+          if (
+            message.kind !== "items-snapshot" ||
+            message.version !== 1 ||
+            message.boardId !== boardId ||
+            message.sourceId === collabClientId.current ||
+            !Array.isArray(message.items)
+          ) {
+            return;
+          }
+          if (editingId || dragRef.current) return;
+          setItems((prev) => (JSON.stringify(prev) === JSON.stringify(message.items) ? prev : message.items));
+        });
+        ws.addEventListener("close", () => {
+          if (collabWs.current === ws) collabWs.current = null;
+          if (!stopped) retry = setTimeout(connect, 1500);
+        });
+        ws.addEventListener("error", () => {
+          ws.close();
+        });
+      } catch {
+        if (!stopped) retry = setTimeout(connect, 1500);
+      }
+    }
+
+    void connect();
+    return () => {
+      stopped = true;
+      if (retry) clearTimeout(retry);
+      collabWs.current?.close();
+      collabWs.current = null;
+    };
+  }, [boardId, editingId]);
 
   // uc-collab-001：文本编辑进行中也算「正在操作」，供他人看到「谁在操作」（editingId 存在 = 编辑中）。
   useEffect(() => {
@@ -393,8 +505,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       undoStack.current.push({ kind: "move", moves });
       redoStack.current = [];
       await apiMove(moves, false);
+      await syncAndPublish("move");
     },
-    [apiMove, onDragMove],
+    [apiMove, onDragMove, syncAndPublish],
   );
 
   function startNoteDrag(e: React.MouseEvent, item: Item) {
@@ -438,7 +551,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     if (res.status === 201) {
       const { item } = await res.json();
       recordOp({ kind: "add", items: [item] });
-      await load();
+      await syncAndPublish("add");
       setSelected(new Set([item.id]));
     }
   }
@@ -467,7 +580,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     });
     const textItem: Item = { ...item, color: TEXT_MARK };
     recordOp({ kind: "add", items: [textItem] });
-    await load();
+    await syncAndPublish("add");
     setSelected(new Set([item.id]));
   }
 
@@ -484,7 +597,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     if (res.status !== 201) return;
     const { item } = (await res.json()) as { item: Item };
     recordOp({ kind: "add", items: [item] });
-    await load();
+    await syncAndPublish("add");
     setSelected(new Set([item.id]));
   }
 
@@ -509,7 +622,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     });
     const embedItem: Item = { ...item, color: EMBED_MARK };
     recordOp({ kind: "add", items: [embedItem] });
-    await load();
+    await syncAndPublish("add");
     setSelected(new Set([item.id]));
   }
 
@@ -583,8 +696,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       setItems((prev) => prev.map((it) => (selected.has(it.id) ? { ...it, x: it.x + dx, y: it.y + dy } : it)));
       recordOp({ kind: "move", moves });
       await apiMove(moves, false);
+      await syncAndPublish("move");
     },
-    [canEdit, selected, items, apiMove]
+    [canEdit, selected, items, apiMove, syncAndPublish]
   );
 
   const pasteClipboard = useCallback(async () => {
@@ -610,9 +724,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       created.push(copy);
     }
     if (created.length) recordOp({ kind: "add", items: created });
-    await load();
+    await syncAndPublish("paste");
     setSelected(new Set(created.map((c) => c.id)));
-  }, [canEdit, boardId, load]);
+  }, [canEdit, boardId, syncAndPublish]);
 
   function duplicateSelected() {
     clipboard.current = items.filter((it) => selected.has(it.id));
@@ -628,6 +742,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ text }),
     });
+    await syncAndPublish("edit");
   }
 
   // 落库一批 color 变更（共用于 setColor / toggleBold）。
@@ -643,6 +758,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         })
       )
     );
+    await syncAndPublish("style");
   }
 
   // F11：改选中便签颜色（保留字重 :bold 修饰）
@@ -708,7 +824,8 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     setSelected(new Set());
     recordOp({ kind: "delete", items: removed });
     await apiDelete(removed.map((it) => it.id));
-  }, [canEdit, selected, items, apiDelete]);
+    await syncAndPublish("delete");
+  }, [canEdit, selected, items, apiDelete, syncAndPublish]);
 
   const undo = useCallback(async () => {
     if (!canEdit) return;
@@ -719,8 +836,8 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     else await apiMove(op.moves, true);
     redoStack.current.push(op);
     setSelected(new Set());
-    await load();
-  }, [canEdit, apiDelete, apiRestore, apiMove, load]);
+    await syncAndPublish("undo");
+  }, [canEdit, apiDelete, apiRestore, apiMove, syncAndPublish]);
 
   const redo = useCallback(async () => {
     if (!canEdit) return;
@@ -731,8 +848,8 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     else await apiMove(op.moves, false);
     undoStack.current.push(op);
     setSelected(new Set());
-    await load();
-  }, [canEdit, apiDelete, apiRestore, apiMove, load]);
+    await syncAndPublish("redo");
+  }, [canEdit, apiDelete, apiRestore, apiMove, syncAndPublish]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
