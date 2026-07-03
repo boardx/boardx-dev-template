@@ -1,13 +1,13 @@
 "use client";
-// apps/web/app/(app)/ava/voice-input.tsx — AVA 语音输入（P18 UI 先行原型，uc-ava-008）
+// apps/web/app/(app)/ava/voice-input.tsx — AVA 语音输入（P18 F07 接通真实转写）
 //
 // 差距：phase-p9-ava-chat 的 F09（语音输入）此前 blocked——不仅转写服务（STT）未就绪，
 // 连"点麦克风→请求权限→录音中看到时长/音量→结束"这条纯前端路径都完全没有实现（无
-// MediaRecorder、无麦克风按钮）。本组件把这条纯前端路径先做实：真实
+// MediaRecorder、无麦克风按钮）。本组件把这条纯前端路径做实：真实
 // `getUserMedia` 权限请求 + 真实 `MediaRecorder` 录音 + 真实 `AnalyserNode` 音量可视化 +
-// 真实计时器；唯一 mock 的环节是"转写"——STT 服务本身是另一个能力（见
-// phases/phase-p18-ava-ai-realization/requirements/03-voice-input-stt.md），服务就绪前
-// 用固定文案代替真实转写结果，明确标注、不假装是真实识别。
+// 真实计时器；录音结束后把录制的音频 Blob POST 到 /api/ava/transcribe，由该端点调用
+// P18 F06 落地的 STT provider（`packages/ai` `transcribeAudio`，OpenAI Whisper API）
+// 做真实转写，返回文本直接回填输入框（不再是固定占位文案）。
 //
 // 边界状态覆盖 uc-ava-008：权限拒绝 / 无麦克风 / 浏览器不支持 / 录音过短 / 转写失败。
 // 取消录音（cancel）不产生任何文本，也不报错。
@@ -34,14 +34,10 @@ const ERROR_MESSAGES: Record<VoiceErrorReason, string> = {
 
 const BAR_COUNT = 5;
 const MIN_RECORDING_MS = 1000;
-
-// STT 服务未就绪前的占位转写结果（见 requirements/03-voice-input-stt.md）。
-// 真实接入后：用后端转写结果替换这个数组的选取逻辑，其余状态机保持不变。
-const MOCK_TRANSCRIPTS = [
-  "帮我总结一下这份材料的关键结论。",
-  "请把这段内容改写得更简洁一些。",
-  "根据以上讨论，列出三个下一步行动项。",
-];
+const TRANSCRIBE_ENDPOINT = "/api/ava/transcribe";
+// MediaRecorder 未显式指定 mimeType 时各浏览器默认不同（Chrome 通常 audio/webm;codecs=opus）。
+// 优先用 recorder.mimeType（真实生效的格式）；取不到时退回这个候选，供请求 Content-Type 参考。
+const FALLBACK_RECORDING_MIME = "audio/webm";
 
 function formatElapsed(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
@@ -70,6 +66,7 @@ export function VoiceInputControl({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAtRef = useRef<number>(0);
   const cancelledRef = useRef(false);
+  const chunksRef = useRef<Blob[]>([]);
 
   const teardown = useCallback(() => {
     if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
@@ -130,6 +127,10 @@ export function VoiceInputControl({
 
       const recorder = new MediaRecorder(stream);
       recorderRef.current = recorder;
+      chunksRef.current = [];
+      recorder.ondataavailable = (e: BlobEvent) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
       recorder.start();
       startedAtRef.current = Date.now();
       setElapsedMs(0);
@@ -141,6 +142,9 @@ export function VoiceInputControl({
 
       recorder.onstop = () => {
         const durationMs = Date.now() - startedAtRef.current;
+        const mimeType = recorder.mimeType || FALLBACK_RECORDING_MIME;
+        const audioBlob = new Blob(chunksRef.current, { type: mimeType });
+        chunksRef.current = [];
         teardown();
         if (cancelledRef.current) {
           setState("idle");
@@ -152,12 +156,21 @@ export function VoiceInputControl({
           return;
         }
         setState("transcribing");
-        // Mock 转写延迟：真实接入 STT 后替换为等待后端响应。
-        setTimeout(() => {
-          const text = MOCK_TRANSCRIPTS[Math.floor(Math.random() * MOCK_TRANSCRIPTS.length)] ?? MOCK_TRANSCRIPTS[0]!;
-          setState("idle");
-          onTranscribed(text);
-        }, 700);
+        void (async () => {
+          try {
+            const formData = new FormData();
+            formData.append("file", audioBlob, `recording.${mimeType.includes("webm") ? "webm" : "wav"}`);
+            const res = await fetch(TRANSCRIBE_ENDPOINT, { method: "POST", body: formData });
+            if (!res.ok) throw new Error(`transcribe failed: ${res.status}`);
+            const data = (await res.json()) as { text?: string };
+            if (!data.text) throw new Error("transcribe response missing text");
+            setState("idle");
+            onTranscribed(data.text);
+          } catch {
+            setState("error");
+            setErrorReason("transcription-failed");
+          }
+        })();
       };
     } catch (err) {
       teardown();

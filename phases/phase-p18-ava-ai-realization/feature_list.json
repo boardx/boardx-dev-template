@@ -135,9 +135,9 @@
       "title": "语音输入端到端接通（真实转写替换占位文案）",
       "user_visible_behavior": "点击 voice-input-trigger → 授权麦克风 → voice-recording-indicator 展示计时与音量柱状条 → voice-stop 结束后，输入框填入的是本次录音的真实转写文本（替换 UI 原型的固定占位文案）；权限拒绝/无麦克风/浏览器不支持/录音过短/转写失败分别展示 voice-error 对应文案；voice-cancel 取消不产生任何文本。",
       "design_ref": "已确认 UI：apps/web/app/(app)/ava/voice-input.tsx（ui-signoff.md confirmed @2026-07-04）",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "wrk-ava-p18-3",
       "capability": "CAP-AI",
       "depends_on": [
         "F06"
@@ -146,7 +146,7 @@
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/ava-voice-input.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F07.verify.log @ 2026-07-03T19:30:50.957Z",
       "notes": "requirements/03。e2e 用 Playwright fake media stream（--use-fake-device-for-media-stream / --use-fake-ui-for-media-stream）+ stub 转写端点走通全链路；真实 STT 由 F06 冒烟覆盖。该 spec 文件名与 p9-F09 原 verification 一致，落地后 p9-F09 可凭同一验证转 passing。"
     },
     {
