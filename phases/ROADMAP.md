@@ -42,7 +42,7 @@ Team/Room 的「高级入口」（Team AI Store、Team Memory、Room Studio、Ro
 | **P3 Team & 邀请** | team 核心 + invite(2) | AUTH/DATA | P1 | 🟡 team 核心已建（phase-04）；高级入口随能力阶段点亮 |
 | **P4 Room & Room-Chat** | room(7) + room-chat(4) | COLLAB/DATA | P3 | 🟡 room 核心已建（phase-04）；room-chat feature_list 已产出（phase-p4，5F） |
 | **P5 Board 基础** | board 根(8) + access(2) | DATA | P4 | 📋 feature_list 已产出（phase-p5，10F，全可建） |
-| **P6 Canvas & 组件** | canvas(5)+board/canvas(4)+widgets(10)+widget-menu(14) | CANVAS | P5 | 📋 feature_list 已产出（phase-p6，22F=4passing种子+18；图片/文件/AI 助手 blocked） |
+| **P6 Canvas & 组件** | canvas(5)+board/canvas(4)+widgets(10)+widget-menu(14) | CANVAS | P5 | 📋 feature_list 已产出（phase-p6，23F=10 passing+9 not_started+1 渲染引擎切换 Fabric.js（F13,既有 passing 不回归）+3 blocked 图片/文件/AI 助手；F14-F17 形状/连接线/手绘/图表 blocked-on F13，见 [gap 分析](requirements/board-canvas-gap-analysis-and-roadmap.md)） |
 | **P7 Board 壳** | header(15)+board-menu(12)+context-menu(6)+local-workspace(3) | WEB/CANVAS | P6 | 📋 feature_list 已产出（phase-p7，16F；语音/AI/导出/模板 blocked） |
 | **P8 实时协作** | board/collaboration(3) + 在线状态/光标 | COLLAB(Yjs+Redis) | P6 | 📋 feature_list 已产出（phase-p8，4F，待建 packages/collab） |
 | **P9 AVA / Chat** | ava(10) + share(1) | AI(LangGraph/LiteLLM) | P3 | 📋 feature_list 已产出（phase-p9，11F=9 not_started+2 blocked；附件 blocked-on p10、语音 blocked-on STT。本阶段建 CAP-AI 地基） |
