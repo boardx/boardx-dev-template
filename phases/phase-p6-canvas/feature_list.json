@@ -135,9 +135,9 @@
       "area": "canvas",
       "title": "拖动时的对齐参考线",
       "user_visible_behavior": "拖动或缩放组件时，与邻近组件的边/中心对齐时显示动态参考线并吸附；多组件等间距时显示间距提示；释放后参考线消失。",
-      "status": "not_started",
+      "status": "in_progress",
       "sprint": "08",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
