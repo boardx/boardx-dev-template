@@ -32,7 +32,8 @@
 - 不要动：`apps/web/lib/admin.ts`（requireSysAdmin 的唯一权威实现，本次未改，勿重复实现）。
 
 ## 命令
-- 启动:`pnpm -w run dev`
+- 启动:`pnpm -w run dev`（或本会话方式：`cd apps/web && npx next dev -p <E2E_PORT或3000>`，
+  先确认 `apps/web/.env.local` 的 DATABASE_URL/REDIS_URL 指向本 worktree 自己的 docker compose 端口）
 - 验证:`pnpm harness verify --sprint p16/01`
 - 调试:`cd apps/web && pnpm exec playwright test e2e/nav-001-global-entry-points.spec.ts`
   （需要先 `bash scripts/init-worktree-env.sh` + `docker compose -f infra/docker-compose.yml up -d`
