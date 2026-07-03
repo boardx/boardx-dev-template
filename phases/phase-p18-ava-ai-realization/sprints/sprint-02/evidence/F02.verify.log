@@ -1,0 +1,15 @@
+$ pnpm --filter @repo/web exec playwright test e2e/ava-real-model-failure.spec.ts
+[exit 0]
+
+
+Running 4 tests using 1 worker
+
+  ✓  1 [chromium] › ava-real-model-failure.spec.ts:116:7 › 真实模型 provider 故障 → 失败态展示 + 输入不丢失 › 429 限流：/ava 展示失败态，用户已输入内容保留在历史中 (2.8s)
+  ✓  2 [chromium] › ava-real-model-failure.spec.ts:134:7 › 真实模型 provider 故障 → 失败态展示 + 输入不丢失 › 网络错误（连接被重置）：/ava 展示失败态，composer 输入未清空/未丢失 (537ms)
+  ✓  3 [chromium] › ava-real-model-failure.spec.ts:149:7 › 真实模型 provider 故障 → 失败态展示 + 输入不丢失 › 超时：/ava 最终展示失败态（不会无限挂起/静默成功） (6.5s)
+  ✓  4 [chromium] › ava-real-model-failure.spec.ts:166:7 › 流式回复进行中点停止 → 真实中断（AbortController 生效） › 点击停止后：请求被真实中断，不再追加新 token，消息落定为已停止的部分内容 (2.0s)
+
+  4 passed (16.3s)
+
+[BASE VERIFY] $ pnpm -w run verify:base
+[exit 0] (see ./init.sh run above / this session — 45/45 tasks successful)
