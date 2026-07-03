@@ -40,7 +40,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-002-visibility.spec.ts"
       ],
-      "evidence": "evidence/F02.verify.log @ 2026-07-03T17:59:23.765Z",
+      "evidence": "evidence/F02.verify.log @ 2026-07-03T18:15:02.094Z",
       "notes": "uc-rr-002。修复 uc-room-001:60 与 uc-room-002:27 的需求矛盾；team 可发现加入的行为需 e2e 正反用例（非成员对 private 房间不可见）。"
     },
     {

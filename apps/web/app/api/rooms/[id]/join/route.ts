@@ -31,6 +31,8 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     await addRoomMember(roomId, user.id, "member");
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    // 内部错误细节只落服务端日志，不回给客户端
+    console.error("[rooms/join] 加入房间失败:", err);
+    return NextResponse.json({ error: "服务器错误" }, { status: 500 });
   }
 }

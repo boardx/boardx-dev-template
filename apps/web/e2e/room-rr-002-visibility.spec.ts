@@ -3,7 +3,7 @@
 // （data-testid=room-create-visibility-private / room-create-visibility-team，默认 Private）；
 // 提交 POST /api/rooms 落库 visibility；列表卡片按可见性显示 🔒/🌐 徽章；
 // visibility=team 的房间对同团队成员可发现并可加入成为 member；private 房间对非成员不可见。
-import { test, expect, type Page, type APIRequestContext } from "@playwright/test";
+import { test, expect, type Page, type APIRequestContext, type PlaywrightWorkerArgs } from "@playwright/test";
 
 const uniq = (p: string) => `${p}_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
@@ -17,7 +17,10 @@ async function register(page: Page, prefix: string): Promise<string> {
   return email;
 }
 
-async function newUserCtx(playwright: any, prefix: string): Promise<{ ctx: APIRequestContext; email: string }> {
+async function newUserCtx(
+  playwright: PlaywrightWorkerArgs["playwright"],
+  prefix: string
+): Promise<{ ctx: APIRequestContext; email: string }> {
   const ctx = await playwright.request.newContext({ baseURL: BASE_URL });
   const email = uniq(prefix);
   const res = await ctx.post("/api/auth/register", {
