@@ -21,5 +21,7 @@
 | p13 | 问卷 (P13) | in_progress | 0 | 1 | 0 | 5 |
 | p14 | 积分 & 计费 (P14) | in_progress | 0 | 1 | 0 | 4 |
 | p15 | Admin 后台 (P15) | in_progress | 0 | 1 | 0 | 4 |
+| p16 | UI 导航接线与差距审计 | not_started | 3 | 0 | 0 | 0 |
+| p17 | UI Reskin Round 2 | not_started | 1 | 0 | 0 | 0 |
 
-_最近聚合:2026-07-02T18:43:06.710Z_
+_最近聚合:2026-07-03T00:46:54.175Z_

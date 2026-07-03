@@ -1,0 +1,136 @@
+{
+  "phase": "p17",
+  "features": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "area": "canvas",
+      "title": "Board 内嵌 AI 浮层 + 底部工具 dock + board chat 面板",
+      "user_visible_behavior": "打开 Board 后，画布内出现可唤起的 AI 浮层（悬浮聊天窗，能就当前画布内容提问/生成），底部出现悬浮工具 dock（对齐 prototype 的 FigJam 风格，取代/补充现有顶部单行工具条），board chat 面板可停靠展示协作对话。具体交互细节以 phase-p16:F02 审计报告 + prototype bundle 的 Board 屏为准。",
+      "design_ref": "docs/design/boardx-prototype-v1.bundle.html Board 屏；phase-p16:F02 产出的差距审计报告（Board 部分）。",
+      "status": "blocked",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": ["p16:F02"],
+      "wave": 1,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/board-ai-overlay.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "uc-board-ai-001（新增）。这是 prototype 里的核心差异化体验，优先级最高。blocked-on phase-p16:F02（审计报告）与本阶段 ui-signoff.md confirmed（ADR-003）——两者都满足前才能 new-sprint。"
+    },
+    {
+      "id": "F02",
+      "priority": 1,
+      "area": "ava",
+      "title": "Ava 对话界面 reskin",
+      "user_visible_behavior": "Ava 对话页（空态建议/消息列表/research card/clarify-plan-running 时间线/report 面板）的视觉与交互对齐 prototype AVA 屏：token（灰阶/柔彩/圆角/字号）、布局、组件形态与 Home/Rooms 等已 reskin 页面一致。不改变已有的功能行为（消息发送/流式回复/附件/分享等 p9 已 passing 的能力保持不变），只对齐视觉与交互细节。",
+      "design_ref": "docs/design/boardx-prototype-v1.bundle.html AVA 屏；phase-p16:F02 审计报告（Ava 部分）。",
+      "status": "blocked",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": ["p16:F02"],
+      "wave": 1,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/ava-*.spec.ts",
+        "cd apps/web && bash scripts/lint-design.sh"
+      ],
+      "evidence": "",
+      "notes": "uc-ava-reskin-001（新增）。verification 复用既有 p9 全部 ava e2e（回归，确保 reskin 不破坏功能）+ design lint。blocked-on 同 F01。"
+    },
+    {
+      "id": "F03",
+      "priority": 2,
+      "area": "ai-store",
+      "title": "AI Store 页面 reskin",
+      "user_visible_behavior": "AI Store 浏览/详情/创建/订阅/收藏等页面的视觉对齐 prototype STORE 屏（submenu + 内容 + 详情/创建 modal 的设计语言），文案统一语言（不再中英混用），不改变 p11 已 passing 的功能行为。",
+      "design_ref": "docs/design/boardx-prototype-v1.bundle.html STORE 屏；phase-p16:F02 审计报告（Store 部分）。",
+      "status": "blocked",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": ["p16:F02"],
+      "wave": 2,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/ai-store-*.spec.ts",
+        "cd apps/web && bash scripts/lint-design.sh"
+      ],
+      "evidence": "",
+      "notes": "uc-store-reskin-001（新增）。verification 复用既有 p11 全部 e2e 回归 + design lint。blocked-on 同 F01。"
+    },
+    {
+      "id": "F04",
+      "priority": 2,
+      "area": "admin",
+      "title": "Admin 后台 reskin",
+      "user_visible_behavior": "Admin 首页/用户管理/团队管理/AI Store 审核与精选页面的视觉对齐 prototype ADMIN 屏（overview/users/teams/store-approval + 多 modal），不改变 p15 已 passing 的鉴权与业务逻辑。",
+      "design_ref": "docs/design/boardx-prototype-v1.bundle.html ADMIN 屏；phase-p16:F02 审计报告（Admin 部分）。",
+      "status": "blocked",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": ["p16:F02"],
+      "wave": 2,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/admin-*.spec.ts",
+        "cd apps/web && bash scripts/lint-design.sh"
+      ],
+      "evidence": "",
+      "notes": "uc-admin-reskin-001（新增）。verification 复用既有 p15 全部 e2e 回归（含权限相关用例，reskin 绝不能弱化鉴权）+ design lint。blocked-on 同 F01。"
+    },
+    {
+      "id": "F05",
+      "priority": 2,
+      "area": "survey",
+      "title": "Surveys 页面 reskin",
+      "user_visible_behavior": "问卷列表/编辑器/答题预览/结果报告页面的视觉对齐 prototype SURVEYS 屏，不改变 p13 已 passing 的功能行为（含公开答题页的访客体验）。",
+      "design_ref": "docs/design/boardx-prototype-v1.bundle.html SURVEYS 屏；phase-p16:F02 审计报告（Surveys 部分）。",
+      "status": "blocked",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": ["p16:F02"],
+      "wave": 2,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-*.spec.ts",
+        "cd apps/web && bash scripts/lint-design.sh"
+      ],
+      "evidence": "",
+      "notes": "uc-survey-reskin-001（新增）。verification 复用既有 p13 全部 e2e 回归（含公开答题页，访客体验不能破坏）+ design lint。blocked-on 同 F01。"
+    },
+    {
+      "id": "F06",
+      "priority": 3,
+      "area": "common",
+      "title": "Knowledge Base + Credits 页面收尾 reskin",
+      "user_visible_behavior": "知识库文件列表/上传弹窗、Credits 钱包/购买/账单页面的视觉打磨对齐设计系统，不改变 p10/p14 已 passing 的功能行为。这是收尾优先级，不涉及新组件设计。",
+      "design_ref": "已确认的 P0-P4 token 基座（globals.css/tailwind.config.ts）；phase-p16:F02 审计报告（如有覆盖 KB/Credits 的部分）。",
+      "status": "blocked",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": ["p16:F02"],
+      "wave": 3,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/kb-*.spec.ts e2e/credits-*.spec.ts",
+        "cd apps/web && bash scripts/lint-design.sh"
+      ],
+      "evidence": "",
+      "notes": "uc-kb-credits-reskin-001（新增）。优先级最低，收尾性质。blocked-on 同 F01。Mobile Shell 明确不做（沿用 boardx-prototype-mapping.md §4 已确认的决定），本阶段不建对应 feature。"
+    }
+  ]
+}
