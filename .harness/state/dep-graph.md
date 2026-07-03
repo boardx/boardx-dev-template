@@ -219,19 +219,19 @@
 
 | Feature | 标题 | 状态 | owner | depends_on | wave |
 |---|---|---|---|---|---|
-| F01 | 全局导航接线：Ava / Surveys / Admin 入口 | not_started | - | [] | - |
-| F02 | UI 差距审计：Ava / Store / Surveys / Admin vs prototype | not_started | - | [] | - |
-| F03 | Design lint 覆盖扩大到新增页面 | not_started | - | [] | - |
+| F01 | 全局导航接线：Ava / Surveys / Admin 入口 | passing | wrk-claude-1 | [] | - |
+| F02 | UI 差距审计：Ava / Store / Surveys / Admin vs prototype | passing | wrk-nav-audit-1 | [] | - |
+| F03 | Design lint 覆盖扩大到新增页面 | passing | wrk-lint-1 | [] | - |
 
 ## p17 (UI Reskin Round 2)
 
 | Feature | 标题 | 状态 | owner | depends_on | wave |
 |---|---|---|---|---|---|
-| F01 | Board 内嵌 AI 浮层 + 底部工具 dock + board chat 面板 | blocked | - | [p16:F02(not_started)] | 1 |
-| F02 | Ava 对话界面 reskin | blocked | - | [p16:F02(not_started)] | 1 |
-| F03 | AI Store 页面 reskin | blocked | - | [p16:F02(not_started)] | 2 |
-| F04 | Admin 后台 reskin | blocked | - | [p16:F02(not_started)] | 2 |
-| F05 | Surveys 页面 reskin | blocked | - | [p16:F02(not_started)] | 2 |
-| F06 | Knowledge Base + Credits 页面收尾 reskin | blocked | - | [p16:F02(not_started)] | 3 |
+| F01 | Board 内嵌 AI 浮层 + 底部工具 dock + board chat 面板 | not_started | - | [p16:F02(passing)] | 1 |
+| F02 | Ava 对话界面 reskin | not_started | - | [p16:F02(passing)] | 1 |
+| F03 | AI Store 页面 reskin | not_started | - | [p16:F02(passing)] | 2 |
+| F04 | Admin 后台 reskin | not_started | - | [p16:F02(passing)] | 2 |
+| F05 | Surveys 页面 reskin | not_started | - | [p16:F02(passing)] | 2 |
+| F06 | Knowledge Base + Credits 页面收尾 reskin | not_started | - | [p16:F02(passing)] | 3 |
 
-_最近生成:2026-07-03T01:01:15.460Z_
+_最近生成:2026-07-03T04:11:27.136Z_
