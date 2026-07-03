@@ -1,0 +1,14 @@
+=== P18 F12 verification @ 2026-07-03T17:39:22Z ===
+--- docker compose up + migrate: OK（容器 Running，迁移完成）---
+--- playwright test e2e/share-view-chat-states.spec.ts ---
+
+Running 5 tests using 1 worker
+
+  ✓  1 [chromium] › share-view-chat-states.spec.ts:42:7 › P18-F12 分享只读页四态 › 状态一 Loading：请求在途时展示骨架屏，完成后进入正常渲染 (2.1s)
+  ✓  2 [chromium] › share-view-chat-states.spec.ts:72:7 › P18-F12 分享只读页四态 › 状态二 Invalid：threadId 非法或 token 缺失 → Invalid chat session (709ms)
+  ✓  3 [chromium] › share-view-chat-states.spec.ts:82:7 › P18-F12 分享只读页四态 › 状态三 Unavailable：token 错误或分享已关闭 → 不可访问 (1.4s)
+  ✓  4 [chromium] › share-view-chat-states.spec.ts:106:7 › P18-F12 分享只读页四态 › 状态四 Empty：空线程展示 No messages，且保留只读底栏 (479ms)
+  ✓  5 [chromium] › share-view-chat-states.spec.ts:124:7 › P18-F12 Agent 锁定禁用态（uc-ava-006 边界） › 线程已有消息后，agent-select 呈禁用态且展示锁定提示（点击前即可见，非点击后报错） (2.0s)
+
+  5 passed (10.3s)
+exit=0
