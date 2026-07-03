@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CanvasViewport } from "@/components/board/canvas-viewport";
 import { BoardBottomDock, type DockToolKey } from "@/components/board/board-bottom-dock";
 import { BoardAiOverlay } from "@/components/board/board-ai-panel";
-import { setOperating } from "@/lib/collab-bus";
+import { publishCursor, setOperating } from "@/lib/collab-bus";
 import {
   Cable,
   Hand,
@@ -237,6 +237,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       : `client-${Date.now()}-${Math.random().toString(16).slice(2)}`,
   );
   const collabWs = useRef<WebSocket | null>(null);
+  const cursorIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 鼠标拖拽移动便签（指针驱动；记录可逆 move 命令）。
   const dragRef = useRef<{
     startX: number;
@@ -292,6 +293,25 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   useEffect(() => {
     void load();
   }, [load]);
+
+  const clearLocalCursor = useCallback(() => {
+    if (cursorIdleTimer.current) {
+      clearTimeout(cursorIdleTimer.current);
+      cursorIdleTimer.current = null;
+    }
+    publishCursor(null);
+  }, []);
+
+  const publishLocalCursor = useCallback((e: React.MouseEvent) => {
+    publishCursor({ x: e.clientX, y: e.clientY, visible: true });
+    if (cursorIdleTimer.current) clearTimeout(cursorIdleTimer.current);
+    cursorIdleTimer.current = setTimeout(() => {
+      cursorIdleTimer.current = null;
+      publishCursor(null);
+    }, 2500);
+  }, []);
+
+  useEffect(() => clearLocalCursor, [clearLocalCursor]);
 
   // p8:F02：通过 F01 的 WebSocket + Redis gateway 广播 board item 快照。
   // 轮询仍保留为降级路径；实时路径让另一端不必等 1.5s poll 才看到组件变更。
@@ -898,7 +918,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   }, [items, selected, deleteSelected, moveSelected, pasteClipboard, undo, redo]);
 
   return (
-    <div className="relative flex flex-1 flex-col">
+    <div className="relative flex flex-1 flex-col" onMouseMove={publishLocalCursor} onMouseLeave={clearLocalCursor}>
       {/* Board Menu：编辑者可见的工具入口；不可用能力保留禁用状态，避免误导为已实现。 */}
       {canEdit && (
         <div className="relative border-b bg-card px-3 py-1.5">

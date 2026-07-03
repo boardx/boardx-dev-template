@@ -48,16 +48,16 @@
       "area": "collaboration",
       "title": "在线成员头像 + 实时光标",
       "user_visible_behavior": "Board Header 显示在线成员头像（当前用户优先），人数超出显示「+N」更多入口、点击弹出在线用户列表（头像+名称）；悬停头像显示名称/提示；协作者移动鼠标时画布对应位置显示其光标与用户标识，停止移动/离开/离线后光标隐藏或移除；小屏减少直显头像、其余进 +N。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "wrk-codex-collab-1",
       "capability": "CAP-COLLAB",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/collab-presence-cursors.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-07-03T20:50:29.546Z",
       "notes": "uc-collab-002。基于 Yjs awareness 广播 presence（用户/光标坐标）。无头像时显示名称缩写/默认头像。Visitor 可见在线与光标但不可编辑。Header 在线区与 p7 F01 协同。blocked-on p8:F02（Yjs 同步）——awareness 挂在 F02 建的 Yjs doc 之上。",
       "source_use_cases": [
         "phases/requirements/board/collaboration/uc-collab-002-show-online-users-cursors.md"

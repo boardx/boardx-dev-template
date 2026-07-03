@@ -17,6 +17,12 @@ export interface ViewportSnapshot {
   scale: number;
 }
 
+export interface CursorSnapshot {
+  x: number;
+  y: number;
+  visible: boolean;
+}
+
 interface FollowSnapshot {
   viewport: ViewportSnapshot;
 }
@@ -27,6 +33,8 @@ type Listener<T> = (value: T) => void;
 let localViewport: ViewportSnapshot = { tx: 0, ty: 0, scale: 1 };
 // 本地是否正在操作（拖拽/编辑）。
 let localOperating = false;
+// 本地鼠标光标最新位置（供 presence 心跳广播给他人）。
+let localCursor: CursorSnapshot | null = null;
 
 const followListeners = new Set<Listener<FollowSnapshot | null>>();
 
@@ -48,6 +56,16 @@ export function setOperating(on: boolean): void {
 /** BoardPresence：读取本地操作态，塞进心跳 payload。 */
 export function readLocalOperating(): boolean {
   return localOperating;
+}
+
+/** BoardCanvas：发布本地光标位置；null 表示空闲/离开画布。 */
+export function publishCursor(cursor: CursorSnapshot | null): void {
+  localCursor = cursor;
+}
+
+/** BoardPresence：读取本地光标，塞进心跳 payload。 */
+export function readLocalCursor(): CursorSnapshot | null {
+  return localCursor;
 }
 
 /** BoardPresence：设置/清除跟随目标的视口快照（null = 停止跟随）。 */

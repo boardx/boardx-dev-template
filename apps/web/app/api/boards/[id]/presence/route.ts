@@ -1,22 +1,29 @@
 import { NextResponse } from "next/server";
 import { getBoardAccessRole } from "@repo/data";
 import { currentUser } from "@/lib/session";
-import { heartbeat, listOnline, type PresenceViewport } from "@/lib/presence";
+import { heartbeat, listOnline, type PresenceCursor, type PresenceViewport } from "@/lib/presence";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // uc-collab-001 协作感知：从心跳 body 解析可选的 operating + viewport（容错，字段缺失/畸形时退化为空）。
-function parseAwareness(body: unknown): { operating?: boolean; viewport?: PresenceViewport } {
+function parseAwareness(body: unknown): { operating?: boolean; viewport?: PresenceViewport; cursor?: PresenceCursor } {
   if (!body || typeof body !== "object") return {};
   const b = body as Record<string, unknown>;
-  const out: { operating?: boolean; viewport?: PresenceViewport } = {};
+  const out: { operating?: boolean; viewport?: PresenceViewport; cursor?: PresenceCursor } = {};
   if (typeof b.operating === "boolean") out.operating = b.operating;
   const v = b.viewport;
   if (v && typeof v === "object") {
     const vp = v as Record<string, unknown>;
     if (typeof vp.x === "number" && typeof vp.y === "number" && typeof vp.scale === "number") {
       out.viewport = { x: vp.x, y: vp.y, scale: vp.scale };
+    }
+  }
+  const c = b.cursor;
+  if (c && typeof c === "object") {
+    const cursor = c as Record<string, unknown>;
+    if (typeof cursor.x === "number" && typeof cursor.y === "number" && typeof cursor.visible === "boolean") {
+      out.cursor = { x: cursor.x, y: cursor.y, visible: cursor.visible };
     }
   }
   return out;
@@ -51,8 +58,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     user.email;
   // uc-collab-001：心跳可携带协作感知（operating + viewport）。body 可选，缺失时按普通心跳处理。
   const body = await req.json().catch(() => null);
-  const { operating, viewport } = parseAwareness(body);
-  heartbeat(boardId, { id: user.id, name, role, operating, viewport });
+  const { operating, viewport, cursor } = parseAwareness(body);
+  heartbeat(boardId, { id: user.id, name, role, operating, viewport, cursor });
   const members = listOnline(boardId);
   return NextResponse.json({ members, count: members.length, self: { id: user.id, role } });
 }
