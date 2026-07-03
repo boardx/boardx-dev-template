@@ -200,9 +200,9 @@
       "title": "消息附件富渲染接线（图片缩略图/lightbox + 音频播放器）",
       "user_visible_behavior": "聊天历史中的图片附件展示为缩略图（msg-attachment-image），点击打开 attachment-lightbox 放大预览；音频附件展示为可播放卡片（msg-attachment-audio-player）；签名 URL 获取失败时降级为文件名 chip（msg-attachment-chip）；文件类附件保留 chip + 下载。",
       "design_ref": "已确认 UI：apps/web/app/(app)/ava/attachments.tsx 的 RichAttachmentPreview（ui-signoff.md confirmed @2026-07-04，组件已建好待接线）",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-ava-p18-1",
       "capability": "CAP-FILE",
       "depends_on": [],
       "wave": 0,
@@ -211,7 +211,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-attach-files.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F10.verify.log @ 2026-07-03T18:44:02.192Z",
       "notes": "requirements/04。接线时必须同步更新 e2e/ava-attach-files.spec.ts 里对 msg-attachment-item 可见文本的断言（改为校验 alt/aria-label），这是 ui-signoff.md 里明确记录的既有断言耦合，不能静默破坏 p9-F08 基线。"
     },
     {

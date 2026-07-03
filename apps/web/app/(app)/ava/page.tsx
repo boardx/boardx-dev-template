@@ -28,9 +28,7 @@ import {
   Share2,
   Copy,
   Mail,
-  FileAudio,
   FileText,
-  ImageIcon,
   MoreHorizontal,
   Pencil,
   Trash2,
@@ -56,6 +54,7 @@ import {
   useAvaAttachments,
   AttachmentTrigger,
   AttachmentPreviewStrip,
+  RichAttachmentPreview,
 } from "./attachments";
 import { VoiceInputControl } from "./voice-input";
 
@@ -1246,26 +1245,12 @@ export default function AvaPage() {
                                     data-testid="msg-attachments"
                                     className="flex flex-wrap justify-end gap-1.5"
                                   >
-                                    {/* NOTE(p18 UI 先行原型): 富预览组件 RichAttachmentPreview
-                                        （见 ./attachments.tsx）已经建好、真实可用，但先不在这里接线——
-                                        它会让图片/音频附件不再以可见文件名 chip 渲染，从而破坏
-                                        e2e/ava-attach-files.spec.ts 里对 msg-attachment-item 文本内容
-                                        的既有断言（F08 已 passing）。正式接线属于 p18 的实现 feature，
-                                        需要同步把该断言改成校验 alt/aria-label 而不是可见文本。 */}
+                                    {/* p18 F10: 富附件预览接线（图片缩略图/lightbox + 音频播放器，
+                                        签名 URL 失败时组件内部降级为文件名 chip；文件类附件同样由
+                                        RichAttachmentPreview 内部渲染为 chip + 文件名）。 */}
                                     {m.attachments.map((a) => (
-                                      <li
-                                        key={a.id}
-                                        data-testid="msg-attachment-item"
-                                        className="flex items-center gap-1 rounded-9 border border-border bg-surface-1 px-2 py-1 text-11 text-muted-foreground"
-                                      >
-                                        {a.kind === "image" ? (
-                                          <ImageIcon className="h-3 w-3" strokeWidth={1.5} />
-                                        ) : a.kind === "audio" ? (
-                                          <FileAudio className="h-3 w-3" strokeWidth={1.5} />
-                                        ) : (
-                                          <FileText className="h-3 w-3" strokeWidth={1.5} />
-                                        )}
-                                        <span className="max-w-[10rem] truncate">{a.name}</span>
+                                      <li key={a.id} data-testid="msg-attachment-item">
+                                        <RichAttachmentPreview attachment={a} />
                                       </li>
                                     ))}
                                   </ul>
