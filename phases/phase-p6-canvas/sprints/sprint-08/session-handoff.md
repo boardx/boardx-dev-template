@@ -3,7 +3,8 @@
 ## 已完成
 - **F14 passing**：packages/canvas 字段级 patch 命令运行时（见上一轮记录）。
 - **F13 passing**（verify 门控翻的，evidence/F13.verify.log）：画布渲染引擎
-  切换 Fabric.js（官方 npm fabric@6.9.1）。
+  切换 Fabric.js（官方 npm fabric；初始实现基于 6.9.1，同分支 commit 90ada39
+  升级至 7.4.0，v7 origin 适配 + 47 用例回归）。
   - `apps/web/components/board/fabric-canvas.tsx`：渲染适配器。item 渲染 +
     选中框/拖拽（object:moving 吸附、object:modified 提交可逆 move）/Shift 多选/
     双击编辑/右键 都在 <canvas> 上；React 状态仍是数据权威，reconcile 单向同步。
