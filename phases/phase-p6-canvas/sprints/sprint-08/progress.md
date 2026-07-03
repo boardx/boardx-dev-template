@@ -69,3 +69,51 @@
 - 已知风险或未解决问题: fabric 等比缩放改为默认关闭（Shift 仍可等比），
   若后续 feature 需要默认等比需重新权衡；多选（ActiveSelection）缩放仍关闭。
 - 下一步最佳动作: F12 文本组件（见 session-handoff）。
+
+### 2026-07-03（第二轮返工，PR #315 coordinator 打回三次后修复）
+- 本轮目标: 修复 coordinator 在 PR #315 指出的三个阻断项——evidence 指针悬空、
+  F07.verify.log 未入库、回归失败无归因证据。
+- 根因: 分支缺少 main 上 #313 的 gitignore 白名单例外
+  （`!phases/**/evidence/*.log`），普通 `git add` 被 `*.log` 规则静默忽略；
+  `git merge-base --is-ancestor b275cfb HEAD` 此前返回 false 已确认。
+- 已完成:
+  1. `git merge origin/main`（merge commit 663feb3）：带入 #313 白名单例外
+     + p17-F01（底部 dock/AI 浮层）。冲突集中在
+     `apps/web/components/board/board-canvas.tsx`（import 区 + F01 新增的
+     `chooseDockTool`/`selectItem` 函数——纯新增非语义冲突，两边逻辑都保留，
+     dock/overlay 包裹在 fabric 渲染层外层，未改动其行为）与
+     `.harness/state/PROGRESS.md`（采用 origin/main 版本，未凭空编造数字）。
+     合并后 `pnpm run -w typecheck` 21/21 通过。
+  2. 重跑 F07 三条 verification（docker up / migrate / canvas-guidelines.spec.ts
+     3/3 passed），`git status --porcelain | grep F07.verify.log` 确认
+     `A  ...F07.verify.log` 出现在暂存区，随 commit e7f817c 正常 git add
+     入库（无 -f）。
+  3. 新增 `evidence/F07.regression-triage.md`：对 canvas/widget/board 43 个
+     e2e spec 顺序回归扫描（逐文件单独调用 playwright，绕开本机 playwright
+     1.47 CLI 多文件参数 "No tests found" 的已知问题），与
+     `F13.verify-full-triage.md` 逐条对照。2 例明确同名预置红灯
+     （board-menu-001、widgets-001），1 例同族已知问题（board-menu-003
+     自动选中失效，与 triage 里形状创建自动选中失效同一 bug 类），1 例
+     **新发现的真实断层**（board-ai-overlay 的 items-layer DOM 断言与 F13
+     fabric 渲染层不兼容——items 本体现在画在 `<canvas>` 上，不再产出
+     `data-testid="item-*"` DOM 节点；这是 p17-F01 测试代码与 F13 渲染层
+     重构之间的接口断层，不是本轮代码引入的新 bug，按范围纪律未动
+     dock/overlay 代码，留待下一轮修复），6 例因批量顺序执行（43 个文件
+     共享同一 dev server/db 进程、无隔离）怀疑环境 flake、如实标注为
+     **未决**待单独复测确认，不做无证据的"这是 flake"断言。
+- 运行过的验证: `pnpm run -w typecheck`（21/21）；F07 三条 verification
+  全绿；canvas/widget/board 43 spec 顺序回归（10 文件级失败，详见
+  regression-triage.md）；push 时 pre-push turbo 全量（45/45 成功，含
+  lint/test），未使用 `--no-verify`。
+- 已记录证据: evidence/F07.verify.log（补入库）、
+  evidence/F07.regression-triage.md（新增）。
+- 提交记录: 663feb3（merge origin/main）/ e7f817c（evidence 入库 + triage）。
+- 已知风险或未解决问题:
+  - board-ai-overlay.spec.ts 的 items-layer 断言需要下一轮配合 p17-F01
+    owner 修复（改用 fabric 侧 item 计数辅助，见 e2e/helpers/canvas.ts）。
+  - 6 例回归结果未决（怀疑批量顺序执行的环境 flake），需要下一轮单独
+    干净环境复测确认是否为真实回归。
+  - 中严重度修复项（拖动/缩放热路径 O(n) 遍历、no-op resize 污染 undo
+    栈、board-items API w/h 缺 Number.isFinite 防护）本轮未动，范围纪律
+    优先，留给下一轮。
+- 下一步最佳动作: 先处理上述"已知风险"三项遗留，再继续 F12 文本组件。
