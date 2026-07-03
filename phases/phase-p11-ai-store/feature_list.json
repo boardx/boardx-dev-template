@@ -122,7 +122,7 @@
       "title": "团队/项目审核与精选（PENDING/APPROVED 切换 + featured）",
       "user_visible_behavior": "Team 管理角色在团队 AI Store 审核视图查看提交审核的项目（PENDING），批准（→APPROVED/published）、拒绝（→REJECTED）或撤回；对已批准项目切换团队精选。操作即时反映在列表与状态标；无审核权限者看不到审核入口。",
       "design_ref": "prototype:<!-- store approval --> + <!-- admin: approval confirm -->（Team 管理页审核）；平台级审核/精选见 p15-F04/F05；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "06",
       "owner": "wrk-store-2",
       "capability": "CAP-DATA",
@@ -135,7 +135,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ai-store-006-approval-featured.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F06.verify.log @ 2026-07-03T04:19:51.655Z",
       "notes": "uc-ai-store-006。此为团队范围审核；平台范围审核/官方精选由 p15 Admin（F04/F05）承担，二者共用状态机但作用域不同。依赖 F02 的审核状态机。"
     }
   ]
