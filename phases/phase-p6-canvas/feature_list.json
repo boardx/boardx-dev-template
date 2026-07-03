@@ -274,7 +274,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/canvas-render.spec.ts e2e/canvas-add.spec.ts e2e/canvas-update.spec.ts e2e/canvas-delete.spec.ts e2e/canvas-pan-zoom.spec.ts e2e/canvas-select.spec.ts e2e/canvas-copy-paste.spec.ts e2e/canvas-undo-redo.spec.ts e2e/widget-menu-framework.spec.ts e2e/widget-sticky.spec.ts e2e/canvas-fabric-engine.spec.ts"
       ],
       "evidence": "",
-      "notes": "背景调研见 phases/requirements/board-canvas-gap-analysis-and-roadmap.md。canvas.md 早已把 Fabric.js 定位为「留作后续的可替换适配器」，现在到切换时机：F14(形状)/F15(连接线)/F16(手绘)/F17(图表) 在 Fabric 对象模型上实现成本远低于继续在 DOM 上手搓（连接线端口吸附、手绘 PencilBrush 都是 Fabric 原生能力）；oldcode canvasx-main 的 XConnector 子系统（端口吸附/自动重连/箭头样式，产品级+测试充分）可在此之后直接移植参考。依赖包用官方 npm `fabric`，不依赖 boardx-web 私有 fork `@boardxus/canvasx-core`。本 feature 只做渲染层替换，不新增用户可见能力，核心验收是既有 e2e 全绿 + 新增 canvas-fabric-engine.spec.ts 断言 <canvas> 存在。F14-F17 应排在本 feature passing 之后再开工，避免在 DOM 上做一遍、Fabric 化后再返工。",
+      "notes": "背景调研见 phases/requirements/board-canvas-gap-analysis-and-roadmap.md。canvas.md 早已把 Fabric.js 定位为「留作后续的可替换适配器」，现在到切换时机：F15(形状)/F16(连接线)/F17(手绘)/F18(图表) 在 Fabric 对象模型上实现成本远低于继续在 DOM 上手搓（连接线端口吸附、手绘 PencilBrush 都是 Fabric 原生能力）；oldcode canvasx-main 的 XConnector 子系统（端口吸附/自动重连/箭头样式，产品级+测试充分）可在此之后直接移植参考。依赖包用官方 npm `fabric`，不依赖 boardx-web 私有 fork `@boardxus/canvasx-core`。本 feature 只做渲染层替换，不新增用户可见能力，核心验收是既有 e2e 全绿 + 新增 canvas-fabric-engine.spec.ts 断言 <canvas> 存在。F14（数据模型字段级 patch）与本 feature 同属 Wave 0 前置工作，互不依赖可并行；F15-F18 应排在两者都 passing 之后再开工，避免返工。",
       "source_use_cases": [
         "phases/phase-p6-canvas/requirements/fabric-rendering-engine.md",
         "phases/phase-p6-canvas/requirements/canvas.md",
@@ -284,6 +284,29 @@
     {
       "id": "F14",
       "priority": 14,
+      "area": "canvas",
+      "title": "packages/canvas 数据模型改造为字段级 patch（CRDT-ready）",
+      "user_visible_behavior": "widget 更新命令从「整条 item 替换」改为「字段级 patch」（如 {kind:\"patch\", id, patch:{x,y}}）；同一 widget 连续两次不同字段的 patch 互不覆盖；现有 note/rect 类型与 add/move/edit/delete 命令在新语义下行为不变，既有 canvas e2e 全部保持通过。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-CANVAS",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/canvas run test",
+        "pnpm --filter @repo/web exec playwright test e2e/canvas-render.spec.ts e2e/canvas-add.spec.ts e2e/canvas-update.spec.ts e2e/canvas-delete.spec.ts e2e/canvas-select.spec.ts e2e/canvas-copy-paste.spec.ts e2e/canvas-undo-redo.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "背景见 phases/phase-p6-canvas/requirements/widget-schema-field-level.md 与 board-canvas-gap-analysis-and-roadmap.md 第 4 节。与 p6:F13（渲染引擎切换 Fabric.js）同属 Wave 0 前置工作，互不依赖、可并行，但都需在 F15（形状组件）开工前落地——否则后续 widget 类型（F15-F18）的专有字段要在旧的整条替换模型上写一遍，等 P8 接 Yjs 时再拆成字段级会返工（boardx-web 的 UndoRedoService 被 Y.UndoManager 取代就是交过的学费）。不引入 Yjs 依赖，只是让 applyCommand 的 patch 语义对未来 CRDT 存储后端友好。",
+      "source_use_cases": [
+        "phases/phase-p6-canvas/requirements/widget-schema-field-level.md",
+        "phases/requirements/board-canvas-gap-analysis-and-roadmap.md"
+      ]
+    },
+    {
+      "id": "F15",
+      "priority": 15,
       "area": "widgets",
       "title": "形状组件",
       "user_visible_behavior": "创建形状（矩形/圆/菱形等）并在其中输入文本；调整大小/外观（填充/边框）/层级；移动/缩放/旋转持久化。",
@@ -297,14 +320,14 @@
         "pnpm --filter @repo/web exec playwright test e2e/widget-shape.spec.ts"
       ],
       "evidence": "",
-      "notes": "uc-widgets-004。blocked-on p6:F13（画布渲染引擎切换为 Fabric.js）——形状对象在 Fabric 对象模型上实现，需等 F13 passing。",
+      "notes": "uc-widgets-004。blocked-on p6:F13（画布渲染引擎切换为 Fabric.js）与 p6:F14（数据模型字段级 patch）——形状对象在 Fabric 对象模型 + 字段级 schema 上实现，需等两者都 passing。",
       "source_use_cases": [
         "phases/requirements/board/widgets/uc-widgets-004-use-shape-widget.md"
       ]
     },
     {
-      "id": "F15",
-      "priority": 15,
+      "id": "F16",
+      "priority": 16,
       "area": "widgets",
       "title": "连接线组件 + 连接线样式",
       "user_visible_behavior": "从一个组件拉出连接线连到另一个组件，组件移动时连接线跟随；调整线型（直/折/曲）、粗细、颜色、端点箭头与路径/流程标识（uc-widget-menu-012）。",
@@ -318,15 +341,15 @@
         "pnpm --filter @repo/web exec playwright test e2e/widget-connector.spec.ts"
       ],
       "evidence": "",
-      "notes": "uc-widgets-005 + uc-widget-menu-012。连接线锚定到源/目标 widget id，重算路径为纯几何。blocked-on p6:F13——端口吸附/自动重连算法参考并移植 oldcode canvasx-main 的 XConnector 子系统（Fabric 原生），需等 F13 把渲染层切到 Fabric.js 之后才对齐。",
+      "notes": "uc-widgets-005 + uc-widget-menu-012。连接线锚定到源/目标 widget id，重算路径为纯几何。blocked-on p6:F13 与 p6:F14——端口吸附/自动重连算法参考并移植 oldcode canvasx-main 的 XConnector 子系统（Fabric 原生），需等 F13 把渲染层切到 Fabric.js、F14 把 schema 改成字段级之后才对齐。",
       "source_use_cases": [
         "phases/requirements/board/widgets/uc-widgets-005-use-connector-widget.md",
         "phases/requirements/board/widget-menu/uc-widget-menu-012-edit-connector-style.md"
       ]
     },
     {
-      "id": "F16",
-      "priority": 16,
+      "id": "F17",
+      "priority": 17,
       "area": "widgets",
       "title": "手绘组件",
       "user_visible_behavior": "切到手绘工具用鼠标/触控自由绘制笔迹；调整笔色/粗细；橡皮擦擦除笔迹（uc-board-menu-012）；笔迹作为组件可选中/移动/删除并持久化。",
@@ -340,14 +363,14 @@
         "pnpm --filter @repo/web exec playwright test e2e/widget-draw.spec.ts"
       ],
       "evidence": "",
-      "notes": "uc-widgets-006。笔迹存为路径点序列。橡皮擦入口在 p7 board-menu（uc-board-menu-012）触发本组件能力。blocked-on p6:F13——用 Fabric 内置 PencilBrush 实现，比继续在 DOM/SVG 上自研笔迹采样成本低很多，需等 F13 passing。",
+      "notes": "uc-widgets-006。笔迹存为路径点序列。橡皮擦入口在 p7 board-menu（uc-board-menu-012）触发本组件能力。blocked-on p6:F13 与 p6:F14——用 Fabric 内置 PencilBrush 实现，比继续在 DOM/SVG 上自研笔迹采样成本低很多，需等两者都 passing。",
       "source_use_cases": [
         "phases/requirements/board/widgets/uc-widgets-006-use-draw-widget.md"
       ]
     },
     {
-      "id": "F17",
-      "priority": 17,
+      "id": "F18",
+      "priority": 18,
       "area": "widgets",
       "title": "图表组件",
       "user_visible_behavior": "在画布查看/插入图表组件，对其选择/移动/缩放/锁定/删除；图表按其数据渲染（柱/线/饼等）；不支持的操作在 Widget Menu 隐藏。",
@@ -361,14 +384,14 @@
         "pnpm --filter @repo/web exec playwright test e2e/widget-chart.spec.ts"
       ],
       "evidence": "",
-      "notes": "uc-widgets-008。图表数据本期用内联数据；AI 辅助生成图表 blocked-on p9。另 blocked-on p6:F13——参考 oldcode canvasx-main XChart.ts 对 chart.js 的封装方式（渲染到图片贴进 Fabric 或 DOM overlay 跟随），需等 F13 passing。",
+      "notes": "uc-widgets-008。图表数据本期用内联数据；AI 辅助生成图表 blocked-on p9。另 blocked-on p6:F13 与 p6:F14——参考 oldcode canvasx-main XChart.ts 对 chart.js 的封装方式（渲染到图片贴进 Fabric 或 DOM overlay 跟随），需等两者都 passing。",
       "source_use_cases": [
         "phases/requirements/board/widgets/uc-widgets-008-use-chart-widget.md"
       ]
     },
     {
-      "id": "F18",
-      "priority": 18,
+      "id": "F19",
+      "priority": 19,
       "area": "widgets",
       "title": "组件样式调整 + 应用格式",
       "user_visible_behavior": "Widget Menu 中调整选中组件的颜色/边框/背景/线宽/透明度并实时预览、持久化（uc-widget-menu-002）；「应用格式」把当前组件样式刷到其他文本/便利贴（uc-widget-menu-010）。",
@@ -389,8 +412,8 @@
       ]
     },
     {
-      "id": "F19",
-      "priority": 19,
+      "id": "F20",
+      "priority": 20,
       "area": "widgets",
       "title": "锁定/解锁 + 删除 + 刷新组件",
       "user_visible_behavior": "锁定组件后不可移动/缩放/旋转/编辑，菜单显示解锁（uc-widget-menu-003）；删除选中的一个或多个组件（uc-widget-menu-008）；支持重新加载的组件可刷新内容（uc-widget-menu-009）。",
@@ -412,8 +435,8 @@
       ]
     },
     {
-      "id": "F20",
-      "priority": 20,
+      "id": "F21",
+      "priority": 21,
       "area": "widgets",
       "title": "多选组合批量操作（移动/对齐/编组/锁定/删除）",
       "user_visible_behavior": "同时选中多个组件形成 active selection，整体拖动；通过 Widget Menu 批量对齐（左/右/上/下/水平居中/垂直居中/等间距，uc-widget-menu-011）、编组/解组、批量锁定、批量删除。",
@@ -434,8 +457,8 @@
       ]
     },
     {
-      "id": "F21",
-      "priority": 21,
+      "id": "F22",
+      "priority": 22,
       "area": "widgets",
       "title": "图片组件 + 裁剪",
       "user_visible_behavior": "向画布添加图片，管理其位置/尺寸/裁剪/状态；Widget Menu 提供裁剪（uc-widget-menu-004）；图片可移动/缩放/锁定/删除。",
@@ -454,8 +477,8 @@
       ]
     },
     {
-      "id": "F22",
-      "priority": 22,
+      "id": "F23",
+      "priority": 23,
       "area": "widgets",
       "title": "文件组件 + 下载 + 音频转文本",
       "user_visible_behavior": "向画布添加文件并显示文件卡片信息，可移动/删除/下载（uc-widget-menu-005）；音频文件组件可转文本（uc-widget-menu-006）。",
@@ -475,8 +498,8 @@
       ]
     },
     {
-      "id": "F23",
-      "priority": 23,
+      "id": "F24",
+      "priority": 24,
       "area": "widgets",
       "title": "组件 AI 助手",
       "user_visible_behavior": "选中组件后从 Widget Menu 触发 AI 能力（基于该组件内容生成/改写/总结等），结果写回画布或新建组件。",
