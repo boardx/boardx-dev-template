@@ -6,6 +6,7 @@ import {
   isRoomOwner,
   updateRoom,
   deleteRoom,
+  listFavoriteRoomIds,
   type RoomVisibility,
 } from "@repo/data";
 import { currentUser } from "@/lib/session";
@@ -22,7 +23,10 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   if (!(await canViewRoom(roomId, user.id))) {
     return NextResponse.json({ error: "无权限" }, { status: 403 });
   }
-  return NextResponse.json({ room });
+  const favoriteIds = await listFavoriteRoomIds(user.id);
+  // bigint 列经 pg 驱动可能回传为字符串，统一转 String 再比较，避免类型不一致误判
+  const isFavorite = favoriteIds.some((id) => String(id) === String(roomId));
+  return NextResponse.json({ room, isFavorite });
 }
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {

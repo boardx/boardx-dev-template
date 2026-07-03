@@ -96,9 +96,9 @@
       "title": "收藏房间与 Favorites 筛选",
       "user_visible_behavior": "房间卡片与详情页头有星标（data-testid=room-favorite-toggle），点击切换收藏并持久化（每用户维度）；房间列表提供 Favorites 筛选只显示已收藏房间；非成员收藏返回 403；刷新后状态保持。",
       "design_ref": "prototype:Rooms 列表屏；对齐 uc-room-002:31 与 oldcode RoomSubscription.favorite",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-room-1",
       "capability": "CAP-DATA",
       "depends_on": [],
       "wave": 0,
@@ -107,7 +107,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-005-favorite.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F05.verify.log @ 2026-07-03T19:28:03.047Z",
       "notes": "uc-rr-004。存储与 009_board_favorites 模式保持一致。"
     },
     {
