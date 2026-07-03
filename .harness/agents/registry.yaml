@@ -55,10 +55,15 @@ agents:
     model: sonnet-5
     areas: [survey]
     max_concurrent: 1
+  - id: wrk-survey-3
+    kind: worker
+    model: sonnet-5
+    areas: [survey]                              # p17 新增：wrk-survey-1 被 p13-F04 占用时的第二个 survey worker
+    max_concurrent: 1
   - id: wrk-credits-1
     kind: worker
     model: sonnet-5
-    areas: [credits, billing]
+    areas: [credits, billing, common]             # p17-F06 (KB+Credits 收尾 reskin) 归到这里
     max_concurrent: 1
   - id: wrk-admin-1
     kind: worker

@@ -9,7 +9,7 @@
 //                        uploading → failed（可重试，重试即重新发起上传）
 // 发送消息时，只把 uploaded 状态的 attachment id 传给 messages 接口；uploading/failed
 // 的条目会阻塞发送（避免半上传附件随消息发出）。
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Paperclip, X, Loader2, RotateCw, FileAudio, FileText, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FileInput } from "@/components/ui/file-input";
@@ -299,5 +299,143 @@ export function AttachmentPreviewStrip({
         </li>
       ))}
     </ul>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// RichAttachmentPreview — P18 UI 先行原型（组件落点，见 ui-signoff.md）。
+//
+// 差距：消息历史里的附件此前只渲染「图标 + 文件名」chip（见上面 page.tsx 的
+// msg-attachment-item），图片没有缩略图、音频没有播放器。签名直链接口
+// `/api/ava/attachments/:id/url` 早已实现（供 composer 预览条设计时预留），
+// 但从未被消息历史渲染调用——这里把它接上。
+//
+// 本组件真实可用（真实拉取已存在的签名直链接口），不是 mock 占位；F18 阶段把它
+// 接进真实消息列表渲染即完成本项，无需重写。
+export interface MinimalAttachment {
+  id: string;
+  name: string;
+  kind: "image" | "audio" | "file";
+}
+
+function useAttachmentUrl(attachmentId: string, enabled: boolean) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    setStatus("loading");
+    fetch(`/api/ava/attachments/${attachmentId}/url`)
+      .then((res) => {
+        if (!res.ok) throw new Error("failed");
+        return res.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+        if (typeof data?.url === "string" && data.url) {
+          setUrl(data.url);
+          setStatus("ready");
+        } else {
+          setStatus("error");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setStatus("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [attachmentId, enabled]);
+
+  return { url, status };
+}
+
+function AttachmentChipFallback({ attachment }: { attachment: MinimalAttachment }) {
+  return (
+    <span
+      data-testid="msg-attachment-chip"
+      className="flex items-center gap-1 rounded-9 border border-border bg-surface-1 px-2 py-1 text-11 text-muted-foreground"
+    >
+      {kindIcon(attachment.kind)}
+      <span className="max-w-[10rem] truncate">{attachment.name}</span>
+    </span>
+  );
+}
+
+export function RichAttachmentPreview({ attachment }: { attachment: MinimalAttachment }) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const richKind = attachment.kind === "image" || attachment.kind === "audio";
+  const { url, status } = useAttachmentUrl(attachment.id, richKind);
+
+  if (!richKind || status === "error") {
+    return <AttachmentChipFallback attachment={attachment} />;
+  }
+
+  if (status === "loading" || !url) {
+    return (
+      <span
+        data-testid="msg-attachment-loading"
+        className="flex h-14 w-14 items-center justify-center rounded-9 border border-border bg-surface-1"
+      >
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" strokeWidth={2} />
+      </span>
+    );
+  }
+
+  if (attachment.kind === "image") {
+    return (
+      <>
+        <Button
+          type="button"
+          variant="ghost"
+          data-testid="msg-attachment-image"
+          aria-label={`Preview ${attachment.name}`}
+          onClick={() => setLightboxOpen(true)}
+          className="h-14 w-14 overflow-hidden rounded-9 border border-border bg-surface-1 p-0 transition-opacity hover:bg-surface-1 hover:opacity-90"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img alt={attachment.name} src={url} className="h-full w-full object-cover" />
+        </Button>
+        {lightboxOpen && (
+          <div
+            data-testid="attachment-lightbox"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
+            onClick={() => setLightboxOpen(false)}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img alt={attachment.name} src={url} className="max-h-full max-w-full rounded-9 object-contain shadow-lg" />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              data-testid="attachment-lightbox-close"
+              aria-label="Close preview"
+              className="absolute right-4 top-4 h-8 w-8 text-white hover:bg-white/20 hover:text-white"
+              onClick={() => setLightboxOpen(false)}
+            >
+              <X className="h-4 w-4" strokeWidth={2} />
+            </Button>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // audio
+  return (
+    <div
+      data-testid="msg-attachment-audio"
+      className="flex w-56 flex-col gap-1 rounded-9 border border-border bg-surface-1 p-2"
+    >
+      <span className="flex items-center gap-1 truncate text-11 text-muted-foreground">
+        <FileAudio className="h-3 w-3 flex-none" strokeWidth={1.5} />
+        <span className="truncate">{attachment.name}</span>
+      </span>
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <audio data-testid="msg-attachment-audio-player" controls preload="none" className="h-8 w-full">
+        <source src={url} />
+      </audio>
+    </div>
   );
 }
