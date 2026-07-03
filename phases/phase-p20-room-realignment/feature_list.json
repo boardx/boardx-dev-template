@@ -205,9 +205,9 @@
       "title": "下线 legacy 单画布模型（迁移 + 路由收敛）",
       "user_visible_behavior": "迁移把 board_items.board_id IS NULL 的 legacy 数据回填到每房间自动创建的默认 board（幂等）；/rooms/[id]/board 重定向到 /rooms/[id]/boards；/api/rooms/[id]/items 返回 410；legacy 页面组件删除；迁移后全库 board_items.board_id 非空。",
       "design_ref": "架构修正（gap 报告 E2），无原型屏",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-room-3",
       "capability": "CAP-DATA",
       "depends_on": [],
       "wave": 0,
@@ -217,7 +217,7 @@
         "docker compose -f infra/docker-compose.yml exec -T postgres psql -U boardx -d boardx -tAc \"SELECT count(*) FROM board_items WHERE board_id IS NULL\" | grep -qx 0",
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-010-legacy-canvas-retire.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F10.verify.log @ 2026-07-03T18:19:31.582Z",
       "notes": "uc-rr-009。消除双画布并存脏状态；e2e 断言旧直链重定向而非 404。"
     },
     {

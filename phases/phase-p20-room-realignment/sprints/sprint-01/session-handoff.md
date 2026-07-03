@@ -1,6 +1,9 @@
 # 会话交接 — Sprint p20/01
 
 ## 当前已验证
+- **F10 passing**（2026-07-04 门控通过，wrk-room-3）：legacy 单画布下线。迁移 022 回填 board_id 并加 NOT NULL；
+  /rooms/[id]/board → 307 到 /rooms/[id]/boards；/api/rooms/[id]/items 与 /api/items/[id] 全方法 410；
+  canvas-* 四个 e2e 已迁移到 board 模型。验证 = room-rr-010 spec 5 用例 + 回归 14 用例全过。
 - **F02 passing**（2026-07-04 门控通过，wrk-room-1）：New Room 可见性二选一卡片（默认 Private）+
   名称 ≥3 校验 + 列表 🔒/🌐 徽章 + team 房间同团队成员可发现/可加入（新增 POST /api/rooms/[id]/join；
   POST /api/rooms 未传 teamId 回落当前团队 cookie）。验证 = e2e/room-rr-002-visibility.spec.ts 4 用例
@@ -25,7 +28,7 @@
   wave1 的 F03/F06/F08/F11 依赖 F01（壳已就位，合并后即可开工）。
 - F01 实现要点：壳在 apps/web/app/(app)/rooms/[id]/layout.tsx（客户端组件，fetch room+members）；
   /rooms/[id] 服务端 redirect 到 boards；files/、surveys/ 是占位页（F03/F08 替换）。
-- 不要动：rooms/[id]/board 旧页面（F10 统一处理）；phase-04 feature_list 的 F12 描述（F07 一并修订）。
+- 不要动：F10 已处理 rooms/[id]/board（现为 redirect）；phase-04 feature_list 的 F12 描述（F07 一并修订）。
 
 ## 命令
 - 启动:`pnpm -w run dev`
