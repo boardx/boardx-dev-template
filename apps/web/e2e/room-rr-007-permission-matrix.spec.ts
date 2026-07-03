@@ -1,12 +1,16 @@
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type APIRequestContext, type Page, type PlaywrightWorkerArgs } from "@playwright/test";
 
-// uc-rr-006 房间权限矩阵统一（p20/F07）
+// 编号映射：feature = p20/F07「房间权限矩阵统一」；需求 = uc-rr-006（该文件里的矩阵是权威）；
+// 本文件名 rr-007 是 e2e 用例流水号（rr 系列 spec 编号与 uc 编号不一一对应，F07 对应 uc-rr-006）。
 // 按权威矩阵逐行断言（每行至少一个正/反用例）：
 //   查看/创建（member ✅）、邀请/移除 member（admin ✅ / member ❌）、
 //   提升/降级 admin（owner ✅ / admin ❌）、移除 admin（owner ✅）、
 //   改名/可见性（admin ✅ / member ❌）、删房间/动 owner（admin ❌）。
-// 注：删除他人文件行的 API 由 p20/F03（房间文件库）交付，端点就绪后在 F03 的 e2e 断言。
+// 矩阵缺口（本 spec 不断言，归属见 sprint-01/progress.md）：
+//   「admin 删除他人文件」→ 房间文件端点由 p20/F03 交付，F03 的 e2e 补该行断言；
+//   「admin 修改 AI 上下文字段」→ rooms 尚无该字段，由 p20/F11 交付时补该行断言。
 // 与 room-003 spec 互补：本文件不重复「admin 移除 admin 403」「owner 不可自移除」断言。
+type PW = PlaywrightWorkerArgs["playwright"];
 const uniq = (p = "rr7") => `${p}_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
@@ -16,7 +20,7 @@ interface UserCtx {
   userId: number;
 }
 
-async function newUserCtx(playwright: any, prefix = "u"): Promise<UserCtx> {
+async function newUserCtx(playwright: PW, prefix = "u"): Promise<UserCtx> {
   const email = uniq(prefix);
   const ctx = await playwright.request.newContext({ baseURL: BASE_URL });
   const reg = await (
@@ -28,7 +32,7 @@ async function newUserCtx(playwright: any, prefix = "u"): Promise<UserCtx> {
 }
 
 /** owner + admin + member 三角色就位的房间。 */
-async function setupRoom(playwright: any) {
+async function setupRoom(playwright: PW) {
   const owner = await newUserCtx(playwright, "owner");
   const admin = await newUserCtx(playwright, "admin");
   const member = await newUserCtx(playwright, "member");

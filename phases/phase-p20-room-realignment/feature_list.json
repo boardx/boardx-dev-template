@@ -151,7 +151,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-007-permission-matrix.spec.ts"
       ],
-      "evidence": "evidence/F07.verify.log @ 2026-07-03T18:01:37.901Z",
+      "evidence": "evidence/F07.verify.log @ 2026-07-03T18:14:48.115Z",
       "notes": "uc-rr-006。e2e 覆盖矩阵每行至少一个正/反用例；文档修订包含 role-diagrams/room-{owner,admin,member}.md 补 Files/Survey 节点 + phase-04 F12 描述改为 owner/admin。"
     },
     {
