@@ -77,30 +77,55 @@ for f in $pages_with_fetch; do
   fi
 done
 
-# ── 7. 跨模块文案语言一致性：同一类 UI 标签（label=/label:）不应中英文混用 ─────
+# ── 7. 文案语言一致性：同一类 UI 标签（label=/label:）不应中英文混用 ─────────────
 # 只看 label="..." / label: "..." 这类明确的 UI 展示文案 prop（不看 aria-label/placeholder/
-# 邮箱等自然含中英混排的字段，避免误报）。按文件分组，判断该 prop 在文件内整体是
-# 「纯中文」还是「纯英文」，再看全项目范围内两种语言是否同时出现——用真实案例校准：
-# board-canvas.tsx 用中文 label（选择/平移/连接线…），sidebar.tsx 用英文 label（Home/Rooms…）。
+# 邮箱等自然含中英混排的字段，避免误报）。两种粒度都测：
+#   (a) 同一文件内部：既有中文 label 又有英文 label（如 ava/page.tsx 的"理解文件" vs "Today"）。
+#   (b) 跨文件：整个项目里，一批文件全用中文 label、另一批全用英文 label（如
+#       board-canvas.tsx「选择/平移/连接线」 vs sidebar.tsx「Home/Rooms」）。
+# 每条真实命中都以 "LABEL-LANG-MIX:" 前缀 + 文件:行号 的形式输出，可被 grep 精确锚定，
+# 不会与本脚本自身的说明性 echo 混淆（那些行不带这个前缀、也不含真实源文件路径:行号）。
 #
-# 注：此检测项目前是**警告级**（不置 viol=1，不拦截 verify:base）。原因：首次跑这条规则
+# 注：此检测目前是**警告级**（不置 viol=1，不拦截 verify:base）。原因：首次跑这条规则
 # 就发现语言不一致是项目级的既有事实（P0-P4 reskin 页面多为英文 label，harness pipeline
-# 之后新建的 Ava/Admin/Rooms/Studio/Board 等模块多为中文 label），涉及文件众多、修复属于
-# 内容/文案层面的 reskin 工作（归属 phase-p17），不是这个 feature（扩大 lint 覆盖）的范围。
-# 把它做成 err 会让本次新增检测直接拖垮所有人的 verify:base 基础门禁。等 phase-p17 把文案
-# 语言统一之后，可以把下面的 warn 改回 err，让这条规则转为硬门禁防止再次劣化。
+# 之后新建的 Ava/Admin/Rooms/Studio/Board 等模块多为中文 label，甚至同一文件内都有混用），
+# 涉及文件众多，修复属于内容/文案层面的 reskin 工作（归属 phase-p17），不是这个 feature
+# （扩大 lint 覆盖）的范围。把它做成 err 会让本次新增检测直接拖垮所有人的 verify:base
+# 基础门禁。等 phase-p17 把文案语言统一之后，可以把下面的 warn 改回 err，转为硬门禁。
 label_lines=$(grep -rnE '(^|[^a-zA-Z-])label(=|: )"[^"]+"' app components --include="*.tsx" 2>/dev/null \
   | grep -v "components/ui/" \
   | grep -v "aria-label" || true)
 if [ -n "$label_lines" ]; then
-  zh_files=$(echo "$label_lines" | grep -E '[一-龥]' | cut -d: -f1 | sort -u || true)
-  en_files=$(echo "$label_lines" | grep -vE '[一-龥]' | cut -d: -f1 | sort -u || true)
-  if [ -n "$zh_files" ] && [ -n "$en_files" ]; then
-    echo "⚠ 跨模块 UI 标签(label=)文案语言不一致（警告，不拦截；修复归属 phase-p17 reskin）：以下文件用中文 label，而以下文件用英文 label，同一层级 UI 组件的文案语言应统一："
-    echo "  中文 label 文件："
-    echo "$zh_files" | sed 's/^/    /'
-    echo "  英文 label 文件："
-    echo "$en_files" | sed 's/^/    /'
+  # (a) 同文件内混用：文件内既有含中文字符的 label 行，也有不含中文字符的 label 行。
+  same_file_mix_files=$(comm -12 \
+    <(echo "$label_lines" | grep -E '[一-龥]' | cut -d: -f1 | sort -u) \
+    <(echo "$label_lines" | grep -vE '[一-龥]' | cut -d: -f1 | sort -u) || true)
+  if [ -n "$same_file_mix_files" ]; then
+    echo "⚠ LABEL-LANG-MIX(同文件内中英混用，警告，不拦截；修复归属 phase-p17 reskin)："
+    while IFS= read -r f; do
+      [ -z "$f" ] && continue
+      echo "$label_lines" | grep -F "${f}:" | sed 's/^/    LABEL-LANG-MIX: /'
+    done <<< "$same_file_mix_files"
+  fi
+
+  # (b) 跨文件：整个项目里一批文件纯中文 label、另一批纯英文 label（分别排除掉已经在
+  # 同文件内混用名单里的文件，避免重复计入）。
+  zh_only_files=$(comm -23 \
+    <(echo "$label_lines" | grep -E '[一-龥]' | cut -d: -f1 | sort -u) \
+    <(echo "$same_file_mix_files" | sort -u) || true)
+  en_only_files=$(comm -23 \
+    <(echo "$label_lines" | grep -vE '[一-龥]' | cut -d: -f1 | sort -u) \
+    <(echo "$same_file_mix_files" | sort -u) || true)
+  if [ -n "$zh_only_files" ] && [ -n "$en_only_files" ]; then
+    echo "⚠ LABEL-LANG-MIX(跨文件中英混用，警告，不拦截；修复归属 phase-p17 reskin)：以下文件整体用中文 label，而以下文件整体用英文 label，同一层级 UI 组件的文案语言应统一："
+    while IFS= read -r f; do
+      [ -z "$f" ] && continue
+      echo "$label_lines" | grep -F "${f}:" | head -1 | sed 's/^/    LABEL-LANG-MIX: /'
+    done <<< "$zh_only_files"
+    while IFS= read -r f; do
+      [ -z "$f" ] && continue
+      echo "$label_lines" | grep -F "${f}:" | head -1 | sed 's/^/    LABEL-LANG-MIX: /'
+    done <<< "$en_only_files"
     echo "  示例（Board 工具条 vs Sidebar 导航）：见 components/board/board-canvas.tsx 与 components/app-shell/sidebar.tsx"
   fi
 fi
