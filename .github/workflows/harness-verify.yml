@@ -181,5 +181,10 @@ jobs:
         run: pnpm --filter @repo/data run migrate
       - name: Install Playwright chromium
         run: pnpm --filter @repo/web exec playwright install --with-deps chromium
-      - name: Playwright e2e（全量：auth/team/room/canvas/profile/board + 各功能模块；webServer 自动起 next dev）
-        run: pnpm --filter @repo/web exec playwright test
+      # kb/studio/presentation 的异步生成链路（入队→worker 消费→回写状态）依赖
+      # workflow-worker 进程；不起它，相关 e2e（kb-001/presentations/studio）会稳定超时。
+      - name: Playwright e2e（全量：auth/team/room/canvas/profile/board + 各功能模块；webServer 自动起 next dev，先后台起 workflow-worker）
+        run: |
+          set -euo pipefail
+          pnpm --filter @repo/workflow-worker start &
+          pnpm --filter @repo/web exec playwright test

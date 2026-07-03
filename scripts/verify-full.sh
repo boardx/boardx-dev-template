@@ -44,6 +44,20 @@ if docker info >/dev/null 2>&1; then
   # 只清本 worktree 自己的 E2E_PORT，不碰其它端口——避免误杀别的 worktree 的 dev server。
   lsof -ti tcp:"$E2E_PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
   rm -rf apps/web/.next
+  # 后台起 workflow-worker：kb/studio/presentation 的异步生成链路（入队→消费→回写）
+  # 依赖它，否则相关 e2e 稳定超时。worker 不监听端口，多 worktree 并行无冲突；
+  # 退出时只 kill 自己起的这个进程（记 PID），不误伤别的 worktree 的 worker。
+  $PNPM --filter @repo/workflow-worker start &
+  WORKER_PID=$!
+  # pnpm 是包装进程（pnpm → [sh] → node），按 PID 树逐层清掉，避免留僵尸 worker
+  kill_worker() {
+    for c in $(pgrep -P "$WORKER_PID" 2>/dev/null); do
+      pkill -P "$c" 2>/dev/null || true
+      kill "$c" 2>/dev/null || true
+    done
+    kill "$WORKER_PID" 2>/dev/null || true
+  }
+  trap kill_worker EXIT
   $PNPM --filter @repo/web exec playwright test
   echo "✓ 全量 e2e 通过"
 else
