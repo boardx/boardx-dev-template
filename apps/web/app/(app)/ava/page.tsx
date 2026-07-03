@@ -28,9 +28,7 @@ import {
   Share2,
   Copy,
   Mail,
-  FileAudio,
   FileText,
-  ImageIcon,
   MoreHorizontal,
   Pencil,
   Trash2,
@@ -56,7 +54,9 @@ import {
   useAvaAttachments,
   AttachmentTrigger,
   AttachmentPreviewStrip,
+  RichAttachmentPreview,
 } from "./attachments";
+import { VoiceInputControl } from "./voice-input";
 
 interface ThreadSummary {
   id: number;
@@ -194,6 +194,10 @@ export default function AvaPage() {
   const [shareLoading, setShareLoading] = useState(false);
   const [shareError, setShareError] = useState("");
   const [copyStatus, setCopyStatus] = useState("");
+  // p18 F08：邮件发送提示独立于「复制链接」的提示（share-email-status / err-share-email）。
+  const [emailStatus, setEmailStatus] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
   const [editError, setEditError] = useState("");
@@ -287,7 +291,7 @@ export default function AvaPage() {
       setHasMoreThreads(Boolean(data.hasMore));
       setNextThreadCursor(data.nextCursor ?? null);
     } catch {
-      setThreadError("加载更多会话失败，请重试");
+      setThreadError("Failed to load more conversations — please try again");
     } finally {
       setLoadingMoreThreads(false);
     }
@@ -303,8 +307,8 @@ export default function AvaPage() {
         await Promise.all([refreshThreads(), refreshCapabilities()]);
       } catch {
         if (!cancelled) {
-          setThreadError("加载会话失败，请稍后重试");
-          setSettingsError("加载 AI 设置失败，请稍后重试");
+          setThreadError("Failed to load conversations — please try again later");
+          setSettingsError("Failed to load AI settings — please try again later");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -350,7 +354,7 @@ export default function AvaPage() {
 
   useEffect(() => {
     const onFocus = () => {
-      void refreshCapabilities().catch(() => setSettingsError("刷新 AI 设置失败，已保留当前选择"));
+      void refreshCapabilities().catch(() => setSettingsError("Failed to refresh AI settings — kept current selection"));
     };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
@@ -367,6 +371,8 @@ export default function AvaPage() {
     setShare(null);
     setShareError("");
     setCopyStatus("");
+    setEmailStatus("");
+    setEmailError("");
     setEditingId(null);
     setDeleteConfirmId(null);
     setActionError("");
@@ -389,7 +395,7 @@ export default function AvaPage() {
       const data = await res.json();
       setMessages(data.messages ?? []);
     } catch {
-      setSendError("加载消息失败，请稍后重试");
+      setSendError("Failed to load messages — please try again later");
     }
   }
 
@@ -401,6 +407,8 @@ export default function AvaPage() {
     setShare(null);
     setShareError("");
     setCopyStatus("");
+    setEmailStatus("");
+    setEmailError("");
     setEditingId(null);
     setDeleteConfirmId(null);
     setActionError("");
@@ -428,7 +436,7 @@ export default function AvaPage() {
   async function saveRename(threadId: number) {
     const title = renameDraft.trim().replace(/\s+/g, " ");
     if (!title) {
-      setActionError("标题不能为空");
+      setActionError("Title can't be empty");
       return;
     }
     try {
@@ -440,7 +448,7 @@ export default function AvaPage() {
       if (guard(res.status)) return;
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setActionError(data?.errors?.title ?? data?.error ?? "重命名失败，请重试");
+        setActionError(data?.errors?.title ?? data?.error ?? "Rename failed — please try again");
         return;
       }
       setThreads((prev) => prev.map((t) => (t.id === threadId ? data.thread : t)));
@@ -448,7 +456,7 @@ export default function AvaPage() {
       setRenameDraft("");
       setActionError("");
     } catch {
-      setActionError("重命名失败，请重试");
+      setActionError("Rename failed — please try again");
     }
   }
 
@@ -461,7 +469,7 @@ export default function AvaPage() {
       if (guard(res.status)) return;
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setActionError(data?.error ?? "删除失败，请重试");
+        setActionError(data?.error ?? "Delete failed — please try again");
         return;
       }
       setThreads((prev) => prev.filter((t) => t.id !== threadId));
@@ -473,7 +481,7 @@ export default function AvaPage() {
         setMobileView("chat");
       }
     } catch {
-      setActionError("删除失败，请重试");
+      setActionError("Delete failed — please try again");
     }
   }
 
@@ -517,7 +525,7 @@ export default function AvaPage() {
         if (errBody?.errors?.text) {
           setSendError(errBody.errors.text);
         } else {
-          setSendError("发送失败，请重试（你的输入已保留）");
+          setSendError("Send failed — please try again (your input is preserved)");
         }
         return;
       }
@@ -538,12 +546,12 @@ export default function AvaPage() {
         onError: (msg: Message) => {
           setMessages((prev) => [...prev, msg]);
           setStreamingText("");
-          setSendError("AVA 生成回复失败，请重试。");
+          setSendError("AVA failed to generate a reply — please try again.");
         },
       });
       await refreshThreads();
     } catch {
-      setSendError("发送失败，请重试（你的输入已保留）");
+      setSendError("Send failed — please try again (your input is preserved)");
     } finally {
       setSending(false);
     }
@@ -651,7 +659,7 @@ export default function AvaPage() {
       if (guard(res.status)) return;
       if (!res.ok || !res.body) {
         const errBody = await res.json().catch(() => ({}));
-        setEditError(errBody?.errors?.text ?? errBody?.error ?? "保存失败，请重试");
+        setEditError(errBody?.errors?.text ?? errBody?.error ?? "Save failed — please try again");
         return;
       }
 
@@ -683,12 +691,12 @@ export default function AvaPage() {
         onError: (msg: Message) => {
           setMessages((prev) => [...prev, msg]);
           setStreamingText("");
-          setSendError("AVA 生成回复失败，请重试。");
+          setSendError("AVA failed to generate a reply — please try again.");
         },
       });
       await refreshThreads();
     } catch {
-      setEditError("保存失败，请重试");
+      setEditError("Save failed — please try again");
     } finally {
       setSending(false);
     }
@@ -739,7 +747,7 @@ export default function AvaPage() {
       if (guard(res.status)) return;
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
-        setSendError(errBody?.error ?? "删除失败，请重试");
+        setSendError(errBody?.error ?? "Delete failed — please try again");
         return;
       }
       setMessages((prev) => {
@@ -750,7 +758,7 @@ export default function AvaPage() {
       setEditingId(null);
       await refreshThreads();
     } catch {
-      setSendError("删除失败，请重试");
+      setSendError("Delete failed — please try again");
     } finally {
       setDeletingId(null);
     }
@@ -827,7 +835,7 @@ export default function AvaPage() {
         onError: (msg: Message) => {
           setMessages((prev) => [...prev, msg]);
           setStreamingText("");
-          setSendError("AVA 生成回复失败，请重试。");
+          setSendError("AVA failed to generate a reply — please try again.");
         },
       });
       await refreshThreads();
@@ -874,6 +882,8 @@ export default function AvaPage() {
     setShareOpen(nextOpen);
     setShareError("");
     setCopyStatus("");
+    setEmailStatus("");
+    setEmailError("");
     if (nextOpen && activeId) await loadShare();
   }
 
@@ -929,6 +939,26 @@ export default function AvaPage() {
     }
   }
 
+  // p18 F08：分享聊天「发送到我的邮箱」。未开启分享时后端自动生成链接再发送。
+  async function sendShareEmail() {
+    if (!activeId) return;
+    setEmailSending(true);
+    setEmailStatus("");
+    setEmailError("");
+    try {
+      const res = await fetch(`/api/ava/threads/${activeId}/share/email`, { method: "POST" });
+      if (guard(res.status)) return;
+      if (!res.ok) throw new Error();
+      const data = (await res.json()) as { ok: boolean; to: string; share: ThreadShare };
+      setShare(data.share);
+      setEmailStatus(`分享链接已发送到 ${data.to}`);
+    } catch {
+      setEmailError("发送邮件失败，请重试");
+    } finally {
+      setEmailSending(false);
+    }
+  }
+
   const isEmptyThread = messages.length === 0 && !sending;
   const activeModel = capabilities?.models.find((model) => model.id === modelId);
   const activeAgent = capabilities?.agents.find((agent) => agent.id === agentId);
@@ -978,12 +1008,12 @@ export default function AvaPage() {
                 {threadError}
               </p>
               <Button data-testid="threads-retry" size="sm" variant="outline" className="h-8 transition-colors" onClick={() => void refreshThreads()}>
-                重试
+                Retry
               </Button>
             </div>
           ) : threads.length === 0 ? (
             <p data-testid="threads-empty" className="px-1 pt-2 text-xs text-muted-foreground">
-              还没有会话，开始聊天即可创建。
+              No conversations yet — start chatting to create one.
             </p>
           ) : (
             <div className="space-y-3">
@@ -1108,7 +1138,7 @@ export default function AvaPage() {
                   disabled={!activeId}
                 >
                   <Share2 className="h-4 w-4" strokeWidth={1.5} />
-                  分享
+                  Share
                 </Button>
               </div>
               {shareOpen && (
@@ -1118,9 +1148,9 @@ export default function AvaPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h2 className="text-13 font-semibold text-foreground">通过链接分享</h2>
+                      <h2 className="text-13 font-semibold text-foreground">Share via link</h2>
                       <p className="mt-1 text-11 leading-relaxed text-muted-foreground">
-                        公开链接仅包含这条聊天中的消息，不包含私有附件或团队私有上下文。
+                        The public link only includes messages in this chat, not private attachments or team context.
                       </p>
                     </div>
                     <Button
@@ -1135,13 +1165,13 @@ export default function AvaPage() {
                   </div>
 
                   <div className="mt-4 space-y-2">
-                    <Label htmlFor="ava-share-url">分享链接</Label>
+                    <Label htmlFor="ava-share-url">Share link</Label>
                     <Input
                       id="ava-share-url"
                       data-testid="share-link"
                       readOnly
                       value={currentShareUrl}
-                      placeholder={shareLoading ? "Loading share link..." : "点击复制链接生成分享"}
+                      placeholder={shareLoading ? "Loading share link..." : "Click to generate a share link"}
                     />
                   </div>
 
@@ -1165,7 +1195,7 @@ export default function AvaPage() {
                       disabled={shareLoading}
                     >
                       <Copy className="h-4 w-4" strokeWidth={1.5} />
-                      {currentShareUrl ? "复制链接" : "通过链接分享"}
+                      {currentShareUrl ? "Copy link" : "Share via link"}
                     </Button>
                     <Button
                       data-testid="share-disable"
@@ -1176,19 +1206,31 @@ export default function AvaPage() {
                       disabled={shareLoading || !currentShareUrl}
                     >
                       <X className="h-4 w-4" strokeWidth={1.5} />
-                      关闭分享
+                      Turn off sharing
                     </Button>
                     <Button
-                      data-testid="share-email-disabled"
+                      data-testid="share-email"
                       variant="ghost"
                       size="sm"
                       className="h-8 gap-1.5 transition-colors hover:bg-surface-1"
-                      disabled
+                      onClick={() => void sendShareEmail()}
+                      disabled={shareLoading || emailSending}
                     >
                       <Mail className="h-4 w-4" strokeWidth={1.5} />
-                      发送到邮箱
+                      {emailSending ? "Sending..." : "Send via email"}
                     </Button>
                   </div>
+
+                  {emailError && (
+                    <p role="alert" data-testid="err-share-email" className="mt-2 text-xs text-destructive">
+                      {emailError}
+                    </p>
+                  )}
+                  {emailStatus && (
+                    <p data-testid="share-email-status" className="mt-2 text-xs text-muted-foreground">
+                      {emailStatus}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -1212,8 +1254,8 @@ export default function AvaPage() {
                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-12 bg-primary text-primary-foreground">
                       <Sparkles className="h-5 w-5" strokeWidth={1.5} />
                     </div>
-                    <h1 className="mt-3.5 text-17 font-semibold text-foreground">我能帮你做什么？</h1>
-                    <p className="mt-1 text-13 text-muted-foreground">选一个起点，或直接输入。</p>
+                    <h1 className="mt-3.5 text-17 font-semibold text-foreground">How can I help?</h1>
+                    <p className="mt-1 text-13 text-muted-foreground">Pick a starting point, or just type below.</p>
                     <SuggestedActions
                       actions={EMPTY_SUGGESTED_ACTIONS}
                       align="center"
@@ -1245,20 +1287,12 @@ export default function AvaPage() {
                                     data-testid="msg-attachments"
                                     className="flex flex-wrap justify-end gap-1.5"
                                   >
+                                    {/* p18 F10: 富附件预览接线（图片缩略图/lightbox + 音频播放器，
+                                        签名 URL 失败时组件内部降级为文件名 chip；文件类附件同样由
+                                        RichAttachmentPreview 内部渲染为 chip + 文件名）。 */}
                                     {m.attachments.map((a) => (
-                                      <li
-                                        key={a.id}
-                                        data-testid="msg-attachment-item"
-                                        className="flex items-center gap-1 rounded-9 border border-border bg-surface-1 px-2 py-1 text-11 text-muted-foreground"
-                                      >
-                                        {a.kind === "image" ? (
-                                          <ImageIcon className="h-3 w-3" strokeWidth={1.5} />
-                                        ) : a.kind === "audio" ? (
-                                          <FileAudio className="h-3 w-3" strokeWidth={1.5} />
-                                        ) : (
-                                          <FileText className="h-3 w-3" strokeWidth={1.5} />
-                                        )}
-                                        <span className="max-w-[10rem] truncate">{a.name}</span>
+                                      <li key={a.id} data-testid="msg-attachment-item">
+                                        <RichAttachmentPreview attachment={a} />
                                       </li>
                                     ))}
                                   </ul>
@@ -1306,7 +1340,7 @@ export default function AvaPage() {
                                         onClick={cancelEdit}
                                         disabled={sending}
                                       >
-                                        取消
+                                        Cancel
                                       </Button>
                                       <Button
                                         type="button"
@@ -1315,7 +1349,7 @@ export default function AvaPage() {
                                         onClick={() => void saveEdit(m.id)}
                                         disabled={sending}
                                       >
-                                        {sending ? "保存中…" : "保存"}
+                                        {sending ? "Saving…" : "Save"}
                                       </Button>
                                     </div>
                                   </div>
@@ -1341,7 +1375,7 @@ export default function AvaPage() {
                                         disabled={sending || deletingId != null}
                                       >
                                         <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />
-                                        编辑
+                                        Edit
                                       </Button>
                                       <Button
                                         type="button"
@@ -1353,13 +1387,13 @@ export default function AvaPage() {
                                         disabled={sending || deletingId != null}
                                       >
                                         <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
-                                        删除最后一次请求
+                                        Delete last request
                                       </Button>
                                     </div>
                                     {deleteConfirmId === m.id && (
                                       <div className="rounded-12 border border-destructive/40 bg-background p-3">
                                         <p data-testid="msg-delete-confirm" className="text-11 text-foreground">
-                                          确认删除最后一次请求及其后续回复？
+                                          Delete the last request and its replies?
                                         </p>
                                         <div className="mt-2 flex justify-end gap-2">
                                           <Button
@@ -1370,7 +1404,7 @@ export default function AvaPage() {
                                             onClick={() => setDeleteConfirmId(null)}
                                             disabled={deletingId === m.id}
                                           >
-                                            取消
+                                            Cancel
                                           </Button>
                                           <Button
                                             type="button"
@@ -1380,7 +1414,7 @@ export default function AvaPage() {
                                             onClick={() => void deleteLastRequest(m.id)}
                                             disabled={deletingId === m.id}
                                           >
-                                            {deletingId === m.id ? "删除中…" : "确认删除"}
+                                            {deletingId === m.id ? "Deleting…" : "Confirm delete"}
                                           </Button>
                                         </div>
                                       </div>
@@ -1434,7 +1468,7 @@ export default function AvaPage() {
                         <MarkdownMessage content={streamingText} />
                       </div>
                     ) : (
-                      <span className="text-13 text-muted-foreground">AVA 正在重新生成…</span>
+                      <span className="text-13 text-muted-foreground">AVA is regenerating…</span>
                     )}
                   </div>
                 )}
@@ -1448,7 +1482,7 @@ export default function AvaPage() {
                         <MarkdownMessage content={streamingText} />
                       </div>
                     ) : (
-                      <span className="text-13 text-muted-foreground">AVA 正在思考…</span>
+                      <span className="text-13 text-muted-foreground">AVA is thinking…</span>
                     )}
                   </div>
                 )}
@@ -1536,7 +1570,7 @@ export default function AvaPage() {
                           onChange={(e) => {
                             const next = capabilities.models.find((model) => model.id === e.target.value);
                             if (!next || next.disabled) {
-                              setSettingsError("该模型当前不可选，已保留原模型");
+                              setSettingsError("This model is currently unavailable — kept the previous model");
                               return;
                             }
                             setSettingsError("");
@@ -1560,7 +1594,7 @@ export default function AvaPage() {
                           disabled={!canSwitchAgent}
                           onChange={(e) => {
                             if (!canSwitchAgent) {
-                              setSettingsError("已有消息的线程不能切换 Agent");
+                              setSettingsError("Agent can't be switched once a thread has messages");
                               return;
                             }
                             setSettingsError("");
@@ -1648,7 +1682,15 @@ export default function AvaPage() {
                   </p>
                 )}
                 <div className="mt-2 flex items-center justify-between">
-                  <AttachmentTrigger onFiles={(files) => void attachments.addFiles(files)} />
+                  <div className="flex items-center gap-1">
+                    <AttachmentTrigger onFiles={(files) => void attachments.addFiles(files)} />
+                    <VoiceInputControl
+                      disabled={sending}
+                      onTranscribed={(text) =>
+                        setDraft((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text))
+                      }
+                    />
+                  </div>
                   <Button
                     data-testid="send"
                     size="icon"
@@ -1824,7 +1866,7 @@ function SuggestedActions({
   return (
     <div
       data-testid="suggested-actions"
-      aria-label="建议操作"
+      aria-label="Suggested actions"
       className={`${className} flex flex-wrap gap-2.5 ${align === "center" ? "justify-center" : ""}`}
     >
       {actions.map((action) => (
@@ -1835,7 +1877,7 @@ function SuggestedActions({
           data-testid="suggested-action"
           data-action-id={action.id}
           onClick={() => onChoose(action.prompt)}
-          className="h-auto rounded-9 px-3.5 py-2.5 text-13 font-normal text-foreground transition-colors hover:border-foreground hover:bg-surface-1"
+          className="h-auto rounded-9 px-3.5 py-2.5 text-13 font-normal text-foreground transition-all hover:border-foreground hover:bg-surface-1 hover:shadow-sm"
         >
           {action.label}
         </Button>
@@ -2000,7 +2042,7 @@ function MessageActionsBar({
           className="h-7 w-7 text-muted-foreground"
           disabled
           aria-label="Send to current Board (coming soon)"
-          title="需要在 Board 内使用，敬请期待"
+          title="Only available inside a Board — coming soon"
         >
           <LayoutGrid className="h-3.5 w-3.5" strokeWidth={1.5} />
         </Button>
@@ -2012,7 +2054,7 @@ function MessageActionsBar({
           className="h-7 w-7 text-muted-foreground"
           disabled
           aria-label="Send via email (coming soon)"
-          title="邮件发送即将上线"
+          title="Email delivery coming soon"
         >
           <Mail className="h-3.5 w-3.5" strokeWidth={1.5} />
         </Button>
@@ -2024,17 +2066,17 @@ function MessageActionsBar({
       )}
       {copyError && (
         <p role="alert" data-testid="msg-copy-error" className="text-11 text-destructive">
-          复制失败，请手动复制
+          Copy failed — please copy manually
         </p>
       )}
       {feedbackError && (
         <p role="alert" data-testid="msg-feedback-error" className="text-11 text-destructive">
-          反馈提交失败，请重试
+          Feedback failed to submit — please try again
         </p>
       )}
       {regenerateError && (
         <p role="alert" data-testid="msg-regenerate-error" className="text-11 text-destructive">
-          重新生成失败，请重试
+          Regenerate failed — please try again
         </p>
       )}
     </div>

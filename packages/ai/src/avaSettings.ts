@@ -36,6 +36,13 @@ export const AVA_MODEL_OPTIONS: AvaModelOption[] = [
     description: "Fast deterministic AVA stub model for local chat.",
   },
   {
+    // P18 F01：真实模型选项。选中后网关按 anthropic: 前缀路由到 anthropicProvider；
+    // 未配置 ANTHROPIC_API_KEY 时发送会得到明确失败态（用户输入不丢），不影响 stub 路径。
+    id: "anthropic:claude-sonnet-5",
+    label: "Claude Sonnet 5",
+    description: "Real Anthropic model. Requires ANTHROPIC_API_KEY on the server.",
+  },
+  {
     id: "stub:planner",
     label: "Stub Planner",
     description: "Planning-oriented stub response path.",

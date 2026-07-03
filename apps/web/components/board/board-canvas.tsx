@@ -10,6 +10,8 @@ import {
   type ViewportState,
 } from "@/components/board/fabric-canvas";
 import { type Guide, type SpacingHint } from "@/lib/canvas-snap";
+import { BoardBottomDock, type DockToolKey } from "@/components/board/board-bottom-dock";
+import { BoardAiOverlay } from "@/components/board/board-ai-panel";
 import { setOperating } from "@/lib/collab-bus";
 import {
   Cable,
@@ -139,6 +141,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null); // F11 文本编辑中的便签
   const [activeTool, setActiveTool] = useState<BoardTool>("select");
+  const [aiOpen, setAiOpen] = useState(false); // F01: Board AI 浮层/board chat 面板开关，dock 与浮层共享同一真值
   const [openPanel, setOpenPanel] = useState<"assets" | "templates" | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null); // 右键上下文菜单（uc-context-menu-001）
   const [guides, setGuides] = useState<Guide[]>([]); // 拖动时的对齐参考线（uc-canvas-007）
@@ -463,6 +466,36 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     if (tool === "assets" || tool === "templates") setOpenPanel(tool);
     else setOpenPanel(null);
     if (tool === "select") setSelected(new Set());
+  }
+
+  // 底部悬浮 dock（F01，对齐 prototype FigJam 工具栏）复用同一套 activeTool 真值与
+  // add* 动作，不引入第二套工具状态；disabled 的新工具（table/kanban/code/image）
+  // 点击不做任何事（按钮本身已 disabled，这里仅作类型收窄防御）。
+  function chooseDockTool(tool: DockToolKey) {
+    if (tool === "sticky") {
+      void addNote();
+      return;
+    }
+    if (tool === "text") {
+      void addText();
+      return;
+    }
+    if (tool === "shape") {
+      void addShape();
+      return;
+    }
+    if (tool === "select" || tool === "pan") {
+      chooseTool(tool);
+    }
+  }
+
+  function selectItem(id: string, additive: boolean) {
+    setSelected((prev) => {
+      const next = new Set(additive ? prev : []);
+      if (additive && prev.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   const moveSelected = useCallback(
@@ -1084,6 +1117,19 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           </button>
         </div>
       )}
+
+      {/* F01（uc-board-ai-001）：底部悬浮工具 dock + AI 浮层/board chat 面板，对齐
+          docs/design/boardx-prototype-v1.bundle.html 的 Board 屏。仅编辑者可见操作类 dock；
+          AI 浮层对所有可查看者可用（就画布内容提问不要求编辑权限）。 */}
+      {canEdit && (
+        <BoardBottomDock
+          activeTool={activeTool}
+          onSelectTool={chooseDockTool}
+          aiOpen={aiOpen}
+          onToggleAi={() => setAiOpen((prev) => !prev)}
+        />
+      )}
+      <BoardAiOverlay boardId={boardId} itemCount={items.length} open={aiOpen} onOpenChange={setAiOpen} />
     </div>
   );
 }

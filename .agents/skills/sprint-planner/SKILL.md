@@ -34,6 +34,17 @@ description: >
 3. **并行靠 owner**：同一 sprint 内要并行时，用 owner 字段分给不同 agent，
    每个 owner 各自最多一个 in_progress（见 [feature-implementer] 的 claim 流程）。
 
+### 多 agent 并行分派纪律（实战教训，必查）
+
+- **同文件热点串行化**：两个 feature 会改**同一个文件**（尤其共享页面/共享 spec）时，
+  不得同 wave 派发——必须等前一个 PR 合并后再派下一个。派发前先比对各 feature
+  预计触碰的文件清单，有交集即串行。
+  （反例：两个 PR 并行改同一 `rooms/page.tsx`，后合者被迫返工。）
+- **合并顺序按"动共享 spec 多的最后合"**：并行 wave 收尾时，改共享测试/spec 文件
+  最少的 PR 先合，动共享 spec 最多的最后合，把 rebase 冲突集中到一处。
+- **认领双写**：分派时 `harness claim` 与 issue label（`status:in-progress` + `agent:<id>`）
+  必须同时落，lease 靠评论定期刷新（见 multi-agent-coordination.md §4）。
+
 ---
 
 ## 落地命令

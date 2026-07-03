@@ -1,0 +1,28 @@
+
+Running 23 tests using 1 worker
+
+  ✓  1 [chromium] › survey-001-create-survey.spec.ts:14:5 › 已登录访问 /surveys 显示列表与空状态 (965ms)
+  ✓  2 [chromium] › survey-001-create-survey.spec.ts:21:5 › 创建问卷（private）后出现在列表 (770ms)
+  ✓  3 [chromium] › survey-001-create-survey.spec.ts:46:5 › 多题型 + 选项 + 排序 + 预览答题页 (794ms)
+  ✓  4 [chromium] › survey-001-create-survey.spec.ts:83:5 › team 作用域：需选择已加入的团队，问卷对团队成员可见 (641ms)
+  ✓  5 [chromium] › survey-001-create-survey.spec.ts:102:5 › 空标题被拒，问卷不保存（400） (108ms)
+  ✓  6 [chromium] › survey-001-create-survey.spec.ts:110:5 › 零题目被拒，问卷不保存（400） (107ms)
+  ✓  7 [chromium] › survey-001-create-survey.spec.ts:116:5 › 未登录访问 /surveys 跳转登录 (684ms)
+  ✓  8 [chromium] › survey-002-list-manage-surveys.spec.ts:34:5 › 空态：新用户进入 /surveys 后可创建第一个问卷 (441ms)
+  ✓  9 [chromium] › survey-002-list-manage-surveys.spec.ts:41:5 › My surveys 卡片展示字段，并支持 View/Edit/Preview/Share/Activate/Pause/Delete (1.5s)
+  ✓  10 [chromium] › survey-002-list-manage-surveys.spec.ts:82:5 › Team surveys 只显示当前团队上下文内且有权限的问卷 (783ms)
+  ✓  11 [chromium] › survey-003-answer-survey.spec.ts:40:5 › 访客打开公开答题页，完成必填校验并提交落库 (1.4s)
+  ✓  12 [chromium] › survey-003-answer-survey.spec.ts:71:5 › 未发布问卷公开链接展示不可答题态 (441ms)
+  ✓  13 [chromium] › survey-003-answer-survey.spec.ts:82:5 › 安全回归：未发布问卷的公开答题 API 不泄露题目/选项内容（#181） (120ms)
+  ✓  14 [chromium] › survey-004-view-answers-report.spec.ts:63:5 › 无回收时展示空态 (961ms)
+  ✓  15 [chromium] › survey-004-view-answers-report.spec.ts:74:5 › Summary/Individual/Report 三视图按题聚合、逐份浏览、报告统计 (590ms)
+  ✓  16 [chromium] › survey-004-view-answers-report.spec.ts:104:5 › 导出 CSV 下载答卷数据 (726ms)
+  ✓  17 [chromium] › survey-004-view-answers-report.spec.ts:117:5 › CSV 导出对公式注入形态的答案做转义（安全回归） (150ms)
+  ✓  18 [chromium] › survey-004-view-answers-report.spec.ts:151:5 › 仅创建者/团队成员可查看报告，未授权访问被拒绝 (660ms)
+  ✓  19 [chromium] › survey-005-manage-templates.spec.ts:13:5 › 创建问卷时可应用内置模板、保存团队模板、重新应用并删除 (1.1s)
+  ✓  20 [chromium] › survey-006-publish-unpublish-survey.spec.ts:33:5 › owner 通过卡片切换发布状态，即时反映在卡片标签 (689ms)
+  ✓  21 [chromium] › survey-006-publish-unpublish-survey.spec.ts:51:5 › active 时公开答题链接可正常填答并提交；paused 时公开页拒答且提交被拒绝 (472ms)
+  ✓  22 [chromium] › survey-006-publish-unpublish-survey.spec.ts:78:5 › owner 暂停问卷后：公开页展示不可答题态，提交被 409 拒绝，且不泄露题目内容 (518ms)
+  ✓  23 [chromium] › survey-006-publish-unpublish-survey.spec.ts:114:5 › 非 owner 不能切换问卷发布状态（PATCH 返回 403，状态不变） (716ms)
+
+  23 passed (16.1s)

@@ -331,6 +331,9 @@ export default function RoomMembersPage() {
         <ul data-testid="member-list" className="overflow-hidden rounded-12 border border-border">
           {shown.map((m, i) => {
             const isOwner = m.role === "owner";
+            // uc-rr-006 权限矩阵：提升/降级 admin 仅 owner；admin 只能移除 member
+            const canChangeRole = myRole === "owner" && !isOwner;
+            const canRemove = !isOwner && (myRole === "owner" || (myRole === "admin" && m.role !== "admin"));
             return (
               <li
                 key={m.user_id}
@@ -358,27 +361,33 @@ export default function RoomMembersPage() {
 
                 {isOwner ? (
                   <Badge variant="secondary">owner</Badge>
-                ) : canManage ? (
+                ) : canChangeRole || canRemove ? (
                   <div className="flex items-center gap-2">
-                    <Select
-                      data-testid={`role-select-${m.user_id}`}
-                      aria-label={`修改 ${m.email} 的角色`}
-                      value={m.role === "admin" ? "admin" : "member"}
-                      onChange={(e) => void changeRole(m.user_id, e.target.value === "admin" ? "admin" : "member")}
-                      className="h-8 w-28"
-                    >
-                      <option value="member">member</option>
-                      <option value="admin">admin</option>
-                    </Select>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      data-testid={`remove-${m.user_id}`}
-                      onClick={() => void remove(m.user_id)}
-                    >
-                      移除
-                    </Button>
+                    {canChangeRole ? (
+                      <Select
+                        data-testid={`role-select-${m.user_id}`}
+                        aria-label={`修改 ${m.email} 的角色`}
+                        value={m.role === "admin" ? "admin" : "member"}
+                        onChange={(e) => void changeRole(m.user_id, e.target.value === "admin" ? "admin" : "member")}
+                        className="h-8 w-28"
+                      >
+                        <option value="member">member</option>
+                        <option value="admin">admin</option>
+                      </Select>
+                    ) : (
+                      <Badge variant="muted">{m.role}</Badge>
+                    )}
+                    {canRemove && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        data-testid={`remove-${m.user_id}`}
+                        onClick={() => void remove(m.user_id)}
+                      >
+                        移除
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <Badge variant="muted">{m.role}</Badge>

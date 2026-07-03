@@ -8,9 +8,9 @@
       "title": "Board 内嵌 AI 浮层 + 底部工具 dock + board chat 面板",
       "user_visible_behavior": "打开 Board 后，画布内出现可唤起的 AI 浮层（悬浮聊天窗，能就当前画布内容提问/生成），底部出现悬浮工具 dock（对齐 prototype 的 FigJam 风格，取代/补充现有顶部单行工具条），board chat 面板可停靠展示协作对话。具体交互细节以 phase-p16:F02 审计报告 + prototype bundle 的 Board 屏为准。",
       "design_ref": "docs/design/boardx-prototype-v1.bundle.html Board 屏；phase-p16:F02 产出的差距审计报告（Board 部分）。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-claude-1",
       "capability": "CAP-WEB",
       "depends_on": [
         "p16:F02"
@@ -21,8 +21,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-ai-overlay.spec.ts"
       ],
-      "evidence": "",
-      "notes": "uc-board-ai-001（新增）。这是 prototype 里的核心差异化体验，优先级最高。blocked-on phase-p16:F02（审计报告）与本阶段 ui-signoff.md confirmed（ADR-003）——两者都满足前才能 new-sprint。"
+      "evidence": "phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-verification.txt; phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-migrate.txt; phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-real-ai-verification.txt; phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-security-fix-verification.txt",
+      "notes": "uc-board-ai-001（新增）。这是 prototype 里的核心差异化体验，优先级最高。blocked-on phase-p16:F02（审计报告）与本阶段 ui-signoff.md confirmed（ADR-003）——两者都满足前才能 new-sprint。复审（Revise）后修正：Board AI 回复改为真实调用 @repo/ai 的 CAP-AI 网关（与 AVA 相同机制），把画布 items 真实文字组装进 prompt 上下文，不再是前端写死模板；e2e 断言回复中包含画布上具体便签的文字内容。第二轮 code-reviewer 复审（中等严重度）：board item 文本未过滤即拼进 [画布内容: ...] 传给网关，用户在便签里写 stub provider 的强制失败触发词 __ava_force_fail__ 会导致该 board AI 恒定 500（用户内容触发的 DoS）——已在 buildBoardContext 里过滤该触发词修复，并补充单测覆盖；同时标注了接入真实 LLM 前需做 prompt injection 隔离的 TODO。"
     },
     {
       "id": "F02",
@@ -31,9 +31,9 @@
       "title": "Ava 对话界面 reskin",
       "user_visible_behavior": "Ava 对话页（空态建议/消息列表/research card/clarify-plan-running 时间线/report 面板）的视觉与交互对齐 prototype AVA 屏：token（灰阶/柔彩/圆角/字号）、布局、组件形态与 Home/Rooms 等已 reskin 页面一致。不改变已有的功能行为（消息发送/流式回复/附件/分享等 p9 已 passing 的能力保持不变），只对齐视觉与交互细节。",
       "design_ref": "docs/design/boardx-prototype-v1.bundle.html AVA 屏；phase-p16:F02 审计报告（Ava 部分）。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "01",
+      "owner": "wrk-ava-1",
       "capability": "CAP-WEB",
       "depends_on": [
         "p16:F02"
@@ -42,11 +42,11 @@
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web exec playwright test e2e/ava-*.spec.ts",
+        "cd apps/web && pnpm exec playwright test e2e/ava-*.spec.ts",
         "cd apps/web && bash scripts/lint-design.sh"
       ],
-      "evidence": "",
-      "notes": "uc-ava-reskin-001（新增）。verification 复用既有 p9 全部 ava e2e（回归，确保 reskin 不破坏功能）+ design lint。blocked-on 同 F01。"
+      "evidence": "evidence/F02.verify.log @ 2026-07-03T07:10:54.588Z",
+      "notes": "uc-ava-reskin-001（新增）。verification 复用既有 p9 全部 ava e2e（回归，确保 reskin 不破坏功能）+ design lint。blocked-on 同 F01。fix(F02): verification 第 3 条原写法 `pnpm --filter @repo/web exec playwright test e2e/ava-*.spec.ts` 在 repo 根目录下执行时，bash 的 glob 展开发生在 pnpm/exec 之前、相对于 repo 根（此时 `e2e/` 目录并不存在于根，只存在于 `apps/web/e2e/`），导致 glob 无匹配、原样传给 playwright 后报 \"No tests found\"（p9 阶段的既有 ava verification 全部用显式单文件名，从未触发过这个 bug，本 feature 是第一个用 glob 的）。改为 `cd apps/web && pnpm exec playwright test e2e/ava-*.spec.ts`（与第 4 条 lint-design 已用的 cd 前缀写法一致）后可正确匹配 9 个 ava e2e 文件并执行，语义不变（同样跑全部 ava-*.spec.ts）。"
     },
     {
       "id": "F03",
@@ -55,9 +55,9 @@
       "title": "AI Store 页面 reskin",
       "user_visible_behavior": "AI Store 浏览/详情/创建/订阅/收藏等页面的视觉对齐 prototype STORE 屏（submenu + 内容 + 详情/创建 modal 的设计语言），文案统一语言（不再中英混用），不改变 p11 已 passing 的功能行为。",
       "design_ref": "docs/design/boardx-prototype-v1.bundle.html STORE 屏；phase-p16:F02 审计报告（Store 部分）。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-store-2",
       "capability": "CAP-WEB",
       "depends_on": [
         "p16:F02"
@@ -79,9 +79,9 @@
       "title": "Admin 后台 reskin",
       "user_visible_behavior": "Admin 首页/用户管理/团队管理/AI Store 审核与精选页面的视觉对齐 prototype ADMIN 屏（overview/users/teams/store-approval + 多 modal），不改变 p15 已 passing 的鉴权与业务逻辑。",
       "design_ref": "docs/design/boardx-prototype-v1.bundle.html ADMIN 屏；phase-p16:F02 审计报告（Admin 部分）。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-admin-1",
       "capability": "CAP-WEB",
       "depends_on": [
         "p16:F02"
@@ -103,9 +103,9 @@
       "title": "Surveys 页面 reskin",
       "user_visible_behavior": "问卷列表/编辑器/答题预览/结果报告页面的视觉对齐 prototype SURVEYS 屏，不改变 p13 已 passing 的功能行为（含公开答题页的访客体验）。",
       "design_ref": "docs/design/boardx-prototype-v1.bundle.html SURVEYS 屏；phase-p16:F02 审计报告（Surveys 部分）。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-survey-3",
       "capability": "CAP-WEB",
       "depends_on": [
         "p16:F02"
@@ -117,7 +117,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/survey-*.spec.ts",
         "cd apps/web && bash scripts/lint-design.sh"
       ],
-      "evidence": "",
+      "evidence": "phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F05-e2e-survey-regression.log (23/23 survey e2e specs passed, incl. p13 view-answers-report + 公开答题页访客体验回归); phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F05-lint-design.log (design lint 通过); phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F05-migrate.log; phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F05-compose-up.log; PR: worker/wrk-survey-3-p17-f05-survey-reskin (Closes #239).",
       "notes": "uc-survey-reskin-001（新增）。verification 复用既有 p13 全部 e2e 回归（含公开答题页，访客体验不能破坏）+ design lint。blocked-on 同 F01。"
     },
     {
@@ -127,9 +127,9 @@
       "title": "Knowledge Base + Credits 页面收尾 reskin",
       "user_visible_behavior": "知识库文件列表/上传弹窗、Credits 钱包/购买/账单页面的视觉打磨对齐设计系统，不改变 p10/p14 已 passing 的功能行为。这是收尾优先级，不涉及新组件设计。",
       "design_ref": "已确认的 P0-P4 token 基座（globals.css/tailwind.config.ts）；phase-p16:F02 审计报告（如有覆盖 KB/Credits 的部分）。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-credits-1",
       "capability": "CAP-WEB",
       "depends_on": [
         "p16:F02"

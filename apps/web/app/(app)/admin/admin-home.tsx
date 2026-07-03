@@ -29,32 +29,32 @@ interface ModuleCard {
 const MODULES: ModuleCard[] = [
   {
     key: "users",
-    title: "用户管理",
-    description: "查看、搜索、创建/编辑/删除用户，手动上分",
+    title: "Users",
+    description: "View, search, create/edit/delete users, and grant credits manually",
     href: "/admin/users",
     icon: Users,
     available: true,
   },
   {
     key: "teams",
-    title: "团队管理",
-    description: "查看、筛选团队，编辑团队类型，手动上分",
+    title: "Teams",
+    description: "View and filter teams, edit team type, and grant credits manually",
     href: "/admin/teams",
     icon: UsersRound,
     available: true,
   },
   {
     key: "ai-store-review",
-    title: "AI Store 审核",
-    description: "审核提交到平台的 AI Store 项目",
+    title: "Store Approval",
+    description: "Review AI Store items submitted to the platform",
     href: "/admin/ai-store/review",
     icon: Store,
     available: false,
   },
   {
     key: "ai-store-featured",
-    title: "AI Store 精选",
-    description: "管理官方精选（isFeatured）项目",
+    title: "Store Featured",
+    description: "Manage officially featured (isFeatured) items",
     href: "/admin/ai-store/featured",
     icon: Star,
     available: false,
@@ -88,7 +88,7 @@ export function AdminHome() {
           return;
         }
         if (!res.ok) {
-          setError("加载统计摘要失败，请稍后重试");
+          setError("Failed to load stats summary, please try again later");
           setLoading(false);
           return;
         }
@@ -97,7 +97,7 @@ export function AdminHome() {
         setLoading(false);
       } catch {
         if (!alive) return;
-        setError("加载统计摘要失败，请稍后重试");
+        setError("Failed to load stats summary, please try again later");
         setLoading(false);
       }
     })();
@@ -106,11 +106,13 @@ export function AdminHome() {
     };
   }, [router]);
 
+  // testKey 是稳定的英文 test hook 后缀，与展示用的 label 解耦——label 翻译成英文后
+  // 不会影响既有 e2e 对 data-testid 的断言（避免 reskin 顺带改动测试锚点）。
   const statCards = stats
     ? [
-        { label: "用户总数", stat: stats.users },
-        { label: "团队总数", stat: stats.teams },
-        { label: "AI Store 项目数", stat: stats.aiStoreItems },
+        { testKey: "users", label: "Total users", stat: stats.users },
+        { testKey: "teams", label: "Teams", stat: stats.teams },
+        { testKey: "ai-store-items", label: "AI Store items", stat: stats.aiStoreItems },
       ]
     : [];
 
@@ -119,13 +121,13 @@ export function AdminHome() {
       <div className="flex items-center gap-2.5">
         <ShieldCheck className="h-6 w-6 text-foreground" strokeWidth={2} />
         <div>
-          <h1 className="text-26 font-bold tracking-tight text-foreground">后台管理</h1>
-          <p className="mt-1 text-13 text-muted-foreground">平台统计摘要与管理模块导航</p>
+          <h1 className="text-26 font-bold tracking-tight text-foreground">Admin Panel</h1>
+          <p className="mt-1 text-13 text-muted-foreground">Platform stats summary and module navigation</p>
         </div>
       </div>
 
       {/* 统计摘要 */}
-      <section className="mt-6" aria-label="平台统计摘要">
+      <section className="mt-6" aria-label="Platform stats summary">
         {error && (
           <p role="alert" data-testid="stats-error" className="mb-3 text-13 text-destructive">
             {error}
@@ -137,15 +139,15 @@ export function AdminHome() {
           <div data-testid="admin-stats" className="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
             {statCards.map((c) => (
               <div
-                key={c.label}
-                data-testid={`stat-${c.label}`}
+                key={c.testKey}
+                data-testid={`stat-${c.testKey}`}
                 className="rounded-12 border border-border p-4"
               >
                 <div className="flex items-center gap-1.5">
                   <div className="text-22 font-bold text-foreground">{c.stat.value.toLocaleString()}</div>
                   {c.stat.mock && (
-                    <Badge data-testid={`stat-mock-${c.label}`} variant="muted">
-                      占位
+                    <Badge data-testid={`stat-mock-${c.testKey}`} variant="muted">
+                      Placeholder
                     </Badge>
                   )}
                 </div>
@@ -157,8 +159,8 @@ export function AdminHome() {
       </section>
 
       {/* 模块导航 */}
-      <section className="mt-8" aria-label="管理模块导航">
-        <h2 className="text-15 font-semibold text-foreground">管理模块</h2>
+      <section className="mt-8" aria-label="Admin module navigation">
+        <h2 className="text-15 font-semibold text-foreground">Modules</h2>
         <div data-testid="admin-module-nav" className="mt-3 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           {MODULES.map((m) => {
             const Icon = m.icon;
@@ -177,7 +179,7 @@ export function AdminHome() {
                     <span className="text-13 font-semibold text-foreground">{m.title}</span>
                     {!m.available && (
                       <Badge data-testid={`module-badge-${m.key}`} variant="outline">
-                        即将上线
+                        Coming soon
                       </Badge>
                     )}
                   </div>

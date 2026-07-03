@@ -53,21 +53,40 @@ HOOK
   echo "  ✓ pre-commit hook（active-features / lockfile 9.0 / 巨量提交 防线）"
 }
 
-# pre-push: push 前镜像 CI（verify:full），把"只有 CI 能抓的回归"挡在本地。跳过用 git push --no-verify。
+# pre-push: 轻量门控，与 CI 的快速迭代策略对齐（见 .github/workflows/harness-verify.yml）——
+# 只对受本次改动影响的模块跑 typecheck/lint/test（turbo --affected，通常 <2 分钟）。
+# 全量回归（web build + 全量 e2e）不在 push 时跑：由 CI 定时任务（烟测每小时按需、
+# e2e 每 3 小时）+ feature 转 passing 前的 pnpm harness verify / verify:full 承担。
+# 跳过用 git push --no-verify；push 前想跑全量：pnpm -w run verify:full。
 install_pre_push_hook() {
   local hook_path=".git/hooks/pre-push"
   mkdir -p .git/hooks
   cat > "${hook_path}" << 'HOOK'
 #!/usr/bin/env bash
-# harness-hook (pre-push): 镜像 CI 的完整门控
-echo "==> [harness] pre-push: 跑 pnpm verify:full（镜像 CI；跳过用 git push --no-verify）"
-if ! pnpm -w run verify:full; then
-  echo "✗ [harness] verify:full 失败，push 中止。修复后再推，或 git push --no-verify 临时跳过。"
-  exit 1
+# harness-hook (pre-push): 轻量门控（受影响模块 typecheck/lint/test，对齐 CI）
+# 全量验证不在这里：CI 定时回归 + 标 passing 前的 verify:full 负责。
+echo "==> [harness] pre-push: 受影响模块 typecheck/lint/test（turbo --affected；跳过用 git push --no-verify）"
+# --affected 相对 origin/main 计算改动面。用解析后的单一 merge-base SHA 而非
+# origin/main 引用：分支含 merge commit 时 turbo 内部 git 会报
+# "fatal: multiple merge bases found"（git merge-base 命令本身总返回单个最优解）。
+# 拿不到 base（首次 clone 未 fetch 等）→ 回退全量 verify:base。
+BASE_SHA="$(git merge-base origin/main HEAD 2>/dev/null || true)"
+if [ -n "${BASE_SHA}" ]; then
+  export TURBO_SCM_BASE="${BASE_SHA}"
+  if ! pnpm turbo run typecheck lint test --affected; then
+    echo "✗ [harness] 受影响模块验证失败，push 中止。修复后再推，或 git push --no-verify 临时跳过。"
+    exit 1
+  fi
+else
+  echo "  ! 解析不到与 origin/main 的 merge-base，回退全量 verify:base"
+  if ! pnpm -w run verify:base; then
+    echo "✗ [harness] verify:base 失败，push 中止。"
+    exit 1
+  fi
 fi
 HOOK
   chmod +x "${hook_path}"
-  echo "  ✓ pre-push hook（verify:full 镜像 CI）"
+  echo "  ✓ pre-push hook（受影响模块轻量门控，对齐 CI 快速迭代策略）"
 }
 
 if [ -d ".git" ]; then

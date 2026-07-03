@@ -18,6 +18,17 @@ describe("buildStubReply", () => {
     const reply = buildStubReply(long);
     expect(reply).toContain("…");
   });
+
+  it("携带画布内容标记时，回复中真实引用画布上的具体文字（p17-F01 Board AI）", () => {
+    const reply = buildStubReply("总结一下这个画布\n\n[画布内容: 1. 预算方案-Q3-123456]");
+    expect(reply).toContain("预算方案-Q3-123456");
+    expect(reply).not.toContain("[画布内容:");
+  });
+
+  it("无画布内容标记时不虚构画布内容引用", () => {
+    const reply = buildStubReply("总结一下这个画布");
+    expect(reply).not.toContain("画布内容参考");
+  });
 });
 
 describe("ChatGateway", () => {

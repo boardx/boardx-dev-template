@@ -125,6 +125,13 @@ memory.durable.write("task:T01", { status: "done" }, ["task", "status:done"]);
 - 交接准备度：仅靠仓库内文件能否继续开发
 ```
 
+**多 agent 并行时的 verdict 权威（实战教训）：**
+- **coordinator 唯一性**：同一时刻只能有一个 coordinator 在编排。接管前必须先向
+  存量会话广播确认；双 coordinator 并行曾导致两轮 review 结论冲突（ACCEPT vs CHANGES）。
+- **verdict 只能由 coordinator 编排的 reviewer 产出**，worker 不得自打 `review:*-ok`。
+- **结论冲突时以可核验事实为准**：`git ls-tree` 实测 evidence 在分支树中且 blob 非空
+  \> 任何打分或声称。evidence 不在 git 树 = 验证维度 0 分一票否决。
+
 ---
 
 ## 可观测性要求
@@ -143,6 +150,11 @@ spawnSync("bash", ["-c", cmd]);
 - 步骤太少 → 任务理解有问题（改 task.goal）
 - act 步骤失败 → 工具问题（看 toolOutput）
 - observe 没有触发 → 循环逻辑问题
+
+**外部系统失败先分诊 infra vs 代码，再归因（实战教训）：**
+CI/CD 失败不等于代码失败。先看 job annotations 与 steps 是否为空——
+job 数秒即挂、steps 为空、annotation 写明 billing/payment 之类，是 **infra 类失败**：
+不退回 worker 改代码，直接升级人类处理；只有确认是代码引起的失败才走返工路径。
 
 ---
 

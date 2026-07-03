@@ -55,10 +55,15 @@ agents:
     model: sonnet-5
     areas: [survey]
     max_concurrent: 1
+  - id: wrk-survey-3
+    kind: worker
+    model: sonnet-5
+    areas: [survey]                              # p17 新增：wrk-survey-1 被 p13-F04 占用时的第二个 survey worker
+    max_concurrent: 1
   - id: wrk-credits-1
     kind: worker
     model: sonnet-5
-    areas: [credits, billing]
+    areas: [credits, billing, common]             # p17-F06 (KB+Credits 收尾 reskin) 归到这里
     max_concurrent: 1
   - id: wrk-admin-1
     kind: worker
@@ -89,6 +94,37 @@ agents:
     kind: worker
     model: sonnet-5
     areas: [design]
+    max_concurrent: 1
+  - id: wrk-ava-p18-1
+    kind: worker
+    model: sonnet-5
+    areas: [ai-core, deep-research, voice, share, ai-settings, attachments, message-actions]  # p18 AVA AI 落地全域
+    max_concurrent: 1
+  - id: wrk-ava-p18-2
+    kind: worker
+    model: sonnet-5
+    areas: [ai-core, deep-research, voice, share, ai-settings, attachments, message-actions]  # p18 并行 worker
+    max_concurrent: 1
+  - id: wrk-ava-p18-3
+    kind: worker
+    model: sonnet-5
+    areas: [ai-core, deep-research, voice, share, ai-settings, attachments, message-actions]  # p18 并行 worker
+    max_concurrent: 1
+
+  - id: wrk-room-1
+    kind: worker
+    model: fable-5
+    areas: [room, room-files, room-survey]        # p20 Room Realignment 专属 worker
+    max_concurrent: 1
+  - id: wrk-room-2
+    kind: worker
+    model: fable-5
+    areas: [room, room-files, room-survey]
+    max_concurrent: 1
+  - id: wrk-room-3
+    kind: worker
+    model: fable-5
+    areas: [room, room-files, room-survey]
     max_concurrent: 1
 
   # ── Reviewer：评审 agent（复用既有 subagent；coordinator 在 PR 阶段调起）──────

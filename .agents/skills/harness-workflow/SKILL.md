@@ -40,6 +40,8 @@ cat phases/phase-<NN>-*/sprints/sprint-<MM>/active-features.json | jq '[.feature
 | 每次改完立刻局部验证 | 不要攒到最后一起 verify，失败难定位 |
 | 不要手改 `active-features.json` | 它是脚本派生的只读视图 |
 | 不要自己把 status 改成 passing | 只有 `pnpm harness verify` 能做这件事 |
+| status/owner/evidence 字段**严禁出现在你手写的 diff 里** | PR #310/#311/#312 三连事故：diff 里手改 status = review 直接阻断 |
+| 多 agent 并行时认领**双写** | `pnpm harness claim` + issue label 同时打；长任务定期用 lease 评论刷新认领，防止被判失联重派 |
 
 ---
 
@@ -67,6 +69,13 @@ verify 会：
 # 对照检查清单逐项过一遍
 cat .harness/rubrics/clean-state-checklist.md
 ```
+
+```bash
+# 证据入库自查（L1，收尾前必跑）：evidence 必须真实在 git 树中
+git ls-tree HEAD -- phases/**/evidence/
+```
+- 上述命令必须列出本轮引用的每个 evidence 文件且 blob 非空；
+  被根 `.gitignore`（如 `*.log`）挡住 = 异常，**立即上报**，禁止写「本地留存」蒙混。
 
 必须确认：
 - `progress.md` 已更新（写本轮目标、完成项、下一步）
@@ -112,3 +121,12 @@ cat .harness/state/PROGRESS.md
 > **陷阱 3**：passing 状态被手动篡改  
 > 直接编辑 `feature_list.json` 把 status 改成 passing 绕过了验证门控。  
 > **防护**：pre-commit hook 检测 passing 状态变更，要求必须有 evidence 文件。
+
+> **陷阱 4**（PR #310/#311/#312 三连事故）：evidence 是「指向空气的引用」  
+> feature_list 指向 `evidence/*.verify.log`，但文件被根 `.gitignore` 的 `*.log` 挡住没进仓库。  
+> **防护**：收尾前 `git ls-tree HEAD -- phases/**/evidence/` 实测；reviewer 也会实测，不信声称。
+
+> **陷阱 5**：fresh worktree 的 pre-push hook 失败（turbo not found）  
+> 无 node_modules 的 worktree 直接 push 会被 pre-push 拦。  
+> **防护**：纯文档/配置改动可 `git push --no-verify`（commit message 写明理由）；
+> 代码改动必须先 `pnpm install` 并本地跑过验证再推。

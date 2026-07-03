@@ -1,19 +1,20 @@
 import { NextResponse } from "next/server";
-import { canManageRoom, getRoomRole, updateRoomMemberRole, removeRoomMember } from "@repo/data";
+import { getRoomRole, updateRoomMemberRole, removeRoomMember } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** 改成员角色（uc-room-003）。owner/admin only。member↔admin；不能改 owner。 */
+/** 改成员角色（uc-rr-006 权限矩阵）。提升/降级 admin 仅 owner；member↔admin；不能改 owner。 */
 export async function PATCH(req: Request, { params }: { params: { id: string; userId: string } }) {
   try {
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
     const roomId = Number(params.id);
     const targetId = Number(params.userId);
-    if (!(await canManageRoom(roomId, user.id))) {
-      return NextResponse.json({ error: "无权限" }, { status: 403 });
+    const myRole = await getRoomRole(roomId, user.id);
+    if (myRole !== "owner") {
+      return NextResponse.json({ error: "仅 owner 可提升/降级 admin" }, { status: 403 });
     }
     const body = (await req.json().catch(() => ({}))) as { role?: unknown };
     const role = body.role === "admin" ? "admin" : body.role === "member" ? "member" : null;

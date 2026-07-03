@@ -1,0 +1,8 @@
+
+Running 3 tests using 1 worker
+
+  ✓  1 [chromium] › ava-ai-settings.spec.ts:12:5 › 模型/Agent/工具选择在发送前生效，并由 stub 回复回显 (6.0s)
+  ✓  2 [chromium] › ava-ai-settings.spec.ts:37:5 › 普通团队成员不可选择 team-restricted 模型 (1.0s)
+  ✓  3 [chromium] › ava-ai-settings.spec.ts:57:5 › 受限模型被伪造提交时服务端回退默认模型 (431ms)
+
+  3 passed (13.2s)

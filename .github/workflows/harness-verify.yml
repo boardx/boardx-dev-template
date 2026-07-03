@@ -1,6 +1,9 @@
 # harness-verify.yml — CI 门控
-# 仓库即唯一事实来源：PR 必须通过基础验证 + harness verify 才能合并。
-# 同时校验 subagent 生成物没有漂移（改了 yaml 却忘了重新生成 → 红）。
+# 快速迭代策略（2026-07）：
+#   - PR/push 只做轻量门控：受影响模块的 typecheck/lint/test（turbo --affected）+ 生成物漂移检查。
+#   - 全栈烟测(fullstack-smoke)：每小时检查 main 是否有新合并的 PR，有才跑一次。
+#   - 全量浏览器 e2e(e2e-full)：每 3 小时定时回归一次。
+#   - harness verify / 完整验证由本地开发流程承担（pnpm harness verify、verify:full）。
 
 name: harness-verify
 
@@ -9,17 +12,22 @@ on:
   push:
     branches: [main]
   schedule:
-    # 全量浏览器 e2e 较重，不随每个 PR/push 跑；每天 03:00 UTC 定时回归一次。
-    - cron: "0 3 * * *"
+    # 每小时检查 main 是否有新合并（新 PR 落地即产生新 commit），有则跑全栈烟测。
+    - cron: "0 * * * *"
+    # 全量浏览器 e2e 每 3 小时跑一次。
+    - cron: "30 */3 * * *"
 
 jobs:
   verify:
-    # 静态门控：每个 PR/push 都跑；定时(daily)不重复跑。
+    # 轻量门控：每个 PR/push 都跑，只测受本次改动影响的模块；定时(daily)不重复跑。
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # --affected 需要能 diff 到 base 分支
+          fetch-depth: 0
 
       # 不指定 version：pnpm/action-setup 从 package.json 的 packageManager 字段
       # (pnpm@9.0.0) 读取。两处都写会触发 ERR_PNPM_BAD_PM_VERSION。
@@ -32,8 +40,8 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
-      - name: Install + 基础验证 (init.sh)
-        run: ./init.sh
+      - name: Install
+        run: pnpm install --frozen-lockfile
 
       - name: Subagent 生成物未漂移
         run: |
@@ -41,18 +49,41 @@ jobs:
           git diff --exit-code .claude/agents .codex/agents \
             || (echo "✗ subagent 生成物与 .harness/agents/*.yaml 不一致：改了 yaml 请重新跑 pnpm harness gen-subagents 并提交" && exit 1)
 
-      # verify 需要 --phase 或 --sprint（裸调用会报缺少 --phase）。
-      # 指向已交付的 sprint：已 passing 的 feature 会被跳过(不可逆)，
-      # 其验收是文件检查、不依赖运行时服务，故 CI 可安全门控。
-      # 新增 sprint 后，把这里更新/追加为对应的 --sprint NN/MM。
-      - name: harness verify
-        run: pnpm harness verify --sprint 01/01
+      # 只跑受本次改动影响的包（模块只测自己）。
+      # PR：相对 base 分支；push main：相对上一个 commit。
+      - name: 受影响模块 typecheck/lint/test
+        env:
+          TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+        run: pnpm turbo run typecheck lint test --affected
 
-  # 全栈运行时回归：phase-03 的 F01-F03 已 passing（不可逆），harness verify 会跳过，
-  # 不构成真回归测试。故这里用 pg/redis 服务直接跑 curl 断言，每次 CI 真测运行时行为。
+  # 每小时的门卫：看 main 在过去 1 小时内是否有新 commit（新 PR 合并即产生）。
+  # 有 → 触发 fullstack-smoke；没有 → 本小时静默跳过，不浪费 runner。
+  check-new-merges:
+    if: github.event_name == 'schedule' && github.event.schedule == '0 * * * *'
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: main 过去 1 小时内是否有新 commit
+        id: check
+        run: |
+          head_ts=$(git log -1 --format=%ct)
+          now=$(date +%s)
+          if [ $((now - head_ts)) -lt 3600 ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "✓ main 有新合并（HEAD 距今 $((now - head_ts))s），触发全栈烟测"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "○ main 过去 1 小时无新合并，跳过"
+          fi
+
+  # 全栈运行时回归：pg/redis 服务 + curl 断言，真测运行时行为。
+  # 不随每个 PR/push 跑；每小时定时检查，main 有新合并才执行。
   fullstack-smoke:
-    # 后端闭环烟测：每个 PR/push 都跑；定时(daily)不重复跑。
-    if: github.event_name != 'schedule'
+    needs: check-new-merges
+    if: needs.check-new-merges.outputs.changed == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -110,9 +141,9 @@ jobs:
           echo "✓ 全栈烟测通过（F01/F02/F03）"
 
   # 全量 Playwright e2e 回归（真浏览器，覆盖 auth/team/room/canvas/board 等全部模块）。
-  # 较重，不随每个 PR/push 跑；仅每日定时(schedule)执行一次。
+  # 较重，不随每个 PR/push 跑；每 3 小时定时执行一次（错开半小时，避开整点的烟测检查）。
   e2e-full:
-    if: github.event_name == 'schedule'
+    if: github.event_name == 'schedule' && github.event.schedule == '30 */3 * * *'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -150,5 +181,10 @@ jobs:
         run: pnpm --filter @repo/data run migrate
       - name: Install Playwright chromium
         run: pnpm --filter @repo/web exec playwright install --with-deps chromium
-      - name: Playwright e2e（全量：auth/team/room/canvas/profile/board + 各功能模块；webServer 自动起 next dev）
-        run: pnpm --filter @repo/web exec playwright test
+      # kb/studio/presentation 的异步生成链路（入队→worker 消费→回写状态）依赖
+      # workflow-worker 进程；不起它，相关 e2e（kb-001/presentations/studio）会稳定超时。
+      - name: Playwright e2e（全量：auth/team/room/canvas/profile/board + 各功能模块；webServer 自动起 next dev，先后台起 workflow-worker）
+        run: |
+          set -euo pipefail
+          pnpm --filter @repo/workflow-worker start &
+          pnpm --filter @repo/web exec playwright test

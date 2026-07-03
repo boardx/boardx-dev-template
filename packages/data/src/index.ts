@@ -44,6 +44,8 @@ export * from "./presentations";
 export * from "./payment";
 // P15 Admin 后台：平台统计聚合（用户/团队计数；仅已建表的真实维度）
 export * from "./admin";
+// CAP-DATA 出站邮件本地 sink（outbound_emails / p18 F08）
+export * from "./mailbox";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 

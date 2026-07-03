@@ -1,8 +1,10 @@
-// packages/ai/src/gateway.ts — CAP-AI LiteLLM 风格网关（P9 F01 地基）
+// packages/ai/src/gateway.ts — CAP-AI 模型网关（P9 F01 地基；P18 F01 接入真实 provider）
 //
-// 统一多供应商模型调用接口：调用方只认 modelId + messages，网关按 modelId 前缀路由到
-// 具体 provider（真实 provider 接入见 notes；本 feature 默认注册一个 stub provider，
-// 使上层可在无真实供应商额度的情况下跑通端到端流式回复 —— sanctioned in F01 notes）。
+// 这是一个自研的极简前缀路由网关（不是 LiteLLM，也不依赖任何 SDK）：调用方只认
+// modelId + messages，网关按 modelId 前缀路由到具体 provider。
+// 已注册 provider：
+//   - anthropicProvider（anthropic: 前缀，真实 Anthropic Messages API，见 anthropicProvider.ts）
+//   - stubProvider（stub: 前缀，确定性回显，供 CI/e2e 在无供应商额度下跑通端到端）
 //
 // Provider 契约：一个异步生成器，逐 token yield 字符串；调用方将其转成 SSE。
 
@@ -69,16 +71,26 @@ const ATTACHMENT_MARKER_RE = /\n\n\[附件: (.+)\]$/;
 // 无命中时该标记不存在，回复也不会虚构引用——与 F04 验收口径「无相关内容时不虚构来源」一致。
 const KB_CITATION_MARKER_RE = /\n\n\[知识库引用: (.+)\]$/;
 
+// board-ai-chat 路由（p17-F01）在用户问题末尾拼接 `[画布内容: 1. xxx\n2. yyy]`
+// （当前画布上各 item 的真实文字内容，见 apps/web/app/api/boards/[id]/ai-chat/route.ts）。
+// stub provider 据此在回复中真实引用画布上的具体文字，而非只报数量——
+// 用于验证 Board AI 的回复确实基于画布内容生成，不是写死模板。支持多行内容（dotall）。
+const BOARD_CONTEXT_MARKER_RE = /\n\n\[画布内容: ([\s\S]+)\]$/;
+
 /** 构造 stub 回复：包含纯文本 + Markdown 标题/列表 + 代码块，覆盖渲染断言面。
  *  若用户文本携带附件上下文标记，回复里显式提及附件文件名，供 F08 验证 AI 感知到附件。
  *  若携带知识库引用标记，回复里显式列出引用来源，供 F04 验证 RAG 检索结果被使用且可追溯。
+ *  若携带画布内容标记，回复里显式引用画布上的具体文字，供 p17-F01 验证 Board AI 真实基于
+ *  画布内容生成（而非仅报组件数量）。
  *  settings 携带当前生效的模型/Agent/工具，供 F07 验证发送前设置在回复中确实生效。 */
 export function buildStubReply(
   userText: string,
   settings: { modelId?: string; agentId?: string; toolIds?: string[] } = {}
 ): string {
-  const kbMatch = userText.match(KB_CITATION_MARKER_RE);
-  const afterKb = kbMatch ? userText.replace(KB_CITATION_MARKER_RE, "") : userText;
+  const boardMatch = userText.match(BOARD_CONTEXT_MARKER_RE);
+  const afterBoard = boardMatch ? userText.replace(BOARD_CONTEXT_MARKER_RE, "") : userText;
+  const kbMatch = afterBoard.match(KB_CITATION_MARKER_RE);
+  const afterKb = kbMatch ? afterBoard.replace(KB_CITATION_MARKER_RE, "") : afterBoard;
   const attachmentMatch = afterKb.match(ATTACHMENT_MARKER_RE);
   const bodyText = attachmentMatch ? afterKb.replace(ATTACHMENT_MARKER_RE, "") : afterKb;
   const quoted = bodyText.length > 200 ? `${bodyText.slice(0, 200)}…` : bodyText;
@@ -86,13 +98,16 @@ export function buildStubReply(
     ? `\n\n我看到你附上了 ${attachmentMatch[1]}，已一并考虑。`
     : "";
   const kbLine = kbMatch ? `\n\n**引用来源**：${kbMatch[1]}` : "";
+  const boardLine = boardMatch
+    ? `\n\n**画布内容参考**：\n${boardMatch[1]}\n\n以上是我在当前画布上看到的内容，已结合它来回答你的问题。`
+    : "";
   const modelId = settings.modelId ?? DEFAULT_MODEL_ID;
   const agentId = settings.agentId ?? "default";
   const tools = settings.toolIds && settings.toolIds.length > 0 ? settings.toolIds.join(", ") : "none";
   return [
     `## 收到`,
     ``,
-    `这是 AVA 的 stub 回复（未接入真实模型）。你说：「${quoted}」。${attachmentLine}${kbLine}`,
+    `这是 AVA 的 stub 回复（未接入真实模型）。你说：「${quoted}」。${attachmentLine}${kbLine}${boardLine}`,
     ``,
     `模型：${modelId}`,
     `Agent：${agentId}`,
@@ -129,5 +144,8 @@ export class ChatGateway {
   }
 }
 
-/** 默认单例网关（进程内共享，注册全部已知 provider）。 */
-export const defaultGateway = new ChatGateway([stubProvider]);
+import { anthropicProvider } from "./anthropicProvider";
+
+/** 默认单例网关（进程内共享，注册全部已知 provider）。
+ *  anthropic: → 真实 Anthropic API；stub: → 确定性 stub。前缀不重叠，顺序无关。 */
+export const defaultGateway = new ChatGateway([anthropicProvider, stubProvider]);

@@ -33,9 +33,9 @@ interface ReviewItem {
 const PAGE_SIZE = 12;
 
 const STATUS_TABS: { key: ReviewStatus | ""; label: string }[] = [
-  { key: "", label: "全部" },
-  { key: "pending", label: "待审核" },
-  { key: "approved", label: "已批准" },
+  { key: "", label: "All" },
+  { key: "pending", label: "Pending" },
+  { key: "approved", label: "Approved" },
 ];
 
 function instructionsText(item: ReviewItem) {
@@ -70,19 +70,19 @@ function ConfirmReviewModal({
 
   const copy: Record<ReviewAction, { title: string; body: string; confirmLabel: string }> = {
     approve: {
-      title: "批准该 AI Store 项目",
-      body: "批准后该资源状态将变为 APPROVED，并对平台可见。",
-      confirmLabel: "确认批准",
+      title: "Approve this AI Store item",
+      body: "Once approved, this item's status becomes APPROVED and it will be visible on the platform.",
+      confirmLabel: "Confirm approve",
     },
     reject: {
-      title: "拒绝该 AI Store 项目",
-      body: "拒绝后该资源状态将变为 REJECTED，创建者可修改后重新提交审核。",
-      confirmLabel: "确认拒绝",
+      title: "Reject this AI Store item",
+      body: "Once rejected, this item's status becomes REJECTED. The creator can edit it and resubmit for review.",
+      confirmLabel: "Confirm reject",
     },
     revoke: {
-      title: "撤回该 AI Store 项目的批准",
-      body: "撤回后该资源状态将变回 PENDING，重新进入待审核队列，暂不对平台可见。",
-      confirmLabel: "确认撤回",
+      title: "Revoke approval for this AI Store item",
+      body: "Once revoked, this item's status returns to PENDING and re-enters the review queue; it will no longer be visible on the platform.",
+      confirmLabel: "Confirm revoke",
     },
   };
   const c = copy[action];
@@ -99,13 +99,13 @@ function ConfirmReviewModal({
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(d.error ?? "操作失败，请稍后重试");
+        setError(d.error ?? "Action failed, please try again later");
         return;
       }
       onConfirmed(d.item as ReviewItem);
       onClose();
     } catch {
-      setError("操作失败，请稍后重试");
+      setError("Action failed, please try again later");
     } finally {
       setSaving(false);
     }
@@ -125,7 +125,7 @@ function ConfirmReviewModal({
           <h2 id="confirm-review-title" className="text-lg font-semibold text-foreground">
             {c.title}
           </h2>
-          <Button variant="ghost" size="icon" aria-label="关闭" onClick={onClose} disabled={saving} className="shrink-0">
+          <Button variant="ghost" size="icon" aria-label="Close" onClick={onClose} disabled={saving} className="shrink-0">
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -154,7 +154,7 @@ function ConfirmReviewModal({
 
         <div className="mt-4 flex justify-end gap-2">
           <Button type="button" variant="outline" data-testid="cancel-review" onClick={onClose} disabled={saving}>
-            取消
+            Cancel
           </Button>
           <Button
             type="button"
@@ -163,7 +163,7 @@ function ConfirmReviewModal({
             onClick={() => void confirm()}
             disabled={saving}
           >
-            {saving ? "提交中..." : c.confirmLabel}
+            {saving ? "Submitting..." : c.confirmLabel}
           </Button>
         </div>
       </div>
@@ -206,7 +206,7 @@ export default function AdminAiStoreReviewPage() {
           return;
         }
         if (!res.ok) {
-          setError("加载失败，请稍后重试");
+          setError("Failed to load, please try again later");
           setLoading(false);
           return;
         }
@@ -215,7 +215,7 @@ export default function AdminAiStoreReviewPage() {
         setItems(data.items ?? []);
         setTotal(data.total ?? 0);
       } catch {
-        setError("加载失败，请稍后重试");
+        setError("Failed to load, please try again later");
       } finally {
         setLoading(false);
       }
@@ -278,10 +278,10 @@ export default function AdminAiStoreReviewPage() {
           role="alert"
           className="rounded-12 border border-border bg-surface-1 p-8 text-center"
         >
-          <h1 className="text-17 font-bold text-foreground">无权限访问</h1>
-          <p className="mt-2 text-13 text-muted-foreground">该页面仅限系统管理员访问。</p>
+          <h1 className="text-17 font-bold text-foreground">Access denied</h1>
+          <p className="mt-2 text-13 text-muted-foreground">This page is restricted to system administrators.</p>
           <Button className="mt-5" variant="secondary" size="sm" onClick={() => router.push("/home")}>
-            返回首页
+            Back to home
           </Button>
         </div>
       </div>
@@ -293,9 +293,9 @@ export default function AdminAiStoreReviewPage() {
       {/* 标题 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-26 font-bold tracking-tight text-foreground">AI Store 平台审核</h1>
+          <h1 className="text-26 font-bold tracking-tight text-foreground">Store Approval</h1>
           <p className="mt-1 text-13 text-muted-foreground">
-            查看提交到平台审核的 AI Store 项目，批准、拒绝，或将已批准项目撤回到待审核
+            View AI Store items submitted for platform review; approve, reject, or revoke previously approved items
           </p>
         </div>
       </div>
@@ -323,7 +323,7 @@ export default function AdminAiStoreReviewPage() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-placeholder" />
           <Input
             data-testid="search"
-            placeholder="按名称或描述搜索…"
+            placeholder="Search by name or description…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && applyFilters()}
@@ -331,10 +331,10 @@ export default function AdminAiStoreReviewPage() {
           />
         </div>
         <Button data-testid="search-btn" variant="secondary" onClick={applyFilters}>
-          查询
+          Search
         </Button>
         <Button data-testid="reset-btn" variant="ghost" onClick={resetFilters}>
-          重置
+          Reset
         </Button>
       </div>
 
@@ -353,8 +353,8 @@ export default function AdminAiStoreReviewPage() {
           data-testid="empty"
           className="mt-4 flex flex-col items-center justify-center rounded-12 border border-dashed border-border-strong px-6 py-14 text-center"
         >
-          <p className="text-13 font-medium text-foreground">暂无待审核或已批准的项目</p>
-          <p className="mt-1 text-13 text-muted-foreground">调整筛选条件后重试。</p>
+          <p className="text-13 font-medium text-foreground">No pending or approved items</p>
+          <p className="mt-1 text-13 text-muted-foreground">Adjust the filters and try again.</p>
         </div>
       ) : (
         <div data-testid="review-list" className="mt-4 space-y-3">
@@ -401,7 +401,7 @@ export default function AdminAiStoreReviewPage() {
                         className={cn("gap-1.5")}
                       >
                         <ShieldCheck className="h-3.5 w-3.5" />
-                        批准
+                        Approve
                       </Button>
                       <Button
                         type="button"
@@ -412,7 +412,7 @@ export default function AdminAiStoreReviewPage() {
                         className="gap-1.5"
                       >
                         <ShieldX className="h-3.5 w-3.5" />
-                        拒绝
+                        Reject
                       </Button>
                     </>
                   ) : (
@@ -425,7 +425,7 @@ export default function AdminAiStoreReviewPage() {
                       className="gap-1.5"
                     >
                       <Undo2 className="h-3.5 w-3.5" />
-                      撤回批准
+                      Revoke approval
                     </Button>
                   )}
                 </div>
@@ -439,7 +439,7 @@ export default function AdminAiStoreReviewPage() {
       {!loading && items.length > 0 && (
         <div className="mt-4 flex items-center justify-between">
           <span className="text-11 text-muted-foreground">
-            第 {page} / {totalPages} 页 · 共 {total} 个项目
+            Page {page} / {totalPages} · {total} items total
           </span>
           <div className="flex gap-2">
             <Button
@@ -449,7 +449,7 @@ export default function AdminAiStoreReviewPage() {
               disabled={page <= 1}
               onClick={() => goPage(page - 1)}
             >
-              上一页
+              Previous
             </Button>
             <Button
               variant="outline"
@@ -458,7 +458,7 @@ export default function AdminAiStoreReviewPage() {
               disabled={page >= totalPages}
               onClick={() => goPage(page + 1)}
             >
-              下一页
+              Next
             </Button>
           </div>
         </div>

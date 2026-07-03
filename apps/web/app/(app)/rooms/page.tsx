@@ -4,7 +4,6 @@ import { Plus, Search, LayoutGrid, List, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +14,23 @@ interface Room {
   name: string;
   visibility: string;
   team_id: number | string | null;
+  is_member?: boolean;
+}
+
+// uc-rr-002：可见性二选一卡片（🔒 Private / 🌐 Team），默认 Private
+const VISIBILITY_OPTIONS = [
+  { value: "private", icon: "🔒", title: "Private", desc: "Only invited members can find and join" },
+  { value: "team", icon: "🌐", title: "Team", desc: "Anyone on the team can discover and join" },
+] as const;
+
+/** 列表徽章：与创建时的可见性选择一致（🔒 private / 🌐 team）。 */
+function VisibilityBadge({ room }: { room: Room }) {
+  const team = room.visibility === "team";
+  return (
+    <Badge variant="muted" data-testid={`room-visibility-badge-${room.id}`} className="shrink-0">
+      {team ? "🌐 team" : "🔒 private"}
+    </Badge>
+  );
 }
 
 const TAG_FILLS = ["bg-tag-green", "bg-tag-blue", "bg-tag-purple", "bg-tag-pink", "bg-tag-yellow"];
@@ -127,8 +143,12 @@ export default function RoomsPage() {
 
   useEffect(() => { void load(); }, []);
 
+  // uc-rr-002 E1：房间名 ≥3 字符才可提交
+  const nameTooShort = name.trim().length < 3;
+
   async function create(e: React.FormEvent) {
     e.preventDefault();
+    if (nameTooShort) return;
     setCreateError("");
     const res = await fetch("/api/rooms", {
       method: "POST",
@@ -143,6 +163,12 @@ export default function RoomsPage() {
       const d = await res.json().catch(() => ({}));
       setCreateError(d.errors?.name ?? d.error ?? "创建失败");
     }
+  }
+
+  // uc-rr-002：team 可见房间的同团队成员自助加入（加入即成为 member）
+  async function join(id: Room["id"]) {
+    const res = await fetch(`/api/rooms/${id}/join`, { method: "POST" });
+    if (res.ok) await load(q);
   }
 
   return (
@@ -166,21 +192,56 @@ export default function RoomsPage() {
         <form onSubmit={create} className="mt-5 flex flex-col gap-3 rounded-12 border border-border bg-surface-1 p-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="room-name">Room name</Label>
-            <Input id="room-name" data-testid="room-name" placeholder="My room" value={name} onChange={(e) => setName(e.target.value)} />
+            <Input
+              id="room-name"
+              data-testid="room-name"
+              placeholder="My room"
+              value={name}
+              aria-invalid={name.length > 0 && nameTooShort}
+              onChange={(e) => setName(e.target.value)}
+            />
+            {name.length > 0 && nameTooShort && (
+              <p role="alert" data-testid="room-name-hint" className="text-xs text-destructive">
+                Room name must be at least 3 characters
+              </p>
+            )}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="visibility">Visibility</Label>
-            <Select id="visibility" data-testid="visibility" className="w-40" value={visibility} onChange={(e) => setVisibility(e.target.value)}>
-              <option value="private">Private</option>
-              <option value="team">Team</option>
-            </Select>
+            <Label>Visibility</Label>
+            <div role="radiogroup" aria-label="Visibility" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {VISIBILITY_OPTIONS.map((opt) => {
+                const selected = visibility === opt.value;
+                return (
+                  <Button
+                    key={opt.value}
+                    type="button"
+                    variant="outline"
+                    role="radio"
+                    aria-checked={selected}
+                    data-testid={`room-create-visibility-${opt.value}`}
+                    onClick={() => setVisibility(opt.value)}
+                    className={cn(
+                      "h-auto flex-col items-start gap-1 rounded-12 p-3 text-left font-normal",
+                      selected
+                        ? "border-foreground bg-background ring-1 ring-ring"
+                        : "border-border text-muted-foreground hover:border-border-strong",
+                    )}
+                  >
+                    <span className="text-13 font-semibold text-foreground">
+                      {opt.icon} {opt.title}
+                    </span>
+                    <span className="whitespace-normal text-xs text-muted-foreground">{opt.desc}</span>
+                  </Button>
+                );
+              })}
+            </div>
           </div>
           {createError && (
             <p role="alert" data-testid="err-create" className="text-13 text-destructive">
               {createError}
             </p>
           )}
-          <Button data-testid="create" type="submit" size="sm" className="self-start">
+          <Button data-testid="create" type="submit" size="sm" disabled={nameTooShort} className="self-start">
             Create
           </Button>
         </form>
@@ -232,7 +293,24 @@ export default function RoomsPage() {
                 </div>
                 <div className="flex items-center justify-between gap-2 px-3 py-2.5">
                   <span className="truncate text-13 font-semibold text-foreground">{r.name}</span>
-                  <Badge variant="muted">{r.visibility}</Badge>
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    <VisibilityBadge room={r} />
+                    {r.is_member === false && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        data-testid={`room-join-${r.id}`}
+                        className="h-6 px-2 text-xs"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          void join(r.id);
+                        }}
+                      >
+                        Join
+                      </Button>
+                    )}
+                  </span>
                 </div>
               </a>
             ))}
@@ -251,7 +329,22 @@ export default function RoomsPage() {
                   {r.name.charAt(0).toUpperCase()}
                 </span>
                 <span className="flex-1 truncate text-13 font-semibold text-foreground">{r.name}</span>
-                <Badge variant="muted">{r.visibility}</Badge>
+                <VisibilityBadge room={r} />
+                {r.is_member === false && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    data-testid={`room-join-${r.id}`}
+                    className="h-6 px-2 text-xs"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      void join(r.id);
+                    }}
+                  >
+                    Join
+                  </Button>
+                )}
                 <ChevronRight className="h-4 w-4 shrink-0 text-border-strong" />
               </a>
             ))}

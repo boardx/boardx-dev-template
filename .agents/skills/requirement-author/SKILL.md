@@ -54,6 +54,14 @@ description: >
 | `verification`（可执行命令） | 用什么命令能证明上面这句为真？ | "测试通过"（没给命令） |
 | `evidence`（证据落盘位） | 证据写到哪？ | 留空 = 没完成 |
 
+两条附加纪律：
+- **证据可入库（L1）**：`evidence` 路径必须能提交进 git 树（不被根 `.gitignore` 挡住，
+  如 `*.log` 规则需白名单例外），并建议 verification 里含入库断言
+  （`git cat-file -e HEAD:phases/.../evidence/FXX.verify.log`）。指向未入库文件的
+  evidence = 指向空气，reviewer 会实测并阻断。
+- **契约缺口显式归属（L10）**：`user_visible_behavior` 中暂时无法由本 feature 的
+  verification 覆盖的行，必须在 notes 里写明「由 FXX 交付时断言」，禁止静默跳过。
+
 **关键纪律：先有 verification，再谈实现。** verification 是「完成契约」——
 实现者和评审者都读它。契约定不下来，说明需求还没想清楚，不要急着写码。
 （这条顺序由 [verification-writer] 与 [feature-implementer] 接力执行。）

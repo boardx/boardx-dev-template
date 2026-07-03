@@ -75,7 +75,7 @@
       "title": "查看答卷与报告（Summary/Individual/Report + 导出）",
       "user_visible_behavior": "打开某问卷结果：Summary 视图按题聚合（图表/占比/均值），Individual 视图逐份浏览答卷，Report 生成分析报告并可导出（PDF/CSV）；无回收时展示空态；仅有权限者可查看；导出失败给重试。",
       "design_ref": "prototype:<!-- RESULTS / REPORT --> → <!-- summary --> / <!-- individual --> / <!-- report -->；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "04",
       "owner": "wrk-survey-1",
       "capability": "CAP-DATA",
@@ -88,7 +88,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/survey-004-view-answers-report.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F04.verify.log @ 2026-07-03T19:22:04.697Z",
       "notes": "uc-survey-004。聚合与导出基于 survey_responses；分析报告的 AI 摘要为可选增强，核心导出不依赖 CAP-AI。依赖 F03。"
     },
     {
