@@ -4,45 +4,40 @@
 - 仓库根目录: <repo 路径>
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: <feature id / title>
-- 当前 blocker: <无 / 描述>
+- 当前最高优先级未完成功能: F01（owner wrk-claude-1）已实现+自测全绿，等待 `pnpm harness verify` 门控翻 passing。F02-F06 由其他 owner 并行处理，见各自记录。
+- 当前 blocker: 无（F01 自身）。注：`e2e/board-menu-001-use-board-menu.spec.ts` 存在一个与本 feature 无关的**既有**回归（addShape 新建的形状 items 断言 `toContainText("矩形")` 失败，item text 为空）——在 stash 掉 F01 全部改动后仍复现，已 spawn 独立后台任务跟进，不阻塞 F01。
 
 ## 会话记录
 ### 2026-07-03 04:48:25
-- 本轮目标:
-- 已完成:
-- 运行过的验证:
-- 已记录证据:
-- 提交记录:
-- 已知风险或未解决问题:
-- 下一步最佳动作:
+- 本轮目标: p17 sprint-01 全量派发（coordinator）。
+- 已完成: claim 分配，scaffold sprint.md/progress.md/session-handoff.md。
 
-### 2026-07-03（wrk-store-2 / F03 AI Store reskin）
-- 本轮目标: F03 — AI Store 页面 reskin（视觉/文案统一，不改功能逻辑）。
-- 已完成: `apps/web/app/(app)/ai-store/store-browser.tsx` 里未被既有 e2e 断言锁定的中文字符串
-  英文化（fetch 失败提示、重试按钮、喜欢/取消喜欢 aria-label、分享相关的 setShareError 提示、
-  未发布订阅提示），并把标签筛选 chip 与卡片标签的显示文案首字母大写（`tagLabel()` helper，
-  `data-testid` 保持不变）。所有被 phase-p11 e2e 用例硬编码断言的中文字符串（`草稿已保存`/
-  `已发布`/`已提交审核`/`已移除授权`/`分享链接无效`/`已通过分享链接获得该项目的授权访问`/
-  `名称不能为空` 等）**保持不变**，避免破坏 p11 已 passing 的回归测试。
-- 运行过的验证:
-  1. `docker compose -f infra/docker-compose.yml up -d` — 通过
-  2. `pnpm --filter @repo/data run migrate` — 通过
-  3. `pnpm --filter @repo/web exec playwright test e2e/ai-store-*.spec.ts` — **27/30 通过，
-     3 条失败**（详见下方"已知风险"，已用 git stash 对照证明是 p11 遗留问题，非本次改动引入）
-  4. `cd apps/web && bash scripts/lint-design.sh` — 通过（仅跨模块文案语言警告，非拦截项）
-- 已记录证据: `phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F03-e2e.log`、
-  `F03-lint-design.log`、`F03-analysis.md`（含根因分析与对照实验记录）。
-- 提交记录: 见 PR（`worker/wrk-store-2-p17-f03-store-reskin` → main，Closes #237）。
-- 已知风险或未解决问题: 3 条 e2e 失败（`ai-store-003:13`、`ai-store-005:116`、`ai-store-005:174`）
-  是 P11 遗留的 `store-browser.tsx` 内 `useEffect` 读取分享跳转 URL 参数后立即
-  `history.replaceState` 清空 query 的时序竞争——在这台机器上 React effect 执行快于
-  Playwright 的 `toHaveURL` 断言采样，确定性复现（非随机 flake），与本次 F03 视觉/文案改动
-  无关（已用 `git stash`/`git stash pop` 在未改动的 baseline 上重跑同样失败验证）。已通过
-  spawn_task 提出独立修复建议（task: Fix ai-store share-redirect URL race in
-  store-browser.tsx），不在本次 F03 范围内处理（涉及行为/时序修复，超出"只做视觉/文案层面
-  reskin"边界）。因此 F03 本轮**未能让 verification #3 全绿**，无法自证 passing，等待协调方
-  决定是否单独修复该 race 后重新验证，或是否需要调整本 feature 的 verification 范围。
-- 下一步最佳动作: 协调方评估 F03-analysis.md 里的三个选项；如果认可这是 p11 遗留 bug 与
-  F03 无关，可以另派 worker 先修时序 race，F03 这个 PR 待 race 修复后重新跑
-  `pnpm --filter @repo/web exec playwright test e2e/ai-store-*.spec.ts` 转绿再 verify。
+### 2026-07-03（wrk-claude-1 / F01）
+- 本轮目标: F01 — Board 内嵌 AI 浮层 + 底部工具 dock + board chat 面板。
+- 已完成:
+  - 新增 `apps/web/components/board/board-bottom-dock.tsx`：FigJam 风格底部悬浮工具 dock，复用
+    `BoardCanvas` 既有 `activeTool`/`chooseTool` 真值，末尾 "Ask AI" 触发按钮。
+  - 新增 `apps/web/components/board/board-ai-panel.tsx`：右下角圆形 AI 浮层触发按钮 + 唤起后停靠
+    的 "Board AI" 面板（消息列表 + composer，U1/U2/U3 三态齐全：loading/empty/err-board-ai）。
+    AI 回复为本地模拟应答（范围纪律：F01 verification 未要求新后端契约，不跨 feature 新增/复用
+    其它 API）。
+  - 改 `apps/web/components/board/board-canvas.tsx`：引入以上两个组件；新增 `aiOpen` 状态与
+    `chooseDockTool` 映射函数（dock 工具点击 → 复用既有 `chooseTool`/`addNote`/`addText`/`addShape`）。
+  - 新增 e2e `apps/web/e2e/board-ai-overlay.spec.ts`（3 个场景：dock 可见可用 + Ask AI 唤起/问答/
+    收起；dock 新建便签与画布真值一致；无编辑权限时 dock 隐藏但 AI 浮层仍可用）。
+- 运行过的验证（3 条均退出码 0，详见 evidence）:
+  1. `docker compose -f infra/docker-compose.yml up -d`
+  2. `pnpm --filter @repo/data run migrate`
+  3. `pnpm --filter @repo/web exec playwright test e2e/board-ai-overlay.spec.ts` → 3 passed
+  - 另外自测：`pnpm --filter @repo/web run typecheck`、`cd apps/web && bash scripts/lint-design.sh`
+    （exit 0，仅既有 LABEL-LANG-MIX 警告，非本次改动引入）、`pnpm -w run verify:base`（45/45 通过）。
+- 已记录证据:
+  - `phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-migrate.txt`
+  - `phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-verification.txt`
+- 提交记录: 分支 `worker/wrk-claude-1-p17-f01-board-ai-overlay`，PR 见 GitHub issue #235（Closes #235）。
+- 已知风险或未解决问题:
+  - `board-menu-001-use-board-menu.spec.ts` 的既有回归（见上，非本 feature 引入，已 spawn 后台任务）。
+  - Board chat 面板当前无持久化（纯客户端会话内状态），符合 F01 verification 范围；若后续要跨
+    会话/跨用户持久化协作对话，需要新的 feature + 后端契约。
+- 下一步最佳动作: 等待 reviewer 走 `pnpm harness verify --sprint p17/01 --feature F01` 门控翻 passing；
+  不要在 F01 状态翻 passing 前顺手改动 board-canvas.tsx 其它区域。
