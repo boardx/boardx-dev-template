@@ -19,6 +19,26 @@ describe("isAiStoreItemVisible", () => {
     ).toBe(false);
   });
 
+  // P15 F05：F04 批准（approve）= "APPROVED/发布到平台"，approved 与 published 对
+  // Explore 同等可见，否则精选（isFeatured）项目在批准后永远无法出现在 Explore。
+  it("platform + approved 对任何人可见（F04 批准即视为发布到平台）", () => {
+    expect(
+      isAiStoreItemVisible({ status: "approved", scope: "platform", owner_user_id: null, team_id: null }, undefined, undefined)
+    ).toBe(true);
+  });
+
+  it("platform + pending 不可见（尚未审核通过）", () => {
+    expect(
+      isAiStoreItemVisible({ status: "pending", scope: "platform", owner_user_id: null, team_id: null }, 1, null)
+    ).toBe(false);
+  });
+
+  it("platform + rejected 不可见", () => {
+    expect(
+      isAiStoreItemVisible({ status: "rejected", scope: "platform", owner_user_id: null, team_id: null }, 1, null)
+    ).toBe(false);
+  });
+
   it("team + published 且 team_id 命中当前团队 → 可见", () => {
     expect(
       isAiStoreItemVisible({ status: "published", scope: "team", owner_user_id: null, team_id: 7 }, 1, 7)
