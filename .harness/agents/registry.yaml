@@ -25,6 +25,11 @@ agents:
     model: opus-4.8
     areas: [canvas, board, home-page, common]   # 领域亲和（分派优先，不是硬限制）
     max_concurrent: 1                            # 每 owner 同时最多 1 个 in_progress（ADR-001）
+  - id: canvas-worker-1
+    kind: worker
+    model: sonnet-5
+    areas: [canvas, board]                       # p6/p7 canvas 系列专任（补注册，之前已实际使用此 id）
+    max_concurrent: 1
   - id: wrk-codex-1
     kind: worker
     model: codex

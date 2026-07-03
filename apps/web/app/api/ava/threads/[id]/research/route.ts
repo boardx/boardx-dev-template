@@ -4,13 +4,21 @@
 //  1. 校验登录 + 线程属主 + 主题长度。
 //  2. 使用 deterministic stub 研究引擎生成澄清问题、计划、时间线、报告。
 //  3. 将用户研究主题和最终报告通知落到现有 ava_messages，e2e 不接真实外部 AI。
+//  4. p18-F03：同时把该研究持久化到 ava_research_sessions（draft 阶段的 timeline：
+//     首个阶段 running、其余 queued），供 GET 恢复、PATCH 推进阶段。
+//
+// GET /api/ava/threads/:id/research — 返回该线程最近一次研究会话（线程重新打开时
+// 用它把 research-card 恢复到中断前的阶段与内容；没有研究过则 { session: null }）。
 import { NextResponse } from "next/server";
 import {
   getAvaThread,
+  getLatestAvaResearchSession,
   insertAvaMessage,
+  createAvaResearchSession,
   renameAvaThreadIfDefault,
   titleFromMessage,
   touchAvaThread,
+  type AvaResearchTimelineItem,
 } from "@repo/data";
 import { currentTeamId, currentUser } from "@/lib/session";
 import { isThreadInCurrentContext } from "@/lib/ava-thread-auth";
@@ -131,9 +139,26 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   );
   await touchAvaThread(threadId);
 
+  // p18-F03：draft 阶段的实时 timeline——首个阶段 running，其余 queued（与前端
+  // startResearch() 里原本纯 client 端构造的初始 timeline 同一形状，现在权威落库）。
+  const draftTimeline: AvaResearchTimelineItem[] = research.timeline.map((item, index) => ({
+    ...item,
+    status: index === 0 ? "running" : "queued",
+  }));
+  const session = await createAvaResearchSession({
+    threadId,
+    topic,
+    audience,
+    status: "draft",
+    researchPayload: research,
+    timeline: draftTimeline,
+    assistantMessageId: assistantMessage.id,
+  });
+
   return NextResponse.json(
     {
       research,
+      session,
       messages: {
         user: userMessage,
         assistant: assistantMessage,
@@ -141,4 +166,24 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     },
     { status: 201 }
   );
+}
+
+/** 恢复该线程最近一次研究会话（线程重新打开/刷新页面后，用于把 research-card
+ *  恢复到中断前的正确阶段与内容）。没有研究过则返回 { session: null }。 */
+export async function GET(_req: Request, { params }: { params: { id: string } }) {
+  const user = await currentUser();
+  if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
+
+  const threadId = Number(params.id);
+  if (!Number.isFinite(threadId)) {
+    return NextResponse.json({ error: "无效的线程 id" }, { status: 400 });
+  }
+
+  const thread = await getAvaThread(threadId);
+  if (!thread || !isThreadInCurrentContext(thread, user.id, currentTeamId())) {
+    return NextResponse.json({ error: "线程不存在" }, { status: 404 });
+  }
+
+  const session = await getLatestAvaResearchSession(threadId);
+  return NextResponse.json({ session: session ?? null });
 }

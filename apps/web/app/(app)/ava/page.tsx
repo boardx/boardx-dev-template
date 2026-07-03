@@ -117,6 +117,9 @@ interface ResearchRun {
   error?: string;
   assistantMessage?: Message;
   timeline: ResearchTimelineItem[];
+  // p18-F03：持久化会话 id。存在时，status/timeline 的每次变化都会 PATCH 回
+  // ava_research_sessions，使刷新页面后 openThread() 能从 GET 恢复到同一阶段。
+  sessionId?: number;
 }
 
 function keepThroughMessageId(messages: Message[], messageId: number): Message[] {
@@ -394,6 +397,29 @@ export default function AvaPage() {
       if (!res.ok) throw new Error();
       const data = await res.json();
       setMessages(data.messages ?? []);
+      // p18-F03：恢复最近一次研究会话，让 research-card 回到中断前的阶段与内容
+      // （而不是刷新后消失/从头开始）。assistantMessage 留空——已完成的研究其报告
+      // 通知消息已经在上面 listAvaMessages 里，不需要再次推入。
+      try {
+        const researchRes = await fetch(`/api/ava/threads/${id}/research`);
+        if (researchRes.ok) {
+          const researchData = await researchRes.json();
+          const session = researchData.session;
+          if (session) {
+            setResearchRun({
+              topic: session.topic,
+              audience: session.audience,
+              status: session.status,
+              research: session.research_payload ?? undefined,
+              error: session.error ?? undefined,
+              timeline: session.timeline ?? [],
+              sessionId: session.id,
+            });
+          }
+        }
+      } catch {
+        // 研究恢复失败不阻塞聊天历史加载；用户仍能正常收发消息，只是看不到旧研究卡片。
+      }
     } catch {
       setSendError("Failed to load messages — please try again later");
     }
@@ -603,10 +629,13 @@ export default function AvaPage() {
         status: "draft",
         research: data.research,
         assistantMessage: data.messages.assistant,
-        timeline: data.research.timeline.map((item: ResearchTimelineItem, index: number) => ({
+        // 服务端已经把 draft 阶段的 timeline 计算好并落库（data.session.timeline），
+        // 前端直接采用同一份而不是自己重算，避免两处逻辑漂移。
+        timeline: data.session?.timeline ?? data.research.timeline.map((item: ResearchTimelineItem, index: number) => ({
           ...item,
           status: index === 0 ? "running" : "queued",
         })),
+        sessionId: data.session?.id,
       });
       await refreshThreads();
     } catch {
@@ -702,6 +731,23 @@ export default function AvaPage() {
     }
   }
 
+  // p18-F03：把当前阶段推进 PATCH 回 ava_research_sessions（fire-and-forget——这只是
+  // 持久化"中断前处于哪个阶段"，不阻塞本地动画节奏；无 sessionId（理论上不会发生,
+  // POST research 总是先建会话）时静默跳过）。
+  function persistResearchProgress(
+    sessionId: number | undefined,
+    patch: { status?: ResearchStatus; timeline?: ResearchTimelineItem[] }
+  ) {
+    if (activeId == null || sessionId == null) return;
+    void fetch(`/api/ava/threads/${activeId}/research/${sessionId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(patch),
+    }).catch(() => {
+      // 持久化失败不影响本地动画/交互；下次刷新会拿到上一次成功持久化的阶段（保守恢复）。
+    });
+  }
+
   function confirmResearchPlan() {
     if (!researchRun?.research || researchRun.status !== "draft") return;
     const queued: ResearchTimelineItem[] = researchRun.research.timeline.map((item, index) => ({
@@ -709,6 +755,7 @@ export default function AvaPage() {
       status: index === 0 ? "running" : "queued",
     }));
     setResearchRun({ ...researchRun, status: "running", timeline: queued });
+    persistResearchProgress(researchRun.sessionId, { status: "running", timeline: queued });
 
     researchRun.research.timeline.forEach((item, index) => {
       window.setTimeout(() => {
@@ -724,7 +771,11 @@ export default function AvaPage() {
                   : "queued",
           })) as ResearchTimelineItem[];
           const isDone = index === current.research.timeline.length - 1;
-          if (!isDone) return { ...current, status: "running", timeline };
+          if (!isDone) {
+            persistResearchProgress(current.sessionId, { status: "running", timeline });
+            return { ...current, status: "running", timeline };
+          }
+          persistResearchProgress(current.sessionId, { status: "complete", timeline });
           const nextMessages = current.assistantMessage ? [current.assistantMessage] : [];
           setMessages((prev) => [...prev, ...nextMessages]);
           setReportOpen(true);

@@ -51,7 +51,7 @@
       "design_ref": "现有 research-card / research-clarify / research-plan / research-timeline / research-report-panel；requirements/02-deep-research-realization.md",
       "status": "in_progress",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-ava-p18-1",
       "capability": "CAP-DATA",
       "depends_on": [],
       "wave": 0,

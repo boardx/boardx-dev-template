@@ -554,3 +554,100 @@ export async function listAvaAttachmentsByMessageIds(
   }
   return map;
 }
+
+// ─── Deep Research 持久化（p18-F03，CAP-DATA）───────────────────────────────
+// 澄清/计划/时间线/报告持久化到 DB，使刷新页面后可恢复到中断前的正确阶段与内容
+// （而不是从头开始或消失）。一个线程可有多次研究，恢复时取最近一条。
+
+export type AvaResearchStatus = "draft" | "running" | "complete" | "error";
+
+export interface AvaResearchTimelineItem {
+  phase: string;
+  task: string;
+  status: "queued" | "running" | "complete";
+}
+
+export interface AvaResearchSession {
+  id: number;
+  thread_id: number;
+  topic: string;
+  audience: string;
+  status: AvaResearchStatus;
+  research_payload: unknown | null;
+  timeline: AvaResearchTimelineItem[];
+  assistant_message_id: number | null;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const AVA_RESEARCH_SESSION_COLUMNS =
+  "id, thread_id, topic, audience, status, research_payload, timeline, assistant_message_id, error, created_at, updated_at";
+
+export async function createAvaResearchSession(input: {
+  threadId: number;
+  topic: string;
+  audience: string;
+  status: AvaResearchStatus;
+  researchPayload: unknown;
+  timeline: AvaResearchTimelineItem[];
+  assistantMessageId: number | null;
+}): Promise<AvaResearchSession> {
+  const rows = await query<AvaResearchSession>(
+    `INSERT INTO ava_research_sessions
+       (thread_id, topic, audience, status, research_payload, timeline, assistant_message_id)
+     VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7)
+     RETURNING ${AVA_RESEARCH_SESSION_COLUMNS}`,
+    [
+      input.threadId,
+      input.topic,
+      input.audience,
+      input.status,
+      JSON.stringify(input.researchPayload ?? null),
+      JSON.stringify(input.timeline),
+      input.assistantMessageId,
+    ]
+  );
+  return rows[0]!;
+}
+
+/** 最近一次研究会话（该线程内），用于线程重新打开时恢复 research-card。 */
+export async function getLatestAvaResearchSession(
+  threadId: number
+): Promise<AvaResearchSession | undefined> {
+  const rows = await query<AvaResearchSession>(
+    `SELECT ${AVA_RESEARCH_SESSION_COLUMNS} FROM ava_research_sessions
+     WHERE thread_id = $1 ORDER BY created_at DESC LIMIT 1`,
+    [threadId]
+  );
+  return rows[0];
+}
+
+export async function getAvaResearchSession(
+  id: number
+): Promise<AvaResearchSession | undefined> {
+  const rows = await query<AvaResearchSession>(
+    `SELECT ${AVA_RESEARCH_SESSION_COLUMNS} FROM ava_research_sessions WHERE id = $1`,
+    [id]
+  );
+  return rows[0];
+}
+
+/** 推进阶段状态（confirm 计划 / 逐阶段完成 / 报错），是"中断前处于哪个阶段"的写入点。
+ *  只更新传入的字段，故一次调用可以只推进 status，也可以同时刷新 timeline。 */
+export async function updateAvaResearchSessionProgress(
+  id: number,
+  patch: { status?: AvaResearchStatus; timeline?: AvaResearchTimelineItem[]; error?: string | null }
+): Promise<AvaResearchSession | undefined> {
+  const rows = await query<AvaResearchSession>(
+    `UPDATE ava_research_sessions
+     SET status = COALESCE($2, status),
+         timeline = COALESCE($3::jsonb, timeline),
+         error = COALESCE($4, error),
+         updated_at = now()
+     WHERE id = $1
+     RETURNING ${AVA_RESEARCH_SESSION_COLUMNS}`,
+    [id, patch.status ?? null, patch.timeline ? JSON.stringify(patch.timeline) : null, patch.error ?? null]
+  );
+  return rows[0];
+}
