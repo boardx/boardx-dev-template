@@ -174,7 +174,7 @@
 | F03 | 订阅并使用项目（个人/团队订阅 + 使用入口带入 AVA/工具/模板） | in_progress | wrk-store-1 | [F02(passing), p9:F01(passing)] | 2 |
 | F04 | 项目喜欢/收藏状态展示与切换 | passing | wrk-store-2 | [F01(passing)] | 1 |
 | F05 | 项目分享管理（授权链接生成/关闭 + 已授权用户列表） | passing | wrk-store-2 | [F02(passing)] | 2 |
-| F06 | 团队/项目审核与精选（PENDING/APPROVED 切换 + featured） | in_progress | wrk-store-2 | [F02(passing)] | 2 |
+| F06 | 团队/项目审核与精选（PENDING/APPROVED 切换 + featured） | passing | wrk-store-2 | [F02(passing)] | 2 |
 
 ## p12 (Studio & 演示 (P12))
 
@@ -213,7 +213,7 @@
 | F02 | 用户管理（列表/搜索/分页/增删改 + 手动上分） | passing | wrk-admin-1 | [F01(passing), p14:F01(passing)] | 1 |
 | F03 | 团队管理（搜索/分页/编辑团队类型 + 手动上分） | passing | wrk-admin-2 | [F01(passing), p14:F01(passing)] | 1 |
 | F04 | AI Store 平台审核页（APPROVED/PENDING 切换） | passing | wrk-admin-1 | [F01(passing), p11:F01(passing), p11:F02(passing)] | 2 |
-| F05 | AI Store 官方精选页（isFeatured 切换） | in_progress | wrk-admin-1 | [F04(passing), p11:F02(passing)] | 3 |
+| F05 | AI Store 官方精选页（isFeatured 切换） | passing | wrk-admin-1 | [F04(passing), p11:F02(passing)] | 3 |
 
 ## p16 (UI 导航接线与差距审计)
 
@@ -234,4 +234,4 @@
 | F05 | Surveys 页面 reskin | not_started | - | [p16:F02(passing)] | 2 |
 | F06 | Knowledge Base + Credits 页面收尾 reskin | not_started | - | [p16:F02(passing)] | 3 |
 
-_最近生成:2026-07-03T04:11:27.136Z_
+_最近生成:2026-07-03T04:46:37.868Z_

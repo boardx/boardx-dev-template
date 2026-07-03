@@ -8,9 +8,9 @@
       "title": "Board 内嵌 AI 浮层 + 底部工具 dock + board chat 面板",
       "user_visible_behavior": "打开 Board 后，画布内出现可唤起的 AI 浮层（悬浮聊天窗，能就当前画布内容提问/生成），底部出现悬浮工具 dock（对齐 prototype 的 FigJam 风格，取代/补充现有顶部单行工具条），board chat 面板可停靠展示协作对话。具体交互细节以 phase-p16:F02 审计报告 + prototype bundle 的 Board 屏为准。",
       "design_ref": "docs/design/boardx-prototype-v1.bundle.html Board 屏；phase-p16:F02 产出的差距审计报告（Board 部分）。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-claude-1",
       "capability": "CAP-WEB",
       "depends_on": [
         "p16:F02"
@@ -31,9 +31,9 @@
       "title": "Ava 对话界面 reskin",
       "user_visible_behavior": "Ava 对话页（空态建议/消息列表/research card/clarify-plan-running 时间线/report 面板）的视觉与交互对齐 prototype AVA 屏：token（灰阶/柔彩/圆角/字号）、布局、组件形态与 Home/Rooms 等已 reskin 页面一致。不改变已有的功能行为（消息发送/流式回复/附件/分享等 p9 已 passing 的能力保持不变），只对齐视觉与交互细节。",
       "design_ref": "docs/design/boardx-prototype-v1.bundle.html AVA 屏；phase-p16:F02 审计报告（Ava 部分）。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-ava-1",
       "capability": "CAP-WEB",
       "depends_on": [
         "p16:F02"
@@ -55,9 +55,9 @@
       "title": "AI Store 页面 reskin",
       "user_visible_behavior": "AI Store 浏览/详情/创建/订阅/收藏等页面的视觉对齐 prototype STORE 屏（submenu + 内容 + 详情/创建 modal 的设计语言），文案统一语言（不再中英混用），不改变 p11 已 passing 的功能行为。",
       "design_ref": "docs/design/boardx-prototype-v1.bundle.html STORE 屏；phase-p16:F02 审计报告（Store 部分）。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-store-2",
       "capability": "CAP-WEB",
       "depends_on": [
         "p16:F02"
@@ -79,9 +79,9 @@
       "title": "Admin 后台 reskin",
       "user_visible_behavior": "Admin 首页/用户管理/团队管理/AI Store 审核与精选页面的视觉对齐 prototype ADMIN 屏（overview/users/teams/store-approval + 多 modal），不改变 p15 已 passing 的鉴权与业务逻辑。",
       "design_ref": "docs/design/boardx-prototype-v1.bundle.html ADMIN 屏；phase-p16:F02 审计报告（Admin 部分）。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-admin-1",
       "capability": "CAP-WEB",
       "depends_on": [
         "p16:F02"
@@ -103,9 +103,9 @@
       "title": "Surveys 页面 reskin",
       "user_visible_behavior": "问卷列表/编辑器/答题预览/结果报告页面的视觉对齐 prototype SURVEYS 屏，不改变 p13 已 passing 的功能行为（含公开答题页的访客体验）。",
       "design_ref": "docs/design/boardx-prototype-v1.bundle.html SURVEYS 屏；phase-p16:F02 审计报告（Surveys 部分）。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-survey-3",
       "capability": "CAP-WEB",
       "depends_on": [
         "p16:F02"
@@ -127,9 +127,9 @@
       "title": "Knowledge Base + Credits 页面收尾 reskin",
       "user_visible_behavior": "知识库文件列表/上传弹窗、Credits 钱包/购买/账单页面的视觉打磨对齐设计系统，不改变 p10/p14 已 passing 的功能行为。这是收尾优先级，不涉及新组件设计。",
       "design_ref": "已确认的 P0-P4 token 基座（globals.css/tailwind.config.ts）；phase-p16:F02 审计报告（如有覆盖 KB/Credits 的部分）。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-credits-1",
       "capability": "CAP-WEB",
       "depends_on": [
         "p16:F02"
