@@ -1,0 +1,173 @@
+"use client";
+// p20/F01 房间详情壳：面包屑 + 房间名 + 可见性 pill + 成员头像 + Invite + 五 tab 常驻导航（uc-rr-001）
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useParams, usePathname } from "next/navigation";
+import { buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+interface RoomInfo {
+  id: number | string;
+  name: string;
+  visibility: "private" | "team";
+}
+
+interface MemberRow {
+  user_id: number | string;
+  email: string;
+  role: "owner" | "admin" | "member";
+}
+
+const TABS = [
+  { key: "boards", label: "Boards", segment: "boards" },
+  { key: "members", label: "Members", segment: "members" },
+  { key: "files", label: "Files", segment: "files" },
+  { key: "chat", label: "Chat", segment: "chats" },
+  { key: "survey", label: "Survey", segment: "surveys" },
+] as const;
+
+function initials(email: string): string {
+  return email.slice(0, 2).toUpperCase();
+}
+
+export default function RoomShellLayout({ children }: { children: React.ReactNode }) {
+  const params = useParams<{ id: string }>();
+  const pathname = usePathname();
+  const roomId = params.id;
+
+  const [room, setRoom] = useState<RoomInfo | null>(null);
+  const [members, setMembers] = useState<MemberRow[]>([]);
+  const [myRole, setMyRole] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const res = await fetch(`/api/rooms/${roomId}`);
+      if (cancelled) return;
+      if (!res.ok) {
+        setErrorCode(res.status);
+        return;
+      }
+      const d = await res.json();
+      setRoom(d.room);
+      const mres = await fetch(`/api/rooms/${roomId}/members`);
+      if (cancelled || !mres.ok) return;
+      const md = await mres.json();
+      setMembers(md.members ?? []);
+      setMyRole(md.myRole ?? null);
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [roomId]);
+
+  // 当前 tab：/rooms/[id]/<segment>/... 的第一段
+  const activeSegment = pathname.split(`/rooms/${roomId}`)[1]?.split("/")[1] ?? "boards";
+
+  if (errorCode) {
+    return (
+      <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 p-12 text-center">
+        <p role="alert" data-testid="room-shell-error" className="text-sm text-destructive">
+          {errorCode === 403
+            ? "你不是该房间成员，无法访问"
+            : errorCode === 401
+              ? "请先登录"
+              : errorCode === 404
+                ? "房间不存在"
+                : "加载失败"}
+        </p>
+        <Link
+          data-testid="room-back-to-list"
+          href="/rooms"
+          className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
+        >
+          返回房间列表
+        </Link>
+      </div>
+    );
+  }
+
+  const canManage = myRole === "owner" || myRole === "admin";
+  const shownMembers = members.slice(0, 4);
+  const extra = members.length - shownMembers.length;
+
+  return (
+    <div data-testid="room-shell" className="flex min-h-0 flex-1 flex-col">
+      <header className="border-b bg-card px-6 pt-4">
+        <nav data-testid="room-breadcrumb" className="text-xs text-muted-foreground">
+          <Link href="/rooms" className="hover:text-foreground">
+            Rooms
+          </Link>
+          <span className="mx-1">/</span>
+          <span>{room?.name ?? "…"}</span>
+        </nav>
+        <div className="mt-1 flex items-center justify-between gap-4 pb-3">
+          <div className="flex items-center gap-3">
+            <h1 data-testid="room-header-name" className="text-xl font-bold tracking-tight text-foreground">
+              {room?.name ?? ""}
+            </h1>
+            {room && (
+              <Badge data-testid="room-visibility-pill" variant="muted">
+                {room.visibility === "team" ? "🌐 Team" : "🔒 Private"}
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <div data-testid="room-members-avatars" className="flex -space-x-2">
+              {shownMembers.map((m) => (
+                <span
+                  key={String(m.user_id)}
+                  title={m.email}
+                  className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-muted text-10 font-semibold text-muted-foreground"
+                >
+                  {initials(m.email)}
+                </span>
+              ))}
+              {extra > 0 && (
+                <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-secondary text-10 font-semibold text-secondary-foreground">
+                  +{extra}
+                </span>
+              )}
+            </div>
+            {canManage && (
+              <Link
+                data-testid="room-invite-btn"
+                href={`/rooms/${roomId}/members`}
+                className={cn(buttonVariants({ size: "sm" }))}
+              >
+                Invite
+              </Link>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-1 rounded-t-xl" role="tablist">
+          {TABS.map((t) => {
+            const active = activeSegment === t.segment;
+            return (
+              <Link
+                key={t.key}
+                href={`/rooms/${roomId}/${t.segment}`}
+                data-testid={`room-tab-${t.key}`}
+                data-active={active ? "true" : "false"}
+                role="tab"
+                aria-selected={active}
+                className={cn(
+                  "rounded-t-lg px-4 py-2 text-sm font-medium transition-colors",
+                  active
+                    ? "border-b-2 border-primary text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {t.label}
+              </Link>
+            );
+          })}
+        </div>
+      </header>
+      <div className="min-h-0 flex-1">{children}</div>
+    </div>
+  );
+}

@@ -8,9 +8,9 @@
       "title": "房间详情壳与 Tab 导航（Boards/Members/Files/Chat/Survey）",
       "user_visible_behavior": "点击房间卡片进入 /rooms/[id] 默认落在 Boards tab；页头展示面包屑（Rooms/房间名）、房间名、可见性 pill、成员头像堆叠、Invite 按钮（仅 owner/admin 可见）；五个 tab（data-testid=room-tab-boards/-members/-files/-chat/-survey）常驻可切换，URL 同步（/rooms/[id]/boards|members|files|chats|surveys），直链打开时对应 tab 高亮；非成员 403/跳回列表。",
       "design_ref": "prototype:<!-- ROOM DETAIL -->（roomTabDefs，Studio 不做顶级 tab 见 ui-signoff 取舍#1）",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-room-1",
       "capability": "CAP-WEB",
       "depends_on": [],
       "wave": 0,
@@ -19,7 +19,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-001-detail-shell.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-07-03T17:39:25.260Z",
       "notes": "uc-rr-001。壳采用 rooms/[id]/layout.tsx，现有 boards/members/chats 子页收编进壳；Files/Survey tab 内容由 F03/F08 填充，本 feature 先给占位内容但 tab 结构完整。"
     },
     {
