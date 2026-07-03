@@ -567,7 +567,7 @@ export async function listAuthorizedAiStoreItems(userId: number): Promise<AiStor
 // 本文件的函数一律以 teamId 做 WHERE 约束，避免跨团队越权改到别的团队的项目。
 // ---------------------------------------------------------------------------
 
-export type AiStoreReviewAction = "approve" | "reject" | "withdraw";
+export type TeamAiStoreReviewAction = "approve" | "reject" | "withdraw";
 
 /** 某团队当前处于 PENDING 审核队列的 team-scope 项目（供团队审核视图列表）。 */
 export async function listTeamPendingAiStoreItems(teamId: number): Promise<AiStoreItem[]> {
@@ -589,13 +589,13 @@ export async function listTeamApprovedAiStoreItems(teamId: number): Promise<AiSt
   );
 }
 
-const REVIEW_ACTION_TARGET: Record<AiStoreReviewAction, AiStoreItemStatus> = {
+const REVIEW_ACTION_TARGET: Record<TeamAiStoreReviewAction, AiStoreItemStatus> = {
   approve: "published",
   reject: "rejected",
   withdraw: "pending",
 };
 
-const REVIEW_ACTION_FROM: Record<AiStoreReviewAction, AiStoreItemStatus[]> = {
+const REVIEW_ACTION_FROM: Record<TeamAiStoreReviewAction, AiStoreItemStatus[]> = {
   approve: ["pending"],
   reject: ["pending"],
   withdraw: ["published"],
@@ -611,7 +611,7 @@ const REVIEW_ACTION_FROM: Record<AiStoreReviewAction, AiStoreItemStatus[]> = {
 export async function reviewTeamAiStoreItem(
   itemId: number,
   teamId: number,
-  action: AiStoreReviewAction
+  action: TeamAiStoreReviewAction
 ): Promise<AiStoreItem | undefined> {
   const fromStatuses = REVIEW_ACTION_FROM[action];
   const toStatus = REVIEW_ACTION_TARGET[action];
