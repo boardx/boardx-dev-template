@@ -1202,7 +1202,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           onToggleAi={() => setAiOpen((prev) => !prev)}
         />
       )}
-      <BoardAiOverlay itemCount={items.length} open={aiOpen} onOpenChange={setAiOpen} />
+      <BoardAiOverlay boardId={boardId} itemCount={items.length} open={aiOpen} onOpenChange={setAiOpen} />
     </div>
   );
 }

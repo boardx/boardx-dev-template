@@ -21,8 +21,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-ai-overlay.spec.ts"
       ],
-      "evidence": "",
-      "notes": "uc-board-ai-001（新增）。这是 prototype 里的核心差异化体验，优先级最高。blocked-on phase-p16:F02（审计报告）与本阶段 ui-signoff.md confirmed（ADR-003）——两者都满足前才能 new-sprint。"
+      "evidence": "phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-verification.txt; phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-migrate.txt; phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F01-real-ai-verification.txt",
+      "notes": "uc-board-ai-001（新增）。这是 prototype 里的核心差异化体验，优先级最高。blocked-on phase-p16:F02（审计报告）与本阶段 ui-signoff.md confirmed（ADR-003）——两者都满足前才能 new-sprint。复审（Revise）后修正：Board AI 回复改为真实调用 @repo/ai 的 CAP-AI 网关（与 AVA 相同机制），把画布 items 真实文字组装进 prompt 上下文，不再是前端写死模板；e2e 断言回复中包含画布上具体便签的文字内容。"
     },
     {
       "id": "F02",

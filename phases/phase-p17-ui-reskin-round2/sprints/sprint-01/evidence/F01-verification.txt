@@ -1,11 +1,17 @@
-=== Command 1: docker compose up -d ===
- Container worker-wrk-claude-1-p17-f01-board-ai-ove-redis-1 Running 
- Container worker-wrk-claude-1-p17-f01-board-ai-ove-postgres-1 Running 
- Container worker-wrk-claude-1-p17-f01-board-ai-ove-minio-1 Running 
+=== F01 复审（Revise → 修正）验证记录 ===
+背景：feature-evaluator 复审判定 Revise。核心问题：board-ai-panel.tsx 的 buildAiReply 是纯前端
+正则模板拼接，未真实基于画布内容生成。本轮改动：Board AI 浮层改为真实调用
+POST /api/boards/:id/ai-chat -> 复用 @repo/ai 的 CAP-AI 网关（与 AVA 相同机制），把画布
+items 的真实文字内容组装进 prompt 上下文一并传给网关，回复真实引用画布内容。
+
+=== Command 1: docker compose -f infra/docker-compose.yml up -d ===
+ Container infra-minio-1 Running 
+ Container infra-redis-1 Running 
+ Container infra-postgres-1 Running 
 
 === Command 2: pnpm --filter @repo/data run migrate ===
 
-> @repo/data@0.1.0 migrate /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-a2e48b3251d7aa806/packages/data
+> @repo/data@0.1.0 migrate /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-ac47699702e4c0024/packages/data
 > sh -c 'set -a; [ -f ../../apps/web/.env.local ] && . ../../apps/web/.env.local; set +a; tsx src/migrate.ts'
 
 ✓ 已应用，跳过：001_init.sql
@@ -50,8 +56,10 @@
 
 Running 3 tests using 1 worker
 
-  ✓  1 [chromium] › board-ai-overlay.spec.ts:21:5 › 底部工具 dock 可见可用，Ask AI 唤起 board chat 面板并可就画布内容问答 (3.6s)
-  ✓  2 [chromium] › board-ai-overlay.spec.ts:67:5 › 从底部 dock 新建便签：dock 与画布内容真值一致 (663ms)
-  ✓  3 [chromium] › board-ai-overlay.spec.ts:83:5 › 无编辑权限（仅查看）时底部工具 dock 不展示，但 AI 浮层仍可用于提问 (735ms)
+  ✓  1 [chromium] › board-ai-overlay.spec.ts:24:5 › 底部工具 dock 可见可用，Ask AI 唤起 board chat 面板并可基于画布真实内容问答 (17.6s)
+  ✓  2 [chromium] › board-ai-overlay.spec.ts:79:5 › 从底部 dock 新建便签：dock 与画布内容真值一致 (3.0s)
+  ✓  3 [chromium] › board-ai-overlay.spec.ts:95:5 › 无编辑权限（仅查看）时底部工具 dock 不展示，但 AI 浮层仍可用于提问 (4.0s)
 
-  3 passed (7.7s)
+  Slow test file: [chromium] › board-ai-overlay.spec.ts (24.6s)
+  Consider splitting slow test files to speed up parallel execution
+  3 passed (33.7s)

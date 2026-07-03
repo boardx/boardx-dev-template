@@ -3,11 +3,14 @@
 // 对齐 docs/design/boardx-prototype-v1.bundle.html 的 Board 屏：
 // - 右下角圆形 "AI" 浮动触发按钮（唤起/收起）。
 // - 唤起后停靠在右侧的 "Board AI" 面板：消息列表 + composer，可就当前画布内容提问/生成。
-// 范围纪律：这是纯客户端 UI feature（F01 verification 未要求新后端契约），AI 回复走
-// 本地模拟应答（同步引用画布 items 数量，做到"能就当前画布内容回答"），不新增/复用其它
-// feature 的后端 API，避免跨 feature 耦合。三态（loading/empty/error）与 testid 命名参照
-// apps/web/app/(app)/ava/page.tsx 的既有约定，前缀 board-ai- 避免与 Ava 全局 testid 冲突。
-import { useCallback, useRef, useState } from "react";
+//
+// F01 复审（Revise）后的修正：回复不再是前端正则匹配 + 拼接 itemCount 的写死模板，
+// 而是真实调用 POST /api/boards/:id/ai-chat —— 该路由复用与 AVA 相同的 CAP-AI 网关
+// （packages/ai 的 defaultGateway/stubProvider），并把当前画布上 items 的真实文字内容
+// 组装进 prompt 上下文一并传给网关，使回复真实依据画布内容生成。三态
+// （loading/empty/error）与 testid 命名参照 apps/web/app/(app)/ava/page.tsx 的既有约定，
+// 前缀 board-ai- 避免与 Ava 全局 testid 冲突。
+import { useCallback, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface BoardChatMessage {
@@ -19,22 +22,13 @@ interface BoardChatMessage {
 let msgSeq = 0;
 const nextId = () => `bcm_${Date.now()}_${msgSeq++}`;
 
-function buildAiReply(question: string, itemCount: number): string {
-  const trimmed = question.trim();
-  if (/总结|summary|summarize/i.test(trimmed)) {
-    return `这个画布上目前有 ${itemCount} 个组件。总结：内容仍在整理中，建议先给关键便签分组。`;
-  }
-  if (/生成|create|generate/i.test(trimmed)) {
-    return `已收到生成请求。基于画布当前的 ${itemCount} 个组件，建议先补充更多上下文再生成草稿。`;
-  }
-  return `收到你的问题："${trimmed}"。当前画布共有 ${itemCount} 个组件，我可以据此继续帮你分析或生成内容。`;
-}
-
 export function BoardAiOverlay({
+  boardId,
   itemCount,
   open,
   onOpenChange,
 }: {
+  boardId: string;
   itemCount: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -43,7 +37,6 @@ export function BoardAiOverlay({
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const toggleOpen = useCallback(() => {
     onOpenChange(!open);
@@ -58,18 +51,27 @@ export function BoardAiOverlay({
     setDraft("");
     setSending(true);
 
-    // 模拟 AI 生成延迟：真实、可观察的异步状态转换（sending → 完成），而非同步假断言。
-    timerRef.current = setTimeout(() => {
+    // 真实调用：POST /api/boards/:id/ai-chat，服务端读取画布 items 真实文字内容后
+    // 经 CAP-AI 网关生成回复（见该路由与 packages/ai/src/gateway.ts 的注释）。
+    (async () => {
       try {
-        const reply = buildAiReply(text, itemCount);
-        setMessages((prev) => [...prev, { id: nextId(), role: "ai", text: reply }]);
+        const res = await fetch(`/api/boards/${boardId}/ai-chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: text }),
+        });
+        const data = (await res.json().catch(() => ({}))) as { reply?: string; error?: string };
+        if (!res.ok || typeof data.reply !== "string") {
+          throw new Error(data.error ?? `请求失败（${res.status}）`);
+        }
+        setMessages((prev) => [...prev, { id: nextId(), role: "ai", text: data.reply as string }]);
       } catch {
         setError("Board AI 暂时无法回复，请稍后重试。");
       } finally {
         setSending(false);
       }
-    }, 300);
-  }, [draft, sending, itemCount]);
+    })();
+  }, [draft, sending, boardId]);
 
   return (
     <>
