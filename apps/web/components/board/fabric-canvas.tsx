@@ -512,8 +512,11 @@ function buildItemObject(
       ? tokens.surface1
       : tokens.tags[base] ?? tokens.tags.amber!;
   const bg = new fabric.Rect({
+    // fabric v7 默认 origin 改为 center/center，这里的局部布局按 left/top 语义写死
     left: 0,
     top: 0,
+    originX: "left",
+    originY: "top",
     width: it.w,
     height: it.h,
     rx: isTextKind ? 0 : 7,
@@ -544,6 +547,8 @@ function buildItemObject(
   const g = new fabric.Group([bg, text], {
     left: it.x,
     top: it.y,
+    originX: "left",
+    originY: "top",
     subTargetCheck: false,
     selectable: true,
   });
