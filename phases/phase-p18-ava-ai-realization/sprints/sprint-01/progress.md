@@ -4,10 +4,28 @@
 - 仓库根目录: boardx-dev-next
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F06（STT 能力）/ F08（分享邮件）/ F10（附件富渲染，等 PR #295 合并）
+- 当前最高优先级未完成功能: F06（STT 能力）/ F08（分享邮件）
 - 当前 blocker: 无（F03 有并行会话在做，勿重复认领）
 
 ## 会话记录
+### 2026-07-04 F10 (owner: wrk-ava-p18-1)
+- 本轮目标: F10 — 消息附件富渲染接线（图片缩略图/lightbox + 音频播放器）
+- 已完成:
+  - `apps/web/app/(app)/ava/page.tsx`：消息历史 `msg-attachment-item` 的「图标+文件名」chip
+    替换为 `<RichAttachmentPreview attachment={a} />`（组件来自 #295 已合入的
+    attachments.tsx，内部真实调用签名直链接口 `/api/ava/attachments/:id/url`；
+    文件类附件与签名 URL 失败时组件内部降级为 chip，li 保留 data-testid）
+  - 同步更新 `apps/web/e2e/ava-attach-files.spec.ts`（ui-signoff 记录的既有断言耦合）：
+    `toContainText("cat.png")` 改为校验 `msg-attachment-image` 的 aria-label 与 `<img>` alt
+    （reload 持久化断言同理），并新增 lightbox 打开/关闭断言（断言强化，非弱化）
+  - 清理 page.tsx 不再使用的 ImageIcon/FileAudio 导入
+- 运行过的验证: docker compose up -d → migrate → playwright e2e/ava-attach-files.spec.ts
+  8 passed；`pnpm harness verify --sprint p18/01 --feature F10` 门控通过 → passing（含 verify:base）
+- 已记录证据: evidence/F10.verify.log
+- 提交记录: 分支 worker/wrk-ava-p18-1-f10-attachment-rich-render（Closes #254）
+- 已知风险或未解决问题: e2e 用 fake png bytes，`<img>` 实际 onerror（组件降级只看 fetch
+  状态，符合契约）；真实图片的视觉效果建议人工抽查一次
+- 下一步最佳动作: F06（STT）或 F08（分享邮件）
 ### 2026-07-04 (owner: wrk-ava-p18-1)
 - 本轮目标: F12 — 分享只读页四态 e2e 补齐 + Agent 禁用态断言
 - 已完成:

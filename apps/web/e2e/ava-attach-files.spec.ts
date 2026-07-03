@@ -43,10 +43,28 @@ test("composer 附件入口：选择图片 → 预览条展示上传中到完成
   await page.getByTestId("composer").fill("看看这张图");
   await page.getByTestId("send").click();
 
-  // 用户消息带附件一起展示进聊天历史
+  // 用户消息带附件一起展示进聊天历史。
+  // p18 F10：图片附件渲染为缩略图（msg-attachment-image），文件名不再是可见文本，
+  // 改为校验缩略图按钮的 aria-label 与 <img> 的 alt（fake png bytes 加载会 onerror，
+  // 但元素与 alt 仍可断言；组件降级只看签名 URL fetch 状态，不看 img onerror）。
   await expect(page.getByTestId("msg-attachments")).toBeVisible();
-  await expect(page.getByTestId("msg-attachment-item")).toContainText("cat.png");
+  const attachmentImage = page
+    .getByTestId("msg-attachment-item")
+    .getByTestId("msg-attachment-image");
+  await expect(attachmentImage).toBeVisible({ timeout: 10_000 });
+  await expect(attachmentImage).toHaveAttribute("aria-label", "Preview cat.png");
+  await expect(attachmentImage.locator("img")).toHaveAttribute("alt", "cat.png");
   await expect(page.getByTestId("msg-user")).toContainText("看看这张图");
+
+  // 点击缩略图打开 lightbox 放大预览，可关闭
+  await attachmentImage.click();
+  await expect(page.getByTestId("attachment-lightbox")).toBeVisible();
+  await expect(page.getByTestId("attachment-lightbox").locator("img")).toHaveAttribute(
+    "alt",
+    "cat.png"
+  );
+  await page.getByTestId("attachment-lightbox-close").click();
+  await expect(page.getByTestId("attachment-lightbox")).toHaveCount(0);
 
   // AI（stub）基于附件上下文回复，引用文件名
   await expect(page.getByTestId("msg-assistant")).toBeVisible({ timeout: 15_000 });
@@ -55,10 +73,15 @@ test("composer 附件入口：选择图片 → 预览条展示上传中到完成
   // 预览条已在发送后清空
   await expect(page.getByTestId("attachment-preview-strip")).toHaveCount(0);
 
-  // reload 后附件仍随历史消息持久化展示
+  // reload 后附件仍随历史消息持久化展示（同样校验缩略图 alt 而非可见文本）
   await page.reload();
   await page.getByTestId("thread-list").getByRole("button").first().click();
-  await expect(page.getByTestId("msg-attachment-item").first()).toContainText("cat.png");
+  const persistedImage = page
+    .getByTestId("msg-attachment-item")
+    .first()
+    .getByTestId("msg-attachment-image");
+  await expect(persistedImage).toBeVisible({ timeout: 10_000 });
+  await expect(persistedImage.locator("img")).toHaveAttribute("alt", "cat.png");
 });
 
 test("拖拽上传：拖一个文件到 composer 区域也能触发上传", async ({ page }) => {
