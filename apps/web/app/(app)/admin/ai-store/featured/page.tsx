@@ -30,9 +30,9 @@ interface FeaturedItem {
 const PAGE_SIZE = 12;
 
 const FEATURED_TABS: { key: FeaturedFilter; label: string }[] = [
-  { key: "", label: "全部已批准" },
-  { key: "true", label: "已精选" },
-  { key: "false", label: "未精选" },
+  { key: "", label: "All approved" },
+  { key: "true", label: "Featured" },
+  { key: "false", label: "Not featured" },
 ];
 
 function FeaturedSkeleton() {
@@ -80,7 +80,7 @@ export default function AdminAiStoreFeaturedPage() {
           return;
         }
         if (!res.ok) {
-          setError("加载失败，请稍后重试");
+          setError("Failed to load, please try again later");
           setLoading(false);
           return;
         }
@@ -89,7 +89,7 @@ export default function AdminAiStoreFeaturedPage() {
         setItems(data.items ?? []);
         setTotal(data.total ?? 0);
       } catch {
-        setError("加载失败，请稍后重试");
+        setError("Failed to load, please try again later");
       } finally {
         setLoading(false);
       }
@@ -139,7 +139,7 @@ export default function AdminAiStoreFeaturedPage() {
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(d.error ?? "操作失败，请稍后重试");
+        setError(d.error ?? "Action failed, please try again later");
         return;
       }
       const updated = d.item as FeaturedItem;
@@ -153,7 +153,7 @@ export default function AdminAiStoreFeaturedPage() {
       );
       if (!stillMatches) setTotal((t) => Math.max(0, t - 1));
     } catch {
-      setError("操作失败，请稍后重试");
+      setError("Action failed, please try again later");
     } finally {
       setTogglingId(null);
     }
@@ -169,10 +169,10 @@ export default function AdminAiStoreFeaturedPage() {
           role="alert"
           className="rounded-12 border border-border bg-surface-1 p-8 text-center"
         >
-          <h1 className="text-17 font-bold text-foreground">无权限访问</h1>
-          <p className="mt-2 text-13 text-muted-foreground">该页面仅限系统管理员访问。</p>
+          <h1 className="text-17 font-bold text-foreground">Access denied</h1>
+          <p className="mt-2 text-13 text-muted-foreground">This page is restricted to system administrators.</p>
           <Button className="mt-5" variant="secondary" size="sm" onClick={() => router.push("/home")}>
-            返回首页
+            Back to home
           </Button>
         </div>
       </div>
@@ -184,9 +184,9 @@ export default function AdminAiStoreFeaturedPage() {
       {/* 标题 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-26 font-bold tracking-tight text-foreground">AI Store 官方精选</h1>
+          <h1 className="text-26 font-bold tracking-tight text-foreground">Store Featured</h1>
           <p className="mt-1 text-13 text-muted-foreground">
-            查看已通过平台审核的 AI Store 项目，切换官方精选状态；精选项目在 Explore 优先展示并带精选标
+            View AI Store items that passed platform review and toggle their official featured status; featured items are prioritized in Explore with a featured badge
           </p>
         </div>
       </div>
@@ -214,7 +214,7 @@ export default function AdminAiStoreFeaturedPage() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-placeholder" />
           <Input
             data-testid="search"
-            placeholder="按名称或描述搜索…"
+            placeholder="Search by name or description…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && applyFilters()}
@@ -222,10 +222,10 @@ export default function AdminAiStoreFeaturedPage() {
           />
         </div>
         <Button data-testid="search-btn" variant="secondary" onClick={applyFilters}>
-          查询
+          Search
         </Button>
         <Button data-testid="reset-btn" variant="ghost" onClick={resetFilters}>
-          重置
+          Reset
         </Button>
       </div>
 
@@ -244,8 +244,8 @@ export default function AdminAiStoreFeaturedPage() {
           data-testid="empty"
           className="mt-4 flex flex-col items-center justify-center rounded-12 border border-dashed border-border-strong px-6 py-14 text-center"
         >
-          <p className="text-13 font-medium text-foreground">暂无已通过审核的项目</p>
-          <p className="mt-1 text-13 text-muted-foreground">调整筛选条件后重试。</p>
+          <p className="text-13 font-medium text-foreground">No approved items yet</p>
+          <p className="mt-1 text-13 text-muted-foreground">Adjust the filters and try again.</p>
         </div>
       ) : (
         <div data-testid="featured-list" className="mt-4 space-y-3">
@@ -291,7 +291,7 @@ export default function AdminAiStoreFeaturedPage() {
                     className={cn("gap-1.5")}
                   >
                     <Star className={cn("h-3.5 w-3.5", it.featured && "fill-current")} />
-                    {togglingId === it.id ? "处理中..." : it.featured ? "取消精选" : "设为精选"}
+                    {togglingId === it.id ? "Processing..." : it.featured ? "Unfeature" : "Set as featured"}
                   </Button>
                 </div>
               </div>
@@ -304,7 +304,7 @@ export default function AdminAiStoreFeaturedPage() {
       {!loading && items.length > 0 && (
         <div className="mt-4 flex items-center justify-between">
           <span className="text-11 text-muted-foreground">
-            第 {page} / {totalPages} 页 · 共 {total} 个项目
+            Page {page} / {totalPages} · {total} items total
           </span>
           <div className="flex gap-2">
             <Button
@@ -314,7 +314,7 @@ export default function AdminAiStoreFeaturedPage() {
               disabled={page <= 1}
               onClick={() => goPage(page - 1)}
             >
-              上一页
+              Previous
             </Button>
             <Button
               variant="outline"
@@ -323,7 +323,7 @@ export default function AdminAiStoreFeaturedPage() {
               disabled={page >= totalPages}
               onClick={() => goPage(page + 1)}
             >
-              下一页
+              Next
             </Button>
           </div>
         </div>
