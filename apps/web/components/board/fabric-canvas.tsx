@@ -162,6 +162,8 @@ export function FabricCanvas(props: Props) {
     ids: string[];
     init: Record<string, { x: number; y: number }>;
     initRect: { x: number; y: number; w: number; h: number } | null; // 单选手势的初始矩形（缩放用）
+    lastRect: { x: number; y: number; w: number; h: number } | null; // 缩放中最近一次吸附后的矩形（提交用）
+    downScene: { x: number; y: number }; // mouse:down 的画布坐标（缩放的指针意图基准）
     initLeft: number;
     initTop: number;
   } | null>(null);
@@ -248,6 +250,9 @@ export function FabricCanvas(props: Props) {
       fc = new fabric.Canvas(el, {
         // marquee 框选禁用：空白处拖拽 = 视口平移（与 DOM 时代一致，框选 deferred）。
         selection: false,
+        // p6:F07 角点缩放：两轴独立跟随指针（fabric 默认等比缩放会让宽高联动，
+        // 移动边无法精确对齐参考线）；按住 Shift（uniScaleKey）仍可临时等比。
+        uniformScaling: false,
         preserveObjectStacking: true,
         renderOnAddRemove: false,
         fireRightClick: true,
@@ -306,6 +311,8 @@ export function FabricCanvas(props: Props) {
             ids,
             init,
             initRect: single ? { x: single.x, y: single.y, w: single.w, h: single.h } : null,
+            lastRect: null,
+            downScene: { x: scene.x, y: scene.y },
             initLeft: target.left ?? 0,
             initTop: target.top ?? 0,
           };
@@ -368,51 +375,72 @@ export function FabricCanvas(props: Props) {
       });
 
       // p6:F07 角点缩放吸附：移动中的边接近邻居的边/中心时吸附并显示参考线。
-      // 尺寸换算走纯 delta/ratio（初始 scale=1：w' = it.w * scaleX），不读 fabric 绝对宽高。
+      // 尺寸由**指针意图**决定：以 mouse:down 的 scene 坐标为基准的指针位移直接推
+      // 目标矩形（fabric 原生 scale 含描边/padding 偏差，未拖动的轴也会漂移 ~1px，
+      // 不采用），吸附后反推 scaleX/scaleY 写回 fabric 对象。
       fc.on("object:scaling", (opt) => {
         const s = propsRef.current;
         const g = gestureRef.current;
         const t = opt.target as Group | undefined;
         const corner = (opt as { transform?: { corner?: string } }).transform?.corner;
-        if (!g || !t || !s.canEdit || !g.initRect) return;
+        const fcNow = fcRef.current;
+        if (!g || !t || !s.canEdit || !g.initRect || !fcNow) return;
         if (corner !== "tl" && corner !== "tr" && corner !== "bl" && corner !== "br") return;
         g.scaled = true;
         const it = g.initRect;
-        const rect = {
-          x: it.x + ((t.left ?? 0) - g.initLeft),
-          y: it.y + ((t.top ?? 0) - g.initTop),
-          w: it.w * (t.scaleX ?? 1),
-          h: it.h * (t.scaleY ?? 1),
-        };
+        const scene = fcNow.getScenePoint((opt as unknown as { e: TPointerEvent }).e);
+        const dx = scene.x - g.downScene.x;
+        const dy = scene.y - g.downScene.y;
+        let x = it.x;
+        let y = it.y;
+        let w = it.w;
+        let h = it.h;
+        if (corner.includes("l")) {
+          x = it.x + dx;
+          w = it.w - dx;
+        } else {
+          w = it.w + dx;
+        }
+        if (corner.includes("t")) {
+          y = it.y + dy;
+          h = it.h - dy;
+        } else {
+          h = it.h + dy;
+        }
         const others = s.items
           .filter((i) => !g.ids.includes(i.id))
           .map((i) => ({ x: i.x, y: i.y, w: i.w, h: i.h }));
-        const { snapDX, snapDY, guides } = computeResizeSnap(rect, others, corner as ResizeCorner);
-        if (snapDX || snapDY) {
-          // 吸附增量作用在移动边上：l/t 角点还需同步平移原点。
-          let { x, y, w, h } = rect;
-          if (snapDX && corner.includes("l")) {
-            x += snapDX;
-            w -= snapDX;
-          } else if (snapDX) {
-            w += snapDX;
-          }
-          if (snapDY && corner.includes("t")) {
-            y += snapDY;
-            h -= snapDY;
-          } else if (snapDY) {
-            h += snapDY;
-          }
-          if (w >= 8 && h >= 8) {
-            t.set({
-              left: g.initLeft + (x - it.x),
-              top: g.initTop + (y - it.y),
-              scaleX: w / it.w,
-              scaleY: h / it.h,
-            });
-            t.setCoords();
-          }
+        const { snapDX, snapDY, guides } = computeResizeSnap({ x, y, w, h }, others, corner as ResizeCorner);
+        // 吸附增量作用在移动边上：l/t 角点还需同步平移原点。
+        if (snapDX && corner.includes("l")) {
+          x += snapDX;
+          w -= snapDX;
+        } else if (snapDX) {
+          w += snapDX;
         }
+        if (snapDY && corner.includes("t")) {
+          y += snapDY;
+          h -= snapDY;
+        } else if (snapDY) {
+          h += snapDY;
+        }
+        // 最小尺寸钳制（8px），l/t 角点缩到底时固定对侧边。
+        if (w < 8) {
+          if (corner.includes("l")) x = it.x + it.w - 8;
+          w = 8;
+        }
+        if (h < 8) {
+          if (corner.includes("t")) y = it.y + it.h - 8;
+          h = 8;
+        }
+        t.set({
+          left: g.initLeft + (x - it.x),
+          top: g.initTop + (y - it.y),
+          scaleX: w / it.w,
+          scaleY: h / it.h,
+        });
+        t.setCoords();
+        g.lastRect = { x, y, w, h };
         s.onGuides(guides);
       });
 
@@ -421,14 +449,14 @@ export function FabricCanvas(props: Props) {
         const g = gestureRef.current;
         const t = opt.target as Group | undefined;
         if (!g || !t) return;
-        // p6:F07 缩放提交：终态尺寸按 ratio 反推（初始 scale=1），整数化后走字段级落库。
-        if (g.scaled && g.initRect && g.ids.length === 1) {
+        // p6:F07 缩放提交：终态矩形取缩放中最近一次吸附后的 lastRect，整数化后走字段级落库。
+        if (g.scaled && g.initRect && g.lastRect && g.ids.length === 1) {
           const it = g.initRect;
           const to = {
-            x: Math.round(it.x + ((t.left ?? 0) - g.initLeft)),
-            y: Math.round(it.y + ((t.top ?? 0) - g.initTop)),
-            w: Math.round(it.w * (t.scaleX ?? 1)),
-            h: Math.round(it.h * (t.scaleY ?? 1)),
+            x: Math.round(g.lastRect.x),
+            y: Math.round(g.lastRect.y),
+            w: Math.round(g.lastRect.w),
+            h: Math.round(g.lastRect.h),
           };
           s.onGuides([]);
           s.onSpacing([]);
