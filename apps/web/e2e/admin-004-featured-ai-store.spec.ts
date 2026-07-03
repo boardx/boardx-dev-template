@@ -201,8 +201,57 @@ test("非 SysAdmin 无法通过 API 直接切换精选（越权防护）", async
   await page.context().clearCookies();
 
   await page.request.post("/api/auth/register", {
-    data: { firstName: "Plain3", lastName: "User", email: uniq("adm4np3"), password: "secret123", agreeTerms: true },
+    data: { firstName: "Plain2", lastName: "User", email: uniq("adm4np3"), password: "secret123", agreeTerms: true },
   });
   const res = await page.request.post(`/api/admin/ai-store/${item.id}/featured`, { data: { featured: true } });
   expect(res.status()).toBe(403);
+});
+
+// 精选对 Explore 的下游效果（uc-admin-004 user_visible_behavior："精选项目在 AI Store Explore
+// 获得精选标/优先展示"）：F04 批准（→APPROVED）即视为"发布到平台"，APPROVED 的平台项目本就该在
+// Explore 可见；精选（isFeatured=true）在此基础上额外获得 FEATURED 徽标，且排序优先于同批次的
+// 非精选项目（packages/data/src/aiStore.ts 的 listAiStoreItems 用 ORDER BY featured DESC 排序）。
+test("精选项目在 AI Store Explore 出现 FEATURED 徽标，且排序优先于未精选项目", async ({
+  page,
+  playwright,
+  baseURL,
+}) => {
+  await registerAndPromote(page);
+  const stamp = Date.now();
+  const plainItem = await createApprovedItem(page, playwright, baseURL!, `Explore Plain ${stamp}`);
+  const featuredItem = await createApprovedItem(page, playwright, baseURL!, `Explore Star ${stamp}`);
+
+  // 批准（APPROVED）后、设为精选前：两者都应已经能在 Explore 里搜到（APPROVED = 发布到平台）。
+  await page.goto("/ai-store");
+  await page.getByTestId("store-search").fill(`Explore ${stamp}`);
+  await page.getByTestId("store-search").press("Enter");
+  await expect(page.getByTestId(`item-${plainItem.id}`)).toBeVisible();
+  await expect(page.getByTestId(`item-${featuredItem.id}`)).toBeVisible();
+  await expect(page.getByTestId(`item-featured-badge-${featuredItem.id}`)).toHaveCount(0);
+
+  const setFeaturedRes = await page.request.post(`/api/admin/ai-store/${featuredItem.id}/featured`, {
+    data: { featured: true },
+  });
+  expect(setFeaturedRes.status()).toBe(200);
+
+  await page.goto("/ai-store");
+  await page.getByTestId("store-search").fill(`Explore ${stamp}`);
+  await page.getByTestId("store-search").press("Enter");
+
+  // FEATURED 徽标只出现在被精选的项目卡片上。
+  await expect(page.getByTestId(`item-featured-badge-${featuredItem.id}`)).toBeVisible();
+  await expect(page.getByTestId(`item-featured-badge-${plainItem.id}`)).toHaveCount(0);
+
+  // 排序：精选项目优先于未精选项目（ORDER BY featured DESC）。
+  const grid = page.getByTestId("item-grid");
+  const gridText = (await grid.textContent()) ?? "";
+  const featuredPos = gridText.indexOf(featuredItem.name);
+  const plainPos = gridText.indexOf(plainItem.name);
+  expect(featuredPos).toBeGreaterThanOrEqual(0);
+  expect(plainPos).toBeGreaterThanOrEqual(0);
+  expect(featuredPos).toBeLessThan(plainPos);
+
+  // 详情弹窗同样展示精选徽标。
+  await page.getByTestId(`item-${featuredItem.id}`).click();
+  await expect(page.getByTestId("detail-featured-badge")).toBeVisible();
 });

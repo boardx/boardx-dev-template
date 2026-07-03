@@ -74,7 +74,9 @@ export interface AiStoreItemDraftInput {
 const DEFAULT_PAGE_SIZE = 9;
 
 /**
- * 浏览可见的 AI Store 项目：已发布（published）且 scope=platform，
+ * 浏览可见的 AI Store 项目：scope=platform 且 status 为 published 或 approved
+ * （F04 平台审核批准 = "APPROVED/发布到平台"，approved 与 published 对 Explore 同等可见，
+ * 见 phase-p15-admin F04 的 user_visible_behavior 措辞），
  * 或 scope=team 且 team_id 命中当前团队，或 scope=personal 且 owner 为当前用户。
  * 按 featured 优先、再按更新时间倒序；支持 type/关键词/标签筛选与分页。
  */
@@ -85,8 +87,8 @@ export async function listAiStoreItems(opts: ListAiStoreItemsOptions = {}): Prom
   const conds: string[] = [];
   const params: unknown[] = [];
 
-  // 可见性：published 的 platform 项目 + 命中团队的 team 项目 + 属于当前用户的 personal 项目。
-  const visClauses: string[] = ["(status = 'published' AND scope = 'platform')"];
+  // 可见性：published 或 approved 的 platform 项目 + 命中团队的 team 项目 + 属于当前用户的 personal 项目。
+  const visClauses: string[] = ["(status IN ('published', 'approved') AND scope = 'platform')"];
   if (opts.teamId != null) {
     params.push(opts.teamId);
     visClauses.push(`(status = 'published' AND scope = 'team' AND team_id = $${params.length})`);
@@ -215,7 +217,8 @@ export async function updateAiStoreItem(
 
 /**
  * 判断某项目对某用户/团队是否可浏览（纯函数，可单测）：
- * published+platform 恒可见；published+team 需 team_id 命中当前团队；
+ * published 或 approved 的 platform 项目恒可见（F04 批准 = 发布到平台，approved 与
+ * published 对 Explore 同等可见）；published+team 需 team_id 命中当前团队；
  * personal 需 owner 为当前用户（不要求 published，草稿仅属主可见）。
  */
 export function isAiStoreItemVisible(
@@ -223,7 +226,7 @@ export function isAiStoreItemVisible(
   userId: number | undefined,
   teamId: number | null | undefined
 ): boolean {
-  if (item.scope === "platform") return item.status === "published";
+  if (item.scope === "platform") return item.status === "published" || item.status === "approved";
   if (item.scope === "team") return item.status === "published" && teamId != null && item.team_id === teamId;
   if (item.scope === "personal") return userId != null && item.owner_user_id === userId;
   return false;

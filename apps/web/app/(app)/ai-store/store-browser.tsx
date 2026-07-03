@@ -815,7 +815,10 @@ export function StoreBrowser() {
                         className="relative cursor-pointer rounded-12 border border-border p-4 transition-all hover:border-border-strong hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
                       >
                         {it.featured && (
-                          <span className="absolute right-3 top-3 rounded-7 bg-primary px-1.75 py-0.5 text-9 font-bold text-primary-foreground">
+                          <span
+                            data-testid={`item-featured-badge-${it.id}`}
+                            className="absolute right-3 top-3 rounded-7 bg-primary px-1.75 py-0.5 text-9 font-bold text-primary-foreground"
+                          >
                             ★ FEATURED
                           </span>
                         )}
@@ -1273,7 +1276,10 @@ export function StoreBrowser() {
                     {detailItem.name}
                   </div>
                   {detailItem.featured && (
-                    <span className="rounded-7 bg-foreground px-1.75 py-0.5 text-9 font-bold text-background">
+                    <span
+                      data-testid="detail-featured-badge"
+                      className="rounded-7 bg-foreground px-1.75 py-0.5 text-9 font-bold text-background"
+                    >
                       ★ FEATURED
                     </span>
                   )}
