@@ -1,0 +1,11 @@
+
+Running 4 tests using 1 worker
+
+  ✓  1 [chromium] › nav-001-global-entry-points.spec.ts:40:5 › 已登录用户从 sidebar 点击 Ava 入口，到达 /ava (46.6s)
+  ✓  2 [chromium] › nav-001-global-entry-points.spec.ts:47:5 › 已登录用户从 sidebar 点击 Surveys 入口，到达 /surveys (12.7s)
+  ✓  3 [chromium] › nav-001-global-entry-points.spec.ts:54:5 › 普通用户登录后，导航里看不到 Admin 入口 (5.8s)
+  ✓  4 [chromium] › nav-001-global-entry-points.spec.ts:60:5 › SysAdmin 用户登录后，能看到 Admin 入口并点击进入 /admin (8.7s)
+
+  Slow test file: [chromium] › nav-001-global-entry-points.spec.ts (1.2m)
+  Consider splitting slow test files to speed up parallel execution
+  4 passed (1.5m)
