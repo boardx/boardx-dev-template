@@ -264,9 +264,9 @@
       "area": "canvas",
       "title": "画布渲染引擎切换为 Fabric.js（既有行为不回归）",
       "user_visible_behavior": "Board 画布的渲染由 DOM div 切换为 fabric.Canvas（页面中出现承载渲染的 <canvas> 元素）；已 passing 的选择/拖拽/多选/复制粘贴/undo-redo/pan-zoom/对齐吸附线等用户可见行为保持不变，不因渲染引擎切换而回归。",
-      "status": "not_started",
+      "status": "in_progress",
       "sprint": "08",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
