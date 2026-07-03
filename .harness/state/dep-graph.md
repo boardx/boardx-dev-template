@@ -215,4 +215,23 @@
 | F04 | AI Store 平台审核页（APPROVED/PENDING 切换） | passing | wrk-admin-1 | [F01(passing), p11:F01(passing), p11:F02(passing)] | 2 |
 | F05 | AI Store 官方精选页（isFeatured 切换） | in_progress | wrk-admin-1 | [F04(passing), p11:F02(passing)] | 3 |
 
-_最近生成:2026-07-03T00:37:27.566Z_
+## p16 (UI 导航接线与差距审计)
+
+| Feature | 标题 | 状态 | owner | depends_on | wave |
+|---|---|---|---|---|---|
+| F01 | 全局导航接线：Ava / Surveys / Admin 入口 | not_started | - | [] | - |
+| F02 | UI 差距审计：Ava / Store / Surveys / Admin vs prototype | not_started | - | [] | - |
+| F03 | Design lint 覆盖扩大到新增页面 | not_started | - | [] | - |
+
+## p17 (UI Reskin Round 2)
+
+| Feature | 标题 | 状态 | owner | depends_on | wave |
+|---|---|---|---|---|---|
+| F01 | Board 内嵌 AI 浮层 + 底部工具 dock + board chat 面板 | blocked | - | [p16:F02(not_started)] | 1 |
+| F02 | Ava 对话界面 reskin | blocked | - | [p16:F02(not_started)] | 1 |
+| F03 | AI Store 页面 reskin | blocked | - | [p16:F02(not_started)] | 2 |
+| F04 | Admin 后台 reskin | blocked | - | [p16:F02(not_started)] | 2 |
+| F05 | Surveys 页面 reskin | blocked | - | [p16:F02(not_started)] | 2 |
+| F06 | Knowledge Base + Credits 页面收尾 reskin | blocked | - | [p16:F02(not_started)] | 3 |
+
+_最近生成:2026-07-03T00:50:08.817Z_
