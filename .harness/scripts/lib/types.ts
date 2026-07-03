@@ -13,6 +13,10 @@ export interface Feature {
   owner: string | null;
   /** 所属能力平面（CAP-WEB / CAP-DATA / CAP-WORKFLOW…）；可选，便于按平面归类与并行 */
   capability?: string;
+  /** 前置依赖：同阶段写 "F0x"；跨阶段写 "p9:F0x" 这种形式。用于 sweep-unblock / dep-graph。 */
+  depends_on?: string[];
+  /** 派发波次，纯提示性，不参与门控逻辑 */
+  wave?: number;
   verification: string[];
   evidence: string;
   notes: string;

@@ -5,6 +5,8 @@ dist/
 .DS_Store
 .pnpm-store/
 .harness/state/.cache/
+# coordinator 互斥锁：单会话运行时态，不共享入库（见 .harness/scripts/lib/lock.ts）
+.harness/state/coordinator-lock.json
 
 # Next.js / 全栈骨架
 .next/

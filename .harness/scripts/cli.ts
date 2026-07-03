@@ -7,6 +7,10 @@ import { syncGithub } from "./sync-github";
 import { genSubagents } from "./gen-subagents";
 import { claim } from "./claim";
 import { migrateLabels } from "./migrate-labels";
+import { sweepUnblock } from "./sweep-unblock";
+import { sweepWorktrees } from "./sweep-worktrees";
+import { depGraph } from "./dep-graph";
+import { lockStatus, lockAcquire, lockHeartbeat, lockRelease } from "./coordinator-lock";
 
 const argv = process.argv.slice(2);
 const cmd = argv[0];
@@ -21,6 +25,13 @@ try {
     case "gen-subagents": genSubagents(args); break;
     case "claim":         claim(args); break;
     case "migrate-labels": migrateLabels(args); break;
+    case "sweep-unblock":  sweepUnblock(args); break;
+    case "sweep-worktrees": sweepWorktrees(args); break;
+    case "dep-graph":      depGraph(args); break;
+    case "lock-status":    lockStatus(args); break;
+    case "lock-acquire":   lockAcquire(args); break;
+    case "lock-heartbeat": lockHeartbeat(args); break;
+    case "lock-release":   lockRelease(args); break;
     default:
       log.info("用法:");
       log.info("  pnpm harness new-phase     --id NN --name <name> [--slug <s>] [--goal <g>] [--ui]");
@@ -31,6 +42,13 @@ try {
       log.info("  pnpm harness gen-subagents             # 从 .harness/agents/*.yaml 生成 Claude + Codex subagents");
       log.info("  pnpm harness claim         --phase NN --feature F01 --owner <agent-id>");
       log.info("  pnpm harness migrate-labels            # 收敛线上 label 到规范 status:*（ADR-004）；加 --apply 执行");
+      log.info("  pnpm harness sweep-unblock [--dry-run]                 # depends_on 全 passing 的 blocked → not_started");
+      log.info("  pnpm harness sweep-worktrees [--threshold-minutes N]   # 巡检未提交改动的 worker worktree（默认阈值 60）");
+      log.info("  pnpm harness dep-graph                                 # 生成 .harness/state/dep-graph.md 依赖图快照");
+      log.info("  pnpm harness lock-status");
+      log.info("  pnpm harness lock-acquire   --session <id> [--force] [--note <text>]");
+      log.info("  pnpm harness lock-heartbeat --session <id>");
+      log.info("  pnpm harness lock-release   --session <id> [--force]");
       process.exit(cmd ? 1 : 0);
   }
 } catch (e) {

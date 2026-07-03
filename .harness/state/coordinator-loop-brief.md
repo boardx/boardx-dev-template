@@ -29,6 +29,11 @@
   哪**，然后继续处理其它可以推进的事，不要为了让它"不要停"而去做任何形式的
   绕过。用户醒来后一次性看汇报处理。
 - **不要删除/关闭共享分支或 PR**，即使确认已被完全取代，也只留言说明。
+- **每次唤醒先做 coordinator 互斥登记**（见 §1 步骤 0）。本仓库吃过多个 `/loop`
+  coordinator 会话互不知情、同时调度导致互相冲突/重复派发的亏（main 上莫名多出
+  没人派发过的 PR、自己开的分支被 main 反复甩出冲突）。`pnpm harness lock-acquire`
+  拿不到锁（有其它 session 在活跃）就**不要调度**，只做只读检查后退出等下一次唤醒；
+  锁 stale（心跳超 45 分钟）才可以 `--force` 抢占。
 
 ## §0.5 教训：不要留"长期存活、混了多个 feature 的中间整合分支"
 
@@ -42,10 +47,19 @@ push + 开 PR（base 直接指向 `main`，不要指向别的 coordinator 分支
 
 ## 每次唤醒的步骤
 
+0. **拿锁**：`pnpm harness lock-acquire --session <本次会话标识> --note "<一句话说明在干嘛>"`。
+   拿不到（报错说别的 session 活跃）就停下，只做只读巡检（可以继续跑步骤 1-2 的只读部分
+   了解现状），不要派发/不要 push，等下一次唤醒再试。拿到后，本轮结束前（步骤 11）
+   记得 `pnpm harness lock-release --session <同一标识>`；循环中途如果单轮跑得久，
+   可以中间补一次 `lock-heartbeat` 防止被误判 stale。
+
 1. `git fetch origin --quiet`。检查 main 上有没有新合并的 PR。如果发现某个 PR
    是通过解决"长期存活的中间分支"冲突合并的（§0.5 那种），要额外检查一下有没有
    意外带回旧版本/已修复过的问题——如果有，按 §0 的边界：派 worker 写修复，
-   不要自己动手。
+   不要自己动手。**同时跑 `pnpm harness sweep-worktrees`**：巡检有未提交改动的
+   worker worktree，对标了 STALE 阈值的（默认 60 分钟无新编辑仍有改动）逐个用
+   SendMessage resume 对应 agent，而不是等它自己下次汇报——上一轮的教训是 worker
+   session 被打断后工作会静默卡在本地，没人巡检就永远发现不了。
 
 2. 扫 `phases/*/feature_list.json`：对每个 `owner != null && status == "in_progress"`
    的 feature，查它对应的 GitHub issue/PR 是不是已经合并。已合并但 `status` 还不是
@@ -56,8 +70,13 @@ push + 开 PR（base 直接指向 `main`，不要指向别的 coordinator 分支
    能翻 passing；跑失败就照实记录，别硬改）。这一步产生的 commit 只碰
    `feature_list.json`/`PROGRESS.md`，属纯控制面，可以自己 push + 合并。
 
-3. 算「新解锁」集合：`owner == null && status != "blocked"` 且 `depends_on` 里
-   每一项都已 `passing`（同阶段写 `"F0x"`；跨阶段写 `"p9:F0x"` 这种形式）。
+3. **先跑 `pnpm harness sweep-unblock`**（依赖已满足但状态还卡在 `blocked` 的会被
+   自动回填成 `not_started`——这一步过去只能靠人工偶然发现，见教训记录，现在每次
+   唤醒都应该先跑一遍再算新解锁集合）。再算「新解锁」集合：`owner == null &&
+   status != "blocked"` 且 `depends_on` 里每一项都已 `passing`（同阶段写 `"F0x"`；
+   跨阶段写 `"p9:F0x"` 这种形式）——想看全局依赖状态一览，跑
+   `pnpm harness dep-graph` 刷新 `.harness/state/dep-graph.md`（比这份文档下面手写
+   的依赖图备份更权威、更不会过期）。
 
 4. **并发上限 10**（`status == "in_progress"` 的 feature 数），已用端口隔离脚本
    （`scripts/init-worktree-env.sh`，含 `E2E_PORT`）验证过可以稳定支撑。
@@ -103,26 +122,13 @@ push + 开 PR（base 直接指向 `main`，不要指向别的 coordinator 分支
     worker 卡在需要人工确认的地方、有没有异常。
 
 11. 40 个 issue 全部 `passing`/关闭时停止重新调度并汇报收工；否则安排下一次唤醒。
+    无论哪种结束方式，**都要 `pnpm harness lock-release --session <本轮标识>`**，
+    不释放锁会挡住下一次唤醒（或另一个 coordinator）正常拿锁。
 
-## 依赖图备份（同 feature_list.json 的 depends_on/wave）
+## 依赖图
 
-- p9(ava-chat): F01→[] W0（已passing）；F03→**已 passing**（PR #176 已合并+verify）；
-  F02,F04,F06,F07,F10→[F01] W1（codex 在做，不要重复派；#178/#180/#183 在 review）；
-  F05(share)→[F04] W2；F08→[p10:F01] W1（**已 passing**，wrk-ava-1 完成）；
-  F09→无干净解锁路径；F11→[F03] W2（F03 已 passing，可派）。
-- p10(knowledge-base): F01→[] W0（已passing）；F02→[F01] W1（可派）；F03→[F02] W2；
-  F04→[F03,p9:F01] W3。
-- p11(ai-store): F01→[] W0（已passing）；F02,F04→[F01] W1（codex 做 F02，F04 可派
-  Claude worker）；F03→[F02,p9:F01] W2；F05,F06→[F02] W2。
-- p12(studio-presentations): F01→[p9:F01,p10:F01] W1（**已 passing**，PR #158+#172 已合并、
-  verify 门控 2026-07-02 通过）；F02→[F01] W2（已解锁转 not_started，可派）；F03→[F02] W3。
-- p13(survey): F01→[] W0（已passing）；F02,F03,F05→[F01] W1（codex 在做，不要重复
-  派）；F04→[F03] W2；F06→[F01,F03] W2。
-- p14(credits-billing): F01→[]（已passing）；F05→[]（**已 passing**）；F02,F04→[F05]
-  W1（**已解锁转 not_started，可派**；注意 F04 的 credits 模式路径复用 F02，两者同 area
-  强耦合，建议 F02 先行、F04 等 F02 PR 开出后再派避免撞文件）；F03→[F01] W1
-  （**codex 已完成**：issue #132 已关、codex/issue-132-credits-f03-isolated 已合并，
-  待 coordinator 跑 `pnpm harness verify --sprint p14/<sprint> --feature F03` 翻 passing）。
-- p15(admin): F01→[]（已passing）；F02→[F01,p14:F01]（已派 wrk-admin-1b）；
-  F03→[F01,p14:F01]（已派 wrk-admin-2，PR #157 已合并，等 verify 翻 passing）；
-  F04→[F01,p11:F01,p11:F02] W2；F05→[F04,p11:F02] W3。
+见 `.harness/state/dep-graph.md`——由 `pnpm harness dep-graph` 从各
+`phases/*/feature_list.json` 的 `depends_on`/`wave`/`status` 实时生成，**不是手写的**。
+这份文档以前在这里维护一份手写的依赖图快照，多次被发现记的是几天前的状态（写着
+"待 review"时其实早就 passing 了），误导下一次唤醒的判断——所以改成脚本生成，
+每次唤醒（步骤 3）跑一遍 `pnpm harness dep-graph` 就是最新的，不要再在这里手写维护。
