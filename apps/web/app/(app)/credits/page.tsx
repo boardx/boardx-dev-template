@@ -44,7 +44,7 @@ function SummaryCard({ value, label }: { value: string; label: string }) {
   return (
     <div className="rounded-12 border border-border p-4">
       <div className="text-26 font-bold text-foreground">{value}</div>
-      <div className="mt-0.5 text-xs text-muted-foreground">{label}</div>
+      <div className="mt-0.5 text-11 text-muted-foreground">{label}</div>
     </div>
   );
 }

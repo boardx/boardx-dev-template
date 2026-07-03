@@ -490,7 +490,7 @@ export default function KnowledgeBasePage() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between text-12 text-muted-foreground">
+            <div className="flex items-center justify-between text-11 text-muted-foreground">
               <span data-testid="file-count">
                 Showing {files.length} of {page.total}
               </span>
@@ -518,8 +518,8 @@ export default function KnowledgeBasePage() {
                       <div className="text-11 text-placeholder">{fmtSize(f.size_bytes)}</div>
                     </div>
                   </div>
-                  <div className="flex-1 text-12 uppercase text-muted-foreground">{f.ext}</div>
-                  <div className="flex-[1.2] text-12 text-muted-foreground">{fmtDate(f.created_at)}</div>
+                  <div className="flex-1 text-11 uppercase text-muted-foreground">{f.ext}</div>
+                  <div className="flex-[1.2] text-11 text-muted-foreground">{fmtDate(f.created_at)}</div>
                   <div className="flex flex-[1.4] items-center gap-2">
                     <Badge
                       data-testid={`file-status-${f.id}`}
@@ -529,7 +529,7 @@ export default function KnowledgeBasePage() {
                     </Badge>
                     <span className="text-11 text-placeholder">{f.scope}</span>
                   </div>
-                  <div className="flex w-auto min-w-18 items-center justify-end gap-1 text-placeholder">
+                  <div className="flex w-auto min-w-20 items-center justify-end gap-1 text-placeholder">
                     {confirmDeleteId === f.id ? (
                       <div data-testid={`confirm-delete-${f.id}`} className="flex items-center gap-1.5">
                         <span className="text-11 text-muted-foreground">Delete?</span>
