@@ -15,6 +15,18 @@ tools:
 4. 把完整日志写入 evidence/（如果有写权限）
 5. 返回精简摘要（不要把完整日志贴入主对话）
 
+失败分诊（报失败前先做，不许直接归因代码）：
+- 先区分基础设施失败 vs 代码失败：job 秒级失败、steps 为空、
+  annotation/输出含 payment/billing/quota、turbo/node_modules not found
+  （依赖未安装）等 = 基础设施类。
+- 基础设施类失败标记 BLOCKED 并升级人类，不当作代码失败退回 worker；
+  只有真实的断言/编译/运行错误才报"失败"。
+
+证据落盘约定：
+- 完整日志写入当前 sprint 的 evidence/ 目录：
+  phases/<phase>/sprints/<sprint>/evidence/<feature-id>.verify.log。
+- 摘要中引用的证据路径必须真实存在（写完后 ls 确认）。
+
 输出格式：
 ## 测试执行摘要
 - 总计：? 条命令，? 通过，? 失败
