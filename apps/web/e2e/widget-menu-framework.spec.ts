@@ -1,4 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { expectItemCount } from "./helpers/canvas";
+
+// p6:F13：item 计数锚点迁为 canvas 兼容锚点（策略 2 / issue #269），断言意图不变。
 
 const uniq = () => `wmf_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 
@@ -11,8 +14,6 @@ async function openOwnBoard(page: any) {
   await page.goto(`/boards/${board.id}`);
   return board;
 }
-
-const items = (page: any) => page.getByTestId("items-layer").locator('[data-testid^="item-"]');
 
 test("选中时浮出 Widget Menu，取消选中隐藏", async ({ page }) => {
   await openOwnBoard(page);
@@ -29,9 +30,9 @@ test("选中时浮出 Widget Menu，取消选中隐藏", async ({ page }) => {
 test("Widget Menu 删除选中", async ({ page }) => {
   await openOwnBoard(page);
   await page.getByTestId("add-note").click();
-  await expect(items(page)).toHaveCount(1);
+  await expectItemCount(page, 1);
   await page.getByTestId("wm-delete").click();
-  await expect(items(page)).toHaveCount(0);
+  await expectItemCount(page, 0);
   await expect(page.getByTestId("widget-menu")).toBeHidden();
 });
 

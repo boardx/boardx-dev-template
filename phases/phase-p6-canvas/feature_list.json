@@ -264,17 +264,17 @@
       "area": "canvas",
       "title": "画布渲染引擎切换为 Fabric.js（既有行为不回归）",
       "user_visible_behavior": "Board 画布的渲染由 DOM div 切换为 fabric.Canvas（页面中出现承载渲染的 <canvas> 元素）；已 passing 的选择/拖拽/多选/复制粘贴/undo-redo/pan-zoom/对齐吸附线等用户可见行为保持不变，不因渲染引擎切换而回归。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "08",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/canvas-render.spec.ts e2e/canvas-add.spec.ts e2e/canvas-update.spec.ts e2e/canvas-delete.spec.ts e2e/canvas-pan-zoom.spec.ts e2e/canvas-select.spec.ts e2e/canvas-copy-paste.spec.ts e2e/canvas-undo-redo.spec.ts e2e/widget-menu-framework.spec.ts e2e/widget-sticky.spec.ts e2e/canvas-fabric-engine.spec.ts"
       ],
-      "evidence": "",
-      "notes": "背景调研见 phases/requirements/board-canvas-gap-analysis-and-roadmap.md。canvas.md 早已把 Fabric.js 定位为「留作后续的可替换适配器」，现在到切换时机：F15(形状)/F16(连接线)/F17(手绘)/F18(图表) 在 Fabric 对象模型上实现成本远低于继续在 DOM 上手搓（连接线端口吸附、手绘 PencilBrush 都是 Fabric 原生能力）；oldcode canvasx-main 的 XConnector 子系统（端口吸附/自动重连/箭头样式，产品级+测试充分）可在此之后直接移植参考。依赖包用官方 npm `fabric`，不依赖 boardx-web 私有 fork `@boardxus/canvasx-core`。本 feature 只做渲染层替换，不新增用户可见能力，核心验收是既有 e2e 全绿 + 新增 canvas-fabric-engine.spec.ts 断言 <canvas> 存在。F14（数据模型字段级 patch）与本 feature 同属 Wave 0 前置工作，互不依赖可并行；F15-F18 应排在两者都 passing 之后再开工，避免返工。",
+      "evidence": "evidence/F13.verify.log @ 2026-07-03T12:43:15.712Z",
+      "notes": "背景调研见 phases/requirements/board-canvas-gap-analysis-and-roadmap.md。canvas.md 早已把 Fabric.js 定位为「留作后续的可替换适配器」，现在到切换时机：F15(形状)/F16(连接线)/F17(手绘)/F18(图表) 在 Fabric 对象模型上实现成本远低于继续在 DOM 上手搓（连接线端口吸附、手绘 PencilBrush 都是 Fabric 原生能力）；oldcode canvasx-main 的 XConnector 子系统（端口吸附/自动重连/箭头样式，产品级+测试充分）可在此之后直接移植参考。依赖包用官方 npm `fabric`，不依赖 boardx-web 私有 fork `@boardxus/canvasx-core`。本 feature 只做渲染层替换，不新增用户可见能力，核心验收是既有 e2e 全绿 + 新增 canvas-fabric-engine.spec.ts 断言 <canvas> 存在。F14（数据模型字段级 patch）与本 feature 同属 Wave 0 前置工作，互不依赖可并行；F15-F18 应排在两者都 passing 之后再开工，避免返工。【策略 2 决策（人类批准，GitHub issue #269）】「既有 e2e 不回归」按断言意图不变解释：e2e 断言迁移为 canvas 兼容锚点（window.__canvasTestApi + <canvas> 坐标点击），意图逐条保留；明确否决 DOM 测试镜像层（双层维护）与 Fabric 只画视觉、交互仍走 DOM（假切换）。",
       "source_use_cases": [
         "phases/phase-p6-canvas/requirements/fabric-rendering-engine.md",
         "phases/phase-p6-canvas/requirements/canvas.md",
