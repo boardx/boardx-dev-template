@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type PlaywrightWorkerArgs } from "@playwright/test";
 
 // P18-F12: 分享只读页四态 e2e 补齐 + Agent 禁用态断言。
 // 设计稿：phases/requirements/mockups/chat-share-readonly.html 显式列出四种状态变体
@@ -18,7 +18,7 @@ async function register(request: import("@playwright/test").APIRequestContext) {
 
 /** 建一个已开启分享的空线程；closeShare 用 owner 身份关闭分享（供 Unavailable 用例）。 */
 async function makeSharedThread(
-  playwright: typeof import("@playwright/test"),
+  playwright: PlaywrightWorkerArgs["playwright"],
   baseURL: string | undefined
 ): Promise<{
   threadId: number;
