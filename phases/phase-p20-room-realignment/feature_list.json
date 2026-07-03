@@ -140,9 +140,9 @@
       "title": "房间权限矩阵统一（API 断言 + 文档对齐）",
       "user_visible_behavior": "按 uc-rr-006 权威矩阵：admin 可邀请/移除 member、改房间名/可见性/AI 字段、删他人文件，但不能管理 admin、不能删房间、不能动 owner（各返回 403）；member 无管理权；UI 按角色隐藏不可用入口；role-diagrams 三份文档与 phase-04 F12 描述修订为与矩阵一致。",
       "design_ref": "prototype:Room Settings dialog 角色徽章（Owner locked）；uc-rr-006 矩阵为权威",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-room-2",
       "capability": "CAP-AUTH",
       "depends_on": [],
       "wave": 0,
@@ -151,7 +151,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-007-permission-matrix.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F07.verify.log @ 2026-07-03T18:01:37.901Z",
       "notes": "uc-rr-006。e2e 覆盖矩阵每行至少一个正/反用例；文档修订包含 role-diagrams/room-{owner,admin,member}.md 补 Files/Survey 节点 + phase-04 F12 描述改为 owner/admin。"
     },
     {

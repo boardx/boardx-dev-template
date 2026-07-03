@@ -237,7 +237,7 @@
       "priority": 12,
       "area": "room",
       "title": "房间成员管理与更新/删除",
-      "user_visible_behavior": "room owner POST /api/rooms/:id/members 邀请、DELETE 移除成员；PATCH /api/rooms/:id 改名/可见性、DELETE 删除；非 owner 管理操作 403。",
+      "user_visible_behavior": "room owner/admin POST /api/rooms/:id/members 邀请、DELETE 移除 member；owner/admin PATCH /api/rooms/:id 改名/可见性；DELETE 删除房间仅 owner；member 及非成员的管理操作 403（权威矩阵见 p20 uc-rr-006）。",
       "status": "passing",
       "sprint": "03",
       "owner": null,
