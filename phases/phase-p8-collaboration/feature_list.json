@@ -5,10 +5,30 @@
       "id": "F01",
       "priority": 1,
       "area": "collaboration",
+      "title": "WebSocket + Redis 广播骨架（不含 Yjs 语义）",
+      "user_visible_behavior": "两个客户端连接同一 Board 的传输 channel，其中一个发送消息，另一个能收到；客户端断线后重新连接仍能正常收发；消息经网关发布到 Redis pub/sub，验证「发布到 Redis、网关订阅广播」链路打通（不要求多实例部署环境）。本 feature 不涉及 Yjs/CRDT 语义，只验证裸传输层。",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-COLLAB",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/web exec playwright test e2e/collab-transport-skeleton.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "背景见 phases/phase-p8-collaboration/requirements/ws-redis-transport-skeleton.md 与 board-canvas-gap-analysis-and-roadmap.md Wave 0 第 4 项。把「起一个新的长连接网关」这类基础设施发现成本从 F02（Yjs 同步语义）里拆出来，独立验证。不依赖 p6 的组件广度（F15-F21），可与 p6 并行推进。落地后，现有 apps/web/lib/presence.ts、lib/collab-bus.ts 的进程内内存实现应逐步被这条真实传输层替换（替换时机由 F02-F05 各自决定）。",
+      "source_use_cases": [
+        "phases/phase-p8-collaboration/requirements/ws-redis-transport-skeleton.md"
+      ]
+    },
+    {
+      "id": "F02",
+      "priority": 2,
+      "area": "collaboration",
       "title": "Yjs 实时同步组件变更",
       "user_visible_behavior": "多个用户打开同一有权限的 Board 时，任一人创建/移动/缩放/编辑/锁定/删除组件，先在本机即时呈现，其他在线协作者画布上随即出现对应变化；只读用户可观察同步结果但不能编辑；后到的用户加载到最新一致状态。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-COLLAB",
       "verification": [
@@ -17,19 +37,19 @@
         "pnpm --filter @repo/web exec playwright test e2e/collab-realtime-sync.spec.ts"
       ],
       "evidence": "",
-      "notes": "uc-collab-001。新建 packages/collab：每 Board 一个 Yjs doc + WebSocket provider + Redis fanout（跨实例广播），把 p6 item 命令运行时映射到 Yjs 共享结构并异步落库。依赖 p6 命令模型。e2e 用两个 browser context 验证一端编辑另一端可见。",
+      "notes": "uc-collab-001。blocked-on p8:F01（WS+Redis 传输骨架）。新建 packages/collab：每 Board 一个 Yjs doc，在 F01 的传输骨架上把 p6 item 命令运行时映射到 Yjs 共享结构并异步落库。依赖 p6 命令模型（建议基于 p6:F14 的字段级 patch schema）。e2e 用两个 browser context 验证一端编辑另一端可见。",
       "source_use_cases": [
         "phases/requirements/board/collaboration/uc-collab-001-yjs-realtime-sync.md"
       ]
     },
     {
-      "id": "F02",
-      "priority": 2,
+      "id": "F03",
+      "priority": 3,
       "area": "collaboration",
       "title": "在线成员头像 + 实时光标",
       "user_visible_behavior": "Board Header 显示在线成员头像（当前用户优先），人数超出显示「+N」更多入口、点击弹出在线用户列表（头像+名称）；悬停头像显示名称/提示；协作者移动鼠标时画布对应位置显示其光标与用户标识，停止移动/离开/离线后光标隐藏或移除；小屏减少直显头像、其余进 +N。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "02",
       "owner": null,
       "capability": "CAP-COLLAB",
       "verification": [
@@ -38,19 +58,19 @@
         "pnpm --filter @repo/web exec playwright test e2e/collab-presence-cursors.spec.ts"
       ],
       "evidence": "",
-      "notes": "uc-collab-002。基于 Yjs awareness 广播 presence（用户/光标坐标）。无头像时显示名称缩写/默认头像。Visitor 可见在线与光标但不可编辑。Header 在线区与 p7 F01 协同。",
+      "notes": "uc-collab-002。基于 Yjs awareness 广播 presence（用户/光标坐标）。无头像时显示名称缩写/默认头像。Visitor 可见在线与光标但不可编辑。Header 在线区与 p7 F01 协同。blocked-on p8:F02（Yjs 同步）——awareness 挂在 F02 建的 Yjs doc 之上。",
       "source_use_cases": [
         "phases/requirements/board/collaboration/uc-collab-002-show-online-users-cursors.md"
       ]
     },
     {
-      "id": "F03",
-      "priority": 3,
+      "id": "F04",
+      "priority": 4,
       "area": "collaboration",
       "title": "跟随协作者视角",
       "user_visible_behavior": "从在线成员/跟随入口选择跟随某协作者，画布视角移动到对方当前视角并显示跟随状态条；对方平移/缩放时同步调整己方视角；可暂停（保留状态条、停止套用）、恢复、停止（退出、保留当前视角）；己方主动平移/缩放可暂停或退出跟随；被跟随者看到「成员正在跟随你」提示；被跟随者离线/停止广播则退出跟随。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "02",
       "owner": null,
       "capability": "CAP-COLLAB",
       "verification": [
@@ -59,19 +79,19 @@
         "pnpm --filter @repo/web exec playwright test e2e/collab-follow.spec.ts"
       ],
       "evidence": "",
-      "notes": "uc-collab-003。通过 awareness 广播 viewport（p6 F05 视口状态）。Visitor 可跟随查看但不获得编辑能力。",
+      "notes": "uc-collab-003。通过 awareness 广播 viewport（p6 F05 视口状态）。Visitor 可跟随查看但不获得编辑能力。blocked-on p8:F03（在线光标/awareness 已建）。",
       "source_use_cases": [
         "phases/requirements/board/collaboration/uc-collab-003-follow-collaborator.md"
       ]
     },
     {
-      "id": "F04",
-      "priority": 4,
+      "id": "F05",
+      "priority": 5,
       "area": "collaboration",
       "title": "连接状态、断线重连与同步指示",
       "user_visible_behavior": "实时连接建立中/已连接/异常时，Header 同步指示与画布状态对应（同步中/已保存/连接异常）；网络短暂中断时显示异常并保留本地/只读状态，恢复后自动重连并同步到最新一致状态；协作者离线时其头像与光标移除。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "02",
       "owner": null,
       "capability": "CAP-COLLAB",
       "verification": [
@@ -80,7 +100,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/collab-reconnect.spec.ts"
       ],
       "evidence": "",
-      "notes": "uc-collab-001/002/003 异常流程合并。接通 p7 F01 的同步状态指示；断线期间本地编辑缓冲，重连后由 Yjs 合并。",
+      "notes": "uc-collab-001/002/003 异常流程合并。接通 p7 F01 的同步状态指示；断线期间本地编辑缓冲，重连后由 Yjs 合并。blocked-on p8:F01-F04（依赖完整的传输+同步+awareness 链路才能验证异常/重连场景）。",
       "source_use_cases": [
         "phases/requirements/board/collaboration/uc-collab-001-yjs-realtime-sync.md",
         "phases/requirements/board/collaboration/uc-collab-002-show-online-users-cursors.md",

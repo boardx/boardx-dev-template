@@ -80,50 +80,48 @@ blocked 项的依赖已在 feature_list 里标注清楚：图片/文件依赖 p1
 
 计划按 harness 现有的 P5→P6→P7→P8 骨架走（不新开阶段，只调整**阶段内**的执行顺序和补一个前置 wave），因为 feature_list.json 已经和老系统 168 用例对齐，不需要重新做需求梳理，只需要排出正确的实现顺序。
 
-> **落地状态（2026-07-03）**：Wave 0 第 1 项已正式落进 `phases/phase-p6-canvas/feature_list.json`，
-> 作为新 feature **p6:F13「画布渲染引擎切换为 Fabric.js（既有行为不回归）」**（`not_started`），
-> 插在原 F12 之后、原 F13-F22 之前——原 F13-F22 已整体重新编号为 **F14-F23**，并在各自 `notes`
-> 里补了 `blocked-on p6:F13` 的依赖说明（F14 形状、F15 连接线、F16 手绘、F17 图表）。
-> 原始需求见 `phases/phase-p6-canvas/requirements/fabric-rendering-engine.md`。
-> Wave 0 第 2-4 项（数据模型字段级 patch、WS+Redis 骨架预埋）尚未落成 feature，仍是待排期的规划项。
+> **落地状态（2026-07-03，全部 4 项已正式立项）**：
+> - `phases/phase-p6-canvas/feature_list.json`：**p6:F13**「画布渲染引擎切换为 Fabric.js（既有行为不回归）」+ **p6:F14**「packages/canvas 数据模型改造为字段级 patch（CRDT-ready）」，两者插在原 F12 之后、原形状组件之前，互不依赖可并行。原 F13-F23 整体顺延为 **F15-F24**，F15(形状)/F16(连接线)/F17(手绘)/F18(图表) 的 `notes` 已补 `blocked-on p6:F13 与 p6:F14`。原始需求分别见 `requirements/fabric-rendering-engine.md`、`requirements/widget-schema-field-level.md`。
+> - `phases/phase-p8-collaboration/feature_list.json`：**p8:F01**「WebSocket + Redis 广播骨架（不含 Yjs 语义）」插在原 F01 之前，原 F01-F04 顺延为 **F02-F05**，形成链式依赖 F01→F02(Yjs同步)→F03(光标)→F04(跟随)→F05(重连指示)。原始需求见 `requirements/ws-redis-transport-skeleton.md`。F01 不依赖 p6 组件广度，可与 p6 并行推进。
+>
+> Wave 0 的四项技术工作现在全部有对应的、可独立排期/verify 的 feature，不再只是本文档里的规划性描述。
 
-### Wave 0（前置技术工作，已部分落进 p6 feature_list）— 渲染层切换 Fabric.js + 数据模型换底座 + 协作骨架预埋
+### Wave 0（已全部落进 feature_list）— 渲染层切换 Fabric.js + 数据模型换底座 + 协作骨架预埋
 
-作为 p6 的前置 sprint／F13 之前的技术任务。渲染引擎切换是本 wave 里工作量最大、风险最高的一项，需要单独排：
+作为 p6/p8 的前置技术任务，四项互不阻塞（渲染引擎切换和数据模型改造可并行；WS/Redis 骨架独立于 p6，可与 p6 全程并行）：
 
-1. **【已建 p6:F13】引入 Fabric.js 并替换 `board-canvas.tsx` 的渲染层**：`apps/web` 加 `fabric` 依赖（用官方 npm 包 `fabric`，与 canvasx-main 一致；`@boardxus/canvasx-core` 是 boardx-web 的私有 fork，除非拿到访问权限，否则不依赖它）。把现有 `position:absolute` div 渲染换成 `<canvas>` + `fabric.Canvas` 实例挂载，note/rect 两种已有类型先用 Fabric 对象（`fabric.Rect`/自定义 Textbox 子类）重新实现。
+1. **【p6:F13】引入 Fabric.js 并替换 `board-canvas.tsx` 的渲染层**：`apps/web` 加 `fabric` 依赖（用官方 npm 包 `fabric`，与 canvasx-main 一致；`@boardxus/canvasx-core` 是 boardx-web 的私有 fork，除非拿到访问权限，否则不依赖它）。把现有 `position:absolute` div 渲染换成 `<canvas>` + `fabric.Canvas` 实例挂载，note/rect 两种已有类型先用 Fabric 对象（`fabric.Rect`/自定义 Textbox 子类）重新实现。
    **回归风险**：P6 F01-F11（渲染/选择/拖拽/复制粘贴/undo-redo/pan-zoom）当前已经 `passing`，切换渲染引擎必须保证这些 feature 的 verification 不降级——建议先在一个 feature branch 上把已 passing 的 e2e 全部跑绿，再合并，不要一边切引擎一边加新 widget。p6:F13 的 verification 已经把这批既有 e2e 规格列进去。
-2. **【未建 feature，待排期】重定义 `packages/canvas` 的 widget schema**：从"整条 item 替换"改成"字段级可寻址"（借鉴 `Y.Map<widgetId, Y.Map<field,value>>` 的形状，但先用普通对象实现，不引入 Yjs 依赖）。所有 F14 之后新增的 widget 类型都基于这个新 schema 写，避免二次重写。
-3. **【未建 feature，待排期】`applyCommand` 从"按 kind 分支"扩展成"按字段 patch"**：为后续 CRDT 替换存储后端预留接口边界（上层组件不感知底层是内存对象还是 Y.Map）。
-4. **【未建 feature，待排期】打通 P8 依赖的基础设施**（不等 P8 排期）：infra 已有 Redis（`infra/docker-compose.yml`），但**没有 WebSocket 网关**。这一步只需要验证 `apps/web` 或独立轻量服务能起一个 WS endpoint + Redis pub/sub broadcast 的最小骨架，不接 Yjs 逻辑，避免 P8 启动时才发现需要新起一个服务。
+2. **【p6:F14】重定义 `packages/canvas` 的 widget schema**：从"整条 item 替换"改成"字段级可寻址"（`{kind:"patch", id, patch:{...}}`，借鉴 `Y.Map<widgetId, Y.Map<field,value>>` 的形状，但先用普通对象实现，不引入 Yjs 依赖）。所有 F15 之后新增的 widget 类型都基于这个新 schema 写，避免二次重写。
+3. **【p8:F01】打通 P8 依赖的基础设施**（不等 F02-F05 排期）：infra 已有 Redis（`infra/docker-compose.yml`），但**没有 WebSocket 网关**。这一步只验证 `apps/web` 或独立轻量服务能起一个 WS endpoint + Redis pub/sub broadcast 的最小骨架，不接 Yjs 逻辑，避免真正做 Yjs 同步（F02）时才发现要新起一个服务。
 
-产出：渲染层换成 Fabric 之后，Wave 1 的形状/连接线/手绘/图表可以直接对齐 canvasx-main 的对象模型（甚至移植其算法）；P6/P7 继续铺广度时不会踩"数据模型不支持协作"的坑；P8 启动时传输层骨架已在，Yjs 只需要接进已有 WS 网关。第 2-4 项建议在 p6:F13 排期时一并写进 requirements，交 requirement-author 转成正式 feature。
+产出：渲染层换成 Fabric 之后，Wave 1 的形状/连接线/手绘/图表可以直接对齐 canvasx-main 的对象模型（甚至移植其算法）；P6/P7 继续铺广度时不会踩"数据模型不支持协作"的坑；P8 的 F02（Yjs 同步）启动时传输层骨架已在，只需要接 Yjs 语义进去。
 
-### Wave 1 — P6 Canvas 广度补齐（F14-F20，not_started 的 7 项 + F07/F12）
+### Wave 1 — P6 Canvas 广度补齐（F15-F21，not_started 的 7 项 + F07/F12）
 
 在 p6:F13 落地的 Fabric 渲染层 + （待建的）新 schema 上补齐，现在可以参考/移植 canvasx-main 而不只是"思路借鉴"：
 
-- **形状组件（F14）**：参考 `XShapeNotes/types.ts` 的 15 种预置形状 SVG path 定义，直接搬形状数据，包成自己的 Fabric 对象子类。
-- **连接线+样式（F15）**：**直接移植 `XConnector/` 的端口吸附/自动重连/箭头算法**——这是 canvasx-main 里唯一产品级、测试覆盖最充分的子系统（6000+ 行 + 大量 spec），值得认真搬而不是重写。
-- **手绘（F16）**：Fabric 自带 `PencilBrush`（`canvas.isDrawingMode = true` + `freeDrawingBrush`），比自研省事很多——**这里新代码反而能比 canvasx-main 做得更完整**（canvasx-main 只有 `isDrawingMode` 标志位，没有真正接上笔刷逻辑）。
-- **图表（F17）**：参考 `XChart.ts` 对 chart.js 的封装方式（chart.js 渲染到 canvas/图片再贴进 Fabric，或用 DOM overlay 定位跟随，两种都要在这一步定下来）。
-- 文本组件+样式+转便签（F12，不受 F13 阻塞，可与 Wave 0 并行）、样式应用（F18）、锁定/删除/刷新（F19）、多选批量操作（F20）、对齐参考线补强到拖动多对象场景（F07，不受 F13 阻塞）：无强依赖，按 Fabric 事件模型正常实现。
+- **形状组件（F15）**：参考 `XShapeNotes/types.ts` 的 15 种预置形状 SVG path 定义，直接搬形状数据，包成自己的 Fabric 对象子类。
+- **连接线+样式（F16）**：**直接移植 `XConnector/` 的端口吸附/自动重连/箭头算法**——这是 canvasx-main 里唯一产品级、测试覆盖最充分的子系统（6000+ 行 + 大量 spec），值得认真搬而不是重写。
+- **手绘（F17）**：Fabric 自带 `PencilBrush`（`canvas.isDrawingMode = true` + `freeDrawingBrush`），比自研省事很多——**这里新代码反而能比 canvasx-main 做得更完整**（canvasx-main 只有 `isDrawingMode` 标志位，没有真正接上笔刷逻辑）。
+- **图表（F18）**：参考 `XChart.ts` 对 chart.js 的封装方式（chart.js 渲染到 canvas/图片再贴进 Fabric，或用 DOM overlay 定位跟随，两种都要在这一步定下来）。
+- 文本组件+样式+转便签（F12，不受 F13/F14 阻塞，可与 Wave 0 并行）、样式应用（F19）、锁定/删除/刷新（F20）、多选批量操作（F21）、对齐参考线补强到拖动多对象场景（F07，不受 F13/F14 阻塞）：无强依赖，按 Fabric 事件模型正常实现。
 
 ### Wave 2 — P7 Board 壳框架（F01/F02/F04-F08/F11/F12/F14，not_started 的 8 项，不含 blocked）
 
 Header 框架（返回/同步指示/撤销重做入口）、标题编辑、Board 统计、备份恢复、Board-Menu 工具栏框架+组件创建入口、链接组件、Context-Menu 框架（复用 Wave 1 的复制/编组能力）。这批不依赖 p9/p10，可以和 Wave 1 并行。
 
-### Wave 3 — P8 实时协作（4 项，全部 not_started）
+### Wave 3 — P8 实时协作（5 项，全部 not_started，F01 已在 Wave 0 起步）
 
-在 Wave 0 预埋的 WS 骨架上接入 Yjs：F01（Yjs 同步组件变更，替换 packages/canvas 的内存存储为 Y.Map 后端）→ F02（在线成员头像+光标，走 awareness）→ F03（跟随协作者，参考 boardx-web `FollowMeManager` 的广播模式）→ F04（连接状态/断线重连/同步指示，替换现有 `sync-status.tsx` 的"原型占位"注释）。
+F01（WS+Redis 传输骨架，见 Wave 0）→ F02（Yjs 同步组件变更，替换 packages/canvas 的内存存储为 Y.Map 后端）→ F03（在线成员头像+光标，走 awareness）→ F04（跟随协作者，参考 boardx-web `FollowMeManager` 的广播模式）→ F05（连接状态/断线重连/同步指示，替换现有 `sync-status.tsx` 的"原型占位"注释）。
 
 这一波做完后，`presence.tsx`/`collab-bus.ts` 的临时内存实现应该被真正的 awareness 替换掉，而不是并存。
 
 ### Wave 4 — 依赖解禁项（随 p9/p10 推进渐进点亮，不需要等它们全部 passing）
 
-- p6-F21（图片+裁剪）、p7-F13 上传部分：p10 files 能力就绪即可点亮。
-- p6-F22（文件+下载）：同上；音频转文本子项额外依赖 p9。
-- p6-F23（组件 AI 助手）、p7-F10（语音转录）、p7-F13 AI 助手入口、p7-F16 Board Chat：依赖 p9 AI 运行时，可复用同一入口（feature_list 已标注复用关系）。
+- p6-F22（图片+裁剪）、p7-F13 上传部分：p10 files 能力就绪即可点亮。
+- p6-F23（文件+下载）：同上；音频转文本子项额外依赖 p9。
+- p6-F24（组件 AI 助手）、p7-F10（语音转录）、p7-F13 AI 助手入口、p7-F16 Board Chat：依赖 p9 AI 运行时，可复用同一入口（feature_list 已标注复用关系）。
 - p7-F09 PDF 导出、F15 导出选中内容/保存模板：依赖渲染/导出能力+模板系统，属于新增小型基础设施，可在 Wave 1 渲染引擎决策定下来后评估工作量。
 
 ### Wave 5 — UI 视觉收尾
