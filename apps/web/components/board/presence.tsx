@@ -6,6 +6,7 @@ import {
   readLocalCursor,
   readLocalOperating,
   readLocalViewport,
+  subscribeFollowPause,
   type ViewportSnapshot,
 } from "@/lib/collab-bus";
 import { MousePointer2 } from "lucide-react";
@@ -29,6 +30,8 @@ interface Member {
   operating?: boolean;
   viewport?: { x: number; y: number; scale: number };
   cursor?: { x: number; y: number; visible: boolean };
+  followingId?: number | null;
+  followPaused?: boolean;
 }
 
 const POLL_MS = 1500;
@@ -45,15 +48,26 @@ function toSnapshot(v: { x: number; y: number; scale: number }): ViewportSnapsho
   return { tx: v.x, ty: v.y, scale: v.scale };
 }
 
+function normalizeMember(m: Member): Member {
+  return {
+    ...m,
+    id: Number(m.id),
+    followingId: m.followingId == null ? m.followingId : Number(m.followingId),
+  };
+}
+
 export function BoardPresence({ boardId }: { boardId: string }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [selfId, setSelfId] = useState<number | null>(null);
   const [followId, setFollowId] = useState<number | null>(null); // 正在跟随的成员 id（null = 未跟随）
+  const [followPaused, setFollowPaused] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
   const alive = useRef(true);
   const followRef = useRef<number | null>(null); // 供 tick 内读取最新跟随目标
+  const followPausedRef = useRef(false);
   followRef.current = followId;
+  followPausedRef.current = followPaused;
 
   useEffect(() => {
     alive.current = true;
@@ -71,24 +85,28 @@ export function BoardPresence({ boardId }: { boardId: string }) {
             operating: readLocalOperating(),
             viewport: { x: vp.tx, y: vp.ty, scale: vp.scale },
             cursor: readLocalCursor(),
+            followingId: followRef.current,
+            followPaused: followPausedRef.current,
           }),
         });
         if (res.ok) {
           const d = (await res.json()) as { members?: Member[]; self?: { id: number } };
           if (alive.current) {
-            const list = d.members ?? [];
+            const list = (d.members ?? []).map(normalizeMember);
             setMembers(list);
-            if (d.self) setSelfId(d.self.id);
+            if (d.self) setSelfId(Number(d.self.id));
             // 若正在跟随某成员，把其最新视口推给本地画布（跟随视角实时贴合）。
             const fid = followRef.current;
             if (fid != null) {
               const target = list.find((m) => m.id === fid);
-              if (target?.viewport) {
+              if (target?.viewport && !followPausedRef.current) {
                 publishFollow({ viewport: toSnapshot(target.viewport) });
-              } else if (!target) {
+              } else if (!target || !target.viewport) {
                 // 被跟随者离线 → 自动停止跟随。
                 followRef.current = null;
                 setFollowId(null);
+                followPausedRef.current = false;
+                setFollowPaused(false);
                 publishFollow(null);
               }
             }
@@ -110,14 +128,38 @@ export function BoardPresence({ boardId }: { boardId: string }) {
     };
   }, [boardId]);
 
+  useEffect(() => {
+    return subscribeFollowPause(() => {
+      if (followRef.current == null) return;
+      followPausedRef.current = true;
+      setFollowPaused(true);
+      publishFollow(null);
+    });
+  }, []);
+
   function startFollow(m: Member) {
     setFollowId(m.id);
+    setFollowPaused(false);
     followRef.current = m.id;
+    followPausedRef.current = false;
     if (m.viewport) publishFollow({ viewport: toSnapshot(m.viewport) });
+  }
+  function pauseFollow() {
+    setFollowPaused(true);
+    followPausedRef.current = true;
+    publishFollow(null);
+  }
+  function resumeFollow() {
+    const target = members.find((m) => m.id === followRef.current);
+    setFollowPaused(false);
+    followPausedRef.current = false;
+    if (target?.viewport) publishFollow({ viewport: toSnapshot(target.viewport) });
   }
   function stopFollow() {
     setFollowId(null);
+    setFollowPaused(false);
     followRef.current = null;
+    followPausedRef.current = false;
     publishFollow(null);
   }
 
@@ -133,6 +175,7 @@ export function BoardPresence({ boardId }: { boardId: string }) {
   const visibleMembers = orderedMembers.slice(0, DIRECT_AVATARS);
   const overflowMembers = orderedMembers.slice(DIRECT_AVATARS);
   const remoteCursors = orderedMembers.filter((m) => m.id !== selfId && m.cursor?.visible);
+  const followers = selfId == null ? [] : orderedMembers.filter((m) => m.id !== selfId && m.followingId === selfId);
 
   return (
     <div
@@ -246,14 +289,46 @@ export function BoardPresence({ boardId }: { boardId: string }) {
         </div>
       ))}
 
+      {followers.length > 0 && (
+        <div
+          data-testid="followed-by-banner"
+          data-follower-count={followers.length}
+          className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-11 font-medium text-emerald-700"
+        >
+          {followers.map((m) => m.name).join("、")} 正在跟随你
+        </div>
+      )}
+
       {/* 正在跟随横幅：让用户明确知道「自己的视角正在跟随他人」（UC 后置条件 1）。 */}
       {followed && (
         <div
           data-testid="following-banner"
           data-following-id={followed.id}
+          data-follow-state={followPaused ? "paused" : "active"}
           className="flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-11 font-medium text-primary"
         >
-          <span>正在跟随 {followed.name}</span>
+          <span>{followPaused ? "已暂停跟随" : "正在跟随"} {followed.name}</span>
+          {followPaused ? (
+            <button
+              type="button"
+              data-testid="resume-following"
+              aria-label="恢复跟随"
+              onClick={resumeFollow}
+              className="rounded px-1 text-primary/80 transition-colors hover:bg-primary/20 hover:text-primary"
+            >
+              恢复
+            </button>
+          ) : (
+            <button
+              type="button"
+              data-testid="pause-following"
+              aria-label="暂停跟随"
+              onClick={pauseFollow}
+              className="rounded px-1 text-primary/80 transition-colors hover:bg-primary/20 hover:text-primary"
+            >
+              暂停
+            </button>
+          )}
           <button
             type="button"
             data-testid="stop-following"

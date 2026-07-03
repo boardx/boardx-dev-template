@@ -69,16 +69,16 @@
       "area": "collaboration",
       "title": "跟随协作者视角",
       "user_visible_behavior": "从在线成员/跟随入口选择跟随某协作者，画布视角移动到对方当前视角并显示跟随状态条；对方平移/缩放时同步调整己方视角；可暂停（保留状态条、停止套用）、恢复、停止（退出、保留当前视角）；己方主动平移/缩放可暂停或退出跟随；被跟随者看到「成员正在跟随你」提示；被跟随者离线/停止广播则退出跟随。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "wrk-codex-collab-1",
       "capability": "CAP-COLLAB",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/collab-follow.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F04.verify.log @ 2026-07-03T21:06:30.961Z",
       "notes": "uc-collab-003。通过 awareness 广播 viewport（p6 F05 视口状态）。Visitor 可跟随查看但不获得编辑能力。blocked-on p8:F03（在线光标/awareness 已建）。",
       "source_use_cases": [
         "phases/requirements/board/collaboration/uc-collab-003-follow-collaborator.md"

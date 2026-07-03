@@ -10,7 +10,7 @@ import {
   ZOOM_IN_FACTOR,
   ZOOM_OUT_FACTOR,
 } from "@/lib/viewport";
-import { publishViewport, subscribeFollow } from "@/lib/collab-bus";
+import { publishViewport, requestFollowPause, subscribeFollow } from "@/lib/collab-bus";
 
 // 画布视口：拖拽平移 + 滚轮缩放 + 缩放控制条 + 小地图（P6 F05，纯前端，无 items 依赖）。
 // uc-collab-001 协作感知增强：把本地视口上报到 collab-bus（供心跳广播给他人 → 他人可「跟随视角」），
@@ -40,11 +40,17 @@ export function CanvasViewport({ children }: { children?: React.ReactNode }) {
 
   function onWheel(e: React.WheelEvent) {
     e.preventDefault();
-    if (following) return; // 跟随中：视角由被跟随者驱动，忽略本地缩放
+    if (following) {
+      requestFollowPause();
+      return;
+    }
     setVp((v) => ({ ...v, scale: zoomBy(v.scale, e.deltaY < 0 ? ZOOM_IN_FACTOR : ZOOM_OUT_FACTOR) }));
   }
   function onDown(e: React.MouseEvent) {
-    if (following) return; // 跟随中：忽略本地平移
+    if (following) {
+      requestFollowPause();
+      return;
+    }
     pan.current = { x: e.clientX, y: e.clientY, tx: vp.tx, ty: vp.ty };
   }
   function onMove(e: React.MouseEvent) {
@@ -91,16 +97,52 @@ export function CanvasViewport({ children }: { children?: React.ReactNode }) {
         data-testid="zoom-control"
         className="absolute bottom-4 right-4 flex items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-sm"
       >
-        <Button data-testid="zoom-out" size="icon" variant="ghost" className="h-7 w-7" onClick={() => setVp((v) => ({ ...v, scale: zoomBy(v.scale, ZOOM_OUT_FACTOR) }))}>
+        <Button
+          data-testid="zoom-out"
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7"
+          onClick={() => {
+            if (following) {
+              requestFollowPause();
+              return;
+            }
+            setVp((v) => ({ ...v, scale: zoomBy(v.scale, ZOOM_OUT_FACTOR) }));
+          }}
+        >
           −
         </Button>
         <span data-testid="zoom-percent" className="min-w-[3rem] text-center font-mono text-xs tabular-nums text-foreground">
           {pct}%
         </span>
-        <Button data-testid="zoom-in" size="icon" variant="ghost" className="h-7 w-7" onClick={() => setVp((v) => ({ ...v, scale: zoomBy(v.scale, ZOOM_IN_FACTOR) }))}>
+        <Button
+          data-testid="zoom-in"
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7"
+          onClick={() => {
+            if (following) {
+              requestFollowPause();
+              return;
+            }
+            setVp((v) => ({ ...v, scale: zoomBy(v.scale, ZOOM_IN_FACTOR) }));
+          }}
+        >
           +
         </Button>
-        <Button data-testid="zoom-reset" size="sm" variant="ghost" className="h-7" onClick={() => setVp(resetViewport())}>
+        <Button
+          data-testid="zoom-reset"
+          size="sm"
+          variant="ghost"
+          className="h-7"
+          onClick={() => {
+            if (following) {
+              requestFollowPause();
+              return;
+            }
+            setVp(resetViewport());
+          }}
+        >
           重置
         </Button>
       </div>
