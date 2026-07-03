@@ -154,11 +154,11 @@ export function CreditRecordsDialog({ open, onClose }: { open: boolean; onClose:
             {summary && (
               <div data-testid="credit-records-summary" className="grid grid-cols-2 gap-3">
                 <div className="rounded-9 border border-border p-3">
-                  <div className="text-20 font-bold text-foreground">{fmt(summary.balance)}</div>
+                  <div className="text-22 font-bold text-foreground">{fmt(summary.balance)}</div>
                   <div className="mt-0.5 text-11 text-muted-foreground">Remaining credits</div>
                 </div>
                 <div className="rounded-9 border border-border p-3">
-                  <div className="text-20 font-bold text-foreground">{fmt(summary.totalConsumed)}</div>
+                  <div className="text-22 font-bold text-foreground">{fmt(summary.totalConsumed)}</div>
                   <div className="mt-0.5 text-11 text-muted-foreground">Total consumed</div>
                 </div>
               </div>
