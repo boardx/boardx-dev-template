@@ -99,16 +99,18 @@
 | F10 | Widget 框架与能力边界 + Widget Menu 悬浮操作 | passing | claude | [] | - |
 | F11 | 便利贴组件（内容 / 外观 / 状态） | passing | claude | [] | - |
 | F12 | 文本组件 + 文本样式 + 文本转便利贴 | not_started | - | [] | - |
-| F13 | 形状组件 | not_started | - | [] | - |
-| F14 | 连接线组件 + 连接线样式 | not_started | - | [] | - |
-| F15 | 手绘组件 | not_started | - | [] | - |
-| F16 | 图表组件 | not_started | - | [] | - |
-| F17 | 组件样式调整 + 应用格式 | not_started | - | [] | - |
-| F18 | 锁定/解锁 + 删除 + 刷新组件 | not_started | - | [] | - |
-| F19 | 多选组合批量操作（移动/对齐/编组/锁定/删除） | not_started | - | [] | - |
-| F20 | 图片组件 + 裁剪 | blocked | - | [] | - |
-| F21 | 文件组件 + 下载 + 音频转文本 | blocked | - | [] | - |
-| F22 | 组件 AI 助手 | blocked | - | [] | - |
+| F13 | 画布渲染引擎切换为 Fabric.js（既有行为不回归） | not_started | - | [] | - |
+| F14 | packages/canvas 数据模型改造为字段级 patch（CRDT-ready） | not_started | - | [] | - |
+| F15 | 形状组件 | not_started | - | [] | - |
+| F16 | 连接线组件 + 连接线样式 | not_started | - | [] | - |
+| F17 | 手绘组件 | not_started | - | [] | - |
+| F18 | 图表组件 | not_started | - | [] | - |
+| F19 | 组件样式调整 + 应用格式 | not_started | - | [] | - |
+| F20 | 锁定/解锁 + 删除 + 刷新组件 | not_started | - | [] | - |
+| F21 | 多选组合批量操作（移动/对齐/编组/锁定/删除） | not_started | - | [] | - |
+| F22 | 图片组件 + 裁剪 | blocked | - | [] | - |
+| F23 | 文件组件 + 下载 + 音频转文本 | blocked | - | [] | - |
+| F24 | 组件 AI 助手 | blocked | - | [] | - |
 
 ## p7 (Board 壳 (P7))
 
@@ -135,10 +137,11 @@
 
 | Feature | 标题 | 状态 | owner | depends_on | wave |
 |---|---|---|---|---|---|
-| F01 | Yjs 实时同步组件变更 | not_started | - | [] | - |
-| F02 | 在线成员头像 + 实时光标 | not_started | - | [] | - |
-| F03 | 跟随协作者视角 | not_started | - | [] | - |
-| F04 | 连接状态、断线重连与同步指示 | not_started | - | [] | - |
+| F01 | WebSocket + Redis 广播骨架（不含 Yjs 语义） | not_started | - | [] | - |
+| F02 | Yjs 实时同步组件变更 | not_started | - | [] | - |
+| F03 | 在线成员头像 + 实时光标 | not_started | - | [] | - |
+| F04 | 跟随协作者视角 | not_started | - | [] | - |
+| F05 | 连接状态、断线重连与同步指示 | not_started | - | [] | - |
 
 ## p9 (AVA / Chat (P9))
 
@@ -174,7 +177,7 @@
 | F03 | 订阅并使用项目（个人/团队订阅 + 使用入口带入 AVA/工具/模板） | in_progress | wrk-store-1 | [F02(passing), p9:F01(passing)] | 2 |
 | F04 | 项目喜欢/收藏状态展示与切换 | passing | wrk-store-2 | [F01(passing)] | 1 |
 | F05 | 项目分享管理（授权链接生成/关闭 + 已授权用户列表） | passing | wrk-store-2 | [F02(passing)] | 2 |
-| F06 | 团队/项目审核与精选（PENDING/APPROVED 切换 + featured） | in_progress | wrk-store-2 | [F02(passing)] | 2 |
+| F06 | 团队/项目审核与精选（PENDING/APPROVED 切换 + featured） | passing | wrk-store-2 | [F02(passing)] | 2 |
 
 ## p12 (Studio & 演示 (P12))
 
@@ -213,7 +216,7 @@
 | F02 | 用户管理（列表/搜索/分页/增删改 + 手动上分） | passing | wrk-admin-1 | [F01(passing), p14:F01(passing)] | 1 |
 | F03 | 团队管理（搜索/分页/编辑团队类型 + 手动上分） | passing | wrk-admin-2 | [F01(passing), p14:F01(passing)] | 1 |
 | F04 | AI Store 平台审核页（APPROVED/PENDING 切换） | passing | wrk-admin-1 | [F01(passing), p11:F01(passing), p11:F02(passing)] | 2 |
-| F05 | AI Store 官方精选页（isFeatured 切换） | in_progress | wrk-admin-1 | [F04(passing), p11:F02(passing)] | 3 |
+| F05 | AI Store 官方精选页（isFeatured 切换） | passing | wrk-admin-1 | [F04(passing), p11:F02(passing)] | 3 |
 
 ## p16 (UI 导航接线与差距审计)
 
@@ -234,4 +237,4 @@
 | F05 | Surveys 页面 reskin | not_started | - | [p16:F02(passing)] | 2 |
 | F06 | Knowledge Base + Credits 页面收尾 reskin | not_started | - | [p16:F02(passing)] | 3 |
 
-_最近生成:2026-07-03T04:11:27.136Z_
+_最近生成:2026-07-03T10:55:08.989Z_

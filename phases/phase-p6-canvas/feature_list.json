@@ -136,7 +136,7 @@
       "title": "拖动时的对齐参考线",
       "user_visible_behavior": "拖动或缩放组件时，与邻近组件的边/中心对齐时显示动态参考线并吸附；多组件等间距时显示间距提示；释放后参考线消失。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "08",
       "owner": null,
       "capability": "CAP-CANVAS",
       "verification": [
@@ -242,7 +242,7 @@
       "title": "文本组件 + 文本样式 + 文本转便利贴",
       "user_visible_behavior": "创建独立文本组件并编辑；调整字体/字号/粗斜体/颜色/对齐（uc-widget-menu-013）；可把一段文本按行/段拆分为多个便利贴（uc-widget-menu-014）。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "09",
       "owner": null,
       "capability": "CAP-CANVAS",
       "verification": [
@@ -265,7 +265,7 @@
       "title": "画布渲染引擎切换为 Fabric.js（既有行为不回归）",
       "user_visible_behavior": "Board 画布的渲染由 DOM div 切换为 fabric.Canvas（页面中出现承载渲染的 <canvas> 元素）；已 passing 的选择/拖拽/多选/复制粘贴/undo-redo/pan-zoom/对齐吸附线等用户可见行为保持不变，不因渲染引擎切换而回归。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "08",
       "owner": null,
       "capability": "CAP-CANVAS",
       "verification": [
@@ -288,7 +288,7 @@
       "title": "packages/canvas 数据模型改造为字段级 patch（CRDT-ready）",
       "user_visible_behavior": "widget 更新命令从「整条 item 替换」改为「字段级 patch」（如 {kind:\"patch\", id, patch:{x,y}}）；同一 widget 连续两次不同字段的 patch 互不覆盖；现有 note/rect 类型与 add/move/edit/delete 命令在新语义下行为不变，既有 canvas e2e 全部保持通过。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "08",
       "owner": null,
       "capability": "CAP-CANVAS",
       "verification": [
@@ -311,7 +311,7 @@
       "title": "形状组件",
       "user_visible_behavior": "创建形状（矩形/圆/菱形等）并在其中输入文本；调整大小/外观（填充/边框）/层级；移动/缩放/旋转持久化。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "10",
       "owner": null,
       "capability": "CAP-CANVAS",
       "verification": [
@@ -332,7 +332,7 @@
       "title": "连接线组件 + 连接线样式",
       "user_visible_behavior": "从一个组件拉出连接线连到另一个组件，组件移动时连接线跟随；调整线型（直/折/曲）、粗细、颜色、端点箭头与路径/流程标识（uc-widget-menu-012）。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "10",
       "owner": null,
       "capability": "CAP-CANVAS",
       "verification": [
@@ -354,7 +354,7 @@
       "title": "手绘组件",
       "user_visible_behavior": "切到手绘工具用鼠标/触控自由绘制笔迹；调整笔色/粗细；橡皮擦擦除笔迹（uc-board-menu-012）；笔迹作为组件可选中/移动/删除并持久化。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "10",
       "owner": null,
       "capability": "CAP-CANVAS",
       "verification": [
@@ -375,7 +375,7 @@
       "title": "图表组件",
       "user_visible_behavior": "在画布查看/插入图表组件，对其选择/移动/缩放/锁定/删除；图表按其数据渲染（柱/线/饼等）；不支持的操作在 Widget Menu 隐藏。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "10",
       "owner": null,
       "capability": "CAP-CANVAS",
       "verification": [
@@ -396,7 +396,7 @@
       "title": "组件样式调整 + 应用格式",
       "user_visible_behavior": "Widget Menu 中调整选中组件的颜色/边框/背景/线宽/透明度并实时预览、持久化（uc-widget-menu-002）；「应用格式」把当前组件样式刷到其他文本/便利贴（uc-widget-menu-010）。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "09",
       "owner": null,
       "capability": "CAP-CANVAS",
       "verification": [
@@ -418,7 +418,7 @@
       "title": "锁定/解锁 + 删除 + 刷新组件",
       "user_visible_behavior": "锁定组件后不可移动/缩放/旋转/编辑，菜单显示解锁（uc-widget-menu-003）；删除选中的一个或多个组件（uc-widget-menu-008）；支持重新加载的组件可刷新内容（uc-widget-menu-009）。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "09",
       "owner": null,
       "capability": "CAP-CANVAS",
       "verification": [
@@ -441,7 +441,7 @@
       "title": "多选组合批量操作（移动/对齐/编组/锁定/删除）",
       "user_visible_behavior": "同时选中多个组件形成 active selection，整体拖动；通过 Widget Menu 批量对齐（左/右/上/下/水平居中/垂直居中/等间距，uc-widget-menu-011）、编组/解组、批量锁定、批量删除。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "09",
       "owner": null,
       "capability": "CAP-CANVAS",
       "verification": [
