@@ -11,6 +11,9 @@ export const TEMPLATES_DIR = join(HARNESS_DIR, "templates");
 export const STATE_DIR = join(HARNESS_DIR, "state");
 export const ROADMAP_PATH = join(STATE_DIR, "roadmap.yaml");
 export const PROGRESS_PATH = join(STATE_DIR, "PROGRESS.md");
+export const COORDINATOR_LOCK_PATH = join(STATE_DIR, "coordinator-lock.json");
+export const DEP_GRAPH_PATH = join(STATE_DIR, "dep-graph.md");
+export const WORKTREES_DIR = join(REPO_ROOT, ".claude", "worktrees");
 
 export function phaseDirName(id: string, slug: string): string {
   return `phase-${id}-${slug}`;
