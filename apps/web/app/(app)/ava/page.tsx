@@ -731,31 +731,40 @@ export default function AvaPage() {
     }
   }
 
-  // p18-F03：把当前阶段推进 PATCH 回 ava_research_sessions（fire-and-forget——这只是
-  // 持久化"中断前处于哪个阶段"，不阻塞本地动画节奏；无 sessionId（理论上不会发生,
-  // POST research 总是先建会话）时静默跳过）。
+  // p18-F03：把当前阶段推进 PATCH 回 ava_research_sessions——这是"中断前处于哪个阶段"
+  // 的权威写入点。返回 Promise 供调用方按需 await（用户主动触发的阶段跃迁应该等它
+  // 落地后再继续，避免"UI 已显示新阶段但刷新一瞬间还没持久化"的竞态；动画定时器
+  // 里的逐帧推进不必等待，因为它们之间已有下一次调用兜底）。
+  // 无 sessionId（理论上不会发生，POST research 总是先建会话）时静默跳过。
   function persistResearchProgress(
     sessionId: number | undefined,
     patch: { status?: ResearchStatus; timeline?: ResearchTimelineItem[] }
-  ) {
-    if (activeId == null || sessionId == null) return;
-    void fetch(`/api/ava/threads/${activeId}/research/${sessionId}`, {
+  ): Promise<void> {
+    if (activeId == null || sessionId == null) return Promise.resolve();
+    return fetch(`/api/ava/threads/${activeId}/research/${sessionId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(patch),
-    }).catch(() => {
-      // 持久化失败不影响本地动画/交互；下次刷新会拿到上一次成功持久化的阶段（保守恢复）。
-    });
+    })
+      .then(() => undefined)
+      .catch(() => {
+        // 持久化失败不影响本地动画/交互；下次刷新会拿到上一次成功持久化的阶段（保守恢复）。
+      });
   }
 
-  function confirmResearchPlan() {
+  async function confirmResearchPlan() {
     if (!researchRun?.research || researchRun.status !== "draft") return;
     const queued: ResearchTimelineItem[] = researchRun.research.timeline.map((item, index) => ({
       ...item,
       status: index === 0 ? "running" : "queued",
     }));
+    // 先落库再翻 UI：用户点击"确认计划"是显式的阶段跃迁，必须先持久化成功才让界面
+    // 显示新阶段。反过来做（先乐观更新 UI 再异步持久化）会有一个真实的竞态窗口——
+    // UI 已经显示 running，但请求可能还在路上，这段时间内任何刷新都会读到 DB 里
+    // 尚未更新的 draft 行，看起来像"跳回"了（本地网络下这个窗口通常只有几毫秒，
+    // 但真实存在，不是测试假设）。
+    await persistResearchProgress(researchRun.sessionId, { status: "running", timeline: queued });
     setResearchRun({ ...researchRun, status: "running", timeline: queued });
-    persistResearchProgress(researchRun.sessionId, { status: "running", timeline: queued });
 
     researchRun.research.timeline.forEach((item, index) => {
       window.setTimeout(() => {

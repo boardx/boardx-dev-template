@@ -39,7 +39,7 @@ test("draft 阶段刷新：research-card 恢复澄清问题与计划内容", asy
   await expect(page.getByTestId("research-card")).toBeVisible();
   await expect(page.getByTestId("research-card")).toHaveAttribute("data-status", "draft");
   await expect(page.getByTestId("research-clarify")).toContainText("What decision");
-  await expect(page.getByTestId("research-plan")).toContainText("audience");
+  await expect(page.getByTestId("research-plan")).toContainText("Audience:");
   // draft 阶段可继续确认计划（恢复的不是死态展示，而是可交互的同一份状态）
   await expect(page.getByTestId("confirm-research-plan")).toBeVisible();
 });

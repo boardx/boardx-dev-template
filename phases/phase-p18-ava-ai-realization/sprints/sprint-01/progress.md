@@ -4,10 +4,33 @@
 - 仓库根目录: boardx-dev-next
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F06（STT 能力）/ F08（分享邮件）
-- 当前 blocker: 无（F03 有并行会话在做，勿重复认领）
+- 当前最高优先级未完成功能: 见 active-features.json（F03 已 passing）
+- 当前 blocker: 无
 
 ## 会话记录
+### 2026-07-04 12:46 (owner: wrk-ava-p18-1)
+- 本轮目标: F03 收尾 — Deep Research 持久化实体 + 刷新恢复（补验证 + 修竞态）
+- 已完成:
+  - 发现前一轮遗留的 `evidence/F03.verify.log` 是失败态（playwright 报 "No tests found"，
+    且 migrate 日志停在 021，024_ava_research_sessions.sql 未落库），先重跑
+    `pnpm --filter @repo/data run migrate` 确认 022/023/024 三个新迁移正确应用
+  - 修了一个真实竞态：`confirmResearchPlan()` 此前「先乐观更新 UI 再 fire-and-forget
+    PATCH 持久化」，用户点击确认计划后极短窗口内刷新会读到 DB 里仍是 draft 的行，
+    UI 却已经显示 running——看起来像"跳回"。改为 `persistResearchProgress` 返回
+    Promise，`confirmResearchPlan` 改 async 并 `await` 持久化成功后再翻本地 state；
+    动画定时器里的逐帧 PATCH 仍是 fire-and-forget（有下一次调用兜底，不需要等）
+  - 顺带修正 `ava-research-persistence.spec.ts` 里一处大小写不匹配的断言
+    （`"audience"` → `"Audience:"`，与 research-plan 实际渲染文案一致）
+- 运行过的验证:
+  - `pnpm --filter @repo/data run migrate` → 024_ava_research_sessions.sql 等全部应用
+  - `pnpm --filter @repo/web exec playwright test e2e/ava-research-persistence.spec.ts`
+    → 4 passed（此前因未迁移到位 + 断言大小写不符两个原因误报失败）
+  - `pnpm harness verify --sprint p18/01 --feature F03` → 门控通过，F03 = passing
+    （含 verify:base 45/45）
+- 已记录证据: evidence/F03.verify.log
+- 提交记录: 本分支 worker/wrk-ava-p18-1-f03-research-persistence
+- 已知风险或未解决问题: 无（F03 完全收尾）
+- 下一步最佳动作: 领取下一个 in_progress 为空的 feature（见 active-features.json）
 ### 2026-07-04 F10 (owner: wrk-ava-p18-1)
 - 本轮目标: F10 — 消息附件富渲染接线（图片缩略图/lightbox + 音频播放器）
 - 已完成:

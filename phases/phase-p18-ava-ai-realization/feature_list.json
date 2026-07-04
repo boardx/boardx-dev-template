@@ -49,7 +49,7 @@
       "title": "Deep Research 持久化实体 + 刷新恢复",
       "user_visible_behavior": "研究会话（澄清/计划/时间线/报告及当前阶段）持久化到数据库；研究进行中或完成后刷新页面、重新进入同一线程，研究卡片（research-card）恢复到中断前的正确阶段与内容，而不是消失或从头开始。",
       "design_ref": "现有 research-card / research-clarify / research-plan / research-timeline / research-report-panel；requirements/02-deep-research-realization.md",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "wrk-ava-p18-1",
       "capability": "CAP-DATA",
@@ -60,7 +60,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-research-persistence.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-07-04T00:30:28.515Z",
       "notes": "requirements/02。新增 research 持久化 migration（阶段状态机 + 结构化 payload，参考老代码 DeepResearchReportEntity 字段）；兼容现有 ava_messages 记录。e2e 核心断言：page.reload() 后 research-card data-status 与刷新前一致。"
     },
     {
