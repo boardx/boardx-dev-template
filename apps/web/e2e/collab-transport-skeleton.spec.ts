@@ -1,3 +1,4 @@
+import { request as httpRequest } from "node:http";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
@@ -9,8 +10,39 @@ const uniq = () => `collab_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.c
 // F01 要求 upgrade 时校验登录态：连接前先注册登录，让该 context 带上 session cookie
 // （cookie 按 domain 匹配、不区分端口，浏览器会把它一并发给 ws://localhost:{WS_PORT}）。
 async function login(context: BrowserContext) {
-  await context.request.post(`${BASE}/api/auth/register`, {
+  const res = await context.request.post(`${BASE}/api/auth/register`, {
     data: { firstName: "C", lastName: "D", email: uniq(), password: "secret123", agreeTerms: true },
+  });
+  if (!res.ok()) throw new Error(`register failed: ${res.status()} ${await res.text()}`);
+}
+
+// 浏览器 WebSocket API 在握手失败时只暴露笼统的 error/close 事件，拿不到真实 HTTP
+// 状态码；直接用 Node 的 http.request 发 upgrade 请求，能读到网关真实回的状态行，
+// 避免"进程崩了也能通过"这类假阳性。
+function attemptUpgrade(boardId: string, cookie?: string): Promise<{ status: number | null; upgraded: boolean }> {
+  return new Promise((resolve, reject) => {
+    const req = httpRequest({
+      host: "localhost",
+      port: Number(WS_PORT),
+      path: `/api/collab/ws?boardId=${encodeURIComponent(boardId)}`,
+      headers: {
+        Connection: "Upgrade",
+        Upgrade: "websocket",
+        "Sec-WebSocket-Version": "13",
+        "Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
+        ...(cookie ? { cookie } : {}),
+      },
+    });
+    req.on("response", (res) => {
+      resolve({ status: res.statusCode ?? null, upgraded: false });
+      req.destroy();
+    });
+    req.on("upgrade", (res, socket) => {
+      resolve({ status: res.statusCode ?? 101, upgraded: true });
+      socket.destroy();
+    });
+    req.on("error", reject);
+    req.end();
   });
 }
 
@@ -109,24 +141,23 @@ test("客户端断线后重新连接仍能通过同一 Board channel 收发", as
   }
 });
 
-test("未登录连接被拒绝：不带 session cookie 时 upgrade 失败，不会收到 connected", async ({ browser }) => {
+test("未登录连接被拒绝：不带 session cookie 时 upgrade 返回 401，不会完成握手", async () => {
   const boardId = `transport-unauth-${Date.now()}`;
+  const result = await attemptUpgrade(boardId);
+  expect(result.upgraded).toBe(false);
+  expect(result.status).toBe(401);
+});
+
+test("已登录连接被接受：带有效 session cookie 时 upgrade 返回 101", async ({ browser }) => {
+  const boardId = `transport-auth-${Date.now()}`;
   const ctx = await browser.newContext({ baseURL: BASE });
-  const page = await ctx.newPage();
   try {
-    await page.goto("/api/health");
-    // 刻意不 login()：这个 context 没有 session cookie，upgrade 应该被网关拒绝。
-    await connect(page, wsUrl(boardId), "collab-unauth");
-    const rejected = await page.waitForFunction(
-      (eventName) => {
-        const msgs = (window as any).__collabMessages?.[eventName] ?? [];
-        if (msgs.some((m: any) => m.type === "connected")) throw new Error("unexpectedly connected");
-        return (window as any).__collabWs?.readyState === WebSocket.CLOSED || msgs.some((m: any) => m.type === "error");
-      },
-      "collab-unauth",
-      { timeout: 10_000 },
-    );
-    expect(await rejected.jsonValue()).toBeTruthy();
+    await login(ctx);
+    const cookies = await ctx.cookies();
+    const cookieHeader = cookies.map((c) => `${c.name}=${c.value}`).join("; ");
+    const result = await attemptUpgrade(boardId, cookieHeader);
+    expect(result.upgraded).toBe(true);
+    expect(result.status).toBe(101);
   } finally {
     await ctx.close();
   }

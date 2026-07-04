@@ -32,26 +32,42 @@ const server = createServer((req, res) => {
   res.end("not found");
 });
 
-/** 校验 upgrade 请求携带的会话 cookie；无效/未登录返回 false。 */
+// upgrade 到完成鉴权之间有一次真实网络往返；期间客户端随时可能掉线，若 socket 在
+// 无监听者时触发 'error' 会是未捕获异常，直接崩掉整个网关进程（殃及所有 board）。
+const AUTH_TIMEOUT_MS = 5000;
+
+/** 校验 upgrade 请求携带的会话 cookie；无效/未登录/超时返回 false。 */
 async function isAuthenticated(req) {
   const cookie = req.headers.cookie;
   if (!cookie) return false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
   try {
-    const res = await fetch(`${WEB_ORIGIN}/api/auth/session`, { headers: { cookie } });
+    const res = await fetch(`${WEB_ORIGIN}/api/auth/session`, { headers: { cookie }, signal: controller.signal });
     if (!res.ok) return false;
     const body = await res.json();
     return Boolean(body?.user);
   } catch {
     return false;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
 function rejectUpgrade(socket, status) {
+  if (socket.destroyed) return;
   socket.write(`HTTP/1.1 ${status}\r\nConnection: close\r\n\r\n`);
   socket.destroy();
 }
 
+// boardId 直接拼进 Redis channel 名；限制字符集，避免奇怪输入产生不可控的 channel。
+const BOARD_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
+
 server.on("upgrade", (req, socket) => {
+  // 必须在任何 await 之前挂上，否则鉴权网络请求期间客户端掉线触发的 'error'
+  // 会因为无监听者而变成未捕获异常，崩掉整个进程。
+  socket.on("error", () => {});
+
   const url = new URL(req.url ?? "", `http://${req.headers.host ?? "localhost"}`);
   if (url.pathname !== "/api/collab/ws") {
     socket.destroy();
@@ -59,12 +75,13 @@ server.on("upgrade", (req, socket) => {
   }
   const boardId = url.searchParams.get("boardId")?.trim();
   const key = req.headers["sec-websocket-key"];
-  if (!boardId || typeof key !== "string") {
+  if (!boardId || !BOARD_ID_PATTERN.test(boardId) || typeof key !== "string") {
     socket.destroy();
     return;
   }
 
   void isAuthenticated(req).then((ok) => {
+    if (socket.destroyed) return; // 鉴权期间客户端已经掉线，不必再写响应。
     if (!ok) {
       rejectUpgrade(socket, "401 Unauthorized");
       return;
@@ -95,7 +112,9 @@ function completeUpgrade(socket, boardId, key) {
       try {
         parsed = readFrame(client.buffer);
       } catch {
-        // 帧头声明的长度超过上限（含伪造巨帧）：直接断开，不缓冲。
+        // 帧头声明的长度超过上限（含伪造巨帧）：按协议发 1009(Message Too Big) 关闭帧
+        // 再断开，而不是直接砍连接——客户端至少能诊断出是什么原因。
+        sendClose(socket, 1009);
         socket.destroy();
         return;
       }
@@ -116,14 +135,32 @@ function completeUpgrade(socket, boardId, key) {
             fromClientId: client.id,
           },
         })))
-        .catch(() => {
-          // 不回传内部错误细节（err.message 可能带连接串/路径等信息），只给通用文案。
+        .catch((err) => {
+          // 不回传内部错误细节（err.message 可能带连接串/路径等信息）给客户端，只给
+          // 通用文案；真实原因记到服务端日志，否则发布失败在运维侧完全不可见。
+          console.error(`collab gateway publish failed: ${String(err?.message ?? err)}`);
           sendFrame(socket, JSON.stringify({ type: "error", message: "message delivery failed" }));
         });
     }
   });
   socket.on("close", () => removeClient(client));
   socket.on("error", () => removeClient(client));
+}
+
+// subscribe/unsubscribe 各自独立挂在 redisReady 上会有真实的乱序风险（同一 board
+// 快速离开又加入时，两个 fire-and-forget 的 .then 谁先落地取决于微任务调度，不能
+// 保证跟 boards map 的同步变更顺序一致）。用单一队列把所有 Redis 订阅操作强制
+// 串行化，谁先调用谁先真正执行到 Redis，跟 addClient/removeClient 的同步顺序对齐。
+let redisOpQueue = Promise.resolve();
+function enqueueRedisOp(op) {
+  redisOpQueue = redisOpQueue
+    .catch(() => {}) // 前一个操作失败不影响后一个继续排队执行
+    .then(() => redisReady)
+    .then(op)
+    .catch((err) => {
+      console.warn(`collab gateway redis subscribe/unsubscribe failed: ${String(err?.message ?? err)}`);
+    });
+  return redisOpQueue;
 }
 
 function addClient(client) {
@@ -135,7 +172,7 @@ function addClient(client) {
     // 每个 board 独立 channel（非单一全局 channel + 应用层过滤）：只有真正有本
     // 实例客户端的 board 才订阅，Redis 自己做隔离与扇出裁剪，而不是本进程收全库
     // 流量再按 boardId 比对丢弃。
-    void redisReady.then(() => subscriber.subscribe(channelFor(client.boardId), (message) => {
+    enqueueRedisOp(() => subscriber.subscribe(channelFor(client.boardId), (message) => {
       let envelope;
       try {
         envelope = JSON.parse(message);
@@ -154,7 +191,7 @@ function removeClient(client) {
   set.delete(client);
   if (set.size === 0) {
     boards.delete(client.boardId);
-    void redisReady.then(() => subscriber.unsubscribe(channelFor(client.boardId)));
+    enqueueRedisOp(() => subscriber.unsubscribe(channelFor(client.boardId)));
   }
 }
 
@@ -183,6 +220,13 @@ function sendFrame(socket, text) {
     header.writeBigUInt64BE(BigInt(payload.length), 2);
   }
   socket.write(Buffer.concat([header, payload]));
+}
+
+function sendClose(socket, code) {
+  if (socket.destroyed) return;
+  const payload = Buffer.alloc(2);
+  payload.writeUInt16BE(code, 0);
+  socket.write(Buffer.concat([Buffer.from([0x88, payload.length]), payload]));
 }
 
 function readFrame(buffer) {
