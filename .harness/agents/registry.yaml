@@ -19,6 +19,47 @@ agents:
       - review 全绿 + CI 绿 + 分支 up-to-date → 合并 main、置 status:merged、关 issue
       - 回收 stale 认领（lease 超时）、升级 blocked
 
+  # ── 模块 Coordinator（二级编排；分派+初审，无独立合并权）───────────────────
+  # 架构（2026-07-04 起）：coord-main（唯一合并权）↔ N 个 module-coordinator（各领域分派/初审）。
+  # module-coordinator 职责：读自己 areas 范围内的 issue，分派给该模块的 worker，
+  # 调起首轮 reviewer 做初审，返工裁决；PR 全绿后**转交 coord-main 做最终合并**
+  # （不可自行 merge——避免跨模块热点文件的合并冲突失去唯一把关人）。
+  - id: coord-room
+    kind: module-coordinator
+    model: opus-4.8
+    areas: [room, room-files, room-survey, room-chat, invite, share]
+    reports_to: coord-main
+  - id: coord-board
+    kind: module-coordinator
+    model: opus-4.8
+    areas: [canvas, board, board-header, board-menu, context-menu, widgets, studio, presentations]
+    reports_to: coord-main
+  - id: coord-collab
+    kind: module-coordinator
+    model: opus-4.8
+    areas: [collaboration]
+    reports_to: coord-main
+  - id: coord-ava
+    kind: module-coordinator
+    model: opus-4.8
+    areas: [ai-core, deep-research, voice, ai-settings, attachments, message-actions, knowledge-base]
+    reports_to: coord-main
+  - id: coord-store-admin
+    kind: module-coordinator
+    model: opus-4.8
+    areas: [ai-store, admin]
+    reports_to: coord-main
+  - id: coord-survey
+    kind: module-coordinator
+    model: opus-4.8
+    areas: [survey]
+    reports_to: coord-main
+  - id: coord-platform
+    kind: module-coordinator
+    model: opus-4.8
+    areas: [auth, team, home-page, profile, common, billing, credits]
+    reports_to: coord-main
+
   # ── Worker：写码 agent（1 agent = 1 owner，可增删）──────────────────────────
   - id: wrk-claude-1
     kind: worker

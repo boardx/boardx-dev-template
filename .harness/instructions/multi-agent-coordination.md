@@ -128,6 +128,10 @@ reviewer.required_for 含 "*"   OR   reviewer.required_for ∩ {issue.area} ≠ 
 
 > 因 coordinator 是**唯一被授权执行合并**的角色，"不过 review 就不合并"由它独占合并权来保证。
 > 服务端保护一旦可用，即从「唯一合并者」升级为「任何人都无法绕过」的双保险。
+>
+> 2026-07-04 起可拆出 module-coordinator 二级层（见 `.agents/skills/module-coordinator/SKILL.md`
+> 与 registry.yaml 的 `kind: module-coordinator`）：只做分派/初审/返工裁决，**不在"唯一合并者"
+> 授权集合内**，全绿 PR 一律转交 coord-main 执行最终合并——不改变本节的独占合并权归属。
 
 ## 6. v0 边界（当前落地范围）
 
