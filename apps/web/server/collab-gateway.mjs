@@ -5,8 +5,11 @@ import { createConnection } from "node:net";
 const WS_MAGIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const serverId = randomUUID();
 const port = Number(process.env.COLLAB_WS_PORT ?? "3001");
-// 主 app 的 /api/auth/session 是唯一的会话真相来源；网关不直连 DB，靠回调复用既有
-// session cookie 校验（零新增依赖，和网关其余部分手撸协议的风格一致）。
+// 主 app 的 /api/boards/:id 是唯一的 board 归属真相来源；网关不直连 DB，靠回调复用既有
+// session cookie + board 权限校验（零新增依赖，和网关其余部分手撸协议的风格一致）。该端点
+// 本身已实现"已登录 + 对该 board 有 owner/editor/viewer 角色才 200，否则 401/403/404"，
+// 一次网络往返同时验证登录态与 board 归属，替代此前只验证登录态的 isAuthenticated()——
+// 后者是 review 发现的授权缺口：任何登录用户都能连进任意 board 的协作频道。
 const WEB_ORIGIN =
   process.env.COLLAB_WEB_ORIGIN ?? `http://localhost:${process.env.E2E_PORT ?? process.env.PORT ?? "3000"}`;
 // 单帧上限：防止畸形/恶意巨帧把整个连接的内存缓冲区吃爆。
@@ -36,17 +39,23 @@ const server = createServer((req, res) => {
 // 无监听者时触发 'error' 会是未捕获异常，直接崩掉整个网关进程（殃及所有 board）。
 const AUTH_TIMEOUT_MS = 5000;
 
-/** 校验 upgrade 请求携带的会话 cookie；无效/未登录/超时返回 false。 */
-async function isAuthenticated(req) {
+/**
+ * 校验 upgrade 请求携带的会话 cookie 是否对目标 boardId 有访问权限
+ * （owner/editor/viewer，含 public board 的匿名 viewer——但本网关不允许匿名连接，
+ * 无 cookie 直接返回 false）。复用 /api/boards/:id 的既有权限判定：
+ * 200 = 有权限；401/403/404 = 拒绝；网络异常/超时同样拒绝（fail-closed）。
+ */
+async function isAuthorizedForBoard(req, boardId) {
   const cookie = req.headers.cookie;
   if (!cookie) return false;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
   try {
-    const res = await fetch(`${WEB_ORIGIN}/api/auth/session`, { headers: { cookie }, signal: controller.signal });
-    if (!res.ok) return false;
-    const body = await res.json();
-    return Boolean(body?.user);
+    const res = await fetch(`${WEB_ORIGIN}/api/boards/${encodeURIComponent(boardId)}`, {
+      headers: { cookie },
+      signal: controller.signal,
+    });
+    return res.ok;
   } catch {
     return false;
   } finally {
@@ -80,10 +89,11 @@ server.on("upgrade", (req, socket) => {
     return;
   }
 
-  void isAuthenticated(req).then((ok) => {
+  void isAuthorizedForBoard(req, boardId).then((ok) => {
     if (socket.destroyed) return; // 鉴权期间客户端已经掉线，不必再写响应。
     if (!ok) {
-      rejectUpgrade(socket, "401 Unauthorized");
+      // 未登录/board 不存在/无权限统一回 403——网关不区分三者，避免枚举 board 是否存在。
+      rejectUpgrade(socket, "403 Forbidden");
       return;
     }
     completeUpgrade(socket, boardId, key);

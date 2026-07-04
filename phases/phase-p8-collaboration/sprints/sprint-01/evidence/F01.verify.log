@@ -1,9 +1,56 @@
+# F01 端到端验证日志 — 安全修复: board 授权鉴权 (coord/332-board-auth-fix)
+# 生成时间: 2026-07-05 05:04 CST
+# Worktree: /private/tmp/claude-501/.../scratchpad/wt-332fix (branch: coord/332-board-auth-fix)
+# 修复内容:
+#   1. apps/web/server/collab-gateway.mjs: isAuthenticated → isAuthorizedForBoard
+#      (GET /api/boards/{boardId} 验证 owner/editor/viewer, 403 统一拒绝)
+#   2. apps/web/e2e/collab-transport-skeleton.spec.ts:
+#      - 改用真实 boardId (register→room→board)
+#      - 未登录测试: 401 → 403 (网关统一 403, 不区分未登录/无权限)
+#      - 新增安全回归测试: 已登录但非 board 成员被拒绝 (403)
 
-Running 4 tests using 1 worker
+## 步骤 1: pnpm install --frozen-lockfile
+$ cd /...wt-332fix && pnpm install --frozen-lockfile
+Done in 4.1s
+exit_code=0
 
-  ✓  1 [chromium] › collab-transport-skeleton.spec.ts:83:5 › 两个客户端通过 WebSocket + Redis pub/sub 在同一 Board channel 收发消息 (1.1s)
-  ✓  2 [chromium] › collab-transport-skeleton.spec.ts:112:5 › 客户端断线后重新连接仍能通过同一 Board channel 收发 (682ms)
-  ✓  3 [chromium] › collab-transport-skeleton.spec.ts:144:5 › 未登录连接被拒绝：不带 session cookie 时 upgrade 返回 401，不会完成握手 (6ms)
-  ✓  4 [chromium] › collab-transport-skeleton.spec.ts:151:5 › 已登录连接被接受：带有效 session cookie 时 upgrade 返回 101 (302ms)
+## 步骤 2: 启动 Docker 基础设施 (host网络池耗尽, 改用指定subnet 172.60.0.0/24)
+$ docker compose -f .../docker-compose-wt332fix.yml --project-name wt332fix up -d
+ Network wt332fix_wt332fix Created
+ Container wt332fix-postgres-1 Started (port 57000)
+ Container wt332fix-redis-1 Started (port 57001)
+exit_code=0
 
-  4 passed (7.1s)
+## 步骤 3: 数据库迁移
+$ DATABASE_URL=postgresql://boardx:boardx@localhost:57000/boardx tsx packages/data/src/migrate.ts
+→ 应用: 001_init.sql ... 023_outbound_emails.sql (全部 ✓)
+迁移完成。
+exit_code=0
+
+## 步骤 4: 服务启动
+### Next.js dev (port 57004)
+$ DATABASE_URL=... E2E_PORT=57004 next dev -p 57004 &
+$ curl http://localhost:57004/api/health → {"ok":true,"service":"web"}
+exit_code=0
+
+### collab-gateway (port 57005)
+$ COLLAB_WS_PORT=57005 REDIS_URL=redis://localhost:57001 COLLAB_WEB_ORIGIN=http://localhost:57004 node server/collab-gateway.mjs &
+$ curl http://localhost:57005/health → {"ok":true,"redis":"ready"}
+exit_code=0
+
+## 步骤 5: 运行 Playwright 测试
+$ cd apps/web && playwright test e2e/collab-transport-skeleton.spec.ts --project=chromium
+
+Running 5 tests using 1 worker
+
+  ✓  1 [chromium] › collab-transport-skeleton.spec.ts:94:5 › 两个客户端通过 WebSocket + Redis pub/sub 在同一 Board channel 收发消息 (1.2s)
+  ✓  2 [chromium] › collab-transport-skeleton.spec.ts:125:5 › 客户端断线后重新连接仍能通过同一 Board channel 收发 (276ms)
+  ✓  3 [chromium] › collab-transport-skeleton.spec.ts:156:5 › 未登录连接被拒绝：不带 session cookie 时 upgrade 返回 403，不会完成握手 (96ms)
+  ✓  4 [chromium] › collab-transport-skeleton.spec.ts:168:5 › 已登录且是 board 归属者的连接被接受：带有效 session cookie 时 upgrade 返回 101 (328ms)
+  ✓  5 [chromium] › collab-transport-skeleton.spec.ts:182:5 › 安全回归：已登录但非 board 成员的连接被拒绝，upgrade 返回 403 (393ms)
+
+  5 passed (2.9s)
+
+exit_code=0
+
+## 结论: PASS — 5/5 用例全部通过
