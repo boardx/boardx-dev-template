@@ -32,6 +32,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string; 
     await softDeleteRoomFile(file.id);
     return NextResponse.json({ ok: true, id: file.id });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("[rooms/files/:fileId] 操作失败:", err);
+    return NextResponse.json({ error: "服务器错误" }, { status: 500 });
   }
 }

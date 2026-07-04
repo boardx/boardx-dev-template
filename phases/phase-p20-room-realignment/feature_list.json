@@ -64,7 +64,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-003-room-files.spec.ts",
         "git cat-file -e HEAD:phases/phase-p20-room-realignment/sprints/sprint-01/evidence/F03.verify.log"
       ],
-      "evidence": "evidence/F03.verify.log @ 2026-07-04T03:30:49.789Z",
+      "evidence": "evidence/F03.verify.log @ 2026-07-04T07:53:15.506Z",
       "notes": "uc-rr-003（核心模型修正，推翻 uc-room-005 的线程绑定）。复用 p10 CAP-FILE 上传平面（预签名+confirm），不另造上传栈；交付 room_files 迁移 + /api/rooms/[id]/files CRUD + Files tab UI + 聊天左侧面板接同一文件库。依赖：F01（详情壳，已 passing）；迁移需保留存量线程级文件的 chat_thread_id（L4：迁移判据用专用标记列，禁止 name/自然键，DB 级不变量断言输出留 evidence）。L10 契约缺口显式归属（本 feature 接盘并在 room-rr-003 spec 内断言）：① F07 权限矩阵中『admin 删他人文件』一行（F07 交付时 Files tab 不存在，未断言）；② 本 feature 自身的文件签名 URL 过期提示（可刷新）——与 F09 的邀请令牌过期提示是不同域，F09 该项已在其自身 PR 内交付闭环，非遗留。共享文件热点：apps/web/app/(app)/rooms/[id]/files/page.tsx（本 feature 主场）、apps/web/app/(app)/rooms/[id]/members/page.tsx 与房间设置弹窗（与 #327 返工中的邀请流可能同文件——若 #327 未合并，涉及 members 页/设置弹窗的改动必须串行，先合并者优先）、聊天工作区左侧面板组件、packages/data 迁移目录、apps/web/app/api/rooms/[id]/ 下新增 files 子路由。"
     },
     {

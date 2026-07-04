@@ -34,6 +34,7 @@ export async function GET(req: Request, { params }: { params: { id: string; file
     const previewUrl = await presignGetUrl(file.storage_path, expiresInSeconds);
     return NextResponse.json({ previewUrl, fileName: file.file_name, expiresInSeconds });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("[rooms/files/:fileId/preview] 操作失败:", err);
+    return NextResponse.json({ error: "服务器错误" }, { status: 500 });
   }
 }

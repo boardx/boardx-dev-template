@@ -12,22 +12,27 @@ export const dynamic = "force-dynamic";
 // presigned PUT URL；真正落库延后到 /files/confirm（对象存储直传成功后前端再调用）。
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
-  const user = await currentUser();
-  if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-  const roomId = Number(params.id);
-  const room = await getRoom(roomId);
-  if (!room) return NextResponse.json({ error: "not found" }, { status: 404 });
-  if (!(await canViewRoom(roomId, user.id))) {
-    return NextResponse.json({ error: "无权限" }, { status: 403 });
+  try {
+    const user = await currentUser();
+    if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
+    const roomId = Number(params.id);
+    const room = await getRoom(roomId);
+    if (!room) return NextResponse.json({ error: "not found" }, { status: 404 });
+    if (!(await canViewRoom(roomId, user.id))) {
+      return NextResponse.json({ error: "无权限" }, { status: 403 });
+    }
+
+    const url = new URL(req.url);
+    const q = url.searchParams.get("q") ?? undefined;
+    const chatThreadIdRaw = url.searchParams.get("chatThreadId");
+    const chatThreadId = chatThreadIdRaw ? Number(chatThreadIdRaw) : undefined;
+
+    const files = await listRoomFiles({ roomId, chatThreadId, q });
+    return NextResponse.json({ files });
+  } catch (err) {
+    console.error("[rooms/files] 列表加载失败:", err);
+    return NextResponse.json({ error: "服务器错误" }, { status: 500 });
   }
-
-  const url = new URL(req.url);
-  const q = url.searchParams.get("q") ?? undefined;
-  const chatThreadIdRaw = url.searchParams.get("chatThreadId");
-  const chatThreadId = chatThreadIdRaw ? Number(chatThreadIdRaw) : undefined;
-
-  const files = await listRoomFiles({ roomId, chatThreadId, q });
-  return NextResponse.json({ files });
 }
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
@@ -65,6 +70,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     return NextResponse.json({ fileId, objectKey, uploadUrl }, { status: 200 });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("[rooms/files] 操作失败:", err);
+    return NextResponse.json({ error: "服务器错误" }, { status: 500 });
   }
 }
