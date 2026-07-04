@@ -22,7 +22,7 @@
 3. **分派补给**：有空闲 worker 且存在 `status:ready-for-dev` ∩ 依赖全绿 ∩ 与在途 PR 无同文件热点 → 分派（认领双写：`harness claim` + label）。
 
 ### L2 全局层（~15min）
-1. **deadline 巡检**：按下方"Deadline 与分级补救"表逐项检查，触发即执行对应 tier 动作（不止 worker lease，还包括 changes-requested 停滞、review 未派、CI 卡住等）。
+1. **lease/deadline 巡检**：按下方"Deadline 与分级补救"表逐项检查，触发即执行对应 tier 动作（不止 worker lease，还包括 changes-requested 停滞、review 未派、CI 卡住等）。
 2. **漂移巡检**：抽查 label 与事实一致性——`review:*-ok` 是否都有对应 reviewer 产出记录（评论）；有无非 coordinator 编排的 verdict label（出现即摘除并留言，见"verdict 权威"）。
 3. **阻塞升级**：`status:blocked` 超过 1 个 L2 周期无进展 → 评论 + 通知人类。
 4. **基础设施健康**：CI 是否整体可用（账单/runner）；不可用时在追踪评论里刷新状态。
