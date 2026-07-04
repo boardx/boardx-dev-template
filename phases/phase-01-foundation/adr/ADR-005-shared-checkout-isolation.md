@@ -91,6 +91,10 @@ ADR 的这次会话里仍在发生）。
 负面 / 需注意：
 - 每个会话多一步 `git worktree add` + 首次 `git push`，略增操作步骤；对纯只读巡检
   场景（coordinator 读 issue、核实 PR 状态）不需要，避免过度设计。
+- hook 也会拦截共享主 checkout 上合法的 `git commit --amend` / `rebase`——这是
+  预期行为（两者本质都是历史改写），不是 bug；在共享主 checkout 上想 amend/rebase，
+  应先确认没有别的会话在用这个目录，再用 `ALLOW_HISTORY_REWRITE=1` 放行，或者
+  （更推荐）直接去自己的 worktree 里做。
 - 新建 worktree 缺 `node_modules`，`pre-push` hook 会因 "turbo not found" 失败——
   这是已知陷阱（见 `harness-workflow` SKILL「陷阱 5」），解法是先在该 worktree 跑
   `pnpm install`（monorepo 场景下 pnpm store 命中缓存通常几秒到十几秒完成），

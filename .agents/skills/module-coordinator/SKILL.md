@@ -36,8 +36,9 @@ lease issue label 用 `coordination:lease:<module>`（如 `coordination:lease:co
 > `coordination:lease:<module>` 已经是 `multi-agent-coordination.md` §1.2 登记在案的
 > 规范 label——建这个 issue 是在**执行**已确立的协议，不是**提出**新协议，两者标准
 > 不同：后者（改 registry.yaml schema、新增协调角色种类等）才需要走 coord-architecture
-> 审阅。2026-07-04 夜间的实践里，五个模块 coordinator 对这一步的处理并不一致
-> （coord-room/coord-platform 直接建了 #351/#352；coord-board/coord-collab/coord-ava
+> 审阅。2026-07-04 夜间的实践里，当晚在 #323 报到过的五个模块 coordinator（room/board/
+> collab/ava/platform；registry.yaml 另注册的 store-admin/survey 当晚未报到，不在此列）
+> 对这一步的处理并不一致（coord-room/coord-platform 直接建了 #351/#352；coord-board/coord-collab/coord-ava
 > 出于谨慎选择不建、退化为沿用旧的 `agent:<id>` 认领机制）——这是本条澄清要消除的
 > 具体分歧，此后统一为"直接建，不必等批准"。
 

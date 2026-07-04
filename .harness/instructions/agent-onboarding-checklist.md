@@ -41,7 +41,9 @@
 3. **`passing`/`review:*-ok` 只能由实际验证产出**，不能自己声称。任何"已验证"的说法
    必须能被 `git ls-tree`/`git show`/命令退出码验证到；查不到证据的一律视为未完成
    （coordinator-sop.md 铁律 §4）。
-4. **不能自己合并 PR**，除非你就是 `coord-main`（唯一被授权执行合并的角色）。
+4. **不能自己合并 PR**，除非你就是 `coord-main`（唯一被授权执行合并的角色，`registry.yaml`
+   里 `kind: coordinator` 的那一条——同一时刻只应该有一个会话在扮演它，唯一性由
+   `coordination:lease` issue 的心跳裁定，见 multi-agent-coordination.md §1.2）。
 5. **共享 git 工作目录隔离**（ADR-005）：只要会落地写文件/提交，一律用独立 worktree
    或独立 clone，不在共享主 checkout 上做 `reset`/`stash`/`branch -f`/`checkout
    <branch>` 这类整体性操作；分支建好立即 push 到 origin。本地如果启用了
