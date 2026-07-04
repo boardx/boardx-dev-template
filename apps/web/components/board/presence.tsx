@@ -7,8 +7,10 @@ import {
   readLocalCursor,
   readLocalOperating,
   readLocalViewport,
+  subscribeConnectionState,
   subscribeFollowPause,
   viewportContainerRect,
+  type CollabConnectionState,
   type ViewportSnapshot,
 } from "@/lib/collab-bus";
 import { MousePointer2 } from "lucide-react";
@@ -61,6 +63,7 @@ function normalizeMember(m: Member): Member {
 export function BoardPresence({ boardId }: { boardId: string }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const [connectionState, setConnectionState] = useState<CollabConnectionState>("connecting");
   const [selfId, setSelfId] = useState<number | null>(null);
   const [followId, setFollowId] = useState<number | null>(null); // 正在跟随的成员 id（null = 未跟随）
   const [followPaused, setFollowPaused] = useState(false);
@@ -141,6 +144,10 @@ export function BoardPresence({ boardId }: { boardId: string }) {
     });
   }, []);
 
+  // p8:F05 — 实时通道连接状态（BoardCanvas 的 WS 生命周期驱动），映射进 Header
+  // 的同步指示：connecting/syncing 中 → 保存中，disconnected → 连接异常。
+  useEffect(() => subscribeConnectionState(setConnectionState), []);
+
   function startFollow(m: Member) {
     setFollowId(m.id);
     setFollowPaused(false);
@@ -180,6 +187,8 @@ export function BoardPresence({ boardId }: { boardId: string }) {
   const overflowMembers = orderedMembers.slice(DIRECT_AVATARS);
   const remoteCursors = orderedMembers.filter((m) => m.id !== selfId && m.cursor?.visible);
   const followers = selfId == null ? [] : orderedMembers.filter((m) => m.id !== selfId && m.followingId === selfId);
+  const syncState =
+    connectionState === "disconnected" ? "offline" : connectionState === "connecting" || syncing ? "saving" : "synced";
 
   return (
     <div
@@ -354,7 +363,7 @@ export function BoardPresence({ boardId }: { boardId: string }) {
       )}
 
       {/* 同步状态：真实心跳/拉取周期驱动 */}
-      <BoardSyncStatus controlledState={syncing ? "saving" : "synced"} />
+      <BoardSyncStatus controlledState={syncState} />
     </div>
   );
 }

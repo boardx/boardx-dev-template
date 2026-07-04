@@ -12,7 +12,13 @@ import {
 import { type Guide, type SpacingHint } from "@/lib/canvas-snap";
 import { BoardBottomDock, type DockToolKey } from "@/components/board/board-bottom-dock";
 import { BoardAiOverlay } from "@/components/board/board-ai-panel";
-import { publishCursor, screenToBoardPoint, setOperating, viewportContainerRect } from "@/lib/collab-bus";
+import {
+  publishConnectionState,
+  publishCursor,
+  screenToBoardPoint,
+  setOperating,
+  viewportContainerRect,
+} from "@/lib/collab-bus";
 import {
   applyEncodedUpdate,
   createBoardDoc,
@@ -481,21 +487,67 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // 打开到 F01 网关的 WS 连接：先广播 sync-request 问"房间里有没有已经在线的人"，
   // 有则 apply 对方的完整状态（保证跟对方是同一批 Y.Map 结构实例，见 packages/collab
   // 的 encodeFullState 注释）；800ms 内没人应答就当自己是第一个，直接从 REST seed。
+  //
+  // p8:F05 重连策略：close/error 会指数退避重试（1s→2s→4s...封顶 30s，连上一次
+  // 就把退避计数器复位），而不是旧版那种固定 1.5s 无限重试——网关真的挂掉时
+  // 别把它打得更惨。另外，浏览器原生 WebSocket 拿不到握手失败的真实 HTTP 状态码
+  // （401 也只是笼统的 error/close，无法区分"鉴权过期"和"网络抖动"），所以每次
+  // 重连前先探一下 `/api/auth/session`——没登录就直接停止自动重连（重试一个必然
+  // 会被拒绝的连接没有意义，用户需要重新登录）；探测本身失败（网络问题）则当作
+  // 暂时性抖动，照常走退避重试。
   useEffect(() => {
     let cancelled = false;
     let ws: WebSocket | null = null;
     let syncTimer: ReturnType<typeof setTimeout> | null = null;
-    joinSyncedRef.current = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let backoffMs = 1000;
+    const MAX_BACKOFF_MS = 30_000;
 
-    async function setup() {
-      const res = await fetch("/api/collab/config");
-      if (!res.ok || cancelled) return;
-      const { wsUrl } = (await res.json()) as { wsUrl: string };
+    function scheduleRetry() {
+      if (cancelled) return;
+      const wait = backoffMs;
+      backoffMs = Math.min(backoffMs * 2, MAX_BACKOFF_MS);
+      retryTimer = setTimeout(() => void connect(), wait);
+    }
+
+    async function connect() {
+      if (cancelled) return;
+      joinSyncedRef.current = false;
+      publishConnectionState("connecting");
+
+      try {
+        const authRes = await fetch("/api/auth/session");
+        if (authRes.ok) {
+          const body = (await authRes.json()) as { user?: unknown };
+          if (!body?.user) {
+            publishConnectionState("disconnected"); // 会话已失效：不再自动重连
+            return;
+          }
+        }
+      } catch {
+        // 探测请求本身失败（网络问题），当作暂时性抖动，继续走下面的重试路径。
+      }
+      if (cancelled) return;
+
+      const configRes = await fetch("/api/collab/config").catch(() => null);
+      if (!configRes?.ok) {
+        if (!cancelled) scheduleRetry();
+        return;
+      }
+      const { wsUrl } = (await configRes.json()) as { wsUrl: string };
+      if (cancelled) return;
       ws = new WebSocket(`${wsUrl}?boardId=${encodeURIComponent(boardId)}`);
       wsRef.current = ws;
+      // 仅非生产环境暴露调试句柄（e2e 用它模拟断线）；生产环境不应该让任意脚本
+      // 能读到/关闭这个内部连接。
+      if (process.env.NODE_ENV !== "production") {
+        (window as Window & { __boardCollabWs?: WebSocket | null }).__boardCollabWs = ws;
+      }
 
       ws.addEventListener("open", () => {
         if (cancelled || !ws) return;
+        backoffMs = 1000; // 连上了，退避计数器复位
+        publishConnectionState("connected");
         ws.send(JSON.stringify({ type: "y-sync-request", boardId, from: clientIdRef.current }));
         syncTimer = setTimeout(() => {
           if (cancelled || joinSyncedRef.current) return;
@@ -545,9 +597,26 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           applyEncodedUpdate(docRef.current, msg.update);
         }
       });
+
+      ws.addEventListener("close", () => {
+        if (wsRef.current === ws) wsRef.current = null;
+        if (
+          process.env.NODE_ENV !== "production" &&
+          (window as Window & { __boardCollabWs?: WebSocket | null }).__boardCollabWs === ws
+        ) {
+          (window as Window & { __boardCollabWs?: WebSocket | null }).__boardCollabWs = null;
+        }
+        if (!cancelled) {
+          publishConnectionState("disconnected");
+          scheduleRetry();
+        }
+      });
+      ws.addEventListener("error", () => {
+        ws?.close();
+      });
     }
 
-    void setup();
+    void connect();
 
     const offLocal = onLocalUpdate(docRef.current, (update) => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -561,10 +630,12 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     return () => {
       cancelled = true;
       if (syncTimer) clearTimeout(syncTimer);
+      if (retryTimer) clearTimeout(retryTimer);
       offLocal();
       offRemote();
       ws?.close();
       wsRef.current = null;
+      publishConnectionState("disconnected");
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId]);
