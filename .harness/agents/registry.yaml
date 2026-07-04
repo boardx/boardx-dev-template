@@ -3,7 +3,9 @@
 #
 # 用途：
 #  - id 是 agent 的唯一身份，投影为 issue 的 `agent:<id>` label，也用作 claim 的 --owner。
-#  - kind 决定角色：coordinator（编排）/ worker（写码）/ reviewer（评审）。
+#  - kind 决定角色：coordinator（总协调，唯一，独占合并权）/ module-coordinator（模块二级
+#    协调，分派+初审+返工裁决，无合并权）/ architecture-coordinator（控制平面/协议本身的
+#    迭代者，同样无合并权）/ worker（写码）/ reviewer（评审）。
 #  - reviewer 复用 .harness/agents/*.yaml 已定义的 subagent（agent: 字段指向其名）。
 #  - required_for：该 reviewer 对哪些 area 是**强制**门禁（coordinator 据此路由 review）。
 version: 1
@@ -18,6 +20,17 @@ agents:
       - 监视 status:* 流转；PR 开启后编排必需 reviewer
       - review 全绿 + CI 绿 + 分支 up-to-date → 合并 main、置 status:merged、关 issue
       - 回收 stale 认领（lease 超时）、升级 blocked
+
+  # ── Architecture Coordinator（控制平面本身的迭代者；非产品模块）────────────
+  # 职责：harness 控制平面、协议文档（AGENTS.md/.harness/instructions/*/ADR）、
+  # agent 身份/协作协议的持续迭代——目标是让任何 agent（含未来的第三方/开源社区 agent、
+  # 非 Claude 平台 agent）都能靠读文档 + 走 issue/label 总线无缝接入协作，不依赖
+  # Claude Code 私有机制。同样无独立合并权，控制平面改动全绿后转交 coord-main。
+  - id: coord-architecture
+    kind: architecture-coordinator
+    model: opus-4.8
+    areas: [harness, docs, adr, agent-protocol]
+    reports_to: coord-main
 
   # ── 模块 Coordinator（二级编排；分派+初审，无独立合并权）───────────────────
   # 架构（2026-07-04 起）：coord-main（唯一合并权）↔ N 个 module-coordinator（各领域分派/初审）。
