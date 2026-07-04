@@ -36,19 +36,29 @@ const server = createServer((req, res) => {
 // 无监听者时触发 'error' 会是未捕获异常，直接崩掉整个网关进程（殃及所有 board）。
 const AUTH_TIMEOUT_MS = 5000;
 
-/** 校验 upgrade 请求携带的会话 cookie；无效/未登录/超时返回 false。 */
-async function isAuthenticated(req) {
+/**
+ * 校验 upgrade 请求携带的会话 cookie，并确认该用户对目标 boardId 有访问权限
+ * （不只是"登录了"）——早期版本只查登录态，任何登录用户带上任意 boardId 就能连进
+ * 那个 board 的实时协作频道；这是横向越权洞，一旦上层 feature 把真实文档内容接上
+ * 这条通道，后果就是任意用户能读写别人 board 的内容。网关不直连 DB，复用主 app
+ * 现成的 `/api/collab/authorize` 端点（内部走跟其它 board 路由一致的
+ * `getBoardAccessRole`）。返回 401（未登录）/403（无权限）/null（已授权）。
+ */
+async function authorizeUpgrade(req, boardId) {
   const cookie = req.headers.cookie;
-  if (!cookie) return false;
+  if (!cookie) return "401 Unauthorized";
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
   try {
-    const res = await fetch(`${WEB_ORIGIN}/api/auth/session`, { headers: { cookie }, signal: controller.signal });
-    if (!res.ok) return false;
-    const body = await res.json();
-    return Boolean(body?.user);
+    const res = await fetch(`${WEB_ORIGIN}/api/collab/authorize?boardId=${encodeURIComponent(boardId)}`, {
+      headers: { cookie },
+      signal: controller.signal,
+    });
+    if (res.status === 401) return "401 Unauthorized";
+    if (!res.ok) return "403 Forbidden";
+    return null;
   } catch {
-    return false;
+    return "401 Unauthorized";
   } finally {
     clearTimeout(timer);
   }
@@ -80,10 +90,10 @@ server.on("upgrade", (req, socket) => {
     return;
   }
 
-  void isAuthenticated(req).then((ok) => {
+  void authorizeUpgrade(req, boardId).then((rejectStatus) => {
     if (socket.destroyed) return; // 鉴权期间客户端已经掉线，不必再写响应。
-    if (!ok) {
-      rejectUpgrade(socket, "401 Unauthorized");
+    if (rejectStatus) {
+      rejectUpgrade(socket, rejectStatus);
       return;
     }
     completeUpgrade(socket, boardId, key);

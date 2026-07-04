@@ -50,11 +50,29 @@
    的同步调用顺序对齐。
 - 顺带加了 `boardId` 字符集校验（`^[A-Za-z0-9_-]+$`），避免奇怪输入拼进 Redis channel 名。
 
-### 明确记录、本轮不修的已知边界（避免被误读为"已解决"）
-- **鉴权 ≠ 鉴权限（authz）**：现在只校验"是否登录"，不校验"该用户是否有权访问这个
-  boardId"——任何登录用户可以连任意 boardId 的传输 channel。这是原 review(#290) 明确
-  划定的范围（"权限模型细节留给 F02+"），不是本轮遗漏；F02/F03 引入 board 成员关系时
-  必须补上这一层，否则是一个横向越权洞。
+### 第三轮修复：board 归属授权（review 阻断，2026-07-04）
+第二轮修复（a10ec97）明确把"只校验登录、不校验 board 归属"记录为已知边界、留给
+F02+——但后续 review 裁决**不接受这个骨架期妥协**（参考先例 #327：这类骨架层的
+授权缺口一旦被上层 feature 接上真实内容，后果不是"看到别人光标"，而是任意登录
+用户能读写别人 board 的真实文档；现在修的成本是加一次 membership 校验，等 F02-F05
+建完再回头修，成本是重新设计整条数据流）。而且原 e2e 测试**把这个越权行为固化成了
+通过用例**（两个完全无关的独立用户，凭空捏造一个从不落库的 boardId，断言能互相
+收发）——这是本轮修复前必须先看到并承认的真实疏漏，不是"按原计划推进"。
+
+修复：
+- 新增 `apps/web/app/api/collab/authorize/route.ts`：`GET ?boardId=`，复用
+  `currentUser()` + 仓库里其它 board 路由统一用的 `getBoardAccessRole(boardId, userId)`
+  （`packages/data/src/board.ts`）。未登录 401；登录但对该 board 无权限（非
+  owner/编辑者/可见 viewer）403；有权限 200。
+- `collab-gateway.mjs` 的 `isAuthenticated` 改名/改造为 `authorizeUpgrade(req, boardId)`，
+  改调这个新端点（一次 HTTP 往返同时校验登录态+board 归属，不再是两次独立检查）；
+  按端点返回的 401/403 分别回对应状态码给客户端，不再统一 401。
+- 重写 `collab-transport-skeleton.spec.ts`：不再用凭空捏造、从不落库的 boardId；
+  改成建真实 room+board，测试用户要么是 owner 要么被邀请为合法成员。新增**负向
+  用例**：已登录但不是该 board 成员 → upgrade 必须 403（这条用例在旧实现下会
+  失败，是本次修复的直接回归保护）。
+
+### 已知边界（本轮仍不展开，属于更大范畴）
 - Redis 连接中断后，网关不会自动重连+重新 SUBSCRIBE 已有 board 的 channel（`publisher`/
   `subscriber` 都只在启动时 connect 一次）；这属于更大的"Redis 客户端韧性"范畴，本轮
   作为已知限制记录，不在 F01 里展开。

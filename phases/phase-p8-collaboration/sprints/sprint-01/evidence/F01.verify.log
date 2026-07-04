@@ -1,9 +1,10 @@
 
-Running 4 tests using 1 worker
+Running 5 tests using 1 worker
 
-  ✓  1 [chromium] › collab-transport-skeleton.spec.ts:83:5 › 两个客户端通过 WebSocket + Redis pub/sub 在同一 Board channel 收发消息 (1.1s)
-  ✓  2 [chromium] › collab-transport-skeleton.spec.ts:112:5 › 客户端断线后重新连接仍能通过同一 Board channel 收发 (682ms)
-  ✓  3 [chromium] › collab-transport-skeleton.spec.ts:144:5 › 未登录连接被拒绝：不带 session cookie 时 upgrade 返回 401，不会完成握手 (6ms)
-  ✓  4 [chromium] › collab-transport-skeleton.spec.ts:151:5 › 已登录连接被接受：带有效 session cookie 时 upgrade 返回 101 (302ms)
+  ✓  1 [chromium] › collab-transport-skeleton.spec.ts:105:5 › 两个 board 成员通过 WebSocket + Redis pub/sub 在同一 Board channel 收发消息 (1.5s)
+  ✓  2 [chromium] › collab-transport-skeleton.spec.ts:134:5 › 客户端断线后重新连接仍能通过同一 Board channel 收发 (489ms)
+  ✓  3 [chromium] › collab-transport-skeleton.spec.ts:166:5 › 未登录连接被拒绝：不带 session cookie 时 upgrade 返回 401，不会完成握手 (94ms)
+  ✓  4 [chromium] › collab-transport-skeleton.spec.ts:179:5 › 已登录但不是该 board 成员的连接被拒绝：upgrade 返回 403（不是横向越权） (176ms)
+  ✓  5 [chromium] › collab-transport-skeleton.spec.ts:198:5 › 已登录且是该 board 成员的连接被接受：upgrade 返回 101 (180ms)
 
-  4 passed (7.1s)
+  5 passed (6.9s)
