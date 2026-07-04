@@ -57,6 +57,7 @@ loadWorktreeEnv();
 // 会给每个 worktree 分配独立的 E2E_PORT 写进 apps/web/.env.local 来避免这个问题。
 // loadWorktreeEnv() 已把 .env / apps/web/.env.local 里的值灌进 process.env，这里直接读。
 const PORT = process.env.E2E_PORT || "3000";
+const COLLAB_WS_PORT = process.env.COLLAB_WS_PORT || "3001";
 // CAP-PAYMENT（F05）：webhook 走共享密钥 fail-closed 校验（见 lib/webhook-auth.ts）。
 // e2e 里模拟支付网关回调需要带上这把密钥；没有真实网关时用一个仅测试用的默认值，
 // 生产环境必须通过环境变量覆盖成真实值（.env.example 里也标了同名变量）。
@@ -89,11 +90,20 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    command: `next dev -p ${PORT}`,
-    url: `http://localhost:${PORT}/api/health`,
-    reuseExistingServer: true,
-    timeout: 120_000,
-    env: { ...process.env, WEBHOOK_SECRET: E2E_WEBHOOK_SECRET },
-  },
+  webServer: [
+    {
+      command: `next dev -p ${PORT}`,
+      url: `http://localhost:${PORT}/api/health`,
+      reuseExistingServer: true,
+      timeout: 120_000,
+      env: { ...process.env, WEBHOOK_SECRET: E2E_WEBHOOK_SECRET },
+    },
+    {
+      command: "node server/collab-gateway.mjs",
+      url: `http://localhost:${COLLAB_WS_PORT}/health`,
+      reuseExistingServer: true,
+      timeout: 120_000,
+      env: { ...process.env, COLLAB_WS_PORT },
+    },
+  ],
 });
