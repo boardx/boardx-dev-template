@@ -118,6 +118,9 @@ interface ResearchRun {
   error?: string;
   assistantMessage?: Message;
   timeline: ResearchTimelineItem[];
+  // p18-F03：持久化会话 id。存在时，status/timeline 的每次变化都会 PATCH 回
+  // ava_research_sessions，使刷新页面后 openThread() 能从 GET 恢复到同一阶段。
+  sessionId?: number;
 }
 
 function keepThroughMessageId(messages: Message[], messageId: number): Message[] {
@@ -399,6 +402,29 @@ export default function AvaPage() {
       if (!res.ok) throw new Error();
       const data = await res.json();
       setMessages(data.messages ?? []);
+      // p18-F03：恢复最近一次研究会话，让 research-card 回到中断前的阶段与内容
+      // （而不是刷新后消失/从头开始）。assistantMessage 留空——已完成的研究其报告
+      // 通知消息已经在上面 listAvaMessages 里，不需要再次推入。
+      try {
+        const researchRes = await fetch(`/api/ava/threads/${id}/research`);
+        if (researchRes.ok) {
+          const researchData = await researchRes.json();
+          const session = researchData.session;
+          if (session) {
+            setResearchRun({
+              topic: session.topic,
+              audience: session.audience,
+              status: session.status,
+              research: session.research_payload ?? undefined,
+              error: session.error ?? undefined,
+              timeline: session.timeline ?? [],
+              sessionId: session.id,
+            });
+          }
+        }
+      } catch {
+        // 研究恢复失败不阻塞聊天历史加载；用户仍能正常收发消息，只是看不到旧研究卡片。
+      }
     } catch {
       setSendError("Failed to load messages — please try again later");
     }
@@ -643,10 +669,13 @@ export default function AvaPage() {
         status: "draft",
         research: data.research,
         assistantMessage: data.messages.assistant,
-        timeline: data.research.timeline.map((item: ResearchTimelineItem, index: number) => ({
+        // 服务端已经把 draft 阶段的 timeline 计算好并落库（data.session.timeline），
+        // 前端直接采用同一份而不是自己重算，避免两处逻辑漂移。
+        timeline: data.session?.timeline ?? data.research.timeline.map((item: ResearchTimelineItem, index: number) => ({
           ...item,
           status: index === 0 ? "running" : "queued",
         })),
+        sessionId: data.session?.id,
       });
       await refreshThreads();
     } catch {
@@ -742,33 +771,69 @@ export default function AvaPage() {
     }
   }
 
-  function confirmResearchPlan() {
+  // p18-F03：把当前阶段推进 PATCH 回 ava_research_sessions——这是"中断前处于哪个阶段"
+  // 的权威写入点。返回 Promise 供调用方按需 await（用户主动触发的阶段跃迁应该等它
+  // 落地后再继续，避免"UI 已显示新阶段但刷新一瞬间还没持久化"的竞态；动画定时器
+  // 里的逐帧推进不必等待，因为它们之间已有下一次调用兜底）。
+  // 无 sessionId（理论上不会发生，POST research 总是先建会话）时静默跳过。
+  function persistResearchProgress(
+    sessionId: number | undefined,
+    patch: { status?: ResearchStatus; timeline?: ResearchTimelineItem[] }
+  ): Promise<void> {
+    if (activeId == null || sessionId == null) return Promise.resolve();
+    return fetch(`/api/ava/threads/${activeId}/research/${sessionId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(patch),
+    })
+      .then(() => undefined)
+      .catch(() => {
+        // 持久化失败不影响本地动画/交互；下次刷新会拿到上一次成功持久化的阶段（保守恢复）。
+      });
+  }
+
+  async function confirmResearchPlan() {
     if (!researchRun?.research || researchRun.status !== "draft") return;
-    const queued: ResearchTimelineItem[] = researchRun.research.timeline.map((item, index) => ({
+    // 阶段数在这轮动画期间不变（本地定时器推进，非真实异步引擎），提前捕获，
+    // 后续每个 tick 只依赖 index，不依赖当时的 React state——这样才能在 setState
+    // 之外先 await 持久化，再决定要不要提交这次状态更新（见下方注释）。
+    const stages = researchRun.research.timeline;
+    const sessionId = researchRun.sessionId;
+    const assistantMessage = researchRun.assistantMessage;
+
+    const queued: ResearchTimelineItem[] = stages.map((item, index) => ({
       ...item,
       status: index === 0 ? "running" : "queued",
     }));
-    setResearchRun({ ...researchRun, status: "running", timeline: queued });
+    // 先落库再翻 UI：每一次阶段跃迁都必须先持久化成功才让界面显示新阶段。反过来做
+    // （先乐观更新 UI 再异步持久化）会有一个真实的竞态窗口——UI 已经显示新阶段，
+    // 但请求可能还在路上，这段时间内任何刷新都会读到 DB 里尚未更新的旧阶段，看起来
+    // 像"跳回"了（本地网络下这个窗口通常只有几毫秒，但真实存在，不是测试假设）。
+    await persistResearchProgress(sessionId, { status: "running", timeline: queued });
+    setResearchRun((current) => (current ? { ...current, status: "running", timeline: queued } : current));
 
-    researchRun.research.timeline.forEach((item, index) => {
-      window.setTimeout(() => {
+    stages.forEach((item, index) => {
+      window.setTimeout(async () => {
+        const timeline: ResearchTimelineItem[] = stages.map((candidate, candidateIndex) => ({
+          ...candidate,
+          status:
+            candidateIndex <= index
+              ? "complete"
+              : candidateIndex === index + 1
+                ? "running"
+                : "queued",
+        }));
+        const isDone = index === stages.length - 1;
+        const nextStatus: ResearchStatus = isDone ? "complete" : "running";
+        await persistResearchProgress(sessionId, { status: nextStatus, timeline });
         setResearchRun((current) => {
           if (!current?.research) return current;
-          const timeline = current.research.timeline.map((candidate, candidateIndex) => ({
-            ...candidate,
-            status:
-              candidateIndex <= index
-                ? "complete"
-                : candidateIndex === index + 1
-                  ? "running"
-                  : "queued",
-          })) as ResearchTimelineItem[];
-          const isDone = index === current.research.timeline.length - 1;
-          if (!isDone) return { ...current, status: "running", timeline };
-          const nextMessages = current.assistantMessage ? [current.assistantMessage] : [];
-          setMessages((prev) => [...prev, ...nextMessages]);
-          setReportOpen(true);
-          return { ...current, status: "complete", timeline };
+          if (isDone) {
+            const nextMessages = assistantMessage ? [assistantMessage] : [];
+            setMessages((prev) => [...prev, ...nextMessages]);
+            setReportOpen(true);
+          }
+          return { ...current, status: nextStatus, timeline };
         });
       }, 350 * (index + 1));
     });
