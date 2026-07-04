@@ -96,3 +96,51 @@
     记录替换，不影响正确性，但如果同一渲染帧多次触发需注意（已用递减 id 规避直接撞车）。
 - 下一步最佳动作：sprint-02 剩余 F04/F07/F09/F11 按 owner 并行推进；F07（语音输入）与
   本 feature 触碰同一 `page.tsx` 文件，已把改动限制在 send/stop 局部区域降低冲突面。
+
+## 会话记录：F11 — 消息「发送到 Board」「发送邮件」接通（wrk-ava-p18-3）
+- 现状确认：`apps/web/app/(app)/ava/page.tsx` 的 `MessageActionsBar` 里
+  `msg-send-to-board`/`msg-send-email` 原为永久 disabled 占位（无 onClick），现接通为真实动作。
+- 硬前置（coordinator 登记，PR #321 review）：接真实邮件 provider/复用邮件底层前必须先加频控。
+  实现：`packages/data/src/mailbox.ts` 新增 `countRecentOutboundEmails(toEmail, kind, windowMs)`，
+  查既有 `outbound_emails` 表内该收件人+该邮件类型在时间窗口内的计数，不引入 Redis/内存 Map。
+  `apps/web/lib/mailer.ts` 新增 `sendAvaMessageEmail`（复用 `recordOutboundEmail` 同一 dev
+  transport 口径），发送前先查计数，1 分钟内超过 1 封时抛 `RateLimitedError`；路由层捕获后
+  返回 429 + 独立提示（不与「发送到 Board」共用状态）。
+- 发送到 Board：
+  1. `packages/data/src/board.ts` 新增 `listEditableBoardsForUser(userId)`——白板属主，或
+     可访问其所属房间（owner/成员），口径与既有 `boardRole` 一致；不含仅 viewer 的只读白板。
+  2. `apps/web/app/api/boards/route.ts` 新增 `GET ?scope=editable`。
+  3. 新路由 `apps/web/app/api/ava/threads/[id]/messages/[messageId]/send-to-board/route.ts`：
+     鉴权同时校验 user_id/team_id（复用 `isThreadInCurrentContext`）+ 目标消息属于该线程且
+     为 assistant 角色 + `getBoardAccessRole` 为 owner/editor（否则 403「无编辑权限」）；写入
+     方式与既有 `apps/web/app/api/boards/[id]/items/route.ts` 的 POST 完全一致：
+     `insertItem({ type: "note", x: 40, y: 40, w/h: DEFAULT_SIZE.note, text: message.content })`。
+- 发送邮件：新路由 `apps/web/app/api/ava/threads/[id]/messages/[messageId]/send-email/route.ts`，
+  鉴权同上，调用 `sendAvaMessageEmail({ to: user.email, messageContent, threadTitle })`；
+  捕获 `RateLimitedError` 返回 429。
+- 前端：`MessageActionsBar` 新增最小可用的白板选择器（`data-testid="board-picker"`，popover +
+  列表，选项 `board-picker-option-{id}`，空态 `board-picker-empty`，加载失败 `err-board-list`），
+  成功/失败提示独立 testid：`msg-board-status`/`err-msg-board`、`msg-email-status`/`err-msg-email`。
+- 修改既有 `e2e/ava-message-actions.spec.ts`：原「禁用占位不可点击」断言改为「默认可点击」
+  （行为已从占位转真实动作，详细场景覆盖移到新 spec）。
+- 新增 `apps/web/e2e/ava-message-send-actions.spec.ts`（5 用例，全过）：
+  发送到 Board 成功路径（含真实写入断言 `/api/boards/:id/items`）、无编辑权限空态、
+  非属主 board 直接调用接口 403、发送邮件成功（`/api/dev/outbox?kind=ava_message_email`
+  断言真实落库）、频控命中（连续两次点击第二次被拦截，未产生第二封邮件）。
+- 运行过的验证：
+  - `pnpm --filter @repo/web exec tsc --noEmit -p .`（无报错）
+  - `pnpm --filter @repo/web run lint`（design lint 全部通过；此前一版误用原生 `<button>`
+    渲染 board picker 选项，被 lint 拦下后改为 `components/ui/button` 的 `Button`）
+  - `pnpm --filter @repo/web exec playwright test e2e/ava-message-send-actions.spec.ts`
+    （5 passed）
+  - 回归：`ava-message-actions.spec.ts` + `ava-share-email.spec.ts`（13 passed，F08/F09
+    邮件分享与既有消息操作条行为无破坏）
+  - `pnpm -w run verify:base`（45/45 successful，exit 0）
+  - `pnpm harness verify --sprint p18/02 --feature F11` → 门控通过，F11 转 passing
+- 已记录证据：`phases/phase-p18-ava-ai-realization/sprints/sprint-02/evidence/F11.verify.log`。
+- 提交记录：见本次 PR（Closes #260）。
+- 已知边界（如 notes 字段所述）：写入 Board 的内容是「便利贴文本」这一最小可用形态，不含
+  widget 级富投放（依赖 p6 未交付部分时按此边界落地，未虚报为完整对齐）；放置坐标固定在
+  画布原点附近（(40,40)），因触发来源是 AVA 侧栏而非打开的画布，没有可参考的视口/鼠标位置。
+- 下一步最佳动作：sprint-02 剩余 feature 按各自 owner 继续推进；F11 完成后 04 号需求文档
+  四项占位（F04/F07/F08/F11）中 F11 已收口。

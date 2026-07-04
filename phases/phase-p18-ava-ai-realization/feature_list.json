@@ -221,9 +221,9 @@
       "title": "消息「发送到 Board」「发送邮件」接通",
       "user_visible_behavior": "AI 消息操作条的 msg-send-to-board 变为可用：选择自己有编辑权限的 Board 后，消息内容真实写入该 Board 并展示成功提示，无编辑权限时提示权限不足；msg-send-email 变为可用：把该条消息内容发送到当前用户邮箱，成功/失败各有提示。",
       "design_ref": "现有 msg-send-to-board / msg-send-email 禁用占位转真实动作；requirements/04-close-out-placeholders.md",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "wrk-ava-p18-3",
       "capability": "CAP-AI",
       "depends_on": [
         "F08"
@@ -234,8 +234,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-message-send-actions.spec.ts"
       ],
-      "evidence": "",
-      "notes": "requirements/04。发送到 Board 复用 p5/p6 的 board/item 写入能力（widget 级投放细节若依赖 p6 未交付部分，先落为『写入 Board 内容』的最小可用形态并在 notes 记录边界）；发邮件与 F08 共享同一邮件底层。依赖 F08 先建好邮件发送在 AVA 域内的接入。"
+      "evidence": "evidence/F11.verify.log @ 2026-07-04T09:59:21.000Z",
+      "notes": "requirements/04。发送到 Board 复用 p5/p6 的 board/item 写入能力（widget 级投放细节若依赖 p6 未交付部分，先落为『写入 Board 内容』的最小可用形态并在 notes 记录边界）；发邮件与 F08 共享同一邮件底层。依赖 F08 先建好邮件发送在 AVA 域内的接入。PR #359 review 返工：修复 send-email/send-to-board 的 String(err) 泄露；补齐 F08 share/email 频控债务（PR #321 登记）。"
     },
     {
       "id": "F12",

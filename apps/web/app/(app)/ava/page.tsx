@@ -85,6 +85,11 @@ interface ThreadShare {
   share_token: string;
   share_enabled: boolean;
 }
+// p18 F11：发送到 Board 选择器候选项（只列有编辑权限的白板，字段取自 @repo/data Board）。
+interface EditableBoard {
+  id: number;
+  name: string;
+}
 type ComposerMode = "chat" | "research";
 type ResearchStatus = "idle" | "draft" | "running" | "complete" | "error";
 interface ResearchPhase {
@@ -213,6 +218,22 @@ export default function AvaPage() {
   const [feedbackErrorId, setFeedbackErrorId] = useState<number | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
   const [regenerateErrorId, setRegenerateErrorId] = useState<number | null>(null);
+  // p18 F11：发送到 Board——选择器打开状态 + 候选白板（懒加载）+ 每条消息独立的成功/错误提示。
+  const [boardPickerForMessageId, setBoardPickerForMessageId] = useState<number | null>(null);
+  const [editableBoards, setEditableBoards] = useState<EditableBoard[] | null>(null);
+  const [boardsLoading, setBoardsLoading] = useState(false);
+  const [boardsLoadError, setBoardsLoadError] = useState(false);
+  const [sendBoardPendingId, setSendBoardPendingId] = useState<number | null>(null);
+  const [sendBoardStatusId, setSendBoardStatusId] = useState<number | null>(null);
+  const [sendBoardStatusText, setSendBoardStatusText] = useState("");
+  const [sendBoardErrorId, setSendBoardErrorId] = useState<number | null>(null);
+  const [sendBoardErrorText, setSendBoardErrorText] = useState("");
+  // p18 F11：发送邮件——每条消息独立的 pending/成功/失败（含频控命中）状态。
+  const [sendEmailPendingId, setSendEmailPendingId] = useState<number | null>(null);
+  const [sendEmailStatusId, setSendEmailStatusId] = useState<number | null>(null);
+  const [sendEmailStatusText, setSendEmailStatusText] = useState("");
+  const [sendEmailErrorId, setSendEmailErrorId] = useState<number | null>(null);
+  const [sendEmailErrorText, setSendEmailErrorText] = useState("");
   const [menuThreadId, setMenuThreadId] = useState<number | null>(null);
   const [editingThreadId, setEditingThreadId] = useState<number | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
@@ -1064,6 +1085,91 @@ export default function AvaPage() {
     }
   }
 
+  // p18 F11：打开/关闭「发送到 Board」选择器；打开时懒加载有编辑权限的白板列表。
+  async function toggleBoardPicker(message: Message) {
+    const opening = boardPickerForMessageId !== message.id;
+    setBoardPickerForMessageId(opening ? message.id : null);
+    setSendBoardErrorId(null);
+    if (opening && editableBoards === null) {
+      setBoardsLoading(true);
+      setBoardsLoadError(false);
+      try {
+        const res = await fetch("/api/boards?scope=editable");
+        if (guard(res.status)) return;
+        if (!res.ok) throw new Error();
+        const data = (await res.json()) as { boards: EditableBoard[] };
+        setEditableBoards(data.boards);
+      } catch {
+        setBoardsLoadError(true);
+      } finally {
+        setBoardsLoading(false);
+      }
+    }
+  }
+
+  // p18 F11：发送到 Board——把该条 AI 消息内容写入选中白板的一个便利贴 item。
+  async function sendMessageToBoard(message: Message, boardId: number) {
+    if (activeId == null || sendBoardPendingId != null) return;
+    setSendBoardPendingId(message.id);
+    setSendBoardErrorId(null);
+    try {
+      const res = await fetch(
+        `/api/ava/threads/${activeId}/messages/${message.id}/send-to-board`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ boardId }),
+        }
+      );
+      if (guard(res.status)) return;
+      if (res.status === 403) {
+        setSendBoardErrorId(message.id);
+        setSendBoardErrorText("无编辑权限，无法发送到该白板");
+        return;
+      }
+      if (!res.ok) throw new Error();
+      const board = editableBoards?.find((b) => b.id === boardId);
+      setSendBoardStatusId(message.id);
+      setSendBoardStatusText(`已发送到「${board?.name ?? "Board"}」`);
+      setBoardPickerForMessageId(null);
+      setTimeout(() => setSendBoardStatusId((prev) => (prev === message.id ? null : prev)), 3000);
+    } catch {
+      setSendBoardErrorId(message.id);
+      setSendBoardErrorText("发送到 Board 失败，请重试");
+    } finally {
+      setSendBoardPendingId(null);
+    }
+  }
+
+  // p18 F11：发送邮件——把该条 AI 消息内容发到当前用户邮箱。频控命中时展示独立提示。
+  async function sendMessageEmail(message: Message) {
+    if (activeId == null || sendEmailPendingId != null) return;
+    setSendEmailPendingId(message.id);
+    setSendEmailErrorId(null);
+    try {
+      const res = await fetch(
+        `/api/ava/threads/${activeId}/messages/${message.id}/send-email`,
+        { method: "POST" }
+      );
+      if (guard(res.status)) return;
+      if (res.status === 429) {
+        setSendEmailErrorId(message.id);
+        setSendEmailErrorText("发送太频繁，请稍后再试");
+        return;
+      }
+      if (!res.ok) throw new Error();
+      const data = (await res.json()) as { ok: boolean; to: string };
+      setSendEmailStatusId(message.id);
+      setSendEmailStatusText(`已发送到 ${data.to}`);
+      setTimeout(() => setSendEmailStatusId((prev) => (prev === message.id ? null : prev)), 3000);
+    } catch {
+      setSendEmailErrorId(message.id);
+      setSendEmailErrorText("发送邮件失败，请重试");
+    } finally {
+      setSendEmailPendingId(null);
+    }
+  }
+
   const isEmptyThread = messages.length === 0 && !sending;
   const activeModel = capabilities?.models.find((model) => model.id === modelId);
   const activeAgent = capabilities?.agents.find((agent) => agent.id === agentId);
@@ -1547,6 +1653,19 @@ export default function AvaPage() {
                                   onCopy={() => void copyMessage(m)}
                                   onFeedback={(rating) => void submitFeedback(m, rating)}
                                   onRegenerate={() => void regenerateReply(m)}
+                                  boardPickerOpen={boardPickerForMessageId === m.id}
+                                  onToggleBoardPicker={() => void toggleBoardPicker(m)}
+                                  editableBoards={editableBoards}
+                                  boardsLoading={boardsLoading}
+                                  boardsLoadError={boardsLoadError}
+                                  sendBoardPending={sendBoardPendingId === m.id}
+                                  sendBoardStatus={sendBoardStatusId === m.id ? sendBoardStatusText : ""}
+                                  sendBoardError={sendBoardErrorId === m.id ? sendBoardErrorText : ""}
+                                  onChooseBoard={(boardId) => void sendMessageToBoard(m, boardId)}
+                                  sendEmailPending={sendEmailPendingId === m.id}
+                                  sendEmailStatus={sendEmailStatusId === m.id ? sendEmailStatusText : ""}
+                                  sendEmailError={sendEmailErrorId === m.id ? sendEmailErrorText : ""}
+                                  onSendEmail={() => void sendMessageEmail(m)}
                                 />
                               </div>
                             )}
@@ -2080,6 +2199,19 @@ function MessageActionsBar({
   onCopy,
   onFeedback,
   onRegenerate,
+  boardPickerOpen,
+  onToggleBoardPicker,
+  editableBoards,
+  boardsLoading,
+  boardsLoadError,
+  sendBoardPending,
+  sendBoardStatus,
+  sendBoardError,
+  onChooseBoard,
+  sendEmailPending,
+  sendEmailStatus,
+  sendEmailError,
+  onSendEmail,
 }: {
   message: Message;
   isLast: boolean;
@@ -2093,9 +2225,22 @@ function MessageActionsBar({
   onCopy: () => void;
   onFeedback: (rating: MessageFeedbackRating) => void;
   onRegenerate: () => void;
+  boardPickerOpen: boolean;
+  onToggleBoardPicker: () => void;
+  editableBoards: EditableBoard[] | null;
+  boardsLoading: boolean;
+  boardsLoadError: boolean;
+  sendBoardPending: boolean;
+  sendBoardStatus: string;
+  sendBoardError: string;
+  onChooseBoard: (boardId: number) => void;
+  sendEmailPending: boolean;
+  sendEmailStatus: string;
+  sendEmailError: string;
+  onSendEmail: () => void;
 }) {
   return (
-    <div data-testid={`msg-actions-${message.id}`} className="flex flex-col gap-1">
+    <div data-testid={`msg-actions-${message.id}`} className="relative flex flex-col gap-1">
       <div className="flex items-center gap-0.5">
         <Button
           type="button"
@@ -2159,10 +2304,11 @@ function MessageActionsBar({
           variant="ghost"
           size="icon"
           data-testid="msg-send-to-board"
-          className="h-7 w-7 text-muted-foreground"
-          disabled
-          aria-label="Send to current Board (coming soon)"
-          title="Only available inside a Board — coming soon"
+          className="h-7 w-7 text-muted-foreground transition-colors hover:bg-surface-1"
+          onClick={onToggleBoardPicker}
+          disabled={sendBoardPending}
+          aria-label="Send to a Board"
+          title="Send this message to a Board you can edit"
         >
           <LayoutGrid className="h-3.5 w-3.5" strokeWidth={1.5} />
         </Button>
@@ -2171,10 +2317,11 @@ function MessageActionsBar({
           variant="ghost"
           size="icon"
           data-testid="msg-send-email"
-          className="h-7 w-7 text-muted-foreground"
-          disabled
-          aria-label="Send via email (coming soon)"
-          title="Email delivery coming soon"
+          className="h-7 w-7 text-muted-foreground transition-colors hover:bg-surface-1"
+          onClick={onSendEmail}
+          disabled={sendEmailPending}
+          aria-label="Send via email"
+          title="Send this message to your email"
         >
           <Mail className="h-3.5 w-3.5" strokeWidth={1.5} />
         </Button>
@@ -2198,6 +2345,65 @@ function MessageActionsBar({
         <p role="alert" data-testid="msg-regenerate-error" className="text-11 text-destructive">
           Regenerate failed — please try again
         </p>
+      )}
+      {sendBoardStatus && (
+        <p data-testid="msg-board-status" className="text-11 text-muted-foreground">
+          {sendBoardStatus}
+        </p>
+      )}
+      {sendBoardError && (
+        <p role="alert" data-testid="err-msg-board" className="text-11 text-destructive">
+          {sendBoardError}
+        </p>
+      )}
+      {sendEmailStatus && (
+        <p data-testid="msg-email-status" className="text-11 text-muted-foreground">
+          {sendEmailStatus}
+        </p>
+      )}
+      {sendEmailError && (
+        <p role="alert" data-testid="err-msg-email" className="text-11 text-destructive">
+          {sendEmailError}
+        </p>
+      )}
+      {boardPickerOpen && (
+        <div
+          data-testid="board-picker"
+          className="absolute left-0 top-full z-20 mt-1 w-64 rounded-12 border border-border bg-background p-3 shadow-lg"
+        >
+          <p className="text-11 font-medium text-foreground">Send to Board</p>
+          {boardsLoading && (
+            <p className="mt-2 text-11 text-muted-foreground">Loading boards…</p>
+          )}
+          {boardsLoadError && (
+            <p role="alert" data-testid="err-board-list" className="mt-2 text-11 text-destructive">
+              Failed to load boards — please try again
+            </p>
+          )}
+          {!boardsLoading && !boardsLoadError && editableBoards && editableBoards.length === 0 && (
+            <p data-testid="board-picker-empty" className="mt-2 text-11 text-muted-foreground">
+              No editable boards yet — create a Board first
+            </p>
+          )}
+          {!boardsLoading && !boardsLoadError && editableBoards && editableBoards.length > 0 && (
+            <ul className="mt-2 max-h-48 space-y-0.5 overflow-y-auto">
+              {editableBoards.map((board) => (
+                <li key={board.id}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    data-testid={`board-picker-option-${board.id}`}
+                    className="h-auto w-full justify-start truncate px-2 py-1.5 text-left text-12 font-normal text-foreground hover:bg-surface-1"
+                    onClick={() => onChooseBoard(board.id)}
+                    disabled={sendBoardPending}
+                  >
+                    {board.name}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );

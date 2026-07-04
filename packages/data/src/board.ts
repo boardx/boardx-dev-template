@@ -195,6 +195,30 @@ export async function listFavoriteBoards(userId: number, q?: string): Promise<Bo
 }
 
 /**
+ * 用户有编辑权限（owner/editor）的白板列表（p18 F11：AVA「发送到 Board」选择器）。
+ * 口径与 boardRole 一致：白板属主，或可访问（owner/成员）其所属房间。不含仅 viewer 的
+ * public/team 只读白板——那些没有编辑权限，选择器里不应出现。
+ */
+export async function listEditableBoardsForUser(userId: number, q?: string): Promise<Board[]> {
+  const params: unknown[] = [userId];
+  let nameClause = "";
+  if (q && q.trim()) {
+    params.push(`%${q.trim()}%`);
+    nameClause = ` AND b.name ILIKE $${params.length}`;
+  }
+  return query<Board>(
+    `SELECT DISTINCT b.id, b.room_id, b.team_id, b.name, b.cover, b.category, b.description,
+            b.visibility, b.owner_user_id, b.settings, b.created_at, b.updated_at
+     FROM boards b
+     JOIN rooms r ON r.id = b.room_id
+     LEFT JOIN room_members rm ON rm.room_id = r.id AND rm.user_id = $1
+     WHERE (b.owner_user_id = $1 OR r.owner_user_id = $1 OR rm.user_id IS NOT NULL)${nameClause}
+     ORDER BY b.updated_at DESC`,
+    params
+  );
+}
+
+/**
  * 计算用户在某白板的访问角色，含 team 可见性：
  *  - 房间可见者：owner（属主）/ editor（房间成员）
  *  - 白板 public：viewer

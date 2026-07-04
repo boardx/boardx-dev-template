@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { enableAvaThreadShare, getAvaThread, getAvaThreadShare } from "@repo/data";
 import { currentTeamId, currentUser } from "@/lib/session";
 import { isThreadInCurrentContext } from "@/lib/ava-thread-auth";
-import { sendShareLinkEmail } from "@/lib/mailer";
+import { sendShareLinkEmail, RateLimitedError } from "@/lib/mailer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,10 +34,19 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     const origin = new URL(req.url).origin;
     const shareUrl = `${origin}/chatShare/${threadId}?shareToken=${encodeURIComponent(share.share_token)}`;
-    await sendShareLinkEmail({ to: user.email, shareUrl, threadTitle: thread.title ?? "" });
+    try {
+      await sendShareLinkEmail({ to: user.email, shareUrl, threadTitle: thread.title ?? "" });
+    } catch (err) {
+      if (err instanceof RateLimitedError) {
+        return NextResponse.json({ error: "发送太频繁，请稍后再试" }, { status: 429 });
+      }
+      throw err;
+    }
 
     return NextResponse.json({ ok: true, to: user.email, share });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    // 原始错误只记服务端日志；客户端只收到通用文案（同 F02/F07/F11 review 指出的同类问题）。
+    console.error("[ava/share/email] 发送失败", err);
+    return NextResponse.json({ error: "发送失败，请重试" }, { status: 500 });
   }
 }
