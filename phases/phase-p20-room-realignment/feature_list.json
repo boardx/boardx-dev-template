@@ -48,10 +48,10 @@
       "priority": 1,
       "area": "room-files",
       "title": "房间级文件库（数据模型修正 + Files tab）",
-      "user_visible_behavior": "房间 Files tab（data-testid=room-files-tab）提供上传（拖拽/点击，R2 预签名→直传→confirm）、搜索、预览（签名 URL）、软删（二次确认）；文件属于房间（room_files.room_id NOT NULL，chat_thread_id 可空仅作来源标注）；不打开任何聊天线程也能管理文件；删除权限=上传者本人或 owner/admin。",
+      "user_visible_behavior": "房间 Files tab（data-testid=room-files-tab）提供上传（拖拽/点击，R2 预签名→直传→confirm，data-testid=room-files-upload）、搜索、按来源线程过滤、预览（签名 URL；URL 过期时预览处展示过期提示文案并可点击刷新换取新签名 URL）、软删（二次确认，data-testid=room-files-item 行内删除）；文件属于房间（room_files.room_id NOT NULL，chat_thread_id 可空仅作来源标注），同一文件库同时出现在该房间所有聊天线程左侧文件面板；不打开任何聊天线程也能管理文件；删除权限=上传者本人或 owner/admin——member 删他人文件 API 返回 403，admin 可成功删除他人文件（该断言承接 F07 权限矩阵）；不支持的类型上传时行内提示 Unsupported file type。",
       "design_ref": "prototype:<!-- ROOM DETAIL --> Files tab；oldcode room-file.schema.ts 字段对齐",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-FILE",
       "depends_on": [
@@ -61,10 +61,11 @@
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web exec playwright test e2e/room-rr-003-room-files.spec.ts"
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-003-room-files.spec.ts",
+        "git cat-file -e HEAD:phases/phase-p20-room-realignment/evidence/F03.verify.log"
       ],
       "evidence": "",
-      "notes": "uc-rr-003（核心模型修正，推翻 uc-room-005 的线程绑定）。复用 p10 CAP-FILE 上传平面，不另造上传栈；本 feature 交付 room_files 迁移 + /api/rooms/[id]/files CRUD + Files tab UI。"
+      "notes": "uc-rr-003（核心模型修正，推翻 uc-room-005 的线程绑定）。复用 p10 CAP-FILE 上传平面（预签名+confirm），不另造上传栈；交付 room_files 迁移 + /api/rooms/[id]/files CRUD + Files tab UI + 聊天左侧面板接同一文件库。依赖：F01（详情壳，已 passing）；迁移需保留存量线程级文件的 chat_thread_id（L4：迁移判据用专用标记列，禁止 name/自然键，DB 级不变量断言输出留 evidence）。L10 契约缺口显式归属（本 feature 接盘并在 room-rr-003 spec 内断言）：① F07 权限矩阵中『admin 删他人文件』一行（F07 交付时 Files tab 不存在，未断言）；② 本 feature 自身的文件签名 URL 过期提示（可刷新）——与 F09 的邀请令牌过期提示是不同域，F09 该项已在其自身 PR 内交付闭环，非遗留。共享文件热点：apps/web/app/(app)/rooms/[id]/files/page.tsx（本 feature 主场）、apps/web/app/(app)/rooms/[id]/members/page.tsx 与房间设置弹窗（与 #327 返工中的邀请流可能同文件——若 #327 未合并，涉及 members 页/设置弹窗的改动必须串行，先合并者优先）、聊天工作区左侧面板组件、packages/data 迁移目录、apps/web/app/api/rooms/[id]/ 下新增 files 子路由。"
     },
     {
       "id": "F04",
@@ -115,23 +116,26 @@
       "priority": 2,
       "area": "room",
       "title": "删除房间的级联契约（Danger Zone）",
-      "user_visible_behavior": "owner 在房间设置看到 DANGER ZONE；点击 Delete room 弹二次确认（data-testid=room-delete-confirm），列出将删除的内容类别与数量（X boards、Y chats、Z files，data-testid=room-delete-cascade-summary），需输入房间名才可确认；确认后 DELETE 级联删除并跳回列表；admin/member 无入口且 API 403；删除后相关资源 API 全部 404。",
+      "user_visible_behavior": "owner 打开房间设置看到 DANGER ZONE（文案含 Permanently）；点击 Delete room 弹二次确认（data-testid=room-delete-confirm），弹窗逐项列出将删除的内容类别与真实数量（X boards、Y chats、Z files、surveys，data-testid=room-delete-cascade-summary），需输入完全一致的房间名确认按钮才可用（不匹配时禁用）；确认后 DELETE /api/rooms/[id] 级联删除 boards（含 board_items）、room_chats（含消息）、room_files、room_members、房间问卷关联，跳回房间列表并 toast；admin/member 在 UI 无入口且直调 DELETE 返回 403；删除后原房间及其下 boards/chats/files 各资源 API 均返回 404。",
       "design_ref": "prototype:Room Settings dialog DANGER ZONE（'and its boards'）",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-WEB",
       "depends_on": [
-        "F01"
+        "F01",
+        "F03",
+        "F08"
       ],
       "wave": 1,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web exec playwright test e2e/room-rr-006-delete-contract.spec.ts"
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-006-delete-contract.spec.ts",
+        "git cat-file -e HEAD:phases/phase-p20-room-realignment/evidence/F06.verify.log"
       ],
       "evidence": "",
-      "notes": "uc-rr-005。DB CASCADE 已存在，本 feature 交付契约化 UI + e2e 断言级联结果（board/chat/file 各建一条再删房验证 404）。"
+      "notes": "uc-rr-005。DB CASCADE 已存在，本 feature 的增量是契约化：确认弹窗（数量摘要+输入房间名）+ e2e 先各建一条 board/chat/file/survey 再删房断言全部 404。依赖：F01（已 passing）；级联断言中 files 分支依赖 F03 的 room_files 迁移、surveys 分支依赖 F08 的 room_id 列——建议排期 F03/F08 合并后再做 F06，若先行则这两个分支在 spec 中按 L10 标注『由 F06 在 F03/F08 合并后补断言』，禁止静默跳过。共享文件热点：apps/web/app/api/rooms/[id]/route.ts（DELETE 与 F07 已合并的 403 判定、F11 的 PATCH 同文件——与 F11 并行时必须协调或串行）、房间设置弹窗/Members 页（DANGER ZONE 区块与 F11 About & AI 区块、#327 邀请流返工同组件，串行热点）、apps/web/app/(app)/rooms/page.tsx（删除后跳回列表 toast）。"
     },
     {
       "id": "F07",
@@ -159,10 +163,10 @@
       "priority": 2,
       "area": "room-survey",
       "title": "Room Survey 入口（房间作用域问卷）",
-      "user_visible_behavior": "surveys 表加可空 room_id；房间 Survey tab（data-testid=room-survey-tab）只列本房间问卷卡片；owner/admin 可新建（预置 room_id 进入 p13 创建器，data-testid=room-survey-create）、暂停/删除本房间问卷；member 可答题/看已发布结果；tab 内『View team surveys』仅跳转全局 /surveys；房间角色不能管理团队问卷（403）。",
+      "user_visible_behavior": "surveys 表加可空 room_id（迁移后存量问卷 room_id=null 仍全部视为团队问卷）；房间 Survey tab（data-testid=room-survey-tab）只列本房间问卷卡片（data-testid=room-survey-card，含标题/状态/回收数），不再嵌入 Team Surveys 全集；房间 owner/admin 可新建（data-testid=room-survey-create，预置 room_id 进入 p13 创建器）、暂停/删除本房间问卷；member 可答题与查看已发布结果但无管理按钮；tab 内『View team surveys』链接仅跳转全局 /surveys；房间角色对团队问卷的管理请求返回 403；全局 /surveys 列表展示 scope 徽章（My/Team/Room），Room 问卷标注所属房间名。",
       "design_ref": "prototype:<!-- SURVEYS --> Room scope（'Room · Alpha'）+ ROOM DETAIL Survey tab",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "depends_on": [
@@ -172,10 +176,11 @@
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web exec playwright test e2e/room-rr-008-room-survey.spec.ts"
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-008-room-survey.spec.ts",
+        "git cat-file -e HEAD:phases/phase-p20-room-realignment/evidence/F08.verify.log"
       ],
       "evidence": "",
-      "notes": "uc-rr-007。修正 uc-room-007 的 scope 丢失与权限域错位；存量问卷 room_id=null 视为团队问卷（迁移向后兼容）；复用 p13 全部问卷本体能力。"
+      "notes": "uc-rr-007。修正 uc-room-007 的 scope 丢失与权限域错位；问卷本体（题型/答题/报告）全部复用 p13，不改。依赖：F01（已 passing）、p13 surveys 表已存在；迁移向后兼容（room_id=null=团队问卷），迁移不变量断言输出留 evidence（L4）。L10：删除房间时房间问卷随级联消失的断言由 F06 交付时覆盖（本 feature 只保证 scope 与权限）。共享文件热点：packages/data surveys 迁移与 schema、apps/web/app/(app)/rooms/[id]/surveys/page.tsx（本 feature 主场）、全局 /surveys 列表页与 p13 survey API 权限层（与团队侧共享，改动限于加 scope 过滤/徽章）、apps/web/app/api/rooms/[id]/ 下新增 surveys 子路由。"
     },
     {
       "id": "F09",
@@ -184,9 +189,9 @@
       "title": "邀请未注册用户加入房间（完整流）",
       "user_visible_behavior": "owner/admin 输入未注册邮箱邀请：room_invites 落库（token、过期 7 天、幂等刷新），dev 邮件通道发送注册链接；被邀者注册成功后自动成为该房间 member，登录即见房间；Members tab 显示 pending 邀请列表（data-testid=room-invite-pending）可撤销；过期令牌注册成功但不入房并提示；member 邀请返回 403。",
       "design_ref": "prototype:Room Settings dialog INVITE NEW MEMBERS；oldcode inviteNewUserToRoomByEmail 流程",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-room-2",
       "capability": "CAP-AUTH",
       "depends_on": [],
       "wave": 0,
@@ -195,7 +200,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-009-invite-unregistered.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F09.verify.log @ 2026-07-03T19:26:47.043Z",
       "notes": "uc-rr-008。真 SMTP 不在范围（沿用 phase-04 dev 邮件边界：控制台日志 + DB 令牌）；修复现状『生成 token 不持久化不发邮件』的半成品。"
     },
     {
@@ -225,23 +230,25 @@
       "priority": 3,
       "area": "room",
       "title": "Room AI 上下文字段回补（description + ai_instruction）",
-      "user_visible_behavior": "rooms 表加 description、ai_instruction；owner/admin 在房间设置 About & AI 区块（data-testid=room-settings-description、room-settings-ai-instruction）编辑保存（PATCH，member 403，>4000 字符拒绝）；详情页头展示 description；房间聊天发消息时 ai_instruction 注入系统提示（桩层可断言注入内容，真实模型链路归 p9）。",
+      "user_visible_behavior": "rooms 表加 description、ai_instruction 两个 text 字段；owner/admin 在房间设置 About & AI 区块（data-testid=room-settings-description、room-settings-ai-instruction）编辑并保存（PATCH /api/rooms/[id]）；member 直调 PATCH 返回 403（与 F07 权限矩阵口径一致），ai_instruction >4000 字符被校验拒绝并行内提示；保存后房间详情页头/Boards 空态展示 description；房间任一聊天线程发消息时 ai_instruction 注入系统提示，桩层响应可断言注入内容（同房间全部线程共享同一指令）。",
       "design_ref": "oldcode room.schema.ts（description/aiInstruction）；设置表单沿用现有 token，无原型屏",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-AI",
       "depends_on": [
-        "F01"
+        "F01",
+        "F07"
       ],
       "wave": 1,
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web exec playwright test e2e/room-rr-011-room-ai-context.spec.ts"
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-011-room-ai-context.spec.ts",
+        "git cat-file -e HEAD:phases/phase-p20-room-realignment/evidence/F11.verify.log"
       ],
       "evidence": "",
-      "notes": "uc-rr-010。memories[] 不在本期（依赖 p9 记忆机制）；注入路径在桩上断言，p9 真链路就绪后自动受益。"
+      "notes": "uc-rr-010。依赖：F01（已 passing）；F07 权限矩阵已合并且 passing——PATCH 的 admin 可改/member 403 断言必须与 room-rr-007 矩阵口径一致，复用其 e2e 角色 helper，勿另造权限判定。memories[] 不在本期（依赖 p9 记忆机制，另立 feature）。L10：ai_instruction 对真实模型输出的效果由 p9 真链路阶段断言，本 feature 仅在桩层断言注入内容，禁止把桩断言当成效果验证。共享文件热点：apps/web/app/api/rooms/[id]/route.ts（PATCH 与 F06 的 DELETE 同文件——与 F06 并行时协调或串行）、房间设置弹窗（About & AI 区块与 F06 DANGER ZONE、#327 邀请流返工同组件，串行热点）、apps/web/app/(app)/rooms/[id]/layout.tsx 或 page.tsx（页头展示 description）、packages/data rooms 迁移、聊天消息 API 的系统提示注入点（apps/web/app/api/rooms/[id]/chats 下消息路由）。"
     }
   ]
 }
