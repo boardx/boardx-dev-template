@@ -34,9 +34,23 @@ export interface RenderItem {
   color: string | null;
   kind: "note" | "text" | "shape" | "embed";
   bold: boolean;
+  // p6:F12（uc-widget-menu-013）：文本样式字段，均由 color 的 "|k=v" 段解析而来。
+  italic: boolean;
+  fontFamily: string;
+  fontSize: number;
+  align: "left" | "center" | "right";
+  // p6:F19（uc-widget-menu-002）：边框色/边框宽（含线宽语义）/透明度/文字色，同样由 color 的
+  // "|k=v" 段解析而来（见 board-canvas.tsx 的 getBorder/getBorderWidth/getOpacity/getTextColor）。
+  border: "none" | "gray" | "blue" | "red";
+  borderWidth: number;
+  opacity: number;
+  textColor: "default" | "slate" | "blue" | "green" | "red";
   reloadable: boolean;
   reloadCount: number;
   refreshedAt: number | null;
+  // p6:F20（uc-widget-menu-003）：锁定态，由 color 的 "|locked=1" 段解析而来（见
+  // board-canvas.tsx 的 getLocked）。锁定对象不可移动/缩放/旋转/编辑，见 styleInteractive。
+  locked: boolean;
 }
 
 export interface ViewportState {
@@ -130,10 +144,20 @@ export interface CanvasTestApi {
     h: number;
     text: string;
     color: string | null;
+    kind: "note" | "text" | "shape" | "embed";
     bold: boolean;
+    italic: boolean;
+    fontFamily: string;
+    fontSize: number;
+    align: "left" | "center" | "right";
+    border: "none" | "gray" | "blue" | "red";
+    borderWidth: number;
+    opacity: number;
+    textColor: "default" | "slate" | "blue" | "green" | "red";
     reloadable: boolean;
     reloadCount: number;
     refreshedAt: number | null;
+    locked: boolean;
     z: number;
   }>;
   getSelectedIds: () => string[];
@@ -191,7 +215,7 @@ export function FabricCanvas(props: Props) {
       s.items.forEach((it, z) => {
         // 视觉签名变化 → 重建对象（items 数量小，重建比细粒度增量更新简单且不易漏）。
         const sig = JSON.stringify([
-          it.x, it.y, it.w, it.h, it.text, it.color, it.kind, it.bold,
+          it.x, it.y, it.w, it.h, it.text, it.color, it.kind, it.bold, it.locked,
           s.editingId === it.id, s.canEdit,
         ]);
         let g = objsRef.current.get(it.id);
@@ -224,7 +248,12 @@ export function FabricCanvas(props: Props) {
         fc.setActiveObject(sel[0]!);
       } else if (sel.length > 1) {
         const as = new fabric.ActiveSelection(sel, { canvas: fc });
-        styleInteractive(as, tokensRef.current!, s.canEdit);
+        // p6:F20：多选时若任一成员锁定，整组按锁定处理——fabric 把 ActiveSelection 当整体拖拽，
+        // 子对象各自的 lockMovementX/Y 不生效，必须在组一级也挡住（object:moving 的补充防线
+        // 覆盖极端时序，这里是主防线）。
+        const selectedIds = new Set(s.selectedIds);
+        const anyLocked = s.items.some((it) => selectedIds.has(it.id) && it.locked);
+        styleInteractive(as, tokensRef.current!, s.canEdit, false, anyLocked);
         fc.setActiveObject(as);
       }
       fc.requestRenderAll();
@@ -339,6 +368,14 @@ export function FabricCanvas(props: Props) {
         const g = gestureRef.current;
         const t = opt.target as Group | undefined;
         if (!g || !t || !s.canEdit) return;
+        // p6:F20（uc-widget-menu-003）：锁定对象不可移动。单选对象已由 styleInteractive 的
+        // lockMovementX/Y 从源头挡住（fabric 不会派发本事件）；这里补一道防线覆盖多选场景
+        // （ActiveSelection 的拖拽由分组本身响应，子对象各自的 lockMovementX/Y 不生效）。
+        if (g.ids.some((id) => s.items.find((it) => it.id === id)?.locked)) {
+          t.set({ left: g.initLeft, top: g.initTop });
+          t.setCoords();
+          return;
+        }
         g.moved = true;
         // 候选位置 = 初始 item 位置 + fabric 位移（纯 delta，见 gestureRef 注释）。
         const dx = (t.left ?? 0) - g.initLeft;
@@ -386,6 +423,9 @@ export function FabricCanvas(props: Props) {
         const fcNow = fcRef.current;
         if (!g || !t || !s.canEdit || !g.initRect || !fcNow) return;
         if (corner !== "tl" && corner !== "tr" && corner !== "bl" && corner !== "br") return;
+        // p6:F20：锁定对象不可缩放。缩放仅对单选开放（见 styleInteractive 的 hasControls），
+        // 正常路径下锁定对象已在源头被 lockScalingX/Y 挡住，这里是防御性补充。
+        if (g.ids.some((id) => s.items.find((it) => it.id === id)?.locked)) return;
         g.scaled = true;
         const it = g.initRect;
         const scene = fcNow.getScenePoint((opt as unknown as { e: TPointerEvent }).e);
@@ -522,10 +562,20 @@ export function FabricCanvas(props: Props) {
               h: it.h,
               text: it.text,
               color: it.color,
+              kind: it.kind,
               bold: it.bold,
+              italic: it.italic,
+              fontFamily: it.fontFamily,
+              fontSize: it.fontSize,
+              align: it.align,
+              border: it.border,
+              borderWidth: it.borderWidth,
+              opacity: it.opacity,
+              textColor: it.textColor,
               reloadable: it.reloadable,
               reloadCount: it.reloadCount,
               refreshedAt: it.refreshedAt,
+              locked: it.locked,
               z,
             })),
           getSelectedIds: () => [...propsRef.current.selectedIds],
@@ -605,9 +655,13 @@ type Interactive = {
 
 // 交互属性：选中框（border）颜色对齐 ring-primary；无旋转控制点。
 // p6:F07：单选 item 开放四个**角点**缩放控制（缩放中吸附见 object:scaling）；
-// 中点控制与多选（ActiveSelection）缩放仍关闭，锁定能力 deferred。
-function styleInteractive(obj: Interactive, tokens: Tokens, canEdit: boolean, resizable = false) {
-  const resize = resizable && canEdit;
+// 中点控制与多选（ActiveSelection）缩放仍关闭。
+// p6:F20（uc-widget-menu-003）：锁定对象不可移动/缩放/旋转——等价于把 canEdit 当作 false
+// 对待（locked 与 !canEdit 共用同一套 fabric 锁定标志），额外去掉控制点（hasControls）避免
+// 用户看到可拖拽的缩放手柄却拖不动。
+function styleInteractive(obj: Interactive, tokens: Tokens, canEdit: boolean, resizable = false, locked = false) {
+  const interactive = canEdit && !locked;
+  const resize = resizable && interactive;
   obj.set({
     hasControls: resize,
     hasBorders: true,
@@ -617,9 +671,9 @@ function styleInteractive(obj: Interactive, tokens: Tokens, canEdit: boolean, re
     lockRotation: true,
     lockScalingX: !resize,
     lockScalingY: !resize,
-    lockMovementX: !canEdit,
-    lockMovementY: !canEdit,
-    hoverCursor: canEdit ? "grab" : "default",
+    lockMovementX: !interactive,
+    lockMovementY: !interactive,
+    hoverCursor: interactive ? "grab" : "default",
     moveCursor: "grabbing",
     cornerColor: tokens.primary,
     cornerStrokeColor: tokens.primary,
@@ -655,6 +709,20 @@ function buildItemObject(
     : isShapeKind
       ? tokens.surface1
       : tokens.tags[base] ?? tokens.tags.amber!;
+  // p6:F19（uc-widget-menu-002）：用户可调边框色/边框宽（"none" 沿用原有默认描边，
+  // 文本块仍保持无边框——边框是「新增」外观，不应破坏文本块的透明块视觉基线）。
+  const BORDER_COLORS: Record<string, string> = { gray: "#6b7280", blue: "#2563eb", red: "#dc2626" };
+  const customStroke = it.border !== "none" ? BORDER_COLORS[it.border] : undefined;
+  const stroke = isTextKind ? customStroke : (customStroke ?? tokens.borderStrong);
+  const strokeWidth = isTextKind
+    ? customStroke
+      ? it.borderWidth
+      : 0
+    : it.border !== "none"
+      ? it.borderWidth
+      : isShapeKind
+        ? 2
+        : 1;
   const bg = new fabric.Rect({
     // fabric v7 默认 origin 改为 center/center，这里的局部布局按 left/top 语义写死
     left: 0,
@@ -666,24 +734,43 @@ function buildItemObject(
     rx: isTextKind ? 0 : 7,
     ry: isTextKind ? 0 : 7,
     fill,
-    stroke: isTextKind ? undefined : tokens.borderStrong,
-    strokeWidth: isTextKind ? 0 : isShapeKind ? 2 : 1,
+    stroke,
+    strokeWidth,
     strokeUniform: true,
   });
   const pad = 8; // p-2
+  // p6:F12（uc-widget-menu-013）：字体/字号/斜体/对齐均可由用户调整，取值来自 RenderItem
+  // （由 color 的 "|k=v" 样式段解析而来）。水平对齐（left/center/right）独立于 kind 的默认
+  // 垂直布局：文本块沿用原「顶对齐」，便签/形状沿用原「垂直居中」，只有水平锚点随 align 变化。
+  const textAlign = it.align;
+  const horizOrigin =
+    textAlign === "center"
+      ? { originX: "center" as const, left: it.w / 2 }
+      : textAlign === "right"
+        ? { originX: "right" as const, left: it.w - pad }
+        : { originX: "left" as const, left: pad };
+  // p6:F19（uc-widget-menu-002）：文字色独立于底色/tag 色，未设置（"default"）跟随主题前景色
+  // （与既有视觉一致）。
+  const TEXT_COLORS: Record<string, string> = {
+    slate: "#334155",
+    blue: "#2563eb",
+    green: "#16a34a",
+    red: "#dc2626",
+  };
+  const textFill = TEXT_COLORS[it.textColor] ?? tokens.foreground;
   const text = new fabric.Textbox(it.text, {
     width: Math.max(8, it.w - pad * 2),
-    fontSize: 12, // text-xs
+    fontSize: it.fontSize,
     lineHeight: 1.35,
-    fontFamily: tokens.fontFamily,
+    fontFamily: it.fontFamily === "sans-serif" ? tokens.fontFamily : it.fontFamily,
     fontWeight: it.bold ? "700" : "400",
-    fill: tokens.foreground,
-    textAlign: isTextKind ? "left" : "center",
+    fontStyle: it.italic ? "italic" : "normal",
+    fill: textFill,
+    textAlign,
     splitByGrapheme: true, // 中文无空格也按字素折行
     editable: false, // 文本编辑走 DOM textarea 覆盖层（保留 item-edit-<id> 锚点）
-    ...(isTextKind
-      ? { left: pad, top: pad, originX: "left" as const, originY: "top" as const }
-      : { left: it.w / 2, top: it.h / 2, originX: "center" as const, originY: "center" as const }),
+    ...(isTextKind ? { top: pad, originY: "top" as const } : { top: it.h / 2, originY: "center" as const }),
+    ...horizOrigin,
   });
   // 编辑中：隐藏 canvas 文本，避免与 DOM textarea 双重显示（背景仍由 fabric 画）。
   text.visible = !editing;
@@ -695,7 +782,9 @@ function buildItemObject(
     originY: "top",
     subTargetCheck: false,
     selectable: true,
+    // p6:F19（uc-widget-menu-002 透明度）：整体透明度，1-100 映射为 fabric 的 0-1 opacity。
+    opacity: it.opacity / 100,
   });
-  styleInteractive(g as unknown as Interactive, tokens, canEdit, true);
+  styleInteractive(g as unknown as Interactive, tokens, canEdit, true, it.locked);
   return g;
 }

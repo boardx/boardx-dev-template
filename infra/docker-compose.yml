@@ -2,16 +2,25 @@
 # 起：docker compose -f infra/docker-compose.yml up -d
 # 注：先用 pgvector 镜像（向量检索就绪）；Apache AGE 等图特性 feature 来了再换镜像。
 
+networks:
+  infra:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "172.61.0.0/24"
+
 services:
   postgres:
     image: pgvector/pgvector:pg16
+    networks:
+      - infra
     environment:
       POSTGRES_USER: boardx
       POSTGRES_PASSWORD: boardx
       POSTGRES_DB: boardx
     # 主机端口可用 PG_PORT 覆盖（避开本机已占用的 5432），容器内仍 5432
     ports:
-      - "${PG_PORT:-5432}:5432"
+      - "${PG_PORT:-57000}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U boardx"]
       interval: 3s
@@ -20,9 +29,11 @@ services:
 
   redis:
     image: redis:7
+    networks:
+      - infra
     # 主机端口可用 REDIS_PORT 覆盖（避开本机已占用的 6379），容器内仍 6379
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PORT:-57001}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 3s
@@ -34,12 +45,14 @@ services:
   minio:
     image: minio/minio:RELEASE.2024-08-17T01-24-54Z
     command: server /data --console-address ":9001"
+    networks:
+      - infra
     environment:
       MINIO_ROOT_USER: boardx
       MINIO_ROOT_PASSWORD: boardx123
     ports:
-      - "${MINIO_PORT:-9090}:9000"
-      - "${MINIO_CONSOLE_PORT:-9091}:9001"
+      - "${MINIO_PORT:-57002}:9000"
+      - "${MINIO_CONSOLE_PORT:-57003}:9001"
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 3s

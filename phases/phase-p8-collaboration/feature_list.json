@@ -7,15 +7,15 @@
       "area": "collaboration",
       "title": "WebSocket + Redis 广播骨架（不含 Yjs 语义）",
       "user_visible_behavior": "两个客户端连接同一 Board 的传输 channel，其中一个发送消息，另一个能收到；客户端断线后重新连接仍能正常收发；消息经网关发布到 Redis pub/sub，验证「发布到 Redis、网关订阅广播」链路打通（不要求多实例部署环境）。本 feature 不涉及 Yjs/CRDT 语义，只验证裸传输层。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-codex-collab-1",
       "capability": "CAP-COLLAB",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/web exec playwright test e2e/collab-transport-skeleton.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-07-04T21:32:32.143Z",
       "notes": "背景见 phases/phase-p8-collaboration/requirements/ws-redis-transport-skeleton.md 与 board-canvas-gap-analysis-and-roadmap.md Wave 0 第 4 项。把「起一个新的长连接网关」这类基础设施发现成本从 F02（Yjs 同步语义）里拆出来，独立验证。不依赖 p6 的组件广度（F15-F21），可与 p6 并行推进。落地后，现有 apps/web/lib/presence.ts、lib/collab-bus.ts 的进程内内存实现应逐步被这条真实传输层替换（替换时机由 F02-F05 各自决定）。",
       "source_use_cases": [
         "phases/phase-p8-collaboration/requirements/ws-redis-transport-skeleton.md"
