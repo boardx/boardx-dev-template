@@ -165,9 +165,9 @@
       "title": "Room Survey 入口（房间作用域问卷）",
       "user_visible_behavior": "surveys 表加可空 room_id（迁移后存量问卷 room_id=null 仍全部视为团队问卷）；房间 Survey tab（data-testid=room-survey-tab）只列本房间问卷卡片（data-testid=room-survey-card，含标题/状态/回收数），不再嵌入 Team Surveys 全集；房间 owner/admin 可新建（data-testid=room-survey-create，预置 room_id 进入 p13 创建器）、暂停/删除本房间问卷；member 可答题与查看已发布结果但无管理按钮；tab 内『View team surveys』链接仅跳转全局 /surveys；房间角色对团队问卷的管理请求返回 403；全局 /surveys 列表展示 scope 徽章（My/Team/Room），Room 问卷标注所属房间名。",
       "design_ref": "prototype:<!-- SURVEYS --> Room scope（'Room · Alpha'）+ ROOM DETAIL Survey tab",
-      "status": "not_started",
+      "status": "in_progress",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-room-2",
       "capability": "CAP-DATA",
       "depends_on": [
         "F01"

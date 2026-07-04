@@ -3,6 +3,7 @@ import {
   createSurvey,
   listVisibleSurveys,
   getMembership,
+  getRoomRole,
   isBlank,
   type NewQuestionInput,
   type QuestionType,
@@ -45,6 +46,9 @@ export async function GET() {
     description: s.description,
     scope: s.scope,
     teamId: s.team_id,
+    // p20/F08：room 问卷附带 roomId/roomName，供全局列表页展示 scope 徽章 + 所属房间名。
+    roomId: s.room_id,
+    roomName: s.room_name ?? null,
     status: s.is_active ? "active" : "paused",
     responses: Number(s.response_count ?? 0),
     updatedAt: s.updated_at,
@@ -64,6 +68,7 @@ export async function POST(req: Request) {
       description?: unknown;
       scope?: unknown;
       teamId?: unknown;
+      roomId?: unknown;
       questions?: unknown;
     };
 
@@ -77,8 +82,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ errors: { questions: "至少需要一道题目" } }, { status: 400 });
     }
 
-    const scope: SurveyScope = body.scope === "team" ? "team" : "private";
+    const scope: SurveyScope = body.scope === "team" ? "team" : body.scope === "room" ? "room" : "private";
     let teamId: number | null = null;
+    let roomId: number | null = null;
     if (scope === "team") {
       teamId = Number(body.teamId);
       if (!Number.isFinite(teamId)) {
@@ -87,10 +93,21 @@ export async function POST(req: Request) {
       if (!(await getMembership(teamId, user.id))) {
         return NextResponse.json({ error: "你不是该团队成员" }, { status: 403 });
       }
+    } else if (scope === "room") {
+      // p20/F08：room 作用域创建走这个通用端点是为了复用 p13 创建器本体（编辑器/题型/校验）；
+      // 权限判定完全基于房间角色（owner/admin），与团队问卷的 getMembership 分支互不影响。
+      roomId = Number(body.roomId);
+      if (!Number.isFinite(roomId)) {
+        return NextResponse.json({ errors: { roomId: "room 作用域需指定所属房间" } }, { status: 400 });
+      }
+      const role = await getRoomRole(roomId, user.id);
+      if (role !== "owner" && role !== "admin") {
+        return NextResponse.json({ error: "无权限在该房间创建问卷" }, { status: 403 });
+      }
     }
 
     const description = String(body.description ?? "").trim();
-    const survey = await createSurvey(user.id, title, description, scope, teamId, questions);
+    const survey = await createSurvey(user.id, title, description, scope, teamId, questions, roomId);
 
     return NextResponse.json(
       {
@@ -100,6 +117,7 @@ export async function POST(req: Request) {
           description: survey.description,
           scope: survey.scope,
           teamId: survey.team_id,
+          roomId: survey.room_id,
           status: survey.is_active ? "active" : "paused",
           responses: 0,
           questions: survey.questions,

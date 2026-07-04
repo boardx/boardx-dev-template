@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowDown,
   ArrowUp,
@@ -41,6 +42,9 @@ interface Survey {
   status: "active" | "paused";
   responses: number;
   teamId: number | null;
+  // p20/F08：room 问卷附带 roomId/roomName，全局列表页展示 scope 徽章 + 所属房间名。
+  roomId: number | null;
+  roomName: string | null;
   updatedAt: string;
   isOwner: boolean;
   shareUrl: string;
@@ -73,6 +77,13 @@ const STATUS_LABEL: Record<Survey["status"], string> = {
   active: "Active",
   paused: "Paused",
 };
+
+// p20/F08：全局列表 scope 徽章——My（private，自己创建）/ Team（team 作用域）/ Room（room 作用域）。
+function scopeBadgeLabel(s: Pick<Survey, "scope" | "isOwner">): "My" | "Team" | "Room" {
+  if (s.scope === "room") return "Room";
+  if (s.scope === "team") return "Team";
+  return "My";
+}
 
 let qSeq = 0;
 function newQuestion(): Question {
@@ -118,12 +129,17 @@ function SurveySkeleton() {
 }
 
 export default function SurveysPage() {
+  const searchParams = useSearchParams();
+  // p20/F08：房间 Survey tab 的「New room survey」链接携带 ?roomId=，预置进入 p13 创建器时
+  // 直接落 room 作用域（跳过手选 scope），编辑器创建/保存路径完全复用既有 save()。
+  const presetRoomId = searchParams.get("roomId");
+
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [mode, setMode] = useState<"list" | "editor">("list");
   const [view, setView] = useState<"edit" | "preview">("edit");
-  const [filter, setFilter] = useState<"my" | "team">("my");
+  const [filter, setFilter] = useState<"my" | "team" | "room">("my");
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
   const [sharedSurvey, setSharedSurvey] = useState<Survey | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
@@ -133,9 +149,10 @@ export default function SurveysPage() {
   const [editingSurveyId, setEditingSurveyId] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [scope, setScope] = useState<"private" | "team">("private");
+  const [scope, setScope] = useState<"private" | "team" | "room">("private");
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamId, setTeamId] = useState<string>("");
+  const [roomId, setRoomId] = useState<string>("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -172,6 +189,15 @@ export default function SurveysPage() {
 
   useEffect(() => { void load(); }, []);
 
+  // p20/F08：带 ?roomId= 进入时（房间 Survey tab 的「New room survey」入口）自动落 room
+  // 作用域并打开编辑器，跳过手选 scope 这一步——预置 room_id 进入 p13 创建器。
+  useEffect(() => {
+    if (presetRoomId) {
+      openEditor("room", presetRoomId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetRoomId]);
+
   async function loadTeams() {
     try {
       const res = await fetch("/api/teams");
@@ -201,12 +227,13 @@ export default function SurveysPage() {
     setTemplatesLoading(false);
   }
 
-  function openEditor() {
+  function openEditor(presetScope: "private" | "team" | "room" = "private", presetRoom: string = "") {
     setEditingSurveyId(null);
     setTitle("");
     setDescription("");
-    setScope("private");
+    setScope(presetScope);
     setTeamId("");
+    setRoomId(presetRoom);
     setTemplateTeamId("");
     setTemplateTitle("");
     setTemplateMessage("");
@@ -231,8 +258,9 @@ export default function SurveysPage() {
     setEditingSurveyId(nextView === "edit" ? survey.id : null);
     setTitle(survey.title ?? "");
     setDescription(survey.description ?? "");
-    setScope(survey.scope === "team" ? "team" : "private");
+    setScope(survey.scope === "team" ? "team" : survey.scope === "room" ? "room" : "private");
     setTeamId(survey.teamId != null ? String(survey.teamId) : "");
+    setRoomId(survey.roomId != null ? String(survey.roomId) : "");
     setQuestions(questionsFromApi(survey.questions));
     setSaveError("");
     setCreated(null);
@@ -326,6 +354,7 @@ export default function SurveysPage() {
         description,
         scope,
         teamId: scope === "team" ? Number(teamId) : undefined,
+        roomId: scope === "room" ? Number(roomId) : undefined,
         questions,
       }),
     });
@@ -400,13 +429,20 @@ export default function SurveysPage() {
   }
 
   const hasValidQuestion = questions.some((q) => q.title.trim().length > 0);
-  const canSave = title.trim().length > 0 && (editingSurveyId != null || hasValidQuestion) && (scope !== "team" || teamId);
+  const canSave =
+    title.trim().length > 0 &&
+    (editingSurveyId != null || hasValidQuestion) &&
+    (scope !== "team" || teamId) &&
+    (scope !== "room" || roomId);
   const builtInTemplates = templates.filter((t) => t.builtin);
   const teamTemplates = templates.filter((t) => !t.builtin);
   const canSaveTemplate = templateTitle.trim().length > 0 && templateTeamId && hasValidQuestion;
   const mySurveys = surveys.filter((s) => s.isOwner);
   const teamSurveys = surveys.filter((s) => s.scope === "team");
-  const visibleSurveys = filter === "my" ? mySurveys : teamSurveys;
+  // p20/F08：room 问卷单独一栏——房间 admin 管理的问卷未必是自己创建（isOwner=false），
+  // 不放进 mySurveys 也不会误落进 teamSurveys（那栏严格按 scope==='team' 过滤）。
+  const roomSurveys = surveys.filter((s) => s.scope === "room");
+  const visibleSurveys = filter === "my" ? mySurveys : filter === "team" ? teamSurveys : roomSurveys;
 
   if (mode === "editor") {
     return (
@@ -683,19 +719,34 @@ export default function SurveysPage() {
               className="min-h-16 resize-none"
             />
           </div>
-          <div className="mt-4 flex flex-col gap-1.5">
-            <Label htmlFor="survey-scope">Share scope</Label>
-            <Select
-              id="survey-scope"
-              data-testid="survey-scope"
-              className="w-44"
-              value={scope}
-              onChange={(e) => setScope(e.target.value as "private" | "team")}
-            >
-              <option value="private">Only me</option>
-              <option value="team">Shareable with team</option>
-            </Select>
-          </div>
+          {scope === "room" ? (
+            // p20/F08：room 作用域只能从房间 Survey tab 的「New room survey」入口进入
+            // （携带 ?roomId=），scope 本身不可在这里手改——展示为只读信息，不是可选项。
+            <div className="mt-4 flex flex-col gap-1.5">
+              <Label htmlFor="survey-scope">Share scope</Label>
+              <div
+                id="survey-scope"
+                data-testid="survey-scope-room"
+                className="w-fit rounded-lg border border-border bg-muted/30 px-3 py-2 text-13 text-foreground"
+              >
+                Room survey (room #{roomId})
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 flex flex-col gap-1.5">
+              <Label htmlFor="survey-scope">Share scope</Label>
+              <Select
+                id="survey-scope"
+                data-testid="survey-scope"
+                className="w-44"
+                value={scope}
+                onChange={(e) => setScope(e.target.value as "private" | "team")}
+              >
+                <option value="private">Only me</option>
+                <option value="team">Shareable with team</option>
+              </Select>
+            </div>
+          )}
           {scope === "team" && (
             <div className="mt-4 flex flex-col gap-1.5">
               <Label htmlFor="survey-team">Team</Label>
@@ -841,7 +892,7 @@ export default function SurveysPage() {
     <div className="mx-auto max-w-content px-9 pb-14 pt-7">
       <div className="flex items-center justify-between">
         <h1 className="text-26 font-bold tracking-tight text-foreground">Surveys</h1>
-        <Button data-testid="new-survey" size="sm" onClick={openEditor}>
+        <Button data-testid="new-survey" size="sm" onClick={() => openEditor()}>
           New survey
         </Button>
       </div>
@@ -864,7 +915,7 @@ export default function SurveysPage() {
             <p className="text-13 text-muted-foreground">
               Create a survey to collect responses and share it with answerers.
             </p>
-            <Button data-testid="empty-new-survey" size="sm" onClick={openEditor} className="mt-1 gap-1.5">
+            <Button data-testid="empty-new-survey" size="sm" onClick={() => openEditor()} className="mt-1 gap-1.5">
               <Plus className="h-4 w-4" strokeWidth={1.5} />
               Create survey
             </Button>
@@ -888,6 +939,14 @@ export default function SurveysPage() {
               >
                 Team surveys
               </Button>
+              <Button
+                data-testid="filter-room-surveys"
+                size="sm"
+                variant={filter === "room" ? "default" : "outline"}
+                onClick={() => setFilter("room")}
+              >
+                Room surveys
+              </Button>
             </div>
 
             {visibleSurveys.length === 0 ? (
@@ -896,7 +955,11 @@ export default function SurveysPage() {
                 className="rounded-12 border border-dashed border-border-strong px-6 py-10 text-center"
               >
                 <p className="text-13 text-muted-foreground">
-                  {filter === "my" ? "You do not own any surveys in this context." : "No team surveys in this context."}
+                  {filter === "my"
+                    ? "You do not own any surveys in this context."
+                    : filter === "team"
+                      ? "No team surveys in this context."
+                      : "No room surveys in this context."}
                 </p>
               </div>
             ) : (
@@ -916,16 +979,28 @@ export default function SurveysPage() {
                           <p className="mt-1 truncate text-12 text-muted-foreground">{s.description}</p>
                         )}
                       </div>
-                      <Badge data-testid={`survey-status-${s.id}`} variant={s.status === "active" ? "success" : "muted"}>
-                        {STATUS_LABEL[s.status]}
-                      </Badge>
+                      <div className="flex flex-col items-end gap-1.5">
+                        {/* p20/F08：scope 徽章——My/Team/Room，Room 问卷额外标注所属房间名 */}
+                        <Badge data-testid={`survey-scope-badge-${s.id}`} variant="muted">
+                          {scopeBadgeLabel(s)}
+                        </Badge>
+                        <Badge data-testid={`survey-status-${s.id}`} variant={s.status === "active" ? "success" : "muted"}>
+                          {STATUS_LABEL[s.status]}
+                        </Badge>
+                      </div>
                     </div>
+
+                    {s.scope === "room" && s.roomName && (
+                      <p data-testid={`survey-room-name-${s.id}`} className="mt-1.5 text-12 text-muted-foreground">
+                        Room · {s.roomName}
+                      </p>
+                    )}
 
                     <div className="mt-4 grid grid-cols-3 gap-2 text-12">
                       <div>
                         <p className="text-muted-foreground">Scope</p>
                         <p data-testid={`survey-scope-${s.id}`} className="mt-1 font-medium text-foreground">
-                          {s.scope === "team" ? "Team" : "Private"}
+                          {s.scope === "team" ? "Team" : s.scope === "room" ? "Room" : "Private"}
                         </p>
                       </div>
                       <div>
