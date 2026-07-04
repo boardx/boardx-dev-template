@@ -23,6 +23,7 @@ import {
   type PresentationArtifact,
   type PresentationRevision,
 } from "@/components/presentations/presentation-preview-card";
+import { RoomFilesPanel } from "@/components/room-files/room-files-panel";
 
 interface Chat {
   id: number | string;
@@ -364,10 +365,9 @@ export default function RoomChatDetailPage() {
 
       {/* 三栏工作区 */}
       <div className="grid flex-1 grid-cols-[14rem_1fr_14rem] overflow-hidden">
-        {/* 左：Room Files（p10） */}
+        {/* 左：Room Files（p20/F03，房间级文件库，替换原 p10 占位文案） */}
         <aside data-testid="pane-files" className="flex flex-col gap-2 border-r bg-muted/20 p-4">
-          <p className="text-sm font-semibold text-foreground">Room Files</p>
-          <p className="text-xs text-muted-foreground">文件能力将在 p10 接入</p>
+          <RoomFilesPanel roomId={String(roomId)} chatId={String(chatId)} />
         </aside>
 
         {/* 中：AVA 聊天 */}
