@@ -50,7 +50,7 @@
       "title": "房间级文件库（数据模型修正 + Files tab）",
       "user_visible_behavior": "房间 Files tab（data-testid=room-files-tab）提供上传（拖拽/点击，R2 预签名→直传→confirm，data-testid=room-files-upload）、搜索、按来源线程过滤、预览（签名 URL；URL 过期时预览处展示过期提示文案并可点击刷新换取新签名 URL）、软删（二次确认，data-testid=room-files-item 行内删除）；文件属于房间（room_files.room_id NOT NULL，chat_thread_id 可空仅作来源标注），同一文件库同时出现在该房间所有聊天线程左侧文件面板；不打开任何聊天线程也能管理文件；删除权限=上传者本人或 owner/admin——member 删他人文件 API 返回 403，admin 可成功删除他人文件（该断言承接 F07 权限矩阵）；不支持的类型上传时行内提示 Unsupported file type。",
       "design_ref": "prototype:<!-- ROOM DETAIL --> Files tab；oldcode room-file.schema.ts 字段对齐",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "wrk-room-1",
       "capability": "CAP-FILE",
@@ -64,7 +64,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-003-room-files.spec.ts",
         "git cat-file -e HEAD:phases/phase-p20-room-realignment/sprints/sprint-01/evidence/F03.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-07-04T03:30:49.789Z",
       "notes": "uc-rr-003（核心模型修正，推翻 uc-room-005 的线程绑定）。复用 p10 CAP-FILE 上传平面（预签名+confirm），不另造上传栈；交付 room_files 迁移 + /api/rooms/[id]/files CRUD + Files tab UI + 聊天左侧面板接同一文件库。依赖：F01（详情壳，已 passing）；迁移需保留存量线程级文件的 chat_thread_id（L4：迁移判据用专用标记列，禁止 name/自然键，DB 级不变量断言输出留 evidence）。L10 契约缺口显式归属（本 feature 接盘并在 room-rr-003 spec 内断言）：① F07 权限矩阵中『admin 删他人文件』一行（F07 交付时 Files tab 不存在，未断言）；② 本 feature 自身的文件签名 URL 过期提示（可刷新）——与 F09 的邀请令牌过期提示是不同域，F09 该项已在其自身 PR 内交付闭环，非遗留。共享文件热点：apps/web/app/(app)/rooms/[id]/files/page.tsx（本 feature 主场）、apps/web/app/(app)/rooms/[id]/members/page.tsx 与房间设置弹窗（与 #327 返工中的邀请流可能同文件——若 #327 未合并，涉及 members 页/设置弹窗的改动必须串行，先合并者优先）、聊天工作区左侧面板组件、packages/data 迁移目录、apps/web/app/api/rooms/[id]/ 下新增 files 子路由。"
     },
     {
