@@ -1,0 +1,10 @@
+
+> boardx-dev-template@ harness /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/515c4f6b-1bc0-41d4-ac38-b6df9bb81f4f/scratchpad/wt-363gate
+> tsx .harness/scripts/cli.ts "verify" "--sprint" "p17/01" "--feature" "F03"
+
+==> 验证 F03 — AI Store 页面 reskin
+✓ 通过: docker compose -f infra/docker-compose.yml up -d
+✓ 通过: pnpm --filter @repo/data run migrate
+✗ 失败: pnpm --filter @repo/web exec playwright test e2e/ai-store-*.spec.ts
+完成：0 个升级为 passing，1 个未通过。
+ ELIFECYCLE  Command failed with exit code 1.
