@@ -11,8 +11,12 @@ import { test, expect } from "@playwright/test";
 //
 // 后端 /api/ava/transcribe：本地/CI 没有配置 OPENAI_API_KEY 时，走该端点内置的
 // 确定性 stub 回退（不绕过真实代码路径——鉴权/上传/调用/回填逻辑全部真实执行，
-// 只是不发起真实 Whisper API 请求），返回 `[stub 转写] ...` 文案。真实 STT 由 F06 的
-// node scripts/stt-smoke.mjs 冒烟覆盖（env-gated）。
+// 只是不发起真实 Whisper API 请求），返回 `[占位转写・未配置转写服务] ...` 文案。
+// 真实 STT 由 F06 的 node scripts/stt-smoke.mjs 冒烟覆盖（env-gated）。
+//
+// 本文件同时覆盖 review 返工必修项：体积上限（413）/ MIME 白名单（415）——前端断言
+// 走 route mock（验证前端错误分支复用 transcription-failed，不新增状态），后端断言
+// 直接打真实端点（验证服务端校验本身生效，不依赖前端 mock）。
 
 const uniq = () => `ava_voice_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 
@@ -85,4 +89,103 @@ test("转写请求失败时展示 transcription-failed 错误文案", async ({ p
 
   await expect(page.getByTestId("voice-error")).toContainText("转写失败");
   await expect(page.getByTestId("composer")).toHaveValue("");
+});
+
+// 服务端体积上限（413）：mock 转写端点返回结构化 413，前端应落到既有的
+// transcription-failed 错误分支（不新增错误状态），不把服务端错误文案透传成别的展示。
+test("音频超过体积上限时（413）展示 transcription-failed 错误文案", async ({ page }) => {
+  await register(page);
+  await page.goto("/ava");
+
+  await page.route("**/api/ava/transcribe", (route) =>
+    route.fulfill({
+      status: 413,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "音频文件过大（上限 25MB）" }),
+    })
+  );
+
+  await page.getByTestId("voice-input-trigger").click();
+  await expect(page.getByTestId("voice-recording-indicator")).toBeVisible();
+  await page.waitForTimeout(1500);
+  await page.getByTestId("voice-stop").click();
+
+  await expect(page.getByTestId("voice-error")).toContainText("转写失败");
+  await expect(page.getByTestId("composer")).toHaveValue("");
+});
+
+// MIME 类型不在白名单（415）：同样落到 transcription-failed 分支。
+test("音频 MIME 类型不受支持时（415）展示 transcription-failed 错误文案", async ({ page }) => {
+  await register(page);
+  await page.goto("/ava");
+
+  await page.route("**/api/ava/transcribe", (route) =>
+    route.fulfill({
+      status: 415,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "不支持的音频类型：audio/x-bogus" }),
+    })
+  );
+
+  await page.getByTestId("voice-input-trigger").click();
+  await expect(page.getByTestId("voice-recording-indicator")).toBeVisible();
+  await page.waitForTimeout(1500);
+  await page.getByTestId("voice-stop").click();
+
+  await expect(page.getByTestId("voice-error")).toContainText("转写失败");
+  await expect(page.getByTestId("composer")).toHaveValue("");
+});
+
+// 直接打真实的 /api/ava/transcribe 端点（不 mock），验证服务端体积/MIME 校验本身
+// 确实生效并返回结构化的 413/415（覆盖必修项 1 的后端行为，不止是前端错误分支）。
+test("POST /api/ava/transcribe：超过 25MB 返回结构化 413", async ({ page }) => {
+  await register(page);
+  const oversized = Buffer.alloc(25 * 1024 * 1024 + 1, 1);
+  const res = await page.request.post("/api/ava/transcribe", {
+    multipart: {
+      file: {
+        name: "big.webm",
+        mimeType: "audio/webm",
+        buffer: oversized,
+      },
+    },
+  });
+  expect(res.status()).toBe(413);
+  const body = (await res.json()) as { error?: string };
+  expect(typeof body.error).toBe("string");
+  expect(body.error?.length).toBeGreaterThan(0);
+});
+
+test("POST /api/ava/transcribe：MIME 类型不在白名单返回结构化 415", async ({ page }) => {
+  await register(page);
+  const res = await page.request.post("/api/ava/transcribe", {
+    multipart: {
+      file: {
+        name: "clip.exe",
+        mimeType: "application/x-msdownload",
+        buffer: Buffer.from("not audio"),
+      },
+    },
+  });
+  expect(res.status()).toBe(415);
+  const body = (await res.json()) as { error?: string };
+  expect(typeof body.error).toBe("string");
+  expect(body.error?.length).toBeGreaterThan(0);
+});
+
+// 无 OPENAI_API_KEY 时（本地/CI 默认场景）：占位转写文本应带用户可见提示，不悄悄
+// 冒充真实转写（建议项 3）。
+test("无转写服务凭证时：转写结果附带占位提示（不伪装成真实转写）", async ({ page }) => {
+  await register(page);
+  await page.goto("/ava");
+
+  await page.getByTestId("voice-input-trigger").click();
+  await expect(page.getByTestId("voice-recording-indicator")).toBeVisible();
+  await page.waitForTimeout(1500);
+  await page.getByTestId("voice-stop").click();
+
+  const composer = page.getByTestId("composer");
+  await expect(composer).not.toHaveValue("", { timeout: 10_000 });
+  // 本地/CI 默认没有 OPENAI_API_KEY，走 stub 回退，提示应可见。
+  await expect(page.getByTestId("voice-stub-notice")).toBeVisible();
 });
