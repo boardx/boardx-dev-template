@@ -24,16 +24,34 @@ export interface ShareLinkEmail {
   threadTitle: string;
 }
 
+const AVA_SHARE_LINK_KIND = "ava_share_link";
+const SHARE_LINK_EMAIL_RATE_WINDOW_MS = 60_000;
+const SHARE_LINK_EMAIL_RATE_LIMIT = 1;
+
 /**
  * p18 F08：分享聊天「发送到我的邮箱」。与上面 reset-password 同一 dev transport 口径：
  * 打日志 + 落库到 outbound_emails 本地 sink（e2e 经 /api/dev/outbox 断言发信内容含分享链接）。
  * TODO(deferred)：与 reset-password 一起切换到真实 provider（SMTP/Resend）。
+ *
+ * 频控（p18 F11 review 登记的遗留债务补齐，见 PR #359 review）：F11 落地时给自己的
+ * send-email 端点加了频控，但同一底层 dev transport 的本端点当时裸奔——这里补上同款
+ * 频控（同一用户同一分钟最多 1 封），与下方 sendAvaMessageEmail 共用同一个
+ * RateLimitedError（定义见文件下方），查同一张 outbound_emails 表，不新增基础设施。
+ * 命中时抛 RateLimitedError，调用方（路由层）转 429。
  */
 export async function sendShareLinkEmail(mail: ShareLinkEmail): Promise<void> {
+  const recent = await countRecentOutboundEmails(
+    mail.to,
+    AVA_SHARE_LINK_KIND,
+    SHARE_LINK_EMAIL_RATE_WINDOW_MS
+  );
+  if (recent >= SHARE_LINK_EMAIL_RATE_LIMIT) {
+    throw new RateLimitedError();
+  }
   const subject = `AVA 聊天分享：${mail.threadTitle || "Untitled chat"}`;
   const body = `你分享的 AVA 聊天链接：${mail.shareUrl}`;
   console.log(`[mailer:dev] ava-share-link to=${mail.to} url=${mail.shareUrl}`);
-  await recordOutboundEmail(mail.to, "ava_share_link", subject, body);
+  await recordOutboundEmail(mail.to, AVA_SHARE_LINK_KIND, subject, body);
 }
 
 // p18 F11：消息「发送邮件」——把 AVA 单条消息内容发到当前用户邮箱。

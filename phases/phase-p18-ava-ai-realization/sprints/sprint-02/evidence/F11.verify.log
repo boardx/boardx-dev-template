@@ -4,7 +4,6 @@ $ docker compose -f infra/docker-compose.yml up -d
  Container worker-wrk-ava-p18-3-f11-message-send-ac-redis-1 Running 
  Container worker-wrk-ava-p18-3-f11-message-send-ac-minio-1 Running 
 
-
 $ pnpm --filter @repo/data run migrate
 [exit 0]
 
@@ -51,25 +50,25 @@ $ pnpm --filter @repo/data run migrate
 ✓ 已应用，跳过：023_outbound_emails.sql
 ✓ 已应用，跳过：024_room_favorites.sql
 ✓ 已应用，跳过：025_room_invites.sql
+✓ 已应用，跳过：026_room_files.sql
 ✓ 已应用，跳过：026_survey_room_scope.sql
 ✓ 已应用，跳过：027_ava_research_sessions.sql
 迁移完成。
-
 
 $ pnpm --filter @repo/web exec playwright test e2e/ava-message-send-actions.spec.ts
 [exit 0]
 
 Running 5 tests using 1 worker
 
-  ✓  1 [chromium] › ava-message-send-actions.spec.ts:22:5 › 发送到 Board：选择有编辑权限的白板后写入便利贴并展示成功提示 (3.8s)
-  ✓  2 [chromium] › ava-message-send-actions.spec.ts:52:5 › 发送到 Board：无编辑权限的白板不可选或提示权限不足 (738ms)
-  ✓  3 [chromium] › ava-message-send-actions.spec.ts:63:5 › 发送到 Board：非编辑权限 Board 调用底层接口返回 403 权限不足 (672ms)
-  ✓  4 [chromium] › ava-message-send-actions.spec.ts:100:5 › 发送邮件：成功发送到当前用户邮箱，独立成功提示 (1.6s)
-  ✓  5 [chromium] › ava-message-send-actions.spec.ts:119:5 › 发送邮件：频控——同一分钟内连续点击第二次被拦截，不发第二封 (3.8s)
+  ✓  1 [chromium] › ava-message-send-actions.spec.ts:22:5 › 发送到 Board：选择有编辑权限的白板后写入便利贴并展示成功提示 (8.3s)
+  ✓  2 [chromium] › ava-message-send-actions.spec.ts:52:5 › 发送到 Board：无编辑权限的白板不可选或提示权限不足 (1.2s)
+  ✓  3 [chromium] › ava-message-send-actions.spec.ts:63:5 › 发送到 Board：非编辑权限 Board 调用底层接口返回 403 权限不足 (1.2s)
+  ✓  4 [chromium] › ava-message-send-actions.spec.ts:100:5 › 发送邮件：成功发送到当前用户邮箱，独立成功提示 (2.2s)
+  ✓  5 [chromium] › ava-message-send-actions.spec.ts:119:5 › 发送邮件：频控——同一分钟内连续点击第二次被拦截，不发第二封 (4.2s)
 
-  5 passed (13.3s)
-
-
+  Slow test file: [chromium] › ava-message-send-actions.spec.ts (17.2s)
+  Consider splitting slow test files to speed up parallel execution
+  5 passed (22.1s)
 
 [BASE VERIFY] $ pnpm -w run verify:base
 [exit 0]
@@ -80,60 +79,97 @@ Running 5 tests using 1 worker
 • Packages in scope: @repo/agent-core, @repo/ai, @repo/auth, @repo/canvas, @repo/data, @repo/memory, @repo/orchestrator, @repo/queue, @repo/storage, @repo/tools, @repo/web, @repo/workflow-worker
 • Running typecheck, lint, test in 12 packages
 • Remote caching disabled
-@repo/data:lint: cache hit, replaying logs 7dfff772055fa6d0
 @repo/ai:test: cache hit, replaying logs 966406a9381e20a1
-@repo/agent-core:test: cache hit, replaying logs 79e924826c73601a
-@repo/queue:typecheck: cache hit, replaying logs 804cbe4172fa4b15
-@repo/queue:test: cache hit, replaying logs 0d002c292c8fabc8
-@repo/data:lint: 
-@repo/data:lint: > @repo/data@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/data
-@repo/data:lint: > echo 'lint: ok'
-@repo/data:lint: 
-@repo/data:lint: lint: ok
+@repo/agent-core:build: cache hit, replaying logs 72029ef72bc90291
+@repo/agent-core:build: 
+@repo/agent-core:build: > @repo/agent-core@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/agent-core
+@repo/agent-core:build: > tsc --noEmit
+@repo/agent-core:build: 
+@repo/memory:build: cache hit, replaying logs ef2c4955f90a55e2
+@repo/memory:build: 
+@repo/memory:build: > @repo/memory@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/memory
+@repo/memory:build: > tsc --noEmit
+@repo/memory:build: 
 @repo/ai:test: 
 @repo/ai:test: > @repo/ai@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/ai
 @repo/ai:test: > vitest run
 @repo/ai:test: 
 @repo/ai:test: 
 @repo/ai:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/ai
-@repo/queue:test: 
 @repo/ai:test: 
 @repo/ai:test:  ✓ src/sttProvider.test.ts  (6 tests) 10ms
-@repo/queue:typecheck: 
 @repo/ai:test:  ✓ src/studioGenerator.test.ts  (4 tests) 4ms
 @repo/ai:test:  ✓ src/index.test.ts  (12 tests) 3ms
 @repo/ai:test:  ✓ src/anthropicProvider.test.ts  (13 tests) 22ms
 @repo/ai:test: 
 @repo/ai:test:  Test Files  4 passed (4)
 @repo/ai:test:       Tests  35 passed (35)
-@repo/queue:typecheck: > @repo/queue@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/queue
 @repo/ai:test:    Start at  13:24:39
 @repo/ai:test:    Duration  1.42s (transform 868ms, setup 1ms, collect 1.00s, tests 39ms, environment 1ms, prepare 1.39s)
 @repo/ai:test: 
-@repo/agent-core:test: 
-@repo/canvas:lint: cache hit, replaying logs 13e32f8d9de0dc8c
+@repo/canvas:test: cache hit, replaying logs 85524402dd543241
+@repo/canvas:test: 
+@repo/canvas:test: > @repo/canvas@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/canvas
+@repo/canvas:test: > vitest run
+@repo/canvas:test: 
+@repo/canvas:test: 
+@repo/canvas:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/canvas
+@repo/canvas:test: 
+@repo/canvas:test:  ✓ src/index.test.ts  (8 tests) 7ms
+@repo/canvas:test: 
+@repo/canvas:test:  Test Files  1 passed (1)
+@repo/canvas:test:       Tests  8 passed (8)
+@repo/canvas:test:    Start at  12:46:05
+@repo/canvas:test:    Duration  366ms (transform 38ms, setup 0ms, collect 54ms, tests 7ms, environment 0ms, prepare 90ms)
+@repo/canvas:test: 
+@repo/orchestrator:lint: cache hit, replaying logs 30eb51336094ef04
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: > @repo/orchestrator@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/orchestrator
+@repo/orchestrator:lint: > echo 'lint: ok'
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: lint: ok
+@repo/queue:typecheck: cache hit, replaying logs 804cbe4172fa4b15
+@repo/queue:typecheck: 
+@repo/queue:typecheck: > @repo/queue@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/queue
 @repo/queue:typecheck: > tsc --noEmit
 @repo/queue:typecheck: 
+@repo/storage:typecheck: cache hit, replaying logs bd526af1b5929ebe
+@repo/storage:typecheck: 
+@repo/storage:typecheck: > @repo/storage@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/storage
+@repo/storage:typecheck: > tsc --noEmit
+@repo/storage:typecheck: 
+@repo/data:lint: cache hit, replaying logs 7b7fb527f89b602b
+@repo/data:lint: 
+@repo/data:lint: > @repo/data@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/data
+@repo/data:lint: > echo 'lint: ok'
+@repo/data:lint: 
+@repo/data:lint: lint: ok
+@repo/tools:build: cache hit, replaying logs 572d3f061bd1690e
+@repo/tools:build: 
+@repo/tools:build: > @repo/tools@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/tools
+@repo/tools:build: > tsc --noEmit
+@repo/tools:build: 
+@repo/memory:typecheck: cache hit, replaying logs 0c6677da20af9c13
+@repo/memory:typecheck: 
+@repo/memory:typecheck: > @repo/memory@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/memory
+@repo/memory:typecheck: > tsc --noEmit
+@repo/memory:typecheck: 
+@repo/memory:lint: cache hit, replaying logs 27a0f892baac9da2
+@repo/memory:lint: 
+@repo/memory:lint: > @repo/memory@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/memory
+@repo/memory:lint: > echo 'lint: ok'
+@repo/memory:lint: 
+@repo/memory:lint: lint: ok
+@repo/queue:lint: cache hit, replaying logs a841242a04b4cf95
+@repo/queue:lint: 
+@repo/queue:lint: > @repo/queue@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/queue
+@repo/queue:lint: > echo 'lint: ok'
+@repo/queue:lint: 
+@repo/queue:lint: lint: ok
+@repo/queue:test: cache hit, replaying logs 0d002c292c8fabc8
+@repo/queue:test: 
 @repo/queue:test: > @repo/queue@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/queue
 @repo/queue:test: > vitest run
-@repo/canvas:lint: 
-@repo/agent-core:test: > @repo/agent-core@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/agent-core
-@repo/agent-core:test: > vitest run
-@repo/agent-core:test: 
-@repo/agent-core:test: 
-@repo/agent-core:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/agent-core
-@repo/agent-core:test: 
-@repo/agent-core:test:  ✓ src/index.test.ts  (3 tests) 5ms
-@repo/canvas:lint: > @repo/canvas@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/canvas
-@repo/canvas:lint: > echo 'lint: ok'
-@repo/canvas:lint: 
-@repo/canvas:lint: lint: ok
-@repo/agent-core:test: 
-@repo/agent-core:test:  Test Files  1 passed (1)
-@repo/agent-core:test:       Tests  3 passed (3)
-@repo/agent-core:test:    Start at  12:46:04
-@repo/agent-core:test:    Duration  879ms (transform 66ms, setup 0ms, collect 87ms, tests 5ms, environment 0ms, prepare 99ms)
-@repo/agent-core:test: 
 @repo/queue:test: 
 @repo/queue:test: 
 @repo/queue:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/queue
@@ -145,34 +181,7 @@ Running 5 tests using 1 worker
 @repo/queue:test:    Start at  12:46:04
 @repo/queue:test:    Duration  1.04s (transform 30ms, setup 0ms, collect 170ms, tests 2ms, environment 0ms, prepare 72ms)
 @repo/queue:test: 
-@repo/canvas:typecheck: cache hit, replaying logs ec14d65654c44629
-@repo/canvas:typecheck: 
-@repo/canvas:typecheck: > @repo/canvas@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/canvas
-@repo/canvas:typecheck: > tsc --noEmit
-@repo/canvas:typecheck: 
-@repo/storage:typecheck: cache hit, replaying logs 65d6bb3c823d094f
-@repo/storage:typecheck: 
-@repo/storage:typecheck: > @repo/storage@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/storage
-@repo/storage:typecheck: > tsc --noEmit
-@repo/storage:typecheck: 
-@repo/memory:build: cache hit, replaying logs ef2c4955f90a55e2
-@repo/memory:build: 
-@repo/memory:build: > @repo/memory@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/memory
-@repo/memory:build: > tsc --noEmit
-@repo/memory:build: 
-@repo/storage:lint: cache hit, replaying logs 8226e0fa96519d86
-@repo/storage:lint: 
-@repo/storage:lint: > @repo/storage@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/storage
-@repo/storage:lint: > echo 'lint: ok'
-@repo/storage:lint: 
-@repo/storage:lint: lint: ok
-@repo/tools:build: cache hit, replaying logs 572d3f061bd1690e
-@repo/tools:build: 
-@repo/tools:build: > @repo/tools@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/tools
-@repo/tools:build: > tsc --noEmit
-@repo/tools:build: 
 @repo/memory:test: cache hit, replaying logs 6901151252fb79a2
-@repo/memory:lint: cache hit, replaying logs 27a0f892baac9da2
 @repo/memory:test: 
 @repo/memory:test: > @repo/memory@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/memory
 @repo/memory:test: > vitest run
@@ -187,104 +196,29 @@ Running 5 tests using 1 worker
 @repo/memory:test:    Start at  12:46:06
 @repo/memory:test:    Duration  257ms (transform 29ms, setup 1ms, collect 28ms, tests 6ms, environment 0ms, prepare 38ms)
 @repo/memory:test: 
-@repo/memory:lint: 
-@repo/memory:lint: > @repo/memory@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/memory
-@repo/memory:lint: > echo 'lint: ok'
-@repo/memory:lint: 
-@repo/memory:lint: lint: ok
-@repo/agent-core:typecheck: cache hit, replaying logs 605f8206aa339bc0
-@repo/agent-core:typecheck: 
-@repo/agent-core:typecheck: > @repo/agent-core@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/agent-core
-@repo/agent-core:typecheck: > tsc --noEmit
-@repo/agent-core:typecheck: 
-@repo/queue:lint: cache hit, replaying logs a841242a04b4cf95
-@repo/queue:lint: 
-@repo/queue:lint: > @repo/queue@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/queue
-@repo/queue:lint: > echo 'lint: ok'
-@repo/queue:lint: 
-@repo/queue:lint: lint: ok
-@repo/workflow-worker:lint: cache hit, replaying logs 6f389089607d2762
-@repo/workflow-worker:lint: 
-@repo/workflow-worker:lint: > @repo/workflow-worker@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/workflow-worker
-@repo/workflow-worker:lint: > echo 'lint: ok'
-@repo/workflow-worker:lint: 
-@repo/workflow-worker:lint: lint: ok
-@repo/ai:lint: cache hit, replaying logs a1ba493955135d47
-@repo/ai:lint: 
-@repo/ai:lint: > @repo/ai@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/ai
-@repo/ai:lint: > echo 'lint: ok'
-@repo/ai:lint: 
-@repo/ai:lint: lint: ok
-@repo/memory:typecheck: cache hit, replaying logs 0c6677da20af9c13
-@repo/memory:typecheck: 
-@repo/memory:typecheck: > @repo/memory@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/memory
-@repo/memory:typecheck: > tsc --noEmit
-@repo/memory:typecheck: 
-@repo/ai:typecheck: cache hit, replaying logs f42a5dc4d04f66a6
-@repo/ai:typecheck: 
-@repo/ai:typecheck: > @repo/ai@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/ai
-@repo/ai:typecheck: > tsc --noEmit
-@repo/ai:typecheck: 
-@repo/storage:test: cache hit, replaying logs 304ef4d6e385ecab
-@repo/storage:test: 
-@repo/storage:test: > @repo/storage@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/storage
-@repo/storage:test: > vitest run
-@repo/storage:test: 
-@repo/storage:test: 
-@repo/storage:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/storage
-@repo/storage:test: 
-@repo/storage:test:  ✓ src/index.test.ts  (19 tests) 2ms
-@repo/storage:test: 
-@repo/storage:test:  Test Files  1 passed (1)
-@repo/storage:test:       Tests  19 passed (19)
-@repo/storage:test:    Start at  12:46:04
-@repo/storage:test:    Duration  1.07s (transform 70ms, setup 0ms, collect 181ms, tests 2ms, environment 0ms, prepare 124ms)
-@repo/storage:test: 
+@repo/storage:lint: cache hit, replaying logs 796b40bb0cf184f9
+@repo/storage:lint: 
+@repo/storage:lint: > @repo/storage@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/storage
+@repo/storage:lint: > echo 'lint: ok'
+@repo/storage:lint: 
+@repo/storage:lint: lint: ok
+@repo/auth:lint: cache hit, replaying logs 9ae33de5a89531ea
+@repo/auth:lint: 
+@repo/auth:lint: > @repo/auth@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/auth
+@repo/auth:lint: > echo 'lint: ok'
+@repo/auth:lint: 
+@repo/auth:lint: lint: ok
+@repo/canvas:lint: cache hit, replaying logs 13e32f8d9de0dc8c
+@repo/canvas:lint: 
+@repo/canvas:lint: > @repo/canvas@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/canvas
+@repo/canvas:lint: > echo 'lint: ok'
+@repo/canvas:lint: 
+@repo/canvas:lint: lint: ok
 @repo/auth:typecheck: cache hit, replaying logs 5d4669ddd871fb94
 @repo/auth:typecheck: 
 @repo/auth:typecheck: > @repo/auth@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/auth
 @repo/auth:typecheck: > tsc --noEmit
 @repo/auth:typecheck: 
-@repo/data:test: cache hit, replaying logs 11b838368c0ded97
-@repo/data:test: 
-@repo/data:test: > @repo/data@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/data
-@repo/data:test: > vitest run
-@repo/data:test: 
-@repo/data:test: 
-@repo/data:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/data
-@repo/data:test: 
-@repo/data:test:  ✓ src/aiStore.test.ts  (15 tests) 16ms
-@repo/data:test:  ✓ src/roomChat.test.ts  (2 tests) 1ms
-@repo/data:test:  ✓ src/index.test.ts  (3 tests) 1ms
-@repo/data:test:  ✓ src/survey.test.ts  (4 tests) 2ms
-@repo/data:test:  ✓ src/board.test.ts  (9 tests) 1ms
-@repo/data:test:  ✓ src/avaChat.test.ts  (5 tests) 3ms
-@repo/data:test: 
-@repo/data:test:  Test Files  6 passed (6)
-@repo/data:test:       Tests  38 passed (38)
-@repo/data:test:    Start at  13:48:20
-@repo/data:test:    Duration  845ms (transform 598ms, setup 0ms, collect 2.26s, tests 24ms, environment 1ms, prepare 898ms)
-@repo/data:test: 
-@repo/tools:typecheck: cache hit, replaying logs d11b4f859a2cd2f4
-@repo/tools:typecheck: 
-@repo/tools:typecheck: > @repo/tools@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/tools
-@repo/tools:typecheck: > tsc --noEmit
-@repo/tools:typecheck: 
-@repo/ai:build: cache hit, replaying logs 691454f72a441ed0
-@repo/ai:build: 
-@repo/ai:build: > @repo/ai@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/ai
-@repo/ai:build: > tsc --noEmit
-@repo/ai:build: 
-@repo/agent-core:build: cache hit, replaying logs 72029ef72bc90291
-@repo/agent-core:build: 
-@repo/agent-core:build: > @repo/agent-core@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/agent-core
-@repo/agent-core:build: > tsc --noEmit
-@repo/agent-core:build: 
-@repo/queue:build: cache hit, replaying logs 47c8e57bfb69fd26
-@repo/queue:build: 
-@repo/queue:build: > @repo/queue@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/queue
-@repo/queue:build: > tsc --noEmit
-@repo/queue:build: 
 @repo/auth:test: cache hit, replaying logs eaf236f775aa616d
 @repo/auth:test: 
 @repo/auth:test: > @repo/auth@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/auth
@@ -300,35 +234,89 @@ Running 5 tests using 1 worker
 @repo/auth:test:    Start at  13:24:39
 @repo/auth:test:    Duration  1.73s (transform 134ms, setup 0ms, collect 172ms, tests 351ms, environment 0ms, prepare 239ms)
 @repo/auth:test: 
-@repo/orchestrator:lint: cache hit, replaying logs 30eb51336094ef04
-@repo/orchestrator:lint: 
-@repo/orchestrator:lint: > @repo/orchestrator@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/orchestrator
-@repo/orchestrator:lint: > echo 'lint: ok'
-@repo/orchestrator:lint: 
-@repo/orchestrator:lint: lint: ok
-@repo/storage:build: cache hit, replaying logs 2c67dc5e266c6fcc
-@repo/storage:build: 
-@repo/storage:build: > @repo/storage@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/storage
-@repo/storage:build: > tsc --noEmit
-@repo/storage:build: 
-@repo/auth:lint: cache hit, replaying logs 9ae33de5a89531ea
-@repo/auth:lint: 
-@repo/auth:lint: > @repo/auth@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/auth
-@repo/auth:lint: > echo 'lint: ok'
-@repo/auth:lint: 
-@repo/auth:lint: lint: ok
-@repo/canvas:build: cache hit, replaying logs 5ab8469f958aa507
-@repo/canvas:build: 
-@repo/canvas:build: > @repo/canvas@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/canvas
-@repo/canvas:build: > tsc --noEmit
-@repo/canvas:build: 
+@repo/canvas:typecheck: cache hit, replaying logs ec14d65654c44629
+@repo/canvas:typecheck: 
+@repo/canvas:typecheck: > @repo/canvas@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/canvas
+@repo/canvas:typecheck: > tsc --noEmit
+@repo/canvas:typecheck: 
+@repo/ai:lint: cache hit, replaying logs a1ba493955135d47
+@repo/ai:lint: 
+@repo/ai:lint: > @repo/ai@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/ai
+@repo/ai:lint: > echo 'lint: ok'
+@repo/ai:lint: 
+@repo/ai:lint: lint: ok
+@repo/storage:test: cache hit, replaying logs 3fadabdd222eada5
+@repo/storage:test: 
+@repo/storage:test: > @repo/storage@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/storage
+@repo/storage:test: > vitest run
+@repo/storage:test: 
+@repo/storage:test: 
+@repo/storage:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/storage
+@repo/storage:test: 
+@repo/storage:test:  ✓ src/index.test.ts  (19 tests) 12ms
+@repo/storage:test: 
+@repo/storage:test:  Test Files  1 passed (1)
+@repo/storage:test:       Tests  19 passed (19)
+@repo/storage:test:    Start at  17:57:30
+@repo/storage:test:    Duration  4.55s (transform 682ms, setup 0ms, collect 1.58s, tests 12ms, environment 0ms, prepare 772ms)
+@repo/storage:test: 
+@repo/auth:build: cache hit, replaying logs b3251ba7b3f1dcff
+@repo/auth:build: 
+@repo/auth:build: > @repo/auth@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/auth
+@repo/auth:build: > tsc --noEmit
+@repo/auth:build: 
+@repo/data:test: cache hit, replaying logs 5c2109e6fe1ae37d
+@repo/data:test: 
+@repo/data:test: > @repo/data@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/data
+@repo/data:test: > vitest run
+@repo/data:test: 
+@repo/data:test: 
+@repo/data:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/data
+@repo/data:test: 
+@repo/data:test:  ✓ src/aiStore.test.ts  (15 tests) 25ms
+@repo/data:test:  ✓ src/index.test.ts  (3 tests) 6ms
+@repo/data:test:  ✓ src/survey.test.ts  (4 tests) 8ms
+@repo/data:test:  ✓ src/avaChat.test.ts  (5 tests) 10ms
+@repo/data:test:  ✓ src/roomChat.test.ts  (2 tests) 9ms
+@repo/data:test:  ✓ src/board.test.ts  (9 tests) 10ms
+@repo/data:test: 
+@repo/data:test:  Test Files  6 passed (6)
+@repo/data:test:       Tests  38 passed (38)
+@repo/data:test:    Start at  17:57:28
+@repo/data:test:    Duration  6.09s (transform 4.83s, setup 3ms, collect 17.62s, tests 68ms, environment 1ms, prepare 4.10s)
+@repo/data:test: 
+@repo/tools:typecheck: cache hit, replaying logs d11b4f859a2cd2f4
+@repo/tools:typecheck: 
+@repo/tools:typecheck: > @repo/tools@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/tools
+@repo/tools:typecheck: > tsc --noEmit
+@repo/tools:typecheck: 
 @repo/tools:lint: cache hit, replaying logs 4cc8ff2f66a3d7bc
 @repo/tools:lint: 
 @repo/tools:lint: > @repo/tools@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/tools
 @repo/tools:lint: > echo 'lint: ok'
 @repo/tools:lint: 
 @repo/tools:lint: lint: ok
-@repo/web:lint: cache hit, replaying logs 6bdd76b8b99780f9
+@repo/tools:test: cache hit, replaying logs 6ccaef08a058b3c2
+@repo/tools:test: 
+@repo/tools:test: > @repo/tools@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/tools
+@repo/tools:test: > vitest run
+@repo/tools:test: 
+@repo/tools:test: 
+@repo/tools:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/tools
+@repo/tools:test: 
+@repo/tools:test:  ✓ src/index.test.ts  (12 tests) 55ms
+@repo/tools:test: 
+@repo/tools:test:  Test Files  1 passed (1)
+@repo/tools:test:       Tests  12 passed (12)
+@repo/tools:test:    Start at  12:46:07
+@repo/tools:test:    Duration  406ms (transform 39ms, setup 0ms, collect 43ms, tests 55ms, environment 0ms, prepare 61ms)
+@repo/tools:test: 
+@repo/canvas:build: cache hit, replaying logs 5ab8469f958aa507
+@repo/canvas:build: 
+@repo/canvas:build: > @repo/canvas@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/canvas
+@repo/canvas:build: > tsc --noEmit
+@repo/canvas:build: 
+@repo/web:lint: cache hit, replaying logs 279663d07da257bb
 @repo/web:lint: 
 @repo/web:lint: > @repo/web@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/web
 @repo/web:lint: > bash scripts/lint-design.sh
@@ -360,63 +348,70 @@ Running 5 tests using 1 worker
 @repo/web:lint:     LABEL-LANG-MIX: components/app-shell/sidebar.tsx:40:  { label: "Home", icon: Home, href: "/" },
 @repo/web:lint:   示例（Board 工具条 vs Sidebar 导航）：见 components/board/board-canvas.tsx 与 components/app-shell/sidebar.tsx
 @repo/web:lint: ✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性/文案语言一致性）
-@repo/data:build: cache hit, replaying logs 76bfb6a3c56b115a
+@repo/ai:typecheck: cache hit, replaying logs f42a5dc4d04f66a6
+@repo/ai:typecheck: 
+@repo/ai:typecheck: > @repo/ai@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/ai
+@repo/ai:typecheck: > tsc --noEmit
+@repo/ai:typecheck: 
+@repo/agent-core:test: cache hit, replaying logs 79e924826c73601a
+@repo/agent-core:test: 
+@repo/agent-core:test: > @repo/agent-core@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/agent-core
+@repo/agent-core:test: > vitest run
+@repo/agent-core:test: 
+@repo/agent-core:test: 
+@repo/agent-core:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/agent-core
+@repo/agent-core:test: 
+@repo/agent-core:test:  ✓ src/index.test.ts  (3 tests) 5ms
+@repo/agent-core:test: 
+@repo/agent-core:test:  Test Files  1 passed (1)
+@repo/agent-core:test:       Tests  3 passed (3)
+@repo/agent-core:test:    Start at  12:46:04
+@repo/agent-core:test:    Duration  879ms (transform 66ms, setup 0ms, collect 87ms, tests 5ms, environment 0ms, prepare 99ms)
+@repo/agent-core:test: 
+@repo/data:build: cache hit, replaying logs af945e569f720133
 @repo/data:build: 
 @repo/data:build: > @repo/data@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/data
 @repo/data:build: > tsc --noEmit
 @repo/data:build: 
-@repo/auth:build: cache hit, replaying logs b3251ba7b3f1dcff
-@repo/auth:build: 
-@repo/auth:build: > @repo/auth@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/auth
-@repo/auth:build: > tsc --noEmit
-@repo/auth:build: 
 @repo/agent-core:lint: cache hit, replaying logs ac94863c4184d627
 @repo/agent-core:lint: 
 @repo/agent-core:lint: > @repo/agent-core@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/agent-core
 @repo/agent-core:lint: > echo 'lint: ok'
 @repo/agent-core:lint: 
 @repo/agent-core:lint: lint: ok
-@repo/canvas:test: cache hit, replaying logs 85524402dd543241
-@repo/canvas:test: 
-@repo/canvas:test: > @repo/canvas@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/canvas
-@repo/canvas:test: > vitest run
-@repo/canvas:test: 
-@repo/canvas:test: 
-@repo/canvas:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/canvas
-@repo/canvas:test: 
-@repo/canvas:test:  ✓ src/index.test.ts  (8 tests) 7ms
-@repo/canvas:test: 
-@repo/canvas:test:  Test Files  1 passed (1)
-@repo/canvas:test:       Tests  8 passed (8)
-@repo/canvas:test:    Start at  12:46:05
-@repo/canvas:test:    Duration  366ms (transform 38ms, setup 0ms, collect 54ms, tests 7ms, environment 0ms, prepare 90ms)
-@repo/canvas:test: 
-@repo/tools:test: cache hit, replaying logs 6ccaef08a058b3c2
-@repo/tools:test: 
-@repo/tools:test: > @repo/tools@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/tools
-@repo/tools:test: > vitest run
-@repo/tools:test: 
-@repo/tools:test: 
-@repo/tools:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/tools
-@repo/tools:test: 
-@repo/tools:test:  ✓ src/index.test.ts  (12 tests) 55ms
-@repo/tools:test: 
-@repo/tools:test:  Test Files  1 passed (1)
-@repo/tools:test:       Tests  12 passed (12)
-@repo/tools:test:    Start at  12:46:07
-@repo/tools:test:    Duration  406ms (transform 39ms, setup 0ms, collect 43ms, tests 55ms, environment 0ms, prepare 61ms)
-@repo/tools:test: 
-@repo/data:typecheck: cache hit, replaying logs 4232912cb86755cb
+@repo/data:typecheck: cache hit, replaying logs dcf28ee2ddcfc19a
 @repo/data:typecheck: 
 @repo/data:typecheck: > @repo/data@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/data
 @repo/data:typecheck: > tsc --noEmit
 @repo/data:typecheck: 
-@repo/orchestrator:typecheck: cache hit, replaying logs 1e68a3fdb453ab29
-@repo/orchestrator:typecheck: 
-@repo/orchestrator:typecheck: > @repo/orchestrator@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/orchestrator
-@repo/orchestrator:typecheck: > tsc --noEmit
-@repo/orchestrator:typecheck: 
+@repo/ai:build: cache hit, replaying logs 691454f72a441ed0
+@repo/ai:build: 
+@repo/ai:build: > @repo/ai@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/ai
+@repo/ai:build: > tsc --noEmit
+@repo/ai:build: 
+@repo/agent-core:typecheck: cache hit, replaying logs 605f8206aa339bc0
+@repo/agent-core:typecheck: 
+@repo/agent-core:typecheck: > @repo/agent-core@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/agent-core
+@repo/agent-core:typecheck: > tsc --noEmit
+@repo/agent-core:typecheck: 
+@repo/storage:build: cache hit, replaying logs 87d764448ec875ad
+@repo/storage:build: 
+@repo/storage:build: > @repo/storage@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/storage
+@repo/storage:build: > tsc --noEmit
+@repo/storage:build: 
+@repo/queue:build: cache hit, replaying logs 47c8e57bfb69fd26
+@repo/queue:build: 
+@repo/queue:build: > @repo/queue@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/queue
+@repo/queue:build: > tsc --noEmit
+@repo/queue:build: 
+@repo/workflow-worker:lint: cache hit, replaying logs 6f389089607d2762
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: > @repo/workflow-worker@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/workflow-worker
+@repo/workflow-worker:lint: > echo 'lint: ok'
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: lint: ok
 @repo/orchestrator:test: cache hit, replaying logs 72b6c028823cc98c
+@repo/orchestrator:typecheck: cache hit, replaying logs 1e68a3fdb453ab29
 @repo/orchestrator:test: 
 @repo/orchestrator:test: > @repo/orchestrator@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/orchestrator
 @repo/orchestrator:test: > vitest run
@@ -431,35 +426,11 @@ Running 5 tests using 1 worker
 @repo/orchestrator:test:    Start at  12:46:10
 @repo/orchestrator:test:    Duration  337ms (transform 70ms, setup 0ms, collect 72ms, tests 30ms, environment 0ms, prepare 78ms)
 @repo/orchestrator:test: 
-@repo/workflow-worker:typecheck: cache hit, replaying logs 3021997887d4f6f8
-@repo/workflow-worker:typecheck: 
-@repo/workflow-worker:typecheck: > @repo/workflow-worker@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/workflow-worker
-@repo/workflow-worker:typecheck: > tsc --noEmit
-@repo/workflow-worker:typecheck: 
-@repo/workflow-worker:test: cache hit, replaying logs 2cfc58ef781f2334
-@repo/workflow-worker:test: 
-@repo/workflow-worker:test: > @repo/workflow-worker@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/workflow-worker
-@repo/workflow-worker:test: > vitest run
-@repo/workflow-worker:test: 
-@repo/workflow-worker:test: 
-@repo/workflow-worker:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/workflow-worker
-@repo/workflow-worker:test: 
-@repo/workflow-worker:test:  ✓ src/job.test.ts  (3 tests) 1ms
-@repo/workflow-worker:test:  ✓ src/kbFileJob.test.ts  (2 tests) 1ms
-@repo/workflow-worker:test:  ✓ src/presentationRevisionJob.test.ts  (4 tests) 4ms
-@repo/workflow-worker:test:  ✓ src/studioJob.test.ts  (2 tests) 2ms
-@repo/workflow-worker:test: 
-@repo/workflow-worker:test:  Test Files  4 passed (4)
-@repo/workflow-worker:test:       Tests  11 passed (11)
-@repo/workflow-worker:test:    Start at  13:48:22
-@repo/workflow-worker:test:    Duration  961ms (transform 162ms, setup 0ms, collect 359ms, tests 8ms, environment 0ms, prepare 549ms)
-@repo/workflow-worker:test: 
-@repo/web:typecheck: cache hit, replaying logs 5c97883f95c8e43e
-@repo/web:typecheck: 
-@repo/web:typecheck: > @repo/web@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/web
-@repo/web:typecheck: > tsc --noEmit
-@repo/web:typecheck: 
-@repo/web:test: cache hit, replaying logs feb39595bf103c06
+@repo/orchestrator:typecheck: 
+@repo/orchestrator:typecheck: > @repo/orchestrator@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/orchestrator
+@repo/orchestrator:typecheck: > tsc --noEmit
+@repo/orchestrator:typecheck: 
+@repo/web:test: cache hit, replaying logs 342a6c6825123274
 @repo/web:test: 
 @repo/web:test: > @repo/web@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/web
 @repo/web:test: > vitest run
@@ -468,24 +439,52 @@ Running 5 tests using 1 worker
 @repo/web:test: 
 @repo/web:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/web
 @repo/web:test: 
-@repo/web:test:  ✓ lib/feedback.test.ts  (2 tests) 3ms
-@repo/web:test:  ✓ lib/agents.test.ts  (5 tests) 10ms
-@repo/web:test:  ✓ lib/health.test.ts  (1 test) 1ms
-@repo/web:test:  ✓ app/api/ava/threads/[id]/share/route.test.ts  (5 tests) 6ms
-@repo/web:test:  ✓ lib/viewport.test.ts  (4 tests) 4ms
-@repo/web:test:  ✓ app/api/ava/threads/[id]/route.test.ts  (4 tests) 4ms
-@repo/web:test:  ✓ app/api/ai-store/items/[id]/route.test.ts  (2 tests) 7ms
-@repo/web:test:  ✓ app/api/boards/[id]/ai-chat/route.test.ts  (3 tests) 5ms
+@repo/web:test:  ✓ lib/viewport.test.ts  (4 tests) 14ms
+@repo/web:test:  ✓ lib/agents.test.ts  (5 tests) 9ms
+@repo/web:test:  ✓ lib/health.test.ts  (1 test) 7ms
+@repo/web:test:  ✓ lib/feedback.test.ts  (2 tests) 4ms
+@repo/web:test:  ✓ app/api/ava/threads/[id]/share/route.test.ts  (5 tests) 17ms
+@repo/web:test:  ✓ app/api/ava/threads/[id]/route.test.ts  (4 tests) 26ms
+@repo/web:test:  ✓ app/api/ai-store/items/[id]/route.test.ts  (2 tests) 30ms
+@repo/web:test:  ✓ app/api/boards/[id]/ai-chat/route.test.ts  (3 tests) 9ms
 @repo/web:test: 
 @repo/web:test:  Test Files  8 passed (8)
 @repo/web:test:       Tests  26 passed (26)
-@repo/web:test:    Start at  13:48:22
-@repo/web:test:    Duration  1.22s (transform 647ms, setup 0ms, collect 1.41s, tests 40ms, environment 1ms, prepare 1.20s)
+@repo/web:test:    Start at  17:57:41
+@repo/web:test:    Duration  6.21s (transform 3.07s, setup 0ms, collect 7.00s, tests 116ms, environment 2ms, prepare 4.64s)
 @repo/web:test: 
+@repo/workflow-worker:typecheck: cache hit, replaying logs 0cbb9e6c7dca690a
+@repo/workflow-worker:typecheck: 
+@repo/workflow-worker:typecheck: > @repo/workflow-worker@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/workflow-worker
+@repo/workflow-worker:typecheck: > tsc --noEmit
+@repo/workflow-worker:typecheck: 
+@repo/workflow-worker:test: cache hit, replaying logs ec772e2fa2372279
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test: > @repo/workflow-worker@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/workflow-worker
+@repo/workflow-worker:test: > vitest run
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/workflow-worker
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  ✓ src/kbFileJob.test.ts  (2 tests) 8ms
+@repo/workflow-worker:test:  ✓ src/job.test.ts  (3 tests) 13ms
+@repo/workflow-worker:test:  ✓ src/presentationRevisionJob.test.ts  (4 tests) 10ms
+@repo/workflow-worker:test:  ✓ src/studioJob.test.ts  (2 tests) 33ms
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  Test Files  4 passed (4)
+@repo/workflow-worker:test:       Tests  11 passed (11)
+@repo/workflow-worker:test:    Start at  17:57:41
+@repo/workflow-worker:test:    Duration  3.47s (transform 875ms, setup 1ms, collect 2.50s, tests 64ms, environment 2ms, prepare 3.04s)
+@repo/workflow-worker:test: 
+@repo/web:typecheck: cache hit, replaying logs 72bb51c54ba8569e
+@repo/web:typecheck: 
+@repo/web:typecheck: > @repo/web@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/web
+@repo/web:typecheck: > tsc --noEmit
+@repo/web:typecheck: 
 
  Tasks:    45 successful, 45 total
 Cached:    45 cached, 45 total
-  Time:    171ms >>> FULL TURBO
+  Time:    505ms >>> FULL TURBO
 
 turbo 2.5.0
 

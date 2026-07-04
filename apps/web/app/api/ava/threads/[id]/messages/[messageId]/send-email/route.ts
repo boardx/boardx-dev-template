@@ -56,6 +56,8 @@ export async function POST(
 
     return NextResponse.json({ ok: true, to: user.email });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    // 原始错误只记服务端日志；客户端只收到通用文案（同 F02/F07 review 指出的同类问题）。
+    console.error("[ava/send-email] 发送失败", err);
+    return NextResponse.json({ error: "发送失败，请重试" }, { status: 500 });
   }
 }

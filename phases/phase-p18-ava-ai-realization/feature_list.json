@@ -234,8 +234,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-message-send-actions.spec.ts"
       ],
-      "evidence": "evidence/F11.verify.log @ 2026-07-04T05:49:56.831Z",
-      "notes": "requirements/04。发送到 Board 复用 p5/p6 的 board/item 写入能力（widget 级投放细节若依赖 p6 未交付部分，先落为『写入 Board 内容』的最小可用形态并在 notes 记录边界）；发邮件与 F08 共享同一邮件底层。依赖 F08 先建好邮件发送在 AVA 域内的接入。"
+      "evidence": "evidence/F11.verify.log @ 2026-07-04T09:59:21.000Z",
+      "notes": "requirements/04。发送到 Board 复用 p5/p6 的 board/item 写入能力（widget 级投放细节若依赖 p6 未交付部分，先落为『写入 Board 内容』的最小可用形态并在 notes 记录边界）；发邮件与 F08 共享同一邮件底层。依赖 F08 先建好邮件发送在 AVA 域内的接入。PR #359 review 返工：修复 send-email/send-to-board 的 String(err) 泄露；补齐 F08 share/email 频控债务（PR #321 登记）。"
     },
     {
       "id": "F12",
