@@ -26,5 +26,6 @@
 | p18 | AVA AI 落地 (P18) | not_started | 2 | 0 | 0 | 10 |
 | p19 | AVA 画布/记忆扩展 (P19，待决策) | not_started | 1 | 0 | 0 | 0 |
 | p20 | Room Realignment (P20) | not_started | 3 | 0 | 0 | 8 |
+| p21 | platform-accounts-hardening | not_started | 2 | 4 | 0 | 0 |
 
 _最近聚合:2026-07-04T23:37:31.618Z_
