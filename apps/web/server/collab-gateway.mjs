@@ -3,23 +3,53 @@ import { createHash, randomUUID } from "node:crypto";
 import { createConnection } from "node:net";
 
 const WS_MAGIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-const REDIS_CHANNEL = "boardx:collab:transport";
 const serverId = randomUUID();
 const port = Number(process.env.COLLAB_WS_PORT ?? "3001");
+// 主 app 的 /api/auth/session 是唯一的会话真相来源；网关不直连 DB，靠回调复用既有
+// session cookie 校验（零新增依赖，和网关其余部分手撸协议的风格一致）。
+const WEB_ORIGIN =
+  process.env.COLLAB_WEB_ORIGIN ?? `http://localhost:${process.env.E2E_PORT ?? process.env.PORT ?? "3000"}`;
+// 单帧上限：防止畸形/恶意巨帧把整个连接的内存缓冲区吃爆。
+const MAX_FRAME_BYTES = 1024 * 1024;
+function channelFor(boardId) {
+  return `boardx:collab:board:${boardId}`;
+}
 
 const boards = new Map();
 let publisher;
+let subscriber;
 let redisReady;
 
 const server = createServer((req, res) => {
   if (req.url === "/health") {
+    // redis 字段是诊断信息；状态码维持 200（HTTP 网关本身已就绪），不影响
+    // playwright webServer 的就绪判定语义。真正的消息收发仍会等 redisReady。
     res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify({ ok: true }));
+    res.end(JSON.stringify({ ok: true, redis: redisState }));
     return;
   }
   res.writeHead(404);
   res.end("not found");
 });
+
+/** 校验 upgrade 请求携带的会话 cookie；无效/未登录返回 false。 */
+async function isAuthenticated(req) {
+  const cookie = req.headers.cookie;
+  if (!cookie) return false;
+  try {
+    const res = await fetch(`${WEB_ORIGIN}/api/auth/session`, { headers: { cookie } });
+    if (!res.ok) return false;
+    const body = await res.json();
+    return Boolean(body?.user);
+  } catch {
+    return false;
+  }
+}
+
+function rejectUpgrade(socket, status) {
+  socket.write(`HTTP/1.1 ${status}\r\nConnection: close\r\n\r\n`);
+  socket.destroy();
+}
 
 server.on("upgrade", (req, socket) => {
   const url = new URL(req.url ?? "", `http://${req.headers.host ?? "localhost"}`);
@@ -34,6 +64,16 @@ server.on("upgrade", (req, socket) => {
     return;
   }
 
+  void isAuthenticated(req).then((ok) => {
+    if (!ok) {
+      rejectUpgrade(socket, "401 Unauthorized");
+      return;
+    }
+    completeUpgrade(socket, boardId, key);
+  });
+});
+
+function completeUpgrade(socket, boardId, key) {
   const accept = createHash("sha1").update(key + WS_MAGIC).digest("base64");
   socket.write([
     "HTTP/1.1 101 Switching Protocols",
@@ -51,7 +91,14 @@ server.on("upgrade", (req, socket) => {
   socket.on("data", (chunk) => {
     client.buffer = Buffer.concat([client.buffer, chunk]);
     for (;;) {
-      const parsed = readFrame(client.buffer);
+      let parsed;
+      try {
+        parsed = readFrame(client.buffer);
+      } catch {
+        // 帧头声明的长度超过上限（含伪造巨帧）：直接断开，不缓冲。
+        socket.destroy();
+        return;
+      }
       if (!parsed) break;
       client.buffer = client.buffer.subarray(parsed.bytes);
       if (parsed.opcode === 0x8) {
@@ -60,9 +107,8 @@ server.on("upgrade", (req, socket) => {
       }
       if (parsed.opcode !== 0x1) continue;
       void redisReady
-        .then(() => publisher.publish(REDIS_CHANNEL, JSON.stringify({
+        .then(() => publisher.publish(channelFor(boardId), JSON.stringify({
           serverId,
-          boardId,
           payload: {
             type: "message",
             boardId,
@@ -70,26 +116,46 @@ server.on("upgrade", (req, socket) => {
             fromClientId: client.id,
           },
         })))
-        .catch((err) => {
-          sendFrame(socket, JSON.stringify({ type: "error", message: String(err?.message ?? err) }));
+        .catch(() => {
+          // 不回传内部错误细节（err.message 可能带连接串/路径等信息），只给通用文案。
+          sendFrame(socket, JSON.stringify({ type: "error", message: "message delivery failed" }));
         });
     }
   });
   socket.on("close", () => removeClient(client));
   socket.on("error", () => removeClient(client));
-});
+}
 
 function addClient(client) {
+  const isFirstForBoard = !boards.has(client.boardId);
   const set = boards.get(client.boardId) ?? new Set();
   set.add(client);
   boards.set(client.boardId, set);
+  if (isFirstForBoard) {
+    // 每个 board 独立 channel（非单一全局 channel + 应用层过滤）：只有真正有本
+    // 实例客户端的 board 才订阅，Redis 自己做隔离与扇出裁剪，而不是本进程收全库
+    // 流量再按 boardId 比对丢弃。
+    void redisReady.then(() => subscriber.subscribe(channelFor(client.boardId), (message) => {
+      let envelope;
+      try {
+        envelope = JSON.parse(message);
+      } catch {
+        return;
+      }
+      if (!envelope?.payload) return;
+      broadcast(client.boardId, JSON.stringify({ ...envelope.payload, via: "redis" }));
+    }));
+  }
 }
 
 function removeClient(client) {
   const set = boards.get(client.boardId);
   if (!set) return;
   set.delete(client);
-  if (set.size === 0) boards.delete(client.boardId);
+  if (set.size === 0) {
+    boards.delete(client.boardId);
+    void redisReady.then(() => subscriber.unsubscribe(channelFor(client.boardId)));
+  }
 }
 
 function broadcast(boardId, text) {
@@ -136,6 +202,7 @@ function readFrame(buffer) {
     length = Number(big);
     offset += 8;
   }
+  if (length > MAX_FRAME_BYTES) throw new Error("WebSocket frame too large");
   const maskOffset = offset;
   if (masked) offset += 4;
   if (buffer.length < offset + length) return null;
@@ -227,6 +294,11 @@ class RedisSubscriber {
     this.socket.write(encodeRedis(["SUBSCRIBE", channel]));
   }
 
+  unsubscribe(channel) {
+    this.handlers.delete(channel);
+    this.socket.write(encodeRedis(["UNSUBSCRIBE", channel]));
+  }
+
   onData(chunk) {
     this.buffer += chunk;
     for (;;) {
@@ -280,25 +352,22 @@ function parseRespAt(input, offset) {
   return null;
 }
 
+let redisState = "connecting";
+
 async function initRedis() {
   publisher = new RedisCommandClient(process.env.REDIS_URL);
-  const subscriber = new RedisSubscriber(process.env.REDIS_URL);
+  subscriber = new RedisSubscriber(process.env.REDIS_URL);
   await publisher.connect();
   await subscriber.connect();
-  await subscriber.subscribe(REDIS_CHANNEL, (message) => {
-    let envelope;
-    try {
-      envelope = JSON.parse(message);
-    } catch {
-      return;
-    }
-    if (!envelope || typeof envelope.boardId !== "string") return;
-    broadcast(envelope.boardId, JSON.stringify({ ...envelope.payload, via: "redis" }));
-  });
+  redisState = "ready";
+  // 注：断线期间发布的消息不做队列/重放——这是尽力而为的实时传输，不保证
+  // at-least-once。F02(Yjs 同步)必须自带和解机制(如重连后拉全量快照)，
+  // 不能假设这条通道会补发错过的消息。
 }
 
 redisReady = initRedis();
 void redisReady.catch((err) => {
+  redisState = "error";
   console.warn(`collab gateway redis unavailable: ${String(err?.message ?? err)}`);
 });
 
