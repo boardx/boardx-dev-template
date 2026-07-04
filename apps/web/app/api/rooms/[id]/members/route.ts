@@ -3,12 +3,16 @@ import {
   canViewRoom,
   canManageRoom,
   getRoomRole,
+  getRoom,
   listRoomMembers,
   addRoomMember,
   findUserByEmail,
+  upsertRoomInvite,
+  listPendingRoomInvites,
 } from "@repo/data";
-import { isValidEmail, normalizeEmail, generateToken } from "@repo/auth";
+import { isValidEmail, normalizeEmail, generateToken, expiresAt, ROOM_INVITE_TTL_MS } from "@repo/auth";
 import { currentUser } from "@/lib/session";
+import { sendRoomInviteEmail } from "@/lib/mailer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,14 +25,35 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: "无权限" }, { status: 403 });
   }
   const role = await getRoomRole(roomId, user.id);
-  return NextResponse.json({ members: await listRoomMembers(roomId), myRole: role ?? null });
+  const canManage = role === "owner" || role === "admin";
+  // pending 邀请列表仅 owner/admin 可见（避免向普通成员泄漏邀请邮箱等细节）。
+  const invites = canManage ? await listPendingRoomInvites(roomId) : [];
+  return NextResponse.json({
+    members: await listRoomMembers(roomId),
+    myRole: role ?? null,
+    invites: invites.map((i) => ({
+      id: i.id,
+      email: i.email,
+      role: i.role,
+      status: i.status,
+      expires_at: i.expires_at,
+      created_at: i.created_at,
+    })),
+  });
 }
 
 /**
- * 邀请成员（uc-room-003）。owner/admin only。
+ * 邀请成员（uc-room-003 / p20 F09）。owner/admin only。
  * POST { email }  → 邮箱邀请：已注册且不在房间 → 加入为 member（status:"added"）；
- *                    已在房间 → userAlreadyInRoom(409)；未注册 → 邀请流程（status:"invited"）。
+ *                    已在房间 → userAlreadyInRoom(409)；未注册 → room_invites 落库
+ *                    （token/过期7天/幂等刷新）+ dev 邮件通道发送注册链接（status:"invited"）。
  * POST { userId } → 直接按 userId 加入为 member（兼容既有 room-manage API）。
+ *
+ * 安全（review 修正 M2）：token 只经邮件（dev=控制台日志+outbound_emails 落库）流转给
+ * 被邀者本人，响应体绝不返回 token。但响应确实会区分"该邮箱已注册"(added/409) 与
+ * "未注册"(invited) —— 这是 owner/admin 已有权限查看的信息（他们本来就在管理这个房间的
+ * 成员），产品上认为可接受；不去假装两者不可区分。真正需要保密的是 token 本身与
+ * "该邮箱是否已被邀请过"这类细节，这两点不经响应体或口径不一致的状态码泄漏。
  */
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -63,11 +88,23 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ status: "added", email }, { status: 200 });
     }
 
-    // 未注册邮箱：交由邀请流程处理（生成一次性 token，可拼成邀请链接）。
-    // 注：当前阶段不落 room_invites 表，token 仅用于前端展示/复制链接，邮件发送在范围外。
+    // 未注册邮箱：持久化邀请（幂等：同房间+同邮箱刷新 token/过期时间，不产生重复行）
+    // 并经 dev 邮件通道发送注册链接。token 绝不放进响应体，只经邮件流转给被邀者本人；
+    // 注册链接携带 token（而不只是 email）——接受邀请时靠 token 而不是"邮箱匹配"来鉴权
+    // （rev-security B1 修复：此前注册钩子纯按邮箱入房，任何人猜到邮箱曾被邀请即可冒领）。
     const token = generateToken();
-    return NextResponse.json({ status: "invited", email, token }, { status: 200 });
+    await upsertRoomInvite(roomId, email, token, user.id, expiresAt(ROOM_INVITE_TTL_MS));
+    const room = await getRoom(roomId);
+    const origin = new URL(req.url).origin;
+    await sendRoomInviteEmail({
+      to: email,
+      roomName: room?.name ?? `房间 #${roomId}`,
+      inviterEmail: user.email,
+      registerUrl: `${origin}/register?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`,
+    });
+    return NextResponse.json({ status: "invited", email }, { status: 200 });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("[rooms/members] 操作失败:", err);
+    return NextResponse.json({ error: "服务器错误" }, { status: 500 });
   }
 }

@@ -28,9 +28,9 @@
       "title": "真实模型下的失败态与停止生成",
       "user_visible_behavior": "真实 provider 不可用（网络错误/超时/限流）时，/ava 展示明确失败态（沿用 msg-failed），用户已输入内容不丢失；流式回复进行中可停止，请求被真实中断（AbortController 生效）而非等待回显完成。",
       "design_ref": "现有 msg-failed / send 交互；requirements/01-ai-layer-real-model.md",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "wrk-ava-p18-2",
       "capability": "CAP-AI",
       "depends_on": [
         "F01"
@@ -39,7 +39,7 @@
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/ava-real-model-failure.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-07-03T20:08:50.036Z",
       "notes": "requirements/01。e2e 用可控故障注入（如指向不可达的 provider base URL / 模拟 429）验证失败态与输入保留；中断验证断言服务端流被 abort 后不再写入消息。"
     },
     {

@@ -156,6 +156,134 @@ describe("anthropicProvider 错误面", () => {
   });
 });
 
+describe("anthropicProvider 故障面（P18 F02：失败态 + 停止生成）", () => {
+  it("网络错误（fetch reject）时错误向上抛出，非吞掉", async () => {
+    const p = createAnthropicProvider({
+      apiKey: "k",
+      fetchImpl: (async () => {
+        throw new TypeError("fetch failed: ECONNREFUSED");
+      }) as unknown as typeof fetch,
+    });
+    const iter = p.streamChat({
+      modelId: "anthropic:claude-sonnet-5",
+      messages: [{ role: "user", content: "hi" }],
+    });
+    await expect(iter.next()).rejects.toThrow(/ECONNREFUSED/);
+  });
+
+  it("调用方提前 abort（非超时触发）时原样抛出 AbortError，不误报成超时", async () => {
+    const p = createAnthropicProvider({
+      apiKey: "k",
+      fetchImpl: (async (_url: string, init?: RequestInit) => {
+        // 模拟真实 fetch 在 signal 已中止时的行为：抛 AbortError。
+        if (init?.signal?.aborted) {
+          const err = new Error("The operation was aborted");
+          err.name = "AbortError";
+          throw err;
+        }
+        throw new Error("test setup error: signal 未透传");
+      }) as unknown as typeof fetch,
+    });
+    const controller = new AbortController();
+    controller.abort();
+    const iter = p.streamChat({
+      modelId: "anthropic:claude-sonnet-5",
+      messages: [{ role: "user", content: "hi" }],
+      signal: controller.signal,
+    });
+    await expect(iter.next()).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("streamChat 把调用方 signal 接入底层 fetch 的 init.signal（含超时熔断，合成为一个 signal）", async () => {
+    const fetchMock = vi.fn(async () => okStreamResponse(DELTA_EVENTS));
+    const p = createAnthropicProvider({ apiKey: "k", fetchImpl: fetchMock as unknown as typeof fetch });
+    const controller = new AbortController();
+    const tokens: string[] = [];
+    for await (const t of p.streamChat({
+      modelId: "anthropic:claude-sonnet-5",
+      messages: [{ role: "user", content: "hi" }],
+      signal: controller.signal,
+    })) {
+      tokens.push(t);
+    }
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    // 传给 fetch 的 signal 是调用方 signal 与内部超时 signal 的合成（AbortSignal.any），
+    // 不再是同一个对象引用；断言调用方 abort() 后合成 signal 也确实 aborted，这是真正
+    // 有意义的行为验证（而不是 identity 比较）。
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+    expect(init.signal).not.toBe(controller.signal);
+    expect((init.signal as AbortSignal).aborted).toBe(false);
+    controller.abort();
+    expect((init.signal as AbortSignal).aborted).toBe(true);
+    expect(tokens.join("")).toBe("你好，世界");
+  });
+
+  it("请求超时（ANTHROPIC_TIMEOUT_MS 极小值）：抛出可读的超时错误，不是原始 AbortError", async () => {
+    const p = createAnthropicProvider({
+      apiKey: "k",
+      timeoutMs: 5,
+      fetchImpl: (async (_url: string, init?: RequestInit) => {
+        // 模拟一个"挂起直到超时 signal 触发"的真实请求：等 signal abort 后按 fetch 真实
+        // 行为抛 AbortError，交给 provider 内部逻辑判断是不是自己的超时熔断触发的。
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            const err = new Error("The operation was aborted");
+            err.name = "AbortError";
+            reject(err);
+          });
+        });
+      }) as unknown as typeof fetch,
+    });
+    const iter = p.streamChat({
+      modelId: "anthropic:claude-sonnet-5",
+      messages: [{ role: "user", content: "hi" }],
+    });
+    await expect(iter.next()).rejects.toThrow(/超时/);
+  });
+
+  it("正常完成后清理超时定时器：不再有活跃的 setTimeout 残留（高并发下不累积资源）", async () => {
+    vi.useFakeTimers();
+    const clearTimeoutSpy = vi.spyOn(global, "clearTimeout");
+    try {
+      const p = createAnthropicProvider({
+        apiKey: "k",
+        timeoutMs: 60_000,
+        fetchImpl: (async () => okStreamResponse(DELTA_EVENTS)) as unknown as typeof fetch,
+      });
+      const tokens: string[] = [];
+      for await (const t of p.streamChat({
+        modelId: "anthropic:claude-sonnet-5",
+        messages: [{ role: "user", content: "hi" }],
+      })) {
+        tokens.push(t);
+      }
+      expect(tokens.join("")).toBe("你好，世界");
+      // 请求正常完成后，provider 必须在 finally 里主动 clearTimeout 释放超时定时器，
+      // 而不是让它一直挂到 60s 超时点才触发（AbortSignal.timeout() 便捷 API 的旧问题）。
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      clearTimeoutSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("429 限流错误消息可读且包含状态码（复用 F01 用例，确认限流路径未回归）", async () => {
+    const p = createAnthropicProvider({
+      apiKey: "k",
+      fetchImpl: (async () =>
+        new Response(JSON.stringify({ error: { message: "rate limited, retry later" } }), {
+          status: 429,
+        })) as unknown as typeof fetch,
+    });
+    const iter = p.streamChat({
+      modelId: "anthropic:claude-sonnet-5",
+      messages: [{ role: "user", content: "hi" }],
+    });
+    await expect(iter.next()).rejects.toThrow(/429/);
+  });
+});
+
 describe("网关路由（F01 验收：真实 provider 与 stub 并存）", () => {
   it("anthropic: 前缀路由到真实 provider，stub: 前缀仍路由到 stub", () => {
     const real = createAnthropicProvider({ apiKey: "k" });

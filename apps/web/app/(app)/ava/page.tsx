@@ -41,6 +41,7 @@ import {
   ThumbsDown,
   RefreshCw,
   LayoutGrid,
+  Square,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BillingPlanDialog } from "@/components/billing/billing-plan-dialog";
@@ -231,6 +232,10 @@ export default function AvaPage() {
     return "";
   }, [researchRun]);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  // P18 F02：停止生成用的 AbortController，跨真实/stub provider 通用。
+  // 只在一次流式请求生命周期内存在；stop() 触发后 fetch 的底层 TCP 连接被真实中断
+  // （服务端 request signal abort → reply-stream 的 for-await 循环停止 → 不再写入消息）。
+  const streamAbortRef = useRef<AbortController | null>(null);
 
   const attachments = useAvaAttachments({
     threadId: activeId,
@@ -509,6 +514,8 @@ export default function AvaPage() {
     setSending(true);
     setSendError("");
     setStreamingText("");
+    const abortController = new AbortController();
+    streamAbortRef.current = abortController;
 
     try {
       const threadId = await ensureThread();
@@ -518,6 +525,7 @@ export default function AvaPage() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ text, attachmentIds, modelId, agentId, toolIds }),
+        signal: abortController.signal,
       });
       if (guard(res.status)) return;
       if (!res.ok || !res.body) {
@@ -550,11 +558,43 @@ export default function AvaPage() {
         },
       });
       await refreshThreads();
-    } catch {
-      setSendError("Send failed — please try again (your input is preserved)");
+    } catch (err) {
+      // 用户主动点击停止会走这里（fetch 因 AbortController.abort() 抛 AbortError）——
+      // 这是预期行为，不展示失败提示。客户端一旦 abort，这条连接就收不到服务端后续任何
+      // SSE 事件了（包括服务端为了落库而尝试发送的 done/error），所以已经流出来的部分
+      // 内容（streamingText）要在这里就地落定成一条 assistant 消息，不能指望服务端回包。
+      // 服务端那边（reply-stream.ts）会独立把同样的部分内容持久化到数据库，reload 后一致。
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setStreamingText((current) => {
+          setMessages((prev) => {
+            // 客户端临时负数 id：仅用于本地渲染，reload 后会被服务端持久化的真实记录替换。
+            // 用现有消息里最小的 id 再减一，避免同一渲染帧内两次停止生成时 id 撞车。
+            const minId = prev.reduce((min, m) => Math.min(min, m.id), 0);
+            return [
+              ...prev,
+              {
+                id: minId - 1,
+                role: "assistant",
+                content: current,
+                status: "complete",
+              },
+            ];
+          });
+          return "";
+        });
+      } else {
+        setSendError("Send failed — please try again (your input is preserved)");
+      }
     } finally {
       setSending(false);
+      streamAbortRef.current = null;
     }
+  }
+
+  /** P18 F02：停止生成。真实中断底层请求（AbortController.abort()），
+   *  而不是等待流式回显完成后再忽略结果。 */
+  function stop() {
+    streamAbortRef.current?.abort();
   }
 
   async function startResearch() {
@@ -1691,25 +1731,40 @@ export default function AvaPage() {
                       }
                     />
                   </div>
-                  <Button
-                    data-testid="send"
-                    size="icon"
-                    className="h-8 w-8 rounded-9"
-                    onClick={() => void send()}
-                    disabled={
-                      (!draft.trim() && attachments.uploadedIds.length === 0) ||
-                      sending ||
-                      attachments.hasPending ||
-                      researchRun?.status === "running"
-                    }
-                    aria-label={isResearchMode ? "Start Deep Research" : "Send message"}
-                  >
-                    {isResearchMode ? (
-                      <Search className="h-4 w-4" strokeWidth={2} />
-                    ) : (
-                      <ArrowUp className="h-4 w-4" strokeWidth={2} />
-                    )}
-                  </Button>
+                  {sending && !isResearchMode ? (
+                    // P18 F02：流式回复进行中，Send 变成 Stop——点击真实中断请求
+                    // （AbortController.abort()），而不是等回显自然结束。
+                    <Button
+                      data-testid="stop"
+                      size="icon"
+                      variant="outline"
+                      className="h-8 w-8 rounded-9"
+                      onClick={stop}
+                      aria-label="Stop generating"
+                    >
+                      <Square className="h-3.5 w-3.5" strokeWidth={2} fill="currentColor" />
+                    </Button>
+                  ) : (
+                    <Button
+                      data-testid="send"
+                      size="icon"
+                      className="h-8 w-8 rounded-9"
+                      onClick={() => void send()}
+                      disabled={
+                        (!draft.trim() && attachments.uploadedIds.length === 0) ||
+                        sending ||
+                        attachments.hasPending ||
+                        researchRun?.status === "running"
+                      }
+                      aria-label={isResearchMode ? "Start Deep Research" : "Send message"}
+                    >
+                      {isResearchMode ? (
+                        <Search className="h-4 w-4" strokeWidth={2} />
+                      ) : (
+                        <ArrowUp className="h-4 w-4" strokeWidth={2} />
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

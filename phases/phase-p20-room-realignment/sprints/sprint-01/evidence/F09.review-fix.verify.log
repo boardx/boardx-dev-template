@@ -1,0 +1,67 @@
+=== F09 review-fix re-verification 2026-07-03T20:00:15Z ===
+--- docker compose up -d ---
+ Container worker-wrk-room-2-p20-f09-invite-unregis-redis-1 Running 
+ Container worker-wrk-room-2-p20-f09-invite-unregis-minio-1 Running 
+ Container worker-wrk-room-2-p20-f09-invite-unregis-postgres-1 Running 
+--- migrate ---
+
+> @repo/data@0.1.0 migrate /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-a77518af02c3ddf35/packages/data
+> sh -c 'set -a; [ -f ../../apps/web/.env.local ] && . ../../apps/web/.env.local; set +a; tsx src/migrate.ts'
+
+✓ 已应用，跳过：001_init.sql
+✓ 已应用，跳过：002_auth.sql
+✓ 已应用，跳过：003_team.sql
+✓ 已应用，跳过：004_room.sql
+✓ 已应用，跳过：005_canvas.sql
+✓ 已应用，跳过：006_profile.sql
+✓ 已应用，跳过：007_board.sql
+✓ 已应用，跳过：008_board_visits.sql
+✓ 已应用，跳过：009_board_favorites.sql
+✓ 已应用，跳过：010_room_chat.sql
+✓ 已应用，跳过：011_board_settings.sql
+✓ 已应用，跳过：012_board_items_board_id.sql
+✓ 已应用，跳过：013_board_items_color.sql
+✓ 已应用，跳过：014_feedback.sql
+✓ 已应用，跳过：014_room_chat_messages.sql
+✓ 已应用，跳过：015_team_general.sql
+✓ 已应用，跳过：016_admin_role.sql
+✓ 已应用，跳过：016_ai_store.sql
+✓ 已应用，跳过：016_ava_chat.sql
+✓ 已应用，跳过：016_credits.sql
+✓ 已应用，跳过：016_kb_files.sql
+✓ 已应用，跳过：016_survey.sql
+✓ 已应用，跳过：017_ai_store_item_config.sql
+✓ 已应用，跳过：017_payment_orders.sql
+✓ 已应用，跳过：017_studio_artifacts.sql
+✓ 已应用，跳过：017_survey_templates.sql
+✓ 已应用，跳过：018_ai_store_favorites.sql
+✓ 已应用，跳过：018_ava_message_attachments.sql
+✓ 已应用，跳过：018_ava_thread_share.sql
+✓ 已应用，跳过：018_user_plan.sql
+✓ 已应用，跳过：019_ai_store_subscriptions.sql
+✓ 已应用，跳过：019_credit_transaction_idempotency.sql
+✓ 已应用，跳过：019_presentation_artifacts.sql
+✓ 已应用，跳过：020_ava_message_feedback.sql
+✓ 已应用，跳过：021_ai_store_share.sql
+✓ 已应用，跳过：021_presentation_revisions.sql
+✓ 已应用，跳过：022_retire_room_canvas.sql
+✓ 已应用，跳过：023_outbound_emails.sql
+✓ 已应用，跳过：024_room_favorites.sql
+✓ 已应用，跳过：025_room_invites.sql
+迁移完成。
+--- playwright: room-rr-009-invite-unregistered.spec.ts ---
+
+Running 8 tests using 1 worker
+
+  ✓  1 [chromium] › room-rr-009-invite-unregistered.spec.ts:39:5 › owner 邀请未注册邮箱：落库 + pending 列表可见，响应体不泄漏 token (12.1s)
+  ✓  2 [chromium] › room-rr-009-invite-unregistered.spec.ts:65:5 › 重复邀请同一邮箱：幂等刷新 token/过期时间，不产生重复行 (4.3s)
+  ✓  3 [chromium] › room-rr-009-invite-unregistered.spec.ts:89:5 › owner/admin 可撤销 pending 邀请 (5.0s)
+  ✓  4 [chromium] › room-rr-009-invite-unregistered.spec.ts:103:5 › member 调用邀请 API → 403 (1.8s)
+  ✓  5 [chromium] › room-rr-009-invite-unregistered.spec.ts:120:5 › 被邀者带正确 token 注册：自动入房，登录即见该房间 (5.1s)
+  ✓  6 [chromium] › room-rr-009-invite-unregistered.spec.ts:161:5 › 安全回归：不带 token（或邮箱匹配但 token 错误）注册，不能冒领邀请入房 (6.3s)
+  ✓  7 [chromium] › room-rr-009-invite-unregistered.spec.ts:192:5 › 令牌过期：注册仍成功但不自动入房，并在注册页提示邀请已过期 (7.2s)
+  ✓  8 [chromium] › room-rr-009-invite-unregistered.spec.ts:237:5 › 注册页：携带过期 token 注册后展示「邀请已过期」提示（uc-rr-008 E1） (7.9s)
+
+  Slow test file: [chromium] › room-rr-009-invite-unregistered.spec.ts (49.9s)
+  Consider splitting slow test files to speed up parallel execution
+  8 passed (58.2s)

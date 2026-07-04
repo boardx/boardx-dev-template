@@ -138,5 +138,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     agentId: settings.agentId,
     toolIds: settings.toolIds,
     status: 201,
+    // P18 F02：客户端点击停止/断开连接时 Next.js 会 abort 这个 signal；透传给流式生成，
+    // 使真实 provider 的底层 fetch 被真实中断，而非等它自然结束后再丢弃结果。
+    signal: req.signal,
   });
 }
