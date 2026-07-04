@@ -6,6 +6,17 @@ import { BoardBottomDock, type DockToolKey } from "@/components/board/board-bott
 import { BoardAiOverlay } from "@/components/board/board-ai-panel";
 import { setOperating } from "@/lib/collab-bus";
 import {
+  applyEncodedUpdate,
+  createBoardDoc,
+  encodeFullState,
+  encodeUpdate,
+  onLocalUpdate,
+  onRemoteItemsChange,
+  readItems as readCollabItems,
+  seedItems,
+  syncItemsIntoDoc,
+} from "@repo/collab";
+import {
   Cable,
   Hand,
   Image,
@@ -203,6 +214,26 @@ function BoardMenuButton({
   );
 }
 
+// p8:F02 — 把 Yjs doc 的最新状态合并回本地 items，但正在本地编辑/拖拽的那一条
+// 保留本地版本，不被远端覆盖（避免打断用户正在做的操作；等编辑/拖拽结束后，
+// 下一次远端事件或 editingId 清空时的兜底 reconcile 会把merge 的那部分带回来，
+// 不会永久丢失——这是相对于纯"全量快照广播"方案的关键修复点）。
+function mergeRemoteItems(
+  prev: Item[],
+  latest: Item[],
+  editingId: string | null,
+  dragIds: readonly string[],
+): Item[] {
+  const held = new Set(dragIds);
+  if (editingId) held.add(editingId);
+  const prevById = new Map(prev.map((it) => [it.id, it]));
+  const merged = latest.map((it) => (held.has(it.id) ? prevById.get(it.id) ?? it : it));
+  for (const it of prev) {
+    if (held.has(it.id) && !merged.some((m) => m.id === it.id)) merged.push(it);
+  }
+  return merged;
+}
+
 // 画布：渲染 board-keyed items（ADR-0002）+ 选择/键盘（F06）+ 复制粘贴（F08）+ 撤销/重做（F09）。
 // 视口（平移/缩放/小地图）复用 CanvasViewport（F05）。marquee 框选 deferred（与拖拽平移冲突，留后续）。
 export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: boolean }) {
@@ -236,14 +267,152 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   } | null>(null);
   const justDraggedRef = useRef(false); // 拖拽刚结束 → 抑制随后的 click 选择翻转
 
+  // ── p8:F02 Yjs 实时同步 ──────────────────────────────────────────────────
+  // docRef 是本 board 的 CRDT 状态；WS 只是把 doc 的二进制 update 转发给其它
+  // 在线客户端（走 F01 的 collab-gateway，纯 relay，不解释内容）。REST 仍是
+  // 冷启动/持久化的权威来源，doc 只负责"已连接客户端之间"的即时合并。
+  const docRef = useRef(createBoardDoc());
+  const wsRef = useRef<WebSocket | null>(null);
+  const clientIdRef = useRef(crypto.randomUUID());
+  const editingIdRef = useRef<string | null>(null);
+  const itemsRef = useRef<Item[]>([]);
+  const itemsLoadedRef = useRef(false);
+  // 是否已经完成"加入房间"的初次同步判定（收到 peer 的完整状态，或等待超时判定
+  // 自己是第一个在线的人）。在这之前不能把本地 items 写进 doc——否则会替已存在的
+  // item 独立造一份结构上互不相识的 Y.Map，后续增量 update 就合并不回去了。
+  const joinSyncedRef = useRef(false);
+
+  const maybeSeed = useCallback(() => {
+    if (!joinSyncedRef.current || !itemsLoadedRef.current) return;
+    seedItems(docRef.current, itemsRef.current);
+    // seedItems 只补"任何在线客户端都还不知道"的新条目；已存在的条目里，doc
+    // 内可能有比这次 REST 快照更新的字段（比如刚加入时另一人正在编辑），
+    // 用 doc 当前真实状态回填一次 React state，而不是反过来拿 REST 覆盖 doc。
+    setItems((prev) => mergeRemoteItems(prev, readCollabItems(docRef.current), editingIdRef.current, dragRef.current?.ids ?? []));
+  }, []);
+
   const load = useCallback(async () => {
     const res = await fetch(`/api/boards/${boardId}/items`);
-    if (res.ok) setItems((await res.json()).items ?? []);
-  }, [boardId]);
+    if (res.ok) {
+      const next = ((await res.json()).items ?? []) as Item[];
+      itemsRef.current = next;
+      itemsLoadedRef.current = true;
+      setItems(next);
+      maybeSeed();
+    }
+  }, [boardId, maybeSeed]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // 打开到 F01 网关的 WS 连接：先广播 sync-request 问"房间里有没有已经在线的人"，
+  // 有则 apply 对方的完整状态（保证跟对方是同一批 Y.Map 结构实例，见 packages/collab
+  // 的 encodeFullState 注释）；800ms 内没人应答就当自己是第一个，直接从 REST seed。
+  useEffect(() => {
+    let cancelled = false;
+    let ws: WebSocket | null = null;
+    let syncTimer: ReturnType<typeof setTimeout> | null = null;
+    joinSyncedRef.current = false;
+
+    async function setup() {
+      const res = await fetch("/api/collab/config");
+      if (!res.ok || cancelled) return;
+      const { wsUrl } = (await res.json()) as { wsUrl: string };
+      ws = new WebSocket(`${wsUrl}?boardId=${encodeURIComponent(boardId)}`);
+      wsRef.current = ws;
+
+      ws.addEventListener("open", () => {
+        if (cancelled || !ws) return;
+        ws.send(JSON.stringify({ type: "y-sync-request", boardId, from: clientIdRef.current }));
+        syncTimer = setTimeout(() => {
+          if (cancelled || joinSyncedRef.current) return;
+          joinSyncedRef.current = true; // 没人应答：自己是第一个在线的，直接种子化
+          maybeSeed();
+        }, 800);
+      });
+
+      ws.addEventListener("message", (event) => {
+        if (cancelled) return;
+        // F01 网关把"转发自其它客户端"的消息包一层自己的信封：
+        // { type: "message", boardId, data: "<发送方原始文本>", fromClientId, via }。
+        // 网关自己直接发的消息（如刚连上时的 {type:"connected"}）不走这层信封。
+        // 这里先剥掉信封，取出 data 里才是我们自己的业务消息（y-sync-request/
+        // y-sync-response/y-update），再解析一次——只解析一层会把 outer.type
+        // （恒为 "message"）当成业务类型，永远匹配不上，是本文件早期版本的真实 bug
+        // （被同文件里原有的 REST 轮询兜底完全掩盖，playwright 测试一度"意外通过"）。
+        let outer: { type?: string; data?: string } | null = null;
+        try {
+          outer = JSON.parse(event.data);
+        } catch {
+          return;
+        }
+        if (outer?.type !== "message" || typeof outer.data !== "string") return;
+        let msg: { type?: string; from?: string; update?: string } | null = null;
+        try {
+          msg = JSON.parse(outer.data);
+        } catch {
+          return;
+        }
+        if (msg?.type === "y-sync-request" && msg.from !== clientIdRef.current) {
+          ws?.send(
+            JSON.stringify({ type: "y-sync-response", boardId, update: encodeFullState(docRef.current) }),
+          );
+          return;
+        }
+        if (msg?.type === "y-sync-response" && msg.update) {
+          applyEncodedUpdate(docRef.current, msg.update);
+          if (!joinSyncedRef.current) {
+            joinSyncedRef.current = true;
+            if (syncTimer) clearTimeout(syncTimer);
+            maybeSeed();
+          }
+          return;
+        }
+        if (msg?.type === "y-update" && msg.update) {
+          applyEncodedUpdate(docRef.current, msg.update);
+        }
+      });
+    }
+
+    void setup();
+
+    const offLocal = onLocalUpdate(docRef.current, (update) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: "y-update", boardId, update: encodeUpdate(update) }));
+      }
+    });
+    const offRemote = onRemoteItemsChange(docRef.current, (latest) => {
+      setItems((prev) => mergeRemoteItems(prev, latest, editingIdRef.current, dragRef.current?.ids ?? []));
+    });
+
+    return () => {
+      cancelled = true;
+      if (syncTimer) clearTimeout(syncTimer);
+      offLocal();
+      offRemote();
+      ws?.close();
+      wsRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boardId]);
+
+  // 本地 items 变化（不管是用户操作、旧的 REST 轮询合并、还是上面 maybeSeed 的
+  // reconcile）都镜像进 doc，这样才能广播给其它人。syncItemsIntoDoc 对没有真的
+  // 变化的字段是幂等的，所以"这次变化本来就是从 doc 读回来的"不会又广播回去。
+  useEffect(() => {
+    if (!joinSyncedRef.current) return;
+    syncItemsIntoDoc(docRef.current, items);
+  }, [items]);
+
+  useEffect(() => {
+    editingIdRef.current = editingId;
+    // 编辑刚结束：把编辑期间被"保留本地版本"挡住的远端变更（如果有）拉回来，
+    // 不必等下一次远端事件才生效——这是相对旧方案"编辑中收到的变更永久丢失"的修复点。
+    if (editingId == null && joinSyncedRef.current) {
+      setItems((prev) => mergeRemoteItems(prev, readCollabItems(docRef.current), null, dragRef.current?.ids ?? []));
+    }
+  }, [editingId]);
 
   // uc-collab-001：文本编辑进行中也算「正在操作」，供他人看到「谁在操作」（editingId 存在 = 编辑中）。
   useEffect(() => {
