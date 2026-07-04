@@ -100,6 +100,7 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("[auth/register] 注册失败:", err);
+    return NextResponse.json({ error: "服务器错误" }, { status: 500 });
   }
 }

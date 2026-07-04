@@ -104,6 +104,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     });
     return NextResponse.json({ status: "invited", email }, { status: 200 });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("[rooms/members] 操作失败:", err);
+    return NextResponse.json({ error: "服务器错误" }, { status: 500 });
   }
 }

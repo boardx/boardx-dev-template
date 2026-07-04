@@ -19,6 +19,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string; 
     if (!ok) return NextResponse.json({ error: "邀请不存在或已处理" }, { status: 404 });
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("[rooms/invites] 撤销邀请失败:", err);
+    return NextResponse.json({ error: "服务器错误" }, { status: 500 });
   }
 }

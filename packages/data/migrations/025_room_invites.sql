@@ -1,4 +1,4 @@
--- 024_room_invites.sql — CAP-AUTH：房间邀请未注册邮箱（room_invites，p20 F09）
+-- 025_room_invites.sql — CAP-AUTH：房间邀请未注册邮箱（room_invites，p20 F09）
 -- 与 team_invites 同一思路，但按邮箱幂等（同一房间同一邮箱只保留一条 pending 记录，
 -- 重复邀请刷新 token/expires_at 而不是插入新行）；status 显式建模方便 pending 列表/撤销/过期展示。
 

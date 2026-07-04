@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type APIRequestContext, type Page, type PlaywrightWorkerArgs } from "@playwright/test";
 
 // uc-rr-008 / p20 F09：邀请未注册用户加入房间（完整流）。
 // 覆盖：未注册邮箱邀请落库 + pending 列表可见、重复邀请幂等（不重复行）、撤销、
@@ -14,7 +14,7 @@ async function registerOnPage(page: Page, email = uniq()) {
   return email;
 }
 
-async function newUserCtx(playwright: any, baseURL: string): Promise<{ ctx: APIRequestContext; email: string; userId: number }> {
+async function newUserCtx(playwright: PlaywrightWorkerArgs["playwright"], baseURL: string): Promise<{ ctx: APIRequestContext; email: string; userId: number }> {
   const email = uniq("owner");
   const ctx = await playwright.request.newContext({ baseURL });
   const reg = await (
