@@ -26,6 +26,8 @@ export interface PresenceMember {
   operating?: boolean;
   viewport?: PresenceViewport;
   cursor?: PresenceCursor;
+  followingId?: number | null;
+  followPaused?: boolean;
 }
 
 interface Entry extends PresenceMember {
@@ -62,7 +64,16 @@ export function listOnline(boardId: number): PresenceMember[] {
   const table = pruned(boardId);
   return [...table.values()]
     .sort((a, b) => a.id - b.id)
-    .map(({ id, name, role, operating, viewport, cursor }) => ({ id, name, role, operating, viewport, cursor }));
+    .map(({ id, name, role, operating, viewport, cursor, followingId, followPaused }) => ({
+      id,
+      name,
+      role,
+      operating,
+      viewport,
+      cursor,
+      followingId,
+      followPaused,
+    }));
 }
 
 /** 测试辅助：清空某 Board 的在线表。 */

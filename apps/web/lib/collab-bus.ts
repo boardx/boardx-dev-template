@@ -37,6 +37,7 @@ let localOperating = false;
 let localCursor: CursorSnapshot | null = null;
 
 const followListeners = new Set<Listener<FollowSnapshot | null>>();
+const followPauseListeners = new Set<Listener<void>>();
 
 /** CanvasViewport：每次视口变化后上报本地视口（供心跳广播给他人）。 */
 export function publishViewport(vp: ViewportSnapshot): void {
@@ -118,4 +119,15 @@ export function publishFollow(target: FollowSnapshot | null): void {
 export function subscribeFollow(fn: Listener<FollowSnapshot | null>): () => void {
   followListeners.add(fn);
   return () => followListeners.delete(fn);
+}
+
+/** CanvasViewport：用户在跟随中主动平移/缩放时，请求 Header 暂停跟随。 */
+export function requestFollowPause(): void {
+  for (const fn of followPauseListeners) fn(undefined);
+}
+
+/** BoardPresence：订阅本地视口主动操作产生的暂停请求。 */
+export function subscribeFollowPause(fn: Listener<void>): () => void {
+  followPauseListeners.add(fn);
+  return () => followPauseListeners.delete(fn);
 }

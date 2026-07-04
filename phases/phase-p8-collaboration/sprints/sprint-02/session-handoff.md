@@ -1,6 +1,15 @@
 # 会话交接 — Sprint p8/02
 
 ## 当前已验证
+- **F04 passing**：跟随协作者视角（暂停/恢复/停止 + 被跟随提示）。
+  - 验证命令：`docker compose -f infra/docker-compose.yml up -d` + `pnpm --filter @repo/data run migrate`
+  - 验证命令：`pnpm --filter @repo/web exec playwright test e2e/collab-follow.spec.ts`
+  - harness 门控：`pnpm harness verify --sprint p8/02 --feature F04`（含 verify:base）
+  - 证据：`evidence/F04.verify.log`
+  - 原实现（PR #343）审计结论是"质量已达标，无阻断项"，本轮只是 rebase 到新的
+    F02(#365)/F03(#367) 之上——presence.tsx 里 F03 引入的 cursor 渲染块跟 F04 新增的
+    followingId/followPaused/followers 等内容在同一文件里有交叠，手动合并（而不是
+    直接 apply patch）、逐处核对无遗漏。功能代码本身未做改动。
 - **F03 passing**：在线成员头像 + 实时光标。
   - 验证命令：`docker compose -f infra/docker-compose.yml up -d`
   - 验证命令：`pnpm --filter @repo/data run migrate`
@@ -52,11 +61,9 @@
   原样透传（不崩溃，但坐标会错），不是本轮场景，先记录。
 
 ## 下一步最佳动作
-- F04（跟随控制，issue #293）：原实现（PR #343）质量已达标，无阻断项，只需 rebase
-  到本次的 F02(#365)+F03 实现链（它跟 F02/F03 共享 `presence.tsx`/`collab-bus.ts`/
-  `presence/route.ts` 等热点文件，需要在这两个都定下来之后再 rebase，避免反复冲突）。
 - F05（重连状态，issue #294）：需要重连退避 + 区分"鉴权失败(该停)"与"网络抖动
-  (该重试)"，rebase 到 F04 之后再做。
+  (该重试)"，rebase 到本次的 F04 PR 之上再做（reconnect 状态机需要重新设计，
+  详见 p8/01 F01 review 里对 #344 的审计结论）。
 
 ## 命令
 - 启动:`pnpm -w run dev`
