@@ -37,12 +37,22 @@
 2. **coordinator 唯一**：唯一性由 `coordination:lease` issue 的心跳裁定（见下方生命周期章节）；接管协调前先向存量协调会话广播；双 coordinator 结论冲突时，以可核验事实为准，并立即收敛为单 coordinator。
 3. **合并独占**：只有 coordinator 执行合并；review 全绿 + CI 绿 + up-to-date 缺一不可（CI 因基础设施不可用时，合并冻结并升级人类，不得以"本地验过"绕行）。
 4. **证据实测**：任何"已验证/已入库"声称都用 `git ls-tree` / `git show` / 退出码实测，不信任 diff 注释、progress 叙述或打分。
+5. **共享主 checkout 隔离**：任何要落地写文件/提交的会话（含 coordinator 自己）一律
+   `git worktree add` 开独立工作区，不在共享主 checkout 上 `commit`/`stash`/`reset`/
+   `branch -f`/`checkout <branch>`；分支建好立即 push。见 ADR-005
+   （`phases/phase-01-foundation/adr/ADR-005-shared-checkout-isolation.md`），本地另有
+   `reference-transaction` git hook 兜底拦截非快进更新。
 
 ## 事故分诊速查（来自实战）
 - CI 秒级失败 + steps 空 → 账单/runner，非代码（2026-07-04 账单事故）。
 - evidence 指针存在但文件不在 git 树 → 假 passing（PR #310/#311/#312 三连）。
 - 迁移回填用自然键（name）匹配 → 用户数据混入风险（PR #312 初版）。
-- 无 node_modules 的 worktree push 失败（turbo not found）→ pre-push hook，纯文档改动可 --no-verify。
+- 无 node_modules 的 worktree push 失败（turbo not found）→ 先在该 worktree 跑
+  `pnpm install`（pnpm store 命中缓存通常几秒到十几秒），而不是用 `--no-verify` 绕过；
+  纯文档改动如确有必要跳过，需人类明确同意（ADR-005 后果段）。
+- 共享主 checkout 被并发会话 `reset`/`stash`/`branch -f` 踩踏，分支 commit 无声消失
+  （2026-07-03/04 夜间两起：Board agent stash 误伤、AVA 分支 ref 一度被重置）
+  → 见 ADR-005；发现即用 `git reflog` 定位恢复，之后确认该分支已 push 到 origin。
 
 ## 生命周期（启动/退位/抢占）
 coordinator 是**单例角色**，由会话通过启动仪式认领，不是常驻 subagent。

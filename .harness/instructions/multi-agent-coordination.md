@@ -6,6 +6,8 @@
 > 权威边界见 **ADR-004**：文件=规范/DoD 权威；issue+label=运行时协调权威。
 > worker 侧的 wave/DoR/隔离细节见 `parallel-dev-workflow.md`——本文只补**主 agent 层**与
 > **规范化的 label 状态机**，不重复 worker 侧内容。
+> 共享 git 工作目录的隔离规则（任何角色一律 worktree、分支建好立即 push）见 **ADR-005**；
+> 新 agent/新平台加入协作的最小阅读清单见 `agent-onboarding-checklist.md`。
 
 ## 1. 规范 label 集合（唯一事实，禁止漂移）
 
