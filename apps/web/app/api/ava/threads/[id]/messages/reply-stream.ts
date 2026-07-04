@@ -85,10 +85,12 @@ export function createAvaReplyStreamResponse(input: {
           });
         } else {
           const failMessage = "AVA 生成回复失败，请重试。";
+          // 原始错误只记服务端日志排查用；SSE 下发给客户端的 payload 不再带原始报错
+          // 文本（wire 上不暴露内部错误细节），前端只消费 message/status。
+          console.error("[ava-reply-stream] generate failed:", err);
           await updateAvaMessage(placeholder.id, failMessage, "failed");
           send("error", {
             message: { ...placeholder, content: failMessage, status: "failed" },
-            error: String(err),
           });
         }
       } finally {

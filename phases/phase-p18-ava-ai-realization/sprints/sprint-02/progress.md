@@ -57,7 +57,7 @@
     `ava-edit-delete-message`（20 passed，无破坏）
   - `./init.sh`（45/45 tasks successful，基础验证未引入新失败）
   - `pnpm harness verify --sprint p18/02 --feature F02` → 门控通过，F02 转 passing
-- 已记录证据：`phases/phase-p18-ava-ai-realization/evidence/F02.verify.log`（已 `git add -f`，
+- 已记录证据：`phases/phase-p18-ava-ai-realization/sprints/sprint-02/evidence/F02.verify.log`（已 `git add -f`，
   gitignore 白名单 `phases/**/evidence/*.log` 命中，确认在 git 树中）。
 - 提交记录：见本次 PR（Closes #256）。
 - 已知风险或未解决问题：

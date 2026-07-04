@@ -241,6 +241,33 @@ describe("anthropicProvider 故障面（P18 F02：失败态 + 停止生成）", 
     await expect(iter.next()).rejects.toThrow(/超时/);
   });
 
+  it("正常完成后清理超时定时器：不再有活跃的 setTimeout 残留（高并发下不累积资源）", async () => {
+    vi.useFakeTimers();
+    const clearTimeoutSpy = vi.spyOn(global, "clearTimeout");
+    try {
+      const p = createAnthropicProvider({
+        apiKey: "k",
+        timeoutMs: 60_000,
+        fetchImpl: (async () => okStreamResponse(DELTA_EVENTS)) as unknown as typeof fetch,
+      });
+      const tokens: string[] = [];
+      for await (const t of p.streamChat({
+        modelId: "anthropic:claude-sonnet-5",
+        messages: [{ role: "user", content: "hi" }],
+      })) {
+        tokens.push(t);
+      }
+      expect(tokens.join("")).toBe("你好，世界");
+      // 请求正常完成后，provider 必须在 finally 里主动 clearTimeout 释放超时定时器，
+      // 而不是让它一直挂到 60s 超时点才触发（AbortSignal.timeout() 便捷 API 的旧问题）。
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      clearTimeoutSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
   it("429 限流错误消息可读且包含状态码（复用 F01 用例，确认限流路径未回归）", async () => {
     const p = createAnthropicProvider({
       apiKey: "k",

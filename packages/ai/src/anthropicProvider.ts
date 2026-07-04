@@ -120,68 +120,79 @@ export function createAnthropicProvider(options: AnthropicProviderOptions = {}):
 
       // 把调用方（用户点击停止）的 signal 与超时 signal 合并：任一先触发都真实中断 fetch，
       // 而不是"卡住的请求"永远等不到任何人来喊停。
-      const timeoutSignal = AbortSignal.timeout(timeoutMs);
+      // 注意：不用 AbortSignal.timeout() 这个便捷 API——它内部的定时器会一直存活到超时点
+      // 才触发，即便请求早已正常完成也不会提前释放，高并发下会累积大量悬挂定时器。改用
+      // 手写 setTimeout + AbortController，在请求完成/失败的 finally 里 clearTimeout 并
+      // unref，既不阻塞进程退出，也不让已完成的请求继续占用定时器资源。
+      const timeoutController = new AbortController();
+      const timeoutTimer = setTimeout(() => timeoutController.abort(), timeoutMs);
+      if (typeof timeoutTimer.unref === "function") timeoutTimer.unref();
+      const timeoutSignal = timeoutController.signal;
       const combinedSignal = input.signal
         ? AbortSignal.any([input.signal, timeoutSignal])
         : timeoutSignal;
 
-      let res: Response;
       try {
-        res = await fetchImpl(`${baseUrl}/v1/messages`, {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            "x-api-key": apiKey,
-            "anthropic-version": DEFAULT_ANTHROPIC_VERSION,
-          },
-          body: JSON.stringify(buildRequestBody(input, maxTokens)),
-          // P18 F02：停止生成透传到真实网络请求——signal 触发 abort 时 fetch 直接抛
-          // AbortError（而不是等这次流式回复自然结束），上层 reply-stream 据此提前收尾。
-          signal: combinedSignal,
-        });
-      } catch (err) {
-        // 用户主动停止（input.signal 先触发）：原样抛出 AbortError，上层据此区分"停止"
-        // 而非"失败"。超时触发（timeoutSignal 先触发，input.signal 未 abort）：转成一个
-        // 可读的超时错误，走正常失败态路径（不是用户操作，应该展示失败提示）。
-        if (input.signal?.aborted) throw err;
-        if (timeoutSignal.aborted) {
-          throw new Error(`Anthropic API 请求超时（超过 ${timeoutMs}ms 未响应）`);
-        }
-        throw err;
-      }
-
-      if (!res.ok) {
-        const detail = await res.text().catch(() => "");
-        throw new Error(
-          `Anthropic API 请求失败（HTTP ${res.status}）${detail ? `: ${detail.slice(0, 300)}` : ""}`
-        );
-      }
-      if (!res.body) {
-        throw new Error("Anthropic API 响应缺少流式 body");
-      }
-
-      try {
-        for await (const event of parseSseData(res.body)) {
-          const e = event as {
-            type?: string;
-            delta?: { type?: string; text?: string };
-            error?: { type?: string; message?: string };
-          };
-          if (e.type === "error") {
-            throw new Error(
-              `Anthropic API 流式错误：${e.error?.type ?? "unknown"} ${e.error?.message ?? ""}`.trim()
-            );
+        let res: Response;
+        try {
+          res = await fetchImpl(`${baseUrl}/v1/messages`, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-api-key": apiKey,
+              "anthropic-version": DEFAULT_ANTHROPIC_VERSION,
+            },
+            body: JSON.stringify(buildRequestBody(input, maxTokens)),
+            // P18 F02：停止生成透传到真实网络请求——signal 触发 abort 时 fetch 直接抛
+            // AbortError（而不是等这次流式回复自然结束），上层 reply-stream 据此提前收尾。
+            signal: combinedSignal,
+          });
+        } catch (err) {
+          // 用户主动停止（input.signal 先触发）：原样抛出 AbortError，上层据此区分"停止"
+          // 而非"失败"。超时触发（timeoutSignal 先触发，input.signal 未 abort）：转成一个
+          // 可读的超时错误，走正常失败态路径（不是用户操作，应该展示失败提示）。
+          if (input.signal?.aborted) throw err;
+          if (timeoutSignal.aborted) {
+            throw new Error(`Anthropic API 请求超时（超过 ${timeoutMs}ms 未响应）`);
           }
-          if (e.type === "content_block_delta" && e.delta?.type === "text_delta" && e.delta.text) {
-            yield e.delta.text;
+          throw err;
+        }
+
+        if (!res.ok) {
+          const detail = await res.text().catch(() => "");
+          throw new Error(
+            `Anthropic API 请求失败（HTTP ${res.status}）${detail ? `: ${detail.slice(0, 300)}` : ""}`
+          );
+        }
+        if (!res.body) {
+          throw new Error("Anthropic API 响应缺少流式 body");
+        }
+
+        try {
+          for await (const event of parseSseData(res.body)) {
+            const e = event as {
+              type?: string;
+              delta?: { type?: string; text?: string };
+              error?: { type?: string; message?: string };
+            };
+            if (e.type === "error") {
+              throw new Error(
+                `Anthropic API 流式错误：${e.error?.type ?? "unknown"} ${e.error?.message ?? ""}`.trim()
+              );
+            }
+            if (e.type === "content_block_delta" && e.delta?.type === "text_delta" && e.delta.text) {
+              yield e.delta.text;
+            }
           }
+        } catch (err) {
+          if (input.signal?.aborted) throw err;
+          if (timeoutSignal.aborted) {
+            throw new Error(`Anthropic API 请求超时（超过 ${timeoutMs}ms 未响应，流式读取中断）`);
+          }
+          throw err;
         }
-      } catch (err) {
-        if (input.signal?.aborted) throw err;
-        if (timeoutSignal.aborted) {
-          throw new Error(`Anthropic API 请求超时（超过 ${timeoutMs}ms 未响应，流式读取中断）`);
-        }
-        throw err;
+      } finally {
+        clearTimeout(timeoutTimer);
       }
     },
   };
