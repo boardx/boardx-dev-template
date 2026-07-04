@@ -559,7 +559,9 @@ export async function listAvaAttachmentsByMessageIds(
 // 澄清/计划/时间线/报告持久化到 DB，使刷新页面后可恢复到中断前的正确阶段与内容
 // （而不是从头开始或消失）。一个线程可有多次研究，恢复时取最近一条。
 
-export type AvaResearchStatus = "draft" | "running" | "complete" | "error";
+// P18 F04：新增 'clarified' 中间态，见 028_ava_research_clarify_stage.sql——
+// draft（待确认澄清）→ clarified（待确认计划）→ running（执行中）→ complete/error。
+export type AvaResearchStatus = "draft" | "clarified" | "running" | "complete" | "error";
 
 export interface AvaResearchTimelineItem {
   phase: string;

@@ -9,3 +9,5 @@ export * from "./avaSettings";
 export * from "./studioGenerator";
 // 演示文稿生成器（P12 F02）
 export * from "./presentationGenerator";
+// Deep Research 真实生成（P18 F04）：替换 apps/web 里硬编码的 buildResearch()
+export * from "./researchGenerator";
