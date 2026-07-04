@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CanvasViewport } from "@/components/board/canvas-viewport";
 import { BoardBottomDock, type DockToolKey } from "@/components/board/board-bottom-dock";
 import { BoardAiOverlay } from "@/components/board/board-ai-panel";
-import { setOperating } from "@/lib/collab-bus";
+import { publishCursor, screenToBoardPoint, setOperating, viewportContainerRect } from "@/lib/collab-bus";
 import {
   applyEncodedUpdate,
   createBoardDoc,
@@ -266,6 +266,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     moved: boolean;
   } | null>(null);
   const justDraggedRef = useRef(false); // 拖拽刚结束 → 抑制随后的 click 选择翻转
+  const cursorIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null); // p8:F03 光标闲置自动隐藏
 
   // ── p8:F02 Yjs 实时同步 ──────────────────────────────────────────────────
   // docRef 是本 board 的 CRDT 状态；WS 只是把 doc 的二进制 update 转发给其它
@@ -305,6 +306,31 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   useEffect(() => {
     void load();
   }, [load]);
+
+  // p8:F03 — 光标 presence：走既有 collab-bus 的 viewport/awareness 心跳通道（HTTP
+  // presence 轮询），不是 F01/F02 的 WS+Yjs 传输——光标不需要 CRDT 合并语义，
+  // 复用现成的 1.5s presence 心跳足够。闲置 2.5s 自动隐藏，避免残留光标误导。
+  const clearLocalCursor = useCallback(() => {
+    if (cursorIdleTimer.current) {
+      clearTimeout(cursorIdleTimer.current);
+      cursorIdleTimer.current = null;
+    }
+    publishCursor(null);
+  }, []);
+
+  const publishLocalCursor = useCallback((e: React.MouseEvent) => {
+    // 广播画布逻辑坐标，不是发送方屏幕像素——接收端按各自的 pan/zoom 转回屏幕坐标
+    // 渲染，否则窗口尺寸/缩放不同时光标会跟真实指向对不上（p8:F03 修复点）。
+    const board = screenToBoardPoint(e.clientX, e.clientY, viewportContainerRect());
+    publishCursor({ x: board.x, y: board.y, visible: true });
+    if (cursorIdleTimer.current) clearTimeout(cursorIdleTimer.current);
+    cursorIdleTimer.current = setTimeout(() => {
+      cursorIdleTimer.current = null;
+      publishCursor(null);
+    }, 2500);
+  }, []);
+
+  useEffect(() => clearLocalCursor, [clearLocalCursor]);
 
   // 打开到 F01 网关的 WS 连接：先广播 sync-request 问"房间里有没有已经在线的人"，
   // 有则 apply 对方的完整状态（保证跟对方是同一批 Y.Map 结构实例，见 packages/collab
@@ -950,7 +976,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   }, [items, selected, deleteSelected, moveSelected, pasteClipboard, undo, redo]);
 
   return (
-    <div className="relative flex flex-1 flex-col">
+    <div className="relative flex flex-1 flex-col" onMouseMove={publishLocalCursor} onMouseLeave={clearLocalCursor}>
       {/* Board Menu：编辑者可见的工具入口；不可用能力保留禁用状态，避免误导为已实现。 */}
       {canEdit && (
         <div className="relative border-b bg-card px-3 py-1.5">

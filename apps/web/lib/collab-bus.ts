@@ -17,6 +17,12 @@ export interface ViewportSnapshot {
   scale: number;
 }
 
+export interface CursorSnapshot {
+  x: number;
+  y: number;
+  visible: boolean;
+}
+
 interface FollowSnapshot {
   viewport: ViewportSnapshot;
 }
@@ -27,6 +33,8 @@ type Listener<T> = (value: T) => void;
 let localViewport: ViewportSnapshot = { tx: 0, ty: 0, scale: 1 };
 // 本地是否正在操作（拖拽/编辑）。
 let localOperating = false;
+// 本地鼠标光标最新位置（供 presence 心跳广播给他人）。
+let localCursor: CursorSnapshot | null = null;
 
 const followListeners = new Set<Listener<FollowSnapshot | null>>();
 
@@ -48,6 +56,57 @@ export function setOperating(on: boolean): void {
 /** BoardPresence：读取本地操作态，塞进心跳 payload。 */
 export function readLocalOperating(): boolean {
   return localOperating;
+}
+
+/** BoardCanvas：发布本地光标位置；null 表示空闲/离开画布。 */
+export function publishCursor(cursor: CursorSnapshot | null): void {
+  localCursor = cursor;
+}
+
+/** BoardPresence：读取本地光标，塞进心跳 payload。 */
+export function readLocalCursor(): CursorSnapshot | null {
+  return localCursor;
+}
+
+// ── 光标坐标转换（p8:F03）───────────────────────────────────────────────
+// 光标必须以「画布逻辑坐标」而不是「发送方屏幕像素」广播，否则接收端按自己的
+// position:fixed 原样渲染发送方的 clientX/clientY——一旦双方窗口尺寸或画布
+// pan/zoom 不同，光标位置就会跟真实指向对不上。转换公式跟 canvas-viewport.tsx
+// 的 `translate(tx, ty) scale(scale)`（transformOrigin: 0 0）严格对应。
+//
+// 纯数学与 DOM 查询分开：screenToBoardPoint/boardPointToScreen 只接受一个
+// 已经算好的容器矩形，不自己碰 document——这样单测不需要 jsdom，调用方
+// （board-canvas.tsx / presence.tsx，本来就在浏览器里跑）负责传入
+// viewportContainerRect() 的结果。
+export function viewportContainerRect(): { left: number; top: number } | null {
+  const el = document.querySelector('[data-testid="canvas-viewport"]');
+  return el ? el.getBoundingClientRect() : null;
+}
+
+/** 屏幕坐标（如 MouseEvent.clientX/Y）→ 画布逻辑坐标。发布本地光标前调用。 */
+export function screenToBoardPoint(
+  clientX: number,
+  clientY: number,
+  containerRect: { left: number; top: number } | null,
+): { x: number; y: number } {
+  if (!containerRect) return { x: clientX, y: clientY };
+  return {
+    x: (clientX - containerRect.left - localViewport.tx) / localViewport.scale,
+    y: (clientY - containerRect.top - localViewport.ty) / localViewport.scale,
+  };
+}
+
+/** 画布逻辑坐标 → 当前用户视角下的屏幕坐标。渲染他人光标前调用（用「我自己」的视口）。 */
+export function boardPointToScreen(
+  boardX: number,
+  boardY: number,
+  containerRect: { left: number; top: number } | null,
+): { x: number; y: number } {
+  if (!containerRect) return { x: boardX, y: boardY };
+  return {
+    x: containerRect.left + localViewport.tx + boardX * localViewport.scale,
+    y: containerRect.top + localViewport.ty + boardY * localViewport.scale,
+  };
 }
 
 /** BoardPresence：设置/清除跟随目标的视口快照（null = 停止跟随）。 */
