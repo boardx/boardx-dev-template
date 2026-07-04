@@ -7,7 +7,11 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: "172.61.0.0/24"
+        # 每个 worktree 用各自独立的子网（见 scripts/init-worktree-env.sh 的
+        # free_subnet_octet），避免多个 worktree 并行起 docker compose 时
+        # 子网冲突（COMPOSE_SUBNET 由 .env / infra/.env 提供，未设置时兜底
+        # 用 172.61，单 worktree/非并行场景下仍可直接 up）。
+        - subnet: "${COMPOSE_SUBNET:-172.61.0.0/24}"
 
 services:
   postgres:

@@ -31,6 +31,24 @@ s.close()
 PY
 }
 
+# 找一个当前没有任何 docker network 在用的 172.x.0.0/24 第三段八位组，写进
+# COMPOSE_SUBNET。之前 infra/docker-compose.yml 曾把子网硬编码成固定的
+# 172.61.0.0/24，导致两个 worktree 同时 up 时子网冲突（"Pool overlaps with
+# other one on this address space"）——比端口冲突更隐蔽，因为报错看着像是地址池
+# 耗尽，实际是同一个子网被复用。这里跟端口分配用一样的思路：每个 worktree 启动时
+# 现查一个当下空闲的八位组，而不是写死一个值。
+free_subnet_octet() {
+  local used candidate
+  used="$(docker network inspect $(docker network ls -q) --format '{{range .IPAM.Config}}{{.Subnet}}{{"\n"}}{{end}}' 2>/dev/null | grep -oE '^172\.[0-9]+\.' | grep -oE '[0-9]+' || true)"
+  for candidate in $(seq 20 250); do
+    if ! printf '%s\n' "$used" | grep -qx "$candidate"; then
+      echo "$candidate"
+      return
+    fi
+  done
+  echo 61
+}
+
 pg_port="$(free_port)"
 redis_port="$(free_port)"
 web_port="$(free_port)"
@@ -46,6 +64,9 @@ if [ "$collab_ws_port" = "$pg_port" ] || [ "$collab_ws_port" = "$redis_port" ] |
 if [ "$minio_port" = "$pg_port" ] || [ "$minio_port" = "$redis_port" ] || [ "$minio_port" = "$web_port" ] || [ "$minio_port" = "$collab_ws_port" ]; then minio_port="$(free_port)"; fi
 if [ "$minio_console_port" = "$pg_port" ] || [ "$minio_console_port" = "$redis_port" ] || [ "$minio_console_port" = "$web_port" ] || [ "$minio_console_port" = "$collab_ws_port" ] || [ "$minio_console_port" = "$minio_port" ]; then minio_console_port="$(free_port)"; fi
 if [ "$fake_anthropic_port" = "$pg_port" ] || [ "$fake_anthropic_port" = "$redis_port" ] || [ "$fake_anthropic_port" = "$web_port" ] || [ "$fake_anthropic_port" = "$collab_ws_port" ] || [ "$fake_anthropic_port" = "$minio_port" ] || [ "$fake_anthropic_port" = "$minio_console_port" ]; then fake_anthropic_port="$(free_port)"; fi
+
+subnet_octet="$(free_subnet_octet)"
+compose_subnet="172.${subnet_octet}.0.0/24"
 
 env_local="apps/web/.env.local"
 mkdir -p "$(dirname "$env_local")"
@@ -100,6 +121,8 @@ upsert "PG_PORT" "${pg_port}" "$compose_env"
 upsert "REDIS_PORT" "${redis_port}" "$compose_env"
 upsert "MINIO_PORT" "${minio_port}" "$compose_env"
 upsert "MINIO_CONSOLE_PORT" "${minio_console_port}" "$compose_env"
+upsert "COMPOSE_SUBNET" "${compose_subnet}" "$compose_env"
+upsert "COMPOSE_SUBNET" "${compose_subnet}" ".env"
 
 echo "worktree env 已就绪："
 echo "  project name : $project_name"
@@ -108,5 +131,6 @@ echo "  redis        : localhost:${redis_port}"
 echo "  minio        : localhost:${minio_port} / console localhost:${minio_console_port}"
 echo "  web/e2e      : localhost:${web_port}（next dev -p \$E2E_PORT，playwright.config.ts 已读这个变量）"
 echo "  collab ws    : localhost:${collab_ws_port}"
+echo "  docker 子网  : ${compose_subnet}"
 echo "  已写入        : ${env_local}, .env, ${compose_env}（都已 gitignore，机器级/worktree 级覆盖）"
 echo "接下来正常跑: docker compose -f infra/docker-compose.yml up -d"
