@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +40,7 @@ export default function RoomShellLayout({ children }: { children: React.ReactNod
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [myRole, setMyRole] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<number | null>(null);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,6 +53,7 @@ export default function RoomShellLayout({ children }: { children: React.ReactNod
       }
       const d = await res.json();
       setRoom(d.room);
+      setIsFavorite(Boolean(d.isFavorite));
       const mres = await fetch(`/api/rooms/${roomId}/members`);
       if (cancelled || !mres.ok) return;
       const md = await mres.json();
@@ -63,6 +65,18 @@ export default function RoomShellLayout({ children }: { children: React.ReactNod
       cancelled = true;
     };
   }, [roomId]);
+
+  // uc-rr-004：页头星标，乐观切换 + 失败回滚
+  async function toggleFavorite() {
+    const prev = isFavorite;
+    setIsFavorite(!prev);
+    try {
+      const res = await fetch(`/api/rooms/${roomId}/favorite`, { method: prev ? "DELETE" : "POST" });
+      if (!res.ok) throw new Error(String(res.status));
+    } catch {
+      setIsFavorite(prev);
+    }
+  }
 
   // 当前 tab：/rooms/[id]/<segment>/... 的第一段
   const activeSegment = pathname.split(`/rooms/${roomId}`)[1]?.split("/")[1] ?? "boards";
@@ -106,6 +120,20 @@ export default function RoomShellLayout({ children }: { children: React.ReactNod
         </nav>
         <div className="mt-1 flex items-center justify-between gap-4 pb-3">
           <div className="flex items-center gap-3">
+            {room && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                data-testid="room-favorite-toggle"
+                aria-pressed={isFavorite}
+                onClick={() => void toggleFavorite()}
+                title={isFavorite ? "取消收藏" : "收藏"}
+                className="h-7 w-7 text-lg leading-none text-amber-500"
+              >
+                {isFavorite ? "★" : "☆"}
+              </Button>
+            )}
             <h1 data-testid="room-header-name" className="text-xl font-bold tracking-tight text-foreground">
               {room?.name ?? ""}
             </h1>

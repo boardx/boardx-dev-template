@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { CURRENT_TEAM_COOKIE } from "@repo/auth";
-import { createRoom, listVisibleRooms, getMembership, type RoomVisibility } from "@repo/data";
+import { createRoom, listVisibleRooms, getMembership, listFavoriteRoomIds, type RoomVisibility } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -10,8 +10,17 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-  const q = new URL(req.url).searchParams.get("q") ?? undefined;
-  return NextResponse.json({ rooms: await listVisibleRooms(user.id, q) });
+  const params = new URL(req.url).searchParams;
+  const q = params.get("q") ?? undefined;
+  const favoriteIds = await listFavoriteRoomIds(user.id);
+  let rooms = await listVisibleRooms(user.id, q);
+  // uc-rr-004：Favorites 筛选，只返回当前用户已收藏的房间
+  // bigint 列经 pg 驱动可能回传为字符串，统一转 String 再比较，避免类型不一致误判
+  if (params.get("favorite") === "1") {
+    const favSet = new Set(favoriteIds.map(String));
+    rooms = rooms.filter((r) => favSet.has(String(r.id)));
+  }
+  return NextResponse.json({ rooms, favoriteIds });
 }
 
 export async function POST(req: Request) {
