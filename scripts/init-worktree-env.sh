@@ -39,7 +39,11 @@ PY
 # 现查一个当下空闲的八位组，而不是写死一个值。
 free_subnet_octet() {
   local used candidate
-  used="$(docker network inspect $(docker network ls -q) --format '{{range .IPAM.Config}}{{.Subnet}}{{"\n"}}{{end}}' 2>/dev/null | grep -oE '^172\.[0-9]+\.' | grep -oE '[0-9]+' || true)"
+  local nets=""
+  nets="$(docker network ls -q 2>/dev/null || true)"
+  if [ -n "$nets" ]; then
+    used="$(docker network inspect $nets --format '{{range .IPAM.Config}}{{.Subnet}}{{"\n"}}{{end}}' 2>/dev/null | awk -F. '/^172\./{print $2}')"
+  fi
   for candidate in $(seq 20 250); do
     if ! printf '%s\n' "$used" | grep -qx "$candidate"; then
       echo "$candidate"
