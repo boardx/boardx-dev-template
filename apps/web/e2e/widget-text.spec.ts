@@ -74,9 +74,13 @@ test("加粗 + 字体/字号共存：color 同时含 :bold 与样式段", async 
   await page.getByTestId("wm-fontsize").selectOption("20");
   await expect.poll(async () => (await canvasItems(page))[0]!.bold).toBe(true);
   await expect.poll(async () => (await canvasItems(page))[0]!.fontSize).toBe(20);
-  const color = await (await (await page.request.get(`/api/boards/${board.id}/items`)).json()).items[0].color;
-  expect(color).toContain(":bold");
-  expect(color).toContain("size=20");
+  // p6:F19：同一 item 的连续 PATCH 现经串行队列落库（见 board-canvas.tsx queuePatch，修复
+  // 快速连续操作时后发先至覆盖新值的真实回归），REST 落库可能略晚于渲染层乐观更新，
+  // 用 expect.poll 等待而非单次读取。
+  const color = () =>
+    page.request.get(`/api/boards/${board.id}/items`).then((r) => r.json()).then((j) => j.items[0].color as string);
+  await expect.poll(color).toContain(":bold");
+  await expect.poll(color).toContain("size=20");
 });
 
 test("文本转便利贴：按行拆分为多个便利贴，原文本保留", async ({ page }) => {
@@ -105,6 +109,9 @@ test("文本转便利贴：按行拆分为多个便利贴，原文本保留", as
 test("空文本转便利贴：不创建便利贴，保留原文本组件", async ({ page }) => {
   const board = await openOwnBoard(page);
   await page.getByTestId("add-text").click();
+  // add-text 的创建 POST 是异步触发（点击本身不等待），直接紧跟着读 REST 存在与创建请求的
+  // 竞态（预先存在的缺陷，与本轮改动无关）；用渲染层 expectItemCount 确认已落库再读 REST。
+  await expectItemCount(page, 1);
   const id = (await (await page.request.get(`/api/boards/${board.id}/items`)).json()).items[0].id;
   await page.request.patch(`/api/board-items/${id}`, { data: { text: "   \n\n  " } });
 
