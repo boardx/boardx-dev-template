@@ -6,6 +6,20 @@
   `pnpm harness verify` 门控，仍是 `in_progress`（禁止手改 status）。PR #241 已开，Closes #235。
 - F01 经 feature-evaluator 复审一轮：Revise → 已按意见修正（见下方"F01 复审修正"），
   已重新自测，evidence 字段已回填指向 evidence/ 下三份文件。仍待下一轮 evaluator/门控确认。
+- F03（owner wrk-store-2，AI Store reskin，PR #242 已合并到 main）：2026-07-05 由
+  coord/363-p17-f03-gate 跑过 `pnpm harness verify --sprint p17/01 --feature F03`，
+  **门控未通过**，仍是 `in_progress`。过程中顺带修复了 `feature_list.json` 里 F03
+  verification 第 3 条的一个既有 glob/cwd bug（与 F02 notes 记录的是同一个 harness 执行
+  环境问题：`pnpm --filter @repo/web exec playwright test e2e/ai-store-*.spec.ts` 从 repo 根
+  跑时 glob 展开落空 → "No tests found"；已改成 `cd apps/web && pnpm exec playwright test
+  e2e/ai-store-*.spec.ts`，与 F02 一致）。修完 glob 后门控**依然不通过**，真实原因：
+  `e2e/ai-store-*.spec.ts` 30 条里恒定 3 条失败（`ai-store-003:13`、`ai-store-005:116`、
+  `ai-store-005:174`），根因是 `apps/web/app/(app)/ai-store/store-browser.tsx` 里 P11 遗留的
+  `useEffect` 读 URL query 后立刻 `history.replaceState` 清空、与 Playwright 断言 URL 的
+  时序竞争——**不是 F03 本次纯文案/样式改动引入**（已在合并 #384 docker 子网修复后的全新
+  干净环境里独立复现，与之前 worker 的 stash 对照实验结论一致）。已 spawn 独立任务
+  `task_20951276` 跟踪修复该竞态，修复合并后需重新对 F03 跑一次门控。详见
+  `evidence/F03-analysis.md`。
 - F02-F06：见各自 owner 的记录（本文件是共享 sprint 交接，非 F01 独占）。
 
 ## F01 复审修正（本轮，针对 feature-evaluator 的 Revise 意见）

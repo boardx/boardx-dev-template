@@ -45,6 +45,58 @@
 
 本 worker 未擅自修改范围外的功能逻辑，也没有自行豁免失败用例，如实记录到此。
 
+## 协调方复核（2026-07-05，coord/363-p17-f03-gate）
+
+在合并了 `infra/docker-compose.yml` 子网硬编码修复（#384，动态分配子网，解决多 worktree
+并行 `docker compose up` 冲突）之后，在**全新的 worktree + 全新的 docker 子网/端口分配**
+（`scripts/init-worktree-env.sh` 分配到 `172.32.0.0/24`，与本次改动前完全无交集）下独立
+重跑本 feature 的全部 4 条 verification 命令：
+
+1. `docker compose -f infra/docker-compose.yml up -d` — 通过（3 个容器 healthy，无子网冲突）。
+2. `pnpm --filter @repo/data run migrate` — 通过。
+3. `pnpm --filter @repo/web exec playwright test e2e/ai-store-*.spec.ts` — **仍是 27/30 通过，
+   失败的 3 条用例与之前 worker 报告的完全一致**（`ai-store-003-subscribe-use-item.spec.ts:13`、
+   `ai-store-005-share-management.spec.ts:116`、`ai-store-005-share-management.spec.ts:174`）。
+   详见 `F03-e2e-run-20260705.log`。
+4. `cd apps/web && bash scripts/lint-design.sh` — 通过（exit 0，仅既有跨模块 LABEL-LANG-MIX
+   警告，非阻塞）。
+
+**结论**：docker 子网修复解决的是"多 worktree 并行 up 互相冲突"的环境问题，与这 3 条用例的
+失败无关——这 3 条在完全干净、无冲突的新环境里依然确定性失败，进一步印证了 worker 原判断：
+这是 `store-browser.tsx` 里 P11 遗留的 `useEffect` 清 URL query string 的时序竞争
+（约 309-322 行：读参数 → 触发状态 → 立刻 `window.history.replaceState` 清空 query，
+在这台机器的调度节奏下经常快于 Playwright 对 URL 的采样），不是环境噪声、也不是 F03 本次
+纯文案/样式改动引入的回归。
+
+**顺带发现并修复了一个与 F02 同源的 harness 执行环境 bug（非本次改动范围，但属于门控命令本身
+的既有缺陷，直接修正）**：`pnpm harness verify` 从 repo 根目录跑 `sh(cmd)`（见
+`.harness/scripts/lib/sh.ts`，不传 cwd，默认在 repo 根用 `bash -c` 执行），而 F03 原
+verification 第 3 条写的是 `pnpm --filter @repo/web exec playwright test e2e/ai-store-*.spec.ts`
+——这个 glob 在 repo 根目录展开（根目录没有 `e2e/`，只有 `apps/web/e2e/`），无匹配后原样
+传给 playwright，报 "No tests found"，与真实的 3 条用例失败完全是两回事。这正是
+`feature_list.json` 里 F02 notes 已经记录过并修过的同一个 bug（F02 把命令改成
+`cd apps/web && pnpm exec playwright test e2e/ava-*.spec.ts` 后就正确匹配了）。F03 当时还没
+应用这个修复。已按同样方式把 F03 verification 第 3 条改成
+`cd apps/web && pnpm exec playwright test e2e/ai-store-*.spec.ts`，修完后 `pnpm harness verify`
+能正确匹配到 30 个 ai-store e2e 文件，此时门控结果与本节前面手工验证的结果一致：27 passed / 3
+failed，同样的 3 条用例（`ai-store-003:13`、`ai-store-005:116`、`ai-store-005:174`）。
+
+**决定**：按 AGENTS.md 硬约束（"状态不能自己改""每一条 verification 命令都执行成功(退出码 0)
+才算 passing"），修正 glob 命令后重新跑的 `pnpm harness verify --sprint p17/01 --feature F03`
+门控依然**不通过**（真实原因是上述 share-landing URL 竞态，不是 glob 问题），F03 保持
+`in_progress`，不做豁免/不缩减 verification 范围。已就"修复这个 share-landing URL 竞态"
+单独开出一个跟踪任务（`task_20951276`，与 F03 完全解耦，不占用/不阻塞 F03 的 owner），
+修复合并后应重新对 F03 跑一次 `pnpm harness verify --sprint p17/01 --feature F03`，
+届时若 4 条命令全绿，F03 才能真正翻 passing。
+
+本次 gate 尝试的完整证据：
+- `F03-verify-gate-attempt-20260705.log`（glob 修正前，`pnpm harness verify` 原始输出，
+  第 3 条命中 "No tests found" 的 harness 执行环境 bug）
+- `F03-e2e-run-20260705.log`（手工在 `apps/web` 下跑 `playwright test e2e/ai-store-*.spec.ts`
+  的完整输出，27 passed / 3 failed）
+- `evidence/F03.verify.log`（glob 修正后由 `pnpm harness verify` 自动生成的最终门控日志，
+  同样是 27 passed / 3 failed，门控结论：不通过）
+
 ## 补充：pre-push hook（verify:full）范围更广的既有不稳定性
 `git push` 触发的 pre-push hook 跑 `pnpm verify:full`（typecheck+lint+test → web 生产构建 →
 全量 442 条 e2e，单 worker 顺序执行）。观察到：

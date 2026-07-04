@@ -66,11 +66,11 @@
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web exec playwright test e2e/ai-store-*.spec.ts",
+        "cd apps/web && pnpm exec playwright test e2e/ai-store-*.spec.ts",
         "cd apps/web && bash scripts/lint-design.sh"
       ],
       "evidence": "",
-      "notes": "uc-store-reskin-001（新增）。verification 复用既有 p11 全部 e2e 回归 + design lint。blocked-on 同 F01。"
+      "notes": "uc-store-reskin-001（新增）。verification 复用既有 p11 全部 e2e 回归 + design lint。blocked-on 同 F01。fix(F03，同 F02 已知问题): verification 第 3 条原写法 `pnpm --filter @repo/web exec playwright test e2e/ai-store-*.spec.ts` 在 `pnpm harness verify` 从 repo 根目录执行时，bash glob 相对 repo 根展开（根目录不存在 `e2e/`，只有 `apps/web/e2e/`），导致 glob 无匹配、原样传给 playwright 报 \"No tests found\"——与 F02 记录的是同一个 harness 执行环境 bug，非本 feature 引入。改为 `cd apps/web && pnpm exec playwright test e2e/ai-store-*.spec.ts`（与 F02、第 4 条 lint-design 已用的 cd 前缀写法一致）后可正确匹配 30 个 ai-store e2e 文件并执行。"
     },
     {
       "id": "F04",
