@@ -40,3 +40,21 @@ export async function getLatestOutboundEmail(
   );
   return rows[0];
 }
+
+/**
+ * 频控（p18 F11 硬前置，PR #321 review 登记）：某收件人 + 某类邮件在最近 windowMs 内
+ * 已发出的邮件数。查真实落库表 outbound_emails（不引入 Redis/内存 Map 等新基础设施），
+ * 调用方按业务口径设阈值（例如「同一分钟最多 1 封」→ N=1, windowMs=60_000）。
+ */
+export async function countRecentOutboundEmails(
+  toEmail: string,
+  kind: string,
+  windowMs: number
+): Promise<number> {
+  const rows = await query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count FROM outbound_emails
+     WHERE to_email = $1 AND kind = $2 AND created_at > now() - ($3 || ' milliseconds')::interval`,
+    [toEmail, kind, String(windowMs)]
+  );
+  return Number(rows[0]?.count ?? 0);
+}
