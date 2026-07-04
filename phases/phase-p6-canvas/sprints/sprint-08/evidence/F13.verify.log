@@ -1,0 +1,99 @@
+# F13 verification 重跑（review 返工，PR #297/#306 High 发现 1）
+# 日期: 2026-07-03T18:08:44Z
+# fabric 版本: fabric@7.4.0（pnpm 实测 node_modules/.pnpm/fabric@7.4.0；commit 90ada39 升级后的重取证据）
+# 分支: worker/canvas-p6-f1314-review-fixes @ 5cef5a6
+# 说明: harness verify 对已 passing 的 F13 拒绝重跑，故手动逐条执行 feature_list.json 的 verification 命令
+
+====================================================================
+## verification[1]: docker compose -f infra/docker-compose.yml up -d
+====================================================================
+ Container worker-canvas-p6-f1314-review-fixes-redis-1 Running 
+ Container worker-canvas-p6-f1314-review-fixes-minio-1 Running 
+ Container worker-canvas-p6-f1314-review-fixes-postgres-1 Running 
+>>> exit code: 0
+
+====================================================================
+## verification[2]: pnpm --filter @repo/data run migrate
+====================================================================
+
+> @repo/data@0.1.0 migrate /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/f1314-review-fixes/packages/data
+> sh -c 'set -a; [ -f ../../apps/web/.env.local ] && . ../../apps/web/.env.local; set +a; tsx src/migrate.ts'
+
+✓ 已应用，跳过：001_init.sql
+✓ 已应用，跳过：002_auth.sql
+✓ 已应用，跳过：003_team.sql
+✓ 已应用，跳过：004_room.sql
+✓ 已应用，跳过：005_canvas.sql
+✓ 已应用，跳过：006_profile.sql
+✓ 已应用，跳过：007_board.sql
+✓ 已应用，跳过：008_board_visits.sql
+✓ 已应用，跳过：009_board_favorites.sql
+✓ 已应用，跳过：010_room_chat.sql
+✓ 已应用，跳过：011_board_settings.sql
+✓ 已应用，跳过：012_board_items_board_id.sql
+✓ 已应用，跳过：013_board_items_color.sql
+✓ 已应用，跳过：014_feedback.sql
+✓ 已应用，跳过：014_room_chat_messages.sql
+✓ 已应用，跳过：015_team_general.sql
+✓ 已应用，跳过：016_admin_role.sql
+✓ 已应用，跳过：016_ai_store.sql
+✓ 已应用，跳过：016_ava_chat.sql
+✓ 已应用，跳过：016_credits.sql
+✓ 已应用，跳过：016_kb_files.sql
+✓ 已应用，跳过：016_survey.sql
+✓ 已应用，跳过：017_ai_store_item_config.sql
+✓ 已应用，跳过：017_payment_orders.sql
+✓ 已应用，跳过：017_studio_artifacts.sql
+✓ 已应用，跳过：017_survey_templates.sql
+✓ 已应用，跳过：018_ai_store_favorites.sql
+✓ 已应用，跳过：018_ava_message_attachments.sql
+✓ 已应用，跳过：018_ava_thread_share.sql
+✓ 已应用，跳过：018_user_plan.sql
+✓ 已应用，跳过：019_ai_store_subscriptions.sql
+✓ 已应用，跳过：019_credit_transaction_idempotency.sql
+✓ 已应用，跳过：019_presentation_artifacts.sql
+✓ 已应用，跳过：020_ava_message_feedback.sql
+✓ 已应用，跳过：021_ai_store_share.sql
+✓ 已应用，跳过：021_presentation_revisions.sql
+迁移完成。
+>>> exit code: 0
+
+====================================================================
+## verification[3]: pnpm --filter @repo/web exec playwright test e2e/canvas-render.spec.ts e2e/canvas-add.spec.ts e2e/canvas-update.spec.ts e2e/canvas-delete.spec.ts e2e/canvas-pan-zoom.spec.ts e2e/canvas-select.spec.ts e2e/canvas-copy-paste.spec.ts e2e/canvas-undo-redo.spec.ts e2e/widget-menu-framework.spec.ts e2e/widget-sticky.spec.ts e2e/canvas-fabric-engine.spec.ts
+====================================================================
+
+Running 28 tests using 1 worker
+
+  ✓  1 [chromium] › canvas-add.spec.ts:6:5 › 添加便签后出现在板上且刷新仍在 (3.8s)
+  ✓  2 [chromium] › canvas-add.spec.ts:22:5 › 非房间成员添加 item → 403 (204ms)
+  ✓  3 [chromium] › canvas-copy-paste.spec.ts:18:5 › Cmd/Ctrl+C 复制 + V 粘贴出偏移副本并选中 (2.1s)
+  ✓  4 [chromium] › canvas-copy-paste.spec.ts:36:5 › 多选批量复制粘贴 (873ms)
+  ✓  5 [chromium] › canvas-delete.spec.ts:6:5 › 删除 item：板上消失且列表不含 (864ms)
+  ✓  6 [chromium] › canvas-delete.spec.ts:25:5 › 非房间成员删除 item → 403 (214ms)
+  ✓  7 [chromium] › canvas-fabric-engine.spec.ts:17:5 › 画布由 <canvas>（fabric）渲染，fabric 对象数与 items 一致 (754ms)
+  ✓  8 [chromium] › canvas-pan-zoom.spec.ts:14:5 › 缩放控制条：放大/缩小/重置百分比 (640ms)
+  ✓  9 [chromium] › canvas-pan-zoom.spec.ts:31:5 › 小地图与画布表面渲染 (566ms)
+  ✓  10 [chromium] › canvas-pan-zoom.spec.ts:38:5 › 拖拽平移改变画布表面 transform (601ms)
+  ✓  11 [chromium] › canvas-render.spec.ts:5:5 › 打开房间的板，渲染已有 item (533ms)
+  ✓  12 [chromium] › canvas-select.spec.ts:28:5 › 加便签 → 出现并自动选中（board-keyed item） (684ms)
+  ✓  13 [chromium] › canvas-select.spec.ts:35:5 › 点选 / Shift 多选 / 点空白清除 / Esc 清除 (721ms)
+  ✓  14 [chromium] › canvas-select.spec.ts:55:5 › Ctrl/Cmd+A 全选 + Delete 删除选中 (1.6s)
+  ✓  15 [chromium] › canvas-select.spec.ts:71:5 › 方向键移动选中 item 并持久化 (796ms)
+  ✓  16 [chromium] › canvas-select.spec.ts:84:5 › viewer 无编辑工具栏；POST item → 403 (1.0s)
+  ✓  17 [chromium] › canvas-undo-redo.spec.ts:18:5 › 撤销/重做 添加（Cmd/Ctrl+Z / +Shift+Z） (1.2s)
+  ✓  18 [chromium] › canvas-undo-redo.spec.ts:33:5 › 撤销 移动 → 回到原位（落库） (969ms)
+  ✓  19 [chromium] › canvas-undo-redo.spec.ts:47:5 › 撤销 删除 → 用原 id 还原（restore） (854ms)
+  ✓  20 [chromium] › canvas-undo-redo.spec.ts:63:5 › 撤销/重做 按钮 (976ms)
+  ✓  21 [chromium] › canvas-update.spec.ts:6:5 › 移动 + 编辑 item 并持久化 (585ms)
+  ✓  22 [chromium] › canvas-update.spec.ts:28:5 › 非房间成员更新 item → 403 (271ms)
+  ✓  23 [chromium] › widget-menu-framework.spec.ts:18:5 › 选中时浮出 Widget Menu，取消选中隐藏 (812ms)
+  ✓  24 [chromium] › widget-menu-framework.spec.ts:30:5 › Widget Menu 删除选中 (838ms)
+  ✓  25 [chromium] › widget-menu-framework.spec.ts:39:5 › Widget Menu 复制选中（出现副本） (803ms)
+  ✓  26 [chromium] › widget-sticky.spec.ts:20:5 › 双击便签编辑文字并持久化 (1.5s)
+  ✓  27 [chromium] › widget-sticky.spec.ts:41:5 › Widget Menu 改便签颜色并持久化 (966ms)
+  ✓  28 [chromium] › widget-sticky.spec.ts:52:5 › viewer 不能编辑（双击无编辑框） (728ms)
+
+  28 passed (31.3s)
+>>> exit code: 0
+
+# 汇总: overall=PASS
