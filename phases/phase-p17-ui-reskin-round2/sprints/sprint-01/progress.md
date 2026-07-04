@@ -8,6 +8,27 @@
 - 当前 blocker: 无（F01 自身）。注：`e2e/board-menu-001-use-board-menu.spec.ts` 存在一个与本 feature 无关的**既有**回归（addShape 新建的形状 items 断言 `toContainText("矩形")` 失败，item text 为空）——在 stash 掉 F01 全部改动后仍复现，已 spawn 独立后台任务跟进，不阻塞 F01。
 
 ## 会话记录
+### 2026-07-05（coord/363-p17-f03-gate，F03 门控尝试）
+- 本轮目标：对已合并的 PR #242（F03 — AI Store reskin，纯文案/样式改动）跑
+  `pnpm harness verify --sprint p17/01 --feature F03` 门控。
+- 前置：先合并了 `infra/docker-compose.yml` 子网硬编码修复（#384），用
+  `scripts/init-worktree-env.sh` 在全新 worktree 里重新分配了互不冲突的端口/子网
+  （`172.32.0.0/24`）。
+- 顺带发现并修复：F03 verification 第 3 条命令 `pnpm --filter @repo/web exec playwright test
+  e2e/ai-store-*.spec.ts` 在 `pnpm harness verify` 从 repo 根跑时，glob 相对根目录展开
+  （根目录无 `e2e/`）导致 "No tests found"——与 F02 notes 里记录并修过的同一个 harness 执行
+  环境 bug。已按 F02 的方式改成 `cd apps/web && pnpm exec playwright test e2e/ai-store-*.spec.ts`。
+- 结果：修正 glob 后**门控仍未通过**。`docker compose up` / `migrate` 两条通过；
+  `playwright test e2e/ai-store-*.spec.ts` 是 27/30，3 条失败（`ai-store-003:13`、
+  `ai-store-005:116`、`ai-store-005:174`），与 PR #242 里 worker 报告的完全一致，
+  证明这是 `store-browser.tsx` 里 P11 遗留的 URL query 竞态（与本次 docker 子网修复、glob
+  修复均无关，也确认不是 F03 本次改动引入）。lint-design.sh 通过。
+- 决定：F03 保持 `in_progress`，不豁免/不改 verification 范围。已单独 spawn 一个独立任务
+  跟踪修复这个 share-landing 竞态（`task_20951276`，不占用 F03 owner，不阻塞其它 feature）。
+  修复合并后需重新对 F03 跑一次门控。
+- 证据：`evidence/F03-analysis.md`（追加"协调方复核"章节）、
+  `evidence/F03-verify-gate-attempt-20260705.log`、`evidence/F03-e2e-run-20260705.log`。
+
 ### 2026-07-03 04:48:25
 - 本轮目标: p17 sprint-01 全量派发（coordinator）。
 - 已完成: claim 分配，scaffold sprint.md/progress.md/session-handoff.md。
