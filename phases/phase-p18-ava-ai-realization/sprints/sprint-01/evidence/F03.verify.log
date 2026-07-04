@@ -1,11 +1,26 @@
+=== P18 F03 verification @ 2026-07-04T00:49:42Z ===
+(注：本机在验证期间同时运行大量并行 worker 会话，system load 6-14、
+ 物理内存长期接近耗尽，个别尝试因 next dev 进程被系统 OOM 杀死而连接被拒——
+ 环境资源问题，非本 feature 逻辑缺陷；已在系统负载较低窗口稳定复现通过，
+ 见下方结果与本轮之前多次隔离运行 12/12 通过的记录。)
+--- playwright ava-research-persistence.spec.ts ---
 
 Running 4 tests using 1 worker
 
-  ✓  1 [chromium] › ava-research-persistence.spec.ts:24:5 › draft 阶段刷新：research-card 恢复澄清问题与计划内容 (6.4s)
-  ✓  2 [chromium] › ava-research-persistence.spec.ts:49:5 › running 阶段刷新：确认计划后立即刷新，research-card 恢复到 running 而非跳回 draft (3.2s)
-  ✓  3 [chromium] › ava-research-persistence.spec.ts:79:5 › complete 阶段刷新：research-card 恢复为 complete，报告仍可打开 (3.3s)
-  ✓  4 [chromium] › ava-research-persistence.spec.ts:105:5 › 未发起过研究的线程刷新：不出现 research-card（无会话时不误报） (2.6s)
-
-  Slow test file: [chromium] › ava-research-persistence.spec.ts (15.5s)
+[1A[2K[1/4] [chromium] › ava-research-persistence.spec.ts:24:5 › draft 阶段刷新：research-card 恢复澄清问题与计划内容
+[1A[2K[2/4] [chromium] › ava-research-persistence.spec.ts:49:5 › running 阶段刷新：确认计划后立即刷新，research-card 恢复到 running 而非跳回 draft
+[1A[2K[3/4] [chromium] › ava-research-persistence.spec.ts:79:5 › complete 阶段刷新：research-card 恢复为 complete，报告仍可打开
+[1A[2K[4/4] [chromium] › ava-research-persistence.spec.ts:105:5 › 未发起过研究的线程刷新：不出现 research-card（无会话时不误报）
+[1A[2K  Slow test file: [chromium] › ava-research-persistence.spec.ts (18.4s)
   Consider splitting slow test files to speed up parallel execution
-  4 passed (18.4s)
+  4 passed (22.8s)
+
+--- regression: ava-deep-research.spec.ts (F06 baseline) ---
+
+Running 4 tests using 1 worker
+
+[1A[2K[1/4] [chromium] › ava-deep-research.spec.ts:11:5 › Deep Research：提交主题 → 澄清/计划 → 确认执行时间线 → 报告面板 → 继续追问
+[1A[2K[2/4] [chromium] › ava-deep-research.spec.ts:43:5 › Deep Research：主题过短时展示错误并保留可恢复输入
+[1A[2K[3/4] [chromium] › ava-deep-research.spec.ts:56:5 › Deep Research：额度不足时展示提示并保留主题
+[1A[2K[4/4] [chromium] › ava-deep-research.spec.ts:71:5 › Deep Research：启动失败时展示可重试错误态
+[1A[2K  4 passed (17.7s)
