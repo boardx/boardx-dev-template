@@ -74,7 +74,21 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     trace: "off",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        // p18 F07（语音输入 e2e）需要真实 getUserMedia/MediaRecorder 链路可用，
+        // 但 CI/无摄像头环境没有真实麦克风——用 Chromium 的 fake device 标志：
+        // 授权自动通过（fake-ui）+ 提供一个可用的假音频输入设备（fake-device）。
+        // 只影响 chromium 这一个 project，不改变其余测试的启动参数。
+        launchOptions: {
+          args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
+        },
+      },
+    },
+  ],
   webServer: {
     command: `next dev -p ${PORT}`,
     url: `http://localhost:${PORT}/api/health`,
