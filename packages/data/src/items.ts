@@ -48,10 +48,14 @@ export async function insertItem(item: BoardItemRow): Promise<BoardItemRow> {
 
 export async function updateItem(
   itemId: string,
-  fields: { x?: number; y?: number; text?: string; color?: string | null }
+  fields: { x?: number; y?: number; w?: number; h?: number; text?: string; color?: string | null }
 ): Promise<void> {
   if (fields.x !== undefined && fields.y !== undefined) {
     await query("UPDATE board_items SET x = $2, y = $3 WHERE id = $1", [itemId, fields.x, fields.y]);
+  }
+  // p6:F07 组件缩放：尺寸字段级更新（与 x/y 同模式，成对提交）。
+  if (fields.w !== undefined && fields.h !== undefined) {
+    await query("UPDATE board_items SET w = $2, h = $3 WHERE id = $1", [itemId, fields.w, fields.h]);
   }
   if (fields.text !== undefined) {
     await query("UPDATE board_items SET text = $2 WHERE id = $1", [itemId, fields.text]);

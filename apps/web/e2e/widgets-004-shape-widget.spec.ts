@@ -1,4 +1,8 @@
 import { test, expect } from "@playwright/test";
+import { expectItemCount } from "./helpers/canvas";
+
+// p6:F13：item 计数锚点迁为 canvas 兼容锚点（策略 2 / issue #269），断言意图不变。
+// 注：add-shape 入口在本分支基线即缺失（main 的 F01 锚点），该失败原样保留。
 
 const uniq = () => `shp_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 
@@ -15,8 +19,7 @@ async function openOwnBoard(page: import("@playwright/test").Page) {
 test("添加形状（rect）→ 出现在板上、自动选中、刷新仍在", async ({ page }) => {
   const board = await openOwnBoard(page);
   await page.getByTestId("add-shape").click();
-  const items = page.getByTestId("items-layer").locator('[data-testid^="item-"]');
-  await expect(items).toHaveCount(1);
+  await expectItemCount(page, 1);
   await expect(page.getByTestId("selection-count")).toHaveText("已选 1");
 
   // 服务端以原生 rect 落库
@@ -26,12 +29,12 @@ test("添加形状（rect）→ 出现在板上、自动选中、刷新仍在", 
 
   // 刷新仍在
   await page.reload();
-  await expect(page.getByTestId("items-layer").locator('[data-testid^="item-"]')).toHaveCount(1);
+  await expectItemCount(page, 1);
 });
 
 test("形状与便签共存：add-note 仍工作", async ({ page }) => {
   await openOwnBoard(page);
   await page.getByTestId("add-note").click();
   await page.getByTestId("add-shape").click();
-  await expect(page.getByTestId("items-layer").locator('[data-testid^="item-"]')).toHaveCount(2);
+  await expectItemCount(page, 2);
 });

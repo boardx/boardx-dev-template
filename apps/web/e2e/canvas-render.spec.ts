@@ -1,7 +1,10 @@
 import { test, expect } from "@playwright/test";
+import { canvasItems, waitForCanvasReady } from "./helpers/canvas";
 
 // p20-F10：legacy 单画布下线后，本 spec 迁移到 board 模型
 // （先建板 → API 预置 item → 画布页 /boards/[id] 渲染）。
+// 注：p20 合并时用了 p6:F13（渲染引擎切 fabric.Canvas）之前的 DOM 断言（item-<id> testid），
+// 该 DOM 节点在 fabric 渲染下不再产出。按策略 2（issue #269）改为 canvas 兼容锚点。
 const uniq = () => `cr_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 
 test("打开白板画布，渲染已有 item", async ({ page }) => {
@@ -15,6 +18,8 @@ test("打开白板画布，渲染已有 item", async ({ page }) => {
   })).json()).item;
 
   await page.goto(`/boards/${board.id}`);
-  await expect(page.getByTestId(`item-${item.id}`)).toBeVisible();
-  await expect(page.getByTestId(`item-${item.id}`)).toContainText("已有便签");
+  await waitForCanvasReady(page);
+  const rendered = (await canvasItems(page)).find((it) => it.id === item.id);
+  expect(rendered, `item ${item.id} 不在渲染层`).toBeTruthy();
+  expect(rendered!.text).toContain("已有便签");
 });

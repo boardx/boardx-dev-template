@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { canvasItems, expectItemCount } from "./helpers/canvas";
+
+// p6:F13：item 锚点迁为 canvas 兼容锚点（策略 2 / issue #269），断言意图不变。
 
 // uc-board-menu-001-use-board-menu：通过 Board Menu 选择工具并在画布创建或放置内容。
 const uniq = () => `bm001_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
@@ -13,8 +16,6 @@ async function openOwnBoard(page: import("@playwright/test").Page) {
   await page.goto(`/boards/${board.id}`);
   return board;
 }
-
-const items = (page: import("@playwright/test").Page) => page.getByTestId("items-layer").locator('[data-testid^="item-"]');
 
 test("编辑者使用 Board Menu：工具可见、面板可打开、创建后选中", async ({ page }) => {
   await openOwnBoard(page);
@@ -47,13 +48,13 @@ test("编辑者使用 Board Menu：工具可见、面板可打开、创建后选
   await expect(page.getByTestId("board-tool-select")).toHaveAttribute("aria-pressed", "true");
 
   await page.getByTestId("add-note").click();
-  await expect(items(page)).toHaveCount(1);
+  await expectItemCount(page, 1);
   await expect(page.getByTestId("selection-count")).toHaveText("已选 1");
   await expect(page.getByTestId("widget-menu")).toBeVisible();
 
   await page.getByTestId("board-tool-shape").click();
-  await expect(items(page)).toHaveCount(2);
-  await expect(items(page).last()).toContainText("矩形");
+  await expectItemCount(page, 2);
+  expect((await canvasItems(page)).at(-1)!.text).toContain("矩形");
   await expect(page.getByTestId("board-tool-shape")).toHaveAttribute("aria-pressed", "true");
 });
 

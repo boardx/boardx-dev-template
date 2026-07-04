@@ -18,26 +18,27 @@
     "@repo/data": "workspace:*",
     "@repo/queue": "workspace:*",
     "@repo/storage": "workspace:*",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "fabric": "^7.4.0",
+    "lucide-react": "^0.544.0",
     "next": "14.2.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.2",
-    "class-variance-authority": "^0.7.1",
-    "tailwindcss-animate": "^1.0.7",
-    "lucide-react": "^0.544.0",
     "react-markdown": "^9.0.1",
-    "remark-gfm": "^4.0.0"
+    "remark-gfm": "^4.0.0",
+    "tailwind-merge": "^2.5.2",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "typescript": "*",
-    "vitest": "*",
+    "@playwright/test": "^1.47.0",
     "@types/node": "*",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
-    "@playwright/test": "^1.47.0",
-    "tailwindcss": "^3.4.10",
+    "autoprefixer": "^10.4.20",
     "postcss": "^8.4.41",
-    "autoprefixer": "^10.4.20"
+    "tailwindcss": "^3.4.10",
+    "typescript": "*",
+    "vitest": "*"
   }
 }

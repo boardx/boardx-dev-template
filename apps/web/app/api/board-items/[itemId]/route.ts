@@ -20,11 +20,18 @@ export async function PATCH(req: Request, { params }: { params: { itemId: string
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
     const gate = await requireEdit(params.itemId, user.id);
     if ("error" in gate) return NextResponse.json({ error: gate.error }, { status: gate.status });
-    const body = (await req.json().catch(() => ({}))) as { x?: unknown; y?: unknown; text?: unknown; color?: unknown };
-    const fields: { x?: number; y?: number; text?: string; color?: string | null } = {};
+    const body = (await req.json().catch(() => ({}))) as {
+      x?: unknown; y?: unknown; w?: unknown; h?: unknown; text?: unknown; color?: unknown;
+    };
+    const fields: { x?: number; y?: number; w?: number; h?: number; text?: string; color?: string | null } = {};
     if (body.x !== undefined && body.y !== undefined) {
       fields.x = Math.trunc(Number(body.x));
       fields.y = Math.trunc(Number(body.y));
+    }
+    // p6:F07 组件缩放落库：w/h 成对提交，最小 8px 防退化。
+    if (body.w !== undefined && body.h !== undefined) {
+      fields.w = Math.max(8, Math.trunc(Number(body.w)));
+      fields.h = Math.max(8, Math.trunc(Number(body.h)));
     }
     if (typeof body.text === "string") fields.text = body.text;
     if (body.color !== undefined) fields.color = body.color === null ? null : String(body.color);

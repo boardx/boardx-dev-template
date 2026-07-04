@@ -1,7 +1,15 @@
 "use client";
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CanvasViewport } from "@/components/board/canvas-viewport";
+import {
+  FabricCanvas,
+  type ItemMove,
+  type ItemResize,
+  type RenderItem,
+  type ViewportState,
+} from "@/components/board/fabric-canvas";
+import { type Guide, type SpacingHint } from "@/lib/canvas-snap";
 import { BoardBottomDock, type DockToolKey } from "@/components/board/board-bottom-dock";
 import { BoardAiOverlay } from "@/components/board/board-ai-panel";
 import { setOperating } from "@/lib/collab-bus";
@@ -72,100 +80,19 @@ interface Move {
   toY: number;
 }
 
-// 可逆操作（F09 撤销/重做命令栈）。add 与 delete 互为逆；move 记录 from/to。
+// 可逆操作（F09 撤销/重做命令栈）。add 与 delete 互为逆；move/resize 记录 from/to。
 type Op =
   | { kind: "add"; items: Item[] }
   | { kind: "delete"; items: Item[] }
-  | { kind: "move"; moves: Move[] };
+  | { kind: "move"; moves: Move[] }
+  | { kind: "resize"; resize: ItemResize }; // p6:F07 组件缩放
 
 type BoardTool = "select" | "pan" | "sticky" | "draw" | "text" | "connector" | "shape" | "assets" | "templates";
 
 const NUDGE = 1;
 const BIG_NUDGE = 10;
-
-// 对齐参考线（uc-canvas-007）：拖动组件时，若其边缘/中心线与其它组件的边缘/中心线
-// 足够接近（画布坐标系阈值 SNAP_TOLERANCE），则吸附到该对齐位置并显示参考线。
-const SNAP_TOLERANCE = 6;
-
-interface Guide {
-  orientation: "v" | "h"; // v=竖直参考线（沿 x 对齐）；h=水平参考线（沿 y 对齐）
-  pos: number; // 参考线在画布坐标系中的 x（v）或 y（h）
-}
-
-// 组件在某一轴上的三条对齐锚点（前/中/后 = 左中右 或 上中下）。
-function anchors(start: number, size: number): number[] {
-  return [start, start + size / 2, start + size];
-}
-
-// 计算拖动结果的吸附增量 + 需显示的参考线。
-// dragged: 拖动后（未吸附）的目标 item；others: 其余静止 item。
-// 返回沿 x/y 的吸附增量（把 dragged 拉到对齐位置）与参考线集合。
-function computeSnap(
-  dragged: { x: number; y: number; w: number; h: number },
-  others: { x: number; y: number; w: number; h: number }[],
-): { snapDX: number; snapDY: number; guides: Guide[] } {
-  const guides: Guide[] = [];
-  let snapDX = 0;
-  let snapDY = 0;
-  let bestX = SNAP_TOLERANCE + 1;
-  let bestY = SNAP_TOLERANCE + 1;
-
-  const dragXA = anchors(dragged.x, dragged.w);
-  const dragYA = anchors(dragged.y, dragged.h);
-
-  for (const o of others) {
-    const oxA = anchors(o.x, o.w);
-    const oyA = anchors(o.y, o.h);
-    for (const dx of dragXA) {
-      for (const ox of oxA) {
-        const diff = Math.abs(dx - ox);
-        if (diff <= SNAP_TOLERANCE && diff < bestX) {
-          bestX = diff;
-          snapDX = ox - dx;
-        }
-      }
-    }
-    for (const dy of dragYA) {
-      for (const oy of oyA) {
-        const diff = Math.abs(dy - oy);
-        if (diff <= SNAP_TOLERANCE && diff < bestY) {
-          bestY = diff;
-          snapDY = oy - dy;
-        }
-      }
-    }
-  }
-
-  const snap = { snapDX: bestX <= SNAP_TOLERANCE ? snapDX : 0, snapDY: bestY <= SNAP_TOLERANCE ? snapDY : 0 };
-
-  // 吸附确定后，收集所有与吸附后位置精确重合的对齐线用于绘制参考线。
-  if (bestX <= SNAP_TOLERANCE) {
-    const snappedX = anchors(dragged.x + snap.snapDX, dragged.w);
-    const seen = new Set<number>();
-    for (const o of others) {
-      for (const ox of anchors(o.x, o.w)) {
-        if (snappedX.some((a) => Math.abs(a - ox) < 0.5) && !seen.has(ox)) {
-          seen.add(ox);
-          guides.push({ orientation: "v", pos: ox });
-        }
-      }
-    }
-  }
-  if (bestY <= SNAP_TOLERANCE) {
-    const snappedY = anchors(dragged.y + snap.snapDY, dragged.h);
-    const seen = new Set<number>();
-    for (const o of others) {
-      for (const oy of anchors(o.y, o.h)) {
-        if (snappedY.some((a) => Math.abs(a - oy) < 0.5) && !seen.has(oy)) {
-          seen.add(oy);
-          guides.push({ orientation: "h", pos: oy });
-        }
-      }
-    }
-  }
-
-  return { ...snap, guides };
-}
+// 对齐吸附（uc-canvas-007）纯逻辑已抽到 @/lib/canvas-snap（F13：DOM 参考线渲染
+// 与 fabric 拖拽吸附共用），本文件只渲染参考线 DOM（testid=alignment-guide 不变）。
 
 function BoardMenuButton({
   testId,
@@ -205,6 +132,10 @@ function BoardMenuButton({
 
 // 画布：渲染 board-keyed items（ADR-0002）+ 选择/键盘（F06）+ 复制粘贴（F08）+ 撤销/重做（F09）。
 // 视口（平移/缩放/小地图）复用 CanvasViewport（F05）。marquee 框选 deferred（与拖拽平移冲突，留后续）。
+//
+// p6:F13 渲染引擎：item 的渲染与指针交互（选中框/拖拽/多选/双击）由 FabricCanvas
+// （fabric.Canvas 适配器）承担；本组件仍是数据权威（REST 持久化 + 撤销栈 + 剪贴板），
+// 周边 DOM UI（工具栏 / Widget Menu / 右键菜单 / selection-count / 参考线 / 编辑框 / 徽标）不变。
 export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -214,6 +145,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const [openPanel, setOpenPanel] = useState<"assets" | "templates" | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null); // 右键上下文菜单（uc-context-menu-001）
   const [guides, setGuides] = useState<Guide[]>([]); // 拖动时的对齐参考线（uc-canvas-007）
+  const [spacings, setSpacings] = useState<SpacingHint[]>([]); // p6:F07 等间距提示
   // uc-widget-menu-009 刷新组件：可刷新组件的重载信号（重载次数 + 最近重载时间戳），
   // 是纯客户端的「内容已重新加载」可见反馈，随每次刷新自增。
   const [reload, setReload] = useState<Record<string, { count: number; at: number }>>({});
@@ -222,19 +154,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const clipboard = useRef<Item[]>([]); // 应用内剪贴板（F08）
   const undoStack = useRef<Op[]>([]); // F09
   const redoStack = useRef<Op[]>([]);
-  // 鼠标拖拽移动便签（指针驱动；记录可逆 move 命令）。
-  const dragRef = useRef<{
-    startX: number;
-    startY: number;
-    scale: number;
-    ids: string[];
-    init: Record<string, { x: number; y: number; w: number; h: number }>;
-    others: { x: number; y: number; w: number; h: number }[]; // 未参与拖动的组件（吸附参照）
-    snapDX: number; // 最近一次 onDragMove 计算出的吸附增量（release 时应用）
-    snapDY: number;
-    moved: boolean;
-  } | null>(null);
-  const justDraggedRef = useRef(false); // 拖拽刚结束 → 抑制随后的 click 选择翻转
+  // 视口快照（CanvasViewport 上报），供 fabric viewportTransform 镜像与测试 API 坐标换算。
+  const [vp, setVp] = useState<ViewportState>({ tx: 0, ty: 0, scale: 1 });
+  // fabric 拖拽进行中（onOperating 回调驱动）：轮询同步在拖拽中不合并服务端快照。
+  const draggingRef = useRef(false);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/boards/${boardId}/items`);
@@ -258,10 +181,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     let stop = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     async function poll() {
-      if (!stop && !editingId && !dragRef.current) {
+      if (!stop && !editingId && !draggingRef.current) {
         try {
           const res = await fetch(`/api/boards/${boardId}/items`);
-          if (res.ok && !stop && !editingId && !dragRef.current) {
+          if (res.ok && !stop && !editingId && !draggingRef.current) {
             const next = ((await res.json()).items ?? []) as Item[];
             setItems((prev) =>
               JSON.stringify(prev) === JSON.stringify(next) ? prev : next
@@ -320,110 +243,110 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     []
   );
 
+  // p6:F07 组件缩放落库（PATCH x/y/w/h；undo 用 from，redo 用 to）。
+  const apiResize = useCallback(
+    (id: string, rect: { x: number; y: number; w: number; h: number }) =>
+      fetch(`/api/board-items/${id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(rect),
+      }),
+    []
+  );
+
   function recordOp(op: Op) {
     undoStack.current.push(op);
     redoStack.current = [];
   }
 
-  // ── 鼠标拖拽移动便签（F06 增强：指针驱动 + 视口缩放感知 + 可逆）──────────────
-  // 读取画布表面的缩放（item 坐标系在缩放后的 surface 内，故屏幕位移需 ÷scale）。
-  function readScale(): number {
-    const surf = document.querySelector('[data-testid="canvas-surface"]') as HTMLElement | null;
-    if (!surf) return 1;
-    const t = getComputedStyle(surf).transform;
-    const m = t && t !== "none" ? t.match(/matrix\(([^)]+)\)/) : null;
-    const first = m?.[1]?.split(",")[0];
-    const a = first ? parseFloat(first) : 1;
-    return a || 1;
-  }
-
-  const onDragMove = useCallback((e: MouseEvent) => {
-    const d = dragRef.current;
-    if (!d) return;
-    if (!d.moved && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > 3) d.moved = true;
-    if (!d.moved) return;
-    const dx = (e.clientX - d.startX) / d.scale;
-    const dy = (e.clientY - d.startY) / d.scale;
-
-    // 以拖动集合的第一个 item 作为吸附参照，计算对齐吸附增量与参考线。
-    const leadId = d.ids[0];
-    const lead = leadId ? d.init[leadId] : undefined;
-    let snapDX = 0;
-    let snapDY = 0;
-    let nextGuides: Guide[] = [];
-    if (lead) {
-      const { snapDX: sdx, snapDY: sdy, guides: g } = computeSnap(
-        { x: lead.x + dx, y: lead.y + dy, w: lead.w, h: lead.h },
-        d.others,
+  // ── fabric 渲染层回调（F13）：手势在 fabric.Canvas 上发生，这里转成既有命令/落库路径 ──
+  // 拖拽移动提交：可逆 move 命令 + PATCH 落库（等价于旧 DOM onDragUp 的收尾）。
+  const onMoveCommit = useCallback(
+    async (moves: ItemMove[]) => {
+      const map = new Map(moves.map((m) => [m.id, m]));
+      setItems((prev) =>
+        prev.map((it) => {
+          const m = map.get(it.id);
+          return m ? { ...it, x: m.toX, y: m.toY } : it;
+        }),
       );
-      snapDX = sdx;
-      snapDY = sdy;
-      nextGuides = g;
-    }
-    d.snapDX = snapDX;
-    d.snapDY = snapDY;
-    setGuides(nextGuides);
-
-    setItems((prev) =>
-      prev.map((it) => {
-        const p = d.init[it.id];
-        return p ? { ...it, x: p.x + dx + snapDX, y: p.y + dy + snapDY } : it;
-      }),
-    );
-  }, []);
-
-  const onDragUp = useCallback(
-    async (e: MouseEvent) => {
-      window.removeEventListener("mousemove", onDragMove);
-      window.removeEventListener("mouseup", onDragUp);
-      const d = dragRef.current;
-      dragRef.current = null;
-      setOperating(false); // uc-collab-001：拖拽结束 → 清除操作态
-      setGuides([]); // 释放后隐藏参考线
-      if (!d || !d.moved) return;
-      justDraggedRef.current = true;
-      // 若拖动结束时触发吸附，最终位置 = 释放位置 + 吸附增量；否则停在释放位置。
-      const dx = (e.clientX - d.startX) / d.scale + d.snapDX;
-      const dy = (e.clientY - d.startY) / d.scale + d.snapDY;
-      const moves: Move[] = d.ids.map((id) => {
-        const f = d.init[id] ?? { x: 0, y: 0, w: 0, h: 0 };
-        return { id, fromX: f.x, fromY: f.y, toX: f.x + dx, toY: f.y + dy };
-      });
-      setSelected(new Set(d.ids));
+      setSelected(new Set(moves.map((m) => m.id)));
       undoStack.current.push({ kind: "move", moves });
       redoStack.current = [];
       await apiMove(moves, false);
     },
-    [apiMove, onDragMove],
+    [apiMove],
   );
 
-  function startNoteDrag(e: React.MouseEvent, item: Item) {
-    e.stopPropagation(); // 阻止视口平移在便签上启动
-    if (!canEdit || editingId === item.id) return;
-    const ids = selected.has(item.id) ? items.filter((it) => selected.has(it.id)).map((it) => it.id) : [item.id];
-    // 拖动集合置于 ids 首位（吸附以拖动的目标 item 为参照）。
-    const orderedIds = [item.id, ...ids.filter((id) => id !== item.id)];
-    const init: Record<string, { x: number; y: number; w: number; h: number }> = {};
-    const others: { x: number; y: number; w: number; h: number }[] = [];
-    items.forEach((it) => {
-      if (orderedIds.includes(it.id)) init[it.id] = { x: it.x, y: it.y, w: it.w, h: it.h };
-      else others.push({ x: it.x, y: it.y, w: it.w, h: it.h });
-    });
-    dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      scale: readScale(),
-      ids: orderedIds,
-      init,
-      others,
-      snapDX: 0,
-      snapDY: 0,
-      moved: false,
-    };
-    setOperating(true); // uc-collab-001：开始拖拽 → 标记为「正在操作」，供他人看到「谁在操作」
-    window.addEventListener("mousemove", onDragMove);
-    window.addEventListener("mouseup", onDragUp);
-  }
+  // p6:F07 缩放提交：可逆 resize 命令 + PATCH 落库（吸附已在 fabric 层作用于终态尺寸）。
+  const onResizeCommit = useCallback(
+    async (resize: ItemResize) => {
+      setItems((prev) => prev.map((it) => (it.id === resize.id ? { ...it, ...resize.to } : it)));
+      setSelected(new Set([resize.id]));
+      undoStack.current.push({ kind: "resize", resize });
+      redoStack.current = [];
+      await apiResize(resize.id, resize.to);
+    },
+    [apiResize],
+  );
+
+  const onFabricSelection = useCallback((ids: string[]) => {
+    setSelected(new Set(ids));
+  }, []);
+
+  // 空白按下：清除选择 + 关闭右键菜单（旧 items-layer onClick 语义），随后视口照常平移。
+  const onEmptyPointerDown = useCallback(() => {
+    setSelected(new Set());
+    setCtxMenu(null);
+  }, []);
+
+  const onEditRequest = useCallback(
+    (id: string) => {
+      if (canEdit) setEditingId(id);
+    },
+    [canEdit],
+  );
+
+  const onFabricCtxMenu = useCallback(
+    (pos: { x: number; y: number }, itemId: string | null) => {
+      if (!canEdit) return;
+      if (itemId && !selected.has(itemId)) setSelected(new Set([itemId]));
+      setCtxMenu(pos);
+    },
+    [canEdit, selected],
+  );
+
+  // uc-collab-001：拖拽开始/结束 → 操作态上报；同时挡住轮询合并（见 poll）。
+  const onOperating = useCallback((op: boolean) => {
+    draggingRef.current = op;
+    setOperating(op);
+  }, []);
+
+  // fabric 渲染层的输入视图：把 color 哨兵/字重等判别预解析成渲染语义（fabric 组件不懂业务哨兵）。
+  const renderItems = useMemo<RenderItem[]>(
+    () =>
+      items.map((it) => ({
+        id: it.id,
+        type: it.type,
+        x: it.x,
+        y: it.y,
+        w: it.w,
+        h: it.h,
+        text: it.text,
+        color: it.color ?? null,
+        kind: isText(it) ? "text" : isShape(it) ? "shape" : isReloadable(it) ? "embed" : "note",
+        bold: isBold(it),
+        reloadable: isReloadable(it),
+        reloadCount: reload[it.id]?.count ?? 0,
+        refreshedAt: reload[it.id]?.at ?? null,
+      })),
+    [items, reload],
+  );
+  const selectedIdList = useMemo(
+    () => items.filter((it) => selected.has(it.id)).map((it) => it.id),
+    [items, selected],
+  );
+  const editingItem = editingId ? items.find((it) => it.id === editingId) ?? null : null;
 
   async function addNote() {
     setActiveTool("sticky");
@@ -716,11 +639,12 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     if (!op) return;
     if (op.kind === "add") await apiDelete(op.items.map((i) => i.id));
     else if (op.kind === "delete") await apiRestore(op.items);
+    else if (op.kind === "resize") await apiResize(op.resize.id, op.resize.from);
     else await apiMove(op.moves, true);
     redoStack.current.push(op);
     setSelected(new Set());
     await load();
-  }, [canEdit, apiDelete, apiRestore, apiMove, load]);
+  }, [canEdit, apiDelete, apiRestore, apiMove, apiResize, load]);
 
   const redo = useCallback(async () => {
     if (!canEdit) return;
@@ -728,11 +652,12 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     if (!op) return;
     if (op.kind === "add") await apiRestore(op.items);
     else if (op.kind === "delete") await apiDelete(op.items.map((i) => i.id));
+    else if (op.kind === "resize") await apiResize(op.resize.id, op.resize.to);
     else await apiMove(op.moves, false);
     undoStack.current.push(op);
     setSelected(new Set());
     await load();
-  }, [canEdit, apiDelete, apiRestore, apiMove, load]);
+  }, [canEdit, apiDelete, apiRestore, apiMove, apiResize, load]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -955,106 +880,78 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           <Button data-testid="wm-delete" size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteSelected()}>
             删除
           </Button>
-          <Button data-testid="wm-resize-unavailable" size="sm" variant="ghost" disabled title="当前组件暂不支持拖拽控制点缩放">
-            缩放暂不可用
-          </Button>
+          {/* p6:F07：拖拽控制点缩放已可用（选中框四角），原「缩放暂不可用」占位移除。 */}
           <Button data-testid="wm-lock-unavailable" size="sm" variant="ghost" disabled title="锁定能力将在后续组件权限矩阵接入">
             锁定暂不可用
           </Button>
         </div>
       )}
 
-      <CanvasViewport>
-        <div
-          className="relative h-full w-full"
-          data-testid="items-layer"
-          onClick={() => {
-            setSelected(new Set());
-            setCtxMenu(null);
-          }}
-          onContextMenu={(e) => {
-            if (!canEdit) return;
-            e.preventDefault();
-            setCtxMenu({ x: e.clientX, y: e.clientY });
-          }}
-        >
-          {items.map((it, z) => (
+      <CanvasViewport
+        onViewportChange={setVp}
+        underlay={
+          <FabricCanvas
+            items={renderItems}
+            selectedIds={selectedIdList}
+            editingId={editingId}
+            canEdit={canEdit}
+            viewport={vp}
+            onSelectionChange={onFabricSelection}
+            onEmptyPointerDown={onEmptyPointerDown}
+            onMoveCommit={(moves) => void onMoveCommit(moves)}
+            onResizeCommit={(r) => void onResizeCommit(r)}
+            onEditRequest={onEditRequest}
+            onCtxMenu={onFabricCtxMenu}
+            onGuides={setGuides}
+            onSpacing={setSpacings}
+            onOperating={onOperating}
+          />
+        }
+      >
+        {/* DOM 覆盖层（items 本体已由 fabric 渲染）：对齐参考线 / 文本编辑框 / 重载徽标。
+            pointer-events 关闭（编辑框除外），指针事件落到下方 fabric canvas。 */}
+        <div className="pointer-events-none relative h-full w-full" data-testid="items-layer">
+          {/* F11：双击编辑文字 → DOM textarea 覆盖层（锚点 item-edit-<id> 不变），
+              画布坐标系与 item 重合；编辑中 fabric 隐藏该 item 文字。 */}
+          {editingItem && (
             <div
-              key={it.id}
-              data-testid={`item-${it.id}`}
-              data-selected={selected.has(it.id) ? "true" : "false"}
-              data-z={z}
-              data-reloadable={isReloadable(it) ? "true" : "false"}
-              data-reload-count={reload[it.id]?.count ?? 0}
-              data-refreshed-at={reload[it.id]?.at ?? ""}
-              onMouseDown={(e) => startNoteDrag(e, it)}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (justDraggedRef.current) {
-                  justDraggedRef.current = false;
-                  return;
-                }
-                selectItem(it.id, e.shiftKey);
-              }}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                if (canEdit) setEditingId(it.id);
-              }}
-              onContextMenu={(e) => {
-                if (!canEdit) return;
-                e.preventDefault();
-                e.stopPropagation();
-                if (!selected.has(it.id)) selectItem(it.id, false);
-                setCtxMenu({ x: e.clientX, y: e.clientY });
-              }}
-              style={{ left: it.x, top: it.y, width: it.w, height: it.h, zIndex: z }}
-              className={
-                "absolute flex p-2 text-xs " +
-                // 文本：透明无边框文本块；形状：粗边框矩形；便签：柔彩 + 边框 + 圆角 + 阴影
-                (isText(it)
-                  ? "items-start justify-start border-0 bg-transparent text-foreground shadow-none "
-                  : isShape(it)
-                  ? "items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm "
-                  : "items-center justify-center rounded-7 border shadow-sm " + colorClass(it.color) + " ") +
-                (isBold(it) ? "font-bold " : "") +
-                (canEdit && editingId !== it.id ? "cursor-grab active:cursor-grabbing " : "") +
-                (selected.has(it.id) ? "ring-2 ring-primary ring-offset-1" : "")
-              }
+              className="absolute z-20"
+              style={{ left: editingItem.x, top: editingItem.y, width: editingItem.w, height: editingItem.h }}
             >
-              {editingId === it.id ? (
-                <textarea
-                  data-testid={`item-edit-${it.id}`}
-                  autoFocus
-                  defaultValue={it.text}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                  onBlur={(e) => void saveText(it.id, e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      (e.target as HTMLTextAreaElement).blur();
-                    }
-                  }}
-                  className={
-                    "h-full w-full resize-none rounded bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-primary " +
-                    (isText(it) ? "text-left" : "text-center")
+              <textarea
+                data-testid={`item-edit-${editingItem.id}`}
+                autoFocus
+                defaultValue={editingItem.text}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                onBlur={(e) => void saveText(editingItem.id, e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    (e.target as HTMLTextAreaElement).blur();
                   }
-                />
-              ) : (
-                it.text
-              )}
-              {/* uc-widget-menu-009：可刷新组件的重载可见反馈（重载次数徽标）。刷新中显示旋转态。 */}
-              {isReloadable(it) && (
-                <span
-                  data-testid={`widget-reloaded-${it.id}`}
-                  data-reload-count={reload[it.id]?.count ?? 0}
-                  className="pointer-events-none absolute -right-1 -top-2 flex items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-10 font-medium text-primary-foreground shadow"
-                >
-                  <RefreshCw className={"h-2.5 w-2.5 " + (refreshing.has(it.id) ? "animate-spin" : "")} />
-                  {reload[it.id]?.count ?? 0}
-                </span>
-              )}
+                }}
+                className={
+                  "pointer-events-auto h-full w-full resize-none rounded bg-transparent p-2 text-xs text-foreground outline-none ring-2 ring-primary focus-visible:ring-2 focus-visible:ring-primary " +
+                  (isBold(editingItem) ? "font-bold " : "") +
+                  (isText(editingItem) ? "text-left" : "text-center")
+                }
+              />
             </div>
+          )}
+
+          {/* uc-widget-menu-009：可刷新组件的重载可见反馈（重载次数徽标）。刷新中显示旋转态。 */}
+          {items.filter(isReloadable).map((it) => (
+            <span
+              key={`reload-${it.id}`}
+              data-testid={`widget-reloaded-${it.id}`}
+              data-reload-count={reload[it.id]?.count ?? 0}
+              className="pointer-events-none absolute z-10 flex items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-10 font-medium text-primary-foreground shadow"
+              style={{ left: it.x + it.w - 10, top: it.y - 8 }}
+            >
+              <RefreshCw className={"h-2.5 w-2.5 " + (refreshing.has(it.id) ? "animate-spin" : "")} />
+              {reload[it.id]?.count ?? 0}
+            </span>
           ))}
 
           {/* 对齐参考线（uc-canvas-007）：拖动触发吸附时显示，与 item 同处画布坐标系。 */}
@@ -1072,6 +969,36 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               }
             />
           ))}
+
+          {/* p6:F07 等间距提示：拖动形成等间距时，每段间隙画间距线 + 间距值徽标；释放后消失。 */}
+          {spacings.flatMap((sp, i) =>
+            sp.segs.map((seg, j) => (
+              <div key={`spacing-${i}-${j}`}>
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute z-10 bg-primary/60"
+                  style={
+                    sp.orientation === "h"
+                      ? { left: seg.from, top: seg.cross, width: seg.to - seg.from, height: 1 }
+                      : { left: seg.cross, top: seg.from, width: 1, height: seg.to - seg.from }
+                  }
+                />
+                <div
+                  data-testid="spacing-hint"
+                  data-orientation={sp.orientation}
+                  data-gap={Math.round(sp.gap)}
+                  className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded bg-primary px-1 py-0.5 text-10 font-medium text-primary-foreground shadow"
+                  style={
+                    sp.orientation === "h"
+                      ? { left: (seg.from + seg.to) / 2, top: seg.cross }
+                      : { left: seg.cross, top: (seg.from + seg.to) / 2 }
+                  }
+                >
+                  {Math.round(sp.gap)}
+                </div>
+              </div>
+            )),
+          )}
         </div>
       </CanvasViewport>
 
