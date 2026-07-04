@@ -3,7 +3,9 @@
 #
 # 用途：
 #  - id 是 agent 的唯一身份，投影为 issue 的 `agent:<id>` label，也用作 claim 的 --owner。
-#  - kind 决定角色：coordinator（编排）/ worker（写码）/ reviewer（评审）。
+#  - kind 决定角色：coordinator（总协调，唯一，独占合并权）/ module-coordinator（模块二级
+#    协调，分派+初审+返工裁决，无合并权）/ architecture-coordinator（控制平面/协议本身的
+#    迭代者，同样无合并权）/ worker（写码）/ reviewer（评审）。
 #  - reviewer 复用 .harness/agents/*.yaml 已定义的 subagent（agent: 字段指向其名）。
 #  - required_for：该 reviewer 对哪些 area 是**强制**门禁（coordinator 据此路由 review）。
 version: 1
