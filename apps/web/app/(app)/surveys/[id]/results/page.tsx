@@ -129,6 +129,14 @@ export default function SurveyResultsPage() {
   }
 
   useEffect(() => {
+    // code review 加固：surveyId 变化时必须清空上一份问卷生成的 AI 摘要状态。若某次导航
+    // 复用了同一个组件实例（不重新挂载，只有这个 effect 的依赖 surveyId 变化），不重置就
+    // 会把上一份问卷的摘要文本/失败态误展示成当前问卷的内容——本文件上面的注释早已声明
+    // "每次进入/切换问卷都重置"，但重置逻辑此前没有真正写出来。这里的重置对硬导航
+    // （组件本就会重新挂载，state 已是初始值）没有副作用，成本几乎为零，是纯防御性写法。
+    setAiSummaryLoading(false);
+    setAiSummaryText("");
+    setAiSummaryError("");
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [surveyId]);

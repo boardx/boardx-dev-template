@@ -160,3 +160,35 @@ exit code: 0
 显式指定一个未被占用的 /24 子网（172.16.99.0/24，检查过与所有现存 _default 网络的
 172.17-172.31.0.0/16、192.168.0-240.0/20 段均不重叠），随后 compose up 正常创建三容器并健康。
 未执行任何 docker network prune / rm 等影响其它 agent 的操作。
+
+--- 后续修复（code review 回归，2026-07-05）---
+coord-survey 转达 code review 意见：aiSummaryText/aiSummaryError 在同一浏览器会话切换
+问卷时未重置，与代码注释自称的"每次进入/切换问卷都重置"矛盾。修复：
+useEffect(..., [surveyId]) 里补上 setAiSummaryLoading(false)/setAiSummaryText("")/
+setAiSummaryError("") 三行重置。同时给 ai-summary/route.ts 的 catch 分支加
+console.error 服务端日志（此前只返回通用错误文案，服务端完全没有留痕）。
+新增 e2e 用例覆盖"从问卷 A 的 Report 视图跳转到问卷 B 后不残留 A 的摘要"。
+
+$ pnpm --filter @repo/web exec playwright test e2e/survey-007-ai-report-summary.spec.ts
+6 passed（含新增回归用例）
+
+$ pnpm --filter @repo/web exec playwright test e2e/survey-001..006*.spec.ts e2e/survey-007-ai-report-summary.spec.ts
+29 passed，无回归
+
+$ pnpm --filter @repo/web run typecheck
+通过
+
+$ pnpm --filter @repo/web run lint
+通过（既有 LABEL-LANG-MIX 警告与本次改动无关）
+
+诚实说明：为验证这条新用例真的能捕获该 bug，本地临时把修复 revert 回 review 指出的
+"未重置"版本重跑过这条用例——发现即使用 Next.js 暴露的 window.next.router.push()
+（真实客户端路由 push，而非 history.pushState+popstate 之类不可靠的模拟）发起跳转，
+这个 [id] 动态段页面在当前 Next 14.2.5 配置下经实测仍然会整体重新挂载组件（未被本次
+修复触碰的 tab 状态也会一并回到初始值）。也就是说，review 描述的"同一组件实例不重新
+挂载、只有 id 变化"这个具体触发路径，在当前代码库的真实导航方式下暂时观察不到可达入口
+（所有指向 results 页的入口目前都是普通 <a> 硬导航）。修复本身仍然保留——防御性写法，
+成本几乎为零，一旦未来页面结构变化导致真的复用同一组件实例，会立刻生效；新增的 e2e
+用例验证的是更宽的黑盒契约（依次访问两份问卷不会互相污染摘要），但如实记录：它不能
+证明修复在"真正软路由不重新挂载"这个具体场景下生效，因为当前代码库触发不了这个场景。
+详见 e2e 用例内联注释。

@@ -102,7 +102,10 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       questions,
     });
     return NextResponse.json({ text: result.text }, { status: 200 });
-  } catch {
+  } catch (err) {
+    // code review 加固：客户端只展示通用失败文案（不泄露内部错误细节），但服务端需要留痕——
+    // 否则未来接入真实 LLM 管线后，真实的 provider 故障会在生产日志里完全不可见，无法排障。
+    console.error(`[survey ${surveyId}] AI 摘要生成失败:`, err);
     return NextResponse.json({ error: "AI 摘要生成失败，请重试" }, { status: 500 });
   }
 }
