@@ -1,4 +1,4 @@
--- 024_ava_research_sessions.sql — CAP-DATA AVA Deep Research 持久化（P18 F03）
+-- 027_ava_research_sessions.sql — CAP-DATA AVA Deep Research 持久化（P18 F03）
 -- 此前 Deep Research 的澄清/计划/时间线/报告全部只存在于前端内存 state（researchRun），
 -- 刷新页面即丢失，用户必须从头开始。本表持久化每次研究的结构化 payload + 实时阶段状态，
 -- 使 GET 可在线程重新打开时把 research-card 恢复到中断前的正确阶段与内容。

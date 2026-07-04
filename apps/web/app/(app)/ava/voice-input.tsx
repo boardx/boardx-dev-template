@@ -1,16 +1,23 @@
 "use client";
-// apps/web/app/(app)/ava/voice-input.tsx — AVA 语音输入（P18 UI 先行原型，uc-ava-008）
+// apps/web/app/(app)/ava/voice-input.tsx — AVA 语音输入（P18 F07 接通真实转写）
 //
 // 差距：phase-p9-ava-chat 的 F09（语音输入）此前 blocked——不仅转写服务（STT）未就绪，
 // 连"点麦克风→请求权限→录音中看到时长/音量→结束"这条纯前端路径都完全没有实现（无
-// MediaRecorder、无麦克风按钮）。本组件把这条纯前端路径先做实：真实
+// MediaRecorder、无麦克风按钮）。本组件把这条纯前端路径做实：真实
 // `getUserMedia` 权限请求 + 真实 `MediaRecorder` 录音 + 真实 `AnalyserNode` 音量可视化 +
-// 真实计时器；唯一 mock 的环节是"转写"——STT 服务本身是另一个能力（见
-// phases/phase-p18-ava-ai-realization/requirements/03-voice-input-stt.md），服务就绪前
-// 用固定文案代替真实转写结果，明确标注、不假装是真实识别。
+// 真实计时器；录音结束后把录制的音频 Blob POST 到 /api/ava/transcribe，由该端点调用
+// P18 F06 落地的 STT provider（`packages/ai` `transcribeAudio`，OpenAI Whisper API）
+// 做真实转写，返回文本直接回填输入框（不再是固定占位文案）。
 //
-// 边界状态覆盖 uc-ava-008：权限拒绝 / 无麦克风 / 浏览器不支持 / 录音过短 / 转写失败。
+// 边界状态覆盖 uc-ava-008：权限拒绝 / 无麦克风 / 浏览器不支持 / 录音过短 / 转写失败
+// （含服务端体积超限 413 / MIME 不在白名单 415，均复用同一个 transcription-failed
+// 错误分支——`!res.ok` 对任意非 2xx 状态码统一处理，不需要为 413/415 单开新状态）。
 // 取消录音（cancel）不产生任何文本，也不报错。
+//
+// TODO(F07 覆盖缺口)：voice-error 的 permission-denied / no-device / unsupported /
+// too-short 四个分支目前无 e2e 断言（需要 mock getUserMedia 拒绝/无设备，或 mock
+// MediaRecorder 不存在，Playwright 目前用 fake-device 走通过路径，尚未验证失败路径）。
+// 413/415 已在 ava-voice-input.spec.ts 补了断言，此 TODO 只登记未覆盖部分，不阻断本次修复。
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Mic, Square, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,14 +41,31 @@ const ERROR_MESSAGES: Record<VoiceErrorReason, string> = {
 
 const BAR_COUNT = 5;
 const MIN_RECORDING_MS = 1000;
+const TRANSCRIBE_ENDPOINT = "/api/ava/transcribe";
+// MediaRecorder 未显式指定 mimeType 时各浏览器默认不同（Chrome 通常 audio/webm;codecs=opus）。
+// 优先用 recorder.mimeType（真实生效的格式）；取不到时退回这个候选，供请求 Content-Type 参考。
+const FALLBACK_RECORDING_MIME = "audio/webm";
 
-// STT 服务未就绪前的占位转写结果（见 requirements/03-voice-input-stt.md）。
-// 真实接入后：用后端转写结果替换这个数组的选取逻辑，其余状态机保持不变。
-const MOCK_TRANSCRIPTS = [
-  "帮我总结一下这份材料的关键结论。",
-  "请把这段内容改写得更简洁一些。",
-  "根据以上讨论，列出三个下一步行动项。",
-];
+// 服务端无 OPENAI_API_KEY 时走占位转写（见 route.ts stubTranscribe），返回文本带这个前缀；
+// 前端据此判断本次是否为占位结果，向用户显式提示，不让占位文本悄悄冒充真实转写。
+const STUB_TRANSCRIBE_MARKER = "[占位转写";
+
+// mimeType → 文件扩展名，按实际 MIME 精确映射（不再用 includes("webm") 的粗糙判断把
+// Safari 的 audio/mp4 误标成 .wav），与服务端 /api/ava/transcribe 的同名映射口径一致。
+function extForMimeType(mimeType: string): string {
+  const normalized = mimeType.toLowerCase();
+  if (normalized.startsWith("audio/webm")) return "webm";
+  if (normalized.startsWith("audio/ogg")) return "ogg";
+  if (normalized.startsWith("audio/mp4")) return "mp4";
+  if (normalized.startsWith("audio/mpeg")) return "mp3";
+  if (
+    normalized.startsWith("audio/wav") ||
+    normalized.startsWith("audio/x-wav") ||
+    normalized.startsWith("audio/wave")
+  )
+    return "wav";
+  return "webm";
+}
 
 function formatElapsed(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
@@ -61,6 +85,9 @@ export function VoiceInputControl({
   const [errorReason, setErrorReason] = useState<VoiceErrorReason | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [levels, setLevels] = useState<number[]>(Array(BAR_COUNT).fill(0.15));
+  // 上一次转写是否命中了服务端占位 stub（无 OPENAI_API_KEY 时）——用于向用户显式提示
+  // "当前使用占位转写"，而不是让占位文本悄悄表现得像真实转写结果。
+  const [usedStub, setUsedStub] = useState(false);
 
   const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -70,6 +97,7 @@ export function VoiceInputControl({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAtRef = useRef<number>(0);
   const cancelledRef = useRef(false);
+  const chunksRef = useRef<Blob[]>([]);
 
   const teardown = useCallback(() => {
     if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
@@ -108,6 +136,7 @@ export function VoiceInputControl({
 
   const startRecording = useCallback(async () => {
     setErrorReason(null);
+    setUsedStub(false);
     if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
       setState("error");
       setErrorReason("unsupported");
@@ -130,6 +159,10 @@ export function VoiceInputControl({
 
       const recorder = new MediaRecorder(stream);
       recorderRef.current = recorder;
+      chunksRef.current = [];
+      recorder.ondataavailable = (e: BlobEvent) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
       recorder.start();
       startedAtRef.current = Date.now();
       setElapsedMs(0);
@@ -141,6 +174,9 @@ export function VoiceInputControl({
 
       recorder.onstop = () => {
         const durationMs = Date.now() - startedAtRef.current;
+        const mimeType = recorder.mimeType || FALLBACK_RECORDING_MIME;
+        const audioBlob = new Blob(chunksRef.current, { type: mimeType });
+        chunksRef.current = [];
         teardown();
         if (cancelledRef.current) {
           setState("idle");
@@ -152,12 +188,22 @@ export function VoiceInputControl({
           return;
         }
         setState("transcribing");
-        // Mock 转写延迟：真实接入 STT 后替换为等待后端响应。
-        setTimeout(() => {
-          const text = MOCK_TRANSCRIPTS[Math.floor(Math.random() * MOCK_TRANSCRIPTS.length)] ?? MOCK_TRANSCRIPTS[0]!;
-          setState("idle");
-          onTranscribed(text);
-        }, 700);
+        void (async () => {
+          try {
+            const formData = new FormData();
+            formData.append("file", audioBlob, `recording.${extForMimeType(mimeType)}`);
+            const res = await fetch(TRANSCRIBE_ENDPOINT, { method: "POST", body: formData });
+            if (!res.ok) throw new Error(`transcribe failed: ${res.status}`);
+            const data = (await res.json()) as { text?: string };
+            if (!data.text) throw new Error("transcribe response missing text");
+            setUsedStub(data.text.startsWith(STUB_TRANSCRIBE_MARKER));
+            setState("idle");
+            onTranscribed(data.text);
+          } catch {
+            setState("error");
+            setErrorReason("transcription-failed");
+          }
+        })();
       };
     } catch (err) {
       teardown();
@@ -246,6 +292,11 @@ export function VoiceInputControl({
         <p role="alert" data-testid="voice-error" className="text-11 text-destructive">
           {ERROR_MESSAGES[errorReason]}
         </p>
+      )}
+      {state === "idle" && usedStub && (
+        <span data-testid="voice-stub-notice" className="text-11 text-muted-foreground">
+          当前使用占位转写（未配置转写服务）
+        </span>
       )}
     </div>
   );

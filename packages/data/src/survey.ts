@@ -3,13 +3,15 @@
 // 本 feature（F01）只覆盖创建 + 列表 + 详情；答题/发布开关/报告留给 F02-F06。
 import { query, getPool } from "./index";
 import { getMembership } from "./teams";
+import { getRoomRole } from "./rooms";
 
-export type SurveyScope = "private" | "team";
+export type SurveyScope = "private" | "team" | "room";
 export type QuestionType = "text" | "single" | "multiple" | "rating";
 
 export interface Survey {
   id: number;
   team_id: number | null;
+  room_id: number | null;
   scope: SurveyScope;
   title: string;
   description: string;
@@ -56,10 +58,11 @@ export interface SurveyTemplate {
 
 export interface SurveyListItem extends Survey {
   response_count: string;
+  room_name?: string | null;
 }
 
 const SURVEY_COLS =
-  "id, team_id, scope, title, description, is_active, owner_user_id, created_at, updated_at";
+  "id, team_id, room_id, scope, title, description, is_active, owner_user_id, created_at, updated_at";
 const QUESTION_COLS = "id, survey_id, position, title, type, required, options";
 const TEMPLATE_COLS = "id, team_id, owner_user_id, builtin, title, description, questions, created_at, updated_at";
 
@@ -75,23 +78,25 @@ export function isBlank(title: string | null | undefined): boolean {
   return !(title ?? "").trim();
 }
 
-/** 创建问卷 + 题目（同一事务）。至少需要 1 道有效题目，由路由层校验后传入。 */
+/** 创建问卷 + 题目（同一事务）。至少需要 1 道有效题目，由路由层校验后传入。
+ * roomId 仅在 scope='room' 时落库；其余 scope 恒为 NULL（向后兼容存量团队/私有问卷）。 */
 export async function createSurvey(
   ownerId: number,
   title: string,
   description: string,
   scope: SurveyScope,
   teamId: number | null,
-  questions: NewQuestionInput[]
+  questions: NewQuestionInput[],
+  roomId: number | null = null
 ): Promise<SurveyWithQuestions> {
   const client = await getPool().connect();
   try {
     await client.query("BEGIN");
     const surveyRows = await client.query<Survey>(
-      `INSERT INTO surveys (team_id, scope, title, description, owner_user_id)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO surveys (team_id, room_id, scope, title, description, owner_user_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING ${SURVEY_COLS}`,
-      [scope === "team" ? teamId : null, scope, title, description, ownerId]
+      [scope === "team" ? teamId : null, scope === "room" ? roomId : null, scope, title, description, ownerId]
     );
     const survey = surveyRows.rows[0]!;
 
@@ -153,29 +158,53 @@ export async function getPublicSurveyForAnswer(surveyId: number): Promise<Survey
   return survey;
 }
 
-/** 用户可见的问卷：自己的 private 问卷，或当前团队上下文内的 team 问卷。按更新时间倒序。 */
+/** 用户可见的问卷：自己的 private 问卷，当前团队上下文内的 team 问卷，或自己所在房间的 room 问卷。
+ * 按更新时间倒序；room 问卷附带 room_name 供全局列表页展示所属房间（p20/F08 scope 徽章）。 */
 export async function listVisibleSurveys(userId: number, currentTeamId: number | null = null): Promise<SurveyListItem[]> {
   return query<SurveyListItem>(
-    `SELECT DISTINCT s.id, s.team_id, s.scope, s.title, s.description, s.is_active,
+    `SELECT DISTINCT s.id, s.team_id, s.room_id, s.scope, s.title, s.description, s.is_active,
             s.owner_user_id, s.created_at, s.updated_at,
-            count(sr.id)::text AS response_count
+            count(sr.id)::text AS response_count,
+            r.name AS room_name
      FROM surveys s
      LEFT JOIN survey_responses sr ON sr.survey_id = s.id
      LEFT JOIN team_members tm ON tm.team_id = s.team_id AND tm.user_id = $1
+     LEFT JOIN room_members rm ON rm.room_id = s.room_id AND rm.user_id = $1
+     LEFT JOIN rooms r ON r.id = s.room_id
      WHERE (s.scope = 'private' AND s.owner_user_id = $1)
         OR (
           s.scope = 'team'
           AND s.team_id = $2
           AND tm.user_id IS NOT NULL
         )
-     GROUP BY s.id, s.team_id, s.scope, s.title, s.description, s.is_active,
-              s.owner_user_id, s.created_at, s.updated_at
+        OR (
+          s.scope = 'room'
+          AND rm.user_id IS NOT NULL
+        )
+     GROUP BY s.id, s.team_id, s.room_id, s.scope, s.title, s.description, s.is_active,
+              s.owner_user_id, s.created_at, s.updated_at, r.name
      ORDER BY s.updated_at DESC`,
     [userId, currentTeamId]
   );
 }
 
-/** 用户能否查看某问卷：创建者的 private，或当前团队上下文内的 team 成员。 */
+/** 房间 Survey tab：只列本房间问卷（scope='room' 且 room_id 匹配），不嵌入团队问卷全集。 */
+export async function listRoomSurveys(roomId: number): Promise<SurveyListItem[]> {
+  return query<SurveyListItem>(
+    `SELECT s.id, s.team_id, s.room_id, s.scope, s.title, s.description, s.is_active,
+            s.owner_user_id, s.created_at, s.updated_at,
+            count(sr.id)::text AS response_count
+     FROM surveys s
+     LEFT JOIN survey_responses sr ON sr.survey_id = s.id
+     WHERE s.scope = 'room' AND s.room_id = $1
+     GROUP BY s.id, s.team_id, s.room_id, s.scope, s.title, s.description, s.is_active,
+              s.owner_user_id, s.created_at, s.updated_at
+     ORDER BY s.updated_at DESC`,
+    [roomId]
+  );
+}
+
+/** 用户能否查看某问卷：创建者的 private，当前团队上下文内的 team 成员，或该问卷所属房间的成员。 */
 export async function canViewSurvey(
   surveyId: number,
   userId: number,
@@ -189,7 +218,27 @@ export async function canViewSurvey(
     if (currentTeamId !== teamId) return false;
     return (await getMembership(teamId, userId)) !== undefined;
   }
+  if (s.scope === "room" && s.room_id != null) {
+    return (await getRoomRole(Number(s.room_id), userId)) !== undefined;
+  }
   return false;
+}
+
+/**
+ * 用户能否管理（改状态/删除）某问卷：
+ * - private/team 问卷：仍然只有问卷 owner_user_id 本人（团队侧既有规则，不变）。
+ * - room 问卷：房间 owner/admin（房间角色），而不是问卷创建者本人——对齐 uc-rr-007
+ *   「房间问卷管理权属于房间」，修正 uc-room-007 把团队问卷管理权错授给房间角色的问题。
+ * 房间角色对**团队问卷**发起的管理请求，这里恒为 false（不越权），由调用方转 403。
+ */
+export async function canManageSurveyScope(surveyId: number, userId: number): Promise<boolean> {
+  const s = await getSurvey(surveyId);
+  if (!s) return false;
+  if (s.scope === "room" && s.room_id != null) {
+    const role = await getRoomRole(Number(s.room_id), userId);
+    return role === "owner" || role === "admin";
+  }
+  return Number(s.owner_user_id) === Number(userId);
 }
 
 export async function updateSurvey(
@@ -210,11 +259,36 @@ export async function updateSurvey(
   return rows[0];
 }
 
+/** 房间问卷版本的更新：按 surveyId 直接生效（管理权已由 canManageSurveyScope 校验），
+ * 不要求 caller 是问卷的 owner_user_id——房间 admin 管理房间问卷时通常不是创建者本人。 */
+export async function updateSurveyById(
+  surveyId: number,
+  fields: { title?: string; description?: string; isActive?: boolean }
+): Promise<Survey | undefined> {
+  const rows = await query<Survey>(
+    `UPDATE surveys
+     SET title = COALESCE($2, title),
+         description = COALESCE($3, description),
+         is_active = COALESCE($4, is_active),
+         updated_at = now()
+     WHERE id = $1
+     RETURNING ${SURVEY_COLS}`,
+    [surveyId, fields.title ?? null, fields.description ?? null, fields.isActive ?? null]
+  );
+  return rows[0];
+}
+
 export async function deleteSurvey(surveyId: number, ownerId: number): Promise<boolean> {
   const rows = await query<{ id: number }>(
     "DELETE FROM surveys WHERE id = $1 AND owner_user_id = $2 RETURNING id",
     [surveyId, ownerId]
   );
+  return rows.length > 0;
+}
+
+/** 房间问卷版本的删除：按 surveyId 直接生效（管理权已由 canManageSurveyScope 校验）。 */
+export async function deleteSurveyById(surveyId: number): Promise<boolean> {
+  const rows = await query<{ id: number }>("DELETE FROM surveys WHERE id = $1 RETURNING id", [surveyId]);
   return rows.length > 0;
 }
 

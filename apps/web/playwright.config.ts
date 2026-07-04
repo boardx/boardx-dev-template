@@ -2,6 +2,20 @@ import { defineConfig, devices } from "@playwright/test";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
+// P18 F02（e2e/ava-real-model-failure.spec.ts）需要把 anthropicProvider 的请求路由到本地假
+// server：ANTHROPIC_BASE_URL/ANTHROPIC_API_KEY 必须在 next dev 启动前就生效（见 anthropicProvider.ts
+// 顶部注释——baseUrl 在模块加载时读一次 env，测试运行时再改环境变量不起作用）。
+// 但这两个 key 有可能已经被外部环境（比如本机/开发容器上为其它工具配置的 Anthropic 凭证）
+// 提前设置为真实端点/真实 key；如果沿用下面「已存在则不覆盖」的通用语义，worktree 本地的
+// .env.local 配置会被那个外部值悄悄吃掉，e2e 就会真的打到 api.anthropic.com。
+// 这两个 key 是 apps/web/.env.local 明确要接管的测试专用配置，所以强制覆盖，不参与
+// "已存在则跳过" 的通用规则；其它 key（DATABASE_URL 等）维持原语义不变。
+const FORCE_OVERRIDE_KEYS = new Set([
+  "ANTHROPIC_API_KEY",
+  "ANTHROPIC_BASE_URL",
+  "ANTHROPIC_TIMEOUT_MS",
+]);
+
 function loadEnvFile(file: string) {
   if (!existsSync(file)) return;
   const values = new Map<string, string>();
@@ -15,7 +29,9 @@ function loadEnvFile(file: string) {
     values.set(key, value);
   }
   for (const [key, value] of values) {
-    if (process.env[key] === undefined) process.env[key] = value;
+    if (process.env[key] === undefined || FORCE_OVERRIDE_KEYS.has(key)) {
+      process.env[key] = value;
+    }
   }
 }
 
@@ -58,7 +74,21 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     trace: "off",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        // p18 F07（语音输入 e2e）需要真实 getUserMedia/MediaRecorder 链路可用，
+        // 但 CI/无摄像头环境没有真实麦克风——用 Chromium 的 fake device 标志：
+        // 授权自动通过（fake-ui）+ 提供一个可用的假音频输入设备（fake-device）。
+        // 只影响 chromium 这一个 project，不改变其余测试的启动参数。
+        launchOptions: {
+          args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
+        },
+      },
+    },
+  ],
   webServer: {
     command: `next dev -p ${PORT}`,
     url: `http://localhost:${PORT}/api/health`,

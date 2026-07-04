@@ -28,9 +28,9 @@
       "title": "真实模型下的失败态与停止生成",
       "user_visible_behavior": "真实 provider 不可用（网络错误/超时/限流）时，/ava 展示明确失败态（沿用 msg-failed），用户已输入内容不丢失；流式回复进行中可停止，请求被真实中断（AbortController 生效）而非等待回显完成。",
       "design_ref": "现有 msg-failed / send 交互；requirements/01-ai-layer-real-model.md",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "wrk-ava-p18-2",
       "capability": "CAP-AI",
       "depends_on": [
         "F01"
@@ -39,7 +39,7 @@
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/ava-real-model-failure.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-07-03T20:08:50.036Z",
       "notes": "requirements/01。e2e 用可控故障注入（如指向不可达的 provider base URL / 模拟 429）验证失败态与输入保留；中断验证断言服务端流被 abort 后不再写入消息。"
     },
     {
@@ -135,9 +135,9 @@
       "title": "语音输入端到端接通（真实转写替换占位文案）",
       "user_visible_behavior": "点击 voice-input-trigger → 授权麦克风 → voice-recording-indicator 展示计时与音量柱状条 → voice-stop 结束后，输入框填入的是本次录音的真实转写文本（替换 UI 原型的固定占位文案）；权限拒绝/无麦克风/浏览器不支持/录音过短/转写失败分别展示 voice-error 对应文案；voice-cancel 取消不产生任何文本。",
       "design_ref": "已确认 UI：apps/web/app/(app)/ava/voice-input.tsx（ui-signoff.md confirmed @2026-07-04）",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "wrk-ava-p18-3",
       "capability": "CAP-AI",
       "depends_on": [
         "F06"
@@ -146,7 +146,7 @@
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/ava-voice-input.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F07.verify.log @ 2026-07-03T19:30:50.957Z",
       "notes": "requirements/03。e2e 用 Playwright fake media stream（--use-fake-device-for-media-stream / --use-fake-ui-for-media-stream）+ stub 转写端点走通全链路；真实 STT 由 F06 冒烟覆盖。该 spec 文件名与 p9-F09 原 verification 一致，落地后 p9-F09 可凭同一验证转 passing。"
     },
     {
