@@ -754,41 +754,46 @@ export default function AvaPage() {
 
   async function confirmResearchPlan() {
     if (!researchRun?.research || researchRun.status !== "draft") return;
-    const queued: ResearchTimelineItem[] = researchRun.research.timeline.map((item, index) => ({
+    // 阶段数在这轮动画期间不变（本地定时器推进，非真实异步引擎），提前捕获，
+    // 后续每个 tick 只依赖 index，不依赖当时的 React state——这样才能在 setState
+    // 之外先 await 持久化，再决定要不要提交这次状态更新（见下方注释）。
+    const stages = researchRun.research.timeline;
+    const sessionId = researchRun.sessionId;
+    const assistantMessage = researchRun.assistantMessage;
+
+    const queued: ResearchTimelineItem[] = stages.map((item, index) => ({
       ...item,
       status: index === 0 ? "running" : "queued",
     }));
-    // 先落库再翻 UI：用户点击"确认计划"是显式的阶段跃迁，必须先持久化成功才让界面
-    // 显示新阶段。反过来做（先乐观更新 UI 再异步持久化）会有一个真实的竞态窗口——
-    // UI 已经显示 running，但请求可能还在路上，这段时间内任何刷新都会读到 DB 里
-    // 尚未更新的 draft 行，看起来像"跳回"了（本地网络下这个窗口通常只有几毫秒，
-    // 但真实存在，不是测试假设）。
-    await persistResearchProgress(researchRun.sessionId, { status: "running", timeline: queued });
-    setResearchRun({ ...researchRun, status: "running", timeline: queued });
+    // 先落库再翻 UI：每一次阶段跃迁都必须先持久化成功才让界面显示新阶段。反过来做
+    // （先乐观更新 UI 再异步持久化）会有一个真实的竞态窗口——UI 已经显示新阶段，
+    // 但请求可能还在路上，这段时间内任何刷新都会读到 DB 里尚未更新的旧阶段，看起来
+    // 像"跳回"了（本地网络下这个窗口通常只有几毫秒，但真实存在，不是测试假设）。
+    await persistResearchProgress(sessionId, { status: "running", timeline: queued });
+    setResearchRun((current) => (current ? { ...current, status: "running", timeline: queued } : current));
 
-    researchRun.research.timeline.forEach((item, index) => {
-      window.setTimeout(() => {
+    stages.forEach((item, index) => {
+      window.setTimeout(async () => {
+        const timeline: ResearchTimelineItem[] = stages.map((candidate, candidateIndex) => ({
+          ...candidate,
+          status:
+            candidateIndex <= index
+              ? "complete"
+              : candidateIndex === index + 1
+                ? "running"
+                : "queued",
+        }));
+        const isDone = index === stages.length - 1;
+        const nextStatus: ResearchStatus = isDone ? "complete" : "running";
+        await persistResearchProgress(sessionId, { status: nextStatus, timeline });
         setResearchRun((current) => {
           if (!current?.research) return current;
-          const timeline = current.research.timeline.map((candidate, candidateIndex) => ({
-            ...candidate,
-            status:
-              candidateIndex <= index
-                ? "complete"
-                : candidateIndex === index + 1
-                  ? "running"
-                  : "queued",
-          })) as ResearchTimelineItem[];
-          const isDone = index === current.research.timeline.length - 1;
-          if (!isDone) {
-            persistResearchProgress(current.sessionId, { status: "running", timeline });
-            return { ...current, status: "running", timeline };
+          if (isDone) {
+            const nextMessages = assistantMessage ? [assistantMessage] : [];
+            setMessages((prev) => [...prev, ...nextMessages]);
+            setReportOpen(true);
           }
-          persistResearchProgress(current.sessionId, { status: "complete", timeline });
-          const nextMessages = current.assistantMessage ? [current.assistantMessage] : [];
-          setMessages((prev) => [...prev, ...nextMessages]);
-          setReportOpen(true);
-          return { ...current, status: "complete", timeline };
+          return { ...current, status: nextStatus, timeline };
         });
       }, 350 * (index + 1));
     });
