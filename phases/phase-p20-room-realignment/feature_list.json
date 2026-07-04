@@ -165,9 +165,9 @@
       "title": "Room Survey 入口（房间作用域问卷）",
       "user_visible_behavior": "surveys 表加可空 room_id（迁移后存量问卷 room_id=null 仍全部视为团队问卷）；房间 Survey tab（data-testid=room-survey-tab）只列本房间问卷卡片（data-testid=room-survey-card，含标题/状态/回收数），不再嵌入 Team Surveys 全集；房间 owner/admin 可新建（data-testid=room-survey-create，预置 room_id 进入 p13 创建器）、暂停/删除本房间问卷；member 可答题与查看已发布结果但无管理按钮；tab 内『View team surveys』链接仅跳转全局 /surveys；房间角色对团队问卷的管理请求返回 403；全局 /surveys 列表展示 scope 徽章（My/Team/Room），Room 问卷标注所属房间名。",
       "design_ref": "prototype:<!-- SURVEYS --> Room scope（'Room · Alpha'）+ ROOM DETAIL Survey tab",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-room-2",
       "capability": "CAP-DATA",
       "depends_on": [
         "F01"
@@ -177,9 +177,9 @@
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-008-room-survey.spec.ts",
-        "git cat-file -e HEAD:phases/phase-p20-room-realignment/evidence/F08.verify.log"
+        "git cat-file -e HEAD:phases/phase-p20-room-realignment/sprints/sprint-01/evidence/F08.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F08.verify.log @ 2026-07-04T03:46:03.507Z",
       "notes": "uc-rr-007。修正 uc-room-007 的 scope 丢失与权限域错位；问卷本体（题型/答题/报告）全部复用 p13，不改。依赖：F01（已 passing）、p13 surveys 表已存在；迁移向后兼容（room_id=null=团队问卷），迁移不变量断言输出留 evidence（L4）。L10：删除房间时房间问卷随级联消失的断言由 F06 交付时覆盖（本 feature 只保证 scope 与权限）。共享文件热点：packages/data surveys 迁移与 schema、apps/web/app/(app)/rooms/[id]/surveys/page.tsx（本 feature 主场）、全局 /surveys 列表页与 p13 survey API 权限层（与团队侧共享，改动限于加 scope 过滤/徽章）、apps/web/app/api/rooms/[id]/ 下新增 surveys 子路由。"
     },
     {
