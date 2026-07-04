@@ -46,6 +46,8 @@ export * from "./payment";
 export * from "./admin";
 // CAP-DATA 出站邮件本地 sink（outbound_emails / p18 F08）
 export * from "./mailbox";
+// CAP-FILE 房间级文件库仓储（room_files / p20 F03，uc-rr-003 核心模型修正）
+export * from "./roomFiles";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 
