@@ -42,6 +42,90 @@ export const DEFAULT_MODEL_ID = "stub:default";
  *  真实 provider 不识别此串，不影响生产语义。 */
 export const FORCE_FAIL_MARKER = "__ava_force_fail__";
 
+/** P18 F04：Deep Research 生成请求的系统提示词标记。researchGenerator.ts 把它作为
+ *  system 消息的前缀传给网关；stub provider 识别到这个标记时，走研究 JSON 生成分支
+ *  （buildStubResearchJson），而不是聊天式回显——两者共用同一个 stub provider 实例，
+ *  不需要为研究场景另起一个 provider。放在网关这里（而不是 researchGenerator.ts）
+ *  是为了避免 gateway.ts ↔ researchGenerator.ts 的循环 import。 */
+export const RESEARCH_JSON_SYSTEM_MARKER = "__ava_research_json_system__";
+
+/** e2e/测试专用触发词：研究主题含此串时研究生成主动抛错（同 FORCE_FAIL_MARKER 的
+ *  sanctioned 模式），用于确定性验证"真实生成失败"分支。定义在这里（而不是
+ *  researchGenerator.ts）同样是为了避免循环 import——researchGenerator.ts 从这里
+ *  重新导出。 */
+export const RESEARCH_FORCE_FAIL_MARKER = "__ava_research_generate_fail__";
+
+/** stub provider 专用：当请求携带 RESEARCH_JSON_SYSTEM_MARKER 时，从用户提示词里的
+ *  topic/audience 派生出确定性但随主题变化的 JSON 文本，使 e2e 在 mock-provider 模式下
+ *  也能验证"不同主题产出不同内容"。真实 provider（anthropicProvider）不识别这个标记，
+ *  按提示词真实生成。 */
+function buildStubResearchJson(userPrompt: string): string {
+  const topicMatch = userPrompt.match(/Research topic:\s*(.+)/);
+  const audienceMatch = userPrompt.match(/Target audience:\s*(.+)/);
+  const topic = (topicMatch?.[1] ?? "the given topic").trim();
+  const audience = (audienceMatch?.[1] ?? "the target audience").trim();
+
+  const slug = topic
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean);
+  const keyword = slug[0] ?? "topic";
+  const secondKeyword = slug[1] ?? keyword;
+
+  return JSON.stringify({
+    clarifyingQuestions: [
+      `What decision should the research on "${topic}" support?`,
+      `Within ${audience}, which segment matters most for "${keyword}"?`,
+      `Are there constraints or regions to exclude when studying ${secondKeyword}?`,
+    ],
+    plan: {
+      audience,
+      phases: [
+        {
+          name: "Frame the research",
+          tasks: [`Define the decision behind ${keyword}`, "List assumptions", "Set evidence bar"],
+        },
+        {
+          name: "Collect signals",
+          tasks: [
+            `Review language around ${secondKeyword}`,
+            "Map competitor positioning",
+            "Extract usage patterns",
+          ],
+        },
+        {
+          name: "Synthesize report",
+          tasks: ["Rank insights", "Draft recommendations", "Package follow-up questions"],
+        },
+      ],
+    },
+    report: {
+      title: `Deep Research Report: ${topic}`,
+      conclusion: `For "${topic}", the strongest opportunity is to narrow the ${keyword} segment, validate the top workflow pain around ${secondKeyword}, and test one focused positioning angle before expanding scope.`,
+      sections: [
+        {
+          heading: "Key findings",
+          bullets: [
+            `Stakeholders in ${audience} need a clearer reason tied to ${keyword} than broad claims.`,
+            `Research should compare current workaround cost against ${secondKeyword} gains.`,
+            "The next interview round should prioritize high-frequency, high-signal participants.",
+          ],
+        },
+        {
+          heading: "Recommended next steps",
+          bullets: [
+            `Confirm the primary audience for ${keyword} with five targeted interviews.`,
+            `Prototype one ${secondKeyword}-specific message and measure comprehension.`,
+            "Track follow-up objections in the same AVA thread.",
+          ],
+        },
+      ],
+    },
+  });
+}
+
 /** stub provider：确定性回显 + 简单 Markdown/代码块示例，用于 e2e 与无供应商额度环境。 */
 export const stubProvider: ChatProvider = {
   matches(modelId: string) {
@@ -53,6 +137,20 @@ export const stubProvider: ChatProvider = {
     if (text.includes(FORCE_FAIL_MARKER)) {
       throw new Error("stub provider: 强制失败（测试触发）");
     }
+
+    const systemMessage = messages.find((m) => m.role === "system");
+    if (systemMessage?.content.includes(RESEARCH_JSON_SYSTEM_MARKER)) {
+      if (text.includes(RESEARCH_FORCE_FAIL_MARKER)) {
+        throw new Error("stub provider: 研究生成强制失败（测试触发）");
+      }
+      const json = buildStubResearchJson(text);
+      const chunks = json.match(/.{1,32}/gs) ?? [json];
+      for (const chunk of chunks) {
+        yield chunk;
+      }
+      return;
+    }
+
     const reply = buildStubReply(text, {
       modelId,
       agentId: settings?.agentId ?? "default",

@@ -1,11 +1,14 @@
-// apps/web/app/api/ava/threads/[id]/research/route.ts — AVA Deep Research stub engine（P9 F06）
+// apps/web/app/api/ava/threads/[id]/research/route.ts — AVA Deep Research 真实生成（P18 F04）
 //
 // POST /api/ava/threads/:id/research
 //  1. 校验登录 + 线程属主 + 主题长度。
-//  2. 使用 deterministic stub 研究引擎生成澄清问题、计划、时间线、报告。
-//  3. 将用户研究主题和最终报告通知落到现有 ava_messages，e2e 不接真实外部 AI。
-//  4. p18-F03：同时把该研究持久化到 ava_research_sessions（draft 阶段的 timeline：
-//     首个阶段 running、其余 queued），供 GET 恢复、PATCH 推进阶段。
+//  2. p18-F04：不再用硬编码的 buildResearch() 静态文案——改为调用 CAP-AI 网关
+//     （packages/ai 的 generateResearch，走 F01 的同一条真实/stub provider 路径）
+//     针对用户提交的 topic/audience 真实生成澄清问题/计划/报告，不同主题产出不同内容。
+//  3. 将用户研究主题和最终报告通知落到现有 ava_messages，e2e 用 stub: 模型确定性验证。
+//  4. p18-F03：同时把该研究持久化到 ava_research_sessions；p18-F04 起初始状态为
+//     'draft'（只有澄清问题待确认，timeline 全 queued——执行还没开始，避免"还没确认
+//     计划就已经在跑"的假象）。
 //
 // GET /api/ava/threads/:id/research — 返回该线程最近一次研究会话（线程重新打开时
 // 用它把 research-card 恢复到中断前的阶段与内容；没有研究过则 { session: null }）。
@@ -18,8 +21,8 @@ import {
   renameAvaThreadIfDefault,
   titleFromMessage,
   touchAvaThread,
-  type AvaResearchTimelineItem,
 } from "@repo/data";
+import { defaultGateway, generateResearch, DEFAULT_MODEL_ID, normalizeAvaAiSettings } from "@repo/ai";
 import { currentTeamId, currentUser } from "@/lib/session";
 import { isThreadInCurrentContext } from "@/lib/ava-thread-auth";
 
@@ -29,67 +32,12 @@ export const dynamic = "force-dynamic";
 const MIN_TOPIC_LENGTH = 8;
 const NO_CREDITS_MARKER = "__ava_research_no_credits__";
 const FAIL_MARKER = "__ava_research_fail__";
+const DEFAULT_RESEARCH_AUDIENCE = "Product and go-to-market team";
 
 interface ResearchBody {
   topic?: unknown;
   audience?: unknown;
-}
-
-function buildResearch(topic: string, audience: string) {
-  const normalizedAudience = audience.trim() || "Product and go-to-market team";
-  return {
-    clarifyingQuestions: [
-      "What decision should this research support?",
-      "Which audience segment matters most for this pass?",
-      "Are there regions, competitors, or constraints that must be excluded?",
-    ],
-    plan: {
-      audience: normalizedAudience,
-      phases: [
-        {
-          name: "Frame the research",
-          tasks: ["Define target decision", "List assumptions", "Set evidence bar"],
-        },
-        {
-          name: "Collect signals",
-          tasks: ["Review customer language", "Map competitor positioning", "Extract usage patterns"],
-        },
-        {
-          name: "Synthesize report",
-          tasks: ["Rank insights", "Draft recommendations", "Package follow-up questions"],
-        },
-      ],
-    },
-    timeline: [
-      { phase: "Clarification", task: "Scope topic and audience", status: "complete" },
-      { phase: "Planning", task: "Create phased research plan", status: "complete" },
-      { phase: "Execution", task: "Run stub research engine", status: "complete" },
-      { phase: "Report", task: "Prepare structured findings", status: "complete" },
-    ],
-    report: {
-      title: `Deep Research Report: ${topic}`,
-      conclusion:
-        "The strongest opportunity is to narrow the user segment, validate the top workflow pain, and test one focused positioning angle before expanding scope.",
-      sections: [
-        {
-          heading: "Key findings",
-          bullets: [
-            "Users need a clearer reason to switch than broad productivity claims.",
-            "Research should compare current workaround cost against expected collaboration gains.",
-            "The next interview round should prioritize high-frequency teams with active shared boards.",
-          ],
-        },
-        {
-          heading: "Recommended next steps",
-          bullets: [
-            "Confirm the primary audience with five targeted interviews.",
-            "Prototype one workflow-specific message and measure comprehension.",
-            "Track follow-up objections in the same AVA thread.",
-          ],
-        },
-      ],
-    },
-  };
+  modelId?: unknown;
 }
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
@@ -108,7 +56,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const body = (await req.json().catch(() => ({}))) as ResearchBody;
   const topic = String(body.topic ?? "").trim().replace(/\s+/g, " ");
-  const audience = String(body.audience ?? "").trim();
+  const audience = String(body.audience ?? "").trim() || DEFAULT_RESEARCH_AUDIENCE;
 
   if (topic.length < MIN_TOPIC_LENGTH) {
     return NextResponse.json(
@@ -129,7 +77,32 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     );
   }
 
-  const research = buildResearch(topic, audience);
+  // modelId 复用聊天消息同一套设置归一化（未登录/非法值降级为默认 stub 模型），
+  // 使研究生成与当前聊天设置里选中的模型一致（真实 provider 或 stub）。
+  const teamId = currentTeamId();
+  const settings = normalizeAvaAiSettings(
+    { modelId: typeof body.modelId === "string" ? body.modelId : DEFAULT_MODEL_ID },
+    true
+  );
+
+  let research;
+  try {
+    research = await generateResearch({
+      topic,
+      audience,
+      modelId: settings.modelId,
+      gateway: defaultGateway,
+    });
+  } catch (err) {
+    // 真实生成失败（provider 报错 / 模型输出无法解析为预期结构）：服务端记录原始错误，
+    // 给用户一个可重试的通用提示，不把内部错误细节透传到客户端。
+    console.error("[ava/research] 研究内容生成失败:", err);
+    return NextResponse.json(
+      { error: "研究内容生成失败，请稍后重试；当前主题已保留。" },
+      { status: 503 }
+    );
+  }
+
   const userMessage = await insertAvaMessage(threadId, "user", `[Deep Research] ${topic}`);
   await renameAvaThreadIfDefault(threadId, titleFromMessage(topic));
   const assistantMessage = await insertAvaMessage(
@@ -139,12 +112,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   );
   await touchAvaThread(threadId);
 
-  // p18-F03：draft 阶段的实时 timeline——首个阶段 running，其余 queued（与前端
-  // startResearch() 里原本纯 client 端构造的初始 timeline 同一形状，现在权威落库）。
-  const draftTimeline: AvaResearchTimelineItem[] = research.timeline.map((item, index) => ({
-    ...item,
-    status: index === 0 ? "running" : "queued",
-  }));
+  // p18-F04：两步确认的第一步——刚生成时只展示澄清问题待确认，timeline 全部 queued
+  // （执行尚未开始）。用户显式确认澄清问题后（PATCH status=clarified）计划才变为可
+  // 确认，确认计划后（PATCH status=running）才真正推进 timeline。
+  const draftTimeline = research.timeline;
   const session = await createAvaResearchSession({
     threadId,
     topic,

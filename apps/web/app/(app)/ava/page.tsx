@@ -91,7 +91,10 @@ interface EditableBoard {
   name: string;
 }
 type ComposerMode = "chat" | "research";
-type ResearchStatus = "idle" | "draft" | "running" | "complete" | "error";
+// p18-F04：新增 'clarified' 中间态——draft（待确认澄清问题）→ clarified（待确认计划）→
+// running（后端真实推进执行阶段）→ complete/error。两步确认缺一不可，不能从 draft
+// 直接跳到 running。
+type ResearchStatus = "idle" | "draft" | "clarified" | "running" | "complete" | "error";
 interface ResearchPhase {
   name: string;
   tasks: string[];
@@ -249,7 +252,8 @@ export default function AvaPage() {
   const canSend = Boolean(draft.trim()) && !sending && researchRun?.status !== "running";
   const researchStatusLabel = useMemo(() => {
     if (!researchRun) return "";
-    if (researchRun.status === "draft") return "Plan ready for review";
+    if (researchRun.status === "draft") return "Clarify to continue";
+    if (researchRun.status === "clarified") return "Plan ready for review";
     if (researchRun.status === "running") return "Research running";
     if (researchRun.status === "complete") return "Report ready";
     if (researchRun.status === "error") return "Needs attention";
@@ -665,7 +669,9 @@ export default function AvaPage() {
       const res = await fetch(`/api/ava/threads/${threadId}/research`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ topic, audience: RESEARCH_AUDIENCE }),
+        // p18-F04：带上当前选中的 modelId，研究生成与聊天走同一套模型设置
+        // （真实 provider 或 stub），不再是与模型选择无关的固定文案。
+        body: JSON.stringify({ topic, audience: RESEARCH_AUDIENCE, modelId }),
       });
       if (guard(res.status)) return;
       const data = await res.json().catch(() => ({}));
@@ -687,15 +693,14 @@ export default function AvaPage() {
       setResearchRun({
         topic,
         audience: RESEARCH_AUDIENCE,
+        // p18-F04：新会话总是从 'draft' 开始——只展示澄清问题待确认，计划/执行都还
+        // 没开始，两步确认必须依次显式完成（见 confirmResearchClarify/confirmResearchPlan）。
         status: "draft",
         research: data.research,
         assistantMessage: data.messages.assistant,
-        // 服务端已经把 draft 阶段的 timeline 计算好并落库（data.session.timeline），
-        // 前端直接采用同一份而不是自己重算，避免两处逻辑漂移。
-        timeline: data.session?.timeline ?? data.research.timeline.map((item: ResearchTimelineItem, index: number) => ({
-          ...item,
-          status: index === 0 ? "running" : "queued",
-        })),
+        // 服务端已经把 draft 阶段的 timeline 计算好并落库（data.session.timeline，此时
+        // 全部 queued——执行尚未开始），前端直接采用同一份而不是自己重算。
+        timeline: data.session?.timeline ?? data.research.timeline,
         sessionId: data.session?.id,
       });
       await refreshThreads();
@@ -792,72 +797,73 @@ export default function AvaPage() {
     }
   }
 
-  // p18-F03：把当前阶段推进 PATCH 回 ava_research_sessions——这是"中断前处于哪个阶段"
-  // 的权威写入点。返回 Promise 供调用方按需 await（用户主动触发的阶段跃迁应该等它
-  // 落地后再继续，避免"UI 已显示新阶段但刷新一瞬间还没持久化"的竞态；动画定时器
-  // 里的逐帧推进不必等待，因为它们之间已有下一次调用兜底）。
-  // 无 sessionId（理论上不会发生，POST research 总是先建会话）时静默跳过。
-  function persistResearchProgress(
+  // p18-F04：两步确认 + 后端真实阶段进度都通过这一个动作化 PATCH 端点，服务端校验
+  // 当前 status 是否允许该 action、并计算下一个 timeline 快照——前端不再自己维护一份
+  // 并行的定时器状态机，只负责把服务端返回的 session 渲染出来。
+  async function callResearchAction(
     sessionId: number | undefined,
-    patch: { status?: ResearchStatus; timeline?: ResearchTimelineItem[] }
-  ): Promise<void> {
-    if (activeId == null || sessionId == null) return Promise.resolve();
-    return fetch(`/api/ava/threads/${activeId}/research/${sessionId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(patch),
-    })
-      .then(() => undefined)
-      .catch(() => {
-        // 持久化失败不影响本地动画/交互；下次刷新会拿到上一次成功持久化的阶段（保守恢复）。
+    action: "confirm-clarify" | "confirm-plan" | "advance"
+  ): Promise<{ session: { status: ResearchStatus; timeline: ResearchTimelineItem[] }; done?: boolean } | null> {
+    if (activeId == null || sessionId == null) return null;
+    try {
+      const res = await fetch(`/api/ava/threads/${activeId}/research/${sessionId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action }),
       });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
   }
 
-  async function confirmResearchPlan() {
+  /** 第一步确认：确认澄清问题。draft → clarified，计划从此才可确认——
+   *  不允许从提交主题直接跳到能确认计划/进入执行。 */
+  async function confirmResearchClarify() {
     if (!researchRun?.research || researchRun.status !== "draft") return;
-    // 阶段数在这轮动画期间不变（本地定时器推进，非真实异步引擎），提前捕获，
-    // 后续每个 tick 只依赖 index，不依赖当时的 React state——这样才能在 setState
-    // 之外先 await 持久化，再决定要不要提交这次状态更新（见下方注释）。
-    const stages = researchRun.research.timeline;
+    const sessionId = researchRun.sessionId;
+    const result = await callResearchAction(sessionId, "confirm-clarify");
+    const nextStatus = result?.session.status ?? "clarified";
+    setResearchRun((current) => (current ? { ...current, status: nextStatus } : current));
+  }
+
+  /** 第二步确认：确认研究计划。clarified → running，服务端把 timeline 首阶段置为
+   *  running、其余 queued 并返回；随后用 advanceResearch 轮询式地真实推进各阶段
+   *  （每次调用都是一次服务端计算 + 持久化，不是前端凭空猜测下一步该显示什么）。 */
+  async function confirmResearchPlan() {
+    if (!researchRun?.research || researchRun.status !== "clarified") return;
     const sessionId = researchRun.sessionId;
     const assistantMessage = researchRun.assistantMessage;
+    const result = await callResearchAction(sessionId, "confirm-plan");
+    if (!result?.session) return;
+    const session = result.session;
+    setResearchRun((current) =>
+      current ? { ...current, status: session.status, timeline: session.timeline } : current
+    );
 
-    const queued: ResearchTimelineItem[] = stages.map((item, index) => ({
-      ...item,
-      status: index === 0 ? "running" : "queued",
-    }));
-    // 先落库再翻 UI：每一次阶段跃迁都必须先持久化成功才让界面显示新阶段。反过来做
-    // （先乐观更新 UI 再异步持久化）会有一个真实的竞态窗口——UI 已经显示新阶段，
-    // 但请求可能还在路上，这段时间内任何刷新都会读到 DB 里尚未更新的旧阶段，看起来
-    // 像"跳回"了（本地网络下这个窗口通常只有几毫秒，但真实存在，不是测试假设）。
-    await persistResearchProgress(sessionId, { status: "running", timeline: queued });
-    setResearchRun((current) => (current ? { ...current, status: "running", timeline: queued } : current));
-
-    stages.forEach((item, index) => {
-      window.setTimeout(async () => {
-        const timeline: ResearchTimelineItem[] = stages.map((candidate, candidateIndex) => ({
-          ...candidate,
-          status:
-            candidateIndex <= index
-              ? "complete"
-              : candidateIndex === index + 1
-                ? "running"
-                : "queued",
-        }));
-        const isDone = index === stages.length - 1;
-        const nextStatus: ResearchStatus = isDone ? "complete" : "running";
-        await persistResearchProgress(sessionId, { status: nextStatus, timeline });
-        setResearchRun((current) => {
-          if (!current?.research) return current;
-          if (isDone) {
-            const nextMessages = assistantMessage ? [assistantMessage] : [];
-            setMessages((prev) => [...prev, ...nextMessages]);
-            setReportOpen(true);
-          }
-          return { ...current, status: nextStatus, timeline };
-        });
-      }, 350 * (index + 1));
-    });
+    // 逐阶段真实推进：每一步都调用后端 advance（服务端计算 + 持久化下一个 timeline
+    // 快照），前端只按节奏发起调用、渲染返回结果——不是自己算好整段动画再回放。
+    const stageCount = session.timeline.length;
+    for (let i = 0; i < stageCount; i += 1) {
+      // 给用户一个可感知的推进节奏（每阶段之间留出可见间隔），但推进内容本身来自
+      // 服务端下一次调用的返回值，不是这个延时算出来的。
+      await new Promise((resolve) => window.setTimeout(resolve, 350));
+      const advanceResult = await callResearchAction(sessionId, "advance");
+      if (!advanceResult?.session) break;
+      const advanced = advanceResult.session;
+      const isDone = Boolean(advanceResult.done);
+      setResearchRun((current) => {
+        if (!current?.research) return current;
+        if (isDone) {
+          const nextMessages = assistantMessage ? [assistantMessage] : [];
+          setMessages((prev) => [...prev, ...nextMessages]);
+          setReportOpen(true);
+        }
+        return { ...current, status: advanced.status, timeline: advanced.timeline };
+      });
+      if (isDone) break;
+    }
   }
 
   async function deleteLastRequest(messageId: number) {
@@ -1714,7 +1720,8 @@ export default function AvaPage() {
                   <ResearchWorkspace
                     run={researchRun}
                     statusLabel={researchStatusLabel}
-                    onConfirm={confirmResearchPlan}
+                    onConfirmClarify={confirmResearchClarify}
+                    onConfirmPlan={confirmResearchPlan}
                     onOpenReport={() => setReportOpen(true)}
                   />
                 )}
@@ -1963,15 +1970,22 @@ export default function AvaPage() {
 function ResearchWorkspace({
   run,
   statusLabel,
-  onConfirm,
+  onConfirmClarify,
+  onConfirmPlan,
   onOpenReport,
 }: {
   run: ResearchRun;
   statusLabel: string;
-  onConfirm: () => void;
+  onConfirmClarify: () => void;
+  onConfirmPlan: () => void;
   onOpenReport: () => void;
 }) {
   const hasPlan = Boolean(run.research);
+  // p18-F04：澄清确认（research-clarify）与计划确认（confirm-research-plan）是两个
+  // 独立的、必须显式确认的步骤——draft 阶段只能确认澄清问题，计划要等澄清确认后
+  // （status === 'clarified'）才能确认，不能从提交主题直接跳到执行。
+  const canConfirmClarify = run.status === "draft";
+  const canConfirmPlan = run.status === "clarified";
   return (
     <div
       data-testid="research-card"
@@ -2004,7 +2018,21 @@ function ResearchWorkspace({
       {hasPlan && run.research && (
         <div className="mt-4 flex flex-col gap-4">
           <section data-testid="research-clarify" className="rounded-9 border border-border bg-background p-3">
-            <h2 className="text-13 font-semibold text-foreground">Clarifying questions</h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-13 font-semibold text-foreground">Clarifying questions</h2>
+              {canConfirmClarify && (
+                <Button
+                  type="button"
+                  size="sm"
+                  data-testid="confirm-research-clarify"
+                  onClick={onConfirmClarify}
+                  className="gap-1.5 transition-all hover:shadow-sm"
+                >
+                  <CheckCircle2 className="h-4 w-4" strokeWidth={1.5} />
+                  Confirm clarification
+                </Button>
+              )}
+            </div>
             <ul className="mt-2 list-disc space-y-1 pl-4 text-13 text-muted-foreground">
               {run.research.clarifyingQuestions.map((question) => (
                 <li key={question}>{question}</li>
@@ -2017,13 +2045,18 @@ function ResearchWorkspace({
               <div>
                 <h2 className="text-13 font-semibold text-foreground">Research plan</h2>
                 <p className="mt-1 text-13 text-muted-foreground">Audience: {run.research.plan.audience}</p>
+                {canConfirmClarify && (
+                  <p className="mt-1 text-11 text-muted-foreground">
+                    Confirm the clarifying questions above before you can confirm this plan.
+                  </p>
+                )}
               </div>
-              {run.status === "draft" && (
+              {canConfirmPlan && (
                 <Button
                   type="button"
                   size="sm"
                   data-testid="confirm-research-plan"
-                  onClick={onConfirm}
+                  onClick={onConfirmPlan}
                   className="gap-1.5 transition-all hover:shadow-sm"
                 >
                   <CheckCircle2 className="h-4 w-4" strokeWidth={1.5} />

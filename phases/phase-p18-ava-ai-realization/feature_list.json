@@ -70,9 +70,9 @@
       "title": "Deep Research 真实生成（替换硬编码 stub）+ 两步交互确认",
       "user_visible_behavior": "提交研究主题后，澄清问题/研究计划/报告内容由真实模型针对该主题生成（不同主题产出不同内容，非固定文案）；澄清确认（research-clarify）与计划确认（confirm-research-plan）是两个必须显式确认的独立步骤，不确认计划不进入执行；执行时间线状态来自后端真实阶段进度，非前端定时器动画。",
       "design_ref": "现有 research-clarify / research-plan / confirm-research-plan / research-timeline；requirements/02 + 05",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "wrk-ava-p18-1",
       "capability": "CAP-AI",
       "depends_on": [
         "F01",
@@ -84,7 +84,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-research-real-generation.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F04.verify.log @ 2026-07-04T10:33:00.000Z",
       "notes": "requirements/02+05。e2e 在 mock-provider 模式下验证阶段状态机与两步确认交互（内容差异性用 env-gated 冒烟覆盖）；apps/web/app/api/ava/threads/[id]/research/route.ts 的 buildResearch() 硬编码函数删除。"
     },
     {
