@@ -12,7 +12,7 @@ import {
 import { type Guide, type SpacingHint } from "@/lib/canvas-snap";
 import { BoardBottomDock, type DockToolKey } from "@/components/board/board-bottom-dock";
 import { BoardAiOverlay } from "@/components/board/board-ai-panel";
-import { setOperating } from "@/lib/collab-bus";
+import { publishCursor, screenToBoardPoint, setOperating, viewportContainerRect } from "@/lib/collab-bus";
 import {
   applyEncodedUpdate,
   createBoardDoc,
@@ -348,6 +348,12 @@ function mergeRemoteItems(
 export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // p8:F02 — selected 的 ref 镜像，供 onOperating（useCallback，空依赖数组）读取
+  // 拖拽开始时刻的最新选中集合，而不是闭包捕获的过期值。
+  const selectedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    selectedRef.current = selected;
+  }, [selected]);
   const [editingId, setEditingId] = useState<string | null>(null); // F11 文本编辑中的便签
   const [activeTool, setActiveTool] = useState<BoardTool>("select");
   const [aiOpen, setAiOpen] = useState(false); // F01: Board AI 浮层/board chat 面板开关，dock 与浮层共享同一真值
@@ -396,6 +402,12 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const [vp, setVp] = useState<ViewportState>({ tx: 0, ty: 0, scale: 1 });
   // fabric 拖拽进行中（onOperating 回调驱动）：轮询同步在拖拽中不合并服务端快照。
   const draggingRef = useRef(false);
+  // p8:F02 — 拖拽/操作中的 item ids 快照（onOperating 置位时从 selectedRef 拷贝），
+  // 供 mergeRemoteItems 保护正在本地操作的 item 不被远端快照/CRDT 更新覆盖。
+  // 拖拽本身已下沉到 FabricCanvas（F13 重构），这里不再持有指针坐标/吸附状态，
+  // 只保留"当前正在拖的是哪些 id"这一份最小信息。
+  const draggingIdsRef = useRef<string[]>([]);
+  const cursorIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null); // p8:F03 光标闲置自动隐藏
 
   // ── p8:F02 Yjs 实时同步 ──────────────────────────────────────────────────
   // docRef 是本 board 的 CRDT 状态；WS 只是把 doc 的二进制 update 转发给其它
@@ -418,7 +430,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     // seedItems 只补"任何在线客户端都还不知道"的新条目；已存在的条目里，doc
     // 内可能有比这次 REST 快照更新的字段（比如刚加入时另一人正在编辑），
     // 用 doc 当前真实状态回填一次 React state，而不是反过来拿 REST 覆盖 doc。
-    setItems((prev) => mergeRemoteItems(prev, readCollabItems(docRef.current), editingIdRef.current, dragRef.current?.ids ?? []));
+    setItems((prev) => mergeRemoteItems(prev, readCollabItems(docRef.current), editingIdRef.current, draggingIdsRef.current));
   }, []);
 
   // p6:F19 修复：load() 用服务端快照整体覆盖 items（其它 F0x 既有行为，不改）。
@@ -440,6 +452,31 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   useEffect(() => {
     void load();
   }, [load]);
+
+  // p8:F03 — 光标 presence：走既有 collab-bus 的 viewport/awareness 心跳通道（HTTP
+  // presence 轮询），不是 F01/F02 的 WS+Yjs 传输——光标不需要 CRDT 合并语义，
+  // 复用现成的 1.5s presence 心跳足够。闲置 2.5s 自动隐藏，避免残留光标误导。
+  const clearLocalCursor = useCallback(() => {
+    if (cursorIdleTimer.current) {
+      clearTimeout(cursorIdleTimer.current);
+      cursorIdleTimer.current = null;
+    }
+    publishCursor(null);
+  }, []);
+
+  const publishLocalCursor = useCallback((e: React.MouseEvent) => {
+    // 广播画布逻辑坐标，不是发送方屏幕像素——接收端按各自的 pan/zoom 转回屏幕坐标
+    // 渲染，否则窗口尺寸/缩放不同时光标会跟真实指向对不上（p8:F03 修复点）。
+    const board = screenToBoardPoint(e.clientX, e.clientY, viewportContainerRect());
+    publishCursor({ x: board.x, y: board.y, visible: true });
+    if (cursorIdleTimer.current) clearTimeout(cursorIdleTimer.current);
+    cursorIdleTimer.current = setTimeout(() => {
+      cursorIdleTimer.current = null;
+      publishCursor(null);
+    }, 2500);
+  }, []);
+
+  useEffect(() => clearLocalCursor, [clearLocalCursor]);
 
   // 打开到 F01 网关的 WS 连接：先广播 sync-request 问"房间里有没有已经在线的人"，
   // 有则 apply 对方的完整状态（保证跟对方是同一批 Y.Map 结构实例，见 packages/collab
@@ -518,7 +555,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       }
     });
     const offRemote = onRemoteItemsChange(docRef.current, (latest) => {
-      setItems((prev) => mergeRemoteItems(prev, latest, editingIdRef.current, dragRef.current?.ids ?? []));
+      setItems((prev) => mergeRemoteItems(prev, latest, editingIdRef.current, draggingIdsRef.current));
     });
 
     return () => {
@@ -545,7 +582,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     // 编辑刚结束：把编辑期间被"保留本地版本"挡住的远端变更（如果有）拉回来，
     // 不必等下一次远端事件才生效——这是相对旧方案"编辑中收到的变更永久丢失"的修复点。
     if (editingId == null && joinSyncedRef.current) {
-      setItems((prev) => mergeRemoteItems(prev, readCollabItems(docRef.current), null, dragRef.current?.ids ?? []));
+      setItems((prev) => mergeRemoteItems(prev, readCollabItems(docRef.current), null, draggingIdsRef.current));
     }
   }, [editingId]);
 
@@ -720,8 +757,11 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   );
 
   // uc-collab-001：拖拽开始/结束 → 操作态上报；同时挡住轮询合并（见 poll）。
+  // p8:F02：拖拽开始时快照当前选中 ids，供 mergeRemoteItems 保护中途不被远端覆盖；
+  // 结束后清空——此时最新落库结果已经过 apiMove/apiResize，远端快照理应与本地一致。
   const onOperating = useCallback((op: boolean) => {
     draggingRef.current = op;
+    draggingIdsRef.current = op ? Array.from(selectedRef.current) : [];
     setOperating(op);
   }, []);
 
@@ -1327,7 +1367,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   }, [items, selected, deleteSelected, moveSelected, pasteClipboard, undo, redo]);
 
   return (
-    <div className="relative flex flex-1 flex-col">
+    <div className="relative flex flex-1 flex-col" onMouseMove={publishLocalCursor} onMouseLeave={clearLocalCursor}>
       {/* Board Menu：编辑者可见的工具入口；不可用能力保留禁用状态，避免误导为已实现。 */}
       {canEdit && (
         <div className="relative border-b bg-card px-3 py-1.5">
