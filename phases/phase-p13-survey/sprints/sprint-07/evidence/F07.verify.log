@@ -1,0 +1,194 @@
+=== F07 verification log ===
+2026-07-04T20:18:05Z
+
+--- $ docker compose -f infra/docker-compose.yml up -d (isolated project + custom subnet override due to host-wide docker network pool exhaustion; see risk note) ---
+ Container worker-wrk-survey-1-p13-f07-ai-report-su-redis-1 Running 
+ Container worker-wrk-survey-1-p13-f07-ai-report-su-minio-1 Running 
+ Container worker-wrk-survey-1-p13-f07-ai-report-su-postgres-1 Running 
+exit code: 0
+
+--- $ pnpm --filter @repo/data run migrate ---
+
+> @repo/data@0.1.0 migrate /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-a406d310bb2da3fc1/packages/data
+> sh -c 'set -a; [ -f ../../apps/web/.env.local ] && . ../../apps/web/.env.local; set +a; tsx src/migrate.ts'
+
+✓ 已应用，跳过：001_init.sql
+✓ 已应用，跳过：002_auth.sql
+✓ 已应用，跳过：003_team.sql
+✓ 已应用，跳过：004_room.sql
+✓ 已应用，跳过：005_canvas.sql
+✓ 已应用，跳过：006_profile.sql
+✓ 已应用，跳过：007_board.sql
+✓ 已应用，跳过：008_board_visits.sql
+✓ 已应用，跳过：009_board_favorites.sql
+✓ 已应用，跳过：010_room_chat.sql
+✓ 已应用，跳过：011_board_settings.sql
+✓ 已应用，跳过：012_board_items_board_id.sql
+✓ 已应用，跳过：013_board_items_color.sql
+✓ 已应用，跳过：014_feedback.sql
+✓ 已应用，跳过：014_room_chat_messages.sql
+✓ 已应用，跳过：015_team_general.sql
+✓ 已应用，跳过：016_admin_role.sql
+✓ 已应用，跳过：016_ai_store.sql
+✓ 已应用，跳过：016_ava_chat.sql
+✓ 已应用，跳过：016_credits.sql
+✓ 已应用，跳过：016_kb_files.sql
+✓ 已应用，跳过：016_survey.sql
+✓ 已应用，跳过：017_ai_store_item_config.sql
+✓ 已应用，跳过：017_payment_orders.sql
+✓ 已应用，跳过：017_studio_artifacts.sql
+✓ 已应用，跳过：017_survey_templates.sql
+✓ 已应用，跳过：018_ai_store_favorites.sql
+✓ 已应用，跳过：018_ava_message_attachments.sql
+✓ 已应用，跳过：018_ava_thread_share.sql
+✓ 已应用，跳过：018_user_plan.sql
+✓ 已应用，跳过：019_ai_store_subscriptions.sql
+✓ 已应用，跳过：019_credit_transaction_idempotency.sql
+✓ 已应用，跳过：019_presentation_artifacts.sql
+✓ 已应用，跳过：020_ava_message_feedback.sql
+✓ 已应用，跳过：021_ai_store_share.sql
+✓ 已应用，跳过：021_presentation_revisions.sql
+✓ 已应用，跳过：022_retire_room_canvas.sql
+✓ 已应用，跳过：023_outbound_emails.sql
+✓ 已应用，跳过：024_room_favorites.sql
+✓ 已应用，跳过：025_room_invites.sql
+✓ 已应用，跳过：026_room_files.sql
+✓ 已应用，跳过：026_survey_room_scope.sql
+✓ 已应用，跳过：027_ava_research_sessions.sql
+✓ 已应用，跳过：028_ava_research_clarify_stage.sql
+迁移完成。
+exit code: 0
+
+--- $ pnpm --filter @repo/web exec playwright test e2e/survey-007-ai-report-summary.spec.ts ---
+
+Running 5 tests using 1 worker
+
+  ✓  1 [chromium] › survey-007-ai-report-summary.spec.ts:61:5 › 生成 AI 摘要：点击进入 loading，成功后展示摘要文本 (6.2s)
+  ✓  2 [chromium] › survey-007-ai-report-summary.spec.ts:88:5 › 生成 AI 摘要 loading 态可见（网络节流下） (1.4s)
+  ✓  3 [chromium] › survey-007-ai-report-summary.spec.ts:110:5 › 生成失败展示失败态与重试，不影响既有 Summary/Individual/Report 视图 (1.0s)
+  ✓  4 [chromium] › survey-007-ai-report-summary.spec.ts:138:5 › 零回收时生成按钮禁用 (1.1s)
+  ✓  5 [chromium] › survey-007-ai-report-summary.spec.ts:147:5 › 非 owner/无权限者调用生成接口返回 403 (4.2s)
+
+  5 passed (17.2s)
+exit code: 0
+
+--- $ pnpm --filter @repo/web exec playwright test survey-001..006 (regression) ---
+
+Running 23 tests using 1 worker
+
+  ✓  1 [chromium] › survey-001-create-survey.spec.ts:14:5 › 已登录访问 /surveys 显示列表与空状态 (1.7s)
+  ✓  2 [chromium] › survey-001-create-survey.spec.ts:21:5 › 创建问卷（private）后出现在列表 (770ms)
+  ✓  3 [chromium] › survey-001-create-survey.spec.ts:46:5 › 多题型 + 选项 + 排序 + 预览答题页 (817ms)
+  ✓  4 [chromium] › survey-001-create-survey.spec.ts:83:5 › team 作用域：需选择已加入的团队，问卷对团队成员可见 (820ms)
+  ✓  5 [chromium] › survey-001-create-survey.spec.ts:102:5 › 空标题被拒，问卷不保存（400） (131ms)
+  ✓  6 [chromium] › survey-001-create-survey.spec.ts:110:5 › 零题目被拒，问卷不保存（400） (123ms)
+  ✓  7 [chromium] › survey-001-create-survey.spec.ts:116:5 › 未登录访问 /surveys 跳转登录 (1.4s)
+  ✓  8 [chromium] › survey-002-list-manage-surveys.spec.ts:34:5 › 空态：新用户进入 /surveys 后可创建第一个问卷 (469ms)
+  ✓  9 [chromium] › survey-002-list-manage-surveys.spec.ts:41:5 › My surveys 卡片展示字段，并支持 View/Edit/Preview/Share/Activate/Pause/Delete (1.7s)
+  ✓  10 [chromium] › survey-002-list-manage-surveys.spec.ts:82:5 › Team surveys 只显示当前团队上下文内且有权限的问卷 (912ms)
+  ✓  11 [chromium] › survey-003-answer-survey.spec.ts:40:5 › 访客打开公开答题页，完成必填校验并提交落库 (1.6s)
+  ✓  12 [chromium] › survey-003-answer-survey.spec.ts:71:5 › 未发布问卷公开链接展示不可答题态 (457ms)
+  ✓  13 [chromium] › survey-003-answer-survey.spec.ts:82:5 › 安全回归：未发布问卷的公开答题 API 不泄露题目/选项内容（#181） (149ms)
+  ✓  14 [chromium] › survey-004-view-answers-report.spec.ts:63:5 › 无回收时展示空态 (1.0s)
+  ✓  15 [chromium] › survey-004-view-answers-report.spec.ts:74:5 › Summary/Individual/Report 三视图按题聚合、逐份浏览、报告统计 (592ms)
+  ✓  16 [chromium] › survey-004-view-answers-report.spec.ts:104:5 › 导出 CSV 下载答卷数据 (795ms)
+  ✓  17 [chromium] › survey-004-view-answers-report.spec.ts:117:5 › CSV 导出对公式注入形态的答案做转义（安全回归） (150ms)
+  ✓  18 [chromium] › survey-004-view-answers-report.spec.ts:151:5 › 仅创建者/团队成员可查看报告，未授权访问被拒绝 (744ms)
+  ✓  19 [chromium] › survey-005-manage-templates.spec.ts:13:5 › 创建问卷时可应用内置模板、保存团队模板、重新应用并删除 (1.1s)
+  ✓  20 [chromium] › survey-006-publish-unpublish-survey.spec.ts:33:5 › owner 通过卡片切换发布状态，即时反映在卡片标签 (740ms)
+  ✓  21 [chromium] › survey-006-publish-unpublish-survey.spec.ts:51:5 › active 时公开答题链接可正常填答并提交；paused 时公开页拒答且提交被拒绝 (500ms)
+  ✓  22 [chromium] › survey-006-publish-unpublish-survey.spec.ts:78:5 › owner 暂停问卷后：公开页展示不可答题态，提交被 409 拒绝，且不泄露题目内容 (623ms)
+  ✓  23 [chromium] › survey-006-publish-unpublish-survey.spec.ts:114:5 › 非 owner 不能切换问卷发布状态（PATCH 返回 403，状态不变） (752ms)
+
+  23 passed (21.0s)
+exit code: 0
+
+--- $ pnpm --filter @repo/web run typecheck ---
+
+> @repo/web@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-a406d310bb2da3fc1/apps/web
+> tsc --noEmit
+
+exit code: 0
+
+--- $ pnpm --filter @repo/data run typecheck ---
+
+> @repo/data@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-a406d310bb2da3fc1/packages/data
+> tsc --noEmit
+
+exit code: 0
+
+--- $ pnpm --filter @repo/web run lint ---
+
+> @repo/web@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-a406d310bb2da3fc1/apps/web
+> bash scripts/lint-design.sh
+
+· 扫描范围：app/ + components/（含 ava/ai-store/surveys/admin/studio/presentations 等模块）
+⚠ LABEL-LANG-MIX(同文件内中英混用，警告，不拦截；修复归属 phase-p17 reskin)：
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:163:  { id: "understand-file", label: "理解文件", prompt: "帮我理解这份材料，并总结关键结论。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:164:  { id: "draft-email", label: "起草邮件", prompt: "帮我起草一封项目进展同步邮件。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:165:  { id: "summarize-trends", label: "总结趋势", prompt: "帮我总结最近用户反馈中的主要趋势。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:166:  { id: "brainstorm", label: "头脑风暴", prompt: "围绕这个目标帮我头脑风暴 5 个可执行方案。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:172:  { id: "make-tasks", label: "拆成任务", prompt: "把上面的建议拆成可执行任务，并按优先级排序。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:173:  { id: "find-risks", label: "识别风险", prompt: "基于上面的回复，列出主要风险和缓解措施。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:174:  { id: "shorten", label: "压缩摘要", prompt: "把上面的回复压缩成 5 条要点。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2512:  if (diffDays === 0) return { key: "today", label: "Today" };
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2513:  if (diffDays === 1) return { key: "yesterday", label: "Yesterday" };
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2514:  if (diffDays < 7) return { key: "last-7-days", label: "Last 7 days" };
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2515:  return { key: "older", label: "Older" };
+⚠ LABEL-LANG-MIX(跨文件中英混用，警告，不拦截；修复归属 phase-p17 reskin)：以下文件整体用中文 label，而以下文件整体用英文 label，同一层级 UI 组件的文案语言应统一：
+    LABEL-LANG-MIX: app/(app)/rooms/page.tsx:90:    { v: "grid", icon: LayoutGrid, label: "网格视图" },
+    LABEL-LANG-MIX: components/board/board-canvas.tsx:716:              label="选择"
+    LABEL-LANG-MIX: components/board/sync-status.tsx:14:  synced: { label: "已同步", dot: "bg-tag-green", text: "text-success" },
+    LABEL-LANG-MIX: components/studio/studio-panel.tsx:29:  { type: "audio", label: "音频概览", icon: AudioLines },
+    LABEL-LANG-MIX: app/(app)/account/page.tsx:15:  { key: "personal", label: "Personal info", icon: User },
+    LABEL-LANG-MIX: app/(app)/admin/admin-home.tsx:113:        { testKey: "users", label: "Total users", stat: stats.users },
+    LABEL-LANG-MIX: app/(app)/admin/ai-store/featured/page.tsx:33:  { key: "", label: "All approved" },
+    LABEL-LANG-MIX: app/(app)/admin/ai-store/review/page.tsx:36:  { key: "", label: "All" },
+    LABEL-LANG-MIX: app/(app)/credits/page.tsx:237:              <SummaryCard value={fmt(wallet.balance)} label="Current balance" />
+    LABEL-LANG-MIX: app/(app)/rooms/[id]/layout.tsx:23:  { key: "boards", label: "Boards", segment: "boards" },
+    LABEL-LANG-MIX: components/app-shell/sidebar.tsx:40:  { label: "Home", icon: Home, href: "/" },
+  示例（Board 工具条 vs Sidebar 导航）：见 components/board/board-canvas.tsx 与 components/app-shell/sidebar.tsx
+✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性/文案语言一致性）
+exit code: 0
+
+
+--- 备注：docker network 隔离 ---
+本机同时有多个并行 worktree 的 docker compose 栈在跑（30+ 个 project-scoped 网络），
+默认 `docker compose -f infra/docker-compose.yml up -d` 报错
+"all predefined address pools have been fully subnetted"。
+非破坏性解法：叠加一个仅本地临时文件的 compose override（不修改仓库内 infra/docker-compose.yml），
+显式指定一个未被占用的 /24 子网（172.16.99.0/24，检查过与所有现存 _default 网络的
+172.17-172.31.0.0/16、192.168.0-240.0/20 段均不重叠），随后 compose up 正常创建三容器并健康。
+未执行任何 docker network prune / rm 等影响其它 agent 的操作。
+
+--- 后续修复（code review 回归，2026-07-05）---
+coord-survey 转达 code review 意见：aiSummaryText/aiSummaryError 在同一浏览器会话切换
+问卷时未重置，与代码注释自称的"每次进入/切换问卷都重置"矛盾。修复：
+useEffect(..., [surveyId]) 里补上 setAiSummaryLoading(false)/setAiSummaryText("")/
+setAiSummaryError("") 三行重置。同时给 ai-summary/route.ts 的 catch 分支加
+console.error 服务端日志（此前只返回通用错误文案，服务端完全没有留痕）。
+新增 e2e 用例覆盖"从问卷 A 的 Report 视图跳转到问卷 B 后不残留 A 的摘要"。
+
+$ pnpm --filter @repo/web exec playwright test e2e/survey-007-ai-report-summary.spec.ts
+6 passed（含新增回归用例）
+
+$ pnpm --filter @repo/web exec playwright test e2e/survey-001..006*.spec.ts e2e/survey-007-ai-report-summary.spec.ts
+29 passed，无回归
+
+$ pnpm --filter @repo/web run typecheck
+通过
+
+$ pnpm --filter @repo/web run lint
+通过（既有 LABEL-LANG-MIX 警告与本次改动无关）
+
+诚实说明：为验证这条新用例真的能捕获该 bug，本地临时把修复 revert 回 review 指出的
+"未重置"版本重跑过这条用例——发现即使用 Next.js 暴露的 window.next.router.push()
+（真实客户端路由 push，而非 history.pushState+popstate 之类不可靠的模拟）发起跳转，
+这个 [id] 动态段页面在当前 Next 14.2.5 配置下经实测仍然会整体重新挂载组件（未被本次
+修复触碰的 tab 状态也会一并回到初始值）。也就是说，review 描述的"同一组件实例不重新
+挂载、只有 id 变化"这个具体触发路径，在当前代码库的真实导航方式下暂时观察不到可达入口
+（所有指向 results 页的入口目前都是普通 <a> 硬导航）。修复本身仍然保留——防御性写法，
+成本几乎为零，一旦未来页面结构变化导致真的复用同一组件实例，会立刻生效；新增的 e2e
+用例验证的是更宽的黑盒契约（依次访问两份问卷不会互相污染摘要），但如实记录：它不能
+证明修复在"真正软路由不重新挂载"这个具体场景下生效，因为当前代码库触发不了这个场景。
+详见 e2e 用例内联注释。

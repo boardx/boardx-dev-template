@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, Download, FileText, RefreshCw, Users } from "lucide-react";
+import { ChevronLeft, Download, FileText, RefreshCw, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -96,6 +96,11 @@ export default function SurveyResultsPage() {
   const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
   const [exportError, setExportError] = useState("");
 
+  // uc-survey-007 — AI 摘要不持久化：每次进入/切换问卷都重置，只在当前会话内存在。
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const [aiSummaryText, setAiSummaryText] = useState("");
+  const [aiSummaryError, setAiSummaryError] = useState("");
+
   async function load() {
     setLoading(true);
     setError("");
@@ -124,6 +129,14 @@ export default function SurveyResultsPage() {
   }
 
   useEffect(() => {
+    // code review 加固：surveyId 变化时必须清空上一份问卷生成的 AI 摘要状态。若某次导航
+    // 复用了同一个组件实例（不重新挂载，只有这个 effect 的依赖 surveyId 变化），不重置就
+    // 会把上一份问卷的摘要文本/失败态误展示成当前问卷的内容——本文件上面的注释早已声明
+    // "每次进入/切换问卷都重置"，但重置逻辑此前没有真正写出来。这里的重置对硬导航
+    // （组件本就会重新挂载，state 已是初始值）没有副作用，成本几乎为零，是纯防御性写法。
+    setAiSummaryLoading(false);
+    setAiSummaryText("");
+    setAiSummaryError("");
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [surveyId]);
@@ -151,6 +164,24 @@ export default function SurveyResultsPage() {
       setExportError("导出失败，请重试");
     }
     setExporting(null);
+  }
+
+  async function generateAiSummary() {
+    setAiSummaryLoading(true);
+    setAiSummaryError("");
+    try {
+      const res = await fetch(`/api/surveys/${surveyId}/results/ai-summary`, { method: "POST" });
+      if (!res.ok) {
+        setAiSummaryError("生成摘要失败，请重试");
+        setAiSummaryLoading(false);
+        return;
+      }
+      const body = await res.json();
+      setAiSummaryText(String(body.text ?? ""));
+    } catch {
+      setAiSummaryError("生成摘要失败，请重试");
+    }
+    setAiSummaryLoading(false);
   }
 
   function exportPdf() {
@@ -256,6 +287,13 @@ export default function SurveyResultsPage() {
         <div data-testid="results-empty" className="mt-8 rounded-12 border border-dashed border-border-strong px-6 py-15 text-center">
           <p className="text-15 font-semibold text-foreground">No responses yet</p>
           <p className="mt-2 text-13 text-muted-foreground">Share the survey link to start collecting answers.</p>
+          <div data-testid="report-ai-summary" className="mt-5 flex flex-col items-center gap-2">
+            <Button data-testid="report-ai-summary-generate" size="sm" variant="outline" disabled className="gap-1.5">
+              <Sparkles className="h-4 w-4" strokeWidth={1.5} />
+              Generate summary
+            </Button>
+            <p className="text-12 text-muted-foreground">Collect at least one response before generating an AI summary.</p>
+          </div>
         </div>
       ) : (
         <>
@@ -355,6 +393,65 @@ export default function SurveyResultsPage() {
                     <p className="text-20 font-bold text-foreground">{survey.questions.length}</p>
                   </div>
                 </div>
+              </div>
+
+              <div data-testid="report-ai-summary" className="rounded-12 border border-border bg-card p-5 print:break-inside-avoid">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" strokeWidth={1.5} />
+                    <h3 className="text-14 font-semibold text-foreground">AI Summary</h3>
+                  </div>
+                  <Button
+                    data-testid="report-ai-summary-generate"
+                    size="sm"
+                    variant="outline"
+                    disabled={totalResponses === 0 || aiSummaryLoading}
+                    onClick={() => void generateAiSummary()}
+                    className="gap-1.5 print:hidden"
+                  >
+                    <Sparkles className="h-4 w-4" strokeWidth={1.5} />
+                    {aiSummaryLoading ? "Generating…" : aiSummaryText || aiSummaryError ? "Regenerate" : "Generate summary"}
+                  </Button>
+                </div>
+
+                {aiSummaryLoading && (
+                  <div data-testid="report-ai-summary-loading" className="mt-3 grid animate-pulse gap-2">
+                    <div className="h-3 w-full rounded bg-muted" />
+                    <div className="h-3 w-5/6 rounded bg-muted" />
+                    <div className="h-3 w-2/3 rounded bg-muted" />
+                  </div>
+                )}
+
+                {!aiSummaryLoading && aiSummaryError && (
+                  <div className="mt-3 flex items-center gap-3">
+                    <p role="alert" data-testid="err-report-ai-summary" className="text-13 text-destructive">
+                      {aiSummaryError}
+                    </p>
+                    <Button
+                      data-testid="retry-report-ai-summary"
+                      size="sm"
+                      variant="outline"
+                      className="print:hidden"
+                      onClick={() => void generateAiSummary()}
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                )}
+
+                {!aiSummaryLoading && !aiSummaryError && aiSummaryText && (
+                  <p data-testid="report-ai-summary-text" className="mt-3 text-13 leading-relaxed text-foreground">
+                    {aiSummaryText}
+                  </p>
+                )}
+
+                {!aiSummaryLoading && !aiSummaryError && !aiSummaryText && (
+                  <p className="mt-3 text-13 text-muted-foreground">
+                    {totalResponses === 0
+                      ? "Collect at least one response before generating an AI summary."
+                      : "Click Generate summary to get an AI-written overview of this report."}
+                  </p>
+                )}
               </div>
 
               <div className="flex flex-col gap-4">
