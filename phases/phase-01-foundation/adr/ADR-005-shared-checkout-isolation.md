@@ -54,15 +54,17 @@ ADR 的这次会话里仍在发生）。
    worktree、自己 push 的 stash；绝不对"当前检出的分支"做整体性重置类操作
    （`reset --hard`、`checkout -- .`、`clean -f`、`branch -D <not-mine>`）——这类
    操作默认假设"这个目录只有我在用"，而这个假设在共享主 checkout 上不成立。
-4. **机械防护（不只靠文档）**：新增 git `reference-transaction` hook
-   （`scripts/hooks/reference-transaction`，由 `init.sh` 写入 `.git/hooks/`，
-   与既有 pre-commit/pre-push hook 同一安装方式）。规则：
+4. **机械防护（不只靠文档）**：新增 git `reference-transaction` hook，由 `init.sh`
+   的 `install_reference_transaction_hook` 内联写入 `.git/hooks/reference-transaction`
+   （heredoc 方式，与既有 pre-commit/pre-push hook 同一安装方式，不是单独的
+   `scripts/hooks/` 源文件）。规则：
    - 只在**共享主 checkout**（`git rev-parse --git-dir` == `git rev-parse
      --git-common-dir`，即不是某个 linked worktree）里生效；worktree 内部天然
      隔离，不需要也不应该被这层拦截。
    - 只拦截 `refs/heads/*` 的**非快进（non-fast-forward）**更新——即"已有 commit
      从某个分支 ref 上凭空消失"这个动作本身，不管背后是 `reset --hard`、
-     `branch -f` 还是别的命令。分支创建（旧值全零）与删除（新值全零）不拦截。
+     `branch -f`、`commit --amend` 还是别的命令。分支创建（旧值全零）与删除
+     （新值全零）不拦截。
    - 命中时 exit 非零，`reference-transaction` 处于 `prepared` 阶段即可直接
      中止这次操作，打印指向本 ADR 的提示；可用 `ALLOW_HISTORY_REWRITE=1` 环境变量
      临时放行（明确知道自己在干什么、且已确认没有别的会话在用这个目录时）。
