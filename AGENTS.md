@@ -58,6 +58,7 @@
 - 系统架构总览 → `.harness/instructions/architecture.md`
 - 智能体编排/工具/记忆约定 → `.harness/instructions/agentic-patterns.md`
 - 多 agent 协调（主 agent + issue-label 状态机 + review 门禁）→ `.harness/instructions/multi-agent-coordination.md`（见 ADR-004）
+- 新 agent/新平台加入协作的最小清单 → `.harness/instructions/agent-onboarding-checklist.md`（见 ADR-005）
 - 编码规范 → `.harness/instructions/coding-standards.md`
 - UIUX 规范 → `.harness/instructions/uiux-standards.md`
 - 端到端验证标准 → `.harness/instructions/testing-standards.md`

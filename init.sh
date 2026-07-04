@@ -89,9 +89,53 @@ HOOK
   echo "  ✓ pre-push hook（受影响模块轻量门控，对齐 CI 快速迭代策略）"
 }
 
+# reference-transaction: 见 ADR-005（共享主 checkout 隔离）——只在共享主 checkout
+# （非 linked worktree）里挡 refs/heads/* 的非快进更新，防止一个会话的 reset --hard /
+# branch -f 让另一个恰好检出同一分支的并发会话无声丢失 commit。worktree 内天然隔离，
+# 不受影响。临时放行：ALLOW_HISTORY_REWRITE=1 <原命令>。
+install_reference_transaction_hook() {
+  local hook_path=".git/hooks/reference-transaction"
+  mkdir -p .git/hooks
+  cat > "${hook_path}" << 'HOOK'
+#!/usr/bin/env bash
+# harness-hook (reference-transaction): 见 ADR-005
+STATE="${1:-}"
+[ "${STATE}" = "prepared" ] || exit 0
+[ "${ALLOW_HISTORY_REWRITE:-0}" = "1" ] && exit 0
+
+GIT_DIR="$(git rev-parse --git-dir 2>/dev/null || true)"
+COMMON_DIR="$(git rev-parse --git-common-dir 2>/dev/null || true)"
+# linked worktree（git-dir != git-common-dir）天然隔离，不拦截
+[ -n "${GIT_DIR}" ] && [ "${GIT_DIR}" = "${COMMON_DIR}" ] || exit 0
+
+is_zero() { [[ "$1" =~ ^0+$ ]]; }
+
+while read -r old new ref; do
+  case "${ref}" in
+    refs/heads/*) ;;
+    *) continue ;;
+  esac
+  is_zero "${old}" && continue   # 分支创建
+  is_zero "${new}" && continue   # 分支删除
+  if ! git merge-base --is-ancestor "${old}" "${new}" 2>/dev/null; then
+    echo "✗ [harness] 共享主 checkout 检测到非快进更新: ${ref} ${old:0:8} -> ${new:0:8}" >&2
+    echo "  reset --hard / branch -f / 强制 rebase 等操作会让其他并发使用这个目录" >&2
+    echo "  的会话看到分支 commit 无声消失（见 ADR-005，phases/phase-01-foundation/adr）。" >&2
+    echo "  请改用独立 worktree：git worktree add <path> -b <branch>。" >&2
+    echo "  确认这个目录当前只有你在用、且就是要这么做：ALLOW_HISTORY_REWRITE=1 <原命令>" >&2
+    exit 1
+  fi
+done
+exit 0
+HOOK
+  chmod +x "${hook_path}"
+  echo "  ✓ reference-transaction hook（共享主 checkout 非快进更新防护，ADR-005）"
+}
+
 if [ -d ".git" ]; then
   install_pre_commit_hook
   install_pre_push_hook
+  install_reference_transaction_hook
 else
   echo "  ! 不在 git 仓库根目录，跳过 hook 安装"
 fi
