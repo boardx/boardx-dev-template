@@ -1,0 +1,36 @@
+
+Running 5 tests using 1 worker
+
+  ✘  1 [chromium] › ai-store-003-subscribe-use-item.spec.ts:13:5 › 订阅个人发布项目、出现在已订阅列表、使用带入 AVA、取消订阅 (12.7s)
+  ✓  2 [chromium] › ai-store-003-subscribe-use-item.spec.ts:13:5 › 订阅个人发布项目、出现在已订阅列表、使用带入 AVA、取消订阅 (retry #1) (3.4s)
+  ✓  3 [chromium] › ai-store-003-subscribe-use-item.spec.ts:70:5 › 草稿项目的订阅入口为禁用态 (988ms)
+  ✓  4 [chromium] › ai-store-003-subscribe-use-item.spec.ts:97:5 › 被分享授权的 grantee 可以订阅 personal 项目（不再 404） (2.5s)
+  ✓  5 [chromium] › ai-store-003-subscribe-use-item.spec.ts:154:5 › 使用 template 项目跳到 Boards 时显示开发中提示 (1.2s)
+  ✓  6 [chromium] › ai-store-003-subscribe-use-item.spec.ts:191:5 › 在无团队上下文订阅后切换进团队，仍可成功取消订阅 (1.3s)
+
+
+  1) [chromium] › ai-store-003-subscribe-use-item.spec.ts:13:5 › 订阅个人发布项目、出现在已订阅列表、使用带入 AVA、取消订阅 ───
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
+
+    Locator: locator('[data-testid^="subscribed-item-"]').filter({ hasText: 'Subscribe Target Agent 1783208186611' })
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+      [2m- expect.toBeVisible with timeout 10000ms[22m
+    [2m  - waiting for locator('[data-testid^="subscribed-item-"]').filter({ hasText: 'Subscribe Target Agent 1783208186611' })[22m
+
+
+      49 |   await expect(page.getByTestId("subscribe-view")).toBeVisible();
+      50 |   const subscribedCard = page.locator('[data-testid^="subscribed-item-"]').filter({ hasText: agentName });
+    > 51 |   await expect(subscribedCard).toBeVisible();
+         |                                ^
+      52 |   const itemId = await subscribedCard.getAttribute("data-testid").then((v) => v!.replace("subscribed-item-", ""));
+      53 |
+      54 |   // 使用：点「Use」应带入 AVA 会话（Agent 类型 → /ava?agentItemId=）。
+
+        at /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/515c4f6b-1bc0-41d4-ac38-b6df9bb81f4f/scratchpad/wt-362gate/apps/web/e2e/ai-store-003-subscribe-use-item.spec.ts:51:32
+
+  1 flaky
+    [chromium] › ai-store-003-subscribe-use-item.spec.ts:13:5 › 订阅个人发布项目、出现在已订阅列表、使用带入 AVA、取消订阅 ────
+  4 passed (26.0s)
