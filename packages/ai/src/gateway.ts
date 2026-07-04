@@ -20,6 +20,10 @@ export interface StreamChatInput {
     agentId: string;
     toolIds: string[];
   };
+  /** P18 F02：停止生成。传入时 provider 应把它接到真实的中断点（如 fetch 的 signal），
+   *  使请求被真实取消而非等待完整回显后再丢弃结果。可选：stub provider 忽略它也不影响正确性
+   *  （逐块 yield 本身很快，真正需要真实中断的是走网络的 provider）。 */
+  signal?: AbortSignal;
 }
 
 export type TokenStream = AsyncGenerator<string, void, void>;

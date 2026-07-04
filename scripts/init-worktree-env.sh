@@ -36,11 +36,14 @@ redis_port="$(free_port)"
 web_port="$(free_port)"
 minio_port="$(free_port)"
 minio_console_port="$(free_port)"
+# P18 F02：e2e/ava-real-model-failure.spec.ts 自建的假 Anthropic 兼容 server 监听的端口。
+fake_anthropic_port="$(free_port)"
 # 避免几次 free_port 撞到同一个端口（极小概率），撞了就再要一个
 if [ "$pg_port" = "$redis_port" ]; then redis_port="$(free_port)"; fi
 if [ "$web_port" = "$pg_port" ] || [ "$web_port" = "$redis_port" ]; then web_port="$(free_port)"; fi
 if [ "$minio_port" = "$pg_port" ] || [ "$minio_port" = "$redis_port" ] || [ "$minio_port" = "$web_port" ]; then minio_port="$(free_port)"; fi
 if [ "$minio_console_port" = "$pg_port" ] || [ "$minio_console_port" = "$redis_port" ] || [ "$minio_console_port" = "$web_port" ] || [ "$minio_console_port" = "$minio_port" ]; then minio_console_port="$(free_port)"; fi
+if [ "$fake_anthropic_port" = "$pg_port" ] || [ "$fake_anthropic_port" = "$redis_port" ] || [ "$fake_anthropic_port" = "$web_port" ] || [ "$fake_anthropic_port" = "$minio_port" ] || [ "$fake_anthropic_port" = "$minio_console_port" ]; then fake_anthropic_port="$(free_port)"; fi
 
 env_local="apps/web/.env.local"
 mkdir -p "$(dirname "$env_local")"
@@ -62,6 +65,16 @@ upsert "E2E_PORT" "${web_port}" "$env_local"
 # 之前只写了 MINIO_PORT/MINIO_CONSOLE_PORT，导致上传接口连去默认端口/无人监听的 9090，
 # 在这个 worktree 隔离出的 MinIO 容器上传全部 502（kb-004 RAG e2e 门控验证时发现）。
 upsert "S3_ENDPOINT" "http://localhost:${minio_port}" "$env_local"
+# P18 F02（e2e/ava-real-model-failure.spec.ts）：把 anthropicProvider 的请求路由到本
+# worktree 独占的假 Anthropic 兼容 server（同一 spec 文件里起的 http.createServer），
+# 覆盖 429/网络错误/超时/停止生成四个真实故障场景，不消耗真实供应商额度。
+# ANTHROPIC_BASE_URL 在 anthropicProvider 模块加载时读一次 env（见该文件顶部注释），
+# 必须在 next dev（playwright webServer）启动前就写好。ANTHROPIC_API_KEY 用不校验真实性
+# 的占位值（请求根本不会到达真实 Anthropic）。ANTHROPIC_TIMEOUT_MS 调小，e2e 验证请求级
+# 超时熔断时不用真等默认的 60s。
+upsert "ANTHROPIC_API_KEY" "e2e-fake-key-not-a-real-credential" "$env_local"
+upsert "ANTHROPIC_BASE_URL" "http://127.0.0.1:${fake_anthropic_port}" "$env_local"
+upsert "ANTHROPIC_TIMEOUT_MS" "5000" "$env_local"
 
 touch .env
 upsert "COMPOSE_PROJECT_NAME" "$project_name" ".env"
