@@ -75,6 +75,56 @@ export function buildPresentationObjectKey(params: {
   return `presentations/${params.roomId}/${params.chatId}/${params.artifactId}/${safeName}`;
 }
 
+// ─── 房间级文件库对象 key：rooms/{roomId}/files/{fileId}/{文件名}（p20-F03，uc-rr-003）──
+// 独立前缀，与 kb/、ava/ 等隔离命名空间；房间是唯一的所有权边界，chat_thread_id 不进 key
+// （它只是元数据里的来源标注，不是存储路径的一部分——同一房间文件不因线程视角不同而重复存储）。
+
+export const ROOM_FILE_ALLOWED_EXT = [
+  "pdf",
+  "txt",
+  "md",
+  "doc",
+  "docx",
+  "json",
+  "csv",
+  "xlsx",
+  "xls",
+  "png",
+  "jpg",
+  "jpeg",
+  "gif",
+  "webp",
+];
+export const ROOM_FILE_MAX_BYTES = 50 * 1024 * 1024; // 50MB，与 KB 上传平面同口径
+
+export function buildRoomFileObjectKey(params: {
+  roomId: string | number;
+  fileId: string;
+  fileName: string;
+}): string {
+  const safeName = params.fileName.replace(/[/\\]/g, "_");
+  return `rooms/${params.roomId}/files/${params.fileId}/${safeName}`;
+}
+
+/** 类型 + 大小校验，前后端共用同一规则（服务端二次校验用，防绕过）。 */
+export function validateRoomFileUpload(fileName: string, sizeBytes: number): KbUploadValidation {
+  const ext = extOf(fileName);
+  if (!ROOM_FILE_ALLOWED_EXT.includes(ext)) {
+    return {
+      ok: false,
+      reason: "unsupported_type",
+      message: `Unsupported file type .${ext || "?"}`,
+    };
+  }
+  if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
+    return { ok: false, reason: "too_large", message: "文件大小无效" };
+  }
+  if (sizeBytes > ROOM_FILE_MAX_BYTES) {
+    return { ok: false, reason: "too_large", message: "文件过大（上限 50MB）" };
+  }
+  return { ok: true };
+}
+
 // ─── 上传校验（纯函数，前后端共用同一份规则，避免规则漂移）────────────────────
 
 export const KB_ALLOWED_EXT = ["pdf", "txt", "md", "doc", "docx", "json", "csv", "xlsx", "xls"];
@@ -227,6 +277,21 @@ export async function presignGetUrl(key: string, expiresInSeconds = 300): Promis
   return getSignedUrl(client, new GetObjectCommand({ Bucket: cfg.bucket, Key: key }), {
     expiresIn: expiresInSeconds,
   });
+}
+
+/** 带鉴权的临时直传 URL（默认 5 分钟过期）：前端拿到后用 PUT 直接写对象存储，
+ *  写完再调用 confirm 接口落库（p20-F03 房间文件"预签名→直传→confirm"上传平面）。 */
+export async function presignPutUrl(
+  key: string,
+  contentType: string,
+  expiresInSeconds = 300
+): Promise<string> {
+  const { client, cfg } = getClient();
+  return getSignedUrl(
+    client,
+    new PutObjectCommand({ Bucket: cfg.bucket, Key: key, ContentType: contentType }),
+    { expiresIn: expiresInSeconds }
+  );
 }
 
 /** 测试/关闭期用：重置单例，便于隔离测试环境配置。 */

@@ -49,10 +49,13 @@ description: >
 
 ## 产出流程
 1. 发现缺口（事故复盘 / 主动审计）→ 写清楚"背景 + 决策"。
-2. 走正常 PR 流程：开分支、改文档、开 PR、**过 review（可派 code-reviewer 快检一致性）
+2. **先开独立 worktree 再落地改文档**：不在共享主 checkout 上 `commit`/`stash`/
+   `reset`/`checkout <branch>`；分支建好立即 `git push`。这条对你格外重要——你的
+   产出就是"共享主 checkout 隔离"这条规则本身（ADR-005），自己先违反就没有说服力。
+3. 走正常 PR 流程：开分支、改文档、开 PR、**过 review（可派 code-reviewer 快检一致性）
    + CI**，转交 coord-main 合并——你也没有独立合并权，控制平面改动一样要过门禁，
    理由更强：这是所有 agent 共读的权威源,改错影响面最大。
-3. 改动后如果影响到别的 skill/coordinator 的行为约定，主动在对应 issue/评论里
+4. 改动后如果影响到别的 skill/coordinator 的行为约定，主动在对应 issue/评论里
    通知受影响方（不能只靠"文档更新了大家自己会去看"）。
 
 ## 面向跨平台/开源接入的具体设计原则

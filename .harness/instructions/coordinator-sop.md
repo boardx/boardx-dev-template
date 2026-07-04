@@ -22,11 +22,28 @@
 3. **分派补给**：有空闲 worker 且存在 `status:ready-for-dev` ∩ 依赖全绿 ∩ 与在途 PR 无同文件热点 → 分派（认领双写：`harness claim` + label）。
 
 ### L2 全局层（~15min）
-1. **lease 巡检**：`status:in-progress` 最后活动 > LEASE_TTL(6h) → 回收重分派（ADR-004 §4）。
+1. **lease/deadline 巡检**：按下方"Deadline 与分级补救"表逐项检查，触发即执行对应 tier 动作（不止 worker lease，还包括 changes-requested 停滞、review 未派、CI 卡住等）。
 2. **漂移巡检**：抽查 label 与事实一致性——`review:*-ok` 是否都有对应 reviewer 产出记录（评论）；有无非 coordinator 编排的 verdict label（出现即摘除并留言，见"verdict 权威"）。
 3. **阻塞升级**：`status:blocked` 超过 1 个 L2 周期无进展 → 评论 + 通知人类。
 4. **基础设施健康**：CI 是否整体可用（账单/runner）；不可用时在追踪评论里刷新状态。
 5. **背景任务盘点**：自己派出的 reviewer/verifier agent、监控任务有无僵死；scratchpad worktree 有无该清理的。
+
+## Deadline 与分级补救（2026-07-04 起）
+
+> 根因：今晚多条返工线（PR #315/#332/#350/#355）反复出现"发了返工清单后 2-4 小时无新提交"，
+> 而 coordinator 只是在 L2 巡检时"注意到"没推送，没有明确的"超时了该做什么"规则——
+> 全靠临场判断，容易该催不催、该代修不代修、该升级不升级。以下把这类判断固化成表。
+
+| 对象 | Deadline | Tier 1（软提醒） | Tier 2（升级） | Tier 3（补救） |
+|---|---|---|---|---|
+| `status:in-progress`（worker 认领锁） | 6h 无进展 | — | — | 回收 lease、回退 `ready-for-dev`，可重分派（已有，ADR-004 §4） |
+| `status:changes-requested`（返工中） | 2h 无新提交 | 总线追加提醒评论 @worker，附上次返工清单链接 | 4h 无新提交：判断 worker 会话是否仍在运行——仍在运行但静默＝排队中，不追加动作；会话已停止/不可达＝视同 lease 超时，回收或重分派 | 若纯机械性小改、已给过明确修法、且已返工 ≥2 轮未落地：coordinator/module-coordinator 可直接代为修复（先例：PR #327 第三轮），修完仍需过独立 review，不可自我豁免 |
+| `status:in-review`（等 reviewer） | 30min 内未派出 reviewer | 自查为何漏派 | — | 立即补派，属 coordinator 自身失职，不算 worker 责任 |
+| `coordinator`/`module-coordinator` 心跳 | 30min（已有，见生命周期章节） | — | 抢占仪式（已有） | 抢占 |
+| PR CI pending | 30min 未出结果 | 查 CI 健康（账单/runner） | 确认平台问题 → 升级人类，明确标注不算 worker 责任 | 平台恢复后重跑 |
+| 需要人类拍板的产品/安全降级决策（如"是否接受某类已知安全边界"） | 无固定时限，发现即标注 | 在 issue/PR 上明确写"需要人类批复"+ 可选项，不擅自代为拍板 | 人类长时间未回应且不阻塞其他工作 → 继续推进其他线，定期在总 lease issue 重申待决事项 | 绝不静默降级安全/产品决策 |
+
+**执行位置**：L2 巡检的"deadline 巡检"项按此表逐条检查；触发 Tier 2/3 的动作需在对应 issue/PR 留痕（不只是内部判断），保持"总线是权威"。
 
 ### L3 会话层（每轮会话收尾/交接时）
 - 未完成的协调状态写进总线（issue 评论），不留在会话记忆里——下一个 coordinator 冷启动只读总线即可续上。
@@ -37,12 +54,22 @@
 2. **coordinator 唯一**：唯一性由 `coordination:lease` issue 的心跳裁定（见下方生命周期章节）；接管协调前先向存量协调会话广播；双 coordinator 结论冲突时，以可核验事实为准，并立即收敛为单 coordinator。
 3. **合并独占**：只有 coordinator 执行合并；review 全绿 + CI 绿 + up-to-date 缺一不可（CI 因基础设施不可用时，合并冻结并升级人类，不得以"本地验过"绕行）。
 4. **证据实测**：任何"已验证/已入库"声称都用 `git ls-tree` / `git show` / 退出码实测，不信任 diff 注释、progress 叙述或打分。
+5. **共享主 checkout 隔离**：任何要落地写文件/提交的会话（含 coordinator 自己）一律
+   `git worktree add` 开独立工作区，不在共享主 checkout 上 `commit`/`stash`/`reset`/
+   `branch -f`/`checkout <branch>`；分支建好立即 push。见 ADR-005
+   （`phases/phase-01-foundation/adr/ADR-005-shared-checkout-isolation.md`），本地另有
+   `reference-transaction` git hook 兜底拦截非快进更新。
 
 ## 事故分诊速查（来自实战）
 - CI 秒级失败 + steps 空 → 账单/runner，非代码（2026-07-04 账单事故）。
 - evidence 指针存在但文件不在 git 树 → 假 passing（PR #310/#311/#312 三连）。
 - 迁移回填用自然键（name）匹配 → 用户数据混入风险（PR #312 初版）。
-- 无 node_modules 的 worktree push 失败（turbo not found）→ pre-push hook，纯文档改动可 --no-verify。
+- 无 node_modules 的 worktree push 失败（turbo not found）→ 先在该 worktree 跑
+  `pnpm install`（pnpm store 命中缓存通常几秒到十几秒），而不是用 `--no-verify` 绕过；
+  纯文档改动如确有必要跳过，需人类明确同意（ADR-005 后果段）。
+- 共享主 checkout 被并发会话 `reset`/`stash`/`branch -f` 踩踏，分支 commit 无声消失
+  （2026-07-03/04 夜间两起：Board agent stash 误伤、AVA 分支 ref 一度被重置）
+  → 见 ADR-005；发现即用 `git reflog` 定位恢复，之后确认该分支已 push 到 origin。
 
 ## 生命周期（启动/退位/抢占）
 coordinator 是**单例角色**，由会话通过启动仪式认领，不是常驻 subagent。
