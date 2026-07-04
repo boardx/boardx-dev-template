@@ -19,6 +19,17 @@ agents:
       - review 全绿 + CI 绿 + 分支 up-to-date → 合并 main、置 status:merged、关 issue
       - 回收 stale 认领（lease 超时）、升级 blocked
 
+  # ── Architecture Coordinator（控制平面本身的迭代者；非产品模块）────────────
+  # 职责：harness 控制平面、协议文档（AGENTS.md/.harness/instructions/*/ADR）、
+  # agent 身份/协作协议的持续迭代——目标是让任何 agent（含未来的第三方/开源社区 agent、
+  # 非 Claude 平台 agent）都能靠读文档 + 走 issue/label 总线无缝接入协作，不依赖
+  # Claude Code 私有机制。同样无独立合并权，控制平面改动全绿后转交 coord-main。
+  - id: coord-architecture
+    kind: architecture-coordinator
+    model: opus-4.8
+    areas: [harness, docs, adr, agent-protocol]
+    reports_to: coord-main
+
   # ── 模块 Coordinator（二级编排；分派+初审，无独立合并权）───────────────────
   # 架构（2026-07-04 起）：coord-main（唯一合并权）↔ N 个 module-coordinator（各领域分派/初审）。
   # module-coordinator 职责：读自己 areas 范围内的 issue，分派给该模块的 worker，
