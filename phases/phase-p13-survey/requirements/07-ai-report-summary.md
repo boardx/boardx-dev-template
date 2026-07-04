@@ -10,10 +10,12 @@ CAP-AI"——即当时刻意把 AI 摘要排除在核心交付之外，留到后
 思路在非聊天生成场景的既有先例（各自有自己的 xxx_FORCE_FAIL_MARKER）。不需要再造一遍
 AI 接入地基，跟着这套现有约定接线即可。
 
-> 勘误：此前版本此处误引用了 `packages/ai/src/researchGenerator.ts` 作为先例——核实后
-> 发现该文件只存在于一个尚未合并进 main 的 p18 分支（Deep Research 真实生成），并非当前
-> 代码库里可依赖的东西。实现时请以本节列出的、已合入 main 的 `gateway.ts`/
-> `studioGenerator.ts` 为准。
+> 勘误（二次更正）：此前版本此处引用了 `packages/ai/src/researchGenerator.ts`；一版更正
+> 说该文件"只存在于未合并的 p18 分支"——那次核实是在一次 git 状态快照上做的，与 p18/F04
+> 合入 main 发生了时序竞态，结论当时是对的、现在已经过时：`researchGenerator.ts` 目前
+> **已经合入 main**。这条更正本身不影响 F07 的实现或正确性（worker 实现时遵循的是
+> `gateway.ts`/`studioGenerator.ts` 这条路线，没有依赖 `researchGenerator.ts`），纯粹是把
+> 这份需求文档的表述改回准确，避免继续误导后续 reader。
 
 ## 原始需求（用户故事）
 - 作为问卷 owner，我想在 Report 视图里一键生成一段 AI 撰写的自然语言摘要（关键发现、
