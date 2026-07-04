@@ -71,6 +71,10 @@ const styleGet = (c: string | null | undefined, key: string): string | null => {
   return null;
 };
 const isItalic = (it: { color?: string | null }) => styleGet(it.color, "italic") === "1";
+// p6:F20（uc-widget-menu-003 锁定/解锁）：锁定态编码为 color 的 "|locked=1" 样式段，沿用
+// F12/F19 建立的 "|k=v" 哨兵编码约定，不新增持久化列。锁定后不可移动/缩放/旋转/编辑，
+// Widget Menu 显示解锁入口（见 wm-lock/wm-unlock）。
+const getLocked = (it: { color?: string | null }) => styleGet(it.color, "locked") === "1";
 const getFontFamily = (it: { color?: string | null }) => styleGet(it.color, "font") ?? DEFAULT_FONT;
 const getFontSize = (it: { color?: string | null }) => {
   const v = styleGet(it.color, "size");
@@ -462,9 +466,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
 
   const onEditRequest = useCallback(
     (id: string) => {
-      if (canEdit) setEditingId(id);
+      // p6:F20（uc-widget-menu-003）：锁定对象不可编辑（主流程 3），双击进入编辑态短路。
+      if (!canEdit) return;
+      const target = items.find((it) => it.id === id);
+      if (target && getLocked(target)) return;
+      setEditingId(id);
     },
-    [canEdit],
+    [canEdit, items],
   );
 
   const onFabricCtxMenu = useCallback(
@@ -507,6 +515,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         reloadable: isReloadable(it),
         reloadCount: reload[it.id]?.count ?? 0,
         refreshedAt: reload[it.id]?.at ?? null,
+        locked: getLocked(it),
       })),
     [items, reload],
   );
@@ -515,6 +524,11 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     [items, selected],
   );
   const editingItem = editingId ? items.find((it) => it.id === editingId) ?? null : null;
+  // p6:F20（uc-widget-menu-003 主流程 4）：全部选中项已锁定 → Widget Menu 只保留锁定状态入口。
+  const allSelectedLocked = useMemo(() => {
+    const sel = items.filter((it) => selected.has(it.id));
+    return sel.length > 0 && sel.every(getLocked);
+  }, [items, selected]);
 
   async function addNote() {
     setActiveTool("sticky");
@@ -667,12 +681,15 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     });
   }
 
+  // p6:F20（uc-widget-menu-003）：键盘方向键微移选中对象——锁定对象不可移动，过滤后为空则跳过。
   const moveSelected = useCallback(
     async (dx: number, dy: number) => {
       if (!canEdit || selected.size === 0) return;
-      const targets = items.filter((it) => selected.has(it.id));
+      const targets = items.filter((it) => selected.has(it.id) && !getLocked(it));
+      if (targets.length === 0) return;
+      const ids = new Set(targets.map((it) => it.id));
       const moves: Move[] = targets.map((it) => ({ id: it.id, fromX: it.x, fromY: it.y, toX: it.x + dx, toY: it.y + dy }));
-      setItems((prev) => prev.map((it) => (selected.has(it.id) ? { ...it, x: it.x + dx, y: it.y + dy } : it)));
+      setItems((prev) => prev.map((it) => (ids.has(it.id) ? { ...it, x: it.x + dx, y: it.y + dy } : it)));
       recordOp({ kind: "move", moves });
       await apiMove(moves, false);
     },
@@ -733,7 +750,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // F11：改选中便签颜色（保留字重 :bold 修饰 + p6:F12 样式段）
   async function setColor(base: string) {
     const updates = items
-      .filter((it) => selected.has(it.id))
+      .filter((it) => selected.has(it.id) && !getLocked(it))
       .map((it) => {
         const head = base + (isBold(it) ? ":bold" : "");
         const segs = styleSegs(it.color);
@@ -744,7 +761,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
 
   // uc-widget-menu-002：切换选中组件字重（bold/normal），编码为 color 的 :bold 后缀。
   async function toggleBold() {
-    const targets = items.filter((it) => selected.has(it.id));
+    const targets = items.filter((it) => selected.has(it.id) && !getLocked(it));
     if (targets.length === 0) return;
     const allBold = targets.every(isBold); // 全粗 → 取消；否则 → 全部加粗
     const updates = targets.map((it) => {
@@ -758,7 +775,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
 
   // uc-widget-menu-013：切换选中组件斜体（italic），编码为 color 的 "|italic=1" 样式段。
   async function toggleItalic() {
-    const targets = items.filter((it) => selected.has(it.id));
+    const targets = items.filter((it) => selected.has(it.id) && !getLocked(it));
     if (targets.length === 0) return;
     const allItalic = targets.every(isItalic);
     const updates = targets.map((it) => ({
@@ -771,7 +788,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // uc-widget-menu-013：设置选中组件字体，编码为 color 的 "|font=<slug>" 样式段。
   async function setFontFamily(font: string) {
     const updates = items
-      .filter((it) => selected.has(it.id))
+      .filter((it) => selected.has(it.id) && !getLocked(it))
       .map((it) => ({ id: it.id, color: withStyle(it.color, { font: font === DEFAULT_FONT ? null : font }) }));
     await applyColors(updates);
   }
@@ -779,7 +796,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // uc-widget-menu-013：设置选中组件字号，编码为 color 的 "|size=<n>" 样式段。
   async function setFontSize(size: number) {
     const updates = items
-      .filter((it) => selected.has(it.id))
+      .filter((it) => selected.has(it.id) && !getLocked(it))
       .map((it) => ({
         id: it.id,
         color: withStyle(it.color, { size: size === DEFAULT_FONT_SIZE ? null : String(size) }),
@@ -790,7 +807,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // uc-widget-menu-013：设置选中组件文本对齐方式，编码为 color 的 "|align=<left|center|right>" 样式段。
   async function setAlign(align: "left" | "center" | "right") {
     const updates = items
-      .filter((it) => selected.has(it.id))
+      .filter((it) => selected.has(it.id) && !getLocked(it))
       .map((it) => ({ id: it.id, color: withStyle(it.color, { align: align === "left" ? null : align }) }));
     await applyColors(updates);
   }
@@ -798,7 +815,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // p6:F19（uc-widget-menu-002）：设置选中组件边框色，编码为 color 的 "|border=<token>" 样式段。
   async function setBorder(token: BorderToken) {
     const updates = items
-      .filter((it) => selected.has(it.id))
+      .filter((it) => selected.has(it.id) && !getLocked(it))
       .map((it) => ({ id: it.id, color: withStyle(it.color, { border: token === DEFAULT_BORDER ? null : token }) }));
     await applyColors(updates);
   }
@@ -806,7 +823,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // p6:F19（uc-widget-menu-002）：设置选中组件边框宽/线宽，编码为 color 的 "|borderw=<n>" 样式段。
   async function setBorderWidth(width: number) {
     const updates = items
-      .filter((it) => selected.has(it.id))
+      .filter((it) => selected.has(it.id) && !getLocked(it))
       .map((it) => ({
         id: it.id,
         color: withStyle(it.color, { borderw: width === DEFAULT_BORDER_WIDTH ? null : String(width) }),
@@ -817,7 +834,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // p6:F19（uc-widget-menu-002）：设置选中组件透明度，编码为 color 的 "|opacity=<1-100>" 样式段。
   async function setOpacity(value: number) {
     const updates = items
-      .filter((it) => selected.has(it.id))
+      .filter((it) => selected.has(it.id) && !getLocked(it))
       .map((it) => ({
         id: it.id,
         color: withStyle(it.color, { opacity: value === DEFAULT_OPACITY ? null : String(value) }),
@@ -828,11 +845,25 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // p6:F19（uc-widget-menu-002）：设置选中组件文字色，编码为 color 的 "|textcolor=<token>" 样式段。
   async function setTextColor(token: TextColorToken) {
     const updates = items
-      .filter((it) => selected.has(it.id))
+      .filter((it) => selected.has(it.id) && !getLocked(it))
       .map((it) => ({
         id: it.id,
         color: withStyle(it.color, { textcolor: token === DEFAULT_TEXT_COLOR ? null : token }),
       }));
+    await applyColors(updates);
+  }
+
+  // p6:F20（uc-widget-menu-003）：切换选中组件锁定态，编码为 color 的 "|locked=1" 样式段。
+  // 多选混合锁定态时（业务规则 6：批量锁定/解锁）：若全部已锁定 → 批量解锁；否则（含未锁定
+  // 或混合）→ 批量锁定，与 toggleBold 的「全真取消，否则全部置真」语义一致。
+  async function toggleLocked() {
+    const targets = items.filter((it) => selected.has(it.id));
+    if (targets.length === 0) return;
+    const allLocked = targets.every(getLocked);
+    const updates = targets.map((it) => ({
+      id: it.id,
+      color: withStyle(it.color, { locked: allLocked ? null : "1" }),
+    }));
     await applyColors(updates);
   }
 
@@ -938,11 +969,16 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     [canEdit, selected]
   );
 
+  // uc-widget-menu-008 主流程 5：多选删除时，系统删除允许对象；遇到锁定对象时保留这些对象
+  // （部分失败）。锁定对象保持选中，便于用户看到哪些没被删除。
   const deleteSelected = useCallback(async () => {
     if (!canEdit || selected.size === 0) return;
-    const removed = items.filter((it) => selected.has(it.id));
-    setItems((prev) => prev.filter((it) => !selected.has(it.id)));
-    setSelected(new Set());
+    const targeted = items.filter((it) => selected.has(it.id));
+    const removed = targeted.filter((it) => !getLocked(it));
+    if (removed.length === 0) return; // 全部锁定 → 删除入口本就不显示/不可用，防御性短路
+    const removedIds = new Set(removed.map((it) => it.id));
+    setItems((prev) => prev.filter((it) => !removedIds.has(it.id)));
+    setSelected(new Set(targeted.filter((it) => getLocked(it)).map((it) => it.id)));
     recordOp({ kind: "delete", items: removed });
     await apiDelete(removed.map((it) => it.id));
   }, [canEdit, selected, items, apiDelete]);
@@ -1135,6 +1171,12 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           className="absolute left-1/2 top-14 z-20 flex -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-lg"
         >
           <span className="px-1 text-xs text-muted-foreground">{selected.size} 项</span>
+          {/* p6:F20（uc-widget-menu-003 主流程 3/4，业务规则 1）：全部选中项已锁定时，样式/编辑
+              类入口整体隐藏——锁定对象只保留锁定状态入口（此处即下方的解锁）与删除（已置灰）。
+              混合锁定态（部分选中项锁定）仍展示样式入口，setColor/toggleBold 等 setter 已各自
+              过滤掉锁定项，只对未锁定项生效。 */}
+          {!allSelectedLocked && (
+            <>
           {/* 颜色色板（F11）：仅对便签生效；选中项全为文本时隐藏（文本为透明块，不套柔彩色） */}
           {!items.filter((it) => selected.has(it.id)).every(isText) &&
             COLOR_TOKENS.map((c) => (
@@ -1378,13 +1420,52 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           <Button data-testid="wm-duplicate" size="sm" variant="ghost" onClick={duplicateSelected}>
             复制
           </Button>
-          <Button data-testid="wm-delete" size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteSelected()}>
+            </>
+          )}
+          {/* uc-widget-menu-008 主流程 2：对象被锁定时删除入口隐藏或不可用；全部选中项锁定时
+              置灰（其余情况——含混合——仍可删，未锁定的会被删除，锁定的保留，见 deleteSelected）。 */}
+          <Button
+            data-testid="wm-delete"
+            size="sm"
+            variant="ghost"
+            className="text-destructive"
+            disabled={allSelectedLocked}
+            title={allSelectedLocked ? "锁定组件不可删除，请先解锁" : undefined}
+            onClick={() => void deleteSelected()}
+          >
             删除
           </Button>
-          {/* p6:F07：拖拽控制点缩放已可用（选中框四角），原「缩放暂不可用」占位移除。 */}
-          <Button data-testid="wm-lock-unavailable" size="sm" variant="ghost" disabled title="锁定能力将在后续组件权限矩阵接入">
-            锁定暂不可用
-          </Button>
+          {/* p6:F20（uc-widget-menu-003）：锁定/解锁。锁定态入口只保留「解锁」（主流程 4：
+              锁定后菜单只显示锁定状态入口）；未锁定显示「锁定」。多选混合锁定态时，仍显示单一
+              入口，文案取「解锁」当且仅当全部已锁定（与 toggleLocked 的批量语义一致），否则显示
+              「锁定」（点击会把混合态统一收敛为全部锁定，业务规则 6 的批量锁定）。 */}
+          {(() => {
+            const sel = items.filter((it) => selected.has(it.id));
+            const anyLocked = sel.some(getLocked);
+            const mixed = anyLocked && !allSelectedLocked;
+            return allSelectedLocked ? (
+              <Button
+                data-testid="wm-unlock"
+                size="sm"
+                variant="ghost"
+                aria-label="解锁组件"
+                onClick={() => void toggleLocked()}
+              >
+                解锁
+              </Button>
+            ) : (
+              <Button
+                data-testid="wm-lock"
+                size="sm"
+                variant="ghost"
+                aria-label="锁定组件"
+                title={mixed ? "选中项锁定状态不一致，点击将全部锁定" : undefined}
+                onClick={() => void toggleLocked()}
+              >
+                锁定
+              </Button>
+            );
+          })()}
         </div>
       )}
 

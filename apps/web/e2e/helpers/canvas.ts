@@ -27,6 +27,7 @@ export interface CanvasItem {
   reloadable: boolean;
   reloadCount: number;
   refreshedAt: number | null;
+  locked: boolean;
   z: number;
 }
 
