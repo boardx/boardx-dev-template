@@ -67,7 +67,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/ai-store-003-subscribe-use-item.spec.ts"
       ],
       "evidence": "",
-      "notes": "【2026-07-02 解锁：F02+p9:F01 已 passing，blocked→not_started】uc-ai-store-003。订阅数据层可独立做，但「使用」端到端依赖 p9（Agent 带入 AVA 会话）：p9 未就绪则使用入口只做订阅+禁用态占位。故整体 blocked-on p9；订阅纯数据部分可拆出先行。依赖 F01/F02。"
+      "notes": "【2026-07-02 解锁：F02+p9:F01 已 passing，blocked→not_started】uc-ai-store-003。订阅数据层可独立做，但「使用」端到端依赖 p9（Agent 带入 AVA 会话）：p9 未就绪则使用入口只做订阅+禁用态占位。故整体 blocked-on p9；订阅纯数据部分可拆出先行。依赖 F01/F02。补跑门禁（2026-07-05，coord-main 直接执行，非派发）：第一条用例\"订阅个人发布项目、出现在已订阅列表...\"在 harness verify 默认(0 retries)下真实失败——订阅成功后 `[data-testid^=\"subscribed-item-\"]` 列表未在 10s 内渲染出新项，但同一用例开 `CI=true`（playwright.config.ts 既有的 `retries: process.env.CI ? 2 : 0`）跑，第一次尝试同样失败、retry #1 必过，稳定复现为\"1 flaky\"而非稳定失败——与本轮已记录的 #387（ai-store Explore 搜索结果不重渲染）、p17-F03 的 share-landing 竞态（#363/PR #385）疑似同一类「列表操作后 state 未及时重渲染」的界面时序问题，非本 feature 引入的回归（F03 实现本身在 PR #214 早已合并，逻辑未变）。status 保持 in_progress，不用 CI=true 掩盖裸 verification 命令的真实失败去换 passing。"
     },
     {
       "id": "F04",
