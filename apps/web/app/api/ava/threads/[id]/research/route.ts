@@ -170,6 +170,23 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
 /** 恢复该线程最近一次研究会话（线程重新打开/刷新页面后，用于把 research-card
  *  恢复到中断前的正确阶段与内容）。没有研究过则返回 { session: null }。 */
+/** research_payload 落库时是 unknown（jsonb），恢复给前端渲染前做一次轻量 shape 校验——
+ *  前端 ResearchWorkspace 直接解构 `run.research.plan.phases`/`report.sections` 等字段，
+ *  一行脏数据就会让整个页面抛未处理异常。校验不过时降级为 null（前端已有 hasPlan=false
+ *  的正常展示分支），而不是把可能畸形的数据原样透传出去。 */
+function isValidResearchPayload(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  if (!Array.isArray(v.clarifyingQuestions)) return false;
+  if (!Array.isArray(v.timeline)) return false;
+  const plan = v.plan as Record<string, unknown> | undefined;
+  if (!plan || typeof plan.audience !== "string" || !Array.isArray(plan.phases)) return false;
+  const report = v.report as Record<string, unknown> | undefined;
+  if (!report || typeof report.title !== "string" || typeof report.conclusion !== "string") return false;
+  if (!Array.isArray(report.sections)) return false;
+  return true;
+}
+
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
@@ -185,5 +202,11 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   }
 
   const session = await getLatestAvaResearchSession(threadId);
+  if (session && !isValidResearchPayload(session.research_payload)) {
+    console.error(
+      `[ava/research] session ${session.id} 的 research_payload 未通过 shape 校验，已降级为 null`
+    );
+    return NextResponse.json({ session: { ...session, research_payload: null } });
+  }
   return NextResponse.json({ session: session ?? null });
 }

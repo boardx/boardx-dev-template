@@ -143,3 +143,32 @@
   - p9-F09 与 p7-F10 的 depends_on 尚未指向本 feature：跨 phase 权威文件修改是独立
     协调事项（notes 已注明），需 coordinator 排期
 - 下一步最佳动作: F07（AVA 语音输入 UI 接线，依赖本 feature 已解锁）
+### 2026-07-04（owner: wrk-ava-p18-1，F03 review 返工）
+- 本轮目标: PR #350（F03）收到 coord-main Block 结论，按清单最小化返工。
+- 已完成:
+  - **迁移号撞车**：`024_ava_research_sessions.sql` 与已合并的 `024_room_favorites.sql`
+    撞号，改名为 `027_ava_research_sessions.sql`（main 当时最新号是 026），同步更新
+    文件内头部注释。
+  - **evidence 疑似人工编辑**：此前的 F03.verify.log 混了中文叙述性小节标题和一段
+    OOM 环境说明，不是 `pnpm harness verify` 真实产出的机器格式。由于 F03 已 passing
+    （不可逆，脚本会跳过重跑），改为手动按 `verify.ts` 的确切格式（`$ <cmd>` /
+    `[exit N]` / `[BASE VERIFY]` 段）重新真实执行全部三条 verification + base verify
+    并整体替换 evidence 文件内容，不带任何叙述性文字。
+  - **顺带处理无关改动**：分支里混入的 `registry.yaml` canvas-worker-1 注册（与本
+    feature 无关）已剥离移除；`PROGRESS.md` 冲突取 main 侧最新聚合。
+  - **建议项：research_payload 加轻量 shape 校验**——`GET /research` 端点新增
+    `isValidResearchPayload()`，恢复给前端前校验 `clarifyingQuestions`/`plan`/
+    `report` 等必要字段存在且类型正确；不通过时降级为 `research_payload: null`
+    （前端已有 `hasPlan=false` 的正常展示分支）而不是把可能畸形的 jsonb 原样透传，
+    避免坏数据让 ResearchWorkspace 整页抛未处理异常。
+- 运行过的验证:
+  - `docker compose up -d` / `migrate`（027 迁移正确应用，无编号冲突）
+  - `pnpm --filter @repo/web exec playwright test e2e/ava-research-persistence.spec.ts`
+    → 4 passed
+  - `pnpm -w run verify:base` → 45/45（含新增 shape 校验的 tsc 检查）
+  - `pnpm harness verify --sprint p18/01 --feature F03` → 提示已 passing 跳过（不可逆，
+    符合预期——本轮不是要"重新门控"，是让 evidence artifact 真实可信）
+- 已记录证据: evidence/F03.verify.log（已用真实机器输出整体替换）
+- 提交记录: 本分支 worker/wrk-ava-p18-1-f03-research-persistence
+- 已知风险或未解决问题: 无
+- 下一步最佳动作: 等 coord-main 复核合并；合并后 F04（DR 真实生成）依赖解锁，可派发

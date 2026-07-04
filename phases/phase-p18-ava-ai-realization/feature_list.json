@@ -60,7 +60,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-research-persistence.spec.ts"
       ],
-      "evidence": "evidence/F03.verify.log @ 2026-07-04T00:30:28.515Z",
+      "evidence": "evidence/F03.verify.log @ 2026-07-04T05:28:42.000Z",
       "notes": "requirements/02。新增 research 持久化 migration（阶段状态机 + 结构化 payload，参考老代码 DeepResearchReportEntity 字段）；兼容现有 ava_messages 记录。e2e 核心断言：page.reload() 后 research-card data-status 与刷新前一致。"
     },
     {
