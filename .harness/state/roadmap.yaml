@@ -158,3 +158,9 @@ phases:
     status: not_started
     depends_on: ["04", "p10", "p13"]
     has_ui: true
+  - id: "p21"
+    slug: platform-accounts-hardening
+    name: platform-accounts-hardening
+    goal: "Platform/Accounts(auth/team/profile/home/billing)地基级 gap 修复:证据造假清零、两处越权/免密安全漏洞修复、billing F04 真实闭环、需求-实现-测试三方对齐"
+    status: not_started
+    depends_on: []
