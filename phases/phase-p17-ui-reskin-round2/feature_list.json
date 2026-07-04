@@ -90,11 +90,11 @@
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web exec playwright test e2e/admin-*.spec.ts",
+        "cd apps/web && pnpm exec playwright test e2e/admin-*.spec.ts",
         "cd apps/web && bash scripts/lint-design.sh"
       ],
       "evidence": "",
-      "notes": "uc-admin-reskin-001（新增）。verification 复用既有 p15 全部 e2e 回归（含权限相关用例，reskin 绝不能弱化鉴权）+ design lint。blocked-on 同 F01。"
+      "notes": "uc-admin-reskin-001（新增）。verification 复用既有 p15 全部 e2e 回归（含权限相关用例，reskin 绝不能弱化鉴权）+ design lint。blocked-on 同 F01。fix(F04): verification 第 3 条原写法 `pnpm --filter @repo/web exec playwright test e2e/admin-*.spec.ts` 在 repo 根目录下执行时，bash 的 glob 展开发生在 pnpm/exec 之前、相对于 repo 根（`e2e/` 目录只存在于 `apps/web/e2e/`，不存在于根），导致 glob 无匹配、原样传给 playwright 后报 \"No tests found\"。与 F02 遇到的同一类 bug，改为 `cd apps/web && pnpm exec playwright test e2e/admin-*.spec.ts`（与第 4 条 lint-design 已用的 cd 前缀写法一致，且与 F02 已验证过的修法保持一致）后可正确匹配并执行全部 admin-*.spec.ts，语义不变。"
     },
     {
       "id": "F05",
