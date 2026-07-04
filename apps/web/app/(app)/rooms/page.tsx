@@ -17,6 +17,37 @@ interface Room {
   is_member?: boolean;
 }
 
+function FavoriteToggle({
+  active,
+  onToggle,
+  testId,
+  className,
+}: {
+  active: boolean;
+  onToggle: () => void;
+  testId: string;
+  className?: string;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      data-testid={testId}
+      aria-pressed={active}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onToggle();
+      }}
+      className={cn("h-7 w-7 text-base leading-none text-amber-500", className)}
+      title={active ? "取消收藏" : "收藏"}
+    >
+      {active ? "★" : "☆"}
+    </Button>
+  );
+}
+
 // uc-rr-002：可见性二选一卡片（🔒 Private / 🌐 Team），默认 Private
 const VISIBILITY_OPTIONS = [
   { value: "private", icon: "🔒", title: "Private", desc: "Only invited members can find and join" },
@@ -109,6 +140,8 @@ function RoomSkeleton() {
 
 export default function RoomsPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [favIds, setFavIds] = useState<Set<string>>(new Set());
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
   const [visibility, setVisibility] = useState("private");
@@ -128,20 +161,58 @@ export default function RoomsPage() {
     if (typeof window !== "undefined") window.localStorage.setItem("rooms-view", v);
   }
 
-  async function load(search = "") {
+  async function load(search = "", favOnly = favoritesOnly) {
     setLoading(true);
     setError("");
-    const res = await fetch(`/api/rooms${search ? `?q=${encodeURIComponent(search)}` : ""}`);
+    const sp = new URLSearchParams();
+    if (search) sp.set("q", search);
+    if (favOnly) sp.set("favorite", "1");
+    const qs = sp.toString();
+    const res = await fetch(`/api/rooms${qs ? `?${qs}` : ""}`);
     if (res.status === 401) {
       setError("请先登录");
       setLoading(false);
       return;
     }
-    setRooms((await res.json()).rooms ?? []);
+    const d = await res.json();
+    setRooms(d.rooms ?? []);
+    setFavIds(new Set((d.favoriteIds ?? []).map(String)));
     setLoading(false);
   }
 
   useEffect(() => { void load(); }, []);
+
+  // uc-rr-004：星标即时切换（乐观更新 + 网络失败回滚 toast）
+  async function toggleFav(id: Room["id"]) {
+    const key = String(id);
+    const isFav = favIds.has(key);
+    setFavIds((prev) => {
+      const next = new Set(prev);
+      if (isFav) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+    try {
+      const res = await fetch(`/api/rooms/${id}/favorite`, { method: isFav ? "DELETE" : "POST" });
+      if (!res.ok) throw new Error(String(res.status));
+      if (favoritesOnly) await load(q, true);
+    } catch {
+      // 回滚
+      setFavIds((prev) => {
+        const next = new Set(prev);
+        if (isFav) next.add(key);
+        else next.delete(key);
+        return next;
+      });
+      setError("收藏操作失败，请重试");
+    }
+  }
+
+  function toggleFavoritesOnly() {
+    const next = !favoritesOnly;
+    setFavoritesOnly(next);
+    void load(q, next);
+  }
 
   // uc-rr-002 E1：房间名 ≥3 字符才可提交
   const nameTooShort = name.trim().length < 3;
@@ -265,8 +336,19 @@ export default function RoomsPage() {
         </Button>
       </div>
 
-      {/* 视图切换（V1：grid / list） */}
-      <div className="mt-6 flex items-center justify-end">
+      {/* Favorites 筛选 + 视图切换 */}
+      <div className="mt-6 flex items-center justify-end gap-2">
+        <Button
+          variant={favoritesOnly ? "secondary" : "ghost"}
+          size="sm"
+          data-testid="room-favorites-filter"
+          aria-pressed={favoritesOnly}
+          onClick={toggleFavoritesOnly}
+          className="gap-1.5 text-13"
+        >
+          <span className="text-amber-500">{favoritesOnly ? "★" : "☆"}</span>
+          Favorites
+        </Button>
         <ViewToggle view={view} onChange={changeView} />
       </div>
 
@@ -275,9 +357,15 @@ export default function RoomsPage() {
         {loading ? (
           <RoomSkeleton />
         ) : rooms.length === 0 ? (
-          <div data-testid="empty" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <NewRoomCard onClick={() => setShowForm(true)} />
-          </div>
+          favoritesOnly ? (
+            <p data-testid="empty-favorites" className="py-12 text-center text-13 text-muted-foreground">
+              还没有收藏的房间
+            </p>
+          ) : (
+            <div data-testid="empty" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <NewRoomCard onClick={() => setShowForm(true)} />
+            </div>
+          )
         ) : view === "grid" ? (
           <div data-testid="room-list" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <NewRoomCard onClick={() => setShowForm(true)} />
@@ -292,7 +380,14 @@ export default function RoomsPage() {
                   {r.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-                  <span className="truncate text-13 font-semibold text-foreground">{r.name}</span>
+                  <span className="flex min-w-0 items-center gap-1">
+                    <FavoriteToggle
+                      active={favIds.has(String(r.id))}
+                      onToggle={() => toggleFav(r.id)}
+                      testId={`room-favorite-toggle-${r.id}`}
+                    />
+                    <span className="truncate text-13 font-semibold text-foreground">{r.name}</span>
+                  </span>
                   <span className="flex shrink-0 items-center gap-1.5">
                     <VisibilityBadge room={r} />
                     {r.is_member === false && (
@@ -328,6 +423,11 @@ export default function RoomsPage() {
                 <span className={`flex h-7 w-9 shrink-0 items-center justify-center rounded-md text-13 font-bold text-foreground/30 ${fillFor(r.id)}`}>
                   {r.name.charAt(0).toUpperCase()}
                 </span>
+                <FavoriteToggle
+                  active={favIds.has(String(r.id))}
+                  onToggle={() => toggleFav(r.id)}
+                  testId={`room-favorite-toggle-${r.id}`}
+                />
                 <span className="flex-1 truncate text-13 font-semibold text-foreground">{r.name}</span>
                 <VisibilityBadge room={r} />
                 {r.is_member === false && (

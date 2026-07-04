@@ -29,6 +29,44 @@ describe("applyCommand（纯 reducer）", () => {
   });
 });
 
+describe("patch（字段级更新，p6:F14）", () => {
+  it("只更新 patch 里列出的字段，其余保持", () => {
+    const src = [{ ...item("a", 5, 6), text: "keep" }];
+    const out = applyCommand(src, { kind: "patch", id: "a", patch: { x: 50 } });
+    expect(out[0]).toMatchObject({ x: 50, y: 6, text: "keep" });
+  });
+  it("两次不同字段的 patch 互不覆盖", () => {
+    let items = [item("a")];
+    items = applyCommand(items, { kind: "patch", id: "a", patch: { x: 10 } });
+    items = applyCommand(items, { kind: "patch", id: "a", patch: { text: "hi" } });
+    expect(items[0]).toMatchObject({ x: 10, text: "hi" });
+  });
+  it("patch 不能篡改 id/type", () => {
+    const out = applyCommand([item("a")], {
+      kind: "patch",
+      id: "a",
+      patch: { id: "hacked", type: "rect", x: 1 },
+    });
+    expect(out[0]).toMatchObject({ id: "a", type: "note", x: 1 });
+  });
+  it("支持 widget 专有扩展字段（CRDT-ready）", () => {
+    let items = [item("a")];
+    items = applyCommand(items, { kind: "patch", id: "a", patch: { color: "yellow" } });
+    items = applyCommand(items, { kind: "patch", id: "a", patch: { fontSize: 14 } });
+    expect(items[0]).toMatchObject({ color: "yellow", fontSize: 14 });
+  });
+  it("未知 id 为 no-op", () => {
+    const src = [item("a")];
+    const out = applyCommand(src, { kind: "patch", id: "nope", patch: { x: 99 } });
+    expect(out).toEqual(src);
+  });
+  it("move/edit 等价于对应字段的 patch（别名语义）", () => {
+    const viaMove = applyCommand([item("a")], { kind: "move", id: "a", x: 7, y: 8 });
+    const viaPatch = applyCommand([item("a")], { kind: "patch", id: "a", patch: { x: 7, y: 8 } });
+    expect(viaMove).toEqual(viaPatch);
+  });
+});
+
 describe("applyAll", () => {
   it("折叠多个命令", () => {
     const out = applyAll([], [

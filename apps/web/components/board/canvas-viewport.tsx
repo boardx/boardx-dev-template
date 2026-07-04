@@ -15,16 +15,31 @@ import { publishViewport, subscribeFollow } from "@/lib/collab-bus";
 // 画布视口：拖拽平移 + 滚轮缩放 + 缩放控制条 + 小地图（P6 F05，纯前端，无 items 依赖）。
 // uc-collab-001 协作感知增强：把本地视口上报到 collab-bus（供心跳广播给他人 → 他人可「跟随视角」），
 // 并订阅跟随目标——正在跟随他人时，本地视口贴合被跟随者的视口（业务规则 2：跟随只改视角）。
-export function CanvasViewport({ children }: { children?: React.ReactNode }) {
+//
+// p6:F13 渲染引擎切换：新增 underlay 槽（fabric <canvas>，1:1 铺满视口、不吃 CSS transform）
+// 与 onViewportChange 回调（把 vp 镜像到 fabric viewportTransform）。surface 仍保留
+// CSS transform（承载 DOM 覆盖层：对齐参考线/编辑框/徽标 + collab 的 data-vp-* 锚点），
+// 但改为 pointer-events-none，让指针事件落到下方的 fabric canvas 上再冒泡回本组件平移。
+export function CanvasViewport({
+  children,
+  underlay,
+  onViewportChange,
+}: {
+  children?: React.ReactNode;
+  underlay?: React.ReactNode;
+  onViewportChange?: (vp: Viewport) => void;
+}) {
   const [vp, setVp] = useState<Viewport>(DEFAULT_VIEWPORT);
   const pan = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
   // 是否正在跟随他人：跟随时本地平移/缩放操作被禁用（视角由被跟随者驱动）。
   const [following, setFollowing] = useState(false);
 
-  // 每次本地视口变化，向 collab-bus 上报（心跳读取后广播；uc-collab-001 视角字段）。
+  // 每次本地视口变化，向 collab-bus 上报（心跳读取后广播；uc-collab-001 视角字段），
+  // 并同步给渲染引擎（fabric viewportTransform，p6:F13）。
   useEffect(() => {
     publishViewport({ tx: vp.tx, ty: vp.ty, scale: vp.scale });
-  }, [vp.tx, vp.ty, vp.scale]);
+    onViewportChange?.(vp);
+  }, [vp, onViewportChange]);
 
   // 订阅跟随目标：有目标 → 贴合其视口并进入跟随态；null → 退出跟随。
   useEffect(() => {
@@ -69,6 +84,8 @@ export function CanvasViewport({ children }: { children?: React.ReactNode }) {
         onMouseUp={onUp}
         onMouseLeave={onUp}
       >
+        {/* 渲染引擎层（fabric <canvas>）：1:1 铺满，不参与 CSS transform（F13） */}
+        {underlay}
         <div
           data-testid="canvas-surface"
           data-following={following ? "true" : "false"}
@@ -76,7 +93,7 @@ export function CanvasViewport({ children }: { children?: React.ReactNode }) {
           data-vp-ty={Math.round(vp.ty)}
           data-vp-scale={vp.scale}
           style={{ transform: `translate(${vp.tx}px, ${vp.ty}px) scale(${vp.scale})`, transformOrigin: "0 0" }}
-          className="h-full w-full"
+          className={"h-full w-full" + (underlay ? " pointer-events-none" : "")}
         >
           {children ?? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">

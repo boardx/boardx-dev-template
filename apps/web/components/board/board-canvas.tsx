@@ -1,16 +1,28 @@
 "use client";
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CanvasViewport } from "@/components/board/canvas-viewport";
+import {
+  FabricCanvas,
+  type ItemMove,
+  type ItemResize,
+  type RenderItem,
+  type ViewportState,
+} from "@/components/board/fabric-canvas";
+import { type Guide, type SpacingHint } from "@/lib/canvas-snap";
 import { BoardBottomDock, type DockToolKey } from "@/components/board/board-bottom-dock";
 import { BoardAiOverlay } from "@/components/board/board-ai-panel";
 import { setOperating } from "@/lib/collab-bus";
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   Cable,
   Hand,
   Image,
   LayoutTemplate,
   MousePointer2,
+  Paintbrush,
   PenLine,
   Redo2,
   RefreshCw,
@@ -40,10 +52,116 @@ const COLORS: Record<string, string> = {
   pink: "bg-tag-pink border-border-strong text-foreground",
 };
 const COLOR_TOKENS = Object.keys(COLORS);
-// color 字段可为复合 "<base>:bold"（uc-widget-menu-002 字重）；base 决定色/文本判别，:bold 决定字重。
-const baseColor = (c?: string | null) => (c ?? "amber").split(":")[0] || "amber";
-const isBold = (it: { color?: string | null }) => (it.color ?? "").endsWith(":bold");
+// color 字段可为复合 "<base>[:bold][|k=v...]"（uc-widget-menu-002 字重 + p6:F12 文本样式）：
+// "<base>" 决定色/文本/嵌入判别；紧随其后可选的 ":bold" 段（历史格式，勿改）决定字重；
+// "|" 之后是任意数量的 "k=v" 样式段（font/size/align/italic），供 F12 文本样式面板使用。
+// 三者互不影响，解析时先按 "|" 切出样式段，再从首段（base[:bold]）里剥离 base 与 bold。
+const splitColor = (c?: string | null) => (c ?? "amber").split("|");
+const baseColor = (c?: string | null) => (splitColor(c)[0] ?? "amber").split(":")[0] || "amber";
+const isBold = (it: { color?: string | null }) => (splitColor(it.color)[0] ?? "").endsWith(":bold");
 const colorClass = (c?: string | null) => COLORS[baseColor(c)] ?? COLORS.amber;
+
+// p6:F12 文本样式段解析："|" 之后的 "k=v" 列表。
+const styleSegs = (c?: string | null) => splitColor(c).slice(1);
+const styleGet = (c: string | null | undefined, key: string): string | null => {
+  for (const seg of styleSegs(c)) {
+    const [k, ...rest] = seg.split("=");
+    if (k === key) return rest.join("=");
+  }
+  return null;
+};
+const isItalic = (it: { color?: string | null }) => styleGet(it.color, "italic") === "1";
+const getFontFamily = (it: { color?: string | null }) => styleGet(it.color, "font") ?? DEFAULT_FONT;
+const getFontSize = (it: { color?: string | null }) => {
+  const v = styleGet(it.color, "size");
+  const n = v != null ? Number(v) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_FONT_SIZE;
+};
+const getAlign = (it: { color?: string | null }): "left" | "center" | "right" => {
+  const v = styleGet(it.color, "align");
+  if (v === "center" || v === "right" || v === "left") return v;
+  // 未显式设置对齐时的默认值：文本块沿用「左对齐」，便签/其它沿用「居中」（与既有视觉一致）。
+  return baseColor(it.color) === "text" ? "left" : "center";
+};
+
+// p6:F19（uc-widget-menu-002）：边框色/边框宽/透明度样式段，沿用 F12 建立的 "|k=v" 编码约定，
+// 不新增持久化列（color 仍是唯一可扩展的透传字段）。
+// 边框宽同时承担「线宽」语义（uc-widget-menu-002 的线宽项）：本轮画布尚无独立的形状/连接线
+// 组件类型，故线宽与边框宽复用同一个 "|borderw=" 段，避免预留不会被使用的字段。
+const BORDER_TOKENS = ["none", "gray", "blue", "red"] as const;
+type BorderToken = (typeof BORDER_TOKENS)[number];
+const DEFAULT_BORDER: BorderToken = "none";
+const getBorder = (it: { color?: string | null }): BorderToken => {
+  const v = styleGet(it.color, "border");
+  return (BORDER_TOKENS as readonly string[]).includes(v ?? "") ? (v as BorderToken) : DEFAULT_BORDER;
+};
+const BORDER_WIDTH_OPTIONS = [1, 2, 4] as const;
+const DEFAULT_BORDER_WIDTH = 1;
+const getBorderWidth = (it: { color?: string | null }): number => {
+  const v = styleGet(it.color, "borderw");
+  const n = v != null ? Number(v) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_BORDER_WIDTH;
+};
+const OPACITY_OPTIONS = [100, 75, 50, 25] as const;
+const DEFAULT_OPACITY = 100;
+const getOpacity = (it: { color?: string | null }): number => {
+  const v = styleGet(it.color, "opacity");
+  const n = v != null ? Number(v) : NaN;
+  return Number.isFinite(n) && n > 0 && n <= 100 ? n : DEFAULT_OPACITY;
+};
+// uc-widget-menu-002「文字色」：与便签/背景底色（base token）分离的独立文字颜色，
+// F12 之前从未提供文字色控制（此前仅有底色/加粗）。留空 = 跟随主题前景色（既有视觉不变）。
+const TEXT_COLOR_TOKENS = ["default", "slate", "blue", "green", "red"] as const;
+type TextColorToken = (typeof TEXT_COLOR_TOKENS)[number];
+const DEFAULT_TEXT_COLOR: TextColorToken = "default";
+const getTextColor = (it: { color?: string | null }): TextColorToken => {
+  const v = styleGet(it.color, "textcolor");
+  return (TEXT_COLOR_TOKENS as readonly string[]).includes(v ?? "") ? (v as TextColorToken) : DEFAULT_TEXT_COLOR;
+};
+// 样式字段集合（用于「应用格式」把源对象的可复用样式整体复制到目标对象）。
+const STYLE_KEYS = ["font", "size", "align", "italic", "border", "borderw", "opacity", "textcolor"] as const;
+// 「应用格式」（uc-widget-menu-010）：把源对象的完整可复用样式（背景/字重 head +
+// 字体/字号/对齐/斜体/边框/线宽/透明度/文字色样式段）整体复制为目标对象的新 color 值，
+// 只复制外观样式，不带 text/位置/尺寸。目标原有样式段全部被源样式覆盖（非合并），
+// 语义对齐「格式刷」直觉——应用后目标与源外观一致。
+const applyFormatColor = (source: { color?: string | null }, targetIsText: boolean): string => {
+  const [srcHead] = splitColor(source.color);
+  // 目标若为文本组件，强制保留 "text" 判别头（透明块，不套背景色/tag 色）；
+  // 否则采用源的 base[:bold]（含背景色 + 字重）。
+  const head = targetIsText ? TEXT_MARK + (isBold(source) ? ":bold" : "") : (srcHead ?? "amber");
+  const segs = STYLE_KEYS.map((k) => {
+    const v = styleGet(source.color, k);
+    return v != null ? `${k}=${v}` : null;
+  }).filter((s): s is string => s !== null);
+  return [head, ...segs].join("|");
+};
+// 用新的 k=v 覆盖/追加样式段，保留 base[:bold] 与其它未涉及的样式段。
+const withStyle = (color: string | null | undefined, patch: Record<string, string | null>): string => {
+  const [head, ...segs] = splitColor(color);
+  const map = new Map(
+    segs.map((seg) => {
+      const [k, ...rest] = seg.split("=");
+      return [k, rest.join("=")] as const;
+    }),
+  );
+  for (const [k, v] of Object.entries(patch)) {
+    if (v === null) map.delete(k);
+    else map.set(k, v);
+  }
+  const rest = [...map.entries()].map(([k, v]) => `${k}=${v}`);
+  return [head, ...rest].join("|");
+};
+
+// p6:F12（uc-widget-menu-013 编辑文本样式）：字体/字号可选项。
+// 值为渲染层直接消费的 CSS font-family / px 数值，持久化在 color 的 "|font="/"|size=" 段。
+const FONT_OPTIONS = [
+  { value: "sans-serif", label: "无衬线" },
+  { value: "serif", label: "衬线" },
+  { value: "monospace", label: "等宽" },
+] as const;
+const DEFAULT_FONT = FONT_OPTIONS[0].value;
+const FONT_SIZE_OPTIONS = [12, 14, 16, 20, 24, 32] as const;
+const DEFAULT_FONT_SIZE = 12;
 
 // 文本（Text）组件（uc-board-menu-003）。
 // 约束（范围纪律）：当前 @repo/canvas 的 validateNewItem 只放行 type ∈ {note,rect}，
@@ -72,100 +190,19 @@ interface Move {
   toY: number;
 }
 
-// 可逆操作（F09 撤销/重做命令栈）。add 与 delete 互为逆；move 记录 from/to。
+// 可逆操作（F09 撤销/重做命令栈）。add 与 delete 互为逆；move/resize 记录 from/to。
 type Op =
   | { kind: "add"; items: Item[] }
   | { kind: "delete"; items: Item[] }
-  | { kind: "move"; moves: Move[] };
+  | { kind: "move"; moves: Move[] }
+  | { kind: "resize"; resize: ItemResize }; // p6:F07 组件缩放
 
 type BoardTool = "select" | "pan" | "sticky" | "draw" | "text" | "connector" | "shape" | "assets" | "templates";
 
 const NUDGE = 1;
 const BIG_NUDGE = 10;
-
-// 对齐参考线（uc-canvas-007）：拖动组件时，若其边缘/中心线与其它组件的边缘/中心线
-// 足够接近（画布坐标系阈值 SNAP_TOLERANCE），则吸附到该对齐位置并显示参考线。
-const SNAP_TOLERANCE = 6;
-
-interface Guide {
-  orientation: "v" | "h"; // v=竖直参考线（沿 x 对齐）；h=水平参考线（沿 y 对齐）
-  pos: number; // 参考线在画布坐标系中的 x（v）或 y（h）
-}
-
-// 组件在某一轴上的三条对齐锚点（前/中/后 = 左中右 或 上中下）。
-function anchors(start: number, size: number): number[] {
-  return [start, start + size / 2, start + size];
-}
-
-// 计算拖动结果的吸附增量 + 需显示的参考线。
-// dragged: 拖动后（未吸附）的目标 item；others: 其余静止 item。
-// 返回沿 x/y 的吸附增量（把 dragged 拉到对齐位置）与参考线集合。
-function computeSnap(
-  dragged: { x: number; y: number; w: number; h: number },
-  others: { x: number; y: number; w: number; h: number }[],
-): { snapDX: number; snapDY: number; guides: Guide[] } {
-  const guides: Guide[] = [];
-  let snapDX = 0;
-  let snapDY = 0;
-  let bestX = SNAP_TOLERANCE + 1;
-  let bestY = SNAP_TOLERANCE + 1;
-
-  const dragXA = anchors(dragged.x, dragged.w);
-  const dragYA = anchors(dragged.y, dragged.h);
-
-  for (const o of others) {
-    const oxA = anchors(o.x, o.w);
-    const oyA = anchors(o.y, o.h);
-    for (const dx of dragXA) {
-      for (const ox of oxA) {
-        const diff = Math.abs(dx - ox);
-        if (diff <= SNAP_TOLERANCE && diff < bestX) {
-          bestX = diff;
-          snapDX = ox - dx;
-        }
-      }
-    }
-    for (const dy of dragYA) {
-      for (const oy of oyA) {
-        const diff = Math.abs(dy - oy);
-        if (diff <= SNAP_TOLERANCE && diff < bestY) {
-          bestY = diff;
-          snapDY = oy - dy;
-        }
-      }
-    }
-  }
-
-  const snap = { snapDX: bestX <= SNAP_TOLERANCE ? snapDX : 0, snapDY: bestY <= SNAP_TOLERANCE ? snapDY : 0 };
-
-  // 吸附确定后，收集所有与吸附后位置精确重合的对齐线用于绘制参考线。
-  if (bestX <= SNAP_TOLERANCE) {
-    const snappedX = anchors(dragged.x + snap.snapDX, dragged.w);
-    const seen = new Set<number>();
-    for (const o of others) {
-      for (const ox of anchors(o.x, o.w)) {
-        if (snappedX.some((a) => Math.abs(a - ox) < 0.5) && !seen.has(ox)) {
-          seen.add(ox);
-          guides.push({ orientation: "v", pos: ox });
-        }
-      }
-    }
-  }
-  if (bestY <= SNAP_TOLERANCE) {
-    const snappedY = anchors(dragged.y + snap.snapDY, dragged.h);
-    const seen = new Set<number>();
-    for (const o of others) {
-      for (const oy of anchors(o.y, o.h)) {
-        if (snappedY.some((a) => Math.abs(a - oy) < 0.5) && !seen.has(oy)) {
-          seen.add(oy);
-          guides.push({ orientation: "h", pos: oy });
-        }
-      }
-    }
-  }
-
-  return { ...snap, guides };
-}
+// 对齐吸附（uc-canvas-007）纯逻辑已抽到 @/lib/canvas-snap（F13：DOM 参考线渲染
+// 与 fabric 拖拽吸附共用），本文件只渲染参考线 DOM（testid=alignment-guide 不变）。
 
 function BoardMenuButton({
   testId,
@@ -205,6 +242,10 @@ function BoardMenuButton({
 
 // 画布：渲染 board-keyed items（ADR-0002）+ 选择/键盘（F06）+ 复制粘贴（F08）+ 撤销/重做（F09）。
 // 视口（平移/缩放/小地图）复用 CanvasViewport（F05）。marquee 框选 deferred（与拖拽平移冲突，留后续）。
+//
+// p6:F13 渲染引擎：item 的渲染与指针交互（选中框/拖拽/多选/双击）由 FabricCanvas
+// （fabric.Canvas 适配器）承担；本组件仍是数据权威（REST 持久化 + 撤销栈 + 剪贴板），
+// 周边 DOM UI（工具栏 / Widget Menu / 右键菜单 / selection-count / 参考线 / 编辑框 / 徽标）不变。
 export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -214,29 +255,53 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const [openPanel, setOpenPanel] = useState<"assets" | "templates" | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null); // 右键上下文菜单（uc-context-menu-001）
   const [guides, setGuides] = useState<Guide[]>([]); // 拖动时的对齐参考线（uc-canvas-007）
+  const [spacings, setSpacings] = useState<SpacingHint[]>([]); // p6:F07 等间距提示
+  // p6:F19（uc-widget-menu-010 应用格式）：格式刷取样状态。非 null 表示已进入取样模式，
+  // 值为源对象的 color（取样时快照，避免取样后源对象被继续编辑影响后续应用）。
+  // 用户可连续点击多个目标应用同一格式，直到 Esc/切工具/点不兼容对象退出（主流程 6/7）。
+  const [formatSource, setFormatSource] = useState<{ id: string; color: string | null } | null>(null);
+  // 当前正在应用格式的目标 id（去重用，见 onFabricSelection 注释）。
+  const formatApplyingRef = useRef<string | null>(null);
   // uc-widget-menu-009 刷新组件：可刷新组件的重载信号（重载次数 + 最近重载时间戳），
   // 是纯客户端的「内容已重新加载」可见反馈，随每次刷新自增。
   const [reload, setReload] = useState<Record<string, { count: number; at: number }>>({});
   const [refreshing, setRefreshing] = useState<Set<string>>(new Set()); // 刷新处理中（旋转/加载态）
   const placeN = useRef(0); // 同步自增放置位，避免连点时读到尚未刷新的 items.length 造成重叠
+  // p6:F19：per-item PATCH 串行队列。多个样式段（边框/线宽/透明度/文字色…）连续快速点击时，
+  // 各自独立 fetch 并发发出，网络层不保证到达服务端的顺序——后发出的 PATCH 可能先落地，
+  // 早发出的 PATCH 晚落地并用旧 color 覆盖新值（观测到的真实回归，而非理论风险）。
+  // 用 per-item Promise 链保证同一 item 的 PATCH 严格按发起顺序落库，不影响乐观 UI 更新
+  // （setItems 仍同步先行，用户感知无延迟）。
+  const patchQueue = useRef<Map<string, Promise<unknown>>>(new Map());
+  function queuePatch(id: string, body: Record<string, unknown>): Promise<unknown> {
+    const prev = patchQueue.current.get(id) ?? Promise.resolve();
+    const next = prev
+      .catch(() => {})
+      .then(() =>
+        fetch(`/api/board-items/${id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        }),
+      );
+    patchQueue.current.set(id, next);
+    return next;
+  }
+
   const clipboard = useRef<Item[]>([]); // 应用内剪贴板（F08）
   const undoStack = useRef<Op[]>([]); // F09
   const redoStack = useRef<Op[]>([]);
-  // 鼠标拖拽移动便签（指针驱动；记录可逆 move 命令）。
-  const dragRef = useRef<{
-    startX: number;
-    startY: number;
-    scale: number;
-    ids: string[];
-    init: Record<string, { x: number; y: number; w: number; h: number }>;
-    others: { x: number; y: number; w: number; h: number }[]; // 未参与拖动的组件（吸附参照）
-    snapDX: number; // 最近一次 onDragMove 计算出的吸附增量（release 时应用）
-    snapDY: number;
-    moved: boolean;
-  } | null>(null);
-  const justDraggedRef = useRef(false); // 拖拽刚结束 → 抑制随后的 click 选择翻转
+  // 视口快照（CanvasViewport 上报），供 fabric viewportTransform 镜像与测试 API 坐标换算。
+  const [vp, setVp] = useState<ViewportState>({ tx: 0, ty: 0, scale: 1 });
+  // fabric 拖拽进行中（onOperating 回调驱动）：轮询同步在拖拽中不合并服务端快照。
+  const draggingRef = useRef(false);
 
+  // p6:F19 修复：load() 用服务端快照整体覆盖 items（其它 F0x 既有行为，不改）。
+  // 若此时仍有未落地的 PATCH（如样式改动后立即触发了 load，如新增组件后的 await load()），
+  // 服务端快照可能还不包含最新样式，覆盖会让乐观更新「凭空消失」（真实回归，非测试假象）。
+  // 先等所有排队中的 PATCH 落地，再拉取快照，保证 load() 不会撤销尚未确认的用户操作。
   const load = useCallback(async () => {
+    await Promise.all(patchQueue.current.values());
     const res = await fetch(`/api/boards/${boardId}/items`);
     if (res.ok) setItems((await res.json()).items ?? []);
   }, [boardId]);
@@ -258,10 +323,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     let stop = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     async function poll() {
-      if (!stop && !editingId && !dragRef.current) {
+      if (!stop && !editingId && !draggingRef.current) {
         try {
           const res = await fetch(`/api/boards/${boardId}/items`);
-          if (res.ok && !stop && !editingId && !dragRef.current) {
+          if (res.ok && !stop && !editingId && !draggingRef.current) {
             const next = ((await res.json()).items ?? []) as Item[];
             setItems((prev) =>
               JSON.stringify(prev) === JSON.stringify(next) ? prev : next
@@ -320,110 +385,136 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     []
   );
 
+  // p6:F07 组件缩放落库（PATCH x/y/w/h；undo 用 from，redo 用 to）。
+  const apiResize = useCallback(
+    (id: string, rect: { x: number; y: number; w: number; h: number }) =>
+      fetch(`/api/board-items/${id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(rect),
+      }),
+    []
+  );
+
   function recordOp(op: Op) {
     undoStack.current.push(op);
     redoStack.current = [];
   }
 
-  // ── 鼠标拖拽移动便签（F06 增强：指针驱动 + 视口缩放感知 + 可逆）──────────────
-  // 读取画布表面的缩放（item 坐标系在缩放后的 surface 内，故屏幕位移需 ÷scale）。
-  function readScale(): number {
-    const surf = document.querySelector('[data-testid="canvas-surface"]') as HTMLElement | null;
-    if (!surf) return 1;
-    const t = getComputedStyle(surf).transform;
-    const m = t && t !== "none" ? t.match(/matrix\(([^)]+)\)/) : null;
-    const first = m?.[1]?.split(",")[0];
-    const a = first ? parseFloat(first) : 1;
-    return a || 1;
-  }
-
-  const onDragMove = useCallback((e: MouseEvent) => {
-    const d = dragRef.current;
-    if (!d) return;
-    if (!d.moved && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > 3) d.moved = true;
-    if (!d.moved) return;
-    const dx = (e.clientX - d.startX) / d.scale;
-    const dy = (e.clientY - d.startY) / d.scale;
-
-    // 以拖动集合的第一个 item 作为吸附参照，计算对齐吸附增量与参考线。
-    const leadId = d.ids[0];
-    const lead = leadId ? d.init[leadId] : undefined;
-    let snapDX = 0;
-    let snapDY = 0;
-    let nextGuides: Guide[] = [];
-    if (lead) {
-      const { snapDX: sdx, snapDY: sdy, guides: g } = computeSnap(
-        { x: lead.x + dx, y: lead.y + dy, w: lead.w, h: lead.h },
-        d.others,
+  // ── fabric 渲染层回调（F13）：手势在 fabric.Canvas 上发生，这里转成既有命令/落库路径 ──
+  // 拖拽移动提交：可逆 move 命令 + PATCH 落库（等价于旧 DOM onDragUp 的收尾）。
+  const onMoveCommit = useCallback(
+    async (moves: ItemMove[]) => {
+      const map = new Map(moves.map((m) => [m.id, m]));
+      setItems((prev) =>
+        prev.map((it) => {
+          const m = map.get(it.id);
+          return m ? { ...it, x: m.toX, y: m.toY } : it;
+        }),
       );
-      snapDX = sdx;
-      snapDY = sdy;
-      nextGuides = g;
-    }
-    d.snapDX = snapDX;
-    d.snapDY = snapDY;
-    setGuides(nextGuides);
-
-    setItems((prev) =>
-      prev.map((it) => {
-        const p = d.init[it.id];
-        return p ? { ...it, x: p.x + dx + snapDX, y: p.y + dy + snapDY } : it;
-      }),
-    );
-  }, []);
-
-  const onDragUp = useCallback(
-    async (e: MouseEvent) => {
-      window.removeEventListener("mousemove", onDragMove);
-      window.removeEventListener("mouseup", onDragUp);
-      const d = dragRef.current;
-      dragRef.current = null;
-      setOperating(false); // uc-collab-001：拖拽结束 → 清除操作态
-      setGuides([]); // 释放后隐藏参考线
-      if (!d || !d.moved) return;
-      justDraggedRef.current = true;
-      // 若拖动结束时触发吸附，最终位置 = 释放位置 + 吸附增量；否则停在释放位置。
-      const dx = (e.clientX - d.startX) / d.scale + d.snapDX;
-      const dy = (e.clientY - d.startY) / d.scale + d.snapDY;
-      const moves: Move[] = d.ids.map((id) => {
-        const f = d.init[id] ?? { x: 0, y: 0, w: 0, h: 0 };
-        return { id, fromX: f.x, fromY: f.y, toX: f.x + dx, toY: f.y + dy };
-      });
-      setSelected(new Set(d.ids));
+      setSelected(new Set(moves.map((m) => m.id)));
       undoStack.current.push({ kind: "move", moves });
       redoStack.current = [];
       await apiMove(moves, false);
     },
-    [apiMove, onDragMove],
+    [apiMove],
   );
 
-  function startNoteDrag(e: React.MouseEvent, item: Item) {
-    e.stopPropagation(); // 阻止视口平移在便签上启动
-    if (!canEdit || editingId === item.id) return;
-    const ids = selected.has(item.id) ? items.filter((it) => selected.has(it.id)).map((it) => it.id) : [item.id];
-    // 拖动集合置于 ids 首位（吸附以拖动的目标 item 为参照）。
-    const orderedIds = [item.id, ...ids.filter((id) => id !== item.id)];
-    const init: Record<string, { x: number; y: number; w: number; h: number }> = {};
-    const others: { x: number; y: number; w: number; h: number }[] = [];
-    items.forEach((it) => {
-      if (orderedIds.includes(it.id)) init[it.id] = { x: it.x, y: it.y, w: it.w, h: it.h };
-      else others.push({ x: it.x, y: it.y, w: it.w, h: it.h });
-    });
-    dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      scale: readScale(),
-      ids: orderedIds,
-      init,
-      others,
-      snapDX: 0,
-      snapDY: 0,
-      moved: false,
-    };
-    setOperating(true); // uc-collab-001：开始拖拽 → 标记为「正在操作」，供他人看到「谁在操作」
-    window.addEventListener("mousemove", onDragMove);
-    window.addEventListener("mouseup", onDragUp);
-  }
+  // p6:F07 缩放提交：可逆 resize 命令 + PATCH 落库（吸附已在 fabric 层作用于终态尺寸）。
+  const onResizeCommit = useCallback(
+    async (resize: ItemResize) => {
+      setItems((prev) => prev.map((it) => (it.id === resize.id ? { ...it, ...resize.to } : it)));
+      setSelected(new Set([resize.id]));
+      undoStack.current.push({ kind: "resize", resize });
+      redoStack.current = [];
+      await apiResize(resize.id, resize.to);
+    },
+    [apiResize],
+  );
+
+  const onFabricSelection = useCallback(
+    (ids: string[]) => {
+      // p6:F19（uc-widget-menu-010 主流程 4/6）：取样模式下，点击单个目标即应用格式，
+      // 不改变常规选中态（保持取样模式继续可用，直到用户显式退出——主流程 6）。
+      // 注：fabric 的 mouse:down 与 mouse:up 对同一次「纯点击」（未拖动）都会各触发一次
+      // onSelectionChange（既有行为，非本轮引入），故用 formatApplyingRef 去重，避免同一目标
+      // 被并发 applyFormatTo 两次（虽然幂等无害，但会造成不必要的重复 PATCH）。
+      if (formatSource && ids.length === 1 && ids[0] !== formatSource.id) {
+        const targetId = ids[0]!;
+        if (formatApplyingRef.current === targetId) return;
+        formatApplyingRef.current = targetId;
+        void applyFormatTo(targetId).finally(() => {
+          if (formatApplyingRef.current === targetId) formatApplyingRef.current = null;
+        });
+        return;
+      }
+      setSelected(new Set(ids));
+    },
+    [formatSource, items, canEdit],
+  );
+
+  // 空白按下：清除选择 + 关闭右键菜单（旧 items-layer onClick 语义），随后视口照常平移。
+  const onEmptyPointerDown = useCallback(() => {
+    if (formatSource) return; // 取样模式下点击空白不清空选择/退出（Esc 才退出，主流程 7）
+    setSelected(new Set());
+    setCtxMenu(null);
+  }, [formatSource]);
+
+  const onEditRequest = useCallback(
+    (id: string) => {
+      if (canEdit) setEditingId(id);
+    },
+    [canEdit],
+  );
+
+  const onFabricCtxMenu = useCallback(
+    (pos: { x: number; y: number }, itemId: string | null) => {
+      if (!canEdit) return;
+      if (itemId && !selected.has(itemId)) setSelected(new Set([itemId]));
+      setCtxMenu(pos);
+    },
+    [canEdit, selected],
+  );
+
+  // uc-collab-001：拖拽开始/结束 → 操作态上报；同时挡住轮询合并（见 poll）。
+  const onOperating = useCallback((op: boolean) => {
+    draggingRef.current = op;
+    setOperating(op);
+  }, []);
+
+  // fabric 渲染层的输入视图：把 color 哨兵/字重等判别预解析成渲染语义（fabric 组件不懂业务哨兵）。
+  const renderItems = useMemo<RenderItem[]>(
+    () =>
+      items.map((it) => ({
+        id: it.id,
+        type: it.type,
+        x: it.x,
+        y: it.y,
+        w: it.w,
+        h: it.h,
+        text: it.text,
+        color: it.color ?? null,
+        kind: isText(it) ? "text" : isShape(it) ? "shape" : isReloadable(it) ? "embed" : "note",
+        bold: isBold(it),
+        italic: isItalic(it),
+        fontFamily: getFontFamily(it),
+        fontSize: getFontSize(it),
+        align: getAlign(it),
+        border: getBorder(it),
+        borderWidth: getBorderWidth(it),
+        opacity: getOpacity(it),
+        textColor: getTextColor(it),
+        reloadable: isReloadable(it),
+        reloadCount: reload[it.id]?.count ?? 0,
+        refreshedAt: reload[it.id]?.at ?? null,
+      })),
+    [items, reload],
+  );
+  const selectedIdList = useMemo(
+    () => items.filter((it) => selected.has(it.id)).map((it) => it.id),
+    [items, selected],
+  );
+  const editingItem = editingId ? items.find((it) => it.id === editingId) ?? null : null;
 
   async function addNote() {
     setActiveTool("sticky");
@@ -543,6 +634,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     if (tool === "assets" || tool === "templates") setOpenPanel(tool);
     else setOpenPanel(null);
     if (tool === "select") setSelected(new Set());
+    setFormatSource(null); // uc-widget-menu-010 主流程 7：切工具即退出取样模式
   }
 
   // 底部悬浮 dock（F01，对齐 prototype FigJam 工具栏）复用同一套 activeTool 真值与
@@ -630,26 +722,23 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     });
   }
 
-  // 落库一批 color 变更（共用于 setColor / toggleBold）。
+  // 落库一批 color 变更（共用于 setColor / toggleBold）。经 queuePatch 按 item 串行落库，
+  // 避免同一 item 连续多次样式改动时后发先至覆盖新值（p6:F19 修复的真实回归，见 queuePatch 注释）。
   async function applyColors(updates: { id: string; color: string }[]) {
     const map = new Map(updates.map((u) => [u.id, u.color]));
     setItems((prev) => prev.map((it) => (map.has(it.id) ? { ...it, color: map.get(it.id)! } : it)));
-    await Promise.all(
-      updates.map((u) =>
-        fetch(`/api/board-items/${u.id}`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ color: u.color }),
-        })
-      )
-    );
+    await Promise.all(updates.map((u) => queuePatch(u.id, { color: u.color })));
   }
 
-  // F11：改选中便签颜色（保留字重 :bold 修饰）
+  // F11：改选中便签颜色（保留字重 :bold 修饰 + p6:F12 样式段）
   async function setColor(base: string) {
     const updates = items
       .filter((it) => selected.has(it.id))
-      .map((it) => ({ id: it.id, color: base + (isBold(it) ? ":bold" : "") }));
+      .map((it) => {
+        const head = base + (isBold(it) ? ":bold" : "");
+        const segs = styleSegs(it.color);
+        return { id: it.id, color: [head, ...segs].join("|") };
+      });
     await applyColors(updates);
   }
 
@@ -660,9 +749,157 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     const allBold = targets.every(isBold); // 全粗 → 取消；否则 → 全部加粗
     const updates = targets.map((it) => {
       const b = baseColor(it.color);
-      return { id: it.id, color: allBold ? b : `${b}:bold` };
+      const segs = styleSegs(it.color);
+      const head = allBold ? b : `${b}:bold`;
+      return { id: it.id, color: [head, ...segs].join("|") };
     });
     await applyColors(updates);
+  }
+
+  // uc-widget-menu-013：切换选中组件斜体（italic），编码为 color 的 "|italic=1" 样式段。
+  async function toggleItalic() {
+    const targets = items.filter((it) => selected.has(it.id));
+    if (targets.length === 0) return;
+    const allItalic = targets.every(isItalic);
+    const updates = targets.map((it) => ({
+      id: it.id,
+      color: withStyle(it.color, { italic: allItalic ? null : "1" }),
+    }));
+    await applyColors(updates);
+  }
+
+  // uc-widget-menu-013：设置选中组件字体，编码为 color 的 "|font=<slug>" 样式段。
+  async function setFontFamily(font: string) {
+    const updates = items
+      .filter((it) => selected.has(it.id))
+      .map((it) => ({ id: it.id, color: withStyle(it.color, { font: font === DEFAULT_FONT ? null : font }) }));
+    await applyColors(updates);
+  }
+
+  // uc-widget-menu-013：设置选中组件字号，编码为 color 的 "|size=<n>" 样式段。
+  async function setFontSize(size: number) {
+    const updates = items
+      .filter((it) => selected.has(it.id))
+      .map((it) => ({
+        id: it.id,
+        color: withStyle(it.color, { size: size === DEFAULT_FONT_SIZE ? null : String(size) }),
+      }));
+    await applyColors(updates);
+  }
+
+  // uc-widget-menu-013：设置选中组件文本对齐方式，编码为 color 的 "|align=<left|center|right>" 样式段。
+  async function setAlign(align: "left" | "center" | "right") {
+    const updates = items
+      .filter((it) => selected.has(it.id))
+      .map((it) => ({ id: it.id, color: withStyle(it.color, { align: align === "left" ? null : align }) }));
+    await applyColors(updates);
+  }
+
+  // p6:F19（uc-widget-menu-002）：设置选中组件边框色，编码为 color 的 "|border=<token>" 样式段。
+  async function setBorder(token: BorderToken) {
+    const updates = items
+      .filter((it) => selected.has(it.id))
+      .map((it) => ({ id: it.id, color: withStyle(it.color, { border: token === DEFAULT_BORDER ? null : token }) }));
+    await applyColors(updates);
+  }
+
+  // p6:F19（uc-widget-menu-002）：设置选中组件边框宽/线宽，编码为 color 的 "|borderw=<n>" 样式段。
+  async function setBorderWidth(width: number) {
+    const updates = items
+      .filter((it) => selected.has(it.id))
+      .map((it) => ({
+        id: it.id,
+        color: withStyle(it.color, { borderw: width === DEFAULT_BORDER_WIDTH ? null : String(width) }),
+      }));
+    await applyColors(updates);
+  }
+
+  // p6:F19（uc-widget-menu-002）：设置选中组件透明度，编码为 color 的 "|opacity=<1-100>" 样式段。
+  async function setOpacity(value: number) {
+    const updates = items
+      .filter((it) => selected.has(it.id))
+      .map((it) => ({
+        id: it.id,
+        color: withStyle(it.color, { opacity: value === DEFAULT_OPACITY ? null : String(value) }),
+      }));
+    await applyColors(updates);
+  }
+
+  // p6:F19（uc-widget-menu-002）：设置选中组件文字色，编码为 color 的 "|textcolor=<token>" 样式段。
+  async function setTextColor(token: TextColorToken) {
+    const updates = items
+      .filter((it) => selected.has(it.id))
+      .map((it) => ({
+        id: it.id,
+        color: withStyle(it.color, { textcolor: token === DEFAULT_TEXT_COLOR ? null : token }),
+      }));
+    await applyColors(updates);
+  }
+
+  // p6:F19（uc-widget-menu-010）：进入/退出格式取样模式。仅支持单选一个文本/便签类对象作为格式来源
+  // （形状/嵌入组件无文字排版语义，不作为来源，业务规则 1）。
+  function startFormatPaint() {
+    if (!canEdit) return;
+    const sel = items.filter((it) => selected.has(it.id));
+    if (sel.length !== 1) return;
+    const source = sel[0]!;
+    if (isShape(source) || isReloadable(source)) return;
+    setFormatSource({ id: source.id, color: source.color ?? null });
+  }
+  function exitFormatPaint() {
+    setFormatSource(null);
+  }
+
+  // p6:F19（uc-widget-menu-010）：把取样格式应用到目标对象。目标为形状/嵌入/锁定或与来源相同对象时
+  // 视为不兼容（异常流程/备选流程 2），不应用也不退出取样模式，交由调用方决定是否提示。
+  // 返回 true 表示已应用；false 表示目标不兼容。
+  async function applyFormatTo(targetId: string): Promise<boolean> {
+    if (!formatSource || !canEdit) return false;
+    if (targetId === formatSource.id) return false;
+    const target = items.find((it) => it.id === targetId);
+    if (!target || isShape(target) || isReloadable(target)) return false;
+    const newColor = applyFormatColor({ color: formatSource.color }, isText(target));
+    await applyColors([{ id: target.id, color: newColor }]);
+    return true;
+  }
+
+  // uc-widget-menu-014：把选中的单个文本组件按行/段拆分为多个便利贴（批量 add 命令）。
+  // 拆分规则：先按空行分段（连续换行视为段落分隔），再在段内按行拆分；
+  // 拆分后的每一行/条目 trim 后为空则跳过。文本为空或拆分不出任何非空片段时，不创建便利贴、保留原文本。
+  // 成功后原文本组件保留在画布（异常流程 2：转换失败保留原文本；主流程未要求删除原文本）。
+  async function convertToStickyNotes() {
+    if (!canEdit) return;
+    const targets = items.filter((it) => selected.has(it.id) && isText(it));
+    if (targets.length !== 1) return; // 仅支持单选文本对象转换
+    const source = targets[0]!;
+    const lines = source.text
+      .split(/\n{2,}/) // 先按空行分段
+      .flatMap((block) => block.split("\n")) // 段内再按行拆
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    if (lines.length === 0) return; // 无法拆分：保留原文本组件，不创建便利贴
+    const cols = Math.min(4, lines.length);
+    const gapX = 180;
+    const gapY = 130;
+    const created: Item[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = source.x + col * gapX;
+      const y = source.y + source.h + 20 + row * gapY;
+      const res = await fetch(`/api/boards/${boardId}/items`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ type: "note", x, y, text: lines[i] }),
+      });
+      if (res.status !== 201) continue;
+      const item = (await res.json()).item as Item;
+      created.push(item);
+    }
+    if (created.length === 0) return; // 全部创建失败：保留原文本组件（异常流程 2）
+    recordOp({ kind: "add", items: created });
+    await load();
+    setSelected(new Set(created.map((c) => c.id))); // 新便利贴按多选态展示（主流程 4）
   }
 
   // uc-context-menu-003：调整图层顺序（z-order）。items 数组顺序即 DOM 绘制顺序，
@@ -716,11 +953,12 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     if (!op) return;
     if (op.kind === "add") await apiDelete(op.items.map((i) => i.id));
     else if (op.kind === "delete") await apiRestore(op.items);
+    else if (op.kind === "resize") await apiResize(op.resize.id, op.resize.from);
     else await apiMove(op.moves, true);
     redoStack.current.push(op);
     setSelected(new Set());
     await load();
-  }, [canEdit, apiDelete, apiRestore, apiMove, load]);
+  }, [canEdit, apiDelete, apiRestore, apiMove, apiResize, load]);
 
   const redo = useCallback(async () => {
     if (!canEdit) return;
@@ -728,11 +966,12 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     if (!op) return;
     if (op.kind === "add") await apiRestore(op.items);
     else if (op.kind === "delete") await apiDelete(op.items.map((i) => i.id));
+    else if (op.kind === "resize") await apiResize(op.resize.id, op.resize.to);
     else await apiMove(op.moves, false);
     undoStack.current.push(op);
     setSelected(new Set());
     await load();
-  }, [canEdit, apiDelete, apiRestore, apiMove, load]);
+  }, [canEdit, apiDelete, apiRestore, apiMove, apiResize, load]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -742,6 +981,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       if (e.key === "Escape") {
         setOpenPanel(null);
         setActiveTool("select");
+        setFormatSource(null); // uc-widget-menu-010 主流程 7：Esc 退出取样模式
         return setSelected(new Set());
       }
       const mod = e.metaKey || e.ctrlKey;
@@ -918,6 +1158,192 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           >
             B
           </Button>
+          {/* uc-widget-menu-013 文本样式：字体/字号/斜体/对齐/转便利贴。仅对文本或便签生效
+              （含文字的对象）；形状/嵌入组件无文字排版语义，不显示（业务规则 1）。 */}
+          {(() => {
+            const sel = items.filter((it) => selected.has(it.id));
+            const allTextLike = sel.length > 0 && sel.every((it) => isText(it) || (!isShape(it) && !isReloadable(it)));
+            if (!allTextLike) return null;
+            const first = sel[0]!;
+            const mixedFont = !sel.every((it) => getFontFamily(it) === getFontFamily(first));
+            const mixedSize = !sel.every((it) => getFontSize(it) === getFontSize(first));
+            const mixedAlign = !sel.every((it) => getAlign(it) === getAlign(first));
+            const allItalic = sel.every(isItalic);
+            return (
+              <>
+                <select
+                  data-testid="wm-font"
+                  aria-label="字体"
+                  value={mixedFont ? "" : getFontFamily(first)}
+                  onChange={(e) => void setFontFamily(e.target.value)}
+                  className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {mixedFont && <option value="">混合</option>}
+                  {FONT_OPTIONS.map((f) => (
+                    <option key={f.value} value={f.value}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  data-testid="wm-fontsize"
+                  aria-label="字号"
+                  value={mixedSize ? "" : String(getFontSize(first))}
+                  onChange={(e) => void setFontSize(Number(e.target.value))}
+                  className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {mixedSize && <option value="">混合</option>}
+                  {FONT_SIZE_OPTIONS.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  data-testid="wm-italic"
+                  size="sm"
+                  variant="ghost"
+                  aria-label="斜体"
+                  aria-pressed={allItalic}
+                  className="italic"
+                  onClick={() => void toggleItalic()}
+                >
+                  I
+                </Button>
+                <Button
+                  data-testid="wm-align-left"
+                  size="sm"
+                  variant="ghost"
+                  aria-label="左对齐"
+                  aria-pressed={!mixedAlign && getAlign(first) === "left"}
+                  onClick={() => void setAlign("left")}
+                >
+                  <AlignLeft className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  data-testid="wm-align-center"
+                  size="sm"
+                  variant="ghost"
+                  aria-label="居中对齐"
+                  aria-pressed={!mixedAlign && getAlign(first) === "center"}
+                  onClick={() => void setAlign("center")}
+                >
+                  <AlignCenter className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  data-testid="wm-align-right"
+                  size="sm"
+                  variant="ghost"
+                  aria-label="右对齐"
+                  aria-pressed={!mixedAlign && getAlign(first) === "right"}
+                  onClick={() => void setAlign("right")}
+                >
+                  <AlignRight className="h-3.5 w-3.5" />
+                </Button>
+              </>
+            );
+          })()}
+          {/* p6:F19（uc-widget-menu-002）：边框色/边框宽（含线宽语义）/透明度/文字色。
+              对文本/便签/形状均生效（透明度、边框是通用外观属性，不限文字类对象）；
+              嵌入组件（图片/文件占位）暂不开放，避免和刷新/裁剪能力冲突。 */}
+          {(() => {
+            const sel = items.filter((it) => selected.has(it.id));
+            const eligible = sel.length > 0 && sel.every((it) => !isReloadable(it));
+            if (!eligible) return null;
+            const first = sel[0]!;
+            const mixedBorder = !sel.every((it) => getBorder(it) === getBorder(first));
+            const mixedBorderWidth = !sel.every((it) => getBorderWidth(it) === getBorderWidth(first));
+            const mixedOpacity = !sel.every((it) => getOpacity(it) === getOpacity(first));
+            const mixedTextColor = !sel.every((it) => getTextColor(it) === getTextColor(first));
+            return (
+              <>
+                <select
+                  data-testid="wm-border"
+                  aria-label="边框色"
+                  value={mixedBorder ? "" : getBorder(first)}
+                  onChange={(e) => void setBorder(e.target.value as BorderToken)}
+                  className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {mixedBorder && <option value="">混合</option>}
+                  <option value="none">无边框</option>
+                  <option value="gray">灰色</option>
+                  <option value="blue">蓝色</option>
+                  <option value="red">红色</option>
+                </select>
+                <select
+                  data-testid="wm-border-width"
+                  aria-label="边框/线宽"
+                  value={mixedBorderWidth ? "" : String(getBorderWidth(first))}
+                  onChange={(e) => void setBorderWidth(Number(e.target.value))}
+                  className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {mixedBorderWidth && <option value="">混合</option>}
+                  {BORDER_WIDTH_OPTIONS.map((w) => (
+                    <option key={w} value={w}>
+                      {w}px
+                    </option>
+                  ))}
+                </select>
+                <select
+                  data-testid="wm-opacity"
+                  aria-label="透明度"
+                  value={mixedOpacity ? "" : String(getOpacity(first))}
+                  onChange={(e) => void setOpacity(Number(e.target.value))}
+                  className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {mixedOpacity && <option value="">混合</option>}
+                  {OPACITY_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {o}%
+                    </option>
+                  ))}
+                </select>
+                <select
+                  data-testid="wm-textcolor"
+                  aria-label="文字色"
+                  value={mixedTextColor ? "" : getTextColor(first)}
+                  onChange={(e) => void setTextColor(e.target.value as TextColorToken)}
+                  className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {mixedTextColor && <option value="">混合</option>}
+                  <option value="default">默认</option>
+                  <option value="slate">石墨</option>
+                  <option value="blue">蓝色</option>
+                  <option value="green">绿色</option>
+                  <option value="red">红色</option>
+                </select>
+              </>
+            );
+          })()}
+          {/* p6:F19（uc-widget-menu-010）：应用格式入口。仅单选一个文本/便签类对象时可进入取样模式
+              （形状/嵌入无可复用的文字排版样式，不作为来源，业务规则 1）。 */}
+          {selected.size === 1 &&
+            items
+              .filter((it) => selected.has(it.id))
+              .every((it) => !isShape(it) && !isReloadable(it)) && (
+              <Button
+                data-testid="wm-apply-format"
+                size="sm"
+                variant="ghost"
+                aria-label="应用格式"
+                aria-pressed={formatSource?.id === Array.from(selected)[0]}
+                onClick={() => void startFormatPaint()}
+              >
+                <Paintbrush className="mr-1 h-3.5 w-3.5" />
+                应用格式
+              </Button>
+            )}
+          {/* uc-widget-menu-014：仅当单选一个文本组件时显示「转换为便利贴」入口。 */}
+          {selected.size === 1 && items.filter((it) => selected.has(it.id)).every(isText) && (
+            <Button
+              data-testid="wm-convert-to-notes"
+              size="sm"
+              variant="ghost"
+              onClick={() => void convertToStickyNotes()}
+            >
+              转为便利贴
+            </Button>
+          )}
           {/* 刷新组件（uc-widget-menu-009）：仅当选中项全部为可刷新（embed）组件时显示刷新入口；
               否则（含不可刷新对象）显示禁用的「刷新暂不可用」，体现类型不支持则动作不可用。 */}
           {(() => {
@@ -955,106 +1381,93 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           <Button data-testid="wm-delete" size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteSelected()}>
             删除
           </Button>
-          <Button data-testid="wm-resize-unavailable" size="sm" variant="ghost" disabled title="当前组件暂不支持拖拽控制点缩放">
-            缩放暂不可用
-          </Button>
+          {/* p6:F07：拖拽控制点缩放已可用（选中框四角），原「缩放暂不可用」占位移除。 */}
           <Button data-testid="wm-lock-unavailable" size="sm" variant="ghost" disabled title="锁定能力将在后续组件权限矩阵接入">
             锁定暂不可用
           </Button>
         </div>
       )}
 
-      <CanvasViewport>
+      {/* p6:F19（uc-widget-menu-010 主流程 2）：取样模式提示条——用户点击「应用格式」后进入，
+          可连续点击目标应用同一格式，直到 Esc/切工具/点空白外的退出动作（主流程 6/7）。 */}
+      {formatSource && (
         <div
-          className="relative h-full w-full"
-          data-testid="items-layer"
-          onClick={() => {
-            setSelected(new Set());
-            setCtxMenu(null);
-          }}
-          onContextMenu={(e) => {
-            if (!canEdit) return;
-            e.preventDefault();
-            setCtxMenu({ x: e.clientX, y: e.clientY });
-          }}
+          data-testid="format-paint-indicator"
+          className="absolute left-1/2 top-24 z-30 flex -translate-x-1/2 items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-xs shadow-lg"
         >
-          {items.map((it, z) => (
+          <Paintbrush className="h-3.5 w-3.5" />
+          <span>格式刷已就绪：点击目标文本/便利贴应用样式（Esc 退出）</span>
+          <Button data-testid="wm-apply-format-exit" size="sm" variant="ghost" onClick={exitFormatPaint}>
+            退出
+          </Button>
+        </div>
+      )}
+
+      <CanvasViewport
+        onViewportChange={setVp}
+        underlay={
+          <FabricCanvas
+            items={renderItems}
+            selectedIds={selectedIdList}
+            editingId={editingId}
+            canEdit={canEdit}
+            viewport={vp}
+            onSelectionChange={onFabricSelection}
+            onEmptyPointerDown={onEmptyPointerDown}
+            onMoveCommit={(moves) => void onMoveCommit(moves)}
+            onResizeCommit={(r) => void onResizeCommit(r)}
+            onEditRequest={onEditRequest}
+            onCtxMenu={onFabricCtxMenu}
+            onGuides={setGuides}
+            onSpacing={setSpacings}
+            onOperating={onOperating}
+          />
+        }
+      >
+        {/* DOM 覆盖层（items 本体已由 fabric 渲染）：对齐参考线 / 文本编辑框 / 重载徽标。
+            pointer-events 关闭（编辑框除外），指针事件落到下方 fabric canvas。 */}
+        <div className="pointer-events-none relative h-full w-full" data-testid="items-layer">
+          {/* F11：双击编辑文字 → DOM textarea 覆盖层（锚点 item-edit-<id> 不变），
+              画布坐标系与 item 重合；编辑中 fabric 隐藏该 item 文字。 */}
+          {editingItem && (
             <div
-              key={it.id}
-              data-testid={`item-${it.id}`}
-              data-selected={selected.has(it.id) ? "true" : "false"}
-              data-z={z}
-              data-reloadable={isReloadable(it) ? "true" : "false"}
-              data-reload-count={reload[it.id]?.count ?? 0}
-              data-refreshed-at={reload[it.id]?.at ?? ""}
-              onMouseDown={(e) => startNoteDrag(e, it)}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (justDraggedRef.current) {
-                  justDraggedRef.current = false;
-                  return;
-                }
-                selectItem(it.id, e.shiftKey);
-              }}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                if (canEdit) setEditingId(it.id);
-              }}
-              onContextMenu={(e) => {
-                if (!canEdit) return;
-                e.preventDefault();
-                e.stopPropagation();
-                if (!selected.has(it.id)) selectItem(it.id, false);
-                setCtxMenu({ x: e.clientX, y: e.clientY });
-              }}
-              style={{ left: it.x, top: it.y, width: it.w, height: it.h, zIndex: z }}
-              className={
-                "absolute flex p-2 text-xs " +
-                // 文本：透明无边框文本块；形状：粗边框矩形；便签：柔彩 + 边框 + 圆角 + 阴影
-                (isText(it)
-                  ? "items-start justify-start border-0 bg-transparent text-foreground shadow-none "
-                  : isShape(it)
-                  ? "items-center justify-center rounded-7 border-2 border-border-strong bg-surface-1 text-foreground shadow-sm "
-                  : "items-center justify-center rounded-7 border shadow-sm " + colorClass(it.color) + " ") +
-                (isBold(it) ? "font-bold " : "") +
-                (canEdit && editingId !== it.id ? "cursor-grab active:cursor-grabbing " : "") +
-                (selected.has(it.id) ? "ring-2 ring-primary ring-offset-1" : "")
-              }
+              className="absolute z-20"
+              style={{ left: editingItem.x, top: editingItem.y, width: editingItem.w, height: editingItem.h }}
             >
-              {editingId === it.id ? (
-                <textarea
-                  data-testid={`item-edit-${it.id}`}
-                  autoFocus
-                  defaultValue={it.text}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                  onBlur={(e) => void saveText(it.id, e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      (e.target as HTMLTextAreaElement).blur();
-                    }
-                  }}
-                  className={
-                    "h-full w-full resize-none rounded bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-primary " +
-                    (isText(it) ? "text-left" : "text-center")
+              <textarea
+                data-testid={`item-edit-${editingItem.id}`}
+                autoFocus
+                defaultValue={editingItem.text}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                onBlur={(e) => void saveText(editingItem.id, e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    (e.target as HTMLTextAreaElement).blur();
                   }
-                />
-              ) : (
-                it.text
-              )}
-              {/* uc-widget-menu-009：可刷新组件的重载可见反馈（重载次数徽标）。刷新中显示旋转态。 */}
-              {isReloadable(it) && (
-                <span
-                  data-testid={`widget-reloaded-${it.id}`}
-                  data-reload-count={reload[it.id]?.count ?? 0}
-                  className="pointer-events-none absolute -right-1 -top-2 flex items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-10 font-medium text-primary-foreground shadow"
-                >
-                  <RefreshCw className={"h-2.5 w-2.5 " + (refreshing.has(it.id) ? "animate-spin" : "")} />
-                  {reload[it.id]?.count ?? 0}
-                </span>
-              )}
+                }}
+                className={
+                  "pointer-events-auto h-full w-full resize-none rounded bg-transparent p-2 text-xs text-foreground outline-none ring-2 ring-primary focus-visible:ring-2 focus-visible:ring-primary " +
+                  (isBold(editingItem) ? "font-bold " : "") +
+                  (isText(editingItem) ? "text-left" : "text-center")
+                }
+              />
             </div>
+          )}
+
+          {/* uc-widget-menu-009：可刷新组件的重载可见反馈（重载次数徽标）。刷新中显示旋转态。 */}
+          {items.filter(isReloadable).map((it) => (
+            <span
+              key={`reload-${it.id}`}
+              data-testid={`widget-reloaded-${it.id}`}
+              data-reload-count={reload[it.id]?.count ?? 0}
+              className="pointer-events-none absolute z-10 flex items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-10 font-medium text-primary-foreground shadow"
+              style={{ left: it.x + it.w - 10, top: it.y - 8 }}
+            >
+              <RefreshCw className={"h-2.5 w-2.5 " + (refreshing.has(it.id) ? "animate-spin" : "")} />
+              {reload[it.id]?.count ?? 0}
+            </span>
           ))}
 
           {/* 对齐参考线（uc-canvas-007）：拖动触发吸附时显示，与 item 同处画布坐标系。 */}
@@ -1072,6 +1485,36 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               }
             />
           ))}
+
+          {/* p6:F07 等间距提示：拖动形成等间距时，每段间隙画间距线 + 间距值徽标；释放后消失。 */}
+          {spacings.flatMap((sp, i) =>
+            sp.segs.map((seg, j) => (
+              <div key={`spacing-${i}-${j}`}>
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute z-10 bg-primary/60"
+                  style={
+                    sp.orientation === "h"
+                      ? { left: seg.from, top: seg.cross, width: seg.to - seg.from, height: 1 }
+                      : { left: seg.cross, top: seg.from, width: 1, height: seg.to - seg.from }
+                  }
+                />
+                <div
+                  data-testid="spacing-hint"
+                  data-orientation={sp.orientation}
+                  data-gap={Math.round(sp.gap)}
+                  className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded bg-primary px-1 py-0.5 text-10 font-medium text-primary-foreground shadow"
+                  style={
+                    sp.orientation === "h"
+                      ? { left: (seg.from + seg.to) / 2, top: seg.cross }
+                      : { left: seg.cross, top: (seg.from + seg.to) / 2 }
+                  }
+                >
+                  {Math.round(sp.gap)}
+                </div>
+              </div>
+            )),
+          )}
         </div>
       </CanvasViewport>
 

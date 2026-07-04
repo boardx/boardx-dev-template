@@ -21,6 +21,15 @@ interface InviteResult {
   message: string;
 }
 
+interface PendingInvite {
+  id: number;
+  email: string;
+  role: string;
+  status: string;
+  expires_at: string;
+  created_at: string;
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const TAG_FILLS = ["bg-tag-green", "bg-tag-blue", "bg-tag-purple", "bg-tag-pink", "bg-tag-yellow"];
@@ -47,6 +56,7 @@ export default function RoomMembersPage() {
   const roomId = params.id;
 
   const [members, setMembers] = useState<Member[]>([]);
+  const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [myRole, setMyRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -83,6 +93,7 @@ export default function RoomMembersPage() {
     }
     const d = await res.json();
     setMembers(d.members ?? []);
+    setInvites(d.invites ?? []);
     setMyRole((d.myRole as Role | null) ?? null);
     setLoading(false);
   }
@@ -180,6 +191,16 @@ export default function RoomMembersPage() {
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
       setError(d.error ?? "改角色失败");
+      return;
+    }
+    await load();
+  }
+
+  async function revokeInvite(inviteId: number) {
+    const res = await fetch(`/api/rooms/${roomId}/invites/${inviteId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error ?? "撤销邀请失败");
       return;
     }
     await load();
@@ -293,6 +314,41 @@ export default function RoomMembersPage() {
               ))}
             </ul>
           )}
+        </section>
+      )}
+
+      {/* pending 邀请列表（p20 F09），仅 owner/admin 可见可撤销 */}
+      {!loading && canManage && invites.length > 0 && (
+        <section
+          data-testid="room-invite-pending"
+          className="flex flex-col gap-2 rounded-12 border border-border bg-surface-1 p-4"
+        >
+          <h2 className="text-15 font-semibold text-foreground">待接受的邀请</h2>
+          <ul className="flex flex-col gap-1">
+            {invites.map((inv) => (
+              <li
+                key={inv.id}
+                data-testid={`pending-invite-${inv.email}`}
+                className="flex items-center justify-between gap-2 rounded-8 border border-muted px-3 py-2"
+              >
+                <div className="flex min-w-0 flex-col">
+                  <span className="truncate text-13 font-medium text-foreground">{inv.email}</span>
+                  <span className="text-11 text-muted-foreground">
+                    待注册接受 · 过期时间 {new Date(inv.expires_at).toLocaleString()}
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  data-testid={`revoke-invite-${inv.email}`}
+                  onClick={() => void revokeInvite(inv.id)}
+                >
+                  撤销
+                </Button>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

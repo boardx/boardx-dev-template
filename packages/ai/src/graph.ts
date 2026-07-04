@@ -13,6 +13,9 @@ export interface GraphState {
   toolIds?: string[];
   /** 节点写入的流式 token 回调；由调用方（API 路由）提供，用于转 SSE。 */
   onToken?: (token: string) => void;
+  /** P18 F02：停止生成。调用方（API 路由）把客户端请求的 abort signal 传进来，
+   *  一路透传到 provider 的真实网络请求，实现真实中断而非等待完整回显。 */
+  signal?: AbortSignal;
 }
 
 export type NodeFn = (state: GraphState) => Promise<Partial<GraphState> & { reply?: string }>;
@@ -44,6 +47,7 @@ export function makeGenerateNode(
       agentId: string;
       toolIds: string[];
     };
+    signal?: AbortSignal;
   }) => AsyncGenerator<string, void, void>
 ): NodeFn {
   return async (state: GraphState) => {
@@ -55,6 +59,7 @@ export function makeGenerateNode(
         agentId: state.agentId ?? "default",
         toolIds: state.toolIds ?? [],
       },
+      signal: state.signal,
     })) {
       full += token;
       state.onToken?.(token);

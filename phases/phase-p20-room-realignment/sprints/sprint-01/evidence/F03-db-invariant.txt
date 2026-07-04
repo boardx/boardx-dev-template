@@ -1,0 +1,5 @@
+ null_room_id_rows | total_rows | room_id_not_null_constraint_present 
+-------------------+------------+-------------------------------------
+                 0 |          0 |                                   1
+(1 row)
+

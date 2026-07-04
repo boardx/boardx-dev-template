@@ -137,6 +137,30 @@
       ],
       "evidence": "evidence/F06.verify.log @ 2026-07-02T17:24:07.068Z",
       "notes": "uc-survey-006。isActive 门控 F03 公开答题页。依赖 F01/F03。"
+    },
+    {
+      "id": "F07",
+      "priority": 4,
+      "area": "survey",
+      "title": "问卷报告 AI 摘要（Report 视图一键生成）",
+      "user_visible_behavior": "打开某问卷结果的 Report 视图（report-view）：新增 AI 摘要区块与生成按钮（report-ai-summary / report-ai-summary-generate）；点击后进入 loading 态（report-ai-summary-loading），成功后展示一段基于当前回收数据的自然语言摘要文本（report-ai-summary-text）；生成失败展示失败态与重试（err-report-ai-summary / retry-report-ai-summary），不影响 Summary/Individual/Report 三个既有视图；零回收（空态）时生成按钮禁用；非 owner/无权限者调用生成接口返回 403。",
+      "design_ref": "无对应原型区块（设计原型未覆盖此增强）；沿用 report-view 现有视觉语言与 DESIGN.md tokens，新区块样式对齐既有 report-* 卡片。",
+      "status": "in_progress",
+      "sprint": "07",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-AI",
+      "depends_on": [
+        "F04"
+      ],
+      "wave": 3,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-007-ai-report-summary.spec.ts",
+        "git cat-file -e HEAD:phases/phase-p13-survey/sprints/sprint-07/evidence/F07.verify.log"
+      ],
+      "evidence": "evidence/F07.verify.log",
+      "notes": "uc-survey-007。源于 F04 notes 明确排除项(\"分析报告的 AI 摘要为可选增强\")的后续补齐，非凭空新增。复用 packages/ai 已合入 main 的 gateway.ts（defaultGateway/ChatGateway，anthropic:/stub: 前缀路由 + FORCE_FAIL_MARKER 确定性失败触发）与 studioGenerator.ts 的 sanctioned-stub 先例，不新造 AI 接入地基；e2e 走 stub provider，不依赖真实 Anthropic API key。（勘误：不要参考 researchGenerator.ts——该文件只存在于未合并进 main 的 p18 分支，不是当前代码库里的东西。）摘要不持久化落库（每次即时生成），历史版本管理/多语言/PDF·CSV 嵌入摘要均明确不做，留给后续 feature。依赖 F04（结果聚合与权限边界）。"
     }
   ]
 }

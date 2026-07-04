@@ -135,16 +135,16 @@
       "area": "canvas",
       "title": "拖动时的对齐参考线",
       "user_visible_behavior": "拖动或缩放组件时，与邻近组件的边/中心对齐时显示动态参考线并吸附；多组件等间距时显示间距提示；释放后参考线消失。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "08",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/canvas-guidelines.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F07.verify.log @ 2026-07-03T18:18:46.685Z",
       "notes": "uc-canvas-007。对齐/吸附为纯几何计算，含单测。",
       "source_use_cases": [
         "phases/requirements/board/canvas/uc-canvas-007-use-alignment-guidelines.md"
@@ -241,16 +241,16 @@
       "area": "widgets",
       "title": "文本组件 + 文本样式 + 文本转便利贴",
       "user_visible_behavior": "创建独立文本组件并编辑；调整字体/字号/粗斜体/颜色/对齐（uc-widget-menu-013）；可把一段文本按行/段拆分为多个便利贴（uc-widget-menu-014）。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "09",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/widget-text.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F12.verify.log @ 2026-07-03T20:29:01.769Z",
       "notes": "uc-widgets-007 + uc-widget-menu-013 + uc-widget-menu-014。文本→便利贴为批量 add 命令。",
       "source_use_cases": [
         "phases/requirements/board/widgets/uc-widgets-007-use-text-widget.md",
@@ -264,17 +264,17 @@
       "area": "canvas",
       "title": "画布渲染引擎切换为 Fabric.js（既有行为不回归）",
       "user_visible_behavior": "Board 画布的渲染由 DOM div 切换为 fabric.Canvas（页面中出现承载渲染的 <canvas> 元素）；已 passing 的选择/拖拽/多选/复制粘贴/undo-redo/pan-zoom/对齐吸附线等用户可见行为保持不变，不因渲染引擎切换而回归。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "08",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/canvas-render.spec.ts e2e/canvas-add.spec.ts e2e/canvas-update.spec.ts e2e/canvas-delete.spec.ts e2e/canvas-pan-zoom.spec.ts e2e/canvas-select.spec.ts e2e/canvas-copy-paste.spec.ts e2e/canvas-undo-redo.spec.ts e2e/widget-menu-framework.spec.ts e2e/widget-sticky.spec.ts e2e/canvas-fabric-engine.spec.ts"
       ],
-      "evidence": "",
-      "notes": "背景调研见 phases/requirements/board-canvas-gap-analysis-and-roadmap.md。canvas.md 早已把 Fabric.js 定位为「留作后续的可替换适配器」，现在到切换时机：F15(形状)/F16(连接线)/F17(手绘)/F18(图表) 在 Fabric 对象模型上实现成本远低于继续在 DOM 上手搓（连接线端口吸附、手绘 PencilBrush 都是 Fabric 原生能力）；oldcode canvasx-main 的 XConnector 子系统（端口吸附/自动重连/箭头样式，产品级+测试充分）可在此之后直接移植参考。依赖包用官方 npm `fabric`，不依赖 boardx-web 私有 fork `@boardxus/canvasx-core`。本 feature 只做渲染层替换，不新增用户可见能力，核心验收是既有 e2e 全绿 + 新增 canvas-fabric-engine.spec.ts 断言 <canvas> 存在。F14（数据模型字段级 patch）与本 feature 同属 Wave 0 前置工作，互不依赖可并行；F15-F18 应排在两者都 passing 之后再开工，避免返工。",
+      "evidence": "evidence/F13.verify.log @ 2026-07-03T12:43:15.712Z",
+      "notes": "背景调研见 phases/requirements/board-canvas-gap-analysis-and-roadmap.md。canvas.md 早已把 Fabric.js 定位为「留作后续的可替换适配器」，现在到切换时机：F15(形状)/F16(连接线)/F17(手绘)/F18(图表) 在 Fabric 对象模型上实现成本远低于继续在 DOM 上手搓（连接线端口吸附、手绘 PencilBrush 都是 Fabric 原生能力）；oldcode canvasx-main 的 XConnector 子系统（端口吸附/自动重连/箭头样式，产品级+测试充分）可在此之后直接移植参考。依赖包用官方 npm `fabric`，不依赖 boardx-web 私有 fork `@boardxus/canvasx-core`。本 feature 只做渲染层替换，不新增用户可见能力，核心验收是既有 e2e 全绿 + 新增 canvas-fabric-engine.spec.ts 断言 <canvas> 存在。F14（数据模型字段级 patch）与本 feature 同属 Wave 0 前置工作，互不依赖可并行；F15-F18 应排在两者都 passing 之后再开工，避免返工。【策略 2 决策（人类批准，GitHub issue #269）】「既有 e2e 不回归」按断言意图不变解释：e2e 断言迁移为 canvas 兼容锚点（window.__canvasTestApi + <canvas> 坐标点击），意图逐条保留；明确否决 DOM 测试镜像层（双层维护）与 Fabric 只画视觉、交互仍走 DOM（假切换）。",
       "source_use_cases": [
         "phases/phase-p6-canvas/requirements/fabric-rendering-engine.md",
         "phases/phase-p6-canvas/requirements/canvas.md",
@@ -287,9 +287,9 @@
       "area": "canvas",
       "title": "packages/canvas 数据模型改造为字段级 patch（CRDT-ready）",
       "user_visible_behavior": "widget 更新命令从「整条 item 替换」改为「字段级 patch」（如 {kind:\"patch\", id, patch:{x,y}}）；同一 widget 连续两次不同字段的 patch 互不覆盖；现有 note/rect 类型与 add/move/edit/delete 命令在新语义下行为不变，既有 canvas e2e 全部保持通过。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "08",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
@@ -297,7 +297,7 @@
         "pnpm --filter @repo/canvas run test",
         "pnpm --filter @repo/web exec playwright test e2e/canvas-render.spec.ts e2e/canvas-add.spec.ts e2e/canvas-update.spec.ts e2e/canvas-delete.spec.ts e2e/canvas-select.spec.ts e2e/canvas-copy-paste.spec.ts e2e/canvas-undo-redo.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F14.verify.log @ 2026-07-03T11:18:57.341Z",
       "notes": "背景见 phases/phase-p6-canvas/requirements/widget-schema-field-level.md 与 board-canvas-gap-analysis-and-roadmap.md 第 4 节。与 p6:F13（渲染引擎切换 Fabric.js）同属 Wave 0 前置工作，互不依赖、可并行，但都需在 F15（形状组件）开工前落地——否则后续 widget 类型（F15-F18）的专有字段要在旧的整条替换模型上写一遍，等 P8 接 Yjs 时再拆成字段级会返工（boardx-web 的 UndoRedoService 被 Y.UndoManager 取代就是交过的学费）。不引入 Yjs 依赖，只是让 applyCommand 的 patch 语义对未来 CRDT 存储后端友好。",
       "source_use_cases": [
         "phases/phase-p6-canvas/requirements/widget-schema-field-level.md",
@@ -395,16 +395,16 @@
       "area": "widgets",
       "title": "组件样式调整 + 应用格式",
       "user_visible_behavior": "Widget Menu 中调整选中组件的颜色/边框/背景/线宽/透明度并实时预览、持久化（uc-widget-menu-002）；「应用格式」把当前组件样式刷到其他文本/便利贴（uc-widget-menu-010）。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "09",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/widget-style.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F19.verify.log @ 2026-07-03T21:24:25.050Z",
       "notes": "uc-widget-menu-002 + uc-widget-menu-010。样式更新走 update 命令，支持多选批量。",
       "source_use_cases": [
         "phases/requirements/board/widget-menu/uc-widget-menu-002-style-widget.md",

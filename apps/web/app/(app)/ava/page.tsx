@@ -41,6 +41,7 @@ import {
   ThumbsDown,
   RefreshCw,
   LayoutGrid,
+  Square,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BillingPlanDialog } from "@/components/billing/billing-plan-dialog";
@@ -84,8 +85,16 @@ interface ThreadShare {
   share_token: string;
   share_enabled: boolean;
 }
+// p18 F11：发送到 Board 选择器候选项（只列有编辑权限的白板，字段取自 @repo/data Board）。
+interface EditableBoard {
+  id: number;
+  name: string;
+}
 type ComposerMode = "chat" | "research";
-type ResearchStatus = "idle" | "draft" | "running" | "complete" | "error";
+// p18-F04：新增 'clarified' 中间态——draft（待确认澄清问题）→ clarified（待确认计划）→
+// running（后端真实推进执行阶段）→ complete/error。两步确认缺一不可，不能从 draft
+// 直接跳到 running。
+type ResearchStatus = "idle" | "draft" | "clarified" | "running" | "complete" | "error";
 interface ResearchPhase {
   name: string;
   tasks: string[];
@@ -117,6 +126,9 @@ interface ResearchRun {
   error?: string;
   assistantMessage?: Message;
   timeline: ResearchTimelineItem[];
+  // p18-F03：持久化会话 id。存在时，status/timeline 的每次变化都会 PATCH 回
+  // ava_research_sessions，使刷新页面后 openThread() 能从 GET 恢复到同一阶段。
+  sessionId?: number;
 }
 
 function keepThroughMessageId(messages: Message[], messageId: number): Message[] {
@@ -209,6 +221,22 @@ export default function AvaPage() {
   const [feedbackErrorId, setFeedbackErrorId] = useState<number | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
   const [regenerateErrorId, setRegenerateErrorId] = useState<number | null>(null);
+  // p18 F11：发送到 Board——选择器打开状态 + 候选白板（懒加载）+ 每条消息独立的成功/错误提示。
+  const [boardPickerForMessageId, setBoardPickerForMessageId] = useState<number | null>(null);
+  const [editableBoards, setEditableBoards] = useState<EditableBoard[] | null>(null);
+  const [boardsLoading, setBoardsLoading] = useState(false);
+  const [boardsLoadError, setBoardsLoadError] = useState(false);
+  const [sendBoardPendingId, setSendBoardPendingId] = useState<number | null>(null);
+  const [sendBoardStatusId, setSendBoardStatusId] = useState<number | null>(null);
+  const [sendBoardStatusText, setSendBoardStatusText] = useState("");
+  const [sendBoardErrorId, setSendBoardErrorId] = useState<number | null>(null);
+  const [sendBoardErrorText, setSendBoardErrorText] = useState("");
+  // p18 F11：发送邮件——每条消息独立的 pending/成功/失败（含频控命中）状态。
+  const [sendEmailPendingId, setSendEmailPendingId] = useState<number | null>(null);
+  const [sendEmailStatusId, setSendEmailStatusId] = useState<number | null>(null);
+  const [sendEmailStatusText, setSendEmailStatusText] = useState("");
+  const [sendEmailErrorId, setSendEmailErrorId] = useState<number | null>(null);
+  const [sendEmailErrorText, setSendEmailErrorText] = useState("");
   const [menuThreadId, setMenuThreadId] = useState<number | null>(null);
   const [editingThreadId, setEditingThreadId] = useState<number | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
@@ -224,13 +252,18 @@ export default function AvaPage() {
   const canSend = Boolean(draft.trim()) && !sending && researchRun?.status !== "running";
   const researchStatusLabel = useMemo(() => {
     if (!researchRun) return "";
-    if (researchRun.status === "draft") return "Plan ready for review";
+    if (researchRun.status === "draft") return "Clarify to continue";
+    if (researchRun.status === "clarified") return "Plan ready for review";
     if (researchRun.status === "running") return "Research running";
     if (researchRun.status === "complete") return "Report ready";
     if (researchRun.status === "error") return "Needs attention";
     return "";
   }, [researchRun]);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  // P18 F02：停止生成用的 AbortController，跨真实/stub provider 通用。
+  // 只在一次流式请求生命周期内存在；stop() 触发后 fetch 的底层 TCP 连接被真实中断
+  // （服务端 request signal abort → reply-stream 的 for-await 循环停止 → 不再写入消息）。
+  const streamAbortRef = useRef<AbortController | null>(null);
 
   const attachments = useAvaAttachments({
     threadId: activeId,
@@ -394,6 +427,29 @@ export default function AvaPage() {
       if (!res.ok) throw new Error();
       const data = await res.json();
       setMessages(data.messages ?? []);
+      // p18-F03：恢复最近一次研究会话，让 research-card 回到中断前的阶段与内容
+      // （而不是刷新后消失/从头开始）。assistantMessage 留空——已完成的研究其报告
+      // 通知消息已经在上面 listAvaMessages 里，不需要再次推入。
+      try {
+        const researchRes = await fetch(`/api/ava/threads/${id}/research`);
+        if (researchRes.ok) {
+          const researchData = await researchRes.json();
+          const session = researchData.session;
+          if (session) {
+            setResearchRun({
+              topic: session.topic,
+              audience: session.audience,
+              status: session.status,
+              research: session.research_payload ?? undefined,
+              error: session.error ?? undefined,
+              timeline: session.timeline ?? [],
+              sessionId: session.id,
+            });
+          }
+        }
+      } catch {
+        // 研究恢复失败不阻塞聊天历史加载；用户仍能正常收发消息，只是看不到旧研究卡片。
+      }
     } catch {
       setSendError("Failed to load messages — please try again later");
     }
@@ -509,6 +565,8 @@ export default function AvaPage() {
     setSending(true);
     setSendError("");
     setStreamingText("");
+    const abortController = new AbortController();
+    streamAbortRef.current = abortController;
 
     try {
       const threadId = await ensureThread();
@@ -518,6 +576,7 @@ export default function AvaPage() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ text, attachmentIds, modelId, agentId, toolIds }),
+        signal: abortController.signal,
       });
       if (guard(res.status)) return;
       if (!res.ok || !res.body) {
@@ -550,11 +609,43 @@ export default function AvaPage() {
         },
       });
       await refreshThreads();
-    } catch {
-      setSendError("Send failed — please try again (your input is preserved)");
+    } catch (err) {
+      // 用户主动点击停止会走这里（fetch 因 AbortController.abort() 抛 AbortError）——
+      // 这是预期行为，不展示失败提示。客户端一旦 abort，这条连接就收不到服务端后续任何
+      // SSE 事件了（包括服务端为了落库而尝试发送的 done/error），所以已经流出来的部分
+      // 内容（streamingText）要在这里就地落定成一条 assistant 消息，不能指望服务端回包。
+      // 服务端那边（reply-stream.ts）会独立把同样的部分内容持久化到数据库，reload 后一致。
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setStreamingText((current) => {
+          setMessages((prev) => {
+            // 客户端临时负数 id：仅用于本地渲染，reload 后会被服务端持久化的真实记录替换。
+            // 用现有消息里最小的 id 再减一，避免同一渲染帧内两次停止生成时 id 撞车。
+            const minId = prev.reduce((min, m) => Math.min(min, m.id), 0);
+            return [
+              ...prev,
+              {
+                id: minId - 1,
+                role: "assistant",
+                content: current,
+                status: "complete",
+              },
+            ];
+          });
+          return "";
+        });
+      } else {
+        setSendError("Send failed — please try again (your input is preserved)");
+      }
     } finally {
       setSending(false);
+      streamAbortRef.current = null;
     }
+  }
+
+  /** P18 F02：停止生成。真实中断底层请求（AbortController.abort()），
+   *  而不是等待流式回显完成后再忽略结果。 */
+  function stop() {
+    streamAbortRef.current?.abort();
   }
 
   async function startResearch() {
@@ -578,7 +669,9 @@ export default function AvaPage() {
       const res = await fetch(`/api/ava/threads/${threadId}/research`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ topic, audience: RESEARCH_AUDIENCE }),
+        // p18-F04：带上当前选中的 modelId，研究生成与聊天走同一套模型设置
+        // （真实 provider 或 stub），不再是与模型选择无关的固定文案。
+        body: JSON.stringify({ topic, audience: RESEARCH_AUDIENCE, modelId }),
       });
       if (guard(res.status)) return;
       const data = await res.json().catch(() => ({}));
@@ -600,13 +693,15 @@ export default function AvaPage() {
       setResearchRun({
         topic,
         audience: RESEARCH_AUDIENCE,
+        // p18-F04：新会话总是从 'draft' 开始——只展示澄清问题待确认，计划/执行都还
+        // 没开始，两步确认必须依次显式完成（见 confirmResearchClarify/confirmResearchPlan）。
         status: "draft",
         research: data.research,
         assistantMessage: data.messages.assistant,
-        timeline: data.research.timeline.map((item: ResearchTimelineItem, index: number) => ({
-          ...item,
-          status: index === 0 ? "running" : "queued",
-        })),
+        // 服务端已经把 draft 阶段的 timeline 计算好并落库（data.session.timeline，此时
+        // 全部 queued——执行尚未开始），前端直接采用同一份而不是自己重算。
+        timeline: data.session?.timeline ?? data.research.timeline,
+        sessionId: data.session?.id,
       });
       await refreshThreads();
     } catch {
@@ -702,36 +797,73 @@ export default function AvaPage() {
     }
   }
 
-  function confirmResearchPlan() {
-    if (!researchRun?.research || researchRun.status !== "draft") return;
-    const queued: ResearchTimelineItem[] = researchRun.research.timeline.map((item, index) => ({
-      ...item,
-      status: index === 0 ? "running" : "queued",
-    }));
-    setResearchRun({ ...researchRun, status: "running", timeline: queued });
+  // p18-F04：两步确认 + 后端真实阶段进度都通过这一个动作化 PATCH 端点，服务端校验
+  // 当前 status 是否允许该 action、并计算下一个 timeline 快照——前端不再自己维护一份
+  // 并行的定时器状态机，只负责把服务端返回的 session 渲染出来。
+  async function callResearchAction(
+    sessionId: number | undefined,
+    action: "confirm-clarify" | "confirm-plan" | "advance"
+  ): Promise<{ session: { status: ResearchStatus; timeline: ResearchTimelineItem[] }; done?: boolean } | null> {
+    if (activeId == null || sessionId == null) return null;
+    try {
+      const res = await fetch(`/api/ava/threads/${activeId}/research/${sessionId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  }
 
-    researchRun.research.timeline.forEach((item, index) => {
-      window.setTimeout(() => {
-        setResearchRun((current) => {
-          if (!current?.research) return current;
-          const timeline = current.research.timeline.map((candidate, candidateIndex) => ({
-            ...candidate,
-            status:
-              candidateIndex <= index
-                ? "complete"
-                : candidateIndex === index + 1
-                  ? "running"
-                  : "queued",
-          })) as ResearchTimelineItem[];
-          const isDone = index === current.research.timeline.length - 1;
-          if (!isDone) return { ...current, status: "running", timeline };
-          const nextMessages = current.assistantMessage ? [current.assistantMessage] : [];
+  /** 第一步确认：确认澄清问题。draft → clarified，计划从此才可确认——
+   *  不允许从提交主题直接跳到能确认计划/进入执行。 */
+  async function confirmResearchClarify() {
+    if (!researchRun?.research || researchRun.status !== "draft") return;
+    const sessionId = researchRun.sessionId;
+    const result = await callResearchAction(sessionId, "confirm-clarify");
+    const nextStatus = result?.session.status ?? "clarified";
+    setResearchRun((current) => (current ? { ...current, status: nextStatus } : current));
+  }
+
+  /** 第二步确认：确认研究计划。clarified → running，服务端把 timeline 首阶段置为
+   *  running、其余 queued 并返回；随后用 advanceResearch 轮询式地真实推进各阶段
+   *  （每次调用都是一次服务端计算 + 持久化，不是前端凭空猜测下一步该显示什么）。 */
+  async function confirmResearchPlan() {
+    if (!researchRun?.research || researchRun.status !== "clarified") return;
+    const sessionId = researchRun.sessionId;
+    const assistantMessage = researchRun.assistantMessage;
+    const result = await callResearchAction(sessionId, "confirm-plan");
+    if (!result?.session) return;
+    const session = result.session;
+    setResearchRun((current) =>
+      current ? { ...current, status: session.status, timeline: session.timeline } : current
+    );
+
+    // 逐阶段真实推进：每一步都调用后端 advance（服务端计算 + 持久化下一个 timeline
+    // 快照），前端只按节奏发起调用、渲染返回结果——不是自己算好整段动画再回放。
+    const stageCount = session.timeline.length;
+    for (let i = 0; i < stageCount; i += 1) {
+      // 给用户一个可感知的推进节奏（每阶段之间留出可见间隔），但推进内容本身来自
+      // 服务端下一次调用的返回值，不是这个延时算出来的。
+      await new Promise((resolve) => window.setTimeout(resolve, 350));
+      const advanceResult = await callResearchAction(sessionId, "advance");
+      if (!advanceResult?.session) break;
+      const advanced = advanceResult.session;
+      const isDone = Boolean(advanceResult.done);
+      setResearchRun((current) => {
+        if (!current?.research) return current;
+        if (isDone) {
+          const nextMessages = assistantMessage ? [assistantMessage] : [];
           setMessages((prev) => [...prev, ...nextMessages]);
           setReportOpen(true);
-          return { ...current, status: "complete", timeline };
-        });
-      }, 350 * (index + 1));
-    });
+        }
+        return { ...current, status: advanced.status, timeline: advanced.timeline };
+      });
+      if (isDone) break;
+    }
   }
 
   async function deleteLastRequest(messageId: number) {
@@ -956,6 +1088,91 @@ export default function AvaPage() {
       setEmailError("发送邮件失败，请重试");
     } finally {
       setEmailSending(false);
+    }
+  }
+
+  // p18 F11：打开/关闭「发送到 Board」选择器；打开时懒加载有编辑权限的白板列表。
+  async function toggleBoardPicker(message: Message) {
+    const opening = boardPickerForMessageId !== message.id;
+    setBoardPickerForMessageId(opening ? message.id : null);
+    setSendBoardErrorId(null);
+    if (opening && editableBoards === null) {
+      setBoardsLoading(true);
+      setBoardsLoadError(false);
+      try {
+        const res = await fetch("/api/boards?scope=editable");
+        if (guard(res.status)) return;
+        if (!res.ok) throw new Error();
+        const data = (await res.json()) as { boards: EditableBoard[] };
+        setEditableBoards(data.boards);
+      } catch {
+        setBoardsLoadError(true);
+      } finally {
+        setBoardsLoading(false);
+      }
+    }
+  }
+
+  // p18 F11：发送到 Board——把该条 AI 消息内容写入选中白板的一个便利贴 item。
+  async function sendMessageToBoard(message: Message, boardId: number) {
+    if (activeId == null || sendBoardPendingId != null) return;
+    setSendBoardPendingId(message.id);
+    setSendBoardErrorId(null);
+    try {
+      const res = await fetch(
+        `/api/ava/threads/${activeId}/messages/${message.id}/send-to-board`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ boardId }),
+        }
+      );
+      if (guard(res.status)) return;
+      if (res.status === 403) {
+        setSendBoardErrorId(message.id);
+        setSendBoardErrorText("无编辑权限，无法发送到该白板");
+        return;
+      }
+      if (!res.ok) throw new Error();
+      const board = editableBoards?.find((b) => b.id === boardId);
+      setSendBoardStatusId(message.id);
+      setSendBoardStatusText(`已发送到「${board?.name ?? "Board"}」`);
+      setBoardPickerForMessageId(null);
+      setTimeout(() => setSendBoardStatusId((prev) => (prev === message.id ? null : prev)), 3000);
+    } catch {
+      setSendBoardErrorId(message.id);
+      setSendBoardErrorText("发送到 Board 失败，请重试");
+    } finally {
+      setSendBoardPendingId(null);
+    }
+  }
+
+  // p18 F11：发送邮件——把该条 AI 消息内容发到当前用户邮箱。频控命中时展示独立提示。
+  async function sendMessageEmail(message: Message) {
+    if (activeId == null || sendEmailPendingId != null) return;
+    setSendEmailPendingId(message.id);
+    setSendEmailErrorId(null);
+    try {
+      const res = await fetch(
+        `/api/ava/threads/${activeId}/messages/${message.id}/send-email`,
+        { method: "POST" }
+      );
+      if (guard(res.status)) return;
+      if (res.status === 429) {
+        setSendEmailErrorId(message.id);
+        setSendEmailErrorText("发送太频繁，请稍后再试");
+        return;
+      }
+      if (!res.ok) throw new Error();
+      const data = (await res.json()) as { ok: boolean; to: string };
+      setSendEmailStatusId(message.id);
+      setSendEmailStatusText(`已发送到 ${data.to}`);
+      setTimeout(() => setSendEmailStatusId((prev) => (prev === message.id ? null : prev)), 3000);
+    } catch {
+      setSendEmailErrorId(message.id);
+      setSendEmailErrorText("发送邮件失败，请重试");
+    } finally {
+      setSendEmailPendingId(null);
     }
   }
 
@@ -1442,6 +1659,19 @@ export default function AvaPage() {
                                   onCopy={() => void copyMessage(m)}
                                   onFeedback={(rating) => void submitFeedback(m, rating)}
                                   onRegenerate={() => void regenerateReply(m)}
+                                  boardPickerOpen={boardPickerForMessageId === m.id}
+                                  onToggleBoardPicker={() => void toggleBoardPicker(m)}
+                                  editableBoards={editableBoards}
+                                  boardsLoading={boardsLoading}
+                                  boardsLoadError={boardsLoadError}
+                                  sendBoardPending={sendBoardPendingId === m.id}
+                                  sendBoardStatus={sendBoardStatusId === m.id ? sendBoardStatusText : ""}
+                                  sendBoardError={sendBoardErrorId === m.id ? sendBoardErrorText : ""}
+                                  onChooseBoard={(boardId) => void sendMessageToBoard(m, boardId)}
+                                  sendEmailPending={sendEmailPendingId === m.id}
+                                  sendEmailStatus={sendEmailStatusId === m.id ? sendEmailStatusText : ""}
+                                  sendEmailError={sendEmailErrorId === m.id ? sendEmailErrorText : ""}
+                                  onSendEmail={() => void sendMessageEmail(m)}
                                 />
                               </div>
                             )}
@@ -1490,7 +1720,8 @@ export default function AvaPage() {
                   <ResearchWorkspace
                     run={researchRun}
                     statusLabel={researchStatusLabel}
-                    onConfirm={confirmResearchPlan}
+                    onConfirmClarify={confirmResearchClarify}
+                    onConfirmPlan={confirmResearchPlan}
                     onOpenReport={() => setReportOpen(true)}
                   />
                 )}
@@ -1691,25 +1922,40 @@ export default function AvaPage() {
                       }
                     />
                   </div>
-                  <Button
-                    data-testid="send"
-                    size="icon"
-                    className="h-8 w-8 rounded-9"
-                    onClick={() => void send()}
-                    disabled={
-                      (!draft.trim() && attachments.uploadedIds.length === 0) ||
-                      sending ||
-                      attachments.hasPending ||
-                      researchRun?.status === "running"
-                    }
-                    aria-label={isResearchMode ? "Start Deep Research" : "Send message"}
-                  >
-                    {isResearchMode ? (
-                      <Search className="h-4 w-4" strokeWidth={2} />
-                    ) : (
-                      <ArrowUp className="h-4 w-4" strokeWidth={2} />
-                    )}
-                  </Button>
+                  {sending && !isResearchMode ? (
+                    // P18 F02：流式回复进行中，Send 变成 Stop——点击真实中断请求
+                    // （AbortController.abort()），而不是等回显自然结束。
+                    <Button
+                      data-testid="stop"
+                      size="icon"
+                      variant="outline"
+                      className="h-8 w-8 rounded-9"
+                      onClick={stop}
+                      aria-label="Stop generating"
+                    >
+                      <Square className="h-3.5 w-3.5" strokeWidth={2} fill="currentColor" />
+                    </Button>
+                  ) : (
+                    <Button
+                      data-testid="send"
+                      size="icon"
+                      className="h-8 w-8 rounded-9"
+                      onClick={() => void send()}
+                      disabled={
+                        (!draft.trim() && attachments.uploadedIds.length === 0) ||
+                        sending ||
+                        attachments.hasPending ||
+                        researchRun?.status === "running"
+                      }
+                      aria-label={isResearchMode ? "Start Deep Research" : "Send message"}
+                    >
+                      {isResearchMode ? (
+                        <Search className="h-4 w-4" strokeWidth={2} />
+                      ) : (
+                        <ArrowUp className="h-4 w-4" strokeWidth={2} />
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1724,15 +1970,22 @@ export default function AvaPage() {
 function ResearchWorkspace({
   run,
   statusLabel,
-  onConfirm,
+  onConfirmClarify,
+  onConfirmPlan,
   onOpenReport,
 }: {
   run: ResearchRun;
   statusLabel: string;
-  onConfirm: () => void;
+  onConfirmClarify: () => void;
+  onConfirmPlan: () => void;
   onOpenReport: () => void;
 }) {
   const hasPlan = Boolean(run.research);
+  // p18-F04：澄清确认（research-clarify）与计划确认（confirm-research-plan）是两个
+  // 独立的、必须显式确认的步骤——draft 阶段只能确认澄清问题，计划要等澄清确认后
+  // （status === 'clarified'）才能确认，不能从提交主题直接跳到执行。
+  const canConfirmClarify = run.status === "draft";
+  const canConfirmPlan = run.status === "clarified";
   return (
     <div
       data-testid="research-card"
@@ -1765,7 +2018,21 @@ function ResearchWorkspace({
       {hasPlan && run.research && (
         <div className="mt-4 flex flex-col gap-4">
           <section data-testid="research-clarify" className="rounded-9 border border-border bg-background p-3">
-            <h2 className="text-13 font-semibold text-foreground">Clarifying questions</h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-13 font-semibold text-foreground">Clarifying questions</h2>
+              {canConfirmClarify && (
+                <Button
+                  type="button"
+                  size="sm"
+                  data-testid="confirm-research-clarify"
+                  onClick={onConfirmClarify}
+                  className="gap-1.5 transition-all hover:shadow-sm"
+                >
+                  <CheckCircle2 className="h-4 w-4" strokeWidth={1.5} />
+                  Confirm clarification
+                </Button>
+              )}
+            </div>
             <ul className="mt-2 list-disc space-y-1 pl-4 text-13 text-muted-foreground">
               {run.research.clarifyingQuestions.map((question) => (
                 <li key={question}>{question}</li>
@@ -1778,13 +2045,18 @@ function ResearchWorkspace({
               <div>
                 <h2 className="text-13 font-semibold text-foreground">Research plan</h2>
                 <p className="mt-1 text-13 text-muted-foreground">Audience: {run.research.plan.audience}</p>
+                {canConfirmClarify && (
+                  <p className="mt-1 text-11 text-muted-foreground">
+                    Confirm the clarifying questions above before you can confirm this plan.
+                  </p>
+                )}
               </div>
-              {run.status === "draft" && (
+              {canConfirmPlan && (
                 <Button
                   type="button"
                   size="sm"
                   data-testid="confirm-research-plan"
-                  onClick={onConfirm}
+                  onClick={onConfirmPlan}
                   className="gap-1.5 transition-all hover:shadow-sm"
                 >
                   <CheckCircle2 className="h-4 w-4" strokeWidth={1.5} />
@@ -1960,6 +2232,19 @@ function MessageActionsBar({
   onCopy,
   onFeedback,
   onRegenerate,
+  boardPickerOpen,
+  onToggleBoardPicker,
+  editableBoards,
+  boardsLoading,
+  boardsLoadError,
+  sendBoardPending,
+  sendBoardStatus,
+  sendBoardError,
+  onChooseBoard,
+  sendEmailPending,
+  sendEmailStatus,
+  sendEmailError,
+  onSendEmail,
 }: {
   message: Message;
   isLast: boolean;
@@ -1973,9 +2258,22 @@ function MessageActionsBar({
   onCopy: () => void;
   onFeedback: (rating: MessageFeedbackRating) => void;
   onRegenerate: () => void;
+  boardPickerOpen: boolean;
+  onToggleBoardPicker: () => void;
+  editableBoards: EditableBoard[] | null;
+  boardsLoading: boolean;
+  boardsLoadError: boolean;
+  sendBoardPending: boolean;
+  sendBoardStatus: string;
+  sendBoardError: string;
+  onChooseBoard: (boardId: number) => void;
+  sendEmailPending: boolean;
+  sendEmailStatus: string;
+  sendEmailError: string;
+  onSendEmail: () => void;
 }) {
   return (
-    <div data-testid={`msg-actions-${message.id}`} className="flex flex-col gap-1">
+    <div data-testid={`msg-actions-${message.id}`} className="relative flex flex-col gap-1">
       <div className="flex items-center gap-0.5">
         <Button
           type="button"
@@ -2039,10 +2337,11 @@ function MessageActionsBar({
           variant="ghost"
           size="icon"
           data-testid="msg-send-to-board"
-          className="h-7 w-7 text-muted-foreground"
-          disabled
-          aria-label="Send to current Board (coming soon)"
-          title="Only available inside a Board — coming soon"
+          className="h-7 w-7 text-muted-foreground transition-colors hover:bg-surface-1"
+          onClick={onToggleBoardPicker}
+          disabled={sendBoardPending}
+          aria-label="Send to a Board"
+          title="Send this message to a Board you can edit"
         >
           <LayoutGrid className="h-3.5 w-3.5" strokeWidth={1.5} />
         </Button>
@@ -2051,10 +2350,11 @@ function MessageActionsBar({
           variant="ghost"
           size="icon"
           data-testid="msg-send-email"
-          className="h-7 w-7 text-muted-foreground"
-          disabled
-          aria-label="Send via email (coming soon)"
-          title="Email delivery coming soon"
+          className="h-7 w-7 text-muted-foreground transition-colors hover:bg-surface-1"
+          onClick={onSendEmail}
+          disabled={sendEmailPending}
+          aria-label="Send via email"
+          title="Send this message to your email"
         >
           <Mail className="h-3.5 w-3.5" strokeWidth={1.5} />
         </Button>
@@ -2078,6 +2378,65 @@ function MessageActionsBar({
         <p role="alert" data-testid="msg-regenerate-error" className="text-11 text-destructive">
           Regenerate failed — please try again
         </p>
+      )}
+      {sendBoardStatus && (
+        <p data-testid="msg-board-status" className="text-11 text-muted-foreground">
+          {sendBoardStatus}
+        </p>
+      )}
+      {sendBoardError && (
+        <p role="alert" data-testid="err-msg-board" className="text-11 text-destructive">
+          {sendBoardError}
+        </p>
+      )}
+      {sendEmailStatus && (
+        <p data-testid="msg-email-status" className="text-11 text-muted-foreground">
+          {sendEmailStatus}
+        </p>
+      )}
+      {sendEmailError && (
+        <p role="alert" data-testid="err-msg-email" className="text-11 text-destructive">
+          {sendEmailError}
+        </p>
+      )}
+      {boardPickerOpen && (
+        <div
+          data-testid="board-picker"
+          className="absolute left-0 top-full z-20 mt-1 w-64 rounded-12 border border-border bg-background p-3 shadow-lg"
+        >
+          <p className="text-11 font-medium text-foreground">Send to Board</p>
+          {boardsLoading && (
+            <p className="mt-2 text-11 text-muted-foreground">Loading boards…</p>
+          )}
+          {boardsLoadError && (
+            <p role="alert" data-testid="err-board-list" className="mt-2 text-11 text-destructive">
+              Failed to load boards — please try again
+            </p>
+          )}
+          {!boardsLoading && !boardsLoadError && editableBoards && editableBoards.length === 0 && (
+            <p data-testid="board-picker-empty" className="mt-2 text-11 text-muted-foreground">
+              No editable boards yet — create a Board first
+            </p>
+          )}
+          {!boardsLoading && !boardsLoadError && editableBoards && editableBoards.length > 0 && (
+            <ul className="mt-2 max-h-48 space-y-0.5 overflow-y-auto">
+              {editableBoards.map((board) => (
+                <li key={board.id}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    data-testid={`board-picker-option-${board.id}`}
+                    className="h-auto w-full justify-start truncate px-2 py-1.5 text-left text-12 font-normal text-foreground hover:bg-surface-1"
+                    onClick={() => onChooseBoard(board.id)}
+                    disabled={sendBoardPending}
+                  >
+                    {board.name}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );

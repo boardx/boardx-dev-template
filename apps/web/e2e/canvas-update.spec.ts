@@ -1,7 +1,10 @@
 import { test, expect } from "@playwright/test";
+import { canvasItems, waitForCanvasReady } from "./helpers/canvas";
 
 // p20-F10：legacy 单画布下线后，本 spec 迁移到 board 模型
 // （PATCH 走 /api/board-items/[itemId]，列表走 /api/boards/[id]/items）。
+// 注：p20 合并时用了 p6:F13（渲染引擎切 fabric.Canvas）之前的 DOM 断言（item-<id> testid），
+// 该 DOM 节点在 fabric 渲染下不再产出。按策略 2（issue #269）改为 canvas 兼容锚点。
 const uniq = () => `cu_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
@@ -25,7 +28,10 @@ test("移动 + 编辑 item 并持久化", async ({ page }) => {
 
   // 板上渲染更新后的文字
   await page.goto(`/boards/${board.id}`);
-  await expect(page.getByTestId(`item-${item.id}`)).toContainText("new-text");
+  await waitForCanvasReady(page);
+  await expect
+    .poll(async () => (await canvasItems(page)).find((it) => it.id === item.id)?.text)
+    .toContain("new-text");
 });
 
 test("非 board 成员更新 item → 403", async ({ page, playwright }) => {
