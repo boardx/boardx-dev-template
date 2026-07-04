@@ -160,7 +160,7 @@
         "git cat-file -e HEAD:phases/phase-p13-survey/sprints/sprint-07/evidence/F07.verify.log"
       ],
       "evidence": "evidence/F07.verify.log",
-      "notes": "uc-survey-007。源于 F04 notes 明确排除项(\"分析报告的 AI 摘要为可选增强\")的后续补齐，非凭空新增。复用 packages/ai 的 gateway/anthropicProvider + stub provider 确定性模式（同 researchGenerator.ts 的接入方式），不新造 AI 接入地基；e2e 走 stub provider，不依赖真实 Anthropic API key。摘要不持久化落库（每次即时生成），历史版本管理/多语言/PDF·CSV 嵌入摘要均明确不做，留给后续 feature。依赖 F04（结果聚合与权限边界）。"
+      "notes": "uc-survey-007。源于 F04 notes 明确排除项(\"分析报告的 AI 摘要为可选增强\")的后续补齐，非凭空新增。复用 packages/ai 已合入 main 的 gateway.ts（defaultGateway/ChatGateway，anthropic:/stub: 前缀路由 + FORCE_FAIL_MARKER 确定性失败触发）与 studioGenerator.ts 的 sanctioned-stub 先例，不新造 AI 接入地基；e2e 走 stub provider，不依赖真实 Anthropic API key。（勘误：不要参考 researchGenerator.ts——该文件只存在于未合并进 main 的 p18 分支，不是当前代码库里的东西。）摘要不持久化落库（每次即时生成），历史版本管理/多语言/PDF·CSV 嵌入摘要均明确不做，留给后续 feature。依赖 F04（结果聚合与权限边界）。"
     }
   ]
 }
