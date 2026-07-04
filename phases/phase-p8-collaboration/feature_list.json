@@ -15,7 +15,7 @@
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/web exec playwright test e2e/collab-transport-skeleton.spec.ts"
       ],
-      "evidence": "evidence/F01.verify.log @ 2026-07-04T20:55:00.000Z (安全返工:board 归属授权修复)",
+      "evidence": "evidence/F01.verify.log @ 2026-07-04T21:32:32.143Z",
       "notes": "背景见 phases/phase-p8-collaboration/requirements/ws-redis-transport-skeleton.md 与 board-canvas-gap-analysis-and-roadmap.md Wave 0 第 4 项。把「起一个新的长连接网关」这类基础设施发现成本从 F02（Yjs 同步语义）里拆出来，独立验证。不依赖 p6 的组件广度（F15-F21），可与 p6 并行推进。落地后，现有 apps/web/lib/presence.ts、lib/collab-bus.ts 的进程内内存实现应逐步被这条真实传输层替换（替换时机由 F02-F05 各自决定）。",
       "source_use_cases": [
         "phases/phase-p8-collaboration/requirements/ws-redis-transport-skeleton.md"
