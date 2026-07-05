@@ -1,0 +1,19 @@
+=== F06 verify — 创建团队 (uc-team-001) ===
+date (UTC): 2026-07-05T01:35:59Z
+commit: c3a449d108642059e2c8bcc93f531382a50856d5
+重新执行时间：phase-p21 F04 补齐证据（owner wrk-platform-2）
+
+$ docker compose -f infra/docker-compose.yml up -d
+ (worktree infra 已启动，见本轮 F04 会话)
+
+$ pnpm --filter @repo/data run migrate
+ (已应用，跳过 — 迁移已是最新)
+
+$ pnpm --filter @repo/web exec playwright test e2e/team-create.spec.ts
+
+Running 2 tests using 1 worker
+
+  ✓  1 [chromium] › team-create.spec.ts:5:5 › 创建团队后出现在列表且自己是 owner (3.2s)
+  ✓  2 [chromium] › team-create.spec.ts:17:5 › 空团队名被拒 (146ms)
+
+  2 passed (6.9s)

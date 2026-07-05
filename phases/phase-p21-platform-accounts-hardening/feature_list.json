@@ -80,9 +80,9 @@
       "title": "Team F06-F09 证据补齐 + F13 状态拆分回填",
       "user_visible_behavior": "重新执行 phase-04 F06-F09 的 verification 命令，输出真实日志落盘并被 git 追踪。F13（团队设置/Home/Memory/AI Store）拆分：uc-team-007（团队改名/描述/删除）已在 commit f603f45 实现却从未回填 feature_list.json，本 feature 把它登记为独立 passing 条目；核实 uc-team-008/010 依赖的 AI/AI Store 平面现状后，若确实已具备条件则解除 deferred 并登记为 not_started（留给后续排期，不在本 feature 内实现）；uc-team-009（团队 Memory）继续保持 deferred（数据模型确实缺失）。",
       "design_ref": "无新 UI；已实现的 apps/web/app/(app)/teams/[id]/settings 等页面",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-platform-2",
       "capability": "CAP-DATA",
       "depends_on": [],
       "wave": 1,
@@ -94,7 +94,7 @@
         "jq -e '.features[] | select(.id==\"F13\")' phases/phase-04-identity-and-spaces/feature_list.json",
         "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F04.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F04.verify.log @ 2026-07-05T01:38:59.735Z",
       "notes": "requirements/team.md。commit 7e58dce 是 F06-F09 底层实现的落地提交，commit f603f45 是 uc-007 的落地提交但未回写 feature_list.json——两个 commit 号仅供实现者定位代码，不代表本 feature 需要重新实现，只需验证+回填状态。"
     },
     {
