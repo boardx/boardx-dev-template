@@ -104,7 +104,7 @@
       "title": "Billing F04「额度不足触发」如实改写",
       "user_visible_behavior": "phase-p14 F04 的 user_visible_behavior/notes 改为如实描述现状：AI credits 提示横幅（data-testid=ai-low-credits-prompt）是无条件常驻展示的静态 UI，用户可随时手动点击进入升级流程；不再声称该横幅由'额度不足'事件触发。同步补充 notes：明确声明当前仅支持单一货币（USD）、不支持退款、不支持自动续费管理（相对 oldcode 收窄的范围，避免被后续开发者误判为遗漏）。对应 e2e 测试名/断言同步改名去掉'触发'措辞。",
       "design_ref": "无新 UI；apps/web/app/(app)/ava/page.tsx 现有 ai-low-credits-prompt 横幅",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "wrk-payment-1",
       "capability": "CAP-PAYMENT",
@@ -115,7 +115,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/billing-001-upgrade-plan.spec.ts -g '静态常驻展示'",
         "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F05.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F05.verify.log @ 2026-07-05T00:53:29.024Z",
       "notes": "requirements/billing.md。默认走路径 B（如实改描述，不新增因果链实现）；若产品在实现前明确要走路径 A（真正让 402 触发弹窗自动打开），实现者应在开工前更新本条 notes 说明改用路径 A，并相应调整 verification 为真正模拟 402 响应后断言弹窗打开的 e2e。"
     },
     {
