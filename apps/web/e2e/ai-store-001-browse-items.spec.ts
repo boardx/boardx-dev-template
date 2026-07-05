@@ -56,6 +56,25 @@ test("搜索按名称/描述收窄列表", async ({ page }) => {
   await expect(grid).not.toContainText("Research Agent");
 });
 
+test("输入后立即按 Enter 使用当前搜索词刷新网格", async ({ page }) => {
+  await register(page);
+  await page.goto("/ai-store");
+  const grid = page.getByTestId("item-grid");
+  await expect(grid).toBeVisible();
+  await expect(grid).toContainText("Research Agent");
+
+  await page.getByTestId("store-search").fill(`no-match-${Date.now()}`);
+  await page.getByTestId("store-search").press("Enter");
+  await expect(page.getByTestId("empty")).toBeVisible();
+  await expect(grid).toHaveCount(0);
+
+  await page.getByTestId("store-search").fill("Translate");
+  await page.getByTestId("store-search").press("Enter");
+  await expect(grid).toBeVisible();
+  await expect(grid).toContainText("Translate");
+  await expect(grid).not.toContainText("Research Agent");
+});
+
 test("无匹配结果显示空状态 + 清空筛选入口", async ({ page }) => {
   await register(page);
   await page.goto("/ai-store");
