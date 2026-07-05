@@ -51,14 +51,14 @@
         "pnpm --filter @repo/web exec playwright test e2e/home-agent-search.spec.ts"
       ],
       "evidence": "",
-      "notes": "uc-home-005。过滤逻辑 filterAgents 已实现并单测（lib/agents.test.ts，随 F02 落地）；但有意义的端到端搜索需要 Agent 数据，blocked-on p11（AI Store 提供 Agent 源）。p11 接通后补 home-agent-search.spec.ts 有数据分支并转 passing。"
+      "notes": "uc-home-005。过滤逻辑 filterAgents 已实现并单测（lib/agents.test.ts，随 F02 落地）；但有意义的端到端搜索需要 Agent 数据，blocked_on p11:F03（AI Store「订阅并使用项目」，负责把 Agent 带入使用场景/AVA 会话，当前 in_progress）。【2026-07-05 p21-F06 修正】此前笼统写「blocked-on p11」，核实后 p11:F01/F02 与 p9:F01 均已 passing，真正卡住的是 p11:F03。p11:F03 转 passing 后补 home-agent-search.spec.ts 有数据分支并转 passing。"
     },
     {
       "id": "F04",
       "priority": 4,
       "area": "home-page",
-      "title": "Recent 页占位（忠于真实「开发中」状态）",
-      "user_visible_behavior": "/recent 显示「Recent Activity」标题与「This page is under development.」提示；不展示资源卡片/列表/筛选/排序；用户可经导航/Home/Room/Board/全局搜索离开继续工作。未登录跳登录。",
+      "title": "Recent 页真实最近白板列表",
+      "user_visible_behavior": "/recent 显示「Recent Activity」标题；已登录且存在最近访问/编辑白板时展示真实白板列表（复用 GET /api/boards?scope=recent，按权限过滤），点击列表项跳转对应 Board 页；无最近白板时显示空状态并提供「去房间看看」入口；数据加载中显示骨架占位，加载失败显示错误提示与重试按钮。未登录访问跳登录。",
       "status": "passing",
       "sprint": "01",
       "owner": "claude",
@@ -66,10 +66,10 @@
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web exec playwright test e2e/recent-placeholder.spec.ts"
+        "pnpm --filter @repo/web exec playwright test e2e/home-004-view-recent-page.spec.ts"
       ],
       "evidence": "evidence/F04.verify.log @ 2026-06-29T19:48:18.599Z",
-      "notes": "uc-home-004。真实产品当前即为占位页，故按占位实现而非臆造最近资源列表（避免 quality-document.md 记录的「臆造用例」回归）。后续支持团队范围最近资源时再升级。"
+      "notes": "uc-home-004。【2026-07-05 p21-F06 修正】此前本条 user_visible_behavior/verification 描述的是「占位页」，但 apps/web/app/(app)/recent/page.tsx 的真实实现是复用 /api/boards?scope=recent 的真实最近白板列表（loading/empty/error/有数据四态），verification 此前指向的 e2e/recent-placeholder.spec.ts 在仓库中不存在。已改为如实描述真实实现，verification 改指向真实存在且测试该真实行为的 apps/web/e2e/home-004-view-recent-page.spec.ts。evidence 时间戳沿用历史记录，未重新执行（本次仅做字段如实修正，不改代码）。"
     },
     {
       "id": "F05",
@@ -103,7 +103,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/home-quick-chat.spec.ts"
       ],
       "evidence": "",
-      "notes": "uc-home-006/007/008。blocked-on p9（AVA 线程创建/聊天页）。本期仅渲染按钮与禁用态占位；接通在 p9。"
+      "notes": "uc-home-006/007/008。blocked_on p11:F03（AI Store「订阅并使用项目」，负责把 Agent 带入 AVA 会话的使用入口，当前 in_progress）。【2026-07-05 p21-F06 修正】此前笼统写「blocked-on p9（AVA 线程创建/聊天页）」，核实后 p9:F01 已 passing，AVA 线程创建/聊天页本身已具备条件，真正卡住的是 p11:F03 尚未把 Agent 使用入口接通到 AVA 会话。本期仅渲染按钮与禁用态占位；接通在 p11:F03 转 passing 后。"
     },
     {
       "id": "F07",
