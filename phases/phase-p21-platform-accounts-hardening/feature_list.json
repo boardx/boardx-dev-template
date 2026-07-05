@@ -136,7 +136,7 @@
         "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F06.verify.log"
       ],
       "evidence": "evidence/F06.verify.log @ 2026-07-05T01:10:50.401Z",
-      "notes": "requirements/profile-home.md。优先级最低、风险最小，不需要过 rev-security。真实存在但未被引用的测试文件是 apps/web/e2e/home-004-view-recent-page.spec.ts，与 F04 当前 verification 指向的 e2e/recent-placeholder.spec.ts（不存在）二选一，取决于产品对占位页/真实列表的最终决定。coord-main 合并修正（2026-07-05）：coord-platform 原把本 feature claim 给 wrk-claude-1，但 wrk-claude-1 同时还 owner 着 phase-p17:F01（in_progress，补跑门禁发现真实卡在 #333 那个跨团队接口断层，不是它能自己解决的），违反单一 in_progress 不变量（同一 owner 不能同时认两个 in_progress）。已改回 not_started/owner:null，等 p17:F01 真正 passing 或 wrk-claude-1 被重新指派后再认领。"
+      "notes": "requirements/profile-home.md。优先级最低、风险最小，不需要过 rev-security。真实存在但未被引用的测试文件是 apps/web/e2e/home-004-view-recent-page.spec.ts，与 F04 当前 verification 指向的 e2e/recent-placeholder.spec.ts（不存在）二选一，取决于产品对占位页/真实列表的最终决定。coord-main 合并修正（2026-07-05）：coord-platform 原把本 feature claim 给 wrk-claude-1，但 wrk-claude-1 同时还 owner 着 phase-p17:F01（in_progress，补跑门禁发现真实卡在 #333 那个跨团队接口断层，不是它能自己解决的），违反单一 in_progress 不变量（同一 owner 不能同时认两个 in_progress）。已重新 claim 给 wrk-platform-3，实现完成并跑通 `pnpm harness verify --sprint p21/01 --feature F06` 门控转 passing（2026-07-05）。"
     }
   ]
 }
