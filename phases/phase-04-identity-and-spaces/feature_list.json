@@ -97,7 +97,7 @@
       "capability": "CAP-AUTH",
       "verification": [
         "test \"$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{\"provider\":\"google\"}' http://localhost:3000/api/auth/social)\" = \"200\"",
-        "NODE_ENV=production test \"$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{\"provider\":\"google\"}' http://localhost:3000/api/auth/social)\" = \"404\""
+        "pnpm --filter @repo/web exec playwright test e2e/auth-social-prod-gate.spec.ts"
       ],
       "evidence": "evidence/F05.verify.log @ 2026-06-29T08:03:13.656Z；生产环境 gate 由 phases/phase-p21-platform-accounts-hardening F01 补齐并在 phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F01.verify.log 留证",
       "notes": "uc-auth-003。DEFERRED 真 OAuth（需 provider secret），本轮仅 demo 登录桩；此前本条记录曾错误声称「GET .../social/:provider 返回 501 占位」，与真实代码（POST + demo 账号免密登录）不符，已在 p21 F01（issue #373）审计中修正为如实描述，并补上生产环境 gate（apps/web/app/api/auth/social/route.ts 的 NODE_ENV==='production' 分支）防止该 demo 桩在生产环境被当成认证后门。",
