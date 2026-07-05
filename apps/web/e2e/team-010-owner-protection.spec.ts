@@ -5,6 +5,9 @@ import { test, expect, type APIRequestContext, type PlaywrightWorkerArgs } from 
 // 覆盖：
 //   - admin 尝试把 owner 降级为其他角色 → 403，owner 角色不变
 //   - admin 尝试移除 owner → 403，owner 仍是成员
+//   - admin 尝试把普通 member 的角色 PATCH 成 owner → 403，不产出第二个 owner
+//     （code review 抓出的回归缺口：只挡"目标当前是 owner"不够，还要挡"把角色改成 owner"，
+//     否则 admin 能凭空造一个新 owner，绕过前两条保护实现团队接管）
 //   - admin 尝试签发 role=owner 的邀请 → 不会真的产出 owner 邀请（拒绝或强制降级为非 owner）
 //   - 合法路径不受影响：owner 操作任意成员（改角色/移除）、admin 操作普通成员（改角色/移除）
 type PW = PlaywrightWorkerArgs["playwright"];
@@ -69,6 +72,16 @@ test("admin 尝试移除 owner → 403，owner 仍是成员", async ({ playwrigh
   const res = await admin.ctx.delete(`/api/teams/${team.id}/members/${owner.userId}`);
   expect(res.status()).toBe(403);
   expect(await roleOf(owner.ctx, team.id, owner.userId)).toBe("owner");
+  await disposeAll(owner, admin, member);
+});
+
+test("admin 尝试把普通 member PATCH 成 role:owner → 403，不产出第二个 owner", async ({ playwright }) => {
+  const { owner, admin, member, team } = await setupTeam(playwright);
+  const res = await admin.ctx.patch(`/api/teams/${team.id}/members/${member.userId}`, {
+    data: { role: "owner" },
+  });
+  expect(res.status()).toBe(403);
+  expect(await roleOf(owner.ctx, team.id, member.userId)).toBe("member");
   await disposeAll(owner, admin, member);
 });
 

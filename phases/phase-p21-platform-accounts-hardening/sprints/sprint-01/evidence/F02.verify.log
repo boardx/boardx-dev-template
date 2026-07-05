@@ -1,53 +1,60 @@
 === F02 verify log — 团队成员角色接口越权修复（owner 保护）===
 worker: wrk-platform-2 / phase p21 / sprint 01
 
-## 环境问题（诚实记录，非本 feature 引入的回归）
+## 修订记录
 
-本机同时有大量并行 worker/worktree 在跑各自的 docker compose 网络（`docker network ls`
-观测到 37→40+ 个 compose 网络，且数字在写这份记录期间还在持续增长），Docker 的预定义
-地址池已被耗尽。`pnpm harness verify --sprint p21/01 --feature F02` 在第一条命令
-`docker compose -f infra/docker-compose.yml up -d` 上失败：
+- 第一轮修复（commit c0fdcf2）：members/[userId] 路由 PATCH/DELETE 加"目标当前是不是 owner"
+  校验 + invites 路由禁止签发 role=owner。
+- **code-reviewer 复审发现回归缺口**：PATCH 路由只校验了目标当前角色，没校验请求体里要把角色
+  设成什么——`isTeamRole("owner")` 为 true，所以 admin 仍能 `PATCH .../members/:anyMemberId
+  {role:"owner"}` 把任意普通成员提升为第二个 owner，等价的团队接管路径换了个入口。
+  `packages/data/src/teams.ts` 的 `updateMemberRole` 数据层兜底同样只挡"改 owner 那一行"，
+  不挡"把某行 SET 成 owner"。更糟的是，一旦造出这个新 owner，第一轮加的"目标是 owner 时拒绝
+  修改/移除"保护反而会保护它不被降级/移除，接管更彻底。
+- **本轮修复**：
+  1. `members/[userId]/route.ts` PATCH 增加 `if (role === "owner") return 403`（对齐 room 域
+     `rooms/[id]/members/[userId]/route.ts:20` 的白名单写法思路，从设计上不允许把角色设成 owner）。
+  2. `packages/data/src/teams.ts` 的 `updateMemberRole` SQL 加对称条件 `AND $3 <> 'owner'`。
+  3. 新增 e2e 用例："admin 尝试把普通 member PATCH 成 role:owner → 403，不产出第二个 owner"。
+
+## 环境说明（诚实记录，非本 feature 引入的回归）
+
+本机同时有大量并行 worker/worktree 在跑各自的 docker compose 网络，Docker 的预定义地址池
+已被耗尽，`docker compose -f infra/docker-compose.yml up -d`（含单独起 postgres）在"创建
+compose 网络"这一步失败：
 
     Network worker-wrk-platform-2-p21-f02-team-owner_default Creating
     Network worker-wrk-platform-2-p21-f02-team-owner_default Error
     Error response from daemon: all predefined address pools have been fully subnetted
-    failed to create network worker-wrk-platform-2-p21-f02-team-owner_default: ...
 
-复核过这不是"本 worktree 专属网络名冲突"——用 scripts/init-worktree-env.sh 分配的独占
-project name 重跑，甚至只起 postgres 单个 service，同样在"创建 compose 网络"这一步失败，
-是 Docker daemon 级别的地址池耗尽，与 team 域代码改动无关。
+复核过不是本 worktree 专属网络名冲突（用 scripts/init-worktree-env.sh 分配的独占 project name
+仍然失败），是 Docker daemon 级别的地址池耗尽，与 team 域代码改动无关。本轮修复重跑
+`pnpm harness verify` 再次确认此问题仍然存在（两轮都遇到，环境状态未变，且核实期间
+`docker network ls` 观测到活跃网络数量还在持续增长）。
 
 已确认的非破坏性事实：
-- `docker network prune` 在核实时刻是 no-op（逐个 `docker network inspect --format
-  '{{len .Containers}}'` 核对，当前活跃的 40 个网络全部有容器挂载，没有可安全清理的孤儿
-  网络）。
-- 没有对其它 worker/agent 的容器、网络做任何清理或重启操作。
-- 没有重启 Docker daemon（改 default-address-pools 需要重启，会打断所有其它并行 agent 的
-  数据库连接，不是本 worker 能单方面决定的操作）。
+- 核实时刻 `docker network inspect --format '{{len .Containers}}'` 逐个核对，当前所有活跃
+  compose 网络都有容器挂载，没有可安全清理的孤儿网络，未跑 `docker network prune`。
+- 没有重启 Docker daemon（会打断所有其它并行 agent 的数据库连接）。
+- 没有清理/停止其它 worker 的容器。
 
-因此本次改动的验证走了一条**不新建 docker compose 网络、行为等价**的路径：
+验证走的仍是不新建 docker compose 网络、行为等价的路径：
 
     docker run -d --name p21-f02-postgres --network bridge \
       -e POSTGRES_USER=boardx -e POSTGRES_PASSWORD=boardx -e POSTGRES_DB=boardx \
       -p ${PG_PORT}:5432 pgvector/pgvector:pg16
 
-直接复用 Docker 默认 bridge 网络（当时 0 容器挂载），不触发地址池分配，端口仍取
-scripts/init-worktree-env.sh 分配给本 worktree 的独占 PG_PORT。本 feature 只涉及 team
-路由 + `packages/data/src/teams.ts` 数据层，不依赖 redis/minio，未启动这两个服务。
+复用 Docker 默认 bridge 网络，不触发地址池分配，端口取 scripts/init-worktree-env.sh 分配给
+本 worktree 的独占 PG_PORT。本 feature 只涉及 team 路由 + 数据层，不依赖 redis/minio。
 
-**结论**：`pnpm harness verify` 这次跑不过是纯环境资源竞争问题，不代表功能未验证。下面是
-用等价方式跑通的完整验证链条（migrate 到 e2e 全部真实执行，非模拟）。这份 log 保留了
-harness verify 失败的真实记录（不删除、不假装通过），后续任何 agent/协调者在 Docker 网络
-压力下降后重跑 `pnpm harness verify --sprint p21/01 --feature F02`，理应可以自动升级
-passing（代码已在此提交里就绪，未做未提交的额外改动）。
+**结论**：`pnpm harness verify` 本身仍会在第一条命令上因环境资源问题失败，不代表功能未验证。
+下面是用等价方式跑通的完整验证链条，本轮已把 code review 发现的回归缺口修复并补测。
 
 ## 命令 1: docker compose -f infra/docker-compose.yml up -d
 
-结果：失败（见上，环境资源耗尽，非代码问题）。
-
-等价验证（非破坏性替代）：
-$ docker run -d --name p21-f02-postgres --network bridge -e POSTGRES_USER=boardx -e POSTGRES_PASSWORD=boardx -e POSTGRES_DB=boardx -p 52753:5432 pgvector/pgvector:pg16
-[启动成功，pg_isready 确认 accepting connections]
+结果：失败（环境资源耗尽，非代码问题，见上）。
+等价验证：`docker run --network bridge ...pgvector/pgvector:pg16`，pg_isready 确认
+accepting connections。
 
 ## 命令 2: pnpm --filter @repo/data run migrate
 
@@ -58,50 +65,50 @@ $ pnpm --filter @repo/data run migrate
 
 ## 命令 3: pnpm --filter @repo/web exec playwright test e2e/team-010-owner-protection.spec.ts
 
-$ pnpm --filter @repo/web exec playwright test e2e/team-010-owner-protection.spec.ts
+$ pnpm --filter @repo/web exec playwright test e2e/team-010-owner-protection.spec.ts e2e/team-manage.spec.ts
 [exit 0]
 
-Running 5 tests using 1 worker
+Running 9 tests using 1 worker
 
-  ✓  1 [chromium] › team-010-owner-protection.spec.ts:57:5 › admin 尝试降级 owner → 403，owner 角色不变 (1.7s)
-  ✓  2 [chromium] › team-010-owner-protection.spec.ts:67:5 › admin 尝试移除 owner → 403，owner 仍是成员 (433ms)
-  ✓  3 [chromium] › team-010-owner-protection.spec.ts:75:5 › admin 尝试签发 owner 邀请 → 不产出可用的 owner 邀请 (735ms)
-  ✓  4 [chromium] › team-010-owner-protection.spec.ts:95:5 › 合法路径不受影响：owner 可以改/移除任意成员（含 admin） (836ms)
-  ✓  5 [chromium] › team-010-owner-protection.spec.ts:111:5 › 合法路径不受影响：admin 可以改/移除普通成员 (720ms)
+  ✓  1 [chromium] › team-010-owner-protection.spec.ts:60:5 › admin 尝试降级 owner → 403，owner 角色不变 (1.4s)
+  ✓  2 [chromium] › team-010-owner-protection.spec.ts:70:5 › admin 尝试移除 owner → 403，owner 仍是成员 (351ms)
+  ✓  3 [chromium] › team-010-owner-protection.spec.ts:78:5 › admin 尝试把普通 member PATCH 成 role:owner → 403，不产出第二个 owner (470ms)
+  ✓  4 [chromium] › team-010-owner-protection.spec.ts:88:5 › admin 尝试签发 owner 邀请 → 不产出可用的 owner 邀请 (481ms)
+  ✓  5 [chromium] › team-010-owner-protection.spec.ts:108:5 › 合法路径不受影响：owner 可以改/移除任意成员（含 admin） (541ms)
+  ✓  6 [chromium] › team-010-owner-protection.spec.ts:124:5 › 合法路径不受影响：admin 可以改/移除普通成员 (411ms)
+  ✓  7 [chromium] › team-manage.spec.ts:26:5 › owner 改成员角色、移除成员 (238ms)
+  ✓  8 [chromium] › team-manage.spec.ts:40:5 › member 无权管理（改角色 403），非 owner 无权删除团队（403） (589ms)
+  ✓  9 [chromium] › team-manage.spec.ts:52:5 › owner 改名并删除团队 (184ms)
 
-  5 passed (7.1s)
+  9 passed (8.0s)
 
 ## 命令 4: pnpm --filter @repo/web exec playwright test e2e/team-manage.spec.ts
 
-$ pnpm --filter @repo/web exec playwright test e2e/team-manage.spec.ts
-[exit 0]
-
-Running 3 tests using 1 worker
-
-  ✓  1 [chromium] › team-manage.spec.ts:26:5 › owner 改成员角色、移除成员 (3.4s)
-  ✓  2 [chromium] › team-manage.spec.ts:40:5 › member 无权管理（改角色 403），非 owner 无权删除团队（403） (3.4s)
-  ✓  3 [chromium] › team-manage.spec.ts:52:5 › owner 改名并删除团队 (196ms)
-
-  3 passed (10.7s)
+同上，与命令 3 合并跑了一次（team-manage.spec.ts 的 3 个用例全部包含在上面的 9 passed 里）。
 
 ## 命令 5: git cat-file -e HEAD:phases/.../evidence/F02.verify.log
 
-本文件随对应 commit 一并提交后，已用 `git cat-file -e HEAD:<path>` 复核 exit 0。
+本文件随对应 commit 一并提交后，用 `git cat-file -e HEAD:<path>` 复核 exit 0。
 
 ## 补充回归（未在 verification 列表内，额外确认无破坏性变更）
 
 $ pnpm --filter @repo/web run typecheck   → PASS（exit 0）
 $ pnpm --filter @repo/data run typecheck  → PASS（exit 0）
 $ pnpm --filter @repo/web exec playwright test e2e/team-003-invite-members.spec.ts e2e/team-007-general-settings.spec.ts e2e/team-create.spec.ts e2e/team-invite-join.spec.ts e2e/team-switch.spec.ts e2e/admin-002-manage-teams.spec.ts
-  → 27 passed（无回归）
-$ ./init.sh → 45/45 tasks successful（基础验证在本次改动前后均通过）
+  → 27 passed（无回归，第一轮验证已跑过；本轮只改了 members/[userId].ts PATCH 与 teams.ts
+  updateMemberRole，未涉及这几个 spec 覆盖的路径，未重复全量重跑）
+$ ./init.sh → 45/45 tasks successful（本轮改动前后均通过）
 
-## 本次改动摘要
+## 本次改动摘要（含本轮修复）
 
-- apps/web/app/api/teams/[id]/members/[userId]/route.ts：PATCH/DELETE 增加目标角色校验，
-  目标是 owner 时一律 403，不论操作者是谁；owner 自己的操作行为不变（不在本 feature 范围）。
-- packages/data/src/teams.ts 的 updateMemberRole/removeMember 加 `AND role <> 'owner'`
-  数据层兜底，防止未来有其它调用方绕过路由层校验。
-- apps/web/app/api/teams/[id]/invites/route.ts：签发邀请时若指定 role=owner，强制降级为
-  member。
+- apps/web/app/api/teams/[id]/members/[userId]/route.ts：
+  - PATCH：双向拦截——目标当前是 owner 时 403；**请求把角色设为 owner 时同样 403**（本轮新增，
+    修复 code review 抓出的"PATCH 造第二个 owner"回归缺口）。
+  - DELETE：目标是 owner 时 403，不论操作者是谁。
+  - owner 自己的操作行为不变（不在本 feature 范围）。
+- packages/data/src/teams.ts：
+  - updateMemberRole 加双向 SQL 兜底：`AND role <> 'owner' AND $3 <> 'owner'`（本轮补上后半段）。
+  - removeMember 加 `AND role <> 'owner'`。
+- apps/web/app/api/teams/[id]/invites/route.ts：签发邀请时若指定 role=owner，强制降级为 member。
 - 对齐 apps/web/app/api/rooms/[id]/members/[userId]/route.ts 已有的 target-owner 保护写法。
+- e2e/team-010-owner-protection.spec.ts：6 个用例（新增"admin PATCH member 成 owner 被拒"）。
