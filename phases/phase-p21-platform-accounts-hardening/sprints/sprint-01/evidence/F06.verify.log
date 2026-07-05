@@ -1,0 +1,9 @@
+=== F06 verification run — 2026-07-05T00:31:56Z ===
+
+--- cmd 1: grep -q 'p11' phases/phase-p2-home/feature_list.json ---
+EXIT 0 (match found)
+
+38:      "notes": "uc-home-001/003。本期 Agent 数据源（订阅/推荐）由 AI Store(p11) 提供，故先以空数据集渲染空状态与入口；真实 Agent 列表在 p11 落地后接入（届时补 e2e 有数据分支）。"
+54:      "notes": "uc-home-005。过滤逻辑 filterAgents 已实现并单测（lib/agents.test.ts，随 F02 落地）；但有意义的端到端搜索需要 Agent 数据，blocked_on p11:F03（AI Store「订阅并使用项目」，负责把 Agent 带入使用场景/AVA 会话，当前 in_progress）。【2026-07-05 p21-F06 修正】此前笼统写「blocked-on p11」，核实后 p11:F01/F02 与 p9:F01 均已 passing，真正卡住的是 p11:F03。p11:F03 转 passing 后补 home-agent-search.spec.ts 有数据分支并转 passing。"
+106:      "notes": "uc-home-006/007/008。blocked_on p11:F03（AI Store「订阅并使用项目」，负责把 Agent 带入 AVA 会话的使用入口，当前 in_progress）。【2026-07-05 p21-F06 修正】此前笼统写「blocked-on p9（AVA 线程创建/聊天页）」，核实后 p9:F01 已 passing，AVA 线程创建/聊天页本身已具备条件，真正卡住的是 p11:F03 尚未把 Agent 使用入口接通到 AVA 会话。本期仅渲染按钮与禁用态占位；接通在 p11:F03 转 passing 后。"
+124:      "notes": "uc-home-003。空状态/引导壳可独立实现；其中指向 AI Store 的入口在 p11、指向 AVA 的入口在 p9 接通真实跳转。"
