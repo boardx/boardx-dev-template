@@ -1,0 +1,28 @@
+{
+  "name": "@repo/coord-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "echo 'lint: ok'",
+    "dev": "wrangler dev --local",
+    "db:migrate:local": "wrangler d1 migrations apply coord_service_db --local",
+    "db:migrate:remote": "sh -c 'set -a; . ./.env.cloudflare; set +a; wrangler d1 migrations apply coord_service_db --remote'",
+    "deploy": "sh -c 'set -a; . ./.env.cloudflare; set +a; wrangler deploy'"
+  },
+  "devDependencies": {
+    "typescript": "*",
+    "vitest": "^2.0.0",
+    "@cloudflare/vitest-pool-workers": "^0.12.0",
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "wrangler": "^4.0.0",
+    "@types/node": "*"
+  }
+}
