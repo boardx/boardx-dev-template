@@ -7,6 +7,9 @@ dist/
 .harness/state/.cache/
 # coordinator 互斥锁：单会话运行时态，不共享入库（见 .harness/scripts/lib/lock.ts）
 .harness/state/coordinator-lock.json
+# module-coordinator dual-write 记账（coord-service claim id 缓存，非权威，见
+# .harness/scripts/lib/module-lock-state.ts）
+.harness/state/module-lock-*.json
 
 # Next.js / 全栈骨架
 .next/
