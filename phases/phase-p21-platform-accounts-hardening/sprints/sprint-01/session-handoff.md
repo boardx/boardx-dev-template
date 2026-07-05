@@ -149,6 +149,26 @@
 - 调试: `bash scripts/init-worktree-env.sh && docker compose -f infra/docker-compose.yml up -d && pnpm --filter @repo/data run migrate`
   然后 `pnpm --filter @repo/web exec playwright test e2e/auth-005-confirm-email.spec.ts` 单独跑 confirm-email 测试。
 - 调试:`pnpm --filter @repo/web exec playwright test e2e/auth-social-prod-gate.spec.ts --headed`（本地看生产 gate 行为；需要先 `bash scripts/init-worktree-env.sh` + `docker compose -f infra/docker-compose.yml up -d` + `pnpm --filter @repo/data run migrate`）
+- 调试:`grep -n 'p11' phases/phase-p2-home/feature_list.json`；
+  `git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F06.verify.log`
+
+## F06（Profile/Home 文档与追踪字段同步，owner wrk-claude-1）— 已完成并门控通过 passing
+- `phases/phase-p2-home/feature_list.json`：F04 的 user_visible_behavior/verification/
+  evidence-notes 改为如实反映真实实现（真实最近白板列表，非占位页）；F03/F06 的 notes 里
+  blocked_on 从笼统的"p9/p11"改为精确的 `p11:F03`。
+- `phases/phase-p1-profile-common/requirements/README.md`：oldcode 溯源描述修正
+  （aiModel/privacy 是本阶段新设计，非 oldcode 移植）。
+- `phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F06.verify.log`：
+  新增，记录两条 verification 命令的真实执行结果。
+- 未改动任何运行时代码（apps/web 等一律未动，只读了 `recent/page.tsx` 确认真实行为）。
+- 追加（code-reviewer 修复轮，PR #390）：code-reviewer 审出真实阻断项——p2-F04 改了
+  verification 指向新测试，但 status 留 `passing`、evidence 仍指向旧测试产出的过期日志，
+  新命令从未真正跑过。修复：`bash scripts/init-worktree-env.sh` 补齐本 worktree 缺失的隔离
+  env，实际重跑 F04 三条 verification（docker up + migrate + playwright test
+  e2e/home-004-view-recent-page.spec.ts），3/3 通过；`feature_list.json` F04 的 `evidence`
+  字段改为指向新日志的真实时间戳，status 保持 `passing`（验证后确认真实成立，非未验证强留）。
+- p11:F03（Agent→AVA 桥接）仍 in_progress，是 p2-F03/F06 的真实 blocker，本轮只是把表述改
+  精确，未去解决它（不属于 F06 范围）。
 - F05（Billing F04「额度不足触发」如实改写，wrk-payment-1）：**已跑 `pnpm harness verify --sprint p21/01
   --feature F05` 门控通过，status = passing**（脚本自动写入，未手改）。日志见
   `phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F05.verify.log`（harness
