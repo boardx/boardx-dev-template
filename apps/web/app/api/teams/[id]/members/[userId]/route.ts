@@ -6,7 +6,12 @@ import { currentUser } from "@/lib/session";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** 改成员角色（p21-F02 owner 保护）。目标是 owner 时一律拒绝——owner 自己转让所有权是另一个功能，不在本路由范围内。 */
+/**
+ * 改成员角色（p21-F02 owner 保护）。双向拦截：
+ *  - 目标当前是 owner 时一律拒绝（owner 自己转让所有权是另一个功能，不在本路由范围内）；
+ *  - 请求把角色设为 owner 时一律拒绝——不能通过 PATCH 把任意成员提升为第二个 owner，
+ *    否则会绕过上面那条保护，凭空造一个新 owner 实现团队接管（code review 抓出的回归缺口）。
+ */
 export async function PATCH(req: Request, { params }: { params: { id: string; userId: string } }) {
   try {
     const user = await currentUser();
@@ -19,6 +24,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string; us
     const body = (await req.json()) as { role?: unknown };
     const role = String(body.role ?? "");
     if (!isTeamRole(role)) return NextResponse.json({ error: "角色无效" }, { status: 400 });
+    if (role === "owner") {
+      return NextResponse.json({ error: "不能把角色设为 owner" }, { status: 403 });
+    }
     const targetRole = await getMembership(teamId, targetId);
     if (targetRole === "owner") {
       return NextResponse.json({ error: "不能修改 owner" }, { status: 403 });
