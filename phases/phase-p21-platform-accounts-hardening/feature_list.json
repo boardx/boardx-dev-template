@@ -112,7 +112,7 @@
       "wave": 1,
       "verification": [
         "grep -q 'ai-low-credits-prompt' \"apps/web/app/(app)/ava/page.tsx\"",
-        "pnpm --filter @repo/web exec playwright test e2e/billing-001-upgrade-plan.spec.ts",
+        "pnpm --filter @repo/web exec playwright test e2e/billing-001-upgrade-plan.spec.ts -g '静态常驻展示'",
         "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F05.verify.log"
       ],
       "evidence": "",

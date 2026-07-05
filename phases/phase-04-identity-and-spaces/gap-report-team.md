@@ -40,7 +40,7 @@ F06-F09 status=passing，但 `sprint-02/evidence/` 仅一个 0 字节 `.gitkeep`
 ## Deferred 理由复核（uc-007~010）
 
 四份 .md 正文均无 DEFERRED 措辞，判断只存在于 `feature_list.json:271` 的 notes。逐项核查：
-CAP-AI 平面（`packages/ai/gateway.ts`+`graph.ts`）已被 p9-AVA（9/10 passing）消费，成立；
+CAP-AI 平面（`packages/ai/src/gateway.ts`+`graph.ts`）已被 p9-AVA（9/10 passing）消费，成立；
 AI Store（uc-010）已有团队维度真实实现——`teams/[id]/ai-store-review/page.tsx`+对应 API，
 p11 5/6 passing；007（改名/描述/删除）、008（Home 统计壳）与 AI/Memory 无强依赖，007 事实上
 已单独实现。仅 009（团队 Memory）仍缺——`packages/memory` 是 harness 自身的
