@@ -1,0 +1,34 @@
+name = "coord-service"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+
+# Default (no --env flag): local-only placeholder database_id, only ever used
+# with `--local` where wrangler never talks to a real Cloudflare account.
+[[d1_databases]]
+binding = "DB"
+database_name = "coord_service_db"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "./migrations"
+
+# Both the stale-claim sweep and the one-way GitHub projector run off the same
+# schedule (see src/index.ts `scheduled()` — both are cheap, idempotent, and at
+# this scale there's no reason to give them separate cron strings).
+[triggers]
+crons = ["*/5 * * * *"]
+
+# Phase 2 — staging: real Cloudflare account, created via
+# `wrangler d1 create coord-service-staging`. GITHUB_TOKEN/GITHUB_REPO are
+# deliberately NOT set here yet (Worker secret, added in a later Phase 2 step
+# once a scratch repo/issue target is chosen) — the projector stays a safe
+# no-op until then (see src/cron/projector.ts isGithubConfigured).
+[env.staging]
+name = "coord-service-staging"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "coord-service-staging"
+database_id = "14f4c97e-238c-43e7-93f3-5139db41b0d9"
+migrations_dir = "./migrations"
+
+[env.staging.triggers]
+crons = ["*/5 * * * *"]

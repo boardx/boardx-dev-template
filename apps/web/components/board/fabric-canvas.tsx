@@ -13,7 +13,7 @@
 //
 // SSR：fabric 仅客户端可用，在 useEffect 内动态 import。
 import { useEffect, useMemo, useRef } from "react";
-import type { Canvas, Group, TPointerEventInfo, TPointerEvent } from "fabric";
+import type { Canvas, FabricObject, Group, TPointerEventInfo, TPointerEvent } from "fabric";
 import {
   computeResizeSnap,
   computeSnap,
@@ -45,6 +45,9 @@ export interface RenderItem {
   borderWidth: number;
   opacity: number;
   textColor: "default" | "slate" | "blue" | "green" | "red";
+  // p6:F15（uc-widgets-004）：具体形状种类，由 color 的 "|shape=xxx" 段解析而来（见
+  // board-canvas.tsx 的 getShapeType）。仅 kind === "shape" 时有意义，其余 kind 恒为 "rect"。
+  shapeType: "rect" | "rounded" | "circle" | "triangle" | "diamond" | "hexagon";
   reloadable: boolean;
   reloadCount: number;
   refreshedAt: number | null;
@@ -154,6 +157,7 @@ export interface CanvasTestApi {
     borderWidth: number;
     opacity: number;
     textColor: "default" | "slate" | "blue" | "green" | "red";
+    shapeType: "rect" | "rounded" | "circle" | "triangle" | "diamond" | "hexagon";
     reloadable: boolean;
     reloadCount: number;
     refreshedAt: number | null;
@@ -572,6 +576,7 @@ export function FabricCanvas(props: Props) {
               borderWidth: it.borderWidth,
               opacity: it.opacity,
               textColor: it.textColor,
+              shapeType: it.shapeType,
               reloadable: it.reloadable,
               reloadCount: it.reloadCount,
               refreshedAt: it.refreshedAt,
@@ -692,6 +697,69 @@ function styleInteractive(obj: Interactive, tokens: Tokens, canEdit: boolean, re
   }
 }
 
+// p6:F15（uc-widgets-004）：按具体形状类型构建局部坐标系 [0,w]x[0,h] 内的背景对象。
+// 三角形/菱形/六边形的顶点坐标按单位框架给出再乘以 w/h（随 item 尺寸线性缩放），
+// 不依赖固定路径数据，缩放（object:scaling → scaleX/scaleY）时形状自然跟随。
+function buildShapePath(
+  fabric: FabricNS,
+  shapeType: RenderItem["shapeType"],
+  w: number,
+  h: number,
+  style: { fill: string; stroke: string | undefined; strokeWidth: number },
+): FabricObject {
+  const common = {
+    left: 0,
+    top: 0,
+    originX: "left" as const,
+    originY: "top" as const,
+    fill: style.fill,
+    stroke: style.stroke,
+    strokeWidth: style.strokeWidth,
+    strokeUniform: true,
+    strokeLineJoin: "round" as const,
+  };
+  switch (shapeType) {
+    case "circle":
+      return new fabric.Ellipse({ ...common, rx: w / 2, ry: h / 2 });
+    case "rounded":
+      return new fabric.Rect({ ...common, width: w, height: h, rx: Math.min(w, h) * 0.2, ry: Math.min(w, h) * 0.2 });
+    case "triangle":
+      return new fabric.Polygon(
+        [
+          { x: w / 2, y: 0 },
+          { x: w, y: h },
+          { x: 0, y: h },
+        ],
+        common,
+      );
+    case "diamond":
+      return new fabric.Polygon(
+        [
+          { x: w / 2, y: 0 },
+          { x: w, y: h / 2 },
+          { x: w / 2, y: h },
+          { x: 0, y: h / 2 },
+        ],
+        common,
+      );
+    case "hexagon":
+      return new fabric.Polygon(
+        [
+          { x: w * 0.29, y: 0 },
+          { x: w * 0.71, y: 0 },
+          { x: w, y: h / 2 },
+          { x: w * 0.71, y: h },
+          { x: w * 0.29, y: h },
+          { x: 0, y: h / 2 },
+        ],
+        common,
+      );
+    case "rect":
+    default:
+      return new fabric.Rect({ ...common, width: w, height: h, rx: 0, ry: 0 });
+  }
+}
+
 // 单个 item → fabric.Group（背景矩形 + 文本）。样式对齐 DOM 时代（F11 柔彩便签 /
 // 透明文本块 / 粗边框形状），色 token 语义不变。
 function buildItemObject(
@@ -723,21 +791,26 @@ function buildItemObject(
       : isShapeKind
         ? 2
         : 1;
-  const bg = new fabric.Rect({
-    // fabric v7 默认 origin 改为 center/center，这里的局部布局按 left/top 语义写死
-    left: 0,
-    top: 0,
-    originX: "left",
-    originY: "top",
-    width: it.w,
-    height: it.h,
-    rx: isTextKind ? 0 : 7,
-    ry: isTextKind ? 0 : 7,
-    fill,
-    stroke,
-    strokeWidth,
-    strokeUniform: true,
-  });
+  // p6:F15（uc-widgets-004）：形状 kind 按具体形状类型渲染不同的 fabric 背景对象（矩形/圆角矩形
+  // 复用 fabric.Rect；圆形用 fabric.Ellipse 按 w/h 独立缩放；三角形/菱形/六边形用 fabric.Polygon，
+  // 点坐标按 [0,w]x[0,h] 的局部框架给出，随 item 尺寸线性缩放，无需为每种形状单独维护路径数据）。
+  const bg = isShapeKind
+    ? buildShapePath(fabric, it.shapeType, it.w, it.h, { fill, stroke, strokeWidth })
+    : new fabric.Rect({
+        // fabric v7 默认 origin 改为 center/center，这里的局部布局按 left/top 语义写死
+        left: 0,
+        top: 0,
+        originX: "left",
+        originY: "top",
+        width: it.w,
+        height: it.h,
+        rx: isTextKind ? 0 : 7,
+        ry: isTextKind ? 0 : 7,
+        fill,
+        stroke,
+        strokeWidth,
+        strokeUniform: true,
+      });
   const pad = 8; // p-2
   // p6:F12（uc-widget-menu-013）：字体/字号/斜体/对齐均可由用户调整，取值来自 RenderItem
   // （由 color 的 "|k=v" 样式段解析而来）。水平对齐（left/center/right）独立于 kind 的默认

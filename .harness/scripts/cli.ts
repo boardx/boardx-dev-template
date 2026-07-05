@@ -11,12 +11,16 @@ import { sweepUnblock } from "./sweep-unblock";
 import { sweepWorktrees } from "./sweep-worktrees";
 import { depGraph } from "./dep-graph";
 import { lockStatus, lockAcquire, lockHeartbeat, lockRelease } from "./coordinator-lock";
+import { moduleLockStatus, moduleLockAcquire, moduleLockHeartbeat, moduleLockRelease } from "./module-lock";
 
 const argv = process.argv.slice(2);
 const cmd = argv[0];
 const args = parseArgs(argv.slice(1));
 
-try {
+// Wrapped in an async function only because lock-acquire/heartbeat/release now
+// optionally await a coord-service dual-write (Phase 3) — every other command
+// is still called synchronously below, unchanged from before.
+async function main(): Promise<void> {
   switch (cmd) {
     case "new-phase":     newPhase(args); break;
     case "new-sprint":    newSprint(args); break;
@@ -29,9 +33,13 @@ try {
     case "sweep-worktrees": sweepWorktrees(args); break;
     case "dep-graph":      depGraph(args); break;
     case "lock-status":    lockStatus(args); break;
-    case "lock-acquire":   lockAcquire(args); break;
-    case "lock-heartbeat": lockHeartbeat(args); break;
-    case "lock-release":   lockRelease(args); break;
+    case "lock-acquire":   await lockAcquire(args); break;
+    case "lock-heartbeat": await lockHeartbeat(args); break;
+    case "lock-release":   await lockRelease(args); break;
+    case "module-lock-status":    moduleLockStatus(args); break;
+    case "module-lock-acquire":   await moduleLockAcquire(args); break;
+    case "module-lock-heartbeat": await moduleLockHeartbeat(args); break;
+    case "module-lock-release":   await moduleLockRelease(args); break;
     default:
       log.info("用法:");
       log.info("  pnpm harness new-phase     --id NN --name <name> [--slug <s>] [--goal <g>] [--ui]");
@@ -49,9 +57,15 @@ try {
       log.info("  pnpm harness lock-acquire   --session <id> [--force] [--note <text>]");
       log.info("  pnpm harness lock-heartbeat --session <id>");
       log.info("  pnpm harness lock-release   --session <id> [--force]");
+      log.info("  pnpm harness module-lock-status    --module <name>");
+      log.info("  pnpm harness module-lock-acquire   --module <name> --session <agent-id>");
+      log.info("  pnpm harness module-lock-heartbeat --module <name> --session <agent-id>");
+      log.info("  pnpm harness module-lock-release   --module <name> --session <agent-id>");
       process.exit(cmd ? 1 : 0);
   }
-} catch (e) {
+}
+
+main().catch((e: unknown) => {
   log.err((e as Error).message);
   process.exit(1);
-}
+});

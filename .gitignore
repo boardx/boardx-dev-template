@@ -7,6 +7,9 @@ dist/
 .harness/state/.cache/
 # coordinator 互斥锁：单会话运行时态，不共享入库（见 .harness/scripts/lib/lock.ts）
 .harness/state/coordinator-lock.json
+# module-coordinator dual-write 记账（coord-service claim id 缓存，非权威，见
+# .harness/scripts/lib/module-lock-state.ts）
+.harness/state/module-lock-*.json
 
 # Next.js / 全栈骨架
 .next/
@@ -16,6 +19,10 @@ dist/
 .env
 .env.local
 **/.memory/
+
+# Cloudflare 部署凭据（packages/coord-service）——只提交 .env.cloudflare.example
+**/.env.cloudflare
+.wrangler/
 
 # 脚本派生的只读视图（由 new-sprint/claim 重生成，不入库；权威源是 feature_list.json）
 **/active-features.json
