@@ -129,6 +129,16 @@ agents:
     model: sonnet-5
     areas: [billing]
     max_concurrent: 1
+  - id: wrk-platform-1                             # p21-F01：社交登录后门 gate 修正（安全类，coord-platform 分派）
+    kind: worker
+    model: sonnet-5
+    areas: [auth]
+    max_concurrent: 1
+  - id: wrk-platform-2                             # p21-F02：团队成员角色越权修正（安全类，coord-platform 分派）
+    kind: worker
+    model: sonnet-5
+    areas: [team]
+    max_concurrent: 1
   - id: wrk-studio-1
     kind: worker
     model: sonnet-5
