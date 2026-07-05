@@ -1,0 +1,162 @@
+
+Running 30 tests using 1 worker
+
+  ✓  1 [chromium] › ai-store-001-browse-items.spec.ts:11:5 › 未登录访问 /ai-store 重定向到 /login (2.4s)
+  ✓  2 [chromium] › ai-store-001-browse-items.spec.ts:17:5 › 登录后浏览：submenu 分类 + 内容网格 (687ms)
+  ✓  3 [chromium] › ai-store-001-browse-items.spec.ts:34:5 › 类型筛选只显示该类型，并在页面上下文生效 (636ms)
+  ✓  4 [chromium] › ai-store-001-browse-items.spec.ts:47:5 › 搜索按名称/描述收窄列表 (550ms)
+  ✓  5 [chromium] › ai-store-001-browse-items.spec.ts:59:5 › 无匹配结果显示空状态 + 清空筛选入口 (739ms)
+  ✓  6 [chromium] › ai-store-001-browse-items.spec.ts:74:5 › 标签筛选高亮并显示 filters active，Clear all 复位 (597ms)
+  ✓  7 [chromium] › ai-store-001-browse-items.spec.ts:88:5 › 未登录调用 GET /api/ai-store/items 返回未授权 (48ms)
+  ✓  8 [chromium] › ai-store-001-browse-items.spec.ts:94:5 › 分页：种子数据超过一页时显示分页控件，翻页后内容更新 (678ms)
+  ✓  9 [chromium] › ai-store-001-browse-items.spec.ts:117:5 › 点卡片打开详情弹窗：展示描述/示例/统计/订阅入口，可关闭 (905ms)
+  ✓  10 [chromium] › ai-store-002-create-update-item.spec.ts:11:5 › 创建器必填校验、草稿/发布/提交审核、Authorized 编辑自己的项目 (1.5s)
+  ✘  11 [chromium] › ai-store-003-subscribe-use-item.spec.ts:13:5 › 订阅个人发布项目、出现在已订阅列表、使用带入 AVA、取消订阅 (11.0s)
+  ✓  12 [chromium] › ai-store-003-subscribe-use-item.spec.ts:70:5 › 草稿项目的订阅入口为禁用态 (951ms)
+  ✓  13 [chromium] › ai-store-003-subscribe-use-item.spec.ts:97:5 › 被分享授权的 grantee 可以订阅 personal 项目（不再 404） (2.0s)
+  ✓  14 [chromium] › ai-store-003-subscribe-use-item.spec.ts:154:5 › 使用 template 项目跳到 Boards 时显示开发中提示 (1.8s)
+  ✓  15 [chromium] › ai-store-003-subscribe-use-item.spec.ts:191:5 › 在无团队上下文订阅后切换进团队，仍可成功取消订阅 (2.5s)
+  ✓  16 [chromium] › ai-store-004-favorite-item.spec.ts:11:5 › 未登录调用 POST /api/ai-store/items/:id/favorite 返回未授权 (257ms)
+  ✓  17 [chromium] › ai-store-004-favorite-item.spec.ts:17:5 › 未登录访问 /ai-store 重定向到登录（引导登录后才能点喜欢） (302ms)
+  ✓  18 [chromium] › ai-store-004-favorite-item.spec.ts:23:5 › 卡片心形高亮切换 + 计数更新，刷新后保持 (1.4s)
+  ✓  19 [chromium] › ai-store-004-favorite-item.spec.ts:57:5 › 详情弹窗心形与卡片状态同步，切换后计数一致 (720ms)
+  ✓  20 [chromium] › ai-store-004-favorite-item.spec.ts:88:5 › 并发 toggle 不会让 likes 计数与收藏明细漂移（CTE 绑定回归） (362ms)
+  ✓  21 [chromium] › ai-store-005-share-management.spec.ts:36:5 › 未登录调用分享管理接口返回未授权 (71ms)
+  ✓  22 [chromium] › ai-store-005-share-management.spec.ts:42:5 › 拥有者生成授权链接、关闭后旧链接失效、重新生成开启新链接 (1.9s)
+  ✓  23 [chromium] › ai-store-005-share-management.spec.ts:91:5 › 非拥有者不能开关分享（服务端拒绝，客户端无入口） (1.3s)
+  ✘  24 [chromium] › ai-store-005-share-management.spec.ts:116:5 › 被授权协作者打开链接后出现在 Authorized 视图，拥有者可移除授权 (11.7s)
+  ✘  25 [chromium] › ai-store-005-share-management.spec.ts:174:5 › 无效或已关闭的分享链接显示无法访问提示 (10.7s)
+  ✓  26 [chromium] › ai-store-006-approval-featured.spec.ts:46:5 › 未登录访问团队审核 API 返回 401 (502ms)
+  ✓  27 [chromium] › ai-store-006-approval-featured.spec.ts:52:5 › 团队 owner 审核团队项目：提交审核后出现在待审队列，通过确认弹窗批准后发布并移出队列 (2.9s)
+  ✓  28 [chromium] › ai-store-006-approval-featured.spec.ts:98:5 › 团队 owner 拒绝审核项目：拒绝后移出待审队列，不进入精选 (1.2s)
+  ✓  29 [chromium] › ai-store-006-approval-featured.spec.ts:128:5 › 团队 owner 切换精选状态，UI 立即反映；精选只对已批准项目生效 (2.1s)
+  ✓  30 [chromium] › ai-store-006-approval-featured.spec.ts:181:5 › 非管理角色团队成员看不到审核入口，直接访问/调用 API 均被拒绝 (1.4s)
+
+
+  1) [chromium] › ai-store-003-subscribe-use-item.spec.ts:13:5 › 订阅个人发布项目、出现在已订阅列表、使用带入 AVA、取消订阅 ───
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
+
+    Locator: locator('[data-testid^="subscribed-item-"]').filter({ hasText: 'Subscribe Target Agent 1783203373116' })
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+      [2m- expect.toBeVisible with timeout 10000ms[22m
+    [2m  - waiting for locator('[data-testid^="subscribed-item-"]').filter({ hasText: 'Subscribe Target Agent 1783203373116' })[22m
+
+
+      49 |   await expect(page.getByTestId("subscribe-view")).toBeVisible();
+      50 |   const subscribedCard = page.locator('[data-testid^="subscribed-item-"]').filter({ hasText: agentName });
+    > 51 |   await expect(subscribedCard).toBeVisible();
+         |                                ^
+      52 |   const itemId = await subscribedCard.getAttribute("data-testid").then((v) => v!.replace("subscribed-item-", ""));
+      53 |
+      54 |   // 使用：点「Use」应带入 AVA 会话（Agent 类型 → /ava?agentItemId=）。
+
+        at /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/515c4f6b-1bc0-41d4-ac38-b6df9bb81f4f/scratchpad/wt-363gate/apps/web/e2e/ai-store-003-subscribe-use-item.spec.ts:51:32
+
+  2) [chromium] › ai-store-005-share-management.spec.ts:116:5 › 被授权协作者打开链接后出现在 Authorized 视图，拥有者可移除授权 
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoHaveURL[2m([22m[32mexpected[39m[2m)[22m
+
+    Locator: locator(':root')
+    Expected pattern: [32m/\/ai-store\?nav=authorized&shared=/[39m
+    Received string:  [31m"http://localhost:55029/ai-store"[39m
+    Call log:
+      [2m- expect.toHaveURL with timeout 10000ms[22m
+    [2m  - waiting for locator(':root')[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+
+
+      137 |
+      138 |   await collaboratorPage.goto(`/ai-store/share/${itemId}?shareToken=${encodeURIComponent(token)}`);
+    > 139 |   await expect(collaboratorPage).toHaveURL(/\/ai-store\?nav=authorized&shared=/);
+          |                                  ^
+      140 |   await expect(collaboratorPage.getByTestId("authorized-view")).toBeVisible();
+      141 |   await expect(collaboratorPage.getByTestId("share-redeem-notice")).toContainText("已通过分享链接获得该项目的授权访问");
+      142 |
+
+        at /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/515c4f6b-1bc0-41d4-ac38-b6df9bb81f4f/scratchpad/wt-363gate/apps/web/e2e/ai-store-005-share-management.spec.ts:139:34
+
+  3) [chromium] › ai-store-005-share-management.spec.ts:174:5 › 无效或已关闭的分享链接显示无法访问提示 ────────────────
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoHaveURL[2m([22m[32mexpected[39m[2m)[22m
+
+    Locator: locator(':root')
+    Expected pattern: [32m/\/ai-store\?nav=authorized&shareError=invalid/[39m
+    Received string:  [31m"http://localhost:55029/ai-store"[39m
+    Call log:
+      [2m- expect.toHaveURL with timeout 10000ms[22m
+    [2m  - waiting for locator(':root')[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+    [2m  -   locator resolved to <html lang="en">…</html>[22m
+    [2m  -   unexpected value "http://localhost:55029/ai-store"[22m
+
+
+      175 |   await registerAndLogin(page, uniq("badlink"));
+      176 |   await page.goto("/ai-store/share/999999?shareToken=not-a-real-token");
+    > 177 |   await expect(page).toHaveURL(/\/ai-store\?nav=authorized&shareError=invalid/);
+          |                      ^
+      178 |   await expect(page.getByTestId("share-redeem-notice")).toContainText("分享链接无效");
+      179 | });
+      180 |
+
+        at /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/515c4f6b-1bc0-41d4-ac38-b6df9bb81f4f/scratchpad/wt-363gate/apps/web/e2e/ai-store-005-share-management.spec.ts:177:22
+
+  3 failed
+    [chromium] › ai-store-003-subscribe-use-item.spec.ts:13:5 › 订阅个人发布项目、出现在已订阅列表、使用带入 AVA、取消订阅 ────
+    [chromium] › ai-store-005-share-management.spec.ts:116:5 › 被授权协作者打开链接后出现在 Authorized 视图，拥有者可移除授权 
+    [chromium] › ai-store-005-share-management.spec.ts:174:5 › 无效或已关闭的分享链接显示无法访问提示 ─────────────────
+  27 passed (1.1m)

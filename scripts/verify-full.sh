@@ -10,7 +10,7 @@ PNPM="corepack pnpm@9.0.0"
 # DB/Redis/web 端口：优先 apps/web/.env.local（本机端口覆盖），否则环境变量，否则默认。
 if [ -f apps/web/.env.local ]; then
   # shellcheck disable=SC2046
-  export $(grep -E '^(DATABASE_URL|REDIS_URL|E2E_PORT)=' apps/web/.env.local | xargs) 2>/dev/null || true
+  export $(grep -E '^(DATABASE_URL|REDIS_URL|E2E_PORT|COLLAB_WS_PORT)=' apps/web/.env.local | xargs) 2>/dev/null || true
 fi
 export DATABASE_URL="${DATABASE_URL:-postgresql://boardx:boardx@localhost:5432/boardx}"
 export REDIS_URL="${REDIS_URL:-redis://localhost:6379}"
@@ -18,6 +18,7 @@ export REDIS_URL="${REDIS_URL:-redis://localhost:6379}"
 # 的 reuseExistingServer 会复用到别的 worktree 的 server（测错代码），下面的清理步骤
 # 也会误杀别的 worktree 的 server。scripts/init-worktree-env.sh 会写入独立 E2E_PORT。
 export E2E_PORT="${E2E_PORT:-3000}"
+export COLLAB_WS_PORT="${COLLAB_WS_PORT:-3001}"
 # 从 URL 解析端口给 docker compose 发布
 export PG_PORT="$(printf '%s' "$DATABASE_URL" | sed -E 's#.*:([0-9]+)/.*#\1#')"
 export REDIS_PORT="$(printf '%s' "$REDIS_URL" | sed -E 's#.*:([0-9]+).*#\1#')"
@@ -43,6 +44,7 @@ if docker info >/dev/null 2>&1; then
   # （quality-document #8）。Playwright reuseExistingServer 会复用僵尸 server 跑到旧代码。
   # 只清本 worktree 自己的 E2E_PORT，不碰其它端口——避免误杀别的 worktree 的 dev server。
   lsof -ti tcp:"$E2E_PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
+  lsof -ti tcp:"$COLLAB_WS_PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
   rm -rf apps/web/.next
   # 后台起 workflow-worker：kb/studio/presentation 的异步生成链路（入队→消费→回写）
   # 依赖它，否则相关 e2e 稳定超时。worker 不监听端口，多 worktree 并行无冲突；

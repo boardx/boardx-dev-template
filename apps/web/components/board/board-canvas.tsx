@@ -22,6 +22,7 @@ import {
   Image,
   LayoutTemplate,
   MousePointer2,
+  Paintbrush,
   PenLine,
   Redo2,
   RefreshCw,
@@ -70,6 +71,10 @@ const styleGet = (c: string | null | undefined, key: string): string | null => {
   return null;
 };
 const isItalic = (it: { color?: string | null }) => styleGet(it.color, "italic") === "1";
+// p6:F20（uc-widget-menu-003 锁定/解锁）：锁定态编码为 color 的 "|locked=1" 样式段，沿用
+// F12/F19 建立的 "|k=v" 哨兵编码约定，不新增持久化列。锁定后不可移动/缩放/旋转/编辑，
+// Widget Menu 显示解锁入口（见 wm-lock/wm-unlock）。
+const getLocked = (it: { color?: string | null }) => styleGet(it.color, "locked") === "1";
 const getFontFamily = (it: { color?: string | null }) => styleGet(it.color, "font") ?? DEFAULT_FONT;
 const getFontSize = (it: { color?: string | null }) => {
   const v = styleGet(it.color, "size");
@@ -81,6 +86,58 @@ const getAlign = (it: { color?: string | null }): "left" | "center" | "right" =>
   if (v === "center" || v === "right" || v === "left") return v;
   // 未显式设置对齐时的默认值：文本块沿用「左对齐」，便签/其它沿用「居中」（与既有视觉一致）。
   return baseColor(it.color) === "text" ? "left" : "center";
+};
+
+// p6:F19（uc-widget-menu-002）：边框色/边框宽/透明度样式段，沿用 F12 建立的 "|k=v" 编码约定，
+// 不新增持久化列（color 仍是唯一可扩展的透传字段）。
+// 边框宽同时承担「线宽」语义（uc-widget-menu-002 的线宽项）：本轮画布尚无独立的形状/连接线
+// 组件类型，故线宽与边框宽复用同一个 "|borderw=" 段，避免预留不会被使用的字段。
+const BORDER_TOKENS = ["none", "gray", "blue", "red"] as const;
+type BorderToken = (typeof BORDER_TOKENS)[number];
+const DEFAULT_BORDER: BorderToken = "none";
+const getBorder = (it: { color?: string | null }): BorderToken => {
+  const v = styleGet(it.color, "border");
+  return (BORDER_TOKENS as readonly string[]).includes(v ?? "") ? (v as BorderToken) : DEFAULT_BORDER;
+};
+const BORDER_WIDTH_OPTIONS = [1, 2, 4] as const;
+const DEFAULT_BORDER_WIDTH = 1;
+const getBorderWidth = (it: { color?: string | null }): number => {
+  const v = styleGet(it.color, "borderw");
+  const n = v != null ? Number(v) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_BORDER_WIDTH;
+};
+const OPACITY_OPTIONS = [100, 75, 50, 25] as const;
+const DEFAULT_OPACITY = 100;
+const getOpacity = (it: { color?: string | null }): number => {
+  const v = styleGet(it.color, "opacity");
+  const n = v != null ? Number(v) : NaN;
+  return Number.isFinite(n) && n > 0 && n <= 100 ? n : DEFAULT_OPACITY;
+};
+// uc-widget-menu-002「文字色」：与便签/背景底色（base token）分离的独立文字颜色，
+// F12 之前从未提供文字色控制（此前仅有底色/加粗）。留空 = 跟随主题前景色（既有视觉不变）。
+const TEXT_COLOR_TOKENS = ["default", "slate", "blue", "green", "red"] as const;
+type TextColorToken = (typeof TEXT_COLOR_TOKENS)[number];
+const DEFAULT_TEXT_COLOR: TextColorToken = "default";
+const getTextColor = (it: { color?: string | null }): TextColorToken => {
+  const v = styleGet(it.color, "textcolor");
+  return (TEXT_COLOR_TOKENS as readonly string[]).includes(v ?? "") ? (v as TextColorToken) : DEFAULT_TEXT_COLOR;
+};
+// 样式字段集合（用于「应用格式」把源对象的可复用样式整体复制到目标对象）。
+const STYLE_KEYS = ["font", "size", "align", "italic", "border", "borderw", "opacity", "textcolor"] as const;
+// 「应用格式」（uc-widget-menu-010）：把源对象的完整可复用样式（背景/字重 head +
+// 字体/字号/对齐/斜体/边框/线宽/透明度/文字色样式段）整体复制为目标对象的新 color 值，
+// 只复制外观样式，不带 text/位置/尺寸。目标原有样式段全部被源样式覆盖（非合并），
+// 语义对齐「格式刷」直觉——应用后目标与源外观一致。
+const applyFormatColor = (source: { color?: string | null }, targetIsText: boolean): string => {
+  const [srcHead] = splitColor(source.color);
+  // 目标若为文本组件，强制保留 "text" 判别头（透明块，不套背景色/tag 色）；
+  // 否则采用源的 base[:bold]（含背景色 + 字重）。
+  const head = targetIsText ? TEXT_MARK + (isBold(source) ? ":bold" : "") : (srcHead ?? "amber");
+  const segs = STYLE_KEYS.map((k) => {
+    const v = styleGet(source.color, k);
+    return v != null ? `${k}=${v}` : null;
+  }).filter((s): s is string => s !== null);
+  return [head, ...segs].join("|");
 };
 // 用新的 k=v 覆盖/追加样式段，保留 base[:bold] 与其它未涉及的样式段。
 const withStyle = (color: string | null | undefined, patch: Record<string, string | null>): string => {
@@ -203,11 +260,38 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null); // 右键上下文菜单（uc-context-menu-001）
   const [guides, setGuides] = useState<Guide[]>([]); // 拖动时的对齐参考线（uc-canvas-007）
   const [spacings, setSpacings] = useState<SpacingHint[]>([]); // p6:F07 等间距提示
+  // p6:F19（uc-widget-menu-010 应用格式）：格式刷取样状态。非 null 表示已进入取样模式，
+  // 值为源对象的 color（取样时快照，避免取样后源对象被继续编辑影响后续应用）。
+  // 用户可连续点击多个目标应用同一格式，直到 Esc/切工具/点不兼容对象退出（主流程 6/7）。
+  const [formatSource, setFormatSource] = useState<{ id: string; color: string | null } | null>(null);
+  // 当前正在应用格式的目标 id（去重用，见 onFabricSelection 注释）。
+  const formatApplyingRef = useRef<string | null>(null);
   // uc-widget-menu-009 刷新组件：可刷新组件的重载信号（重载次数 + 最近重载时间戳），
   // 是纯客户端的「内容已重新加载」可见反馈，随每次刷新自增。
   const [reload, setReload] = useState<Record<string, { count: number; at: number }>>({});
   const [refreshing, setRefreshing] = useState<Set<string>>(new Set()); // 刷新处理中（旋转/加载态）
   const placeN = useRef(0); // 同步自增放置位，避免连点时读到尚未刷新的 items.length 造成重叠
+  // p6:F19：per-item PATCH 串行队列。多个样式段（边框/线宽/透明度/文字色…）连续快速点击时，
+  // 各自独立 fetch 并发发出，网络层不保证到达服务端的顺序——后发出的 PATCH 可能先落地，
+  // 早发出的 PATCH 晚落地并用旧 color 覆盖新值（观测到的真实回归，而非理论风险）。
+  // 用 per-item Promise 链保证同一 item 的 PATCH 严格按发起顺序落库，不影响乐观 UI 更新
+  // （setItems 仍同步先行，用户感知无延迟）。
+  const patchQueue = useRef<Map<string, Promise<unknown>>>(new Map());
+  function queuePatch(id: string, body: Record<string, unknown>): Promise<unknown> {
+    const prev = patchQueue.current.get(id) ?? Promise.resolve();
+    const next = prev
+      .catch(() => {})
+      .then(() =>
+        fetch(`/api/board-items/${id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        }),
+      );
+    patchQueue.current.set(id, next);
+    return next;
+  }
+
   const clipboard = useRef<Item[]>([]); // 应用内剪贴板（F08）
   const undoStack = useRef<Op[]>([]); // F09
   const redoStack = useRef<Op[]>([]);
@@ -216,7 +300,12 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // fabric 拖拽进行中（onOperating 回调驱动）：轮询同步在拖拽中不合并服务端快照。
   const draggingRef = useRef(false);
 
+  // p6:F19 修复：load() 用服务端快照整体覆盖 items（其它 F0x 既有行为，不改）。
+  // 若此时仍有未落地的 PATCH（如样式改动后立即触发了 load，如新增组件后的 await load()），
+  // 服务端快照可能还不包含最新样式，覆盖会让乐观更新「凭空消失」（真实回归，非测试假象）。
+  // 先等所有排队中的 PATCH 落地，再拉取快照，保证 load() 不会撤销尚未确认的用户操作。
   const load = useCallback(async () => {
+    await Promise.all(patchQueue.current.values());
     const res = await fetch(`/api/boards/${boardId}/items`);
     if (res.ok) setItems((await res.json()).items ?? []);
   }, [boardId]);
@@ -347,21 +436,43 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     [apiResize],
   );
 
-  const onFabricSelection = useCallback((ids: string[]) => {
-    setSelected(new Set(ids));
-  }, []);
+  const onFabricSelection = useCallback(
+    (ids: string[]) => {
+      // p6:F19（uc-widget-menu-010 主流程 4/6）：取样模式下，点击单个目标即应用格式，
+      // 不改变常规选中态（保持取样模式继续可用，直到用户显式退出——主流程 6）。
+      // 注：fabric 的 mouse:down 与 mouse:up 对同一次「纯点击」（未拖动）都会各触发一次
+      // onSelectionChange（既有行为，非本轮引入），故用 formatApplyingRef 去重，避免同一目标
+      // 被并发 applyFormatTo 两次（虽然幂等无害，但会造成不必要的重复 PATCH）。
+      if (formatSource && ids.length === 1 && ids[0] !== formatSource.id) {
+        const targetId = ids[0]!;
+        if (formatApplyingRef.current === targetId) return;
+        formatApplyingRef.current = targetId;
+        void applyFormatTo(targetId).finally(() => {
+          if (formatApplyingRef.current === targetId) formatApplyingRef.current = null;
+        });
+        return;
+      }
+      setSelected(new Set(ids));
+    },
+    [formatSource, items, canEdit],
+  );
 
   // 空白按下：清除选择 + 关闭右键菜单（旧 items-layer onClick 语义），随后视口照常平移。
   const onEmptyPointerDown = useCallback(() => {
+    if (formatSource) return; // 取样模式下点击空白不清空选择/退出（Esc 才退出，主流程 7）
     setSelected(new Set());
     setCtxMenu(null);
-  }, []);
+  }, [formatSource]);
 
   const onEditRequest = useCallback(
     (id: string) => {
-      if (canEdit) setEditingId(id);
+      // p6:F20（uc-widget-menu-003）：锁定对象不可编辑（主流程 3），双击进入编辑态短路。
+      if (!canEdit) return;
+      const target = items.find((it) => it.id === id);
+      if (target && getLocked(target)) return;
+      setEditingId(id);
     },
-    [canEdit],
+    [canEdit, items],
   );
 
   const onFabricCtxMenu = useCallback(
@@ -397,9 +508,14 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         fontFamily: getFontFamily(it),
         fontSize: getFontSize(it),
         align: getAlign(it),
+        border: getBorder(it),
+        borderWidth: getBorderWidth(it),
+        opacity: getOpacity(it),
+        textColor: getTextColor(it),
         reloadable: isReloadable(it),
         reloadCount: reload[it.id]?.count ?? 0,
         refreshedAt: reload[it.id]?.at ?? null,
+        locked: getLocked(it),
       })),
     [items, reload],
   );
@@ -408,6 +524,11 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     [items, selected],
   );
   const editingItem = editingId ? items.find((it) => it.id === editingId) ?? null : null;
+  // p6:F20（uc-widget-menu-003 主流程 4）：全部选中项已锁定 → Widget Menu 只保留锁定状态入口。
+  const allSelectedLocked = useMemo(() => {
+    const sel = items.filter((it) => selected.has(it.id));
+    return sel.length > 0 && sel.every(getLocked);
+  }, [items, selected]);
 
   async function addNote() {
     setActiveTool("sticky");
@@ -527,6 +648,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     if (tool === "assets" || tool === "templates") setOpenPanel(tool);
     else setOpenPanel(null);
     if (tool === "select") setSelected(new Set());
+    setFormatSource(null); // uc-widget-menu-010 主流程 7：切工具即退出取样模式
   }
 
   // 底部悬浮 dock（F01，对齐 prototype FigJam 工具栏）复用同一套 activeTool 真值与
@@ -559,12 +681,15 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     });
   }
 
+  // p6:F20（uc-widget-menu-003）：键盘方向键微移选中对象——锁定对象不可移动，过滤后为空则跳过。
   const moveSelected = useCallback(
     async (dx: number, dy: number) => {
       if (!canEdit || selected.size === 0) return;
-      const targets = items.filter((it) => selected.has(it.id));
+      const targets = items.filter((it) => selected.has(it.id) && !getLocked(it));
+      if (targets.length === 0) return;
+      const ids = new Set(targets.map((it) => it.id));
       const moves: Move[] = targets.map((it) => ({ id: it.id, fromX: it.x, fromY: it.y, toX: it.x + dx, toY: it.y + dy }));
-      setItems((prev) => prev.map((it) => (selected.has(it.id) ? { ...it, x: it.x + dx, y: it.y + dy } : it)));
+      setItems((prev) => prev.map((it) => (ids.has(it.id) ? { ...it, x: it.x + dx, y: it.y + dy } : it)));
       recordOp({ kind: "move", moves });
       await apiMove(moves, false);
     },
@@ -614,25 +739,18 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     });
   }
 
-  // 落库一批 color 变更（共用于 setColor / toggleBold）。
+  // 落库一批 color 变更（共用于 setColor / toggleBold）。经 queuePatch 按 item 串行落库，
+  // 避免同一 item 连续多次样式改动时后发先至覆盖新值（p6:F19 修复的真实回归，见 queuePatch 注释）。
   async function applyColors(updates: { id: string; color: string }[]) {
     const map = new Map(updates.map((u) => [u.id, u.color]));
     setItems((prev) => prev.map((it) => (map.has(it.id) ? { ...it, color: map.get(it.id)! } : it)));
-    await Promise.all(
-      updates.map((u) =>
-        fetch(`/api/board-items/${u.id}`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ color: u.color }),
-        })
-      )
-    );
+    await Promise.all(updates.map((u) => queuePatch(u.id, { color: u.color })));
   }
 
   // F11：改选中便签颜色（保留字重 :bold 修饰 + p6:F12 样式段）
   async function setColor(base: string) {
     const updates = items
-      .filter((it) => selected.has(it.id))
+      .filter((it) => selected.has(it.id) && !getLocked(it))
       .map((it) => {
         const head = base + (isBold(it) ? ":bold" : "");
         const segs = styleSegs(it.color);
@@ -643,7 +761,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
 
   // uc-widget-menu-002：切换选中组件字重（bold/normal），编码为 color 的 :bold 后缀。
   async function toggleBold() {
-    const targets = items.filter((it) => selected.has(it.id));
+    const targets = items.filter((it) => selected.has(it.id) && !getLocked(it));
     if (targets.length === 0) return;
     const allBold = targets.every(isBold); // 全粗 → 取消；否则 → 全部加粗
     const updates = targets.map((it) => {
@@ -657,7 +775,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
 
   // uc-widget-menu-013：切换选中组件斜体（italic），编码为 color 的 "|italic=1" 样式段。
   async function toggleItalic() {
-    const targets = items.filter((it) => selected.has(it.id));
+    const targets = items.filter((it) => selected.has(it.id) && !getLocked(it));
     if (targets.length === 0) return;
     const allItalic = targets.every(isItalic);
     const updates = targets.map((it) => ({
@@ -670,7 +788,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // uc-widget-menu-013：设置选中组件字体，编码为 color 的 "|font=<slug>" 样式段。
   async function setFontFamily(font: string) {
     const updates = items
-      .filter((it) => selected.has(it.id))
+      .filter((it) => selected.has(it.id) && !getLocked(it))
       .map((it) => ({ id: it.id, color: withStyle(it.color, { font: font === DEFAULT_FONT ? null : font }) }));
     await applyColors(updates);
   }
@@ -678,7 +796,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // uc-widget-menu-013：设置选中组件字号，编码为 color 的 "|size=<n>" 样式段。
   async function setFontSize(size: number) {
     const updates = items
-      .filter((it) => selected.has(it.id))
+      .filter((it) => selected.has(it.id) && !getLocked(it))
       .map((it) => ({
         id: it.id,
         color: withStyle(it.color, { size: size === DEFAULT_FONT_SIZE ? null : String(size) }),
@@ -689,9 +807,91 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // uc-widget-menu-013：设置选中组件文本对齐方式，编码为 color 的 "|align=<left|center|right>" 样式段。
   async function setAlign(align: "left" | "center" | "right") {
     const updates = items
-      .filter((it) => selected.has(it.id))
+      .filter((it) => selected.has(it.id) && !getLocked(it))
       .map((it) => ({ id: it.id, color: withStyle(it.color, { align: align === "left" ? null : align }) }));
     await applyColors(updates);
+  }
+
+  // p6:F19（uc-widget-menu-002）：设置选中组件边框色，编码为 color 的 "|border=<token>" 样式段。
+  async function setBorder(token: BorderToken) {
+    const updates = items
+      .filter((it) => selected.has(it.id) && !getLocked(it))
+      .map((it) => ({ id: it.id, color: withStyle(it.color, { border: token === DEFAULT_BORDER ? null : token }) }));
+    await applyColors(updates);
+  }
+
+  // p6:F19（uc-widget-menu-002）：设置选中组件边框宽/线宽，编码为 color 的 "|borderw=<n>" 样式段。
+  async function setBorderWidth(width: number) {
+    const updates = items
+      .filter((it) => selected.has(it.id) && !getLocked(it))
+      .map((it) => ({
+        id: it.id,
+        color: withStyle(it.color, { borderw: width === DEFAULT_BORDER_WIDTH ? null : String(width) }),
+      }));
+    await applyColors(updates);
+  }
+
+  // p6:F19（uc-widget-menu-002）：设置选中组件透明度，编码为 color 的 "|opacity=<1-100>" 样式段。
+  async function setOpacity(value: number) {
+    const updates = items
+      .filter((it) => selected.has(it.id) && !getLocked(it))
+      .map((it) => ({
+        id: it.id,
+        color: withStyle(it.color, { opacity: value === DEFAULT_OPACITY ? null : String(value) }),
+      }));
+    await applyColors(updates);
+  }
+
+  // p6:F19（uc-widget-menu-002）：设置选中组件文字色，编码为 color 的 "|textcolor=<token>" 样式段。
+  async function setTextColor(token: TextColorToken) {
+    const updates = items
+      .filter((it) => selected.has(it.id) && !getLocked(it))
+      .map((it) => ({
+        id: it.id,
+        color: withStyle(it.color, { textcolor: token === DEFAULT_TEXT_COLOR ? null : token }),
+      }));
+    await applyColors(updates);
+  }
+
+  // p6:F20（uc-widget-menu-003）：切换选中组件锁定态，编码为 color 的 "|locked=1" 样式段。
+  // 多选混合锁定态时（业务规则 6：批量锁定/解锁）：若全部已锁定 → 批量解锁；否则（含未锁定
+  // 或混合）→ 批量锁定，与 toggleBold 的「全真取消，否则全部置真」语义一致。
+  async function toggleLocked() {
+    const targets = items.filter((it) => selected.has(it.id));
+    if (targets.length === 0) return;
+    const allLocked = targets.every(getLocked);
+    const updates = targets.map((it) => ({
+      id: it.id,
+      color: withStyle(it.color, { locked: allLocked ? null : "1" }),
+    }));
+    await applyColors(updates);
+  }
+
+  // p6:F19（uc-widget-menu-010）：进入/退出格式取样模式。仅支持单选一个文本/便签类对象作为格式来源
+  // （形状/嵌入组件无文字排版语义，不作为来源，业务规则 1）。
+  function startFormatPaint() {
+    if (!canEdit) return;
+    const sel = items.filter((it) => selected.has(it.id));
+    if (sel.length !== 1) return;
+    const source = sel[0]!;
+    if (isShape(source) || isReloadable(source)) return;
+    setFormatSource({ id: source.id, color: source.color ?? null });
+  }
+  function exitFormatPaint() {
+    setFormatSource(null);
+  }
+
+  // p6:F19（uc-widget-menu-010）：把取样格式应用到目标对象。目标为形状/嵌入/锁定或与来源相同对象时
+  // 视为不兼容（异常流程/备选流程 2），不应用也不退出取样模式，交由调用方决定是否提示。
+  // 返回 true 表示已应用；false 表示目标不兼容。
+  async function applyFormatTo(targetId: string): Promise<boolean> {
+    if (!formatSource || !canEdit) return false;
+    if (targetId === formatSource.id) return false;
+    const target = items.find((it) => it.id === targetId);
+    if (!target || isShape(target) || isReloadable(target)) return false;
+    const newColor = applyFormatColor({ color: formatSource.color }, isText(target));
+    await applyColors([{ id: target.id, color: newColor }]);
+    return true;
   }
 
   // uc-widget-menu-014：把选中的单个文本组件按行/段拆分为多个便利贴（批量 add 命令）。
@@ -769,11 +969,16 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     [canEdit, selected]
   );
 
+  // uc-widget-menu-008 主流程 5：多选删除时，系统删除允许对象；遇到锁定对象时保留这些对象
+  // （部分失败）。锁定对象保持选中，便于用户看到哪些没被删除。
   const deleteSelected = useCallback(async () => {
     if (!canEdit || selected.size === 0) return;
-    const removed = items.filter((it) => selected.has(it.id));
-    setItems((prev) => prev.filter((it) => !selected.has(it.id)));
-    setSelected(new Set());
+    const targeted = items.filter((it) => selected.has(it.id));
+    const removed = targeted.filter((it) => !getLocked(it));
+    if (removed.length === 0) return; // 全部锁定 → 删除入口本就不显示/不可用，防御性短路
+    const removedIds = new Set(removed.map((it) => it.id));
+    setItems((prev) => prev.filter((it) => !removedIds.has(it.id)));
+    setSelected(new Set(targeted.filter((it) => getLocked(it)).map((it) => it.id)));
     recordOp({ kind: "delete", items: removed });
     await apiDelete(removed.map((it) => it.id));
   }, [canEdit, selected, items, apiDelete]);
@@ -812,6 +1017,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       if (e.key === "Escape") {
         setOpenPanel(null);
         setActiveTool("select");
+        setFormatSource(null); // uc-widget-menu-010 主流程 7：Esc 退出取样模式
         return setSelected(new Set());
       }
       const mod = e.metaKey || e.ctrlKey;
@@ -965,6 +1171,12 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           className="absolute left-1/2 top-14 z-20 flex -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-lg"
         >
           <span className="px-1 text-xs text-muted-foreground">{selected.size} 项</span>
+          {/* p6:F20（uc-widget-menu-003 主流程 3/4，业务规则 1）：全部选中项已锁定时，样式/编辑
+              类入口整体隐藏——锁定对象只保留锁定状态入口（此处即下方的解锁）与删除（已置灰）。
+              混合锁定态（部分选中项锁定）仍展示样式入口，setColor/toggleBold 等 setter 已各自
+              过滤掉锁定项，只对未锁定项生效。 */}
+          {!allSelectedLocked && (
+            <>
           {/* 颜色色板（F11）：仅对便签生效；选中项全为文本时隐藏（文本为透明块，不套柔彩色） */}
           {!items.filter((it) => selected.has(it.id)).every(isText) &&
             COLOR_TOKENS.map((c) => (
@@ -1073,6 +1285,96 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               </>
             );
           })()}
+          {/* p6:F19（uc-widget-menu-002）：边框色/边框宽（含线宽语义）/透明度/文字色。
+              对文本/便签/形状均生效（透明度、边框是通用外观属性，不限文字类对象）；
+              嵌入组件（图片/文件占位）暂不开放，避免和刷新/裁剪能力冲突。 */}
+          {(() => {
+            const sel = items.filter((it) => selected.has(it.id));
+            const eligible = sel.length > 0 && sel.every((it) => !isReloadable(it));
+            if (!eligible) return null;
+            const first = sel[0]!;
+            const mixedBorder = !sel.every((it) => getBorder(it) === getBorder(first));
+            const mixedBorderWidth = !sel.every((it) => getBorderWidth(it) === getBorderWidth(first));
+            const mixedOpacity = !sel.every((it) => getOpacity(it) === getOpacity(first));
+            const mixedTextColor = !sel.every((it) => getTextColor(it) === getTextColor(first));
+            return (
+              <>
+                <select
+                  data-testid="wm-border"
+                  aria-label="边框色"
+                  value={mixedBorder ? "" : getBorder(first)}
+                  onChange={(e) => void setBorder(e.target.value as BorderToken)}
+                  className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {mixedBorder && <option value="">混合</option>}
+                  <option value="none">无边框</option>
+                  <option value="gray">灰色</option>
+                  <option value="blue">蓝色</option>
+                  <option value="red">红色</option>
+                </select>
+                <select
+                  data-testid="wm-border-width"
+                  aria-label="边框/线宽"
+                  value={mixedBorderWidth ? "" : String(getBorderWidth(first))}
+                  onChange={(e) => void setBorderWidth(Number(e.target.value))}
+                  className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {mixedBorderWidth && <option value="">混合</option>}
+                  {BORDER_WIDTH_OPTIONS.map((w) => (
+                    <option key={w} value={w}>
+                      {w}px
+                    </option>
+                  ))}
+                </select>
+                <select
+                  data-testid="wm-opacity"
+                  aria-label="透明度"
+                  value={mixedOpacity ? "" : String(getOpacity(first))}
+                  onChange={(e) => void setOpacity(Number(e.target.value))}
+                  className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {mixedOpacity && <option value="">混合</option>}
+                  {OPACITY_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {o}%
+                    </option>
+                  ))}
+                </select>
+                <select
+                  data-testid="wm-textcolor"
+                  aria-label="文字色"
+                  value={mixedTextColor ? "" : getTextColor(first)}
+                  onChange={(e) => void setTextColor(e.target.value as TextColorToken)}
+                  className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {mixedTextColor && <option value="">混合</option>}
+                  <option value="default">默认</option>
+                  <option value="slate">石墨</option>
+                  <option value="blue">蓝色</option>
+                  <option value="green">绿色</option>
+                  <option value="red">红色</option>
+                </select>
+              </>
+            );
+          })()}
+          {/* p6:F19（uc-widget-menu-010）：应用格式入口。仅单选一个文本/便签类对象时可进入取样模式
+              （形状/嵌入无可复用的文字排版样式，不作为来源，业务规则 1）。 */}
+          {selected.size === 1 &&
+            items
+              .filter((it) => selected.has(it.id))
+              .every((it) => !isShape(it) && !isReloadable(it)) && (
+              <Button
+                data-testid="wm-apply-format"
+                size="sm"
+                variant="ghost"
+                aria-label="应用格式"
+                aria-pressed={formatSource?.id === Array.from(selected)[0]}
+                onClick={() => void startFormatPaint()}
+              >
+                <Paintbrush className="mr-1 h-3.5 w-3.5" />
+                应用格式
+              </Button>
+            )}
           {/* uc-widget-menu-014：仅当单选一个文本组件时显示「转换为便利贴」入口。 */}
           {selected.size === 1 && items.filter((it) => selected.has(it.id)).every(isText) && (
             <Button
@@ -1118,12 +1420,66 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           <Button data-testid="wm-duplicate" size="sm" variant="ghost" onClick={duplicateSelected}>
             复制
           </Button>
-          <Button data-testid="wm-delete" size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteSelected()}>
+            </>
+          )}
+          {/* uc-widget-menu-008 主流程 2：对象被锁定时删除入口隐藏或不可用；全部选中项锁定时
+              置灰（其余情况——含混合——仍可删，未锁定的会被删除，锁定的保留，见 deleteSelected）。 */}
+          <Button
+            data-testid="wm-delete"
+            size="sm"
+            variant="ghost"
+            className="text-destructive"
+            disabled={allSelectedLocked}
+            title={allSelectedLocked ? "锁定组件不可删除，请先解锁" : undefined}
+            onClick={() => void deleteSelected()}
+          >
             删除
           </Button>
-          {/* p6:F07：拖拽控制点缩放已可用（选中框四角），原「缩放暂不可用」占位移除。 */}
-          <Button data-testid="wm-lock-unavailable" size="sm" variant="ghost" disabled title="锁定能力将在后续组件权限矩阵接入">
-            锁定暂不可用
+          {/* p6:F20（uc-widget-menu-003）：锁定/解锁。锁定态入口只保留「解锁」（主流程 4：
+              锁定后菜单只显示锁定状态入口）；未锁定显示「锁定」。多选混合锁定态时，仍显示单一
+              入口，文案取「解锁」当且仅当全部已锁定（与 toggleLocked 的批量语义一致），否则显示
+              「锁定」（点击会把混合态统一收敛为全部锁定，业务规则 6 的批量锁定）。 */}
+          {(() => {
+            const sel = items.filter((it) => selected.has(it.id));
+            const anyLocked = sel.some(getLocked);
+            const mixed = anyLocked && !allSelectedLocked;
+            return allSelectedLocked ? (
+              <Button
+                data-testid="wm-unlock"
+                size="sm"
+                variant="ghost"
+                aria-label="解锁组件"
+                onClick={() => void toggleLocked()}
+              >
+                解锁
+              </Button>
+            ) : (
+              <Button
+                data-testid="wm-lock"
+                size="sm"
+                variant="ghost"
+                aria-label="锁定组件"
+                title={mixed ? "选中项锁定状态不一致，点击将全部锁定" : undefined}
+                onClick={() => void toggleLocked()}
+              >
+                锁定
+              </Button>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* p6:F19（uc-widget-menu-010 主流程 2）：取样模式提示条——用户点击「应用格式」后进入，
+          可连续点击目标应用同一格式，直到 Esc/切工具/点空白外的退出动作（主流程 6/7）。 */}
+      {formatSource && (
+        <div
+          data-testid="format-paint-indicator"
+          className="absolute left-1/2 top-24 z-30 flex -translate-x-1/2 items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-xs shadow-lg"
+        >
+          <Paintbrush className="h-3.5 w-3.5" />
+          <span>格式刷已就绪：点击目标文本/便利贴应用样式（Esc 退出）</span>
+          <Button data-testid="wm-apply-format-exit" size="sm" variant="ghost" onClick={exitFormatPaint}>
+            退出
           </Button>
         </div>
       )}

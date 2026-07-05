@@ -11,3 +11,5 @@ export * from "./studioGenerator";
 export * from "./presentationGenerator";
 // Deep Research 真实生成（P18 F04）：替换 apps/web 里硬编码的 buildResearch()
 export * from "./researchGenerator";
+// 问卷报告 AI 摘要生成器（P13 F07）
+export * from "./reportSummaryGenerator";

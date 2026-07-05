@@ -395,16 +395,16 @@
       "area": "widgets",
       "title": "组件样式调整 + 应用格式",
       "user_visible_behavior": "Widget Menu 中调整选中组件的颜色/边框/背景/线宽/透明度并实时预览、持久化（uc-widget-menu-002）；「应用格式」把当前组件样式刷到其他文本/便利贴（uc-widget-menu-010）。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "09",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/widget-style.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F19.verify.log @ 2026-07-03T21:24:25.050Z",
       "notes": "uc-widget-menu-002 + uc-widget-menu-010。样式更新走 update 命令，支持多选批量。",
       "source_use_cases": [
         "phases/requirements/board/widget-menu/uc-widget-menu-002-style-widget.md",
@@ -417,16 +417,16 @@
       "area": "widgets",
       "title": "锁定/解锁 + 删除 + 刷新组件",
       "user_visible_behavior": "锁定组件后不可移动/缩放/旋转/编辑，菜单显示解锁（uc-widget-menu-003）；删除选中的一个或多个组件（uc-widget-menu-008）；支持重新加载的组件可刷新内容（uc-widget-menu-009）。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "09",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/widget-lock-delete-refresh.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F20.verify.log @ 2026-07-03T21:48:31.792Z",
       "notes": "uc-widget-menu-003 + 008 + 009。lock 标志参与所有交互守卫。",
       "source_use_cases": [
         "phases/requirements/board/widget-menu/uc-widget-menu-003-lock-unlock-widget.md",

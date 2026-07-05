@@ -66,11 +66,11 @@
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web exec playwright test e2e/ai-store-*.spec.ts",
+        "cd apps/web && pnpm exec playwright test e2e/ai-store-*.spec.ts",
         "cd apps/web && bash scripts/lint-design.sh"
       ],
       "evidence": "",
-      "notes": "uc-store-reskin-001（新增）。verification 复用既有 p11 全部 e2e 回归 + design lint。blocked-on 同 F01。"
+      "notes": "uc-store-reskin-001（新增）。verification 复用既有 p11 全部 e2e 回归 + design lint。blocked-on 同 F01。fix(F03，同 F02 已知问题): verification 第 3 条原写法 `pnpm --filter @repo/web exec playwright test e2e/ai-store-*.spec.ts` 在 `pnpm harness verify` 从 repo 根目录执行时，bash glob 相对 repo 根展开（根目录不存在 `e2e/`，只有 `apps/web/e2e/`），导致 glob 无匹配、原样传给 playwright 报 \"No tests found\"——与 F02 记录的是同一个 harness 执行环境 bug，非本 feature 引入。改为 `cd apps/web && pnpm exec playwright test e2e/ai-store-*.spec.ts`（与 F02、第 4 条 lint-design 已用的 cd 前缀写法一致）后可正确匹配 30 个 ai-store e2e 文件并执行。"
     },
     {
       "id": "F04",
@@ -90,11 +90,11 @@
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web exec playwright test e2e/admin-*.spec.ts",
+        "cd apps/web && pnpm exec playwright test e2e/admin-*.spec.ts",
         "cd apps/web && bash scripts/lint-design.sh"
       ],
       "evidence": "",
-      "notes": "uc-admin-reskin-001（新增）。verification 复用既有 p15 全部 e2e 回归（含权限相关用例，reskin 绝不能弱化鉴权）+ design lint。blocked-on 同 F01。"
+      "notes": "uc-admin-reskin-001（新增）。verification 复用既有 p15 全部 e2e 回归（含权限相关用例，reskin 绝不能弱化鉴权）+ design lint。blocked-on 同 F01。fix(F04): verification 第 3 条原写法 `pnpm --filter @repo/web exec playwright test e2e/admin-*.spec.ts` 在 repo 根目录下执行时，bash 的 glob 展开发生在 pnpm/exec 之前、相对于 repo 根（`e2e/` 目录只存在于 `apps/web/e2e/`，不存在于根），导致 glob 无匹配、原样传给 playwright 后报 \"No tests found\"。与 F02 遇到的同一类 bug，改为 `cd apps/web && pnpm exec playwright test e2e/admin-*.spec.ts`（与第 4 条 lint-design 已用的 cd 前缀写法一致，且与 F02 已验证过的修法保持一致）后可正确匹配并执行全部 admin-*.spec.ts，语义不变。修正 glob 后门控真实结果 45/47 通过、2 条失败，均与 F04（admin 面板英文化 reskin，未碰 AI Store Explore 页面/store-browser.tsx）无关：①admin-004-featured-ai-store.spec.ts:214 —— 已顺手修掉一处测试数据 bug（item 命名 `Explore Plain ${stamp}` 导致搜索词 `Explore ${stamp}` 匹配不到，改成 `Explore ${stamp} Plain` 让搜索词成为真前缀），但修完后该用例在同一断言处又暴露一个更深的真实前端 bug——search 请求的 API 响应已经是正确的过滤结果，但页面网格没有用新结果重渲染，仍显示旧的 unfiltered items（疑似 store-browser.tsx 里 load()/items state 更新时序问题），超出 F04 范围，未继续深挖。②admin-001-manage-users.spec.ts:162（SysAdmin 删除用户后立即从列表移除）与本次改动完全无关的独立 flake。F04 保持 in_progress，不豁免这两条失败；已把①的根因线索记录在此供后续排期。"
     },
     {
       "id": "F05",

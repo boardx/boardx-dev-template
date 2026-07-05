@@ -1,0 +1,102 @@
+
+Running 47 tests using 1 worker
+
+  ✓  1 [chromium] › admin-001-manage-users.spec.ts:61:5 › 未登录访问 /admin/users 跳转到 /login (368ms)
+  ✓  2 [chromium] › admin-001-manage-users.spec.ts:68:5 › 已登录但非 SysAdmin 访问 /admin/users 看到无权限 (452ms)
+  ✓  3 [chromium] › admin-001-manage-users.spec.ts:76:5 › 未登录调用用户列表 API 返回 401，非 SysAdmin 返回 403 (194ms)
+  ✓  4 [chromium] › admin-001-manage-users.spec.ts:88:5 › SysAdmin 看到用户列表并能搜索 (1.4s)
+  ✓  5 [chromium] › admin-001-manage-users.spec.ts:114:5 › SysAdmin 创建用户，立即出现在列表 (547ms)
+  ✓  6 [chromium] › admin-001-manage-users.spec.ts:134:5 › SysAdmin 编辑用户资料，立即反映 (745ms)
+  ✘  7 [chromium] › admin-001-manage-users.spec.ts:162:5 › SysAdmin 删除用户（确认弹窗），立即从列表移除 (10.8s)
+  ✓  8 [chromium] › admin-001-manage-users.spec.ts:184:5 › SysAdmin 为用户手动增加 Credit，余额立即反映 (802ms)
+  ✓  9 [chromium] › admin-001-manage-users.spec.ts:217:5 › 用户手动上分带幂等 key：重复提交（同 key）不会重复入账 (253ms)
+  ✓  10 [chromium] › admin-001-manage-users.spec.ts:258:5 › 用户手动上分同一 Idempotency-Key 并发请求不会双重入账 (267ms)
+  ✓  11 [chromium] › admin-001-manage-users.spec.ts:292:5 › SysAdmin 不能删除自己的账号（400，删除按钮也禁用） (599ms)
+  ✓  12 [chromium] › admin-001-manage-users.spec.ts:310:5 › SysAdmin 不能删除拥有团队的用户（409），转移/无团队后才能删除 (927ms)
+  ✓  13 [chromium] › admin-001-manage-users.spec.ts:340:5 › SysAdmin 不能把自己的平台角色降级为 user（400，编辑弹窗里角色框也禁用） (581ms)
+  ✓  14 [chromium] › admin-001-manage-users.spec.ts:362:5 › 降级非本人的 SysAdmin：平台上还有其它 SysAdmin 时允许，只剩它一个时拒绝 (217ms)
+  ✓  15 [chromium] › admin-002-manage-teams.spec.ts:26:5 › 未登录访问 /admin/teams 跳转到 /login (291ms)
+  ✓  16 [chromium] › admin-002-manage-teams.spec.ts:33:5 › 已登录但非 SysAdmin 访问 /admin/teams 看到无权限 (405ms)
+  ✓  17 [chromium] › admin-002-manage-teams.spec.ts:41:5 › 未登录调用团队列表 API 返回 401，非 SysAdmin 返回 403 (125ms)
+  ✓  18 [chromium] › admin-002-manage-teams.spec.ts:53:5 › SysAdmin 看到团队列表（名称/类型/成员数/Credit）并能搜索 (1.0s)
+  ✓  19 [chromium] › admin-002-manage-teams.spec.ts:77:5 › SysAdmin 编辑团队类型，立即反映 (695ms)
+  ✓  20 [chromium] › admin-002-manage-teams.spec.ts:101:5 › SysAdmin 为团队手动增加 Credit，余额立即反映 (678ms)
+  ✓  21 [chromium] › admin-002-manage-teams.spec.ts:132:5 › 手动上分带幂等 key：重复提交（同 key）不会重复入账 (170ms)
+  ✓  22 [chromium] › admin-002-manage-teams.spec.ts:168:5 › 团队手动上分同一 Idempotency-Key 并发请求不会双重入账 (165ms)
+  ✓  23 [chromium] › admin-002-manage-teams.spec.ts:195:5 › 手动上分 note 超长会被服务端裁剪到 200 字符 (140ms)
+  ✓  24 [chromium] › admin-003-ai-store-approval.spec.ts:50:5 › 未登录访问 /admin/ai-store/review 跳转到 /login (303ms)
+  ✓  25 [chromium] › admin-003-ai-store-approval.spec.ts:57:5 › 已登录但非 SysAdmin 访问审核页看到无权限 (497ms)
+  ✓  26 [chromium] › admin-003-ai-store-approval.spec.ts:65:5 › 未登录调用审核列表/操作 API 返回 401，非 SysAdmin 返回 403 (160ms)
+  ✓  27 [chromium] › admin-003-ai-store-approval.spec.ts:80:5 › SysAdmin 看到 PENDING 项目并能批准，状态立即变为 APPROVED (842ms)
+  ✓  28 [chromium] › admin-003-ai-store-approval.spec.ts:106:5 › SysAdmin 可撤回已批准项目到 PENDING (731ms)
+  ✓  29 [chromium] › admin-003-ai-store-approval.spec.ts:126:5 › SysAdmin 可拒绝 PENDING 项目，拒绝后不再出现在待审核/已批准列表 (698ms)
+  ✓  30 [chromium] › admin-003-ai-store-approval.spec.ts:144:5 › 状态 Tab 筛选：切到已批准只看到 APPROVED 项目 (704ms)
+  ✓  31 [chromium] › admin-003-ai-store-approval.spec.ts:158:5 › 审核状态转移幂等：重复提交同一批准操作不报错、状态不变；前置状态不符返回 409 (291ms)
+  ✓  32 [chromium] › admin-004-featured-ai-store.spec.ts:62:5 › 未登录访问 /admin/ai-store/featured 跳转到 /login (441ms)
+  ✓  33 [chromium] › admin-004-featured-ai-store.spec.ts:69:5 › 已登录但非 SysAdmin 访问精选页看到无权限 (417ms)
+  ✓  34 [chromium] › admin-004-featured-ai-store.spec.ts:77:5 › 未登录调用精选列表/切换 API 返回 401，非 SysAdmin 返回 403 (136ms)
+  ✓  35 [chromium] › admin-004-featured-ai-store.spec.ts:92:5 › SysAdmin 看到已批准项目并能设为精选，状态立即反映在星标 (644ms)
+  ✓  36 [chromium] › admin-004-featured-ai-store.spec.ts:106:5 › SysAdmin 可取消已精选项目的精选状态 (712ms)
+  ✓  37 [chromium] › admin-004-featured-ai-store.spec.ts:123:5 › 精选页只展示 APPROVED 项目：PENDING 项目不出现，拒绝后的项目也不出现 (903ms)
+  ✓  38 [chromium] › admin-004-featured-ai-store.spec.ts:148:5 › 精选 Tab 筛选：切到已精选只看到 featured=true 的项目 (696ms)
+  ✓  39 [chromium] › admin-004-featured-ai-store.spec.ts:162:5 › 精选切换幂等：重复提交同一目标值不报错；对未批准/已撤回项目切换返回 409 (357ms)
+  ✓  40 [chromium] › admin-004-featured-ai-store.spec.ts:198:5 › 非 SysAdmin 无法通过 API 直接切换精选（越权防护） (289ms)
+  ✘  41 [chromium] › admin-004-featured-ai-store.spec.ts:214:5 › 精选项目在 AI Store Explore 出现 FEATURED 徽标，且排序优先于未精选项目 (10.5s)
+  ✓  42 [chromium] › admin-005-view-admin-home.spec.ts:19:5 › 未登录访问 /admin 跳转到 /login (346ms)
+  ✓  43 [chromium] › admin-005-view-admin-home.spec.ts:26:5 › 已登录但非 SysAdmin 访问 /admin 看到 403 无权限 (346ms)
+  ✓  44 [chromium] › admin-005-view-admin-home.spec.ts:35:5 › SysAdmin 访问 /admin 看到统计摘要与模块导航 (445ms)
+  ✓  45 [chromium] › admin-005-view-admin-home.spec.ts:63:5 › SysAdmin 点用户管理导航进入 /admin/users (495ms)
+  ✓  46 [chromium] › admin-005-view-admin-home.spec.ts:71:5 › SysAdmin 点团队管理导航进入 /admin/teams (594ms)
+  ✓  47 [chromium] › admin-005-view-admin-home.spec.ts:79:5 › 统计摘要 API 未登录 401、非 SysAdmin 403 (134ms)
+
+
+  1) [chromium] › admin-001-manage-users.spec.ts:162:5 › SysAdmin 删除用户（确认弹窗），立即从列表移除 ───────────────
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
+
+    Locator: getByTestId('empty')
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+      [2m- expect.toBeVisible with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('empty')[22m
+
+
+      179 |
+      180 |   await expect(page.getByTestId("delete-user-modal")).toHaveCount(0);
+    > 181 |   await expect(page.getByTestId("empty")).toBeVisible();
+          |                                           ^
+      182 | });
+      183 |
+      184 | test("SysAdmin 为用户手动增加 Credit，余额立即反映", async ({ page, playwright, baseURL }) => {
+
+        at /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/515c4f6b-1bc0-41d4-ac38-b6df9bb81f4f/scratchpad/wt-364gate/apps/web/e2e/admin-001-manage-users.spec.ts:181:43
+
+  2) [chromium] › admin-004-featured-ai-store.spec.ts:214:5 › 精选项目在 AI Store Explore 出现 FEATURED 徽标，且排序优先于未精选项目 
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
+
+    Locator: getByTestId('item-132')
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+      [2m- expect.toBeVisible with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('item-132')[22m
+
+
+      226 |   await page.getByTestId("store-search").fill(`Explore ${stamp}`);
+      227 |   await page.getByTestId("store-search").press("Enter");
+    > 228 |   await expect(page.getByTestId(`item-${plainItem.id}`)).toBeVisible();
+          |                                                          ^
+      229 |   await expect(page.getByTestId(`item-${featuredItem.id}`)).toBeVisible();
+      230 |   await expect(page.getByTestId(`item-featured-badge-${featuredItem.id}`)).toHaveCount(0);
+      231 |
+
+        at /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/515c4f6b-1bc0-41d4-ac38-b6df9bb81f4f/scratchpad/wt-364gate/apps/web/e2e/admin-004-featured-ai-store.spec.ts:228:58
+
+  Slow test file: [chromium] › admin-004-featured-ai-store.spec.ts (15.1s)
+  Consider splitting slow test files to speed up parallel execution
+  2 failed
+    [chromium] › admin-001-manage-users.spec.ts:162:5 › SysAdmin 删除用户（确认弹窗），立即从列表移除 ────────────────
+    [chromium] › admin-004-featured-ai-store.spec.ts:214:5 › 精选项目在 AI Store Explore 出现 FEATURED 徽标，且排序优先于未精选项目 
+  45 passed (45.0s)
