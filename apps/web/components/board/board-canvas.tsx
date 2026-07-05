@@ -177,6 +177,26 @@ const DEFAULT_TEXT = "文本";
 const isText = (it: { color?: string | null }) => baseColor(it.color) === TEXT_MARK;
 // 形状（Shape）组件（uc-widgets-004）：服务端原生放行 type:"rect"，按 type 判别，无需 color 哨兵。
 const isShape = (it: { type: string }) => it.type === "rect";
+// p6:F15：具体形状种类沿用 F12/F19/F20/F21 建立的 color "|k=v" 哨兵编码约定，不新增持久化列
+// （服务端 validateNewItem 仍只认 type ∈ {note,rect}）。UC uc-widgets-004 业务规则 5 明确当前
+// 界面确认展示 6 种：圆形/三角形/菱形/圆角矩形/矩形/六边形。
+const SHAPE_TYPES = ["rect", "rounded", "circle", "triangle", "diamond", "hexagon"] as const;
+type ShapeType = (typeof SHAPE_TYPES)[number];
+const DEFAULT_SHAPE_TYPE: ShapeType = "rect";
+const SHAPE_LABELS: Record<ShapeType, string> = {
+  rect: "矩形",
+  rounded: "圆角矩形",
+  circle: "圆形",
+  triangle: "三角形",
+  diamond: "菱形",
+  hexagon: "六边形",
+};
+const getShapeType = (it: { color?: string | null }): ShapeType => {
+  const v = styleGet(it.color, "shape");
+  return (SHAPE_TYPES as readonly string[]).includes(v ?? "") ? (v as ShapeType) : DEFAULT_SHAPE_TYPE;
+};
+// 形状工具「记住上次选择」（UC 主流程 4）：本地会话状态足够，无需持久化到服务端。
+const SHAPE_TOOL_LAST_KEY = "board_shape_tool_last";
 
 // 可刷新组件（uc-widget-menu-009 刷新组件）：模拟「内容会重新加载」的嵌入/资源类组件
 // （如图片、文件、外链预览）。线上仍以 type:"note" 持久化 + color:"embed" 哨兵判别。
@@ -202,6 +222,50 @@ type Op =
   | { kind: "resize"; resize: ItemResize }; // p6:F07 组件缩放
 
 type BoardTool = "select" | "pan" | "sticky" | "draw" | "text" | "connector" | "shape" | "assets" | "templates";
+
+// p6:F15：形状类型面板/Widget Menu 切换入口的小图标（纯 SVG，不依赖 lucide 里没有的形状）。
+function ShapeGlyph({ type, className }: { type: ShapeType; className?: string }) {
+  const common = { className, viewBox: "0 0 24 24", "aria-hidden": true } as const;
+  switch (type) {
+    case "circle":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" />
+        </svg>
+      );
+    case "triangle":
+      return (
+        <svg {...common}>
+          <polygon points="12,3 21,20 3,20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+        </svg>
+      );
+    case "diamond":
+      return (
+        <svg {...common}>
+          <polygon points="12,2 22,12 12,22 2,12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+        </svg>
+      );
+    case "rounded":
+      return (
+        <svg {...common}>
+          <rect x="3" y="5" width="18" height="14" rx="5" fill="none" stroke="currentColor" strokeWidth="2" />
+        </svg>
+      );
+    case "hexagon":
+      return (
+        <svg {...common}>
+          <polygon points="7,3 17,3 22,12 17,21 7,21 2,12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+        </svg>
+      );
+    case "rect":
+    default:
+      return (
+        <svg {...common}>
+          <rect x="3" y="5" width="18" height="14" fill="none" stroke="currentColor" strokeWidth="2" />
+        </svg>
+      );
+  }
+}
 
 const NUDGE = 1;
 const BIG_NUDGE = 10;
@@ -256,7 +320,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const [editingId, setEditingId] = useState<string | null>(null); // F11 文本编辑中的便签
   const [activeTool, setActiveTool] = useState<BoardTool>("select");
   const [aiOpen, setAiOpen] = useState(false); // F01: Board AI 浮层/board chat 面板开关，dock 与浮层共享同一真值
-  const [openPanel, setOpenPanel] = useState<"assets" | "templates" | null>(null);
+  const [openPanel, setOpenPanel] = useState<"assets" | "templates" | "shape" | null>(null);
+  // p6:F15（uc-widgets-004 主流程 4）：形状工具记住上次选择的形状类型，默认矩形。
+  const [lastShapeType, setLastShapeType] = useState<ShapeType>(DEFAULT_SHAPE_TYPE);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null); // 右键上下文菜单（uc-context-menu-001）
   const [guides, setGuides] = useState<Guide[]>([]); // 拖动时的对齐参考线（uc-canvas-007）
   const [spacings, setSpacings] = useState<SpacingHint[]>([]); // p6:F07 等间距提示
@@ -512,6 +578,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         borderWidth: getBorderWidth(it),
         opacity: getOpacity(it),
         textColor: getTextColor(it),
+        shapeType: getShapeType(it),
         reloadable: isReloadable(it),
         reloadCount: reload[it.id]?.count ?? 0,
         refreshedAt: reload[it.id]?.at ?? null,
@@ -576,19 +643,40 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     setSelected(new Set([item.id]));
   }
 
-  async function addShape() {
+  // 形状（Shape）组件创建（uc-widgets-004 主流程 1-5）：Board Menu「形状」入口旁的下拉选形状
+  // 类型，创建后系统记住该类型供下次沿用（主流程 4）。线上以 type:"rect" 落库（服务端原生放行），
+  // 具体形状种类经 color 的 "|shape=<token>" 哨兵表达（不新增持久化列），创建后立即 PATCH 写入，
+  // 刷新后仍可判别（同 F12/F19/F20 的 text/embed/locked 哨兵约定）。
+  async function addShape(shapeType: ShapeType = lastShapeType) {
     setActiveTool("shape");
     setOpenPanel(null);
-    const x = 400;
+    setLastShapeType(shapeType);
+    // 放置位与便签/文本一致（x=40，纵向按 placeN 递增），不再用旧的固定 x=400——
+    // 400 恰好落在选中后自动出现的 Widget Menu 悬浮层正下方（该浮层 absolute 定位在
+    // 视口顶部居中区域），导致新建形状一创建就被浮层盖住、拦截了鼠标事件（dblclick 编辑/
+    // 拖拽移动均因此失效，真实回归见 e2e 诊断：点空白取消选中后同一手势对形状完全生效）。
+    const x = 40;
     const y = 40 + placeN.current++ * 130;
+    // 默认占位文字（对齐便签/文本/嵌入组件已有的 DEFAULT_TEXT/DEFAULT_EMBED 模式，也是
+    // board-menu-001 既有回归断言的期望：新建矩形默认文案「矩形」）。用户仍可清空成空形状
+    // （UC 备选流程 1：只创建空形状时系统保留空形状，稍后仍可输入文本）。
     const res = await fetch(`/api/boards/${boardId}/items`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ type: "rect", x, y, text: "" }),
+      body: JSON.stringify({ type: "rect", x, y, text: SHAPE_LABELS[shapeType] }),
     });
     if (res.status !== 201) return;
     const { item } = (await res.json()) as { item: Item };
-    recordOp({ kind: "add", items: [item] });
+    const color = shapeType === DEFAULT_SHAPE_TYPE ? null : `amber|shape=${shapeType}`;
+    if (color) {
+      await fetch(`/api/board-items/${item.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ color }),
+      });
+    }
+    const shapeItem: Item = { ...item, color };
+    recordOp({ kind: "add", items: [shapeItem] });
     await load();
     setSelected(new Set([item.id]));
   }
@@ -853,6 +941,19 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     await applyColors(updates);
   }
 
+  // p6:F15（uc-widgets-004 备选流程 3 / 业务规则 6）：切换已有形状的具体类型，编码为 color 的
+  // "|shape=<token>" 样式段。仅通过 Widget Menu 的可见入口（wm-shape-type）暴露，符合 UC 业务
+  // 规则 6「已有形状类型切换由 Widget Menu 可见入口决定」。
+  async function setShapeType(shapeType: ShapeType) {
+    const updates = items
+      .filter((it) => selected.has(it.id) && isShape(it) && !getLocked(it))
+      .map((it) => ({
+        id: it.id,
+        color: withStyle(it.color, { shape: shapeType === DEFAULT_SHAPE_TYPE ? null : shapeType }),
+      }));
+    await applyColors(updates);
+  }
+
   // p6:F20（uc-widget-menu-003）：切换选中组件锁定态，编码为 color 的 "|locked=1" 样式段。
   // 多选混合锁定态时（业务规则 6：批量锁定/解锁）：若全部已锁定 → 批量解锁；否则（含未锁定
   // 或混合）→ 批量锁定，与 toggleBold 的「全真取消，否则全部置真」语义一致。
@@ -1090,9 +1191,22 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             <BoardMenuButton testId="board-tool-connector" label="连接线" active={false} disabled>
               <Cable className="h-4 w-4" />
             </BoardMenuButton>
+            {/* p6:F15（uc-widgets-004 前端入口 1/2）：形状入口点击直接用上次选择的类型创建
+                （主流程 4：沿用上次），旁边的下拉箭头（board-tool-shape-menu）展开形状类型面板
+                （主流程 1-3：展示可创建的形状类型下拉菜单，供切换）。 */}
             <BoardMenuButton testId="board-tool-shape" label="形状" active={activeTool === "shape"} onClick={() => void addShape()}>
               <Shapes className="h-4 w-4" />
             </BoardMenuButton>
+            <button
+              type="button"
+              data-testid="board-tool-shape-menu"
+              aria-label="选择形状类型"
+              aria-expanded={openPanel === "shape"}
+              onClick={() => setOpenPanel((p) => (p === "shape" ? null : "shape"))}
+              className="flex h-9 w-4 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
+            >
+              <span className="text-10 leading-none">▾</span>
+            </button>
             <BoardMenuButton
               testId="board-tool-assets"
               label="资源"
@@ -1125,6 +1239,33 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               已选 {selected.size}
             </span>
           </div>
+
+          {/* p6:F15（uc-widgets-004 主流程 1-3）：形状类型下拉——当前确认展示圆形/三角形/菱形/
+              圆角矩形/矩形/六边形（业务规则 5）。选中后把该类型设为当前形状工具并立即创建一个
+              该类型的形状（与「点击形状入口沿用上次类型」共用同一个 addShape，只是显式指定类型）。 */}
+          {openPanel === "shape" && (
+            <div
+              data-testid="board-shape-panel"
+              className="absolute left-3 top-12 z-20 w-56 rounded-lg border bg-popover p-2 shadow-lg"
+            >
+              <div className="grid grid-cols-3 gap-1.5">
+                {SHAPE_TYPES.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    data-testid={`board-shape-${s}`}
+                    aria-label={SHAPE_LABELS[s]}
+                    title={SHAPE_LABELS[s]}
+                    onClick={() => void addShape(s)}
+                    className="flex flex-col items-center gap-1 rounded-md border border-transparent p-2 text-10 text-muted-foreground hover:border-input hover:bg-accent"
+                  >
+                    <ShapeGlyph type={s} className="h-5 w-5" />
+                    {SHAPE_LABELS[s]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {openPanel === "assets" && (
             <div
@@ -1355,6 +1496,31 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                   <option value="red">红色</option>
                 </select>
               </>
+            );
+          })()}
+          {/* p6:F15（uc-widgets-004 备选流程 3 / 业务规则 6）：已有形状类型切换入口——只在选中项
+              全部为形状（type:"rect"）时展示，未展示该入口时不能直接切换（与 UC 明确一致）。 */}
+          {(() => {
+            const sel = items.filter((it) => selected.has(it.id));
+            const allShapes = sel.length > 0 && sel.every(isShape);
+            if (!allShapes) return null;
+            const first = sel[0]!;
+            const mixedShapeType = !sel.every((it) => getShapeType(it) === getShapeType(first));
+            return (
+              <select
+                data-testid="wm-shape-type"
+                aria-label="形状类型"
+                value={mixedShapeType ? "" : getShapeType(first)}
+                onChange={(e) => void setShapeType(e.target.value as ShapeType)}
+                className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {mixedShapeType && <option value="">混合</option>}
+                {SHAPE_TYPES.map((s) => (
+                  <option key={s} value={s}>
+                    {SHAPE_LABELS[s]}
+                  </option>
+                ))}
+              </select>
             );
           })()}
           {/* p6:F19（uc-widget-menu-010）：应用格式入口。仅单选一个文本/便签类对象时可进入取样模式

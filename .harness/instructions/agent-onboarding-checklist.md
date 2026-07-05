@@ -17,8 +17,11 @@
 3. **`.harness/agents/registry.yaml`**——找到/确认自己的身份条目（`id`/`kind`/`areas`）。
    没有条目 → 见下方"新增身份"一节，不要自行编号硬凑。
 4. **`phases/phase-01-foundation/adr/ADR-004-issues-as-coordination-bus.md`** +
-   **`ADR-005-shared-checkout-isolation.md`**——两条决定"你能怎么碰 git/GitHub"的
-   硬约束：状态机权威在哪、共享工作目录的隔离规则。
+   **`ADR-005-shared-checkout-isolation.md`** +
+   **`ADR-006-coord-service-d1-gating.md`**——三条决定"你能怎么碰 git/GitHub"的
+   硬约束：状态机权威在哪、共享工作目录的隔离规则、认领动作的可选原子性增强
+   （`COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN` 未配置 = 完全不受影响，两个都配了
+   才会额外问一次 D1）。
 5. 按自己的 `kind` 再读对应角色文档：
    - `worker` → `.harness/instructions/parallel-dev-workflow.md` §5（执行循环）+
      要认领的那个 `phases/<phase>/feature_list.json` 条目（行为契约 + 验收命令）。
