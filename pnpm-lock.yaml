@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@repo/coord-service':
+        specifier: workspace:*
+        version: link:packages/coord-service
       '@rollup/rollup-darwin-arm64':
         specifier: ^4.62.2
         version: 4.62.2
@@ -231,6 +234,9 @@ importers:
       '@types/node':
         specifier: '*'
         version: 22.0.0
+      tsx:
+        specifier: '*'
+        version: 4.19.0
       typescript:
         specifier: '*'
         version: 5.6.2
@@ -240,6 +246,9 @@ importers:
       wrangler:
         specifier: ^4.0.0
         version: 4.107.0(@cloudflare/workers-types@4.20260702.1)
+      yaml:
+        specifier: '*'
+        version: 2.5.0
 
   packages/data:
     dependencies:

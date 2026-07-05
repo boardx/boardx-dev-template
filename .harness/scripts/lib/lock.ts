@@ -8,6 +8,11 @@ export interface CoordinatorLock {
   startedAt: string;
   lastHeartbeat: string;
   note?: string;
+  /** Phase 3 opt-in dual-write: the coord-service claim id backing this lock,
+   *  if COORD_SERVICE_URL/COORD_SERVICE_TOKEN are configured. Local-only
+   *  runtime state (this file is gitignored) — safe to add without any
+   *  cross-session compatibility concern. */
+  remoteClaimId?: number;
 }
 
 /** 超过这么久没心跳，视为 stale（进程已死/会话已结束），允许新 coordinator 抢占。 */
@@ -24,6 +29,17 @@ export function readLock(): CoordinatorLock | null {
 
 function writeLock(lock: CoordinatorLock): void {
   writeFileSync(COORDINATOR_LOCK_PATH, JSON.stringify(lock, null, 2) + "\n", "utf8");
+}
+
+/** Merges `patch` into the current lock file, if one exists — used by the
+ *  Phase 3 dual-write wrapper in coordinator-lock.ts to record a
+ *  `remoteClaimId` after the primary (file-based) lock operation already
+ *  succeeded. Never called on the critical path of acquiring/checking the
+ *  lock itself. */
+export function patchLock(patch: Partial<CoordinatorLock>): void {
+  const existing = readLock();
+  if (!existing) return;
+  writeLock({ ...existing, ...patch });
 }
 
 export function minutesSince(iso: string): number {
