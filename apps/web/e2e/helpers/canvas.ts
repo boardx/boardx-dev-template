@@ -24,6 +24,8 @@ export interface CanvasItem {
   borderWidth: number;
   opacity: number;
   textColor: "default" | "slate" | "blue" | "green" | "red";
+  // p6:F15（uc-widgets-004）：具体形状种类，仅 kind === "shape" 时有意义。
+  shapeType: "rect" | "rounded" | "circle" | "triangle" | "diamond" | "hexagon";
   reloadable: boolean;
   reloadCount: number;
   refreshedAt: number | null;
