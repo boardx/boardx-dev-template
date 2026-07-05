@@ -16,7 +16,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/auth-register.spec.ts"
       ],
-      "evidence": "evidence/F01.verify.log @ 2026-06-29T08:02:53.443Z",
+      "evidence": "phases/phase-04-identity-and-spaces/sprints/sprint-01/evidence/F01-F04-confirm-email.verify.log @ 2026-07-05T01:30:25Z（P21 F03 重跑：此前 evidence 字段指向的 evidence/F01.verify.log 在仓库任何位置都不存在，本次重新执行 verification 并落盘真实日志）",
       "notes": "uc-auth-001。密码≥6，邮箱小写，未勾选条款 400。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-001-email-register.md"
@@ -37,7 +37,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/auth-login.spec.ts"
       ],
-      "evidence": "evidence/F02.verify.log @ 2026-06-29T08:02:59.877Z",
+      "evidence": "phases/phase-04-identity-and-spaces/sprints/sprint-01/evidence/F01-F04-confirm-email.verify.log @ 2026-07-05T01:30:25Z（P21 F03 重跑：此前 evidence 字段指向的 evidence/F02.verify.log 在仓库任何位置都不存在，本次重新执行 verification 并落盘真实日志；同时补上 login 速率限制加固，见 packages/auth/src/index.ts 的 LOGIN_RATE_LIMIT_*）",
       "notes": "uc-auth-002。会话 7 天；不存在/错误密码统一报「邮箱或密码无效」。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-002-email-login.md"
@@ -58,7 +58,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/auth-change-password.spec.ts"
       ],
-      "evidence": "evidence/F03.verify.log @ 2026-06-29T08:03:06.108Z",
+      "evidence": "phases/phase-04-identity-and-spaces/sprints/sprint-01/evidence/F01-F04-confirm-email.verify.log @ 2026-07-05T01:30:25Z（P21 F03 重跑：此前 evidence 字段指向的 evidence/F03.verify.log 在仓库任何位置都不存在，本次重新执行 verification 并落盘真实日志）",
       "notes": "uc-auth-006。改密后 deleteUserSessions。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-006-change-password.md"
@@ -79,7 +79,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/auth-reset-password.spec.ts"
       ],
-      "evidence": "evidence/F04.verify.log @ 2026-06-29T08:03:11.646Z",
+      "evidence": "phases/phase-04-identity-and-spaces/sprints/sprint-01/evidence/F01-F04-confirm-email.verify.log @ 2026-07-05T01:30:25Z（P21 F03 重跑：此前 evidence 字段指向的 evidence/F04.verify.log 在仓库任何位置都不存在，本次重新执行 verification 并落盘真实日志；同时补上 forgot-password 速率限制加固，见 packages/auth/src/index.ts 的 FORGOT_PASSWORD_RATE_LIMIT_*）",
       "notes": "uc-auth-004。响应绝不返回 token；令牌一次性、30 分钟过期。真 SMTP deferred。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-004-forgot-reset-password.md"
@@ -335,6 +335,27 @@
         "phases/phase-04-identity-and-spaces/requirements/room/uc-room-005-manage-room-files.md",
         "phases/phase-04-identity-and-spaces/requirements/room/uc-room-006-use-room-studio.md",
         "phases/phase-04-identity-and-spaces/requirements/room/uc-room-007-view-room-surveys.md"
+      ]
+    },
+    {
+      "id": "F15",
+      "priority": 5,
+      "area": "auth",
+      "title": "确认邮箱（注册确认，真实一次性令牌）",
+      "user_visible_behavior": "注册成功后系统在后台生成一条 24 小时有效的一次性确认令牌并「发信」（dev 环境走 apps/web/lib/mailer.ts 同款 console.log 桩，不接真实 SMTP）；用户打开 /confirm-email?token=... 页面，POST /api/auth/confirm-email {token} 校验令牌，成功后该用户 users.email_confirmed_at 被打上时间戳且令牌立即失效（一次性，不可重放）；令牌缺失/未知/过期/已用 400 并展示「确认链接无效或已过期」+ 重新发送入口。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": "wrk-platform-1",
+      "capability": "CAP-AUTH",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/auth-005-confirm-email.spec.ts"
+      ],
+      "evidence": "phases/phase-04-identity-and-spaces/sprints/sprint-01/evidence/F01-F04-confirm-email.verify.log @ 2026-07-05T01:30:25Z",
+      "notes": "uc-auth-005（此前完全没有 feature_list 条目在追踪，由 phase-p21 F03 补登）。此前 apps/web/app/api/auth/confirm-email/route.ts 是硬编码 Set([\"demo\"]) 的内存桩，从未接入 email_tokens；本轮改为读写 packages/data/src/auth.ts 的 createEmailToken/getValidEmailToken/consumeEmailToken（type=\"confirm_email\"，复用 reset-password 已验证过的一次性 token 机制），并新增 users.email_confirmed_at 列（029_email_confirmation.sql）与 /api/dev/confirm-token dev 端点（e2e 用，生产 404）。范围：只覆盖注册邮箱确认主流程；uc-auth-005 里的「新邮箱变更确认」（备选流程 A1，confirm-new-email 页面）不在本次范围内，仍是 deferred。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-005-confirm-email.md"
       ]
     }
   ]

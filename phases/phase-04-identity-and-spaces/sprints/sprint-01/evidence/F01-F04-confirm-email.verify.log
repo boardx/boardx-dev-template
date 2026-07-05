@@ -1,0 +1,27 @@
+=== phase-04 F01-F04 + confirm-email 重新验证 (P21 F03) — 2026-07-05T01:29:45Z ===
+docker compose -f infra/docker-compose.yml up -d
+pnpm --filter @repo/data run migrate
+pnpm --filter @repo/web exec playwright test e2e/auth-register.spec.ts e2e/auth-login.spec.ts e2e/auth-change-password.spec.ts e2e/auth-reset-password.spec.ts e2e/auth-005-confirm-email.spec.ts
+
+
+Running 15 tests using 1 worker
+
+  ✓  1 [chromium] › auth-005-confirm-email.spec.ts:17:5 › 有效令牌 → 确认成功，可去登录/工作区 (5.1s)
+  ✓  2 [chromium] › auth-005-confirm-email.spec.ts:28:5 › 无效令牌 → 链接无效或已过期，可重新发送 (601ms)
+  ✓  3 [chromium] › auth-005-confirm-email.spec.ts:34:5 › 缺少令牌 → 确认失败 (405ms)
+  ✓  4 [chromium] › auth-005-confirm-email.spec.ts:39:5 › 已用令牌不可重复使用 (303ms)
+  ✓  5 [chromium] › auth-005-confirm-email.spec.ts:51:5 › API：真实生成的 token → ok；未知 token → 400 (126ms)
+  ✓  6 [chromium] › auth-change-password.spec.ts:5:5 › 修改密码后旧会话失效、新密码可登录、旧密码失败 (3.5s)
+  ✓  7 [chromium] › auth-change-password.spec.ts:55:5 › 旧密码错误时拒绝修改 (593ms)
+  ✓  8 [chromium] › auth-login.spec.ts:11:5 › 正确凭据登录成功 (859ms)
+  ✓  9 [chromium] › auth-login.spec.ts:23:5 › 错误密码报「邮箱或密码无效」 (622ms)
+  ✓  10 [chromium] › auth-login.spec.ts:34:5 › 登出后回到访客态 (2.0s)
+  ✓  11 [chromium] › auth-register.spec.ts:5:5 › 注册成功后自动登录并进入首页 (1.0s)
+  ✓  12 [chromium] › auth-register.spec.ts:18:5 › 未勾选条款/弱密码显示字段错误 (501ms)
+  ✓  13 [chromium] › auth-register.spec.ts:29:5 › 重复邮箱注册被拒 (696ms)
+  ✓  14 [chromium] › auth-reset-password.spec.ts:5:5 › 忘记密码→邮件令牌→重置→新密码登录 (1.9s)
+  ✓  15 [chromium] › auth-reset-password.spec.ts:38:5 › 已用令牌不可重复使用 (444ms)
+
+  15 passed (22.6s)
+
+全部 15/15 通过，@ 2026-07-05T01:30:25Z
