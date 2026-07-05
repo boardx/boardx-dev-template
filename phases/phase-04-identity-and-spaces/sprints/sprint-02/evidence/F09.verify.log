@@ -1,0 +1,20 @@
+=== F09 verify — 成员/角色管理与更新/删除团队 (uc-team-005 + uc-team-006) ===
+date (UTC): 2026-07-05T01:35:59Z
+commit: c3a449d108642059e2c8bcc93f531382a50856d5
+重新执行时间：phase-p21 F04 补齐证据（owner wrk-platform-2）
+
+$ docker compose -f infra/docker-compose.yml up -d
+ (worktree infra 已启动，见本轮 F04 会话)
+
+$ pnpm --filter @repo/data run migrate
+ (已应用，跳过 — 迁移已是最新)
+
+$ pnpm --filter @repo/web exec playwright test e2e/team-manage.spec.ts
+
+Running 3 tests using 1 worker
+
+  ✓  1 [chromium] › team-manage.spec.ts:26:5 › owner 改成员角色、移除成员 (1.3s)
+  ✓  2 [chromium] › team-manage.spec.ts:40:5 › member 无权管理（改角色 403），非 owner 无权删除团队（403） (432ms)
+  ✓  3 [chromium] › team-manage.spec.ts:52:5 › owner 改名并删除团队 (114ms)
+
+  3 passed (4.9s)

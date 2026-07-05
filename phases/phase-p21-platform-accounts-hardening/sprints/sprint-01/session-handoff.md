@@ -2,61 +2,63 @@
 
 ## 当前已验证
 - F01、F02 均已由 coord-main 补跑真实 `pnpm harness verify` 转 passing（F02 的 Docker 网络
-  环境阻塞已在资源恢复后解除，非代码回归）。以下是两个 owner 各自留下的详细记录：
-- F02（团队成员角色接口越权修复，owner: wrk-platform-2）代码 + 测试已完成并手工/等价验证通过，
-  **含 code-reviewer 复审发现并修复的第二轮回归缺口**：
-  - `pnpm --filter @repo/web exec playwright test e2e/team-010-owner-protection.spec.ts` → 6 passed
-    （新增"admin PATCH member 成 owner 被拒"用例）
-  - `pnpm --filter @repo/web exec playwright test e2e/team-manage.spec.ts` → 3 passed（回归）
-  - team-003/007/create/invite-join/switch + admin-002 → 27 passed（第一轮已验证，本轮未涉及
-    这几个 spec 覆盖的路径，未重复全量重跑）
-  - `pnpm --filter @repo/web run typecheck` / `pnpm --filter @repo/data run typecheck` → PASS
-  - `./init.sh` → 45/45 tasks successful
-  - 详见 `sprints/sprint-01/evidence/F02.verify.log`
-- **未达成**：`pnpm harness verify --sprint p21/01 --feature F02` 两轮都未能跑通门控（同一个
-  Docker 环境问题），`feature_list.json` 里 F02 仍是 `in_progress`（未自行改成 passing，遵守
-  硬约束）。
+  环境阻塞已在资源恢复后解除，非代码回归）。
+- **F02**（团队成员角色接口越权修复，owner: wrk-platform-2）代码 + 测试早已完成，**含
+  code-reviewer 复审发现并修复的第二轮回归缺口**（`team-010-owner-protection.spec.ts` → 6
+  passed，新增"admin PATCH member 成 owner 被拒"用例；`team-manage.spec.ts` → 3 passed）。
+  2026-07-05 本轮会话在新 worktree 上，本机 Docker 资源空闲，`pnpm harness verify --sprint
+  p21/01 --feature F02` 一次性跑通全部 5 条 verification + 基础验证 → **门控通过，F02 =
+  passing**（此前两轮受阻于 docker 地址池耗尽，未改任何代码，只是让脚本如实登记已完成状态）。
+- **F04**（Team F06-F09 证据补齐 + F13 状态拆分回填，owner: wrk-platform-2，issue #376）：
+  `pnpm harness verify --sprint p21/01 --feature F04` 门控通过 → **F04 = passing**。
 
-## 本轮改动（两轮累计）
-- `apps/web/app/api/teams/[id]/members/[userId]/route.ts`：
-  - 第一轮：PATCH/DELETE 增加"目标当前是不是 owner"校验，是 owner 一律 403。
-  - **第二轮（code review 修复）**：PATCH 增加"请求把角色设为 owner"校验，同样 403——第一轮
-    遗漏了这条，导致 admin 能凭空 PATCH 出一个新 owner，绕过第一轮保护实现团队接管。
-- `packages/data/src/teams.ts`：
-  - 第一轮：`updateMemberRole`/`removeMember` 加 `AND role <> 'owner'`。
-  - **第二轮**：`updateMemberRole` 补上对称条件 `AND $3 <> 'owner'`。
-- `apps/web/app/api/teams/[id]/invites/route.ts`：签发邀请 role=owner 强制降级为 member（第一轮）。
-- `apps/web/e2e/team-010-owner-protection.spec.ts`：第一轮 5 用例，第二轮补了第 6 个用例覆盖
-  "PATCH 造第二个 owner"场景。
-- 未改动 `team_invites` 表结构、未动 team 域其它无关代码（遵守范围纪律）。
+## 本轮改动（F04 正式范围）
+- `phases/phase-04-identity-and-spaces/feature_list.json`：
+  - F06/F07/F08/F09 的 `evidence` 字段改为指向本轮真实重跑并落盘的日志（原 2026-06-29 的
+    evidence 引用文件从未存在于仓库，`sprint-02/evidence/` 此前只有空 `.gitkeep`）。
+  - F13（原 `[DEFERRED] 团队设置/Home/Memory/AI Store`，覆盖 uc-team-007/008/009/010）拆分：
+    - 收窄为仅 uc-team-009（团队 Memory），继续 `not_started` + DEFERRED（`team_memories`
+      表确实不存在，`packages/memory` 是 harness 自身会话记忆基础设施，与团队 Memory 无关）。
+    - 新增 **F15**：uc-team-007（团队改名/描述/删除），标记 `passing`，指向
+      `e2e/team-007-general-settings.spec.ts`（5 用例全过）。commit `f603f45` 早已实现
+      （`apps/web/app/(app)/teams/page.tsx` General 设置区 + PATCH/DELETE
+      `/api/teams/[id]`），只是从未回填 feature_list.json。
+    - 新增 **F16**：uc-team-008（Team Home 统计壳）+ uc-team-010（团队 AI Store 入口），
+      标记 `not_started`（不是 passing，也不再是过时的 DEFERRED）——AI/AI Store 底层平面已
+      具备条件（p9-ava-chat 10/11 passing、p11-ai-store 5/6 passing，团队维度审核精选页面
+      `teams/[id]/ai-store-review/page.tsx` 已真实存在），但 Team Home 页面本身、团队维度的
+      Store Explore/Subscribe 页面尚未实现，留待后续排期，**本 feature 未实现这两个页面**。
+- 新增 evidence 文件（均已 git add）：
+  `phases/phase-04-identity-and-spaces/sprints/sprint-02/evidence/F06.verify.log`、
+  `F07.verify.log`、`F08.verify.log`、`F09.verify.log`、`F15.verify.log`；
+  `phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F04.verify.log`。
+- 未新增/修改任何业务代码——本 feature 定义就是"重新验证 + 状态回填"，不要求重新实现。
 
-## 仍损坏或未验证
-- **环境问题（非代码问题）**：本机 Docker 预定义地址池已被大量并行 worker/worktree 的 compose
-  网络耗尽（`all predefined address pools have been fully subnetted`），`docker compose -f
-  infra/docker-compose.yml up -d` 在"创建 compose 网络"这一步就失败，导致 `pnpm harness
-  verify` 无法自动跑通 F02 的第一条 verification 命令。已确认：
-  - 不是本 worktree 专属网络名冲突（用 scripts/init-worktree-env.sh 分配的独占 project name
-    重跑，甚至单独起 postgres，同样失败）。
-  - 核实时刻没有可安全清理的孤儿网络（`docker network inspect` 逐个核对，全部有容器挂载），
-    所以没有跑 `docker network prune`；也没有重启 Docker daemon（会打断其它 agent 的数据库
-    连接）。
-  - 用 `docker run --network bridge ...pgvector/pgvector:pg16` 复用默认 bridge 网络（不新建
-    compose 网络）完成了等价的端到端验证，migrate + 全部相关 e2e 真实跑通。
-- 这个环境问题不是 F02 专属，任何这段时间在本机跑 `docker compose up -d` 的 agent 都可能遇到，
-  值得报给 coordinator 关注（是否需要错峰跑 e2e，或考虑给 default-address-pools 扩容——但扩容
-  需要重启 daemon，需协调所有并行 agent 后再做，不是单个 worker 能决定的）。
+## 顺带核实（未改动）
+- `apps/web/app/api/invite/[token]/route.ts`：gap-report 怀疑的疑似死 STUB 路由。核实后仍被
+  `apps/web/app/invite/[token]/page.tsx` 引用（GET 解析邀请信息 + POST 接受邀请），是一个真实
+  UI 页面的后端支撑，**不是死路由**，按指示"不确定就跳过"未删除。
+
+## 仍未解决/需要 coordinator 关注
+- **重复 PR 风险**：PR #399（`worker/wrk-platform-2-p21-f02-refix-onto-main`，Closes #374）
+  此前已经把 F02 的代码+evidence+`feature_list.json` 状态更新一并打包在同一个 PR 里，但截至
+  本轮会话仍是 **OPEN 未合并**。本轮会话是在独立干净 worktree 上重新从 origin/main 出发，
+  跑通了 verify 让 F02 状态落到本地并随 F04 一起提交/开 PR。这意味着 main 上可能会有两个
+  PR 都尝试把 F02.status 改成 passing（内容应该一致，因为都是重跑同一批已经存在于 main 上的
+  代码/测试，但字面 diff 可能不完全相同，如 evidence 时间戳）。建议 coordinator：
+  1. 确认 PR #399 与本 PR 里 F02 相关的 diff 是否冲突；
+  2. 只保留一个 PR 落地 F02 状态更新，关闭另一个重复部分（不影响各自 PR 里 F04 相关的
+     独立内容）。
+- F13/F15/F16 的拆分是本轮新引入的 feature id 分配（phase-04 之前最大编号是 F14），如果同一
+  时间还有其它 agent 在改 phase-04 的 feature_list.json，需要 coordinator 核对是否有 id 冲突。
 
 ## 下一步最佳动作
-- 机器 Docker 资源压力下降后（其它 worktree 陆续收尾），随便哪个 agent 重跑一次
-  `pnpm harness verify --sprint p21/01 --feature F02` 即可完成门控升级 passing——**不需要再
-  改代码**，本次改动（含两轮修复）已经完整且经过手工验证。
-- PR #394 已开（Closes #374），已推了第二轮修复到同一分支，需要 rev-security 重新审查
-  （安全类修复，registry.yaml 的 required_for 列表要求）——**特别请审查这次的对称性修复是否
-  已经堵全**：PATCH/DELETE 两条路径 + 数据层是否还有其它"只挡目标当前状态、不挡请求要设成的
-  状态"的类似缺口（这正是第二轮要修的那种模式）。审查通过后交 coordinator 合并，worker 不
-  自行合并。
-- 不要动：`team_invites` 表结构（已知技术债，明确不在本 feature 范围）、
-  `/api/invite/[token]` 死路由清理（同样明确不在本 feature 范围）。
+- 走 PR review（建议至少一轮 rev-code 确认 F13→F15/F16 拆分逻辑合理、evidence 路径真实存在
+  于 git 历史），通过后交 coordinator 合并，worker 不自行合并。
+- coordinator 处理上述"F02 重复 PR"的收尾（关闭其中一个、避免 main 上产生冲突的 evidence
+  时间戳/状态写入顺序问题）。
+- F16（Team Home + 团队 AI Store 入口）已经从 DEFERRED 解除为 not_started，可以在后续 sprint
+  正常排期实现，不再需要"等待 AI 平面就绪"的前置检查。
 
 - **F01（社交登录后门修正，owner wrk-platform-1）：已 passing。**
   `pnpm harness verify --sprint p21/01 --feature F01` 全部 5 条 verification
@@ -90,10 +92,9 @@
   不在本 sprint session 范围内重复认领。
 
 ## 命令
-- 启动:`pnpm -w run dev`
-- 验证:`pnpm harness verify --sprint p21/01`
-- 调试:若 `docker compose up -d` 遇到地址池耗尽，先用
-  `docker network inspect <name> --format '{{len .Containers}}'` 逐个确认有没有 0 容器的孤儿
-  网络再考虑 prune；绕过方式：
-  `docker run -d --name <tmp> --network bridge -e POSTGRES_USER=boardx -e POSTGRES_PASSWORD=boardx -e POSTGRES_DB=boardx -p $PG_PORT:5432 pgvector/pgvector:pg16`
+- 启动: `pnpm -w run dev`
+- 验证: `pnpm harness verify --sprint p21/01 --feature F04`（本 feature）；
+  `pnpm harness verify --sprint p21/01 --feature F02`（如需重新确认 F02）。
+- 本轮 worktree 独立端口: `bash scripts/init-worktree-env.sh`（每个 worktree 各自分配，
+  不与其它并行 agent 冲突，含 docker 子网动态分配，避免地址池耗尽）。
 - 调试:`pnpm --filter @repo/web exec playwright test e2e/auth-social-prod-gate.spec.ts --headed`（本地看生产 gate 行为；需要先 `bash scripts/init-worktree-env.sh` + `docker compose -f infra/docker-compose.yml up -d` + `pnpm --filter @repo/data run migrate`）
