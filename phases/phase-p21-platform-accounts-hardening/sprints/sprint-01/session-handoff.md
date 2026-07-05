@@ -1,23 +1,31 @@
 # 会话交接 — Sprint p21/01
 
 ## 当前已验证
-- F02（团队成员角色接口越权修复，owner: wrk-platform-2）代码 + 测试已完成并手工/等价验证通过：
-  - `pnpm --filter @repo/web exec playwright test e2e/team-010-owner-protection.spec.ts` → 5 passed
+- F02（团队成员角色接口越权修复，owner: wrk-platform-2）代码 + 测试已完成并手工/等价验证通过，
+  **含 code-reviewer 复审发现并修复的第二轮回归缺口**：
+  - `pnpm --filter @repo/web exec playwright test e2e/team-010-owner-protection.spec.ts` → 6 passed
+    （新增"admin PATCH member 成 owner 被拒"用例）
   - `pnpm --filter @repo/web exec playwright test e2e/team-manage.spec.ts` → 3 passed（回归）
-  - team-003/007/create/invite-join/switch + admin-002 → 27 passed（回归）
+  - team-003/007/create/invite-join/switch + admin-002 → 27 passed（第一轮已验证，本轮未涉及
+    这几个 spec 覆盖的路径，未重复全量重跑）
   - `pnpm --filter @repo/web run typecheck` / `pnpm --filter @repo/data run typecheck` → PASS
   - `./init.sh` → 45/45 tasks successful
   - 详见 `sprints/sprint-01/evidence/F02.verify.log`
-- **未达成**：`pnpm harness verify --sprint p21/01 --feature F02` 未能在本次会话跑通门控，
-  `feature_list.json` 里 F02 仍是 `in_progress`（未自行改成 passing，遵守硬约束）。
+- **未达成**：`pnpm harness verify --sprint p21/01 --feature F02` 两轮都未能跑通门控（同一个
+  Docker 环境问题），`feature_list.json` 里 F02 仍是 `in_progress`（未自行改成 passing，遵守
+  硬约束）。
 
-## 本轮改动
-- `apps/web/app/api/teams/[id]/members/[userId]/route.ts`：PATCH/DELETE 增加目标角色校验，
-  目标是 owner 时一律 403。
-- `packages/data/src/teams.ts`：`updateMemberRole`/`removeMember` 加 `AND role <> 'owner'`
-  数据层兜底。
-- `apps/web/app/api/teams/[id]/invites/route.ts`：签发邀请 role=owner 强制降级为 member。
-- 新增 `apps/web/e2e/team-010-owner-protection.spec.ts`。
+## 本轮改动（两轮累计）
+- `apps/web/app/api/teams/[id]/members/[userId]/route.ts`：
+  - 第一轮：PATCH/DELETE 增加"目标当前是不是 owner"校验，是 owner 一律 403。
+  - **第二轮（code review 修复）**：PATCH 增加"请求把角色设为 owner"校验，同样 403——第一轮
+    遗漏了这条，导致 admin 能凭空 PATCH 出一个新 owner，绕过第一轮保护实现团队接管。
+- `packages/data/src/teams.ts`：
+  - 第一轮：`updateMemberRole`/`removeMember` 加 `AND role <> 'owner'`。
+  - **第二轮**：`updateMemberRole` 补上对称条件 `AND $3 <> 'owner'`。
+- `apps/web/app/api/teams/[id]/invites/route.ts`：签发邀请 role=owner 强制降级为 member（第一轮）。
+- `apps/web/e2e/team-010-owner-protection.spec.ts`：第一轮 5 用例，第二轮补了第 6 个用例覆盖
+  "PATCH 造第二个 owner"场景。
 - 未改动 `team_invites` 表结构、未动 team 域其它无关代码（遵守范围纪律）。
 
 ## 仍损坏或未验证
@@ -39,9 +47,12 @@
 ## 下一步最佳动作
 - 机器 Docker 资源压力下降后（其它 worktree 陆续收尾），随便哪个 agent 重跑一次
   `pnpm harness verify --sprint p21/01 --feature F02` 即可完成门控升级 passing——**不需要再
-  改代码**，本次改动已经完整且经过手工验证。
-- PR 已开（Closes #374），需要 rev-security 审查（安全类修复，registry.yaml 的
-  required_for 列表要求）。审查通过后交 coordinator 合并，worker 不自行合并。
+  改代码**，本次改动（含两轮修复）已经完整且经过手工验证。
+- PR #394 已开（Closes #374），已推了第二轮修复到同一分支，需要 rev-security 重新审查
+  （安全类修复，registry.yaml 的 required_for 列表要求）——**特别请审查这次的对称性修复是否
+  已经堵全**：PATCH/DELETE 两条路径 + 数据层是否还有其它"只挡目标当前状态、不挡请求要设成的
+  状态"的类似缺口（这正是第二轮要修的那种模式）。审查通过后交 coordinator 合并，worker 不
+  自行合并。
 - 不要动：`team_invites` 表结构（已知技术债，明确不在本 feature 范围）、
   `/api/invite/[token]` 死路由清理（同样明确不在本 feature 范围）。
 

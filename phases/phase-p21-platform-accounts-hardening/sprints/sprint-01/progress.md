@@ -56,3 +56,36 @@
     `pnpm harness verify --sprint p21/01 --feature F02`，预期直接通过并升级 passing
     （代码不需要再改）。
   - rev-security 审查 PR；通过后由 coordinator 合并，不要自行合并。
+
+### 2026-07-05 01:10 (wrk-platform-2) — code review 复审修复
+- 本轮目标: 修复 code-reviewer 复审抓出的残留漏洞——PATCH 路由只校验了"目标当前是不是 owner"，
+  没校验"要把角色改成什么"，`isTeamRole("owner")` 为 true 导致 admin 仍可以
+  `PATCH .../members/:anyMemberId {role:"owner"}` 把任意普通成员提升为第二个 owner，等价的
+  团队接管路径换了个入口（invites 堵了，改角色这条路还开着）；且一旦造出新 owner，此前加的
+  "目标是 owner 时拒绝修改/移除"保护反而会保护它不被降级/移除，接管更彻底。
+- 已完成:
+  1. `apps/web/app/api/teams/[id]/members/[userId]/route.ts` PATCH 增加
+     `if (role === "owner") return 403`，对齐 room 域白名单写法思路。
+  2. `packages/data/src/teams.ts` 的 `updateMemberRole` SQL 加对称条件 `AND $3 <> 'owner'`。
+  3. `apps/web/e2e/team-010-owner-protection.spec.ts` 新增用例"admin 尝试把普通 member
+     PATCH 成 role:owner → 403，不产出第二个 owner"，现在 6 个用例。
+- 运行过的验证:
+  - `pnpm --filter @repo/web run typecheck` / `pnpm --filter @repo/data run typecheck` → PASS。
+  - `docker run --network bridge ...pgvector/pgvector:pg16` + migrate → exit 0（同上一轮的
+    等价替代方式，环境问题未变）。
+  - `pnpm --filter @repo/web exec playwright test e2e/team-010-owner-protection.spec.ts
+    e2e/team-manage.spec.ts` → 9 passed（含新用例）。
+  - `./init.sh` → 45/45 tasks successful。
+  - `pnpm harness verify --sprint p21/01 --feature F02` → 再次卡在 docker compose 网络创建
+    这一步（环境问题依旧，与上一轮一致，非本轮改动引入）。
+- 已记录证据: evidence/F02.verify.log 已重写，包含本轮修订记录 + 完整验证链条。
+- 提交记录:
+  - `fix(p21/F02): 修复 PATCH 造第二个 owner 的回归缺口（code review 发现）`
+  - 推到同一分支 `worker/wrk-platform-2-p21-f02-team-owner-protection`，未开新 PR，
+    已在 PR #394 下评论说明修复内容。
+- 已知风险或未解决问题: 同上一轮——`pnpm harness verify` 仍受 Docker 网络资源环境问题阻塞，
+  feature 状态维持 `in_progress`。
+- 下一步最佳动作:
+  - rev-security 复审这次的对称性修复是否已经堵全（PATCH/DELETE + 数据层是否还有其它
+    "只挡当前状态、不挡目标状态"的类似缺口）。
+  - 其余同上一轮：等 Docker 资源压力下降后重跑 harness verify；不要自行合并 PR。
