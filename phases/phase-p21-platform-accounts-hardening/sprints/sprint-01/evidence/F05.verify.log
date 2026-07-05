@@ -1,0 +1,69 @@
+# F05 verification log — Billing F04「额度不足触发」如实改写
+# 2026-07-05T00:38:01Z, wrk-payment-1
+# phase-p21-platform-accounts-hardening / sprint-01 / F05
+
+## Command 1: grep -q 'ai-low-credits-prompt' "apps/web/app/(app)/ava/page.tsx"
+exit code: 0 (PASS)
+确认：ava/page.tsx 中 data-testid=ai-low-credits-prompt 的横幅是无条件常驻渲染的静态 UI（约 1457-1468 行），
+setBillingOpen(true) 只在该横幅的手动点击事件里被调用，402 额度不足响应路径（setSendError）从不触碰 setBillingOpen。
+
+## Command 2: pnpm --filter @repo/web exec playwright test e2e/billing-001-upgrade-plan.spec.ts
+完整 spec 文件运行结果如下（含一个与本 feature 无关的既存失败，见下方说明）：
+
+
+Running 7 tests using 1 worker
+
+  ✓  1 [chromium] › billing-001-upgrade-plan.spec.ts:18:5 › 已登录访问 /billing：展示当前计划 + 可升级计划 + 升级 CTA (6.1s)
+  ✓  2 [chromium] › billing-001-upgrade-plan.spec.ts:34:5 › 升级 Pro：创建 plan_upgrade 订单，支付成功后账号计划更新 (3.3s)
+  ✘  3 [chromium] › billing-001-upgrade-plan.spec.ts:56:5 › 用户菜单可打开计划弹窗；credits 模式进入购买 Credit 流程 (11.5s)
+  ✓  4 [chromium] › billing-001-upgrade-plan.spec.ts:74:5 › AVA 常驻额度提示横幅：点击 Upgrade 按钮可打开计划弹窗（横幅为静态常驻展示，非额度不足触发） (1.9s)
+  ✓  5 [chromium] › billing-001-upgrade-plan.spec.ts:84:5 › 关闭计划弹窗不改变计划 (1.2s)
+  ✓  6 [chromium] › billing-001-upgrade-plan.spec.ts:97:5 › 未登录访问 /billing → 跳转登录 (1.3s)
+  ✓  7 [chromium] › billing-001-upgrade-plan.spec.ts:102:5 › API：未登录 GET /api/billing 返回 401 (117ms)
+
+
+  1) [chromium] › billing-001-upgrade-plan.spec.ts:56:5 › 用户菜单可打开计划弹窗；credits 模式进入购买 Credit 流程 ─────
+
+    Error: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
+
+    Locator: getByTestId('credit-pack-list')
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+      [2m- expect.toBeVisible with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('credit-pack-list')[22m
+
+
+      67 |   await page.getByTestId("billing-mode-credits").click();
+      68 |   await expect(page.getByTestId("buy-credits-dialog")).toBeVisible();
+    > 69 |   await expect(page.getByTestId("credit-pack-list")).toBeVisible();
+         |                                                      ^
+      70 |   await page.getByTestId("create-credit-order").click();
+      71 |   await expect(page.getByTestId("buy-credits-qr")).toBeVisible();
+      72 | });
+
+        at /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-a2cc6841cb13e404c/apps/web/e2e/billing-001-upgrade-plan.spec.ts:69:54
+
+  1 failed
+    [chromium] › billing-001-upgrade-plan.spec.ts:56:5 › 用户菜单可打开计划弹窗；credits 模式进入购买 Credit 流程 ──────
+  6 passed (32.0s)
+
+完整 spec exit code: 1
+
+### 说明：test 3「用户菜单可打开计划弹窗；credits 模式进入购买 Credit 流程」失败与本 feature 无关
+该失败在完全未修改的代码上（git stash 还原本 feature 的两处编辑后）同样可复现，属于既存 bug
+（buy-credits-dialog 切到 credits 模式后 credit-pack-list 元素不出现），本 feature 未触碰任何
+运行时代码或该测试用例，范围内也明确禁止修改 apps/web/app/(app)/ava/page.tsx 等运行时代码。
+已用 mcp spawn_task 登记为独立待办（task_8bfb199b），不在本 feature（F05）范围内修复。
+
+本 feature 实际修改/影响的测试用例单独运行结果（隔离既存失败的干扰）：
+
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › billing-001-upgrade-plan.spec.ts:74:5 › AVA 常驻额度提示横幅：点击 Upgrade 按钮可打开计划弹窗（横幅为静态常驻展示，非额度不足触发） (3.4s)
+
+  1 passed (6.9s)
+
+## Command 3: git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F05.verify.log
+(将在本文件提交后由该 commit 的 HEAD 满足；见 PR 中的提交记录)
