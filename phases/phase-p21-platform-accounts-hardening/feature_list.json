@@ -95,7 +95,7 @@
         "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F04.verify.log"
       ],
       "evidence": "",
-      "notes": "requirements/team.md。commit 7e58dce 是 F06-F09 底层实现的落地提交，commit f603f45 是 uc-007 的落地提交但未回写 feature_list.json——两个 commit 号仅供实现者定位代码，不代表本 feature 需要重新实现，只需验证+回填状态。"
+      "notes": "requirements/team.md。commit 7e58dce 是 F06-F09 底层实现的落地提交，commit f603f45 是 uc-007 的落地提交但未回写 feature_list.json——两个 commit 号仅供实现者定位代码，不代表本 feature 需要重新实现，只需验证+回填状态。注意：本 feature 与 F03 都会编辑 phases/phase-04-identity-and-spaces/feature_list.json（F03 改 F01-F04 条目，本 feature 改 F06-F09/F13 条目），虽是不同条目但同一文件，dispatch 时应避免两者真正并行落地（串行执行或至少各自 rebase 后再提交），防止合并冲突。"
     },
     {
       "id": "F05",
@@ -112,7 +112,7 @@
       "wave": 1,
       "verification": [
         "grep -q 'ai-low-credits-prompt' \"apps/web/app/(app)/ava/page.tsx\"",
-        "pnpm --filter @repo/web exec playwright test e2e/billing-001-upgrade-plan.spec.ts",
+        "pnpm --filter @repo/web exec playwright test e2e/billing-001-upgrade-plan.spec.ts -g '静态常驻展示'",
         "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F05.verify.log"
       ],
       "evidence": "",
