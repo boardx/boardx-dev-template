@@ -1,0 +1,293 @@
+$ docker compose -f infra/docker-compose.yml up -d
+[exit 0]
+ Container worker-wrk-platform-1-p21-f01-social-gat-redis-1 Running 
+ Container worker-wrk-platform-1-p21-f01-social-gat-minio-1 Running 
+ Container worker-wrk-platform-1-p21-f01-social-gat-postgres-1 Running 
+
+
+$ pnpm --filter @repo/data run migrate
+[exit 0]
+
+> @repo/data@0.1.0 migrate /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-ad908e8c84eba9ceb/packages/data
+> sh -c 'set -a; [ -f ../../apps/web/.env.local ] && . ../../apps/web/.env.local; set +a; tsx src/migrate.ts'
+
+✓ 已应用，跳过：001_init.sql
+✓ 已应用，跳过：002_auth.sql
+✓ 已应用，跳过：003_team.sql
+✓ 已应用，跳过：004_room.sql
+✓ 已应用，跳过：005_canvas.sql
+✓ 已应用，跳过：006_profile.sql
+✓ 已应用，跳过：007_board.sql
+✓ 已应用，跳过：008_board_visits.sql
+✓ 已应用，跳过：009_board_favorites.sql
+✓ 已应用，跳过：010_room_chat.sql
+✓ 已应用，跳过：011_board_settings.sql
+✓ 已应用，跳过：012_board_items_board_id.sql
+✓ 已应用，跳过：013_board_items_color.sql
+✓ 已应用，跳过：014_feedback.sql
+✓ 已应用，跳过：014_room_chat_messages.sql
+✓ 已应用，跳过：015_team_general.sql
+✓ 已应用，跳过：016_admin_role.sql
+✓ 已应用，跳过：016_ai_store.sql
+✓ 已应用，跳过：016_ava_chat.sql
+✓ 已应用，跳过：016_credits.sql
+✓ 已应用，跳过：016_kb_files.sql
+✓ 已应用，跳过：016_survey.sql
+✓ 已应用，跳过：017_ai_store_item_config.sql
+✓ 已应用，跳过：017_payment_orders.sql
+✓ 已应用，跳过：017_studio_artifacts.sql
+✓ 已应用，跳过：017_survey_templates.sql
+✓ 已应用，跳过：018_ai_store_favorites.sql
+✓ 已应用，跳过：018_ava_message_attachments.sql
+✓ 已应用，跳过：018_ava_thread_share.sql
+✓ 已应用，跳过：018_user_plan.sql
+✓ 已应用，跳过：019_ai_store_subscriptions.sql
+✓ 已应用，跳过：019_credit_transaction_idempotency.sql
+✓ 已应用，跳过：019_presentation_artifacts.sql
+✓ 已应用，跳过：020_ava_message_feedback.sql
+✓ 已应用，跳过：021_ai_store_share.sql
+✓ 已应用，跳过：021_presentation_revisions.sql
+✓ 已应用，跳过：022_retire_room_canvas.sql
+✓ 已应用，跳过：023_outbound_emails.sql
+✓ 已应用，跳过：024_room_favorites.sql
+✓ 已应用，跳过：025_room_invites.sql
+✓ 已应用，跳过：026_room_files.sql
+✓ 已应用，跳过：026_survey_room_scope.sql
+✓ 已应用，跳过：027_ava_research_sessions.sql
+✓ 已应用，跳过：028_ava_research_clarify_stage.sql
+迁移完成。
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/auth-social-prod-gate.spec.ts
+[exit 0]
+
+Running 2 tests using 1 worker
+
+  [1m[38;2;173;127;168m▲ Next.js 14.2.5[39m[22m
+  - Environments: .env.local
+
+ [37m[1m [22m[39m Creating an optimized production build ...
+ [32m[1m✓[22m[39m Compiled successfully
+ [37m[1m [22m[39m Linting and checking validity of types ...
+ [37m[1m [22m[39m Collecting page data ...
+ [37m[1m [22m[39m Generating static pages (0/31) ...
+ [37m[1m [22m[39m Generating static pages (7/31) 
+ [37m[1m [22m[39m Generating static pages (15/31) 
+ [37m[1m [22m[39m Generating static pages (23/31) 
+ [32m[1m✓[22m[39m Generating static pages (31/31)
+ [37m[1m [22m[39m Finalizing page optimization ...
+ [37m[1m [22m[39m Collecting build traces ...
+
+[4mRoute (app)[24m                                                                            [4mSize[24m     [4mFirst Load JS[24m
+┌ ƒ /                                                                                  1.39 kB        [37m[1m95.2 kB[22m[39m
+├ ○ /_not-found                                                                        876 B            [37m[1m88 kB[22m[39m
+├ ƒ /account                                                                           4.96 kB        [37m[1m98.8 kB[22m[39m
+├ ƒ /admin                                                                             3.4 kB          [37m[1m104 kB[22m[39m
+├ ƒ /admin/ai-store/featured                                                           4.63 kB        [37m[1m98.5 kB[22m[39m
+├ ƒ /admin/ai-store/review                                                             5.46 kB        [37m[1m99.3 kB[22m[39m
+├ ƒ /admin/teams                                                                       5.78 kB        [37m[1m99.6 kB[22m[39m
+├ ƒ /admin/users                                                                       7.13 kB         [37m[1m101 kB[22m[39m
+├ ƒ /ai-store                                                                          11.8 kB         [37m[1m106 kB[22m[39m
+├ ƒ /ai-store/share/[id]                                                               156 B          [37m[1m87.3 kB[22m[39m
+├ ƒ /api/admin/ai-store                                                                0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/admin/ai-store/[id]/featured                                                  0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/admin/ai-store/[id]/review                                                    0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/admin/ai-store/featured                                                       0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/admin/stats                                                                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/admin/teams                                                                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/admin/teams/[id]                                                              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/admin/teams/[id]/credit                                                       0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/admin/users                                                                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/admin/users/[id]                                                              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/admin/users/[id]/credit                                                       0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai-store/items                                                                0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai-store/items/[id]                                                           0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai-store/items/[id]/favorite                                                  0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai-store/items/[id]/share                                                     0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai-store/items/[id]/share/grantees/[userId]                                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai-store/items/[id]/share/redeem                                              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai-store/items/[id]/subscribe                                                 0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/change-password                                                          0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/confirm-email                                                            0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/forgot-password                                                          0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/login                                                                    0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/logout                                                                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/register                                                                 0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/reset-password                                                           0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/session                                                                  0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/social                                                                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ava/attachments/[attachmentId]/url                                            0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ava/capabilities                                                              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ava/threads                                                                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ava/threads/[id]                                                              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ava/threads/[id]/attachments                                                  0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ava/threads/[id]/attachments/[attachmentId]                                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ava/threads/[id]/messages                                                     0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ava/threads/[id]/messages/[messageId]                                         0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ava/threads/[id]/messages/[messageId]/feedback                                0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ava/threads/[id]/messages/[messageId]/regenerate                              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ava/threads/[id]/messages/[messageId]/send-email                              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ava/threads/[id]/messages/[messageId]/send-to-board                           0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ava/threads/[id]/research                                                     0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ava/threads/[id]/research/[sessionId]                                         0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ava/threads/[id]/share                                                        0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ava/threads/[id]/share/email                                                  0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ava/transcribe                                                                0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/billing                                                                       0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/board-items/[itemId]                                                          0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/boards                                                                        0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/boards/[id]                                                                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/boards/[id]/ai-chat                                                           0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/boards/[id]/duplicate                                                         0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/boards/[id]/favorite                                                          0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/boards/[id]/items                                                             0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/boards/[id]/join                                                              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/boards/[id]/move                                                              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/boards/[id]/presence                                                          0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/boards/[id]/settings                                                          0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/boards/[id]/visibility                                                        0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/chatShare/[id]                                                                0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/credits                                                                       0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/credits/transactions                                                          0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/credits/wallet                                                                0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/dev/expire-room-invite                                                        0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/dev/grant-sysadmin                                                            0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/dev/outbox                                                                    0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/dev/reset-token                                                               0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/feedback                                                                      0 B                [37m[1m0 B[22m[39m
+├ ○ /api/health                                                                        0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/invite/[token]                                                                0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/items/[id]                                                                    0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/jobs                                                                          0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/jobs/[id]                                                                     0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/kb/files                                                                      0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/kb/files/[id]                                                                 0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/kb/files/[id]/download                                                        0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/notes                                                                         0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/payment/catalog                                                               0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/payment/orders                                                                0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/payment/orders/[id]                                                           0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/payment/webhook                                                               0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/presentations                                                                 0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/presentations/generate                                                        0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/profile                                                                       0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/profile/settings                                                              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms                                                                         0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]                                                                    0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/boards                                                             0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/chats                                                              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/chats/[chatId]                                                     0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/chats/[chatId]/messages                                            0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/chats/[chatId]/presentations/artifacts                             0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/chats/[chatId]/presentations/artifacts/[artifactId]/download       0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/chats/[chatId]/presentations/artifacts/[artifactId]/optimize-page  0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/chats/[chatId]/presentations/artifacts/[artifactId]/retry          0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/chats/[chatId]/presentations/artifacts/[artifactId]/revisions      0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/chats/[chatId]/presentations/sources                               0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/chats/[chatId]/studio/artifacts                                    0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/chats/[chatId]/studio/artifacts/[artifactId]/download              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/chats/[chatId]/studio/artifacts/[artifactId]/retry                 0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/chats/[chatId]/studio/generate                                     0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/chats/[chatId]/studio/sources                                      0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/favorite                                                           0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/files                                                              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/files/[fileId]                                                     0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/files/[fileId]/preview                                             0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/files/confirm                                                      0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/invites/[inviteId]                                                 0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/items                                                              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/join                                                               0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/members                                                            0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/members/[userId]                                                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/rooms/[id]/surveys                                                            0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/search                                                                        0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/share/[id]                                                                    0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/studio                                                                        0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/survey-templates                                                              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/survey-templates/[id]                                                         0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/surveys                                                                       0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/surveys/[id]                                                                  0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/surveys/[id]/answer                                                           0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/surveys/[id]/responses                                                        0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/surveys/[id]/results                                                          0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/surveys/[id]/results/ai-summary                                               0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/surveys/[id]/results/export                                                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/teams                                                                         0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/teams/[id]                                                                    0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/teams/[id]/ai-store-featured                                                  0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/teams/[id]/ai-store-featured/[itemId]                                         0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/teams/[id]/ai-store-review                                                    0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/teams/[id]/ai-store-review/[itemId]                                           0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/teams/[id]/invites                                                            0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/teams/[id]/members                                                            0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/teams/[id]/members/[userId]                                                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/teams/current                                                                 0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/teams/invite                                                                  0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/teams/join                                                                    0 B                [37m[1m0 B[22m[39m
+├ ƒ /ava                                                                               21.7 kB         [37m[1m163 kB[22m[39m
+├ ƒ /billing                                                                           4.18 kB          [37m[1m98 kB[22m[39m
+├ ƒ /boards                                                                            2.46 kB        [37m[1m96.3 kB[22m[39m
+├ ƒ /boards/[id]                                                                       28.9 kB         [37m[1m123 kB[22m[39m
+├ ƒ /chatShare/[id]                                                                    2.98 kB         [37m[1m141 kB[22m[39m
+├ ○ /confirm-email                                                                     2.29 kB         [37m[1m103 kB[22m[39m
+├ ƒ /credits                                                                           3.73 kB         [37m[1m101 kB[22m[39m
+├ ○ /forgot-password                                                                   2.26 kB         [37m[1m103 kB[22m[39m
+├ ƒ /home                                                                              4.25 kB        [37m[1m98.1 kB[22m[39m
+├ ƒ /invite/[token]                                                                    3.99 kB         [37m[1m105 kB[22m[39m
+├ ƒ /knowledge-base                                                                    6.83 kB         [37m[1m101 kB[22m[39m
+├ ○ /login                                                                             2.49 kB         [37m[1m103 kB[22m[39m
+├ ƒ /payment-test                                                                      2.33 kB        [37m[1m96.2 kB[22m[39m
+├ ƒ /presentations                                                                     4.5 kB         [37m[1m98.3 kB[22m[39m
+├ ƒ /recent                                                                            3.24 kB        [37m[1m97.1 kB[22m[39m
+├ ○ /register                                                                          3.19 kB         [37m[1m104 kB[22m[39m
+├ ○ /reset-password                                                                    2.81 kB        [37m[1m96.7 kB[22m[39m
+├ ƒ /rooms                                                                             5.63 kB        [37m[1m99.5 kB[22m[39m
+├ ƒ /rooms/[id]                                                                        156 B          [37m[1m87.3 kB[22m[39m
+├ ƒ /rooms/[id]/board                                                                  156 B          [37m[1m87.3 kB[22m[39m
+├ ƒ /rooms/[id]/boards                                                                 3.22 kB        [37m[1m97.1 kB[22m[39m
+├ ƒ /rooms/[id]/chats                                                                  2.58 kB        [37m[1m96.4 kB[22m[39m
+├ ƒ /rooms/[id]/chats/[chatId]                                                         11.2 kB         [37m[1m105 kB[22m[39m
+├ ƒ /rooms/[id]/files                                                                  7.22 kB         [37m[1m101 kB[22m[39m
+├ ƒ /rooms/[id]/members                                                                4.61 kB        [37m[1m98.5 kB[22m[39m
+├ ƒ /rooms/[id]/surveys                                                                4.06 kB         [37m[1m105 kB[22m[39m
+├ ƒ /search                                                                            3.96 kB        [37m[1m97.8 kB[22m[39m
+├ ƒ /share/[id]                                                                        1.68 kB        [37m[1m95.5 kB[22m[39m
+├ ƒ /studio                                                                            4.88 kB        [37m[1m98.7 kB[22m[39m
+├ ƒ /survey/[id]/answer                                                                4.43 kB        [37m[1m98.3 kB[22m[39m
+├ ƒ /surveys                                                                           9.59 kB         [37m[1m103 kB[22m[39m
+├ ƒ /surveys/[id]/results                                                              5.5 kB          [37m[1m106 kB[22m[39m
+├ ƒ /teams                                                                             5.21 kB        [37m[1m99.1 kB[22m[39m
+└ ƒ /teams/[id]/ai-store-review                                                        3.71 kB        [37m[1m97.5 kB[22m[39m
++ First Load JS shared by all                                                          [37m[1m87.1 kB[22m[39m
+  ├ chunks/05e6949c-ac61fbe1604d4808.js                                                53.6 kB
+  ├ chunks/8573-f4700d015c171bff.js                                                    31.5 kB
+  └ other shared chunks (total)                                                        1.94 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+  ✓  1 [chromium] › auth-social-prod-gate.spec.ts:91:5 › 生产环境下 POST /api/auth/social 被拒绝（404），不建立会话 (17ms)
+  ✓  2 [chromium] › auth-social-prod-gate.spec.ts:105:5 › 生产环境下即便 provider 未知/为空，也是同样的 404 拒绝（gate 在校验之前生效） (5ms)
+
+  2 passed (23.7s)
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/auth-003-social-login.spec.ts
+[exit 0]
+
+Running 6 tests using 1 worker
+
+  ✓  1 [chromium] › auth-003-social-login.spec.ts:10:5 › 登录页点击 Google → 已登录回到首页 (6.9s)
+  ✓  2 [chromium] › auth-003-social-login.spec.ts:18:5 › 登录页点击 WeChat → 已登录回到首页 (873ms)
+  ✓  3 [chromium] › auth-003-social-login.spec.ts:25:5 › 注册页点击 Facebook → 已登录回到首页 (1.2s)
+  ✓  4 [chromium] › auth-003-social-login.spec.ts:32:5 › 第三方登出后回到访客态 (805ms)
+  ✓  5 [chromium] › auth-003-social-login.spec.ts:41:5 › 同一 provider 二次登录复用同一用户记录（不报错） (910ms)
+  ✓  6 [chromium] › auth-003-social-login.spec.ts:55:5 › 未启用 provider → 失败保持未登录 (365ms)
+
+  6 passed (14.7s)
+
+
+$ git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F01.verify.log
+[exit 128]
+fatal: path 'phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F01.verify.log' exists on disk, but not in 'HEAD'
