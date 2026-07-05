@@ -15,6 +15,7 @@ export interface User {
   display_name?: string | null;
   avatar?: string | null;
   platform_role?: string;
+  email_confirmed_at?: string | null;
 }
 
 export interface CreateUserInput {
@@ -66,6 +67,11 @@ export async function updateUserPlan(userId: number, planId: "free" | "pro"): Pr
 
 export async function updateUserPassword(userId: number, passwordHash: string): Promise<void> {
   await query("UPDATE users SET password_hash = $2 WHERE id = $1", [userId, passwordHash]);
+}
+
+/** uc-auth-005：确认邮箱令牌被消费时，把 email_confirmed_at 打上时间戳（幂等，重复调用只更新时间）。 */
+export async function confirmUserEmail(userId: number): Promise<void> {
+  await query("UPDATE users SET email_confirmed_at = now() WHERE id = $1", [userId]);
 }
 
 /** 仅供 dev/测试：把用户提升为平台 SysAdmin（P15 Admin 门控 e2e 用）。 */
@@ -255,4 +261,43 @@ export async function getLatestTokenByEmail(
     [email, type]
   );
   return rows[0];
+}
+
+/**
+ * 频控（P21 F03 加固）：某用户某类型 email_token 在最近 windowMs 内被创建的次数。
+ * 复用 email_tokens 表本身计数，不新增基础设施——与 mailbox.ts 的 countRecentOutboundEmails
+ * 同一思路，用于 forgot-password 限制同一账号短时间内重复触发发信/生成令牌。
+ */
+export async function countRecentEmailTokens(
+  userId: number,
+  type: string,
+  windowMs: number
+): Promise<number> {
+  const rows = await query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count FROM email_tokens
+     WHERE user_id = $1 AND type = $2 AND created_at > now() - ($3 || ' milliseconds')::interval`,
+    [userId, type, String(windowMs)]
+  );
+  return Number(rows[0]?.count ?? 0);
+}
+
+// ─── auth_rate_limit_events（登录等无邮件动作的速率限制）─────────────────────
+
+/** 记一次限流事件（如一次登录尝试），供后续窗口计数。 */
+export async function recordAuthRateLimitEvent(rateKey: string, kind: string): Promise<void> {
+  await query("INSERT INTO auth_rate_limit_events (rate_key, kind) VALUES ($1, $2)", [rateKey, kind]);
+}
+
+/** 某限流维度（如归一化邮箱）某类事件在最近 windowMs 内发生的次数。 */
+export async function countRecentAuthRateLimitEvents(
+  rateKey: string,
+  kind: string,
+  windowMs: number
+): Promise<number> {
+  const rows = await query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count FROM auth_rate_limit_events
+     WHERE rate_key = $1 AND kind = $2 AND created_at > now() - ($3 || ' milliseconds')::interval`,
+    [rateKey, kind, String(windowMs)]
+  );
+  return Number(rows[0]?.count ?? 0);
 }

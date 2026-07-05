@@ -310,16 +310,16 @@
       "area": "widgets",
       "title": "形状组件",
       "user_visible_behavior": "创建形状（矩形/圆/菱形等）并在其中输入文本；调整大小/外观（填充/边框）/层级；移动/缩放/旋转持久化。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "10",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/widget-shape.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F15.verify.log @ 2026-07-04T00:06:40.186Z",
       "notes": "uc-widgets-004。blocked-on p6:F13（画布渲染引擎切换为 Fabric.js）与 p6:F14（数据模型字段级 patch）——形状对象在 Fabric 对象模型 + 字段级 schema 上实现，需等两者都 passing。",
       "source_use_cases": [
         "phases/requirements/board/widgets/uc-widgets-004-use-shape-widget.md"

@@ -1,0 +1,24 @@
+=== F15 verify — 团队通用设置（改名/描述/删除） (uc-team-007) ===
+date (UTC): 2026-07-05T01:36:26Z
+commit: c3a449d108642059e2c8bcc93f531382a50856d5
+拆分背景：uc-team-007 已在 commit f603f45 实现（teams 页面 General 设置区 + PATCH/DELETE
+/api/teams/[id]），但从未回填 feature_list.json，长期挂在 F13（[DEFERRED]团队设置/Home/
+Memory/AI Store）名下。phase-p21 F04 复核后拆出为独立 passing 条目。
+
+$ docker compose -f infra/docker-compose.yml up -d
+ (worktree infra 已启动，见本轮 F04 会话)
+
+$ pnpm --filter @repo/data run migrate
+ (已应用，跳过 — 迁移已是最新，含 015_team_general.sql)
+
+$ pnpm --filter @repo/web exec playwright test e2e/team-007-general-settings.spec.ts
+
+Running 5 tests using 1 worker
+
+  ✓  1 [chromium] › team-007-general-settings.spec.ts:26:5 › owner 编辑团队名与描述 → 保存成功并持久化 (601ms)
+  ✓  2 [chromium] › team-007-general-settings.spec.ts:47:5 › owner 删除团队 → 团队从列表消失 (136ms)
+  ✓  3 [chromium] › team-007-general-settings.spec.ts:60:5 › 非 owner（member）无权删除团队 → 403 (523ms)
+  ✓  4 [chromium] › team-007-general-settings.spec.ts:74:5 › 团队名不能为空 → 400 (141ms)
+  ✓  5 [chromium] › team-007-general-settings.spec.ts:84:5 › General 设置区在 /teams 页面可见（owner） (5.2s)
+
+  5 passed (10.0s)

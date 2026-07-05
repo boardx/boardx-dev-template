@@ -8,7 +8,7 @@
       "title": "社交登录后门修正（生产环境 gate + F05 如实改写）",
       "user_visible_behavior": "POST /api/auth/social 在 NODE_ENV==='production' 且未配置真实第三方 provider 凭证时拒绝请求（如 403/404，参照 apps/web/app/api/dev/reset-token/route.ts 的生产环境 gate 写法）；非生产环境下 demo 登录行为保留（供 e2e 使用）。phase-04 的 feature_list.json 里 F05 的 user_visible_behavior/verification/notes 三个字段改为如实描述这个真实行为（demo 登录桩 + 生产 gate），不再自称'GET .../social/:provider 返回 501 占位'。",
       "design_ref": "无新 UI；apps/web/app/api/auth/social/route.ts 现有实现",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "wrk-platform-1",
       "capability": "CAP-AUTH",
@@ -21,7 +21,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/auth-003-social-login.spec.ts",
         "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F01.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-07-05T00:42:30.399Z",
       "notes": "requirements/auth.md。核心改动：apps/web/app/api/auth/social/route.ts 加 NODE_ENV 生产环境 gate（同目录 apps/web/app/api/dev/reset-token/route.ts:10-12 的写法可直接参考复用）；同时编辑 phases/phase-04-identity-and-spaces/feature_list.json 里 F05 条目（约在 feature_list.json:88-106 附近，行号可能因本 phase 其它编辑漂移，以 id=='F05' 定位）的 user_visible_behavior/verification/notes 三个字段，使其与真实代码行为一致。新增 e2e：auth-social-prod-gate.spec.ts 验证生产环境下请求被拒绝（可用 NODE_ENV 注入或专门的测试开关）。安全敏感，必须过 rev-security。"
     },
     {
@@ -31,7 +31,7 @@
       "title": "团队成员角色接口越权修复（owner 保护）",
       "user_visible_behavior": "以 admin 身份调用 PATCH /api/teams/:id/members/:userId 修改角色、或 DELETE 同路径移除成员，若目标用户是团队 owner，请求被拒绝（如 403），owner 的角色/成员资格不发生任何变化；以 admin 身份调用 POST /api/teams/:id/invites 创建邀请时，若指定角色为 owner，请求被拒绝或角色被强制降级为非 owner。合法路径（admin 操作普通成员、owner 操作任意成员）不受影响。",
       "design_ref": "无新 UI；对齐 apps/web/app/api/rooms/[id]/members/[userId]/route.ts 已有的 target-owner 保护写法",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "wrk-platform-2",
       "capability": "CAP-AUTH",
@@ -44,7 +44,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/team-manage.spec.ts",
         "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F02.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-07-05T01:30:31.472Z",
       "notes": "requirements/team.md。核心改动：apps/web/app/api/teams/[id]/members/[userId]/route.ts 的 PATCH(9-25行)/DELETE(27-40行) 加目标角色校验；packages/data/src/teams.ts 的 updateMemberRole(78-80行)/removeMember(82-84行) 数据层同步加保护（防止未来有其它调用方绕过路由层校验）；apps/web/app/api/teams/[id]/invites/route.ts:18 的 isTeamRole() 校验加上'不允许生成 role=owner 邀请'。参考样板：apps/web/app/api/rooms/[id]/members/[userId]/route.ts:25,46 已有的同类保护。新增 e2e：team-010-owner-protection.spec.ts 覆盖'admin降级owner被拒''admin移除owner被拒''admin签发owner邀请被拒'三个场景。安全敏感，必须过 rev-security。"
     },
     {
@@ -80,9 +80,9 @@
       "title": "Team F06-F09 证据补齐 + F13 状态拆分回填",
       "user_visible_behavior": "重新执行 phase-04 F06-F09 的 verification 命令，输出真实日志落盘并被 git 追踪。F13（团队设置/Home/Memory/AI Store）拆分：uc-team-007（团队改名/描述/删除）已在 commit f603f45 实现却从未回填 feature_list.json，本 feature 把它登记为独立 passing 条目；核实 uc-team-008/010 依赖的 AI/AI Store 平面现状后，若确实已具备条件则解除 deferred 并登记为 not_started（留给后续排期，不在本 feature 内实现）；uc-team-009（团队 Memory）继续保持 deferred（数据模型确实缺失）。",
       "design_ref": "无新 UI；已实现的 apps/web/app/(app)/teams/[id]/settings 等页面",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-platform-2",
       "capability": "CAP-DATA",
       "depends_on": [],
       "wave": 1,
@@ -94,7 +94,7 @@
         "jq -e '.features[] | select(.id==\"F13\")' phases/phase-04-identity-and-spaces/feature_list.json",
         "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F04.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F04.verify.log @ 2026-07-05T01:38:59.735Z",
       "notes": "requirements/team.md。commit 7e58dce 是 F06-F09 底层实现的落地提交，commit f603f45 是 uc-007 的落地提交但未回写 feature_list.json——两个 commit 号仅供实现者定位代码，不代表本 feature 需要重新实现，只需验证+回填状态。"
     },
     {

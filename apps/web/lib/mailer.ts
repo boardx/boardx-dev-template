@@ -18,6 +18,24 @@ export async function sendResetPasswordEmail(mail: ResetEmail): Promise<void> {
   );
 }
 
+export interface ConfirmEmailMail {
+  to: string;
+  token: string;
+  confirmUrl: string;
+}
+
+/**
+ * uc-auth-005（P21 F03）：注册确认邮箱。与 reset-password 同一 dev transport 口径：
+ * 打日志，便于本地/测试从日志或 /api/dev/confirm-token 取链接。
+ * 重要：接口响应绝不返回令牌；令牌只经"邮件"（此处=日志）+ 用户邮箱获取。
+ * TODO(deferred)：与 reset-password 一起切换到真实邮件 provider（SMTP/Resend）。
+ */
+export async function sendConfirmEmail(mail: ConfirmEmailMail): Promise<void> {
+  console.log(
+    `[mailer:dev] confirm-email to=${mail.to} url=${mail.confirmUrl} token=${mail.token}`
+  );
+}
+
 export interface ShareLinkEmail {
   to: string;
   shareUrl: string;

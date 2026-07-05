@@ -16,7 +16,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/auth-register.spec.ts"
       ],
-      "evidence": "evidence/F01.verify.log @ 2026-06-29T08:02:53.443Z",
+      "evidence": "phases/phase-04-identity-and-spaces/sprints/sprint-01/evidence/F01-F04-confirm-email.verify.log @ 2026-07-05T01:30:25Z（P21 F03 重跑：此前 evidence 字段指向的 evidence/F01.verify.log 在仓库任何位置都不存在，本次重新执行 verification 并落盘真实日志）",
       "notes": "uc-auth-001。密码≥6，邮箱小写，未勾选条款 400。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-001-email-register.md"
@@ -37,7 +37,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/auth-login.spec.ts"
       ],
-      "evidence": "evidence/F02.verify.log @ 2026-06-29T08:02:59.877Z",
+      "evidence": "phases/phase-04-identity-and-spaces/sprints/sprint-01/evidence/F01-F04-confirm-email.verify.log @ 2026-07-05T01:30:25Z（P21 F03 重跑：此前 evidence 字段指向的 evidence/F02.verify.log 在仓库任何位置都不存在，本次重新执行 verification 并落盘真实日志；同时补上 login 速率限制加固，见 packages/auth/src/index.ts 的 LOGIN_RATE_LIMIT_*）",
       "notes": "uc-auth-002。会话 7 天；不存在/错误密码统一报「邮箱或密码无效」。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-002-email-login.md"
@@ -58,7 +58,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/auth-change-password.spec.ts"
       ],
-      "evidence": "evidence/F03.verify.log @ 2026-06-29T08:03:06.108Z",
+      "evidence": "phases/phase-04-identity-and-spaces/sprints/sprint-01/evidence/F01-F04-confirm-email.verify.log @ 2026-07-05T01:30:25Z（P21 F03 重跑：此前 evidence 字段指向的 evidence/F03.verify.log 在仓库任何位置都不存在，本次重新执行 verification 并落盘真实日志）",
       "notes": "uc-auth-006。改密后 deleteUserSessions。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-006-change-password.md"
@@ -79,7 +79,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/auth-reset-password.spec.ts"
       ],
-      "evidence": "evidence/F04.verify.log @ 2026-06-29T08:03:11.646Z",
+      "evidence": "phases/phase-04-identity-and-spaces/sprints/sprint-01/evidence/F01-F04-confirm-email.verify.log @ 2026-07-05T01:30:25Z（P21 F03 重跑：此前 evidence 字段指向的 evidence/F04.verify.log 在仓库任何位置都不存在，本次重新执行 verification 并落盘真实日志；同时补上 forgot-password 速率限制加固，见 packages/auth/src/index.ts 的 FORGOT_PASSWORD_RATE_LIMIT_*）",
       "notes": "uc-auth-004。响应绝不返回 token；令牌一次性、30 分钟过期。真 SMTP deferred。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-004-forgot-reset-password.md"
@@ -90,16 +90,17 @@
       "priority": 5,
       "area": "auth",
       "title": "社交登录骨架（占位，不接真 OAuth）",
-      "user_visible_behavior": "GET /api/auth/social/:provider 返回 501 与「社交登录待接入」结构化提示；登录/注册页在能力关闭时不展示第三方入口。",
+      "user_visible_behavior": "POST /api/auth/social（非生产环境）—— STUB：不接真 OAuth，只要 provider 在白名单（google/facebook/wechat）内，即按 provider 创建/复用一个 demo 账号并用与邮箱登录相同的会话机制登录成功，供 e2e 使用；生产环境（NODE_ENV==='production'）下该接口整体拒绝请求（404），不存在免密登录通道。登录/注册页展示第三方入口按钮，点击后调用该接口。",
       "status": "passing",
       "sprint": "01",
       "owner": null,
       "capability": "CAP-AUTH",
       "verification": [
-        "test \"$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/api/auth/social/google)\" = \"501\""
+        "test \"$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{\"provider\":\"google\"}' http://localhost:3000/api/auth/social)\" = \"200\"",
+        "pnpm --filter @repo/web exec playwright test e2e/auth-social-prod-gate.spec.ts"
       ],
-      "evidence": "evidence/F05.verify.log @ 2026-06-29T08:03:13.656Z",
-      "notes": "uc-auth-003。DEFERRED 真 OAuth（需 provider secret），本轮仅骨架。",
+      "evidence": "evidence/F05.verify.log @ 2026-06-29T08:03:13.656Z；生产环境 gate 由 phases/phase-p21-platform-accounts-hardening F01 补齐并在 phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F01.verify.log 留证",
+      "notes": "uc-auth-003。DEFERRED 真 OAuth（需 provider secret），本轮仅 demo 登录桩；此前本条记录曾错误声称「GET .../social/:provider 返回 501 占位」，与真实代码（POST + demo 账号免密登录）不符，已在 p21 F01（issue #373）审计中修正为如实描述，并补上生产环境 gate（apps/web/app/api/auth/social/route.ts 的 NODE_ENV==='production' 分支）防止该 demo 桩在生产环境被当成认证后门。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-003-social-login.md"
       ]
@@ -119,8 +120,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/team-create.spec.ts"
       ],
-      "evidence": "evidence/F06.verify.log @ 2026-06-29T08:44:41.444Z",
-      "notes": "uc-team-001。创建者=owner。",
+      "evidence": "evidence/F06.verify.log @ 2026-07-05T01:35:42.000Z",
+      "notes": "uc-team-001。创建者=owner。原 2026-06-29 evidence 引用的 verify log 文件从未落盘（sprint-02/evidence 只有 .gitkeep），phase-p21 F04 重跑并补齐真实日志。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/team/uc-team-001-create-team.md"
       ]
@@ -140,8 +141,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/team-switch.spec.ts"
       ],
-      "evidence": "evidence/F07.verify.log @ 2026-06-29T08:44:46.483Z",
-      "notes": "uc-team-002。",
+      "evidence": "evidence/F07.verify.log @ 2026-07-05T01:35:42.000Z",
+      "notes": "uc-team-002。原 2026-06-29 evidence 引用的 verify log 文件从未落盘（sprint-02/evidence 只有 .gitkeep），phase-p21 F04 重跑并补齐真实日志。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/team/uc-team-002-view-switch-team.md"
       ]
@@ -161,8 +162,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/team-invite-join.spec.ts"
       ],
-      "evidence": "evidence/F08.verify.log @ 2026-06-29T08:44:50.625Z",
-      "notes": "uc-team-003 + uc-team-004。",
+      "evidence": "evidence/F08.verify.log @ 2026-07-05T01:35:42.000Z",
+      "notes": "uc-team-003 + uc-team-004。原 2026-06-29 evidence 引用的 verify log 文件从未落盘（sprint-02/evidence 只有 .gitkeep），phase-p21 F04 重跑并补齐真实日志。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/team/uc-team-003-invite-members.md",
         "phases/phase-04-identity-and-spaces/requirements/team/uc-team-004-join-by-invite.md"
@@ -183,8 +184,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/team-manage.spec.ts"
       ],
-      "evidence": "evidence/F09.verify.log @ 2026-06-29T08:44:55.148Z",
-      "notes": "uc-team-005 + uc-team-006。RBAC：owner>admin>member。",
+      "evidence": "evidence/F09.verify.log @ 2026-07-05T01:35:42.000Z",
+      "notes": "uc-team-005 + uc-team-006。RBAC：owner>admin>member。原 2026-06-29 evidence 引用的 verify log 文件从未落盘（sprint-02/evidence 只有 .gitkeep），phase-p21 F04 重跑并补齐真实日志。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/team/uc-team-005-manage-members.md",
         "phases/phase-04-identity-and-spaces/requirements/team/uc-team-006-update-delete-team.md"
@@ -258,21 +259,60 @@
       "id": "F13",
       "priority": 20,
       "area": "team",
-      "title": "[DEFERRED] 团队设置/Home/Memory/AI Store",
-      "user_visible_behavior": "团队级入口：设置页、Team Home、Memory、AI Store。",
+      "title": "[DEFERRED] 团队 Memory",
+      "user_visible_behavior": "团队级 Memory 列表：搜索/新增/删除团队可复用的 AI 协作上下文信息。",
       "status": "not_started",
       "sprint": null,
       "owner": null,
       "capability": "CAP-AI",
       "verification": [
-        "echo 'DEFERRED：依赖 CAP-AI/CAP-DATA 平面，本阶段不实现' && false"
+        "echo 'DEFERRED：team_memories 数据模型不存在，packages/memory 是 harness 自身会话记忆基础设施，apps/web 无任何引用，与团队级 Memory 无关，本阶段不实现' && false"
       ],
       "evidence": "",
-      "notes": "uc-team-007/008/009/010。DEFERRED：依赖 AI/Memory 平面，不排入本阶段 sprint。",
+      "notes": "uc-team-009。phase-p21 F04 复核 2026-07-05：原 F13 覆盖 uc-team-007/008/009/010 四条用例，007 已在 commit f603f45 实现却从未回填（拆分为 F15，已 passing）；008/010 依赖的 AI/AI Store 平面已具备条件（拆分为 F16，改列 not_started）；只有 009（团队 Memory）仍因 team_memories 表缺失继续 DEFERRED，本记录范围收窄为仅 uc-team-009。",
       "source_use_cases": [
-        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-007-manage-team-general-settings.md",
+        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-009-manage-team-memory.md"
+      ]
+    },
+    {
+      "id": "F15",
+      "priority": 22,
+      "area": "team",
+      "title": "团队通用设置（改名/描述/删除）",
+      "user_visible_behavior": "owner 在 /teams 页面 General 设置区编辑团队名称/描述并持久化；owner 可删除团队，团队从列表消失；非 owner（含 admin/member）删除请求被拒（403）；团队名不能为空（400）。General 设置区（含 team-general/general-name/general-description/danger-zone 等入口）对 owner 可见。",
+      "design_ref": "apps/web/app/(app)/teams/page.tsx 的 General 设置区（data-testid=team-general 等）",
+      "status": "passing",
+      "sprint": "02",
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/team-007-general-settings.spec.ts"
+      ],
+      "evidence": "evidence/F15.verify.log @ 2026-07-05T01:36:26.000Z",
+      "notes": "uc-team-007。从原 F13（[DEFERRED]团队设置/Home/Memory/AI Store）拆分：commit f603f45 已经实现团队改名/描述/删除（apps/web/app/(app)/teams/page.tsx General 设置区 + PATCH/DELETE /api/teams/[id]）并配 5 个 e2e（apps/web/e2e/team-007-general-settings.spec.ts），但从未回填 feature_list.json。phase-p21 F04 复核（2026-07-05）确认实现与测试仍在、全部通过，登记为独立 passing 条目。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-007-manage-team-general-settings.md"
+      ]
+    },
+    {
+      "id": "F16",
+      "priority": 23,
+      "area": "team",
+      "title": "团队 Home 统计壳 + 团队 AI Store 入口",
+      "user_visible_behavior": "Team 管理页 Home 展示 Dashboard 统计卡片（Active Members/AI Tools/Pending Reviews/Total Tokens）与管理入口卡片；AI Store 分组下 Store Explore/Store Subscribe/Store Approval 以当前团队为上下文展示内容。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AI",
+      "verification": [
+        "echo 'not_started：解除过时 DEFERRED 标记，等待排期实现，本 feature 不含可执行 verification' && false"
+      ],
+      "evidence": "",
+      "notes": "uc-team-008 + uc-team-010。从原 F13（[DEFERRED]团队设置/Home/Memory/AI Store）拆分。phase-p21 F04 复核（2026-07-05）：原 DEFERRED 理由（依赖 AI/AI Store 平面）已过时——p9-ava-chat 10/11 passing、p11-ai-store 5/6 passing，团队维度的 AI Store 审核入口（apps/web/app/(app)/teams/[id]/ai-store-review/page.tsx，对应 p11-F06 团队/项目审核与精选）已真实存在。但 Team Home 统计壳页面、团队维度的 Store Explore/Store Subscribe 尚未实现，因此解除 DEFERRED、改列 not_started，留给后续排期，不在本 feature 内实现。",
+      "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/team/uc-team-008-view-team-home.md",
-        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-009-manage-team-memory.md",
         "phases/phase-04-identity-and-spaces/requirements/team/uc-team-010-view-team-ai-store.md"
       ]
     },
@@ -295,6 +335,27 @@
         "phases/phase-04-identity-and-spaces/requirements/room/uc-room-005-manage-room-files.md",
         "phases/phase-04-identity-and-spaces/requirements/room/uc-room-006-use-room-studio.md",
         "phases/phase-04-identity-and-spaces/requirements/room/uc-room-007-view-room-surveys.md"
+      ]
+    },
+    {
+      "id": "F15",
+      "priority": 5,
+      "area": "auth",
+      "title": "确认邮箱（注册确认，真实一次性令牌）",
+      "user_visible_behavior": "注册成功后系统在后台生成一条 24 小时有效的一次性确认令牌并「发信」（dev 环境走 apps/web/lib/mailer.ts 同款 console.log 桩，不接真实 SMTP）；用户打开 /confirm-email?token=... 页面，POST /api/auth/confirm-email {token} 校验令牌，成功后该用户 users.email_confirmed_at 被打上时间戳且令牌立即失效（一次性，不可重放）；令牌缺失/未知/过期/已用 400 并展示「确认链接无效或已过期」+ 重新发送入口。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": "wrk-platform-1",
+      "capability": "CAP-AUTH",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/auth-005-confirm-email.spec.ts"
+      ],
+      "evidence": "phases/phase-04-identity-and-spaces/sprints/sprint-01/evidence/F01-F04-confirm-email.verify.log @ 2026-07-05T01:30:25Z",
+      "notes": "uc-auth-005（此前完全没有 feature_list 条目在追踪，由 phase-p21 F03 补登）。此前 apps/web/app/api/auth/confirm-email/route.ts 是硬编码 Set([\"demo\"]) 的内存桩，从未接入 email_tokens；本轮改为读写 packages/data/src/auth.ts 的 createEmailToken/getValidEmailToken/consumeEmailToken（type=\"confirm_email\"，复用 reset-password 已验证过的一次性 token 机制），并新增 users.email_confirmed_at 列（029_email_confirmation.sql）与 /api/dev/confirm-token dev 端点（e2e 用，生产 404）。范围：只覆盖注册邮箱确认主流程；uc-auth-005 里的「新邮箱变更确认」（备选流程 A1，confirm-new-email 页面）不在本次范围内，仍是 deferred。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-005-confirm-email.md"
       ]
     }
   ]
