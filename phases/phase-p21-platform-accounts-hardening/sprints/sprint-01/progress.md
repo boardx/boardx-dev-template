@@ -4,17 +4,13 @@
 - 仓库根目录: <repo 路径>
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F02 团队成员角色接口越权修复（owner 保护）— owner: wrk-platform-2，
-  代码/测试已完成，`pnpm harness verify` 因本机 Docker 网络资源耗尽未能自动跑通门控（见下）。
-- 当前 blocker: `pnpm harness verify --sprint p21/01 --feature F02` 卡在第一条命令
-  `docker compose -f infra/docker-compose.yml up -d` —— 本机同时有大量并行 worker/worktree
-  各自的 compose 网络，Docker 预定义地址池已耗尽（`all predefined address pools have been
-  fully subnetted`），核实过不是本 worktree 专属网络名冲突，是 Docker daemon 级别资源上限，
-  与 F02 代码改动无关。未采用 `docker network prune`/重启 daemon 等破坏性手段（会影响其它
-  正在运行的 agent），改用 `docker run --network bridge` 起独立 postgres 容器完成等价的端到端
-  验证（migrate + 新增 e2e + 既有 team e2e 全部真实通过，见 evidence/F02.verify.log）。
-  待机器 Docker 资源压力下降后，重跑 `pnpm harness verify --sprint p21/01 --feature F02`
-  应可自动升级 passing（代码已就绪，此 blocker 纯属环境资源问题）。
+- F02（团队成员角色接口越权修复）：2026-07-05 在新 worktree（wrk-platform-2 认领 F04 前）
+  本机 Docker 资源空闲，重跑 `pnpm harness verify --sprint p21/01 --feature F02` 一次性
+  门控通过 → **F02 = passing**（此前两轮受阻于 docker 地址池耗尽，状态诚实保持 in_progress；
+  这是首次真正门控通过，代码本身此前已完整，无需改动）。
+- F04（Team F06-F09 证据补齐 + F13 状态拆分回填）：同一会话完成并门控通过 → **F04 = passing**。
+- 当前最高优先级未完成功能: 无（本 owner wrk-platform-2 名下 F02/F04 均已 passing）。
+- 当前 blocker: 无。
 
 ## 会话记录
 ### 2026-07-05 00:20 (wrk-platform-2)
@@ -89,3 +85,59 @@
   - rev-security 复审这次的对称性修复是否已经堵全（PATCH/DELETE + 数据层是否还有其它
     "只挡当前状态、不挡目标状态"的类似缺口）。
   - 其余同上一轮：等 Docker 资源压力下降后重跑 harness verify；不要自行合并 PR。
+
+### 2026-07-05 09:2x (wrk-platform-2) — F02 门控补跑 + F04 认领（issue #376）
+- 背景：进入本轮会话时发现 PR #399（"替代误合并的 #394"）虽然已在 main 上落地了 F02 的代码/
+  evidence（commit `c3a449d`，`docker compose`/`migrate`/两个 e2e 均已随该 commit 落盘证据），
+  但 feature_list.json 的 F02.status 仍卡在 `in_progress`（owner: wrk-platform-2）——PR #399
+  本身还开着未合并。由于 harness `claim` 命令对同一 owner 强制"最多一个 in_progress"，
+  这个历史遗留状态挡住了本轮要认领的 F04。
+- 已完成（F02，非本 feature 范围内的顺带核实，未改代码）:
+  - `bash scripts/init-worktree-env.sh` 分配独立 docker 网络/端口后，`pnpm harness verify
+    --sprint p21/01 --feature F02` 一次性跑通全部 5 条 verification + 基础验证 → 门控自动把
+    F02 标记 `passing`。证据：`evidence/F02.verify.log`（本轮重写，639 行差异）。
+  - 这一步只是让脚本把已经真实完成的状态如实登记，未修改任何 F02 相关代码。
+- 已完成（F04 — 本 feature 正式范围）:
+  1. `pnpm harness claim --phase p21 --feature F04 --owner wrk-platform-2`（F02 转 passing 后
+     解除单 owner 限制，认领成功）。
+  2. 重新执行 phase-04 area=="team" 且 status=="passing" 的 F06/F07/F08/F09 各自的
+     verification 命令（team-create/team-switch/team-invite-join/team-manage 四个 e2e
+     套件），全部真实通过（共 10 个用例），真实日志写入
+     `phases/phase-04-identity-and-spaces/sprints/sprint-02/evidence/F0{6,7,8,9}.verify.log`
+     并更新 feature_list.json 对应 evidence 字段的时间戳与来源说明。
+  3. 核实 uc-team-007（commit f603f45，`apps/web/app/(app)/teams/page.tsx` General 设置区 +
+     PATCH/DELETE `/api/teams/[id]`）实现仍在，`e2e/team-007-general-settings.spec.ts` 5 个
+     用例全过 → 从原 F13 拆出新记录 **F15**（passing），证据
+     `sprint-02/evidence/F15.verify.log`。
+  4. 核实 uc-team-008/010 依赖的 AI/AI Store 平面现状：p9-ava-chat 10/11 passing、
+     p11-ai-store 5/6 passing（含团队维度的 F06 审核精选），团队维度的
+     `teams/[id]/ai-store-review/page.tsx` 已真实存在 → 从原 F13 拆出新记录 **F16**
+     （not_started，解除过时 DEFERRED 标记，留待后续排期，本 feature 不实现其页面）。
+  5. uc-team-009（团队 Memory）核实 `packages/memory` 是 harness 自身会话记忆基础设施，
+     `apps/web` 无任何 import，`team_memories` 表确实不存在 → **F13 收窄为仅 uc-team-009**，
+     继续 DEFERRED。
+  6. 顺带核实 `apps/web/app/api/invite/[token]/route.ts`：仍被 `apps/web/app/invite/[token]/
+     page.tsx` 引用（GET 解析邀请 + POST 接受邀请），非死路由，按指示不确定即跳过，未删除。
+- 运行过的验证:
+  - `pnpm harness verify --sprint p21/01 --feature F02` → 门控通过，F02 = passing。
+  - `pnpm --filter @repo/web exec playwright test e2e/team-create.spec.ts` → 2 passed（F06）。
+  - `pnpm --filter @repo/web exec playwright test e2e/team-switch.spec.ts` → 2 passed（F07）。
+  - `pnpm --filter @repo/web exec playwright test e2e/team-invite-join.spec.ts` → 3 passed（F08）。
+  - `pnpm --filter @repo/web exec playwright test e2e/team-manage.spec.ts` → 3 passed（F09）。
+  - `pnpm --filter @repo/web exec playwright test e2e/team-007-general-settings.spec.ts`
+    → 5 passed（F15）。
+  - `pnpm harness verify --sprint p21/01 --feature F04` → 门控通过，F04 = passing
+    （含 require_base_pass=true 的 `pnpm -w run verify:base` 全绿）。
+- 已记录证据: `phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/
+  F04.verify.log`；phase-04 侧新增/更新的 evidence 见上文各条。
+- 提交记录:
+  - `fix(p21/F04): 补齐 team F06-F09 evidence + F13 状态拆分回填(uc-007→F15, uc-008/010→F16)`
+  - 分支 `worker/wrk-platform-2-p21-f04-team-evidence`（从干净 `origin/main` 起步），
+    已开 PR，Closes #376，base = main。
+- 已知风险或未解决问题: 无（F02/F04 均已 passing，`init.sh` 基础验证未受影响）。
+- 下一步最佳动作:
+  - PR 走 review（本 feature 非安全类，但涉及 phase-04 历史 feature_list 状态回填，建议至少
+    过一轮 rev-code 确认拆分逻辑合理）；不要自行合并。
+  - 关注 PR #399（F02 的另一支重复 PR）：本轮已经通过 `pnpm harness verify` 把 main 上的
+    F02 状态正式登记为 passing，PR #399 可能与本次改动在 F02 evidence 字段上产生冲突，
+    建议 coordinator 核实后关闭其中一个重复 PR。
