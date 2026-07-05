@@ -49,3 +49,19 @@
     走路径 A，需要新开一个 feature，且要相应把 verification 换成真正模拟 402 后断言弹窗联动。
 - 下一步最佳动作: F05 已完成，等待 PR review/rev-security（billing 域按 registry.yaml 要求过一次）。
   其余 wave1 feature（F03/F04/F06）仍待各自 owner 认领处理；F01/F02（wave0 安全类）优先级更高。
+
+### 2026-07-05（追加，收到 coordinator review 反馈后）
+- rev-code 反馈：PR 混入了整套 p21 scaffold（db39820），原因是本 worktree 从 main 起步时
+  main 上还没有 p21 的 feature_list.json（coordinator 立项 PR #389 未合并），只能 cherry-pick
+  立项 commit 才能拿到上下文；#389 合并后会 rebase 到新 main 上自动收窄 diff，coordinator 侧处理，
+  本次会话不需要额外动作。
+- feature-evaluator 反馈（真问题）：F05 verification 第二条命令原来跑整份
+  `billing-001-upgrade-plan.spec.ts`，会撞上已 spawn_task 登记的既存无关失败
+  （test「用户菜单可打开计划弹窗；credits 模式进入购买 Credit 流程」的 credit-pack-list 缺失），
+  导致命令永远非 0 退出，无法门控转 passing。
+- 已 cherry-pick coordinator 在 871f984 里的修正（verification 第二条改为
+  `-g '静态常驻展示'` 精确只跑本 feature 自己的 test），重新执行
+  `pnpm harness verify --sprint p21/01 --feature F05`：**门控通过，F05 = passing**。
+  基础验证（verify:base）同步通过。新证据已覆盖写入 F05.verify.log（harness 脚本自动生成，
+  含 base verify 完整输出），`feature_list.json` 的 F05 status/evidence 字段由脚本自动更新
+  （未手改，符合"状态不能自己改"约束）。

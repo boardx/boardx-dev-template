@@ -1,10 +1,12 @@
 # 会话交接 — Sprint p21/01
 
 ## 当前已验证
-- F05（Billing F04「额度不足触发」如实改写，wrk-payment-1）：本轮改动的两处验证命令均已跑通
-  （grep 命中 + 目标 e2e 用例通过），日志见
-  `phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F05.verify.log`。
-  未跑 `pnpm harness verify` 门控转正式 passing（按 harness 规则由脚本门控，非本次会话自行标记）。
+- F05（Billing F04「额度不足触发」如实改写，wrk-payment-1）：**已跑 `pnpm harness verify --sprint p21/01
+  --feature F05` 门控通过，status = passing**（脚本自动写入，未手改）。日志见
+  `phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F05.verify.log`（harness
+  脚本自动生成，含三条 verification 命令的真实输出 + base verify 完整日志）。
+  verification 第二条命令按 feature-evaluator 反馈改为 `-g '静态常驻展示'` 精确只跑本 feature
+  自己的 test，避免撞上既存无关失败（见下）。
 
 ## 本轮改动
 - `phases/phase-p14-credits-billing/feature_list.json`：F04 条目的 title/user_visible_behavior/notes
@@ -23,7 +25,11 @@
 - F01-F04（除本轮的 F04 描述修正外）/F06 均仍是各自 owner 的待办，未在本次会话内处理。
 
 ## 下一步最佳动作
-- F05 本身已完成，等待 PR review（billing 域涉及 rev-security 建议门槛，见 registry.yaml）。
+- F05 已 passing，无需再改；等待 rev-security（billing 域涉及升级弹窗触发条件，registry.yaml
+  建议过一次）review 通过后由 coordinator 合并 PR #391。
+- coordinator 的立项 PR #389 合并后，本分支应 `git fetch origin main && git rebase origin/main`
+  把 diff 收窄到只剩本 feature 的改动（去掉 cherry-pick 进来的整套 p21 scaffold），coordinator
+  已知情正在处理，如果 #389 迟迟不合并可以自行 rebase。
 - 下一轮可继续处理 p21 的 F01/F02（wave0 安全类，优先级更高）或 F03/F04/F06（wave1，无 owner 冲突）。
 - 不要在本 feature 分支上顺手实现路径 A（402 自动触发弹窗）——那是明确排除的范围，需要新开 feature。
 
