@@ -1,8 +1,15 @@
 # 会话交接 — Sprint p21/01
 
 ## 当前已验证
-- F01、F02 均已由 coord-main 补跑真实 `pnpm harness verify` 转 passing（F02 的 Docker 网络
-  环境阻塞已在资源恢复后解除，非代码回归）。以下是两个 owner 各自留下的详细记录：
+- F01、F02、F04 均已由真实 `pnpm harness verify` 转 passing（F02 的 Docker 网络环境阻塞已在
+  资源恢复后解除，非代码回归；F04 本轮由 wrk-codex-platform-1 完成）。
+- F04（Team F06-F09 证据补齐 + F13 状态拆分回填，owner: wrk-codex-platform-1）已完成：
+  - `pnpm harness verify --sprint p21/01 --feature F04` → PASS，含 `pnpm -w run verify:base`。
+  - verification 覆盖：compose up、data migrate、`team-007-general-settings.spec.ts`
+    （5 passed）、`team-invite-join.spec.ts`（3 passed）、F13 jq 校验、evidence git-tree 校验。
+  - phase-04 F13 已从混合 deferred 拆成 uc-team-007 General 设置并回填 passing；F15/F17
+    登记为 not_started；F16 继续 deferred/not_started（缺产品级 `team_memories` 数据模型）。
+  - 证据：`phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F04.verify.log`。
 - F02（团队成员角色接口越权修复，owner: wrk-platform-2）代码 + 测试已完成并手工/等价验证通过，
   **含 code-reviewer 复审发现并修复的第二轮回归缺口**：
   - `pnpm --filter @repo/web exec playwright test e2e/team-010-owner-protection.spec.ts` → 6 passed
@@ -13,9 +20,7 @@
   - `pnpm --filter @repo/web run typecheck` / `pnpm --filter @repo/data run typecheck` → PASS
   - `./init.sh` → 45/45 tasks successful
   - 详见 `sprints/sprint-01/evidence/F02.verify.log`
-- **未达成**：`pnpm harness verify --sprint p21/01 --feature F02` 两轮都未能跑通门控（同一个
-  Docker 环境问题），`feature_list.json` 里 F02 仍是 `in_progress`（未自行改成 passing，遵守
-  硬约束）。
+- F03（auth confirm-email）仍可由独立 owner 认领；F05/F06 按各自 owner/PR 继续推进。
 
 ## 本轮改动（两轮累计）
 - `apps/web/app/api/teams/[id]/members/[userId]/route.ts`：
@@ -63,7 +68,7 @@
   通过（docker up / migrate / 新增 e2e prod-gate spec / 既有 auth-003
   social-login spec / evidence log 落盘），并跑了 `verify:base` 门控。
   证据：`phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F01.verify.log`。
-- F02/F03/F04/F05/F06：未在本轮处理，状态维持各自 owner claim 时的原值。
+- F03/F05/F06：未在本轮处理，状态维持各自 owner claim 时的原值。
 
 ## 本轮改动
 - `apps/web/app/api/auth/social/route.ts`：POST 入口加
@@ -86,7 +91,7 @@
 - 下一轮：等 PR #393 过 rev-security 审查后由 coord-main 合并；不要在
   PR 未合并前再改 `apps/web/app/api/auth/social/route.ts` 或 phase-04
   F05 记录，避免冲突。
-- F02 由 wrk-platform-2 继续；F03/F04/F05/F06 owner 未定或各自进行中，
+- F03/F05/F06 owner 未定或各自进行中，
   不在本 sprint session 范围内重复认领。
 
 ## 命令

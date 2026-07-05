@@ -10,6 +10,31 @@
   F02 曾因 Docker 网络资源环境问题短暂受阻，非代码回归，已在资源恢复后重新跑通）。
 
 ## 会话记录
+### 2026-07-05 08:22 (wrk-codex-platform-1) — F04 passing
+- 本轮目标: 处理 issue #376 — Team F06-F09 证据补齐 + F13 状态拆分回填。
+- 已完成:
+  1. 在隔离 worktree `/private/tmp/boardx-worktrees/issue-376-p21-team-f04` 重新执行 F04
+     verification：`docker compose up`、data migrate、`team-007-general-settings.spec.ts`、
+     `team-invite-join.spec.ts`、F13 jq 校验、evidence git-tree 校验。
+  2. `phases/phase-04-identity-and-spaces/feature_list.json` 将原混合 deferred 的 F13 拆分：
+     F13=uc-team-007 General 设置并回填 passing；F15=uc-team-008 Team Home not_started；
+     F16=uc-team-009 Team Memory 继续 deferred/not_started；F17=uc-team-010 Team AI Store
+     not_started。
+  3. `pnpm harness verify --sprint p21/01 --feature F04` 门控通过，F04 由 harness 升级为
+     passing。
+- 运行过的验证:
+  - `pnpm harness verify --sprint p21/01 --feature F04` → PASS，含 `pnpm -w run verify:base`。
+  - 前置手工验证输出已落盘到 `evidence/F04.verify.log`，最终
+    `git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F04.verify.log`
+    也通过。
+- 已记录证据: `phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F04.verify.log`。
+- 已知风险或未解决问题:
+  - F15/F16/F17 本轮只做状态拆分和排期边界登记，不实现新功能。
+  - F16 仍需产品级 `team_memories` 数据模型；`packages/memory` 不是 apps/web 团队 Memory。
+- 下一步最佳动作:
+  - F03（auth confirm-email）仍可由独立 owner 认领。
+  - F15/F17 可后续单独排期；F16 需先补数据模型设计。
+
 ### 2026-07-05 00:20 (wrk-platform-2)
 - 本轮目标: 修复 issue #374 — team 域成员角色接口越权（PATCH/DELETE members/[userId] 只校验
   操作者角色，不校验目标是不是 owner；admin 可越权降级/移除 owner；invites 路由也未禁止签发

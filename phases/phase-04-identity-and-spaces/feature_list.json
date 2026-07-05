@@ -259,22 +259,21 @@
       "id": "F13",
       "priority": 20,
       "area": "team",
-      "title": "[DEFERRED] 团队设置/Home/Memory/AI Store",
-      "user_visible_behavior": "团队级入口：设置页、Team Home、Memory、AI Store。",
-      "status": "not_started",
-      "sprint": null,
+      "title": "团队 General 设置（改名 / 描述 / 删除）",
+      "user_visible_behavior": "团队 owner 可以在 /teams 的 General 设置区修改团队名称与描述，保存后 GET /api/teams 持久化返回；owner 可以删除团队，删除后团队从列表消失；非 owner 删除团队返回 403；团队名为空返回 400。",
+      "status": "passing",
+      "sprint": "02",
       "owner": null,
-      "capability": "CAP-AI",
+      "capability": "CAP-AUTH",
       "verification": [
-        "echo 'DEFERRED：依赖 CAP-AI/CAP-DATA 平面，本阶段不实现' && false"
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/team-007-general-settings.spec.ts"
       ],
-      "evidence": "",
-      "notes": "uc-team-007/008/009/010。DEFERRED：依赖 AI/Memory 平面，不排入本阶段 sprint。",
+      "evidence": "phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F04.verify.log @ 2026-07-05",
+      "notes": "uc-team-007。原 F13 曾把 General/Home/Memory/AI Store 混在一个 DEFERRED 条目里；p21 F04 复核确认 General 设置已由 commit f603f45 落地并有 team-007-general-settings.spec.ts 真实覆盖，故拆出为独立 passing 条目。Home/Memory/AI Store 分别拆到 F15-F17。",
       "source_use_cases": [
-        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-007-manage-team-general-settings.md",
-        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-008-view-team-home.md",
-        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-009-manage-team-memory.md",
-        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-010-view-team-ai-store.md"
+        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-007-manage-team-general-settings.md"
       ]
     },
     {
@@ -296,6 +295,63 @@
         "phases/phase-04-identity-and-spaces/requirements/room/uc-room-005-manage-room-files.md",
         "phases/phase-04-identity-and-spaces/requirements/room/uc-room-006-use-room-studio.md",
         "phases/phase-04-identity-and-spaces/requirements/room/uc-room-007-view-room-surveys.md"
+      ]
+    },
+    {
+      "id": "F15",
+      "priority": 22,
+      "area": "team",
+      "title": "Team Home 统计与管理入口",
+      "user_visible_behavior": "团队成员进入 Team Home 后看到当前团队概况、成员/房间/资源统计，以及 General、Members、Memory、AI Store、Credits 等团队管理入口；切换团队后上下文刷新为新团队。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "echo 'NOT_STARTED：uc-team-008 已解除 F13 的 AI/Memory deferred 误绑，待后续 sprint 定义真实 Team Home 验证' && false"
+      ],
+      "evidence": "",
+      "notes": "uc-team-008。p21 F04 复核确认该用例不应继续被 F13 的 AI/Memory deferred 理由阻塞；当前仅登记为可排期 not_started，不在 p21 F04 内实现。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-008-view-team-home.md"
+      ]
+    },
+    {
+      "id": "F16",
+      "priority": 23,
+      "area": "team",
+      "title": "[DEFERRED] Team Memory 管理",
+      "user_visible_behavior": "团队 owner/admin 在团队 Memory 页面维护团队级可复用上下文，支持查看、搜索、新增、删除。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AI",
+      "verification": [
+        "echo 'DEFERRED：uc-team-009 仍缺 team_memories 数据模型与 apps/web 持久化入口' && false"
+      ],
+      "evidence": "",
+      "notes": "uc-team-009。p21 F04 复核确认 packages/memory 是 harness/agent 会话记忆基础设施，不是产品内团队 Memory；该用例仍需新增 team_memories 数据模型后单独排期。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-009-manage-team-memory.md"
+      ]
+    },
+    {
+      "id": "F17",
+      "priority": 24,
+      "area": "team",
+      "title": "Team AI Store 入口与团队审核/精选上下文",
+      "user_visible_behavior": "团队 owner/admin 可以从团队上下文进入 AI Store 审核/精选能力，查看团队待审项目、批准/拒绝、切换精选；非管理角色不能访问管理入口或 API。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AI",
+      "verification": [
+        "echo 'NOT_STARTED：uc-team-010 已解除 F13 的 AI/Memory deferred 误绑，待后续 sprint 复用 ai-store-006 团队审核/精选验证' && false"
+      ],
+      "evidence": "",
+      "notes": "uc-team-010。p21 F04 复核确认团队 AI Store 审核/精选已有 apps/web 页面/API 与 p11 相关覆盖，可独立排期；本 feature 只解除错误 deferred 并登记为 not_started。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/team/uc-team-010-view-team-ai-store.md"
       ]
     }
   ]
