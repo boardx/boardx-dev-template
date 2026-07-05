@@ -8,7 +8,7 @@
       "title": "社交登录后门修正（生产环境 gate + F05 如实改写）",
       "user_visible_behavior": "POST /api/auth/social 在 NODE_ENV==='production' 且未配置真实第三方 provider 凭证时拒绝请求（如 403/404，参照 apps/web/app/api/dev/reset-token/route.ts 的生产环境 gate 写法）；非生产环境下 demo 登录行为保留（供 e2e 使用）。phase-04 的 feature_list.json 里 F05 的 user_visible_behavior/verification/notes 三个字段改为如实描述这个真实行为（demo 登录桩 + 生产 gate），不再自称'GET .../social/:provider 返回 501 占位'。",
       "design_ref": "无新 UI；apps/web/app/api/auth/social/route.ts 现有实现",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "wrk-platform-1",
       "capability": "CAP-AUTH",
@@ -21,7 +21,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/auth-003-social-login.spec.ts",
         "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F01.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-07-05T00:42:30.399Z",
       "notes": "requirements/auth.md。核心改动：apps/web/app/api/auth/social/route.ts 加 NODE_ENV 生产环境 gate（同目录 apps/web/app/api/dev/reset-token/route.ts:10-12 的写法可直接参考复用）；同时编辑 phases/phase-04-identity-and-spaces/feature_list.json 里 F05 条目（约在 feature_list.json:88-106 附近，行号可能因本 phase 其它编辑漂移，以 id=='F05' 定位）的 user_visible_behavior/verification/notes 三个字段，使其与真实代码行为一致。新增 e2e：auth-social-prod-gate.spec.ts 验证生产环境下请求被拒绝（可用 NODE_ENV 注入或专门的测试开关）。安全敏感，必须过 rev-security。"
     },
     {

@@ -90,16 +90,17 @@
       "priority": 5,
       "area": "auth",
       "title": "社交登录骨架（占位，不接真 OAuth）",
-      "user_visible_behavior": "GET /api/auth/social/:provider 返回 501 与「社交登录待接入」结构化提示；登录/注册页在能力关闭时不展示第三方入口。",
+      "user_visible_behavior": "POST /api/auth/social（非生产环境）—— STUB：不接真 OAuth，只要 provider 在白名单（google/facebook/wechat）内，即按 provider 创建/复用一个 demo 账号并用与邮箱登录相同的会话机制登录成功，供 e2e 使用；生产环境（NODE_ENV==='production'）下该接口整体拒绝请求（404），不存在免密登录通道。登录/注册页展示第三方入口按钮，点击后调用该接口。",
       "status": "passing",
       "sprint": "01",
       "owner": null,
       "capability": "CAP-AUTH",
       "verification": [
-        "test \"$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/api/auth/social/google)\" = \"501\""
+        "test \"$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{\"provider\":\"google\"}' http://localhost:3000/api/auth/social)\" = \"200\"",
+        "pnpm --filter @repo/web exec playwright test e2e/auth-social-prod-gate.spec.ts"
       ],
-      "evidence": "evidence/F05.verify.log @ 2026-06-29T08:03:13.656Z",
-      "notes": "uc-auth-003。DEFERRED 真 OAuth（需 provider secret），本轮仅骨架。",
+      "evidence": "evidence/F05.verify.log @ 2026-06-29T08:03:13.656Z；生产环境 gate 由 phases/phase-p21-platform-accounts-hardening F01 补齐并在 phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F01.verify.log 留证",
+      "notes": "uc-auth-003。DEFERRED 真 OAuth（需 provider secret），本轮仅 demo 登录桩；此前本条记录曾错误声称「GET .../social/:provider 返回 501 占位」，与真实代码（POST + demo 账号免密登录）不符，已在 p21 F01（issue #373）审计中修正为如实描述，并补上生产环境 gate（apps/web/app/api/auth/social/route.ts 的 NODE_ENV==='production' 分支）防止该 demo 桩在生产环境被当成认证后门。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-003-social-login.md"
       ]
