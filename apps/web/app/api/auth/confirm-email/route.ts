@@ -1,18 +1,19 @@
 import { NextResponse } from "next/server";
+import { getValidEmailToken, consumeEmailToken, confirmUserEmail } from "@repo/data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * 邮箱确认 — 原型内存桩（in-memory stub）。
+ * 邮箱确认（uc-auth-005，P21 F03）。
  *
- * 真实实现应查 @repo/data 的一次性邮箱令牌（同 reset-password 的
- * getValidEmailToken/consumeEmailToken 模式），区分注册确认与新邮箱变更，
- * 校验链接归属当前用户/目标邮箱，并更新邮箱确认/绑定状态（见 UC-AUTH-005 主流程 4–7、E1–E4）。
- * 此处为前端原型提供确定性桩：已知 token `demo` → 成功；其余 → 链接无效或已过期。
+ * 此前是硬编码 Set(["demo"]) 的内存桩；本轮改为真实读写 @repo/data 的一次性邮箱令牌，
+ * 复用 reset-password 已验证过的 create/get/consume 机制（同一张 email_tokens 表，
+ * type="confirm_email"，由 register 路由在注册时创建、24 小时过期）。
+ *
+ * 只覆盖主流程（注册邮箱确认）：token 有效 → 消费 token + 打 email_confirmed_at 时间戳。
+ * 新邮箱变更确认（uc-auth-005 备选流程 A1）不在本次范围内，仍是 deferred。
  */
-const KNOWN_TOKENS = new Set(["demo"]);
-
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as { token?: unknown };
@@ -23,13 +24,15 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-    if (!KNOWN_TOKENS.has(token)) {
+    const rec = await getValidEmailToken(token, "confirm_email");
+    if (!rec) {
       return NextResponse.json(
         { error: "确认链接无效或已过期" },
         { status: 400 },
       );
     }
-    // 成功：注册邮箱确认状态 / 新邮箱绑定状态被更新（桩）。
+    await consumeEmailToken(token); // 一次性：成功确认后立即失效，防重放
+    await confirmUserEmail(rec.user_id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

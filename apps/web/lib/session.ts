@@ -55,6 +55,9 @@ export async function startSession(userId: number): Promise<void> {
     sameSite: "lax",
     path: "/",
     maxAge: Math.floor(SESSION_TTL_MS / 1000),
+    // P21 F03 加固：生产环境要求 HTTPS 传输 cookie，防止明文网络上被窃取。
+    // 非生产（dev/e2e 用 http://localhost）不能设，否则浏览器直接丢弃该 cookie。
+    secure: process.env.NODE_ENV === "production",
   });
 }
 
