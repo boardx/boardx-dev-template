@@ -8,6 +8,10 @@
 > **规范化的 label 状态机**，不重复 worker 侧内容。
 > 共享 git 工作目录的隔离规则（任何角色一律 worktree、分支建好立即 push）见 **ADR-005**；
 > 新 agent/新平台加入协作的最小阅读清单见 `agent-onboarding-checklist.md`。
+> 认领/心跳/交还这个具体动作的可选原子性增强（Cloudflare D1，opt-in，GitHub 仍是
+> 默认与兜底权威，不改变本文 §1 的 label 状态机）见 **ADR-006**
+> （`packages/coord-service`；`.harness/scripts/coordinator-lock.ts` /
+> `.harness/scripts/module-lock.ts`）。
 
 ## 1. 规范 label 集合（唯一事实，禁止漂移）
 
