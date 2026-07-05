@@ -6,12 +6,15 @@
 - 标准验证路径: `pnpm -w run verify:base`
 - F01（社交登录后门 gate）已合并（#403）并 passing，F03 的单 owner 阻塞已解除。
 - F02（团队角色越权修复，含 code review 复审后的第二轮修复）已合并（#398）并 passing。
+- F03（confirm-email 真实实现 + phase-04 F01-F04 证据补齐）已合并（#410），owner wrk-platform-1，
+  待补跑 `pnpm harness claim` + `pnpm harness verify --sprint p21/01 --feature F03`。
 - F04（Team 证据补齐 + F13 拆分）已合并（#409）并 passing。
-- F05（billing F04 文档如实改写）已合并（#411）并 passing。
+- F05（billing F04 文档如实改写）已合并（#411）并 passing；发现一个既存无关 bug 已 spawn_task
+  登记（见下）。
 - F06（Profile/Home 文档与追踪字段同步）本轮完成并门控通过 → passing。
 - 当前最高优先级未完成功能: F03（confirm-email 真实实现 + phase-04 F01-F04 证据补齐），owner
   wrk-platform-1——代码已全部实现完成并通过测试，F01 已合并，可以补跑 `pnpm harness claim`
-  + `pnpm harness verify --sprint p21/01 --feature F03`。
+  + `pnpm harness verify --sprint p21/01 --feature F03`。p21 其余 5 个 feature 均已 passing。
 - 当前 blocker: 无。
 
 ## 会话记录
@@ -257,3 +260,52 @@
 - 下一步最佳动作：F02（wrk-platform-2 owner，team 越权修复）、F05/F06
   （wave1，其它 owner）按各自 owner 继续推进；F01 已 passing，无需再动
   `apps/web/app/api/auth/social/route.ts` 或 phase-04 F05 记录。
+
+### 2026-07-05（wrk-payment-1，F05）
+- 本轮目标: 完成 issue #377 / F05「Billing F04『额度不足触发』如实改写」。
+- 已完成:
+  - `phases/phase-p14-credits-billing/feature_list.json` F04 条目：`title`/`user_visible_behavior`/`notes`
+    改为如实描述——AVA 页面「AI credits」横幅（data-testid=ai-low-credits-prompt）是无条件常驻展示的
+    静态 UI，不由 402 额度不足响应触发，402 目前只走 `setSendError` 文字提示；用户可随时手动点击
+    横幅上的 Upgrade 按钮进入升级弹窗，与真实额度状态无关。删除了此前不准确的「是 p9/p12 额度不足
+    引导落点」表述。补充 notes：当前仅支持单一货币（USD），不支持退款，不支持自动续费管理（相对
+    oldcode 双轨计费主动收窄的范围，非遗漏）。
+  - `apps/web/e2e/billing-001-upgrade-plan.spec.ts`：把测试名从「AVA 额度提示可打开计划弹窗」改为
+    「AVA 常驻额度提示横幅：点击 Upgrade 按钮可打开计划弹窗（横幅为静态常驻展示，非额度不足触发）」，
+    只改名字/加注释，未改断言逻辑（原断言本身正确）。
+  - 走的是 requirements/billing.md 里说明的默认路径 B（如实改描述，不新增因果链实现），未实现
+    402 自动触发弹窗——按任务指示这是明确排除的范围。
+  - 未改动 `apps/web/app/(app)/ava/page.tsx` 等运行时代码，符合硬约束。
+- 运行过的验证:
+  1. `grep -q 'ai-low-credits-prompt' "apps/web/app/(app)/ava/page.tsx"` → exit 0，PASS。
+  2. `pnpm --filter @repo/web exec playwright test e2e/billing-001-upgrade-plan.spec.ts` → 完整 spec
+     7 个 test 中 6 个通过，1 个既存无关失败（见下）；本 feature 实际改动的那条 test（原「AVA 额度
+     提示可打开计划弹窗」，现改名后）单独运行 **通过**（exit 0）。
+  3. `git cat-file -e HEAD:.../evidence/F05.verify.log` → 将在本 commit 落盘后满足。
+- 已记录证据: `phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F05.verify.log`
+- 提交记录: 见分支 `worker/wrk-payment-1-p21-f05-billing-f04-honest-desc`，PR 关闭 issue #377。
+- 已知风险或未解决问题:
+  - `billing-001-upgrade-plan.spec.ts` 里「用户菜单可打开计划弹窗；credits 模式进入购买 Credit 流程」
+    这条 test 失败（`credit-pack-list` 元素找不到），**已确认在完全未修改代码的基线上同样复现**，
+    与本 feature 无关，不在 F05 范围内修复。已用 spawn_task 登记为独立待办（task_8bfb199b），
+    建议后续单独开 feature 处理这个 buy-credits-dialog 的真实 UI bug。
+  - 未走路径 A（真正让 402 触发弹窗自动打开）——按任务说明这是明确排除的范围，如后续产品拍板要
+    走路径 A，需要新开一个 feature，且要相应把 verification 换成真正模拟 402 后断言弹窗联动。
+- 下一步最佳动作: F05 已完成，等待 PR review/rev-security（billing 域按 registry.yaml 要求过一次）。
+  其余 wave1 feature（F03/F04/F06）仍待各自 owner 认领处理；F01/F02（wave0 安全类）优先级更高。
+
+### 2026-07-05（追加，收到 coordinator review 反馈后）
+- rev-code 反馈：PR 混入了整套 p21 scaffold（db39820），原因是本 worktree 从 main 起步时
+  main 上还没有 p21 的 feature_list.json（coordinator 立项 PR #389 未合并），只能 cherry-pick
+  立项 commit 才能拿到上下文；#389 合并后会 rebase 到新 main 上自动收窄 diff，coordinator 侧处理，
+  本次会话不需要额外动作。
+- feature-evaluator 反馈（真问题）：F05 verification 第二条命令原来跑整份
+  `billing-001-upgrade-plan.spec.ts`，会撞上已 spawn_task 登记的既存无关失败
+  （test「用户菜单可打开计划弹窗；credits 模式进入购买 Credit 流程」的 credit-pack-list 缺失），
+  导致命令永远非 0 退出，无法门控转 passing。
+- 已 cherry-pick coordinator 在 871f984 里的修正（verification 第二条改为
+  `-g '静态常驻展示'` 精确只跑本 feature 自己的 test），重新执行
+  `pnpm harness verify --sprint p21/01 --feature F05`：**门控通过，F05 = passing**。
+  基础验证（verify:base）同步通过。新证据已覆盖写入 F05.verify.log（harness 脚本自动生成，
+  含 base verify 完整输出），`feature_list.json` 的 F05 status/evidence 字段由脚本自动更新
+  （未手改，符合"状态不能自己改"约束）。
