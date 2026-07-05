@@ -60,8 +60,8 @@ test.beforeAll(async () => {
   const port = await findFreePort();
   baseURL = `http://127.0.0.1:${port}`;
 
-  // 生产模式需要先有生产构建产物；已存在 .next 生产构建则 next start 直接复用，
-  // 否则这里现建一份（同一份构建产物给本文件所有用例共用）。
+  // 生产模式需要先有生产构建产物：每次都现建一份（不复用已有 .next），保证测的是
+  // 当前代码而不是可能过期的旧构建，代价是本文件单独跑会比其它 e2e 慢一些。
   const { execSync } = await import("node:child_process");
   execSync("pnpm exec next build", {
     cwd: __dirname + "/..",
@@ -72,7 +72,7 @@ test.beforeAll(async () => {
   child = spawn("pnpm", ["exec", "next", "start", "-p", String(port)], {
     cwd: __dirname + "/..",
     env: { ...process.env, NODE_ENV: "production" },
-    stdio: "pipe",
+    stdio: ["ignore", "inherit", "inherit"],
   });
 
   await waitForHealth(baseURL, 60_000);
