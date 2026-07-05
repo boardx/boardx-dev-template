@@ -11,6 +11,7 @@ import { sweepUnblock } from "./sweep-unblock";
 import { sweepWorktrees } from "./sweep-worktrees";
 import { depGraph } from "./dep-graph";
 import { lockStatus, lockAcquire, lockHeartbeat, lockRelease } from "./coordinator-lock";
+import { moduleLockStatus, moduleLockAcquire, moduleLockHeartbeat, moduleLockRelease } from "./module-lock";
 
 const argv = process.argv.slice(2);
 const cmd = argv[0];
@@ -35,6 +36,10 @@ async function main(): Promise<void> {
     case "lock-acquire":   await lockAcquire(args); break;
     case "lock-heartbeat": await lockHeartbeat(args); break;
     case "lock-release":   await lockRelease(args); break;
+    case "module-lock-status":    moduleLockStatus(args); break;
+    case "module-lock-acquire":   await moduleLockAcquire(args); break;
+    case "module-lock-heartbeat": await moduleLockHeartbeat(args); break;
+    case "module-lock-release":   await moduleLockRelease(args); break;
     default:
       log.info("用法:");
       log.info("  pnpm harness new-phase     --id NN --name <name> [--slug <s>] [--goal <g>] [--ui]");
@@ -52,6 +57,10 @@ async function main(): Promise<void> {
       log.info("  pnpm harness lock-acquire   --session <id> [--force] [--note <text>]");
       log.info("  pnpm harness lock-heartbeat --session <id>");
       log.info("  pnpm harness lock-release   --session <id> [--force]");
+      log.info("  pnpm harness module-lock-status    --module <name>");
+      log.info("  pnpm harness module-lock-acquire   --module <name> --session <agent-id>");
+      log.info("  pnpm harness module-lock-heartbeat --module <name> --session <agent-id>");
+      log.info("  pnpm harness module-lock-release   --module <name> --session <agent-id>");
       process.exit(cmd ? 1 : 0);
   }
 }
