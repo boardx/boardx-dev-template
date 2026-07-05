@@ -125,9 +125,9 @@
       "title": "Profile/Home 文档与追踪字段同步",
       "user_visible_behavior": "phase-p2 F04 的 verification 改为指向真实存在的测试文件（先确认 UI 分歧：占位页 vs 真实最近列表，产品拍板后使 user_visible_behavior 与真实实现一致）；phase-p1 requirements/README.md 的 oldcode 溯源描述改为如实说明 aiModel/privacy 是本阶段新设计、非 oldcode 移植；phase-p2 F03/F06 的 notes 里 blocked_on 更新为精确的 p11:F03。",
       "design_ref": "无新 UI，纯文档/feature_list 字段修正",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-platform-3",
       "capability": "CAP-WEB",
       "depends_on": [],
       "wave": 1,
@@ -135,7 +135,7 @@
         "grep -q 'p11' phases/phase-p2-home/feature_list.json",
         "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F06.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F06.verify.log @ 2026-07-05T01:10:50.401Z",
       "notes": "requirements/profile-home.md。优先级最低、风险最小，不需要过 rev-security。真实存在但未被引用的测试文件是 apps/web/e2e/home-004-view-recent-page.spec.ts，与 F04 当前 verification 指向的 e2e/recent-placeholder.spec.ts（不存在）二选一，取决于产品对占位页/真实列表的最终决定。coord-main 合并修正（2026-07-05）：coord-platform 原把本 feature claim 给 wrk-claude-1，但 wrk-claude-1 同时还 owner 着 phase-p17:F01（in_progress，补跑门禁发现真实卡在 #333 那个跨团队接口断层，不是它能自己解决的），违反单一 in_progress 不变量（同一 owner 不能同时认两个 in_progress）。已改回 not_started/owner:null，等 p17:F01 真正 passing 或 wrk-claude-1 被重新指派后再认领。"
     }
   ]
