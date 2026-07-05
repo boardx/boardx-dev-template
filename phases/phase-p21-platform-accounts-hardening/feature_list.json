@@ -1,0 +1,142 @@
+{
+  "phase": "p21",
+  "features": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "area": "auth",
+      "title": "社交登录后门修正（生产环境 gate + F05 如实改写）",
+      "user_visible_behavior": "POST /api/auth/social 在 NODE_ENV==='production' 且未配置真实第三方 provider 凭证时拒绝请求（如 403/404，参照 apps/web/app/api/dev/reset-token/route.ts 的生产环境 gate 写法）；非生产环境下 demo 登录行为保留（供 e2e 使用）。phase-04 的 feature_list.json 里 F05 的 user_visible_behavior/verification/notes 三个字段改为如实描述这个真实行为（demo 登录桩 + 生产 gate），不再自称'GET .../social/:provider 返回 501 占位'。",
+      "design_ref": "无新 UI；apps/web/app/api/auth/social/route.ts 现有实现",
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-platform-1",
+      "capability": "CAP-AUTH",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/auth-social-prod-gate.spec.ts",
+        "pnpm --filter @repo/web exec playwright test e2e/auth-003-social-login.spec.ts",
+        "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F01.verify.log"
+      ],
+      "evidence": "",
+      "notes": "requirements/auth.md。核心改动：apps/web/app/api/auth/social/route.ts 加 NODE_ENV 生产环境 gate（同目录 apps/web/app/api/dev/reset-token/route.ts:10-12 的写法可直接参考复用）；同时编辑 phases/phase-04-identity-and-spaces/feature_list.json 里 F05 条目（约在 feature_list.json:88-106 附近，行号可能因本 phase 其它编辑漂移，以 id=='F05' 定位）的 user_visible_behavior/verification/notes 三个字段，使其与真实代码行为一致。新增 e2e：auth-social-prod-gate.spec.ts 验证生产环境下请求被拒绝（可用 NODE_ENV 注入或专门的测试开关）。安全敏感，必须过 rev-security。"
+    },
+    {
+      "id": "F02",
+      "priority": 1,
+      "area": "team",
+      "title": "团队成员角色接口越权修复（owner 保护）",
+      "user_visible_behavior": "以 admin 身份调用 PATCH /api/teams/:id/members/:userId 修改角色、或 DELETE 同路径移除成员，若目标用户是团队 owner，请求被拒绝（如 403），owner 的角色/成员资格不发生任何变化；以 admin 身份调用 POST /api/teams/:id/invites 创建邀请时，若指定角色为 owner，请求被拒绝或角色被强制降级为非 owner。合法路径（admin 操作普通成员、owner 操作任意成员）不受影响。",
+      "design_ref": "无新 UI；对齐 apps/web/app/api/rooms/[id]/members/[userId]/route.ts 已有的 target-owner 保护写法",
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-platform-2",
+      "capability": "CAP-AUTH",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/team-010-owner-protection.spec.ts",
+        "pnpm --filter @repo/web exec playwright test e2e/team-manage.spec.ts",
+        "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F02.verify.log"
+      ],
+      "evidence": "",
+      "notes": "requirements/team.md。核心改动：apps/web/app/api/teams/[id]/members/[userId]/route.ts 的 PATCH(9-25行)/DELETE(27-40行) 加目标角色校验；packages/data/src/teams.ts 的 updateMemberRole(78-80行)/removeMember(82-84行) 数据层同步加保护（防止未来有其它调用方绕过路由层校验）；apps/web/app/api/teams/[id]/invites/route.ts:18 的 isTeamRole() 校验加上'不允许生成 role=owner 邀请'。参考样板：apps/web/app/api/rooms/[id]/members/[userId]/route.ts:25,46 已有的同类保护。新增 e2e：team-010-owner-protection.spec.ts 覆盖'admin降级owner被拒''admin移除owner被拒''admin签发owner邀请被拒'三个场景。安全敏感，必须过 rev-security。"
+    },
+    {
+      "id": "F03",
+      "priority": 2,
+      "area": "auth",
+      "title": "Auth F01-F04 证据补齐 + confirm-email 真实实现",
+      "user_visible_behavior": "重新执行 phase-04 F01(注册)/F02(登录)/F03(改密)/F04(忘记密码重置) 的 verification 命令，输出真实日志落盘并被 git 追踪（若跑不通，phase-04 对应条目状态如实打回 in_progress，不得继续挂 passing）。新增：uc-auth-005（确认邮箱）在 phase-04 feature_list.json 里获得一条对应 feature 条目；apps/web/app/api/auth/confirm-email/route.ts 从硬编码 Set([\"demo\"]) 改为读写 packages/data/src/auth.ts 已有的 email_tokens 表（新增 type='confirm_email' 的调用方，复用 reset-password 已验证过的 create/get/consume 机制）。",
+      "design_ref": "无新 UI；apps/web/app/(auth)/confirm-email/page.tsx 现有页面",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "depends_on": [],
+      "wave": 1,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/auth-register.spec.ts",
+        "pnpm --filter @repo/web exec playwright test e2e/auth-login.spec.ts",
+        "pnpm --filter @repo/web exec playwright test e2e/auth-change-password.spec.ts",
+        "pnpm --filter @repo/web exec playwright test e2e/auth-reset-password.spec.ts",
+        "pnpm --filter @repo/web exec playwright test e2e/auth-005-confirm-email.spec.ts",
+        "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F03.verify.log"
+      ],
+      "evidence": "",
+      "notes": "requirements/auth.md。phase-04 F01-F04 的 evidence 字段（feature_list.json:19,40,61,82）当前指向不存在的文件，本 feature 重新验证后需要同步更新那四个字段的 evidence 路径为本阶段真实落盘的日志（或维持指向 phase-04 自己的 evidence/ 目录，只要文件真实存在即可，两种做法择一但必须保证 git ls-tree 能查到）。confirm-email 的核心改动集中在 apps/web/app/api/auth/confirm-email/route.ts:9-14 和 packages/data/src/auth.ts 的 email_tokens 相关函数。附带：login/forgot-password 加最小速率限制、apps/web/lib/session.ts:53-58 的 cookie 在生产环境加 secure:true。"
+    },
+    {
+      "id": "F04",
+      "priority": 2,
+      "area": "team",
+      "title": "Team F06-F09 证据补齐 + F13 状态拆分回填",
+      "user_visible_behavior": "重新执行 phase-04 F06-F09 的 verification 命令，输出真实日志落盘并被 git 追踪。F13（团队设置/Home/Memory/AI Store）拆分：uc-team-007（团队改名/描述/删除）已在 commit f603f45 实现却从未回填 feature_list.json，本 feature 把它登记为独立 passing 条目；核实 uc-team-008/010 依赖的 AI/AI Store 平面现状后，若确实已具备条件则解除 deferred 并登记为 not_started（留给后续排期，不在本 feature 内实现）；uc-team-009（团队 Memory）继续保持 deferred（数据模型确实缺失）。",
+      "design_ref": "无新 UI；已实现的 apps/web/app/(app)/teams/[id]/settings 等页面",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-DATA",
+      "depends_on": [],
+      "wave": 1,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/team-007-general-settings.spec.ts",
+        "pnpm --filter @repo/web exec playwright test e2e/team-invite-join.spec.ts",
+        "jq -e '.features[] | select(.id==\"F13\")' phases/phase-04-identity-and-spaces/feature_list.json",
+        "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F04.verify.log"
+      ],
+      "evidence": "",
+      "notes": "requirements/team.md。commit 7e58dce 是 F06-F09 底层实现的落地提交，commit f603f45 是 uc-007 的落地提交但未回写 feature_list.json——两个 commit 号仅供实现者定位代码，不代表本 feature 需要重新实现，只需验证+回填状态。"
+    },
+    {
+      "id": "F05",
+      "priority": 3,
+      "area": "billing",
+      "title": "Billing F04「额度不足触发」如实改写",
+      "user_visible_behavior": "phase-p14 F04 的 user_visible_behavior/notes 改为如实描述现状：AI credits 提示横幅（data-testid=ai-low-credits-prompt）是无条件常驻展示的静态 UI，用户可随时手动点击进入升级流程；不再声称该横幅由'额度不足'事件触发。同步补充 notes：明确声明当前仅支持单一货币（USD）、不支持退款、不支持自动续费管理（相对 oldcode 收窄的范围，避免被后续开发者误判为遗漏）。对应 e2e 测试名/断言同步改名去掉'触发'措辞。",
+      "design_ref": "无新 UI；apps/web/app/(app)/ava/page.tsx 现有 ai-low-credits-prompt 横幅",
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-payment-1",
+      "capability": "CAP-PAYMENT",
+      "depends_on": [],
+      "wave": 1,
+      "verification": [
+        "grep -q 'ai-low-credits-prompt' \"apps/web/app/(app)/ava/page.tsx\"",
+        "pnpm --filter @repo/web exec playwright test e2e/billing-001-upgrade-plan.spec.ts",
+        "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F05.verify.log"
+      ],
+      "evidence": "",
+      "notes": "requirements/billing.md。默认走路径 B（如实改描述，不新增因果链实现）；若产品在实现前明确要走路径 A（真正让 402 触发弹窗自动打开），实现者应在开工前更新本条 notes 说明改用路径 A，并相应调整 verification 为真正模拟 402 响应后断言弹窗打开的 e2e。"
+    },
+    {
+      "id": "F06",
+      "priority": 4,
+      "area": "profile",
+      "title": "Profile/Home 文档与追踪字段同步",
+      "user_visible_behavior": "phase-p2 F04 的 verification 改为指向真实存在的测试文件（先确认 UI 分歧：占位页 vs 真实最近列表，产品拍板后使 user_visible_behavior 与真实实现一致）；phase-p1 requirements/README.md 的 oldcode 溯源描述改为如实说明 aiModel/privacy 是本阶段新设计、非 oldcode 移植；phase-p2 F03/F06 的 notes 里 blocked_on 更新为精确的 p11:F03。",
+      "design_ref": "无新 UI，纯文档/feature_list 字段修正",
+      "status": "in_progress",
+      "sprint": "01",
+      "owner": "wrk-claude-1",
+      "capability": "CAP-WEB",
+      "depends_on": [],
+      "wave": 1,
+      "verification": [
+        "grep -q 'p11' phases/phase-p2-home/feature_list.json",
+        "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F06.verify.log"
+      ],
+      "evidence": "",
+      "notes": "requirements/profile-home.md。优先级最低、风险最小，不需要过 rev-security。真实存在但未被引用的测试文件是 apps/web/e2e/home-004-view-recent-page.spec.ts，与 F04 当前 verification 指向的 e2e/recent-placeholder.spec.ts（不存在）二选一，取决于产品对占位页/真实列表的最终决定。"
+    }
+  ]
+}
