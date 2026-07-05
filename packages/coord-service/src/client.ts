@@ -18,10 +18,23 @@ export interface ClaimResult {
   body?: unknown;
 }
 
+export interface ActiveClaim {
+  id: number;
+  resource_id: string;
+  agent_id: string;
+  last_heartbeat_at: string;
+  ttl_seconds: number;
+}
+
 export interface CoordServiceClient {
   claim(resourceId: string, resourceType: string, ttlSeconds?: number): Promise<ClaimResult>;
   heartbeat(claimId: number): Promise<ClaimResult>;
   release(claimId: number): Promise<ClaimResult>;
+  /** Reads the current in_progress claim for a resource, or null if free.
+   *  Public endpoint — used by the Phase 5 cutover to decide, before ever
+   *  touching the local file lock, whether D1 says the resource is already
+   *  held by someone else. Never throws on a reachable-but-empty result. */
+  queryActiveClaim(resourceId: string): Promise<ActiveClaim | null>;
 }
 
 export function createCoordServiceClient(baseUrl: string, token: string): CoordServiceClient {
@@ -50,6 +63,13 @@ export function createCoordServiceClient(baseUrl: string, token: string): CoordS
     },
     release(claimId) {
       return call(`/claims/${claimId}/release`, { method: "POST" });
+    },
+    async queryActiveClaim(resourceId) {
+      const params = new URLSearchParams({ resource_id: resourceId, status: "in_progress" });
+      const result = await call(`/claims?${params.toString()}`, { method: "GET" });
+      if (!result.ok) return null;
+      const claims = (result.body as { claims?: ActiveClaim[] } | undefined)?.claims;
+      return claims?.[0] ?? null;
     },
   };
 }

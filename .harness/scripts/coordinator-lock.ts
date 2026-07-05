@@ -4,11 +4,26 @@
 // 在完成本地文件锁操作之后，会尝试做一次 opt-in 的 dual-write：只有同时设了
 // COORD_SERVICE_URL 和 COORD_SERVICE_TOKEN 环境变量才会发起网络调用；没设 = 和
 // Phase 3 之前完全一样，零行为变化。网络调用失败/coord-service 不可用只打一条
-// info 日志，绝不影响本地文件锁的结果或这条命令的退出码——本地文件锁在 Phase 5
-// 之前始终是唯一权威。
+// info 日志，绝不影响本地文件锁的结果或这条命令的退出码。
+//
+// Phase 5 起，lockAcquire 在这两个环境变量都设了的前提下，会先问 D1
+// "role:coord-main 现在是不是被别人占着、还新不新鲜"——D1 说"被占且新鲜"就直接
+// 拒绝，比本地文件更早一步把关；D1 查不到/查询失败则静默降级为只看本地文件，
+// 绝不因为 coord-service 不可用就卡住协调本身。本地文件锁不删除、继续作为兜底
+// 和唯一权威（未设两个环境变量时）——没有人被强制切过去：只有显式配置了这两个
+// 环境变量的会话，才会真的把 D1 当权威在问。
 import { req } from "./lib/args";
 import { log, die } from "./lib/log";
-import { acquireLock, heartbeat, releaseLock, readLock, isStale, minutesSince, patchLock } from "./lib/lock";
+import {
+  acquireLock,
+  heartbeat,
+  releaseLock,
+  readLock,
+  isStale,
+  minutesSince,
+  patchLock,
+  STALE_THRESHOLD_MINUTES,
+} from "./lib/lock";
 import type { CoordinatorLock } from "./lib/lock";
 import type { Args } from "./lib/args";
 import { createCoordServiceClientFromEnv } from "@repo/coord-service/client";
@@ -36,6 +51,29 @@ export async function lockAcquire(args: Args): Promise<void> {
   const force = !!args.flags["force"];
   const note = args.opts["note"];
 
+  const client = createCoordServiceClientFromEnv();
+
+  // Phase 5 cutover: when dual-write is configured, ask D1 first — it may
+  // know about a holder the local file never learned about (e.g. this machine
+  // never ran acquire for this session before). Unreachable/erroring D1 is
+  // treated as "no opinion," never as a block.
+  if (client && !force) {
+    try {
+      const activeClaim = await client.queryActiveClaim(REMOTE_RESOURCE_ID);
+      if (activeClaim && activeClaim.agent_id !== sessionId) {
+        const staleMinutes = (Date.now() - new Date(activeClaim.last_heartbeat_at).getTime()) / 60000;
+        if (staleMinutes <= STALE_THRESHOLD_MINUTES) {
+          die(
+            `[coord-service] 已有 coordinator "${activeClaim.agent_id}" 持有 role:coord-main 租约` +
+              `（最后心跳 ${staleMinutes.toFixed(1)} 分钟前）。不要重复调度——如确认它已失效，加 --force 抢占。`
+          );
+        }
+      }
+    } catch (e) {
+      log.info(`[coord-service] 查询远端认领状态失败（${(e as Error).message}），降级为仅本地文件锁把关`);
+    }
+  }
+
   let lock: CoordinatorLock;
   try {
     lock = acquireLock(sessionId, { force, note });
@@ -44,7 +82,6 @@ export async function lockAcquire(args: Args): Promise<void> {
   }
   log.ok(`已获取锁：session=${lock.sessionId}`);
 
-  const client = createCoordServiceClientFromEnv();
   if (!client) return;
   try {
     const result = await client.claim(REMOTE_RESOURCE_ID, REMOTE_RESOURCE_TYPE);
