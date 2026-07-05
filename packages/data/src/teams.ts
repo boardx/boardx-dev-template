@@ -75,12 +75,23 @@ export async function addMember(teamId: number, userId: number, role: TeamRole =
   );
 }
 
+/**
+ * 改成员角色（p21-F02 owner 保护，数据层兜底）。SQL 里双向排除 owner：
+ *  - `role <> 'owner'`（现有条件）：排除目标当前就是 owner 的行，防止改/降级 owner；
+ *  - `$3 <> 'owner'`：排除把某行 SET 成 owner，防止绕过路由层白名单凭空造出第二个 owner
+ *    （code review 抓出的回归缺口——只挡"改 owner"不够，还要挡"改成 owner"）。
+ * 即使调用方绕过路由层校验也无法读到/写出 owner；owner 自己转让所有权不在本函数范围内。
+ */
 export async function updateMemberRole(teamId: number, userId: number, role: TeamRole): Promise<void> {
-  await query("UPDATE team_members SET role = $3 WHERE team_id = $1 AND user_id = $2", [teamId, userId, role]);
+  await query(
+    "UPDATE team_members SET role = $3 WHERE team_id = $1 AND user_id = $2 AND role <> 'owner' AND $3 <> 'owner'",
+    [teamId, userId, role]
+  );
 }
 
+/** 移除成员（p21-F02 owner 保护，数据层兜底）。SQL 里直接排除 role='owner' 的目标行。 */
 export async function removeMember(teamId: number, userId: number): Promise<void> {
-  await query("DELETE FROM team_members WHERE team_id = $1 AND user_id = $2", [teamId, userId]);
+  await query("DELETE FROM team_members WHERE team_id = $1 AND user_id = $2 AND role <> 'owner'", [teamId, userId]);
 }
 
 export async function renameTeam(teamId: number, name: string): Promise<void> {

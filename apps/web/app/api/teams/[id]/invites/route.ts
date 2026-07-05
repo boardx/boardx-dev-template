@@ -15,7 +15,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ error: "无权限邀请" }, { status: 403 });
     }
     const body = (await req.json().catch(() => ({}))) as { role?: unknown };
-    const role = typeof body.role === "string" && isTeamRole(body.role) ? body.role : "member";
+    // p21-F02：不允许签发 role=owner 的邀请，避免绕过成员路由的 owner 保护另造一个 owner 实现团队接管。
+    const requestedRole = typeof body.role === "string" && isTeamRole(body.role) ? body.role : "member";
+    const role = requestedRole === "owner" ? "member" : requestedRole;
     const token = generateToken();
     await createTeamInvite(token, teamId, role, expiresAt(TEAM_INVITE_TTL_MS));
     // 邀请令牌可返回（用于生成邀请链接，由邀请人分享）
