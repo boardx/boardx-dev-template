@@ -19,6 +19,16 @@
   新增，记录两条 verification 命令的真实执行结果。
 - 未改动任何运行时代码（apps/web 等一律未动，只读了 `recent/page.tsx` 确认真实行为）。
 
+### 追加（code-reviewer 修复轮，PR #390）
+- code-reviewer 审出真实阻断项：p2-F04 改了 verification 指向新测试，但 status 留
+  `passing`、evidence 仍指向旧测试产出的过期日志——新命令从未真正跑过。
+- 修复：`bash scripts/init-worktree-env.sh` 补齐本 worktree 缺失的隔离 env（此前直接
+  `docker compose up -d` 用默认端口，`next dev` 连不上 DB）；然后实际重跑 F04 三条
+  verification（docker up + migrate + playwright test e2e/home-004-view-recent-page.spec.ts），
+  3/3 通过；新建 `phases/phase-p2-home/evidence/F04.verify.log`（已确认不被 .gitignore
+  挡住）；`feature_list.json` F04 的 `evidence` 字段改为指向这份新日志的真实时间戳。
+  status 保持 `passing`（因为验证后确认真实成立，非未验证强留）。
+
 ## 仍损坏或未验证
 - F06 尚未经 `pnpm harness verify` 门控转 passing——这一步按硬约束需要 coord/verify 脚本执行，
   不是本 agent 自行判定。

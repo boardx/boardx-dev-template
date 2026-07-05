@@ -68,8 +68,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/home-004-view-recent-page.spec.ts"
       ],
-      "evidence": "evidence/F04.verify.log @ 2026-06-29T19:48:18.599Z",
-      "notes": "uc-home-004。【2026-07-05 p21-F06 修正】此前本条 user_visible_behavior/verification 描述的是「占位页」，但 apps/web/app/(app)/recent/page.tsx 的真实实现是复用 /api/boards?scope=recent 的真实最近白板列表（loading/empty/error/有数据四态），verification 此前指向的 e2e/recent-placeholder.spec.ts 在仓库中不存在。已改为如实描述真实实现，verification 改指向真实存在且测试该真实行为的 apps/web/e2e/home-004-view-recent-page.spec.ts。evidence 时间戳沿用历史记录，未重新执行（本次仅做字段如实修正，不改代码）。"
+      "evidence": "evidence/F04.verify.log @ 2026-07-05T00:43:41.000Z",
+      "notes": "uc-home-004。【2026-07-05 p21-F06 修正】此前本条 user_visible_behavior/verification 描述的是「占位页」，但 apps/web/app/(app)/recent/page.tsx 的真实实现是复用 /api/boards?scope=recent 的真实最近白板列表（loading/empty/error/有数据四态），verification 此前指向的 e2e/recent-placeholder.spec.ts 在仓库中不存在。已改为如实描述真实实现，verification 改指向真实存在且测试该真实行为的 apps/web/e2e/home-004-view-recent-page.spec.ts，并实际重跑三条 verification 命令（docker compose up -d + migrate + playwright test），3/3 用例通过，真实输出落盘到 evidence/F04.verify.log，evidence 字段同步更新为新日志的时间戳，不再指向旧命令产出的过期证据（code-reviewer 在 PR #390 发现的证据脱钩问题，已修复）。"
     },
     {
       "id": "F05",
