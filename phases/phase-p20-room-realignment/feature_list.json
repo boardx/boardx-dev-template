@@ -118,9 +118,9 @@
       "title": "删除房间的级联契约（Danger Zone）",
       "user_visible_behavior": "owner 打开房间设置看到 DANGER ZONE（文案含 Permanently）；点击 Delete room 弹二次确认（data-testid=room-delete-confirm），弹窗逐项列出将删除的内容类别与真实数量（X boards、Y chats、Z files、surveys，data-testid=room-delete-cascade-summary），需输入完全一致的房间名确认按钮才可用（不匹配时禁用）；确认后 DELETE /api/rooms/[id] 级联删除 boards（含 board_items）、room_chats（含消息）、room_files、room_members、房间问卷关联，跳回房间列表并 toast；admin/member 在 UI 无入口且直调 DELETE 返回 403；删除后原房间及其下 boards/chats/files 各资源 API 均返回 404。",
       "design_ref": "prototype:Room Settings dialog DANGER ZONE（'and its boards'）",
-      "status": "not_started",
+      "status": "in_progress",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-room-2",
       "capability": "CAP-WEB",
       "depends_on": [
         "F01",

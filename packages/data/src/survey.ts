@@ -204,6 +204,15 @@ export async function listRoomSurveys(roomId: number): Promise<SurveyListItem[]>
   );
 }
 
+/** 房间下问卷数量（scope='room'，p20/F06 删除房间确认弹窗的级联数量摘要）。 */
+export async function countRoomSurveys(roomId: number): Promise<number> {
+  const rows = await query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count FROM surveys WHERE scope = 'room' AND room_id = $1`,
+    [roomId]
+  );
+  return Number(rows[0]?.count ?? 0);
+}
+
 /** 用户能否查看某问卷：创建者的 private，当前团队上下文内的 team 成员，或该问卷所属房间的成员。 */
 export async function canViewSurvey(
   surveyId: number,

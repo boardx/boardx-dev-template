@@ -68,6 +68,14 @@ export async function listBoardsInRoom(roomId: number, q?: string): Promise<Boar
   );
 }
 
+/** 房间下白板数量（p20/F06 删除房间确认弹窗的级联数量摘要）。 */
+export async function countBoardsInRoom(roomId: number): Promise<number> {
+  const rows = await query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM boards WHERE room_id = $1`, [
+    roomId,
+  ]);
+  return Number(rows[0]?.count ?? 0);
+}
+
 /** 记录一次访问（upsert，刷新 visited_at），供「最近访问」排序。 */
 export async function recordBoardVisit(boardId: number, userId: number): Promise<void> {
   await query(

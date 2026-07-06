@@ -1,0 +1,93 @@
+=== F06 verify.log — p20/F06 删除房间的级联契约（Danger Zone） ===
+date: 2026-07-06T23:47:42Z
+owner: wrk-room-2
+
+--- $ docker compose -f infra/docker-compose.yml up -d ---
+ Container worker-wrk-room-2-p20-f06-delete-contrac-postgres-1 Running 
+ Container worker-wrk-room-2-p20-f06-delete-contrac-redis-1 Running 
+ Container worker-wrk-room-2-p20-f06-delete-contrac-minio-1 Running 
+
+--- $ pnpm --filter @repo/data run migrate ---
+✓ 已应用，跳过：022_retire_room_canvas.sql
+✓ 已应用，跳过：023_outbound_emails.sql
+✓ 已应用，跳过：024_room_favorites.sql
+✓ 已应用，跳过：025_room_invites.sql
+✓ 已应用，跳过：026_room_files.sql
+✓ 已应用，跳过：026_survey_room_scope.sql
+✓ 已应用，跳过：027_ava_research_sessions.sql
+✓ 已应用，跳过：028_ava_research_clarify_stage.sql
+✓ 已应用，跳过：029_email_confirmation.sql
+迁移完成。
+
+--- $ pnpm --filter @repo/web exec playwright test e2e/room-rr-006-delete-contract.spec.ts ---
+
+Running 3 tests using 1 worker
+
+  ✓  1 [chromium] › room-rr-006-delete-contract.spec.ts:102:5 › owner 在 Members 页看到 DANGER ZONE，弹窗数量摘要真实，房间名不匹配时确认按钮禁用 (6.9s)
+  ✓  2 [chromium] › room-rr-006-delete-contract.spec.ts:138:5 › admin/member 在 Members 页无 DANGER ZONE 入口；直调 DELETE 仍 403 (2.7s)
+  ✓  3 [chromium] › room-rr-006-delete-contract.spec.ts:164:5 › 确认后级联删除 boards/board_items/chats/messages/files/members/survey 关联，跳回列表并 toast，各资源 404 (4.8s)
+
+  3 passed (18.4s)
+
+--- 回归：room-rr-001-detail-shell / room-manage / room-rr-007-permission-matrix / room-rr-003-room-files / room-rr-008-room-survey ---
+
+Running 32 tests using 1 worker
+
+  ✓  1 [chromium] › room-manage.spec.ts:14:5 › owner 加/移成员、改名改可见性、删除；非 owner 403 (1.6s)
+  ✓  2 [chromium] › room-rr-001-detail-shell.spec.ts:24:5 › 进入 /rooms/[id] 默认落 Boards tab，壳完整（面包屑/房间名/pill/头像/五 tab） (2.0s)
+  ✓  3 [chromium] › room-rr-001-detail-shell.spec.ts:46:5 › tab 切换 URL 同步；直链打开对应 tab 高亮；Files/Survey 有占位内容 (5.1s)
+  ✓  4 [chromium] › room-rr-001-detail-shell.spec.ts:69:5 › member 角色看不到 Invite 按钮；owner 看得到 (1.1s)
+  ✓  5 [chromium] › room-rr-001-detail-shell.spec.ts:90:5 › 非成员访问显示 403 态并可返回房间列表 (3.6s)
+  ✓  6 [chromium] › room-rr-003-room-files.spec.ts:94:5 › 房间级文件库跨线程可见：不打开任何聊天线程也能管理文件，且同一文件出现在所有线程面板 (7.2s)
+  ✓  7 [chromium] › room-rr-003-room-files.spec.ts:140:5 › 上传（拖拽区/预签名直传）UI 全链路：文件出现在列表；上传后可通过搜索 + 来源过滤定位 (1.4s)
+  ✓  8 [chromium] › room-rr-003-room-files.spec.ts:174:5 › 按来源线程过滤：只勾选某线程时只看到该线程标注的文件 (1.2s)
+  ✓  9 [chromium] › room-rr-003-room-files.spec.ts:196:5 › 预览：签发签名 URL 且真实可用（API 级，证明预签名机制本身是真实的，非 mock） (885ms)
+  ✓  10 [chromium] › room-rr-003-room-files.spec.ts:210:5 › 预览：签名 URL 过期后真实拒绝访问（API 级，1 秒过期窗口，证明过期机制真实生效） (1.8s)
+  ✓  11 [chromium] › room-rr-003-room-files.spec.ts:225:5 › UI：预览过期后展示过期提示文案，点击刷新换取新签名 URL 后可正常预览（契约缺口②，本 feature 自己的边界） (1.1s)
+  ✓  12 [chromium] › room-rr-003-room-files.spec.ts:267:5 › 软删二次确认：取消保留文件行，确认后立即从列表移除 (1.6s)
+  ✓  13 [chromium] › room-rr-003-room-files.spec.ts:303:5 › 删除权限矩阵：member 删他人文件 403；上传者本人删自己文件成功；admin 删他人文件成功（契约缺口①，承接 F07） (1.2s)
+  ✓  14 [chromium] › room-rr-003-room-files.spec.ts:346:5 › 不支持的文件类型上传 → 行内提示 Unsupported file type，且不落库 (898ms)
+  ✓  15 [chromium] › room-rr-003-room-files.spec.ts:370:5 › 安全回归：confirm 忽略客户端伪造的 objectKey，storage_path 恒由服务端按 roomId+fileId 重新推导 (307ms)
+  ✓  16 [chromium] › room-rr-003-room-files.spec.ts:404:5 › 安全回归：confirm 里 chatThreadId 必须真的属于当前房间，否则 400 (271ms)
+  ✓  17 [chromium] › room-rr-003-room-files.spec.ts:425:5 › 未登录访问 Files tab / API → 房间壳展示未登录提示，API 返回 401 (1.0s)
+  ✓  18 [chromium] › room-rr-007-permission-matrix.spec.ts:52:5 › 矩阵：查看与创建 — member 可看房间/成员/boards/chats，可建 board 和 chat (603ms)
+  ✓  19 [chromium] › room-rr-007-permission-matrix.spec.ts:68:5 › 矩阵：邀请/移除 member — admin ✅，member ❌(403) (598ms)
+  ✓  20 [chromium] › room-rr-007-permission-matrix.spec.ts:89:5 › 矩阵：提升/降级 admin — owner ✅，admin ❌(403)，member ❌(403) (573ms)
+  ✓  21 [chromium] › room-rr-007-permission-matrix.spec.ts:121:5 › 矩阵：改房间名/可见性 — owner ✅，admin ✅（新放宽），member ❌(403) (426ms)
+  ✓  22 [chromium] › room-rr-007-permission-matrix.spec.ts:142:5 › 矩阵：删除房间 / 动 owner — admin ❌(403)，member ❌(403)，owner ✅ (607ms)
+  ✓  23 [chromium] › room-rr-007-permission-matrix.spec.ts:172:5 › UI：admin 在成员页看到邀请区，但看不到角色下拉；admin 行无移除按钮，member 行有 (1.6s)
+  ✓  24 [chromium] › room-rr-007-permission-matrix.spec.ts:198:5 › UI：member 在成员页看不到任何管理控件（邀请/角色/移除） (1.2s)
+  ✓  25 [chromium] › room-rr-007-permission-matrix.spec.ts:213:5 › UI：owner 在成员页对非 owner 行看到角色下拉与移除按钮 (1.2s)
+  ✓  26 [chromium] › room-rr-008-room-survey.spec.ts:70:5 › 房间 Survey tab 只列本房间问卷，不嵌入 Team Surveys 全集 (1.5s)
+  ✓  27 [chromium] › room-rr-008-room-survey.spec.ts:99:5 › owner/admin 可新建/暂停/删除房间问卷；member 无管理按钮但可答题 (2.6s)
+  ✓  28 [chromium] › room-rr-008-room-survey.spec.ts:136:5 › tab 内 View team surveys 链接只跳转全局 /surveys (1.4s)
+  ✓  29 [chromium] › room-rr-008-room-survey.spec.ts:149:5 › 房间角色对团队问卷的管理请求返回 403（不能越权管理团队资源） (1.5s)
+  ✓  30 [chromium] › room-rr-008-room-survey.spec.ts:175:5 › 非房间成员访问房间问卷列表 403；member 创建房间问卷 403 (506ms)
+  ✓  31 [chromium] › room-rr-008-room-survey.spec.ts:196:5 › 全局 /surveys 列表展示 scope 徽章（My/Team/Room），Room 问卷标注所属房间名 (1.1s)
+  ✓  32 [chromium] › room-rr-008-room-survey.spec.ts:210:5 › 迁移不变量：存量问卷 room_id=null 仍视为团队问卷（POST 不传 roomId 时默认 private，不受迁移影响） (580ms)
+
+  Slow test file: [chromium] › room-rr-003-room-files.spec.ts (19.0s)
+  Consider splitting slow test files to speed up parallel execution
+  32 passed (52.1s)
+
+--- $ pnpm turbo run typecheck lint test (verify:base 等价) ---
+@repo/web:test:  ✓ lib/canvas-snap.test.ts  (14 tests) 5ms
+@repo/web:test:  ✓ app/api/ai-store/items/[id]/route.test.ts  (2 tests) 6ms
+@repo/web:test:  ✓ app/api/ava/threads/[id]/route.test.ts  (4 tests) 5ms
+@repo/web:test:  ✓ app/api/boards/[id]/ai-chat/route.test.ts  (3 tests) 16ms
+@repo/web:test: 
+@repo/web:test:  Test Files  9 passed (9)
+@repo/web:test:       Tests  40 passed (40)
+@repo/web:test:    Start at  07:47:11
+@repo/web:test:    Duration  6.09s (transform 3.31s, setup 2ms, collect 6.62s, tests 69ms, environment 7ms, prepare 8.17s)
+@repo/web:test: 
+@repo/web:typecheck: cache hit, replaying logs df36cc6dd4a71281
+@repo/web:typecheck: 
+@repo/web:typecheck: > @repo/web@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-a4115c916811af91b/apps/web
+@repo/web:typecheck: > tsc --noEmit
+@repo/web:typecheck: 
+
+ Tasks:    48 successful, 48 total
+Cached:    48 cached, 48 total
+  Time:    341ms >>> FULL TURBO
+

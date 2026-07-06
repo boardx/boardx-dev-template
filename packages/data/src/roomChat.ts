@@ -60,6 +60,14 @@ export async function deleteRoomChat(chatId: number): Promise<void> {
   await query(`DELETE FROM room_chats WHERE id = $1`, [chatId]);
 }
 
+/** 房间下聊天线程数量（p20/F06 删除房间确认弹窗的级联数量摘要）。 */
+export async function countRoomChats(roomId: number): Promise<number> {
+  const rows = await query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM room_chats WHERE room_id = $1`, [
+    roomId,
+  ]);
+  return Number(rows[0]?.count ?? 0);
+}
+
 // ─── 消息体（room_chat_messages / P9 uc-room-chat-003）──────────────────────
 
 export type RoomChatRole = "user" | "assistant";
