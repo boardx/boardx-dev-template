@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { canViewRoom, getRoomChat, listRoomChatMessages, sendRoomChatMessage } from "@repo/data";
+import {
+  canViewRoom,
+  getRoomChat,
+  getRoomAiInstruction,
+  listRoomChatMessages,
+  sendRoomChatMessage,
+} from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -41,7 +47,9 @@ export async function POST(req: Request, { params }: { params: { id: string; cha
     const body = (await req.json().catch(() => ({}))) as { text?: string };
     const text = (body.text ?? "").trim();
     if (!text) return NextResponse.json({ error: "消息不能为空" }, { status: 400 });
-    const result = await sendRoomChatMessage(chat.id, roomId, text);
+    // uc-rr-010（p20/F11）：同房间全部线程共享同一 ai_instruction，注入系统提示（桩层）。
+    const aiInstruction = await getRoomAiInstruction(roomId);
+    const result = await sendRoomChatMessage(chat.id, roomId, text, aiInstruction);
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

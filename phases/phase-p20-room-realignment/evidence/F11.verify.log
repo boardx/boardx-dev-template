@@ -1,0 +1,154 @@
+=== F11 verify log — 2026-07-06T23:44:01Z ===
+
+--- docker compose -f infra/docker-compose.yml up -d ---
+ Container worker-wrk-room-1-p20-f11-room-ai-contex-redis-1 Running 
+ Container worker-wrk-room-1-p20-f11-room-ai-contex-minio-1 Running 
+ Container worker-wrk-room-1-p20-f11-room-ai-contex-postgres-1 Running 
+
+--- pnpm --filter @repo/data run migrate ---
+
+> @repo/data@0.1.0 migrate /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-add5e905ae636543f/packages/data
+> sh -c 'set -a; [ -f ../../apps/web/.env.local ] && . ../../apps/web/.env.local; set +a; tsx src/migrate.ts'
+
+✓ 已应用，跳过：001_init.sql
+✓ 已应用，跳过：002_auth.sql
+✓ 已应用，跳过：003_team.sql
+✓ 已应用，跳过：004_room.sql
+✓ 已应用，跳过：005_canvas.sql
+✓ 已应用，跳过：006_profile.sql
+✓ 已应用，跳过：007_board.sql
+✓ 已应用，跳过：008_board_visits.sql
+✓ 已应用，跳过：009_board_favorites.sql
+✓ 已应用，跳过：010_room_chat.sql
+✓ 已应用，跳过：011_board_settings.sql
+✓ 已应用，跳过：012_board_items_board_id.sql
+✓ 已应用，跳过：013_board_items_color.sql
+✓ 已应用，跳过：014_feedback.sql
+✓ 已应用，跳过：014_room_chat_messages.sql
+✓ 已应用，跳过：015_team_general.sql
+✓ 已应用，跳过：016_admin_role.sql
+✓ 已应用，跳过：016_ai_store.sql
+✓ 已应用，跳过：016_ava_chat.sql
+✓ 已应用，跳过：016_credits.sql
+✓ 已应用，跳过：016_kb_files.sql
+✓ 已应用，跳过：016_survey.sql
+✓ 已应用，跳过：017_ai_store_item_config.sql
+✓ 已应用，跳过：017_payment_orders.sql
+✓ 已应用，跳过：017_studio_artifacts.sql
+✓ 已应用，跳过：017_survey_templates.sql
+✓ 已应用，跳过：018_ai_store_favorites.sql
+✓ 已应用，跳过：018_ava_message_attachments.sql
+✓ 已应用，跳过：018_ava_thread_share.sql
+✓ 已应用，跳过：018_user_plan.sql
+✓ 已应用，跳过：019_ai_store_subscriptions.sql
+✓ 已应用，跳过：019_credit_transaction_idempotency.sql
+✓ 已应用，跳过：019_presentation_artifacts.sql
+✓ 已应用，跳过：020_ava_message_feedback.sql
+✓ 已应用，跳过：021_ai_store_share.sql
+✓ 已应用，跳过：021_presentation_revisions.sql
+✓ 已应用，跳过：022_retire_room_canvas.sql
+✓ 已应用，跳过：023_outbound_emails.sql
+✓ 已应用，跳过：024_room_favorites.sql
+✓ 已应用，跳过：025_room_invites.sql
+✓ 已应用，跳过：026_room_files.sql
+✓ 已应用，跳过：026_survey_room_scope.sql
+✓ 已应用，跳过：027_ava_research_sessions.sql
+✓ 已应用，跳过：028_ava_research_clarify_stage.sql
+✓ 已应用，跳过：029_email_confirmation.sql
+✓ 已应用，跳过：030_room_ai_context.sql
+迁移完成。
+
+--- pnpm --filter @repo/data run test ---
+
+> @repo/data@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-add5e905ae636543f/packages/data
+> vitest run
+
+
+ RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-add5e905ae636543f/packages/data
+
+ ✓ src/aiStore.test.ts  (15 tests) 5ms
+ ✓ src/index.test.ts  (3 tests) 1ms
+ ✓ src/roomChat.test.ts  (4 tests) 2ms
+ ✓ src/avaChat.test.ts  (5 tests) 2ms
+ ✓ src/survey.test.ts  (4 tests) 2ms
+ ✓ src/board.test.ts  (9 tests) 4ms
+
+ Test Files  6 passed (6)
+      Tests  40 passed (40)
+   Start at  07:44:01
+   Duration  604ms (transform 603ms, setup 0ms, collect 1.11s, tests 16ms, environment 1ms, prepare 771ms)
+
+
+--- pnpm --filter @repo/web exec playwright test e2e/room-rr-011-room-ai-context.spec.ts ---
+
+Running 7 tests using 1 worker
+
+  ✓  1 [chromium] › room-rr-011-room-ai-context.spec.ts:52:5 › owner/admin 可 PATCH 保存 description + ai_instruction；字段持久化 (1.5s)
+  ✓  2 [chromium] › room-rr-011-room-ai-context.spec.ts:75:5 › member 直调 PATCH 改 description/ai_instruction → 403（与 F07 权限矩阵口径一致） (410ms)
+  ✓  3 [chromium] › room-rr-011-room-ai-context.spec.ts:86:5 › ai_instruction 超过 4000 字符 → 400 校验拒绝 (332ms)
+  ✓  4 [chromium] › room-rr-011-room-ai-context.spec.ts:98:5 › 房间任一聊天线程发消息，ai_instruction 注入系统提示（桩层断言注入内容，非模型效果验证）；同房间全部线程共享同一指令 (1.6s)
+  ✓  5 [chromium] › room-rr-011-room-ai-context.spec.ts:126:5 › UI：owner 在 Members 页 About & AI 区块编辑并保存后，字段持久化 + 房间页头展示 description (5.6s)
+  ✓  6 [chromium] › room-rr-011-room-ai-context.spec.ts:153:5 › UI：ai_instruction 超长时行内提示，保存按钮禁用 (1.5s)
+  ✓  7 [chromium] › room-rr-011-room-ai-context.spec.ts:167:5 › UI：member 在 Members 页看不到 About & AI 区块 (1.4s)
+
+  7 passed (16.2s)
+
+--- regression: room-rr-001-detail-shell.spec.ts room-rr-007-permission-matrix.spec.ts room-003-invite-manage-room-members.spec.ts ---
+
+Running 18 tests using 1 worker
+
+  ✓  1 [chromium] › room-003-invite-manage-room-members.spec.ts:26:5 › 房间管理者看到成员列表 + 邮箱邀请已注册用户加入 (4.8s)
+  ✓  2 [chromium] › room-003-invite-manage-room-members.spec.ts:49:5 › 未注册邮箱 → 邀请流程；空邮箱与无效邮箱 → 错误提示 (1.0s)
+  ✓  3 [chromium] › room-003-invite-manage-room-members.spec.ts:65:5 › 管理者改成员角色 / 移除成员，列表随之更新 (1.7s)
+  ✓  4 [chromium] › room-003-invite-manage-room-members.spec.ts:86:5 › 普通成员 → 只读：无邀请区，有只读提示 (1.3s)
+  ✓  5 [chromium] › room-003-invite-manage-room-members.spec.ts:103:5 › 未登录访问 /rooms/[id]/members → 跳 /login (1.3s)
+  ✓  6 [chromium] › room-003-invite-manage-room-members.spec.ts:108:5 › API：owner 不可被移除；admin 不能移除另一个 admin (717ms)
+  ✓  7 [chromium] › room-rr-001-detail-shell.spec.ts:24:5 › 进入 /rooms/[id] 默认落 Boards tab，壳完整（面包屑/房间名/pill/头像/五 tab） (5.5s)
+  ✓  8 [chromium] › room-rr-001-detail-shell.spec.ts:46:5 › tab 切换 URL 同步；直链打开对应 tab 高亮；Files/Survey 有占位内容 (11.0s)
+  ✓  9 [chromium] › room-rr-001-detail-shell.spec.ts:69:5 › member 角色看不到 Invite 按钮；owner 看得到 (1.9s)
+  ✓  10 [chromium] › room-rr-001-detail-shell.spec.ts:90:5 › 非成员访问显示 403 态并可返回房间列表 (2.9s)
+  ✓  11 [chromium] › room-rr-007-permission-matrix.spec.ts:52:5 › 矩阵：查看与创建 — member 可看房间/成员/boards/chats，可建 board 和 chat (611ms)
+  ✓  12 [chromium] › room-rr-007-permission-matrix.spec.ts:68:5 › 矩阵：邀请/移除 member — admin ✅，member ❌(403) (585ms)
+  ✓  13 [chromium] › room-rr-007-permission-matrix.spec.ts:89:5 › 矩阵：提升/降级 admin — owner ✅，admin ❌(403)，member ❌(403) (1.0s)
+  ✓  14 [chromium] › room-rr-007-permission-matrix.spec.ts:121:5 › 矩阵：改房间名/可见性 — owner ✅，admin ✅（新放宽），member ❌(403) (627ms)
+  ✓  15 [chromium] › room-rr-007-permission-matrix.spec.ts:142:5 › 矩阵：删除房间 / 动 owner — admin ❌(403)，member ❌(403)，owner ✅ (786ms)
+  ✓  16 [chromium] › room-rr-007-permission-matrix.spec.ts:172:5 › UI：admin 在成员页看到邀请区，但看不到角色下拉；admin 行无移除按钮，member 行有 (3.0s)
+  ✓  17 [chromium] › room-rr-007-permission-matrix.spec.ts:198:5 › UI：member 在成员页看不到任何管理控件（邀请/角色/移除） (2.8s)
+  ✓  18 [chromium] › room-rr-007-permission-matrix.spec.ts:213:5 › UI：owner 在成员页对非 owner 行看到角色下拉与移除按钮 (1.7s)
+
+  Slow test file: [chromium] › room-rr-001-detail-shell.spec.ts (21.3s)
+  Consider splitting slow test files to speed up parallel execution
+  18 passed (46.9s)
+
+--- design lint (pnpm run lint) ---
+
+> @repo/web@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-add5e905ae636543f/apps/web
+> bash scripts/lint-design.sh
+
+· 扫描范围：app/ + components/（含 ava/ai-store/surveys/admin/studio/presentations 等模块）
+⚠ LABEL-LANG-MIX(同文件内中英混用，警告，不拦截；修复归属 phase-p17 reskin)：
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:163:  { id: "understand-file", label: "理解文件", prompt: "帮我理解这份材料，并总结关键结论。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:164:  { id: "draft-email", label: "起草邮件", prompt: "帮我起草一封项目进展同步邮件。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:165:  { id: "summarize-trends", label: "总结趋势", prompt: "帮我总结最近用户反馈中的主要趋势。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:166:  { id: "brainstorm", label: "头脑风暴", prompt: "围绕这个目标帮我头脑风暴 5 个可执行方案。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:172:  { id: "make-tasks", label: "拆成任务", prompt: "把上面的建议拆成可执行任务，并按优先级排序。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:173:  { id: "find-risks", label: "识别风险", prompt: "基于上面的回复，列出主要风险和缓解措施。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:174:  { id: "shorten", label: "压缩摘要", prompt: "把上面的回复压缩成 5 条要点。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2512:  if (diffDays === 0) return { key: "today", label: "Today" };
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2513:  if (diffDays === 1) return { key: "yesterday", label: "Yesterday" };
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2514:  if (diffDays < 7) return { key: "last-7-days", label: "Last 7 days" };
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2515:  return { key: "older", label: "Older" };
+⚠ LABEL-LANG-MIX(跨文件中英混用，警告，不拦截；修复归属 phase-p17 reskin)：以下文件整体用中文 label，而以下文件整体用英文 label，同一层级 UI 组件的文案语言应统一：
+    LABEL-LANG-MIX: app/(app)/rooms/page.tsx:90:    { v: "grid", icon: LayoutGrid, label: "网格视图" },
+    LABEL-LANG-MIX: components/board/board-canvas.tsx:162:  { value: "sans-serif", label: "无衬线" },
+    LABEL-LANG-MIX: components/board/sync-status.tsx:14:  synced: { label: "已同步", dot: "bg-tag-green", text: "text-success" },
+    LABEL-LANG-MIX: components/studio/studio-panel.tsx:29:  { type: "audio", label: "音频概览", icon: AudioLines },
+    LABEL-LANG-MIX: app/(app)/account/page.tsx:15:  { key: "personal", label: "Personal info", icon: User },
+    LABEL-LANG-MIX: app/(app)/admin/admin-home.tsx:113:        { testKey: "users", label: "Total users", stat: stats.users },
+    LABEL-LANG-MIX: app/(app)/admin/ai-store/featured/page.tsx:33:  { key: "", label: "All approved" },
+    LABEL-LANG-MIX: app/(app)/admin/ai-store/review/page.tsx:36:  { key: "", label: "All" },
+    LABEL-LANG-MIX: app/(app)/credits/page.tsx:237:              <SummaryCard value={fmt(wallet.balance)} label="Current balance" />
+    LABEL-LANG-MIX: app/(app)/rooms/[id]/layout.tsx:24:  { key: "boards", label: "Boards", segment: "boards" },
+    LABEL-LANG-MIX: components/app-shell/sidebar.tsx:40:  { label: "Home", icon: Home, href: "/" },
+  示例（Board 工具条 vs Sidebar 导航）：见 components/board/board-canvas.tsx 与 components/app-shell/sidebar.tsx
+✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性/文案语言一致性）

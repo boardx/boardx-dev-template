@@ -11,6 +11,7 @@ interface RoomInfo {
   id: number | string;
   name: string;
   visibility: "private" | "team";
+  description?: string | null;
 }
 
 interface MemberRow {
@@ -171,6 +172,12 @@ export default function RoomShellLayout({ children }: { children: React.ReactNod
             )}
           </div>
         </div>
+        {/* uc-rr-010（p20/F11）：房间详情页头展示 description，无则不渲染该行 */}
+        {room?.description && (
+          <p data-testid="room-header-description" className="mb-3 max-w-2xl truncate text-13 text-muted-foreground">
+            {room.description}
+          </p>
+        )}
         <div className="flex gap-1 rounded-t-xl" role="tablist">
           {TABS.map((t) => {
             const active = activeSegment === t.segment;

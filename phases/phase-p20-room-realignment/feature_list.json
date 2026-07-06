@@ -232,9 +232,9 @@
       "title": "Room AI 上下文字段回补（description + ai_instruction）",
       "user_visible_behavior": "rooms 表加 description、ai_instruction 两个 text 字段；owner/admin 在房间设置 About & AI 区块（data-testid=room-settings-description、room-settings-ai-instruction）编辑并保存（PATCH /api/rooms/[id]）；member 直调 PATCH 返回 403（与 F07 权限矩阵口径一致），ai_instruction >4000 字符被校验拒绝并行内提示；保存后房间详情页头/Boards 空态展示 description；房间任一聊天线程发消息时 ai_instruction 注入系统提示，桩层响应可断言注入内容（同房间全部线程共享同一指令）。",
       "design_ref": "oldcode room.schema.ts（description/aiInstruction）；设置表单沿用现有 token，无原型屏",
-      "status": "not_started",
+      "status": "in_progress",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-room-1",
       "capability": "CAP-AI",
       "depends_on": [
         "F01",

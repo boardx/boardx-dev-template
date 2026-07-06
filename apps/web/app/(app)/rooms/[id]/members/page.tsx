@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import RoomAboutAiSection from "./RoomAboutAiSection";
 
 type Role = "owner" | "admin" | "member";
 
@@ -61,6 +62,9 @@ export default function RoomMembersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("");
+  // uc-rr-010（p20/F11）：About & AI 区块所需的房间字段，独立于成员列表加载
+  const [roomDescription, setRoomDescription] = useState("");
+  const [roomAiInstruction, setRoomAiInstruction] = useState("");
 
   // 邀请（邮箱标签）
   const [emailDraft, setEmailDraft] = useState("");
@@ -98,8 +102,18 @@ export default function RoomMembersPage() {
     setLoading(false);
   }
 
+  // uc-rr-010（p20/F11）：单独取房间详情里的 description/ai_instruction，供 About & AI 区块初始化
+  async function loadRoomAiContext() {
+    const res = await fetch(`/api/rooms/${roomId}`);
+    if (!res.ok) return;
+    const d = await res.json();
+    setRoomDescription(d.room?.description ?? "");
+    setRoomAiInstruction(d.room?.ai_instruction ?? "");
+  }
+
   useEffect(() => {
     void load();
+    void loadRoomAiContext();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
 
@@ -357,6 +371,16 @@ export default function RoomMembersPage() {
           你是房间成员，只能查看成员列表；仅 owner / admin 可邀请或管理成员。
         </p>
       )}
+
+      {/* ===== p20/F11 About & AI 区块 start（独立组件，勿与其他区块交织；DANGER ZONE 等后续区块请另起一段，别插进这两条注释中间）===== */}
+      {!loading && canManage && (
+        <RoomAboutAiSection
+          roomId={roomId}
+          initialDescription={roomDescription}
+          initialAiInstruction={roomAiInstruction}
+        />
+      )}
+      {/* ===== p20/F11 About & AI 区块 end ===== */}
 
       {/* 搜索 */}
       {!loading && members.length > 0 && (
