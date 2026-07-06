@@ -498,3 +498,49 @@ turbo 2.5.0
  WARNING  no output files found for task @repo/queue#build. Please check your `outputs` key in `turbo.json`
  WARNING  no output files found for task @repo/storage#build. Please check your `outputs` key in `turbo.json`
  WARNING  no output files found for task @repo/tools#build. Please check your `outputs` key in `turbo.json`
+
+============================================================
+【本轮追加】rebase 后回归修复 — 2026-07-06（canvas-worker-1）
+============================================================
+
+背景：F21 rebase 到最新 main 后，e2e/widget-style.spec.ts:102
+「应用格式：设置源便签样式 → 进入取样模式 → 点击目标便签 → 样式复制过去」
+偶发失败（expect.poll bold/border/opacity 超时），独立单测约 4/5 概率通过、
+1/5 概率失败，非并行负载假象——多次隔离运行 + trace/console 诊断定位到
+真实竞态。
+
+根因：
+components/board/board-canvas.tsx 里 uc-canvas-005 的实时协作轮询循环
+poll()（每 1500ms 跑一次，拉服务端 item 快照合并进本地 items）只在本地
+editingId/draggingRef 时跳过合并，没有像 load()（F19 已修）那样检查
+patchQueue 是否还有未落地的 PATCH。当用户（或 Playwright，点击速度远快于
+真人）连续应用 bold/border/opacity 等样式改动、PATCH 请求仍在途中时，
+若 poll() 恰好在这个窗口内拿到服务端旧快照并 setItems 覆盖，会把还没
+确认的乐观更新冲掉。若此时点击「应用格式」取样源对象，取样到的就是被
+poll() 冲掉的中间态样式（缺 bold/border/opacity），导致复制到目标对象
+的格式不完整——这是应用层真实回归，不是 applyFormatColor/onFabricSelection
+逻辑本身的问题（诊断过程中反复验证过这两处逻辑对同一份 source.color 计算
+结果始终正确）。
+
+修复：
+- components/board/board-canvas.tsx：poll() 的合并前/合并后判断都加上
+  patchQueue.current.size === 0（与 load() 已有防线一致），有 PATCH 在途
+  时本轮跳过合并，下个周期再试。
+- e2e/widget-style.spec.ts：同一测试里对服务端 color 的最终断言此前是
+  一次性 page.request.get(...)，与本文件其它同类断言（39-59 行/70-78 行）
+  的 expect.poll 写法不一致，属于测试自身的真实薄弱点（client 侧乐观更新
+  先于服务端落库变为目标值，一次性 GET 有极小概率读到 PATCH 尚在途中的
+  旧值）。改为 expect.poll，与既有约定对齐，不改变断言内容/期望值。
+
+验证：
+- e2e/widget-style.spec.ts:102 单独隔离运行 20+ 次（含 8 核以上机器
+  load average ~23-25 的高负载环境下）无一次因 bold/border/opacity
+  丢失而失败。
+- pnpm exec playwright test e2e/widget-style.spec.ts —— 7/7 passed。
+- pnpm exec playwright test e2e/widget-style.spec.ts e2e/widget-text.spec.ts
+  e2e/widget-shape.spec.ts e2e/widget-lock-delete-refresh.spec.ts
+  e2e/widget-active-selection.spec.ts e2e/canvas-select.spec.ts
+  —— 38/39 passed；唯一失败
+  widget-lock-delete-refresh.spec.ts:176（reloadable 断言）经 git stash
+  验证在完全不含本轮改动的代码上同样复现，确认是与本次修复无关的
+  预先存在问题，不在本次改动范围内处理。
