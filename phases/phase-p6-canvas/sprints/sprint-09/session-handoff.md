@@ -128,6 +128,33 @@
   左对齐、右/顶/底/水平居中/垂直居中、等间距水平分布（3 对象几何断言）、对齐遇锁定对象、
   编组+整体选中+整体删除、解组恢复独立选择、编组入口显隐规则。
 
+## Rebase 后追加修复（F21，passing 之后发现，不可逆状态未变）
+F21 已 rebase 到最新 main 两次；rebase 期间 poll() 实时同步会用服务端快照整体覆盖 `items`,
+先修了一版 poll() 竞态（commit 3fc6694）。但压测 `widget-style.spec.ts:102`（应用格式）时
+仍以约 50% 概率失败（本地 7 次跑法 3 通过/4 失败），排查发现真正病根是与 p6:F16（连接线）
+在另一分支各自独立踩到的同一个 `applyColors` 竞态：`applyColors` 原来接受"预先算好的
+updates 数组"，数组是从 `items` state closure 算出来的；同一交互里连续调用多个样式相关
+setter（含本 feature 新增的 `groupSelected`/`ungroupSelected`、以及 F19 的 `applyFormatTo`）
+时，closure 可能滞后于上一次调用刚 setState 完的最新值，导致除最后一次外的样式改动静默
+丢失。修复：把 `applyColors` 签名从"入参预算好的 updates 数组"改为"入参 compute 函数"，
+内部读写一个与 `items` state 同步维护的 `itemsRef`（`useRef`），保证同一 tick 内连续调用
+读到的都是上一次调用刚写完的真值，不依赖 React state 更新的调度时机。15 处调用点
+（setColor/toggleBold/toggleItalic/setFontFamily/setFontSize/setAlign/setBorder/
+setBorderWidth/setOpacity/setTextColor/setShapeType/toggleLocked/groupSelected/
+ungroupSelected/applyFormatTo）同步改写为 `await applyColors((it) => 条件 ? color : null)`。
+
+**重要：harness verify 门控此时对 F21 是 no-op**（`F21 已 passing，跳过（不可逆）`，见
+AGENTS.md 的"状态不能自己改"约束——passing 不可逆，脚本不会因为代码又改了就重新判定）。
+因此这版修复的证据不是靠 `pnpm harness verify` 自动跑出来的，是靠人工直接跑 e2e：
+`widget-style.spec.ts:102` 单独跑 4 次（1 次首验 + 3 次连续复验）全部 EXIT 0（7.7s/12.6s/
+8.5s/9.4s，速度均正常，不是超时假通过）；`widget-active-selection.spec.ts` 全量 8/8
+通过（20.0s）。另附：本轮同时修了一个不相关的环境问题——本 worktree 的 `node_modules`
+符号链接指向的主 checkout 停在一个还没合并 coord-service（PR #408）的旧分支上，导致
+`pnpm harness verify` 先因为 `Cannot find module '@repo/coord-service/client'`
+（`.harness/scripts/coordinator-lock.ts` 依赖）直接报错退出；已通过在本 worktree 内
+`rm node_modules && pnpm install`（不碰共享主 checkout，符合 ADR-005）解决,与本 feature
+实现无关，纯粹是跑 verify 前的环境修复。
+
 ## 仍损坏或未验证
 - widgets-001-use-canvasx-widgets.spec.ts / widgets-004-shape-widget.spec.ts 各有既有失败
   （add-shape testid 基线缺失，与本次改动无关，spec 文件内已有注释说明，不要在下一轮误判为

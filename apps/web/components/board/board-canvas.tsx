@@ -323,6 +323,14 @@ function BoardMenuButton({
 // 周边 DOM UI（工具栏 / Widget Menu / 右键菜单 / selection-count / 参考线 / 编辑框 / 徽标）不变。
 export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
+  // applyColors 的同步真值来源：React 的 setState(updater) 不保证 updater 在调用点同步
+  // 执行（可能被推迟到下一次渲染阶段），所以不能指望"setItems(prev => ...) 内部算出的
+  // 新值"能在紧接着的同步代码里读到。同一交互序列里连续调用多个样式 setter（或应用格式
+  // 连续应用到多个目标）时，若各自都从 `items` state closure 读基准色，会读到过期值、
+  // 后写覆盖前写（p6:F16/F21 verify 各自独立抓到的同一类真实回归）。用 ref 维护真正同步、
+  // 每次 applyColors 调用后立刻前进的 items 快照，取代对 setState 时序的依赖。
+  const itemsRef = useRef<Item[]>(items);
+  itemsRef.current = items;
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null); // F11 文本编辑中的便签
   const [activeTool, setActiveTool] = useState<BoardTool>("select");
@@ -861,24 +869,33 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     });
   }
 
-  // 落库一批 color 变更（共用于 setColor / toggleBold）。经 queuePatch 按 item 串行落库，
-  // 避免同一 item 连续多次样式改动时后发先至覆盖新值（p6:F19 修复的真实回归，见 queuePatch 注释）。
-  async function applyColors(updates: { id: string; color: string }[]) {
-    const map = new Map(updates.map((u) => [u.id, u.color]));
-    setItems((prev) => prev.map((it) => (map.has(it.id) ? { ...it, color: map.get(it.id)! } : it)));
-    await Promise.all(updates.map((u) => queuePatch(u.id, { color: u.color })));
+  // 落库一批 color 变更。compute 基于 itemsRef.current（同步真值）求值并立刻推进
+  // itemsRef，而不是依赖"预先算好 updates 数组"——数组是从 `items` state closure 算的，
+  // 同一交互序列连续调用多个样式 setter（或应用格式连续应用到多个目标）时，closure 可能
+  // 是过期的，导致除最后一次外全部丢失（p6:F16/F21 verify 各自独立抓到的同一类真实回归，
+  // 与 p6:F19 修的 queuePatch 落库乱序是同一类"并发写用了过期读"问题，只是发生在客户端
+  // state 计算层，queuePatch 本身防不住）。
+  async function applyColors(compute: (it: Item) => string | null) {
+    const captured: { id: string; color: string }[] = [];
+    const next = itemsRef.current.map((it) => {
+      const color = compute(it);
+      if (color == null) return it;
+      captured.push({ id: it.id, color });
+      return { ...it, color };
+    });
+    itemsRef.current = next;
+    setItems(next);
+    await Promise.all(captured.map((u) => queuePatch(u.id, { color: u.color })));
   }
 
   // F11：改选中便签颜色（保留字重 :bold 修饰 + p6:F12 样式段）
   async function setColor(base: string) {
-    const updates = items
-      .filter((it) => selected.has(it.id) && !getLocked(it))
-      .map((it) => {
-        const head = base + (isBold(it) ? ":bold" : "");
-        const segs = styleSegs(it.color);
-        return { id: it.id, color: [head, ...segs].join("|") };
-      });
-    await applyColors(updates);
+    await applyColors((it) => {
+      if (!selected.has(it.id) || getLocked(it)) return null;
+      const head = base + (isBold(it) ? ":bold" : "");
+      const segs = styleSegs(it.color);
+      return [head, ...segs].join("|");
+    });
   }
 
   // uc-widget-menu-002：切换选中组件字重（bold/normal），编码为 color 的 :bold 后缀。
@@ -886,13 +903,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     const targets = items.filter((it) => selected.has(it.id) && !getLocked(it));
     if (targets.length === 0) return;
     const allBold = targets.every(isBold); // 全粗 → 取消；否则 → 全部加粗
-    const updates = targets.map((it) => {
+    await applyColors((it) => {
+      if (!selected.has(it.id) || getLocked(it)) return null;
       const b = baseColor(it.color);
       const segs = styleSegs(it.color);
       const head = allBold ? b : `${b}:bold`;
-      return { id: it.id, color: [head, ...segs].join("|") };
+      return [head, ...segs].join("|");
     });
-    await applyColors(updates);
   }
 
   // uc-widget-menu-013：切换选中组件斜体（italic），编码为 color 的 "|italic=1" 样式段。
@@ -900,92 +917,81 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     const targets = items.filter((it) => selected.has(it.id) && !getLocked(it));
     if (targets.length === 0) return;
     const allItalic = targets.every(isItalic);
-    const updates = targets.map((it) => ({
-      id: it.id,
-      color: withStyle(it.color, { italic: allItalic ? null : "1" }),
-    }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || getLocked(it) ? null : withStyle(it.color, { italic: allItalic ? null : "1" }),
+    );
   }
 
   // uc-widget-menu-013：设置选中组件字体，编码为 color 的 "|font=<slug>" 样式段。
   async function setFontFamily(font: string) {
-    const updates = items
-      .filter((it) => selected.has(it.id) && !getLocked(it))
-      .map((it) => ({ id: it.id, color: withStyle(it.color, { font: font === DEFAULT_FONT ? null : font }) }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || getLocked(it)
+        ? null
+        : withStyle(it.color, { font: font === DEFAULT_FONT ? null : font }),
+    );
   }
 
   // uc-widget-menu-013：设置选中组件字号，编码为 color 的 "|size=<n>" 样式段。
   async function setFontSize(size: number) {
-    const updates = items
-      .filter((it) => selected.has(it.id) && !getLocked(it))
-      .map((it) => ({
-        id: it.id,
-        color: withStyle(it.color, { size: size === DEFAULT_FONT_SIZE ? null : String(size) }),
-      }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || getLocked(it)
+        ? null
+        : withStyle(it.color, { size: size === DEFAULT_FONT_SIZE ? null : String(size) }),
+    );
   }
 
   // uc-widget-menu-013：设置选中组件文本对齐方式，编码为 color 的 "|align=<left|center|right>" 样式段。
   async function setAlign(align: "left" | "center" | "right") {
-    const updates = items
-      .filter((it) => selected.has(it.id) && !getLocked(it))
-      .map((it) => ({ id: it.id, color: withStyle(it.color, { align: align === "left" ? null : align }) }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || getLocked(it) ? null : withStyle(it.color, { align: align === "left" ? null : align }),
+    );
   }
 
   // p6:F19（uc-widget-menu-002）：设置选中组件边框色，编码为 color 的 "|border=<token>" 样式段。
   async function setBorder(token: BorderToken) {
-    const updates = items
-      .filter((it) => selected.has(it.id) && !getLocked(it))
-      .map((it) => ({ id: it.id, color: withStyle(it.color, { border: token === DEFAULT_BORDER ? null : token }) }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || getLocked(it)
+        ? null
+        : withStyle(it.color, { border: token === DEFAULT_BORDER ? null : token }),
+    );
   }
 
   // p6:F19（uc-widget-menu-002）：设置选中组件边框宽/线宽，编码为 color 的 "|borderw=<n>" 样式段。
   async function setBorderWidth(width: number) {
-    const updates = items
-      .filter((it) => selected.has(it.id) && !getLocked(it))
-      .map((it) => ({
-        id: it.id,
-        color: withStyle(it.color, { borderw: width === DEFAULT_BORDER_WIDTH ? null : String(width) }),
-      }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || getLocked(it)
+        ? null
+        : withStyle(it.color, { borderw: width === DEFAULT_BORDER_WIDTH ? null : String(width) }),
+    );
   }
 
   // p6:F19（uc-widget-menu-002）：设置选中组件透明度，编码为 color 的 "|opacity=<1-100>" 样式段。
   async function setOpacity(value: number) {
-    const updates = items
-      .filter((it) => selected.has(it.id) && !getLocked(it))
-      .map((it) => ({
-        id: it.id,
-        color: withStyle(it.color, { opacity: value === DEFAULT_OPACITY ? null : String(value) }),
-      }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || getLocked(it)
+        ? null
+        : withStyle(it.color, { opacity: value === DEFAULT_OPACITY ? null : String(value) }),
+    );
   }
 
   // p6:F19（uc-widget-menu-002）：设置选中组件文字色，编码为 color 的 "|textcolor=<token>" 样式段。
   async function setTextColor(token: TextColorToken) {
-    const updates = items
-      .filter((it) => selected.has(it.id) && !getLocked(it))
-      .map((it) => ({
-        id: it.id,
-        color: withStyle(it.color, { textcolor: token === DEFAULT_TEXT_COLOR ? null : token }),
-      }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || getLocked(it)
+        ? null
+        : withStyle(it.color, { textcolor: token === DEFAULT_TEXT_COLOR ? null : token }),
+    );
   }
 
   // p6:F15（uc-widgets-004 备选流程 3 / 业务规则 6）：切换已有形状的具体类型，编码为 color 的
   // "|shape=<token>" 样式段。仅通过 Widget Menu 的可见入口（wm-shape-type）暴露，符合 UC 业务
   // 规则 6「已有形状类型切换由 Widget Menu 可见入口决定」。
   async function setShapeType(shapeType: ShapeType) {
-    const updates = items
-      .filter((it) => selected.has(it.id) && isShape(it) && !getLocked(it))
-      .map((it) => ({
-        id: it.id,
-        color: withStyle(it.color, { shape: shapeType === DEFAULT_SHAPE_TYPE ? null : shapeType }),
-      }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || !isShape(it) || getLocked(it)
+        ? null
+        : withStyle(it.color, { shape: shapeType === DEFAULT_SHAPE_TYPE ? null : shapeType }),
+    );
   }
 
   // p6:F20（uc-widget-menu-003）：切换选中组件锁定态，编码为 color 的 "|locked=1" 样式段。
@@ -995,11 +1001,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     const targets = items.filter((it) => selected.has(it.id));
     if (targets.length === 0) return;
     const allLocked = targets.every(getLocked);
-    const updates = targets.map((it) => ({
-      id: it.id,
-      color: withStyle(it.color, { locked: allLocked ? null : "1" }),
-    }));
-    await applyColors(updates);
+    await applyColors((it) => (!selected.has(it.id) ? null : withStyle(it.color, { locked: allLocked ? null : "1" })));
   }
 
   // p6:F21（uc-widgets-010 主流程 6：编组/解组）：把选中的 ≥2 个未锁定对象编成一组，
@@ -1010,17 +1012,17 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     const targets = items.filter((it) => selected.has(it.id) && !getLocked(it));
     if (targets.length < 2) return;
     const groupId = targets[0]!.id;
-    const updates = targets.map((it) => ({ id: it.id, color: withStyle(it.color, { group: groupId }) }));
-    await applyColors(updates);
-    setSelected(new Set(targets.map((it) => it.id)));
+    const targetIds = new Set(targets.map((it) => it.id));
+    await applyColors((it) => (targetIds.has(it.id) ? withStyle(it.color, { group: groupId }) : null));
+    setSelected(targetIds);
   }
 
   // 解组：清除选中集合中所有对象的 group 段，恢复为可独立选择的组件（主流程 6 后半）。
   async function ungroupSelected() {
     const targets = items.filter((it) => selected.has(it.id) && getGroupId(it) != null && !getLocked(it));
     if (targets.length === 0) return;
-    const updates = targets.map((it) => ({ id: it.id, color: withStyle(it.color, { group: null }) }));
-    await applyColors(updates);
+    const targetIds = new Set(targets.map((it) => it.id));
+    await applyColors((it) => (targetIds.has(it.id) ? withStyle(it.color, { group: null }) : null));
   }
 
   // p6:F21（uc-widget-menu-011 对齐选中组件）：选中 ≥2 个对象后按包围盒批量对齐/等间距分布。
@@ -1111,10 +1113,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   async function applyFormatTo(targetId: string): Promise<boolean> {
     if (!formatSource || !canEdit) return false;
     if (targetId === formatSource.id) return false;
-    const target = items.find((it) => it.id === targetId);
+    const target = itemsRef.current.find((it) => it.id === targetId);
     if (!target || isShape(target) || isReloadable(target)) return false;
     const newColor = applyFormatColor({ color: formatSource.color }, isText(target));
-    await applyColors([{ id: target.id, color: newColor }]);
+    await applyColors((it) => (it.id === targetId ? newColor : null));
     return true;
   }
 
