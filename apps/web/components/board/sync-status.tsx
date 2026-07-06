@@ -13,7 +13,7 @@ type SyncState = "synced" | "saving" | "offline";
 const META: Record<SyncState, { label: string; dot: string; text: string }> = {
   synced: { label: "已同步", dot: "bg-tag-green", text: "text-success" },
   saving: { label: "保存中", dot: "bg-tag-yellow", text: "text-foreground" },
-  offline: { label: "离线", dot: "bg-muted-foreground", text: "text-muted-foreground" },
+  offline: { label: "连接异常", dot: "bg-muted-foreground", text: "text-muted-foreground" },
 };
 
 // controlledState（uc-canvas-005）：由实时协作层驱动真实同步状态。

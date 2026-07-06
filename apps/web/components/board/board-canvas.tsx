@@ -12,7 +12,24 @@ import {
 import { type Guide, type SpacingHint } from "@/lib/canvas-snap";
 import { BoardBottomDock, type DockToolKey } from "@/components/board/board-bottom-dock";
 import { BoardAiOverlay } from "@/components/board/board-ai-panel";
-import { setOperating } from "@/lib/collab-bus";
+import {
+  publishConnectionState,
+  publishCursor,
+  screenToBoardPoint,
+  setOperating,
+  viewportContainerRect,
+} from "@/lib/collab-bus";
+import {
+  applyEncodedUpdate,
+  createBoardDoc,
+  encodeFullState,
+  encodeUpdate,
+  onLocalUpdate,
+  onRemoteItemsChange,
+  readItems as readCollabItems,
+  seedItems,
+  syncItemsIntoDoc,
+} from "@repo/collab";
 import {
   AlignCenter,
   AlignLeft,
@@ -308,6 +325,26 @@ function BoardMenuButton({
   );
 }
 
+// p8:F02 — 把 Yjs doc 的最新状态合并回本地 items，但正在本地编辑/拖拽的那一条
+// 保留本地版本，不被远端覆盖（避免打断用户正在做的操作；等编辑/拖拽结束后，
+// 下一次远端事件或 editingId 清空时的兜底 reconcile 会把merge 的那部分带回来，
+// 不会永久丢失——这是相对于纯"全量快照广播"方案的关键修复点）。
+function mergeRemoteItems(
+  prev: Item[],
+  latest: Item[],
+  editingId: string | null,
+  dragIds: readonly string[],
+): Item[] {
+  const held = new Set(dragIds);
+  if (editingId) held.add(editingId);
+  const prevById = new Map(prev.map((it) => [it.id, it]));
+  const merged = latest.map((it) => (held.has(it.id) ? prevById.get(it.id) ?? it : it));
+  for (const it of prev) {
+    if (held.has(it.id) && !merged.some((m) => m.id === it.id)) merged.push(it);
+  }
+  return merged;
+}
+
 // 画布：渲染 board-keyed items（ADR-0002）+ 选择/键盘（F06）+ 复制粘贴（F08）+ 撤销/重做（F09）。
 // 视口（平移/缩放/小地图）复用 CanvasViewport（F05）。marquee 框选 deferred（与拖拽平移冲突，留后续）。
 //
@@ -317,6 +354,12 @@ function BoardMenuButton({
 export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // p8:F02 — selected 的 ref 镜像，供 onOperating（useCallback，空依赖数组）读取
+  // 拖拽开始时刻的最新选中集合，而不是闭包捕获的过期值。
+  const selectedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    selectedRef.current = selected;
+  }, [selected]);
   const [editingId, setEditingId] = useState<string | null>(null); // F11 文本编辑中的便签
   const [activeTool, setActiveTool] = useState<BoardTool>("select");
   const [aiOpen, setAiOpen] = useState(false); // F01: Board AI 浮层/board chat 面板开关，dock 与浮层共享同一真值
@@ -365,6 +408,36 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const [vp, setVp] = useState<ViewportState>({ tx: 0, ty: 0, scale: 1 });
   // fabric 拖拽进行中（onOperating 回调驱动）：轮询同步在拖拽中不合并服务端快照。
   const draggingRef = useRef(false);
+  // p8:F02 — 拖拽/操作中的 item ids 快照（onOperating 置位时从 selectedRef 拷贝），
+  // 供 mergeRemoteItems 保护正在本地操作的 item 不被远端快照/CRDT 更新覆盖。
+  // 拖拽本身已下沉到 FabricCanvas（F13 重构），这里不再持有指针坐标/吸附状态，
+  // 只保留"当前正在拖的是哪些 id"这一份最小信息。
+  const draggingIdsRef = useRef<string[]>([]);
+  const cursorIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null); // p8:F03 光标闲置自动隐藏
+
+  // ── p8:F02 Yjs 实时同步 ──────────────────────────────────────────────────
+  // docRef 是本 board 的 CRDT 状态；WS 只是把 doc 的二进制 update 转发给其它
+  // 在线客户端（走 F01 的 collab-gateway，纯 relay，不解释内容）。REST 仍是
+  // 冷启动/持久化的权威来源，doc 只负责"已连接客户端之间"的即时合并。
+  const docRef = useRef(createBoardDoc());
+  const wsRef = useRef<WebSocket | null>(null);
+  const clientIdRef = useRef(crypto.randomUUID());
+  const editingIdRef = useRef<string | null>(null);
+  const itemsRef = useRef<Item[]>([]);
+  const itemsLoadedRef = useRef(false);
+  // 是否已经完成"加入房间"的初次同步判定（收到 peer 的完整状态，或等待超时判定
+  // 自己是第一个在线的人）。在这之前不能把本地 items 写进 doc——否则会替已存在的
+  // item 独立造一份结构上互不相识的 Y.Map，后续增量 update 就合并不回去了。
+  const joinSyncedRef = useRef(false);
+
+  const maybeSeed = useCallback(() => {
+    if (!joinSyncedRef.current || !itemsLoadedRef.current) return;
+    seedItems(docRef.current, itemsRef.current);
+    // seedItems 只补"任何在线客户端都还不知道"的新条目；已存在的条目里，doc
+    // 内可能有比这次 REST 快照更新的字段（比如刚加入时另一人正在编辑），
+    // 用 doc 当前真实状态回填一次 React state，而不是反过来拿 REST 覆盖 doc。
+    setItems((prev) => mergeRemoteItems(prev, readCollabItems(docRef.current), editingIdRef.current, draggingIdsRef.current));
+  }, []);
 
   // p6:F19 修复：load() 用服务端快照整体覆盖 items（其它 F0x 既有行为，不改）。
   // 若此时仍有未落地的 PATCH（如样式改动后立即触发了 load，如新增组件后的 await load()），
@@ -373,12 +446,216 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const load = useCallback(async () => {
     await Promise.all(patchQueue.current.values());
     const res = await fetch(`/api/boards/${boardId}/items`);
-    if (res.ok) setItems((await res.json()).items ?? []);
-  }, [boardId]);
+    if (res.ok) {
+      const next = ((await res.json()).items ?? []) as Item[];
+      itemsRef.current = next;
+      itemsLoadedRef.current = true;
+      setItems(next);
+      maybeSeed();
+    }
+  }, [boardId, maybeSeed]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // p8:F03 — 光标 presence：走既有 collab-bus 的 viewport/awareness 心跳通道（HTTP
+  // presence 轮询），不是 F01/F02 的 WS+Yjs 传输——光标不需要 CRDT 合并语义，
+  // 复用现成的 1.5s presence 心跳足够。闲置 2.5s 自动隐藏，避免残留光标误导。
+  const clearLocalCursor = useCallback(() => {
+    if (cursorIdleTimer.current) {
+      clearTimeout(cursorIdleTimer.current);
+      cursorIdleTimer.current = null;
+    }
+    publishCursor(null);
+  }, []);
+
+  const publishLocalCursor = useCallback((e: React.MouseEvent) => {
+    // 广播画布逻辑坐标，不是发送方屏幕像素——接收端按各自的 pan/zoom 转回屏幕坐标
+    // 渲染，否则窗口尺寸/缩放不同时光标会跟真实指向对不上（p8:F03 修复点）。
+    const board = screenToBoardPoint(e.clientX, e.clientY, viewportContainerRect());
+    publishCursor({ x: board.x, y: board.y, visible: true });
+    if (cursorIdleTimer.current) clearTimeout(cursorIdleTimer.current);
+    cursorIdleTimer.current = setTimeout(() => {
+      cursorIdleTimer.current = null;
+      publishCursor(null);
+    }, 2500);
+  }, []);
+
+  useEffect(() => clearLocalCursor, [clearLocalCursor]);
+
+  // 打开到 F01 网关的 WS 连接：先广播 sync-request 问"房间里有没有已经在线的人"，
+  // 有则 apply 对方的完整状态（保证跟对方是同一批 Y.Map 结构实例，见 packages/collab
+  // 的 encodeFullState 注释）；800ms 内没人应答就当自己是第一个，直接从 REST seed。
+  //
+  // p8:F05 重连策略：close/error 会指数退避重试（1s→2s→4s...封顶 30s，连上一次
+  // 就把退避计数器复位），而不是旧版那种固定 1.5s 无限重试——网关真的挂掉时
+  // 别把它打得更惨。另外，浏览器原生 WebSocket 拿不到握手失败的真实 HTTP 状态码
+  // （401 也只是笼统的 error/close，无法区分"鉴权过期"和"网络抖动"），所以每次
+  // 重连前先探一下 `/api/auth/session`——没登录就直接停止自动重连（重试一个必然
+  // 会被拒绝的连接没有意义，用户需要重新登录）；探测本身失败（网络问题）则当作
+  // 暂时性抖动，照常走退避重试。
+  useEffect(() => {
+    let cancelled = false;
+    let ws: WebSocket | null = null;
+    let syncTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let backoffMs = 1000;
+    const MAX_BACKOFF_MS = 30_000;
+
+    function scheduleRetry() {
+      if (cancelled) return;
+      const wait = backoffMs;
+      backoffMs = Math.min(backoffMs * 2, MAX_BACKOFF_MS);
+      retryTimer = setTimeout(() => void connect(), wait);
+    }
+
+    async function connect() {
+      if (cancelled) return;
+      joinSyncedRef.current = false;
+      publishConnectionState("connecting");
+
+      try {
+        const authRes = await fetch("/api/auth/session");
+        if (authRes.ok) {
+          const body = (await authRes.json()) as { user?: unknown };
+          if (!body?.user) {
+            publishConnectionState("disconnected"); // 会话已失效：不再自动重连
+            return;
+          }
+        }
+      } catch {
+        // 探测请求本身失败（网络问题），当作暂时性抖动，继续走下面的重试路径。
+      }
+      if (cancelled) return;
+
+      const configRes = await fetch("/api/collab/config").catch(() => null);
+      if (!configRes?.ok) {
+        if (!cancelled) scheduleRetry();
+        return;
+      }
+      const { wsUrl } = (await configRes.json()) as { wsUrl: string };
+      if (cancelled) return;
+      ws = new WebSocket(`${wsUrl}?boardId=${encodeURIComponent(boardId)}`);
+      wsRef.current = ws;
+      // 仅非生产环境暴露调试句柄（e2e 用它模拟断线）；生产环境不应该让任意脚本
+      // 能读到/关闭这个内部连接。
+      if (process.env.NODE_ENV !== "production") {
+        (window as Window & { __boardCollabWs?: WebSocket | null }).__boardCollabWs = ws;
+      }
+
+      ws.addEventListener("open", () => {
+        if (cancelled || !ws) return;
+        backoffMs = 1000; // 连上了，退避计数器复位
+        publishConnectionState("connected");
+        ws.send(JSON.stringify({ type: "y-sync-request", boardId, from: clientIdRef.current }));
+        syncTimer = setTimeout(() => {
+          if (cancelled || joinSyncedRef.current) return;
+          joinSyncedRef.current = true; // 没人应答：自己是第一个在线的，直接种子化
+          maybeSeed();
+        }, 800);
+      });
+
+      ws.addEventListener("message", (event) => {
+        if (cancelled) return;
+        // F01 网关把"转发自其它客户端"的消息包一层自己的信封：
+        // { type: "message", boardId, data: "<发送方原始文本>", fromClientId, via }。
+        // 网关自己直接发的消息（如刚连上时的 {type:"connected"}）不走这层信封。
+        // 这里先剥掉信封，取出 data 里才是我们自己的业务消息（y-sync-request/
+        // y-sync-response/y-update），再解析一次——只解析一层会把 outer.type
+        // （恒为 "message"）当成业务类型，永远匹配不上，是本文件早期版本的真实 bug
+        // （被同文件里原有的 REST 轮询兜底完全掩盖，playwright 测试一度"意外通过"）。
+        let outer: { type?: string; data?: string } | null = null;
+        try {
+          outer = JSON.parse(event.data);
+        } catch {
+          return;
+        }
+        if (outer?.type !== "message" || typeof outer.data !== "string") return;
+        let msg: { type?: string; from?: string; update?: string } | null = null;
+        try {
+          msg = JSON.parse(outer.data);
+        } catch {
+          return;
+        }
+        if (msg?.type === "y-sync-request" && msg.from !== clientIdRef.current) {
+          ws?.send(
+            JSON.stringify({ type: "y-sync-response", boardId, update: encodeFullState(docRef.current) }),
+          );
+          return;
+        }
+        if (msg?.type === "y-sync-response" && msg.update) {
+          applyEncodedUpdate(docRef.current, msg.update);
+          if (!joinSyncedRef.current) {
+            joinSyncedRef.current = true;
+            if (syncTimer) clearTimeout(syncTimer);
+            maybeSeed();
+          }
+          return;
+        }
+        if (msg?.type === "y-update" && msg.update) {
+          applyEncodedUpdate(docRef.current, msg.update);
+        }
+      });
+
+      ws.addEventListener("close", () => {
+        if (wsRef.current === ws) wsRef.current = null;
+        if (
+          process.env.NODE_ENV !== "production" &&
+          (window as Window & { __boardCollabWs?: WebSocket | null }).__boardCollabWs === ws
+        ) {
+          (window as Window & { __boardCollabWs?: WebSocket | null }).__boardCollabWs = null;
+        }
+        if (!cancelled) {
+          publishConnectionState("disconnected");
+          scheduleRetry();
+        }
+      });
+      ws.addEventListener("error", () => {
+        ws?.close();
+      });
+    }
+
+    void connect();
+
+    const offLocal = onLocalUpdate(docRef.current, (update) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: "y-update", boardId, update: encodeUpdate(update) }));
+      }
+    });
+    const offRemote = onRemoteItemsChange(docRef.current, (latest) => {
+      setItems((prev) => mergeRemoteItems(prev, latest, editingIdRef.current, draggingIdsRef.current));
+    });
+
+    return () => {
+      cancelled = true;
+      if (syncTimer) clearTimeout(syncTimer);
+      if (retryTimer) clearTimeout(retryTimer);
+      offLocal();
+      offRemote();
+      ws?.close();
+      wsRef.current = null;
+      publishConnectionState("disconnected");
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boardId]);
+
+  // 本地 items 变化（不管是用户操作、旧的 REST 轮询合并、还是上面 maybeSeed 的
+  // reconcile）都镜像进 doc，这样才能广播给其它人。syncItemsIntoDoc 对没有真的
+  // 变化的字段是幂等的，所以"这次变化本来就是从 doc 读回来的"不会又广播回去。
+  useEffect(() => {
+    if (!joinSyncedRef.current) return;
+    syncItemsIntoDoc(docRef.current, items);
+  }, [items]);
+
+  useEffect(() => {
+    editingIdRef.current = editingId;
+    // 编辑刚结束：把编辑期间被"保留本地版本"挡住的远端变更（如果有）拉回来，
+    // 不必等下一次远端事件才生效——这是相对旧方案"编辑中收到的变更永久丢失"的修复点。
+    if (editingId == null && joinSyncedRef.current) {
+      setItems((prev) => mergeRemoteItems(prev, readCollabItems(docRef.current), null, draggingIdsRef.current));
+    }
+  }, [editingId]);
 
   // uc-collab-001：文本编辑进行中也算「正在操作」，供他人看到「谁在操作」（editingId 存在 = 编辑中）。
   useEffect(() => {
@@ -551,8 +828,11 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   );
 
   // uc-collab-001：拖拽开始/结束 → 操作态上报；同时挡住轮询合并（见 poll）。
+  // p8:F02：拖拽开始时快照当前选中 ids，供 mergeRemoteItems 保护中途不被远端覆盖；
+  // 结束后清空——此时最新落库结果已经过 apiMove/apiResize，远端快照理应与本地一致。
   const onOperating = useCallback((op: boolean) => {
     draggingRef.current = op;
+    draggingIdsRef.current = op ? Array.from(selectedRef.current) : [];
     setOperating(op);
   }, []);
 
@@ -1158,7 +1438,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   }, [items, selected, deleteSelected, moveSelected, pasteClipboard, undo, redo]);
 
   return (
-    <div className="relative flex flex-1 flex-col">
+    <div className="relative flex flex-1 flex-col" onMouseMove={publishLocalCursor} onMouseLeave={clearLocalCursor}>
       {/* Board Menu：编辑者可见的工具入口；不可用能力保留禁用状态，避免误导为已实现。 */}
       {canEdit && (
         <div className="relative border-b bg-card px-3 py-1.5">

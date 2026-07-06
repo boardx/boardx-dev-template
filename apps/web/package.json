@@ -15,6 +15,7 @@
     "@repo/ai": "workspace:*",
     "@repo/auth": "workspace:*",
     "@repo/canvas": "workspace:*",
+    "@repo/collab": "workspace:*",
     "@repo/data": "workspace:*",
     "@repo/queue": "workspace:*",
     "@repo/storage": "workspace:*",

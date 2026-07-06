@@ -9,6 +9,14 @@ export interface PresenceViewport {
   scale: number;
 }
 
+// p8:F03 协作光标：坐标使用浏览器 viewport clientX/clientY，
+// Header presence 渲染为 fixed overlay，可跨画布/视口同步显示。
+export interface PresenceCursor {
+  x: number;
+  y: number;
+  visible: boolean;
+}
+
 export interface PresenceMember {
   id: number;
   name: string;
@@ -17,6 +25,9 @@ export interface PresenceMember {
   // operating = 该成员此刻是否正在操作（拖拽/编辑）；viewport = 其当前视口（供他人「跟随视角」）。
   operating?: boolean;
   viewport?: PresenceViewport;
+  cursor?: PresenceCursor;
+  followingId?: number | null;
+  followPaused?: boolean;
 }
 
 interface Entry extends PresenceMember {
@@ -53,7 +64,16 @@ export function listOnline(boardId: number): PresenceMember[] {
   const table = pruned(boardId);
   return [...table.values()]
     .sort((a, b) => a.id - b.id)
-    .map(({ id, name, role, operating, viewport }) => ({ id, name, role, operating, viewport }));
+    .map(({ id, name, role, operating, viewport, cursor, followingId, followPaused }) => ({
+      id,
+      name,
+      role,
+      operating,
+      viewport,
+      cursor,
+      followingId,
+      followPaused,
+    }));
 }
 
 /** 测试辅助：清空某 Board 的在线表。 */
