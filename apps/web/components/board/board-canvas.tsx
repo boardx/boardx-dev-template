@@ -396,14 +396,28 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // 轮询服务端 item 列表，让其它在线用户的新增/移动/删除在本地画布上出现，
   // 达成「在线用户看到一致的 Board 内容」（UC 后置条件 1）。
   // 只在本地无进行中编辑/拖拽时才合并服务端快照，避免打断本地操作。
+  //
+  // p6:F21 rebase 后回归修复：与 load()（见上方 F19 注释）同样的竞态在这里也存在，
+  // 且此前未被同一套防线覆盖——本地样式改动（toggleBold/setBorder/setOpacity/应用格式…）
+  // 经 queuePatch 异步落库，PATCH 尚未落地时若这个每 1.5s 跑一次的轮询恰好拿到旧服务端快照，
+  // 会把 patchQueue 里还没落库的乐观更新整体覆盖回旧值（真实回归，e2e 诊断实测复现：应用格式
+  // 断言 bold/border/opacity 偶发丢失，根因正是取样时读到了被本轮询覆盖的中间态源样式，而非
+  // applyFormatColor/onFabricSelection 本身逻辑有误）。修法与 load() 一致：patchQueue 非空
+  // （有 PATCH 在途）时，本轮跳过合并，下个 1.5s 周期再试，不覆盖尚未确认的本地操作。
   useEffect(() => {
     let stop = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     async function poll() {
-      if (!stop && !editingId && !draggingRef.current) {
+      if (!stop && !editingId && !draggingRef.current && patchQueue.current.size === 0) {
         try {
           const res = await fetch(`/api/boards/${boardId}/items`);
-          if (res.ok && !stop && !editingId && !draggingRef.current) {
+          if (
+            res.ok &&
+            !stop &&
+            !editingId &&
+            !draggingRef.current &&
+            patchQueue.current.size === 0
+          ) {
             const next = ((await res.json()).items ?? []) as Item[];
             setItems((prev) =>
               JSON.stringify(prev) === JSON.stringify(next) ? prev : next
