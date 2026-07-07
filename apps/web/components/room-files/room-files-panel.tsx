@@ -5,6 +5,7 @@
 // AI 上下文 sources（内容进入 RAG 的细节归 p10，这里只做勾选状态与数量展示）；
 // 支持在本面板直接上传，落到房间文件库（附 chat_thread_id 标注来源）。
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { FileText, Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FileInput } from "@/components/ui/file-input";
@@ -40,6 +41,9 @@ function putWithProgress(url: string, file: File): Promise<number> {
   });
 }
 
+// p22/F03：这是"轻量引用视图"——只做勾选 AI 上下文 + 简单上传，不做搜索/预览/删除
+// （这是产品决策，非能力缺失）。权威管理视图是房间 Files tab，本面板始终提供一个
+// 明确的跳转入口，不再只靠空态文案兜底。
 export function RoomFilesPanel({ roomId, chatId }: { roomId: string; chatId: string }) {
   const [files, setFiles] = useState<RoomFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -148,17 +152,26 @@ export function RoomFilesPanel({ roomId, chatId }: { roomId: string; chatId: str
     <div data-testid="room-files-panel" className="flex h-full flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-semibold text-foreground">Room Files</p>
-        <Button
-          data-testid="room-files-panel-upload"
-          variant="ghost"
-          size="icon"
-          aria-label="上传文件到房间文件库"
-          className="h-6.5 w-6.5"
-          disabled={uploading}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Link
+            href={`/rooms/${roomId}/files`}
+            data-testid="room-files-panel-open-files-tab"
+            className="text-xs text-primary hover:underline"
+          >
+            查看全部 →
+          </Link>
+          <Button
+            data-testid="room-files-panel-upload"
+            variant="ghost"
+            size="icon"
+            aria-label="上传文件到房间文件库"
+            className="h-6.5 w-6.5"
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+          </Button>
+        </div>
       </div>
       <FileInput
         ref={fileInputRef}
@@ -190,7 +203,11 @@ export function RoomFilesPanel({ roomId, chatId }: { roomId: string; chatId: str
         </p>
       ) : files.length === 0 ? (
         <p data-testid="empty" className="text-xs text-muted-foreground">
-          房间文件库还没有文件，点击右上角上传或前往 Files tab。
+          房间文件库还没有文件，点击右上角上传，或{" "}
+          <Link href={`/rooms/${roomId}/files`} className="text-primary hover:underline">
+            前往 Files tab
+          </Link>
+          。
         </p>
       ) : (
         <ul data-testid="room-files-panel-list" className="flex flex-1 flex-col gap-1 overflow-y-auto">

@@ -1,0 +1,21 @@
+{
+  "phase": "p22",
+  "features": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "area": "orchestrator",
+      "title": "示例:健康检查端点",
+      "user_visible_behavior": "GET /api/health 返回 200 且 body 为 {\"ok\": true}",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "curl -sf http://localhost:3000/api/health | jq -e '.ok == true'"
+      ],
+      "evidence": "",
+      "notes": "把示例替换成你自己的功能。粒度=一次会话能完成。"
+    }
+  ]
+}

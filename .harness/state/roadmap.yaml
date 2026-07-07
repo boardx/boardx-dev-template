@@ -164,3 +164,10 @@ phases:
     goal: "Platform/Accounts(auth/team/profile/home/billing)地基级 gap 修复:证据造假清零、两处越权/免密安全漏洞修复、billing F04 真实闭环、需求-实现-测试三方对齐"
     status: not_started
     depends_on: []
+  - id: "p22"
+    slug: room-ia-realignment
+    name: Room IA Realignment
+    goal: "修复 Room 信息架构核心缺陷：补齐左房间列表+右详情的主从双栏布局（当前是互相跳转的两个整页）；理清 Files 在 Files-tab 与 Chat 内面板之间的职责边界；评估 Studio 独立性与 Board 面包屑回退——按 harness UI 先行确认关卡（ADR-003）交付"
+    status: not_started
+    depends_on: []
+    has_ui: true
