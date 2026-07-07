@@ -36,7 +36,7 @@
 
 | 对象 | Deadline | Tier 1（软提醒） | Tier 2（升级） | Tier 3（补救） |
 |---|---|---|---|---|
-| `status:in-progress`（worker 认领锁） | 6h 无进展 | — | — | 回收 lease、回退 `ready-for-dev`，可重分派（已有，ADR-004 §4） |
+| `status:in-progress`（worker 认领锁） | 6h 无进展 | — | **强制**：在总线（issue/PR）上贴一条带明确时限的通牒（例："接下来 N 分钟/小时内如果看不到实际进展（哪怕是 draft PR），我会视为 stale 直接回收重分派"），不能只是"注意到了"就默默等或默默回收（先例：coord-main 对 #406 给 45 分钟窗口、coord-board 对 #282 给 2 小时窗口，均在窗口内/窗口后收到明确结果或据此回收）——**本条对 coord-main 和全体 module-coordinator 一视同仁，不因层级或角色豁免** | 窗口到期仍无可验证进展（commit/push/评论）→ 回收 lease、回退 `ready-for-dev`，可重分派（已有，ADR-004 §4） |
 | `status:changes-requested`（返工中） | 2h 无新提交 | 总线追加提醒评论 @worker，附上次返工清单链接 | 4h 无新提交：判断 worker 会话是否仍在运行——仍在运行但静默＝排队中，不追加动作；会话已停止/不可达＝视同 lease 超时，回收或重分派 | 若纯机械性小改、已给过明确修法、且已返工 ≥2 轮未落地：coordinator/module-coordinator 可直接代为修复（先例：PR #327 第三轮），修完仍需过独立 review，不可自我豁免 |
 | `status:in-review`（等 reviewer） | 30min 内未派出 reviewer | 自查为何漏派 | — | 立即补派，属 coordinator 自身失职，不算 worker 责任 |
 | `coordinator`/`module-coordinator` 心跳 | 30min（已有，见生命周期章节） | — | 抢占仪式（已有） | 抢占 |
@@ -59,6 +59,10 @@
    `branch -f`/`checkout <branch>`；分支建好立即 push。见 ADR-005
    （`phases/phase-01-foundation/adr/ADR-005-shared-checkout-isolation.md`），本地另有
    `reference-transaction` git hook 兜底拦截非快进更新。
+6. **不可静默等待**：发现 lease/PR 停滞（见上方 Deadline 表）时，必须在总线上贴出带
+   明确时限的通牒，再据此回收/升级——不能只是内部判断"再等等"或"已经提醒过了"就不再
+   跟进。这条对 coord-main 和全体 module-coordinator 一视同仁，没有"层级更高就可以裸等"
+   这回事（人类反馈直接触发，2026-07-07）。
 6. **coord-service 是 opt-in 增强，不是新权威**：`COORD_SERVICE_URL`/
    `COORD_SERVICE_TOKEN` 未配置时，`lock-*`/`module-lock-*` 行为与 coord-service
    出现之前逐字一致；配置了才会额外问一次 D1、失败一律静默降级——GitHub
