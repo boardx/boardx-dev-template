@@ -63,7 +63,7 @@
    明确时限的通牒，再据此回收/升级——不能只是内部判断"再等等"或"已经提醒过了"就不再
    跟进。这条对 coord-main 和全体 module-coordinator 一视同仁，没有"层级更高就可以裸等"
    这回事（人类反馈直接触发，2026-07-07）。
-6. **coord-service 是 opt-in 增强，不是新权威**：`COORD_SERVICE_URL`/
+7. **coord-service 是 opt-in 增强，不是新权威**：`COORD_SERVICE_URL`/
    `COORD_SERVICE_TOKEN` 未配置时，`lock-*`/`module-lock-*` 行为与 coord-service
    出现之前逐字一致；配置了才会额外问一次 D1、失败一律静默降级——GitHub
    issue+label（module-coordinator 侧）和本地文件锁（顶层 coordinator 侧）依然是
