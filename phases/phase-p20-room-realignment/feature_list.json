@@ -118,9 +118,9 @@
       "title": "删除房间的级联契约（Danger Zone）",
       "user_visible_behavior": "owner 打开房间设置看到 DANGER ZONE（文案含 Permanently）；点击 Delete room 弹二次确认（data-testid=room-delete-confirm），弹窗逐项列出将删除的内容类别与真实数量（X boards、Y chats、Z files、surveys，data-testid=room-delete-cascade-summary），需输入完全一致的房间名确认按钮才可用（不匹配时禁用）；确认后 DELETE /api/rooms/[id] 级联删除 boards（含 board_items）、room_chats（含消息）、room_files、room_members、房间问卷关联，跳回房间列表并 toast；admin/member 在 UI 无入口且直调 DELETE 返回 403；删除后原房间及其下 boards/chats/files 各资源 API 均返回 404。",
       "design_ref": "prototype:Room Settings dialog DANGER ZONE（'and its boards'）",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-room-2",
       "capability": "CAP-WEB",
       "depends_on": [
         "F01",
@@ -134,7 +134,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-006-delete-contract.spec.ts",
         "git cat-file -e HEAD:phases/phase-p20-room-realignment/evidence/F06.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F06.verify.log @ 2026-07-06T23:50:22.649Z",
       "notes": "uc-rr-005。DB CASCADE 已存在，本 feature 的增量是契约化：确认弹窗（数量摘要+输入房间名）+ e2e 先各建一条 board/chat/file/survey 再删房断言全部 404。依赖：F01（已 passing）；级联断言中 files 分支依赖 F03 的 room_files 迁移、surveys 分支依赖 F08 的 room_id 列——建议排期 F03/F08 合并后再做 F06，若先行则这两个分支在 spec 中按 L10 标注『由 F06 在 F03/F08 合并后补断言』，禁止静默跳过。共享文件热点：apps/web/app/api/rooms/[id]/route.ts（DELETE 与 F07 已合并的 403 判定、F11 的 PATCH 同文件——与 F11 并行时必须协调或串行）、房间设置弹窗/Members 页（DANGER ZONE 区块与 F11 About & AI 区块、#327 邀请流返工同组件，串行热点）、apps/web/app/(app)/rooms/page.tsx（删除后跳回列表 toast）。"
     },
     {

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Plus, Search, LayoutGrid, List, ChevronRight } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Plus, Search, LayoutGrid, List, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -139,6 +140,8 @@ function RoomSkeleton() {
 }
 
 export default function RoomsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [favIds, setFavIds] = useState<Set<string>>(new Set());
   const [favoritesOnly, setFavoritesOnly] = useState(false);
@@ -150,11 +153,22 @@ export default function RoomsPage() {
   const [createError, setCreateError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [view, setView] = useState<View>("grid");
+  // p20/F06：删除房间后跳回列表带 ?deleted=<房间名>，展示一次性 toast 并清掉 query。
+  const [deletedToast, setDeletedToast] = useState("");
 
   useEffect(() => {
     const v = typeof window !== "undefined" ? window.localStorage.getItem("rooms-view") : null;
     if (v === "grid" || v === "list") setView(v);
   }, []);
+
+  useEffect(() => {
+    const deleted = searchParams.get("deleted");
+    if (deleted) {
+      setDeletedToast(deleted);
+      router.replace("/rooms");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   function changeView(v: View) {
     setView(v);
@@ -251,6 +265,28 @@ export default function RoomsPage() {
           {showForm ? "Cancel" : "New room"}
         </Button>
       </div>
+
+      {/* p20/F06：房间删除成功 toast（一次性，来自 ?deleted= 跳转） */}
+      {deletedToast && (
+        <div
+          data-testid="room-deleted-toast"
+          className="mt-4 flex items-center justify-between gap-3 rounded-10 border border-border bg-surface-1 px-3.5 py-3 text-13 text-foreground"
+        >
+          <span>
+            <span className="font-semibold">{deletedToast}</span> has been permanently deleted.
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="关闭提示"
+            className="h-6 w-6"
+            onClick={() => setDeletedToast("")}
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
 
       {error && (
         <p role="alert" data-testid="err" className="mt-4 text-13 text-destructive">
