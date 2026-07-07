@@ -74,11 +74,15 @@ export interface RoomChatMessage {
 }
 
 /** AVA 占位回复：以 room chat 类型 + 当前 roomId 关联当前房间上下文（纯函数，可单测）。
- *  p9 接入真实模型前的确定性桩；不含模型选择/计费（见 UC 不包含）。 */
-export function avaReply(userText: string, roomId: number): string {
+ *  p9 接入真实模型前的确定性桩；不含模型选择/计费（见 UC 不包含）。
+ *  uc-rr-010（p20/F11）：若房间配置了 ai_instruction，系统提示注入到桩回复中，使其可被断言
+ *  ——真实模型是否「遵循」指令由 p9 真链路阶段验证，这里只证明注入路径存在（同房间全部线程共享）。 */
+export function avaReply(userText: string, roomId: number, aiInstruction?: string | null): string {
   const t = (userText ?? "").trim();
   const quoted = t.length > 80 ? `${t.slice(0, 80)}…` : t;
-  return `AVA（房间 ${roomId} 上下文）已收到：“${quoted}”。`;
+  const instruction = (aiInstruction ?? "").trim();
+  const systemPromptSuffix = instruction ? ` [系统提示注入 ai_instruction："${instruction}"]` : "";
+  return `AVA（房间 ${roomId} 上下文）已收到：“${quoted}”。${systemPromptSuffix}`;
 }
 
 /** 线程内消息，按时间升序。 */
@@ -105,14 +109,17 @@ async function insertMessage(
   return rows[0]!;
 }
 
-/** 发送一条用户消息并生成 AVA 占位回复；两条都持久化，线程 updated_at 刷新。 */
+/** 发送一条用户消息并生成 AVA 占位回复；两条都持久化，线程 updated_at 刷新。
+ *  uc-rr-010（p20/F11）：房间任一线程发消息都会把 rooms.ai_instruction 注入系统提示
+ *  （同房间全部线程共享同一指令），调用方从 getRoomAiInstruction(roomId) 取值传入。 */
 export async function sendRoomChatMessage(
   chatId: number,
   roomId: number,
-  text: string
+  text: string,
+  aiInstruction?: string | null
 ): Promise<{ userMessage: RoomChatMessage; replyMessage: RoomChatMessage }> {
   const userMessage = await insertMessage(chatId, roomId, "user", text.trim());
-  const replyMessage = await insertMessage(chatId, roomId, "assistant", avaReply(text, roomId));
+  const replyMessage = await insertMessage(chatId, roomId, "assistant", avaReply(text, roomId, aiInstruction));
   await query(`UPDATE room_chats SET updated_at = now() WHERE id = $1`, [chatId]);
   return { userMessage, replyMessage };
 }

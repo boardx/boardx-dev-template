@@ -23,12 +23,18 @@ function BoardSkeleton() {
   );
 }
 
-function EmptyState({ onCreate }: { onCreate: () => void }) {
+function EmptyState({ onCreate, description }: { onCreate: () => void; description: string | null }) {
   return (
     <div
       data-testid="empty"
       className="flex flex-col items-center gap-4 rounded-lg border border-dashed border-border py-12 text-center"
     >
+      {/* uc-rr-010（p20/F11）：Boards 空态展示房间 description（无则不渲染该行） */}
+      {description && (
+        <p data-testid="room-boards-empty-description" className="max-w-md text-sm text-muted-foreground">
+          {description}
+        </p>
+      )}
       <p className="text-sm text-muted-foreground">这个房间还没有白板，创建第一块试试</p>
       <Button size="sm" onClick={onCreate}>
         新建白板
@@ -48,6 +54,8 @@ export default function RoomBoardsPage() {
   const [error, setError] = useState("");
   const [createError, setCreateError] = useState("");
   const [showForm, setShowForm] = useState(false);
+  // uc-rr-010（p20/F11）：Boards 空态展示房间 description
+  const [roomDescription, setRoomDescription] = useState<string | null>(null);
 
   async function load(search = "") {
     setLoading(true);
@@ -82,6 +90,12 @@ export default function RoomBoardsPage() {
 
   useEffect(() => {
     void load();
+    void (async () => {
+      const res = await fetch(`/api/rooms/${roomId}`);
+      if (!res.ok) return;
+      const d = await res.json();
+      setRoomDescription(d.room?.description ?? null);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
 
@@ -168,7 +182,7 @@ export default function RoomBoardsPage() {
             没有匹配「{q}」的白板
           </p>
         ) : (
-          <EmptyState onCreate={() => setShowForm(true)} />
+          <EmptyState onCreate={() => setShowForm(true)} description={roomDescription} />
         )
       ) : (
         <ul data-testid="board-list" className="flex flex-col gap-2">

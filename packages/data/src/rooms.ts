@@ -10,7 +10,12 @@ export interface Room {
   team_id: number | null;
   visibility: RoomVisibility;
   created_at: string;
+  description: string | null;
+  ai_instruction: string | null;
 }
+
+/** ai_instruction 长度上限（uc-rr-010 E2）：超过即校验拒绝。 */
+export const AI_INSTRUCTION_MAX_LEN = 4000;
 
 export async function createRoom(
   name: string,
@@ -20,7 +25,7 @@ export async function createRoom(
 ): Promise<Room> {
   const rows = await query<Room>(
     `INSERT INTO rooms (name, owner_user_id, team_id, visibility) VALUES ($1, $2, $3, $4)
-     RETURNING id, name, owner_user_id, team_id, visibility, created_at`,
+     RETURNING id, name, owner_user_id, team_id, visibility, created_at, description, ai_instruction`,
     [name, ownerId, teamId, visibility]
   );
   const room = rows[0]!;
@@ -30,10 +35,19 @@ export async function createRoom(
 
 export async function getRoom(roomId: number): Promise<Room | undefined> {
   const rows = await query<Room>(
-    "SELECT id, name, owner_user_id, team_id, visibility, created_at FROM rooms WHERE id = $1",
+    "SELECT id, name, owner_user_id, team_id, visibility, created_at, description, ai_instruction FROM rooms WHERE id = $1",
     [roomId]
   );
   return rows[0];
+}
+
+/** 房间的 ai_instruction（聊天发消息注入系统提示时用；同房间全部线程共享同一指令）。 */
+export async function getRoomAiInstruction(roomId: number): Promise<string | null> {
+  const rows = await query<{ ai_instruction: string | null }>(
+    "SELECT ai_instruction FROM rooms WHERE id = $1",
+    [roomId]
+  );
+  return rows[0]?.ai_instruction ?? null;
 }
 
 /** 列表行：在 Room 之上附带「当前用户是否已是成员」，供前端渲染 Join 入口。 */
@@ -146,11 +160,15 @@ export async function removeRoomMember(roomId: number, userId: number): Promise<
 
 export async function updateRoom(
   roomId: number,
-  fields: { name?: string; visibility?: RoomVisibility }
+  fields: { name?: string; visibility?: RoomVisibility; description?: string | null; ai_instruction?: string | null }
 ): Promise<void> {
   if (fields.name !== undefined) await query("UPDATE rooms SET name = $2 WHERE id = $1", [roomId, fields.name]);
   if (fields.visibility !== undefined)
     await query("UPDATE rooms SET visibility = $2 WHERE id = $1", [roomId, fields.visibility]);
+  if (fields.description !== undefined)
+    await query("UPDATE rooms SET description = $2 WHERE id = $1", [roomId, fields.description]);
+  if (fields.ai_instruction !== undefined)
+    await query("UPDATE rooms SET ai_instruction = $2 WHERE id = $1", [roomId, fields.ai_instruction]);
 }
 
 export async function deleteRoom(roomId: number): Promise<void> {
