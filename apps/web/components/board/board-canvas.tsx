@@ -481,7 +481,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const wsRef = useRef<WebSocket | null>(null);
   const clientIdRef = useRef(crypto.randomUUID());
   const editingIdRef = useRef<string | null>(null);
-  const itemsRef = useRef<Item[]>([]);
+  // itemsRef 复用上面（applyColors 同步真值）声明的同一个 ref——两处都需要"当前 items
+  // 的同步真值"这个语义，不需要两份独立状态；load() 里对它的显式赋值
+  // （itemsRef.current = next）先于 setItems/maybeSeed 同步执行，Yjs 种子逻辑读到的
+  // 仍是最新值，和渲染期自动同步（itemsRef.current = items）不冲突。
   const itemsLoadedRef = useRef(false);
   // 是否已经完成"加入房间"的初次同步判定（收到 peer 的完整状态，或等待超时判定
   // 自己是第一个在线的人）。在这之前不能把本地 items 写进 doc——否则会替已存在的
