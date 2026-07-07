@@ -81,6 +81,11 @@ gh pr list --state open --json number,headRefName,baseRefName,statusCheckRollup
 
 ### Step 6 — 心跳与巡检
 沿用顶层 coordinator 的 L0(60s 事件)/L2(15min 巡检+心跳)节奏，范围限于自己 areas。
+**明确适用**：`.harness/instructions/coordinator-sop.md`"Deadline 与分级补救"表 + 铁律 #6
+（不可静默等待）对 module-coordinator 和 coord-main 一视同仁——发现自己模块下的 lease
+停滞（如 worker 认领锁 6h 无进展），必须先在总线上贴出带明确时限的通牒，窗口到期仍无
+可验证进展才回收重分派，不能只是"注意到了"就默默等，也不能不打招呼直接回收（先例：
+coord-board 对 #282 给 2 小时窗口）。
 心跳评论同样可以用 `pnpm harness module-lock-heartbeat --module <name> --session <id>`。
 
 ## 退位 / 抢占
