@@ -14,7 +14,7 @@ export interface CanvasItem {
   h: number;
   text: string;
   color: string | null;
-  kind: "note" | "text" | "shape" | "embed";
+  kind: "note" | "text" | "shape" | "embed" | "connector";
   bold: boolean;
   italic: boolean;
   fontFamily: string;
@@ -66,6 +66,14 @@ export async function itemScreenRect(page: Page, id: string): Promise<ScreenRect
   const rect = await page.evaluate((itemId) => window.__canvasTestApi!.getItemScreenRect(itemId), id);
   expect(rect, `item ${id} 不在渲染层`).not.toBeNull();
   return rect!;
+}
+
+// p6:F16：连接线当前实际渲染的端点画布坐标（跟随源/目标组件移动后的最新值）。
+export function connectorEndpoints(
+  page: Page,
+  id: string,
+): Promise<{ from: { x: number; y: number }; to: { x: number; y: number } } | null> {
+  return page.evaluate((itemId) => window.__canvasTestApi!.getConnectorEndpoints(itemId), id);
 }
 
 // 点击 item 中心（旧锚点：item-<id> div 的 click）。支持 Shift 多选与右键。

@@ -32,7 +32,7 @@ export interface RenderItem {
   h: number;
   text: string;
   color: string | null;
-  kind: "note" | "text" | "shape" | "embed";
+  kind: "note" | "text" | "shape" | "embed" | "connector";
   bold: boolean;
   // p6:F12（uc-widget-menu-013）：文本样式字段，均由 color 的 "|k=v" 段解析而来。
   italic: boolean;
@@ -54,6 +54,20 @@ export interface RenderItem {
   // p6:F20（uc-widget-menu-003）：锁定态，由 color 的 "|locked=1" 段解析而来（见
   // board-canvas.tsx 的 getLocked）。锁定对象不可移动/缩放/旋转/编辑，见 styleInteractive。
   locked: boolean;
+  // p6:F16（uc-widgets-005 + uc-widget-menu-012）：连接线专属几何/样式，仅 kind === "connector"
+  // 时有意义。fromId/toId 为 null 表示该端为自由端点（未连接到任何组件），此时使用
+  // fromPoint/toPoint 的画布坐标作为端点。绑定端点由渲染层每次 reconcile 时按当前的源/目标
+  // 组件矩形重算最近边中点（纯几何，不持久化具体坐标），跟随移动天然生效。
+  connector?: {
+    fromId: string | null;
+    toId: string | null;
+    fromPoint: { x: number; y: number } | null;
+    toPoint: { x: number; y: number } | null;
+    line: "straight" | "curve";
+    arrow: "none" | "end" | "both";
+    stroke: string;
+    strokeWidth: number;
+  };
 }
 
 export interface ViewportState {
@@ -92,6 +106,13 @@ interface Props {
   onGuides: (guides: Guide[]) => void;
   onSpacing: (hints: SpacingHint[]) => void;
   onOperating: (operating: boolean) => void;
+  // p6:F16（uc-widgets-005 主流程 1-3）：连接线创建模式——true 时点击一次选定起点（组件或
+  // 空白处的自由端点），再点击一次选定终点即建连（两次独立点击，不做拖拽预览）。
+  // 之前尝试过"按住拖拽 + mouse:move 实时预览线"的交互，会在拖拽过程中往 fabric 画布上加
+  // 临时预览对象，观测到会连带影响 fabric 自身对其它对象的目标命中判定（具体机制未查清，
+  // 但复现稳定），换成更简单的两次点击可完全绕开，避免在同一个诡异 bug 上无限延伸调试。
+  connectorPickMode: boolean;
+  onConnectorPick: (itemId: string | null, scenePoint: { x: number; y: number }) => void;
 }
 
 type FabricNS = typeof import("fabric");
@@ -125,10 +146,43 @@ function readTokens(): Tokens {
   };
 }
 
+// 点到线段的最短距离（连接线命中测试用——连接线的包围盒经常大幅覆盖其绑定的两个组件
+// 之间的空白区域，若沿用矩形包围盒命中会"抢走"本该落在组件上的点击，见 p6:F16 回归）。
+function pointToSegmentDistance(
+  p: { x: number; y: number },
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lenSq = dx * dx + dy * dy;
+  const t = lenSq > 0 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq)) : 0;
+  const projX = a.x + t * dx;
+  const projY = a.y + t * dy;
+  return Math.hypot(p.x - projX, p.y - projY);
+}
+
 // 画布坐标命中测试（顶层优先 = items 数组末尾优先，与 z-order 一致）。
+// p6:F16：连接线不用矩形包围盒命中（包围盒常年横跨两个被连组件之间的大片空白，会抢走
+// 本该落在组件本体上的点击），改用「指针到线段的距离 ≤ 命中容差」精确判定。
+const CONNECTOR_HIT_TOLERANCE = 6;
 function hitTest(items: RenderItem[], p: { x: number; y: number }): string | null {
   for (let i = items.length - 1; i >= 0; i--) {
     const it = items[i]!;
+    if (it.kind === "connector" && it.connector) {
+      const { from, to } = resolveConnectorEndpoints(it.connector, items);
+      if (it.connector.line === "curve") {
+        // 曲线：用直线中点+真实弯曲中点+两端点组成的折线近似（4 点 3 段），足够满足点击命中精度。
+        const mid = connectorMidpoint(from, to, "curve");
+        const hit =
+          pointToSegmentDistance(p, from, mid) <= CONNECTOR_HIT_TOLERANCE ||
+          pointToSegmentDistance(p, mid, to) <= CONNECTOR_HIT_TOLERANCE;
+        if (hit) return it.id;
+      } else if (pointToSegmentDistance(p, from, to) <= CONNECTOR_HIT_TOLERANCE) {
+        return it.id;
+      }
+      continue;
+    }
     if (p.x >= it.x && p.x <= it.x + it.w && p.y >= it.y && p.y <= it.y + it.h) return it.id;
   }
   return null;
@@ -147,7 +201,7 @@ export interface CanvasTestApi {
     h: number;
     text: string;
     color: string | null;
-    kind: "note" | "text" | "shape" | "embed";
+    kind: "note" | "text" | "shape" | "embed" | "connector";
     bold: boolean;
     italic: boolean;
     fontFamily: string;
@@ -167,6 +221,9 @@ export interface CanvasTestApi {
   getSelectedIds: () => string[];
   getItemScreenRect: (id: string) => { x: number; y: number; width: number; height: number } | null;
   getFabricObjectCount: () => number;
+  // p6:F16：连接线当前实际渲染的端点画布坐标（跟随源/目标组件移动后的最新值），
+  // 供 e2e 断言「组件移动后连接线跟随」而不依赖内部私有状态。
+  getConnectorEndpoints: (id: string) => { from: { x: number; y: number }; to: { x: number; y: number } } | null;
 }
 
 declare global {
@@ -217,10 +274,20 @@ export function FabricCanvas(props: Props) {
 
       const seen = new Set<string>();
       s.items.forEach((it, z) => {
+        // p6:F16：连接线的视觉签名还依赖绑定的源/目标组件当前矩形（跟随移动的关键——
+        // 源/目标移动时它们自身的 sig 变了，但连接线本身的 x/y/w/h/text/color 未变，
+        // 若不把锚点矩形也计入 sig，连接线不会因对端移动而重建，导致视觉上不跟随）。
+        const anchorSig =
+          it.kind === "connector" && it.connector
+            ? [it.connector.fromId, it.connector.toId].map((id) => {
+                const a = id ? s.items.find((x) => x.id === id) : undefined;
+                return a ? [a.x, a.y, a.w, a.h] : null;
+              })
+            : null;
         // 视觉签名变化 → 重建对象（items 数量小，重建比细粒度增量更新简单且不易漏）。
         const sig = JSON.stringify([
           it.x, it.y, it.w, it.h, it.text, it.color, it.kind, it.bold, it.locked,
-          s.editingId === it.id, s.canEdit,
+          s.editingId === it.id, s.canEdit, anchorSig,
         ]);
         let g = objsRef.current.get(it.id);
         if (g && (g as unknown as { sig?: string }).sig !== sig) {
@@ -228,7 +295,10 @@ export function FabricCanvas(props: Props) {
           g = undefined;
         }
         if (!g) {
-          g = buildItemObject(fabric, tokens, it, s.editingId === it.id, s.canEdit);
+          g =
+            it.kind === "connector" && it.connector
+              ? buildConnectorObject(fabric, tokens, it, s.items, s.canEdit)
+              : buildItemObject(fabric, tokens, it, s.editingId === it.id, s.canEdit);
           (g as unknown as { sig: string }).sig = sig;
           (g as unknown as { itemId: string }).itemId = it.id;
           fc.add(g);
@@ -316,7 +386,15 @@ export function FabricCanvas(props: Props) {
         if (!fcNow) return;
         const scene = fcNow.getScenePoint(e);
         const hitId = hitTest(s.items, scene);
+        const hitConnector = hitId ? s.items.find((it) => it.id === hitId && it.kind === "connector") : undefined;
 
+        // p6:F16（uc-widgets-005 主流程 2-3）：连接线创建模式——点击一次即选定一个端点（组件
+        // 或空白处的自由端点），不做拖拽手势/实时预览（两次独立点击，见 onConnectorPick）。
+        if (s.connectorPickMode && s.canEdit && e.button === 0) {
+          e.stopPropagation();
+          s.onConnectorPick(hitId, scene);
+          return;
+        }
         if (e.button === 2) {
           // 右键：选中命中对象并请求上下文菜单（空白处也开菜单，含粘贴），不参与拖拽/平移。
           if (!s.canEdit) return;
@@ -361,6 +439,22 @@ export function FabricCanvas(props: Props) {
             }
           }
           if (s.canEdit) s.onOperating(true); // uc-collab-001：开始操作
+        } else if (hitConnector) {
+          // p6:F16：连接线的 fabric Group 包围盒（由子对象绝对画布坐标算出）与其视觉细线并不
+          // 贴合，fabric 自身的默认目标检测经常判定"未命中任何对象"（target 为 undefined）——
+          // 这里用我们自己的精确命中测试（hitTest 对连接线做「指针到线段距离」判定）兜底：
+          // 命中了连接线但 fabric 没找到 target 时，仍按"命中一个可选中对象"处理（当前版本
+          // 连接线本体不支持整体拖拽，只支持点击选中——端点拖拽重连是后续增量，故不建立
+          // gestureRef，只做选中状态切换，避免拖拽路径缺失手柄而行为不完整）。
+          e.stopPropagation();
+          if (e.shiftKey) {
+            const next = s.selectedIds.includes(hitId!)
+              ? s.selectedIds.filter((x) => x !== hitId)
+              : [...s.selectedIds, hitId!];
+            s.onSelectionChange(next);
+          } else if (!s.selectedIds.includes(hitId!)) {
+            s.onSelectionChange([hitId!]);
+          }
         } else {
           // 空白：清除选择/关闭菜单；不阻断冒泡 → CanvasViewport 照常拖拽平移。
           s.onEmptyPointerDown();
@@ -590,6 +684,21 @@ export function FabricCanvas(props: Props) {
             if (!it || !fcNow) return null;
             const rect = fcNow.getElement().getBoundingClientRect();
             const { tx, ty, scale } = propsRef.current.viewport;
+            // p6:F16：连接线是线段而非矩形——测试锚点需要一个"点击后能真正命中线体"的屏幕矩形，
+            // 直接用两端点包围盒的话，中心点（既有 clickItem 的点击目标）多数情况落在线外
+            // （斜线的包围盒中心并不在线上）。改为返回以线段中点为中心的一个小矩形，
+            // 使 clickItem/itemScreenRect 的既有"点击中心"逻辑对连接线同样成立。
+            if (it.kind === "connector" && it.connector) {
+              const { from, to } = resolveConnectorEndpoints(it.connector, propsRef.current.items);
+              const { x: mx, y: my } = connectorMidpoint(from, to, it.connector.line);
+              const size = 10;
+              return {
+                x: rect.left + tx + (mx - size / 2) * scale,
+                y: rect.top + ty + (my - size / 2) * scale,
+                width: size * scale,
+                height: size * scale,
+              };
+            }
             return {
               x: rect.left + tx + it.x * scale,
               y: rect.top + ty + it.y * scale,
@@ -598,6 +707,11 @@ export function FabricCanvas(props: Props) {
             };
           },
           getFabricObjectCount: () => fcRef.current?.getObjects().length ?? 0,
+          getConnectorEndpoints: (id: string) => {
+            const it = propsRef.current.items.find((x) => x.id === id);
+            if (!it || it.kind !== "connector" || !it.connector) return null;
+            return resolveConnectorEndpoints(it.connector, propsRef.current.items);
+          },
         };
       }
 
@@ -652,6 +766,85 @@ function selectionBBox(
     maxY = Math.max(maxY, it.y + it.h);
   }
   return { x: minX + dx, y: minY + dy, w: maxX - minX, h: maxY - minY };
+}
+
+// p6:F16（uc-widgets-005）：连接线端点几何。绑定到组件的一端不存具体坐标，而是每次
+// reconcile 时按当前组件矩形重算——这样组件移动/缩放时连接线天然跟随（纯几何，无需
+// 额外监听）。锚点算法：取目标矩形四条边中点里离对端最近的一个（比"固定挂某条边"更贴合
+// 「组件移动时连接线自然改向」的直觉，也不依赖 oldcode 的多端口模型，成本更低）。
+function rectEdgeMidpoints(r: { x: number; y: number; w: number; h: number }) {
+  return [
+    { x: r.x + r.w / 2, y: r.y }, // 上
+    { x: r.x + r.w / 2, y: r.y + r.h }, // 下
+    { x: r.x, y: r.y + r.h / 2 }, // 左
+    { x: r.x + r.w, y: r.y + r.h / 2 }, // 右
+  ];
+}
+function nearestAnchor(r: { x: number; y: number; w: number; h: number }, toward: { x: number; y: number }) {
+  const pts = rectEdgeMidpoints(r);
+  let best = pts[0]!;
+  let bestD = Infinity;
+  for (const p of pts) {
+    const d = (p.x - toward.x) ** 2 + (p.y - toward.y) ** 2;
+    if (d < bestD) {
+      bestD = d;
+      best = p;
+    }
+  }
+  return best;
+}
+
+// 解析连接线的实际端点：绑定组件时按当前矩形动态重算最近锚点；自由端点用存储的画布坐标。
+function resolveConnectorEndpoints(
+  conn: NonNullable<RenderItem["connector"]>,
+  items: RenderItem[],
+): { from: { x: number; y: number }; to: { x: number; y: number } } {
+  const fromItem = conn.fromId ? items.find((i) => i.id === conn.fromId) : undefined;
+  const toItem = conn.toId ? items.find((i) => i.id === conn.toId) : undefined;
+  // 先取对端的粗略参考点（另一端矩形中心，或自由端点坐标）决定"朝向"，再各自选最近边锚点。
+  const toRoughRef = toItem
+    ? { x: toItem.x + toItem.w / 2, y: toItem.y + toItem.h / 2 }
+    : (conn.toPoint ?? { x: 0, y: 0 });
+  const fromRoughRef = fromItem
+    ? { x: fromItem.x + fromItem.w / 2, y: fromItem.y + fromItem.h / 2 }
+    : (conn.fromPoint ?? { x: 0, y: 0 });
+  const from = fromItem ? nearestAnchor(fromItem, toRoughRef) : (conn.fromPoint ?? { x: 0, y: 0 });
+  const to = toItem ? nearestAnchor(toItem, fromRoughRef) : (conn.toPoint ?? { x: 0, y: 0 });
+  return { from, to };
+}
+
+// 连接线路径上的中点（曲线时按渲染同款的法线外扩公式算出真实弯曲中点，而非两端点的直线
+// 中点——直线中点在曲线上通常不落在线体本身，命中测试/测试锚点都需要这个真实中点）。
+function connectorMidpoint(
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  line: "straight" | "curve",
+): { x: number; y: number } {
+  const mx = (from.x + to.x) / 2;
+  const my = (from.y + to.y) / 2;
+  if (line !== "curve") return { x: mx, y: my };
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len;
+  const ny = dx / len;
+  const bend = len * 0.18;
+  // 二次贝塞尔在 t=0.5 处的点 = 0.25*from + 0.5*control + 0.25*to（control = 直线中点 + 法线外扩）。
+  const cx = mx + nx * bend;
+  const cy = my + ny * bend;
+  return { x: 0.25 * from.x + 0.5 * cx + 0.25 * to.x, y: 0.25 * from.y + 0.5 * cy + 0.25 * to.y };
+}
+
+// p6:F16（uc-widget-menu-012）：箭头三角形几何——按线段末端方向角计算三角形三个顶点
+// （思路参考 oldcode canvasx-main 的 arrowhead 绘制：以终点为顶点，沿线方向反向展开两翼）。
+function arrowheadPoints(tip: { x: number; y: number }, angle: number, size: number) {
+  const spread = Math.PI / 7; // 翼展角度
+  const back = angle + Math.PI;
+  return [
+    tip,
+    { x: tip.x + size * Math.cos(back - spread), y: tip.y + size * Math.sin(back - spread) },
+    { x: tip.x + size * Math.cos(back + spread), y: tip.y + size * Math.sin(back + spread) },
+  ];
 }
 
 type Interactive = {
@@ -859,5 +1052,106 @@ function buildItemObject(
     opacity: it.opacity / 100,
   });
   styleInteractive(g as unknown as Interactive, tokens, canEdit, true, it.locked);
+  return g;
+}
+
+// p6:F16（uc-widgets-005 + uc-widget-menu-012）：连接线渲染。与其它 item 不同，连接线的
+// "位置"由两个端点的绝对画布坐标决定，不是一个 [x,y,w,h] 局部框——用一个 left:0/top:0 的
+// Group 承载线体 + 箭头，子对象坐标直接写绝对画布坐标（简单可靠，牺牲一点 Group 变换开销）。
+// 线型：straight 用直线 Path("M..L.."）；curve 用二次贝塞尔，控制点取两端点中点沿法线方向
+// 外扩，弯曲程度与距离成比例（纯几何，足够表达"关系有弧度"，不需要用户可拖的控制点）。
+function buildConnectorObject(
+  fabric: FabricNS,
+  tokens: Tokens,
+  it: RenderItem,
+  items: RenderItem[],
+  canEdit: boolean,
+): Group {
+  const conn = it.connector!;
+  const { from, to } = resolveConnectorEndpoints(conn, items);
+  const stroke = conn.stroke;
+  const strokeWidth = conn.strokeWidth;
+  const objs: FabricObject[] = [];
+
+  let pathData: string;
+  let endAngle: number; // 终点处线段方向角（箭头朝向）
+  let startAngle: number; // 起点处线段方向角（反向箭头朝向）
+  if (conn.line === "curve") {
+    const mx = (from.x + to.x) / 2;
+    const my = (from.y + to.y) / 2;
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const len = Math.hypot(dx, dy) || 1;
+    // 法线方向外扩，弯曲幅度取线长的 18%（视觉上明显区分直线，但不过分夸张）。
+    const nx = -dy / len;
+    const ny = dx / len;
+    const bend = len * 0.18;
+    const cx = mx + nx * bend;
+    const cy = my + ny * bend;
+    pathData = `M ${from.x} ${from.y} Q ${cx} ${cy} ${to.x} ${to.y}`;
+    endAngle = Math.atan2(to.y - cy, to.x - cx);
+    startAngle = Math.atan2(from.y - cy, from.x - cx);
+  } else {
+    pathData = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+    endAngle = Math.atan2(to.y - from.y, to.x - from.x);
+    startAngle = endAngle + Math.PI;
+  }
+
+  const path = new fabric.Path(pathData, {
+    left: 0,
+    top: 0,
+    fill: "",
+    stroke,
+    strokeWidth,
+    strokeUniform: true,
+    selectable: false,
+    evented: false,
+  });
+  objs.push(path);
+
+  const arrowSize = 8 + strokeWidth * 2;
+  if (conn.arrow === "end" || conn.arrow === "both") {
+    const pts = arrowheadPoints(to, endAngle, arrowSize);
+    objs.push(
+      new fabric.Polygon(pts, {
+        left: 0,
+        top: 0,
+        fill: stroke,
+        stroke,
+        strokeWidth: 1,
+        selectable: false,
+        evented: false,
+      }),
+    );
+  }
+  if (conn.arrow === "both") {
+    const pts = arrowheadPoints(from, startAngle, arrowSize);
+    objs.push(
+      new fabric.Polygon(pts, {
+        left: 0,
+        top: 0,
+        fill: stroke,
+        stroke,
+        strokeWidth: 1,
+        selectable: false,
+        evented: false,
+      }),
+    );
+  }
+
+  const g = new fabric.Group(objs, {
+    left: 0,
+    top: 0,
+    originX: "left",
+    originY: "top",
+    subTargetCheck: false,
+    selectable: true,
+    hasControls: false,
+    // 注意：不用 perPixelTargetFind——线体路径 fill:"" 空字符串会让 fabric 的像素级命中检测
+    // 找不到目标（真实回归：点击连接线完全选不中），退回默认的包围盒命中即可；连接线的
+    // 精确点击判定已经在 hitTest()（JS 侧、mouse:down/up 用）里用「指针到线段距离」单独处理，
+    // fabric 自身的 target 检测只需要粗略地「知道这个区域有对象」以便触发手势，不需要精确。
+  });
+  styleInteractive(g as unknown as Interactive, tokens, canEdit, false, it.locked);
   return g;
 }
