@@ -63,13 +63,20 @@ test("输入后立即按 Enter 使用当前搜索词刷新网格", async ({ page
   await expect(grid).toBeVisible();
   await expect(grid).toContainText("Research Agent");
 
-  await page.getByTestId("store-search").fill(`no-match-${Date.now()}`);
-  await page.getByTestId("store-search").press("Enter");
+  // 用 pressSequentially 逐字符派发真实键盘事件，紧接着按 Enter——不给 React 一个
+  // 独立的 Playwright action 边界去把最后一个字符的 setQ 落到下一次渲染。这是在真实
+  // 复现"打完最后一个字立刻按 Enter"的窗口；用 fill() + 独立 press("Enter") 的写法
+  // 两次调用之间总有足够 tick 让 state 冲刷，测不出 onKeyDown 闭包读到旧 q 的 bug。
+  const search = page.getByTestId("store-search");
+  await search.click();
+  await search.pressSequentially(`no-match-${Date.now()}`, { delay: 0 });
+  await search.press("Enter");
   await expect(page.getByTestId("empty")).toBeVisible();
   await expect(grid).toHaveCount(0);
 
-  await page.getByTestId("store-search").fill("Translate");
-  await page.getByTestId("store-search").press("Enter");
+  await search.fill("");
+  await search.pressSequentially("Translate", { delay: 0 });
+  await search.press("Enter");
   await expect(grid).toBeVisible();
   await expect(grid).toContainText("Translate");
   await expect(grid).not.toContainText("Research Agent");
