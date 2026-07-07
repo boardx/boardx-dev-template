@@ -331,16 +331,16 @@
       "area": "widgets",
       "title": "连接线组件 + 连接线样式",
       "user_visible_behavior": "从一个组件拉出连接线连到另一个组件，组件移动时连接线跟随；调整线型（直/折/曲）、粗细、颜色、端点箭头与路径/流程标识（uc-widget-menu-012）。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "10",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/widget-connector.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F16.verify.log @ 2026-07-06T06:41:01.118Z",
       "notes": "uc-widgets-005 + uc-widget-menu-012。连接线锚定到源/目标 widget id，重算路径为纯几何。blocked-on p6:F13 与 p6:F14——端口吸附/自动重连算法参考并移植 oldcode canvasx-main 的 XConnector 子系统（Fabric 原生），需等 F13 把渲染层切到 Fabric.js、F14 把 schema 改成字段级之后才对齐。",
       "source_use_cases": [
         "phases/requirements/board/widgets/uc-widgets-005-use-connector-widget.md",

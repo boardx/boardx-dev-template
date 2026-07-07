@@ -223,6 +223,57 @@ const EMBED_MARK = "embed";
 const DEFAULT_EMBED = "嵌入内容";
 const isReloadable = (it: { color?: string | null }) => baseColor(it.color) === EMBED_MARK;
 
+// p6:F16（uc-widgets-005 + uc-widget-menu-012）：连接线组件。沿用 F12/F15/F19/F20/F21 建立的
+// color "|k=v" 哨兵编码约定，不新增持久化列（服务端 validateNewItem 仍只认 type ∈ {note,rect}）。
+// 线上以 type:"note" 落库 + color:"connector" 判别头，紧随其后的样式段：
+//   from=<itemId>   起点绑定的组件 id（缺省=自由起点，取 fx/fy 作画布坐标）
+//   to=<itemId>     终点绑定的组件 id（缺省=自由终点，取 tx/ty 作画布坐标）
+//   fx=/fy=/tx=/ty= 自由端点坐标（未绑定组件的一端才需要；已绑定的一端由客户端动态重算，
+//                   不落这几段——避免和动态重算的语义冲突）
+//   linetype=curve  直线（缺省）/曲线，UC 业务规则 5 只确认这两种，不做折线
+//   arrow=end|both  端点箭头：缺省 none（无箭头），end=尾部箭头，both=两端箭头
+//   border=<token>  复用 F19 已有边框色 token 表达连接线颜色（同一套色板，不重复定义）
+//   borderw=<n>     复用 F19 已有线宽段（F19 注释本就写明 borderw 承担线宽语义）
+// 连接线本身的 x/y/w/h 落库为当前两端点的包围盒（仅用于列表/初始渲染与拖拽命中的粗略范围，
+// 精确端点位置由客户端按 from/to 绑定的组件当前矩形每次动态重算，参见 fabric-canvas.tsx
+// 的 resolveConnectorEndpoints——这才是"组件移动时连接线跟随"的真正机制）。
+const CONNECTOR_MARK = "connector";
+const isConnector = (it: { color?: string | null }) => baseColor(it.color) === CONNECTOR_MARK;
+const getConnectorFromId = (it: { color?: string | null }) => styleGet(it.color, "from");
+const getConnectorToId = (it: { color?: string | null }) => styleGet(it.color, "to");
+const getConnectorFreePoint = (
+  it: { color?: string | null },
+  which: "from" | "to",
+): { x: number; y: number } | null => {
+  const x = styleGet(it.color, which === "from" ? "fx" : "tx");
+  const y = styleGet(it.color, which === "from" ? "fy" : "ty");
+  const nx = x != null ? Number(x) : NaN;
+  const ny = y != null ? Number(y) : NaN;
+  return Number.isFinite(nx) && Number.isFinite(ny) ? { x: nx, y: ny } : null;
+};
+const CONNECTOR_LINE_TYPES = ["straight", "curve"] as const;
+type ConnectorLineType = (typeof CONNECTOR_LINE_TYPES)[number];
+const DEFAULT_CONNECTOR_LINE: ConnectorLineType = "straight";
+const getConnectorLine = (it: { color?: string | null }): ConnectorLineType => {
+  const v = styleGet(it.color, "linetype");
+  return v === "curve" ? "curve" : DEFAULT_CONNECTOR_LINE;
+};
+const CONNECTOR_ARROW_TYPES = ["none", "end", "both"] as const;
+type ConnectorArrowType = (typeof CONNECTOR_ARROW_TYPES)[number];
+const DEFAULT_CONNECTOR_ARROW: ConnectorArrowType = "none";
+const getConnectorArrow = (it: { color?: string | null }): ConnectorArrowType => {
+  const v = styleGet(it.color, "arrow");
+  return (CONNECTOR_ARROW_TYPES as readonly string[]).includes(v ?? "")
+    ? (v as ConnectorArrowType)
+    : DEFAULT_CONNECTOR_ARROW;
+};
+const CONNECTOR_STROKE_COLORS: Record<string, string> = {
+  none: "#334155", // 无边框 token 复用为连接线默认深灰色（连接线始终需要可见描边，语义不同于形状的“无边框”）
+  gray: "#6b7280",
+  blue: "#2563eb",
+  red: "#dc2626",
+};
+
 interface Move {
   id: string;
   fromX: number;
@@ -353,6 +404,13 @@ function mergeRemoteItems(
 // 周边 DOM UI（工具栏 / Widget Menu / 右键菜单 / selection-count / 参考线 / 编辑框 / 徽标）不变。
 export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
+  // applyColors 的同步真值来源：React 的 setState(updater) 不保证 updater 在调用点同步执行
+  // （它可能被推迟到下一次渲染阶段才处理），所以不能指望"setItems(prev => ...) 内部算出的
+  // 新值"能在紧接着的同步代码里读到——之前一版 fix 就是错在这里，同一交互序列里连续调用
+  // 多个样式 setter 时，后面几个的 captured 读到的是空值，PATCH 悄悄丢了。这里用 ref 维护
+  // 真正同步、每次 applyColors 调用后立刻前进的 items 快照，取代对 setState 时序的依赖。
+  const itemsRef = useRef<Item[]>(items);
+  itemsRef.current = items;
   const [selected, setSelected] = useState<Set<string>>(new Set());
   // p8:F02 — selected 的 ref 镜像，供 onOperating（useCallback，空依赖数组）读取
   // 拖拽开始时刻的最新选中集合，而不是闭包捕获的过期值。
@@ -848,7 +906,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         h: it.h,
         text: it.text,
         color: it.color ?? null,
-        kind: isText(it) ? "text" : isShape(it) ? "shape" : isReloadable(it) ? "embed" : "note",
+        kind: isConnector(it) ? "connector" : isText(it) ? "text" : isShape(it) ? "shape" : isReloadable(it) ? "embed" : "note",
         bold: isBold(it),
         italic: isItalic(it),
         fontFamily: getFontFamily(it),
@@ -863,6 +921,19 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         reloadCount: reload[it.id]?.count ?? 0,
         refreshedAt: reload[it.id]?.at ?? null,
         locked: getLocked(it),
+        // p6:F16：连接线专属几何/样式派生视图（见上方 connector "|k=v" 段约定）。
+        connector: isConnector(it)
+          ? {
+              fromId: getConnectorFromId(it),
+              toId: getConnectorToId(it),
+              fromPoint: getConnectorFreePoint(it, "from") ?? { x: it.x, y: it.y },
+              toPoint: getConnectorFreePoint(it, "to") ?? { x: it.x + it.w, y: it.y + it.h },
+              line: getConnectorLine(it),
+              arrow: getConnectorArrow(it),
+              stroke: CONNECTOR_STROKE_COLORS[getBorder(it)] ?? CONNECTOR_STROKE_COLORS.none!,
+              strokeWidth: getBorderWidth(it),
+            }
+          : undefined,
       })),
     [items, reload],
   );
@@ -986,6 +1057,109 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     setSelected(new Set([item.id]));
   }
 
+  // 连接线创建（uc-widgets-005 主流程 2-3）：两次独立点击——点第一下记录起点（组件或空白处
+  // 的自由端点），点第二下记录终点并立即建连（见下方 connectorFirstPick 状态 + onConnectorPick
+  // 回调）。之前尝试过"按住拖拽 + 实时预览线"的单手势交互，观测到会连带影响 fabric 自身对其它
+  // 对象的点击命中判定（真实回归，具体内部机制未查清但复现稳定）；两次点击更简单也更容易验证，
+  // 完全避开了那条路径，是范围内可接受的交互简化（UC 主流程 3 描述的是"拖拽"，两次点击是同一
+  // 用户意图——选定源、选定目标——的等价简化实现，在 notes 里如实记录这个取舍）。
+  // fromId/toId 为 null 时该端是自由端点，落库其画布坐标
+  // （fx/fy 或 tx/ty 段）；绑定组件的一端不落坐标，交由客户端每次按组件当前矩形动态重算
+  // （这是"组件移动时连接线跟随"的机制，见 fabric-canvas.tsx 的 resolveConnectorEndpoints）。
+  // 线上以 type:"note" 落库（服务端只放行 note/rect），x/y/w/h 落为两端点的包围盒（供
+  // 命中测试/初始渲染参考，非跟随时的权威值）。
+  async function createConnector(
+    fromId: string | null,
+    toId: string | null,
+    fromPoint: { x: number; y: number },
+    toPoint: { x: number; y: number },
+  ) {
+    const x = Math.min(fromPoint.x, toPoint.x);
+    const y = Math.min(fromPoint.y, toPoint.y);
+    const w = Math.max(8, Math.abs(toPoint.x - fromPoint.x));
+    const h = Math.max(8, Math.abs(toPoint.y - fromPoint.y));
+    const res = await fetch(`/api/boards/${boardId}/items`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "note", x, y, w, h, text: "" }),
+    });
+    if (res.status !== 201) return;
+    const { item } = (await res.json()) as { item: Item };
+    const segs: Record<string, string | null> = {};
+    if (fromId) segs.from = fromId;
+    else {
+      segs.fx = String(fromPoint.x);
+      segs.fy = String(fromPoint.y);
+    }
+    if (toId) segs.to = toId;
+    else {
+      segs.tx = String(toPoint.x);
+      segs.ty = String(toPoint.y);
+    }
+    const color = withStyle(CONNECTOR_MARK, segs);
+    await fetch(`/api/board-items/${item.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ color }),
+    });
+    const connItem: Item = { ...item, color };
+    recordOp({ kind: "add", items: [connItem] });
+    await load();
+    setSelected(new Set([item.id]));
+    setActiveTool("select"); // 建连后回到选择工具（对齐一次一条连接线的创建节奏，同 addShape 之外的其它一次性创建工具）
+  }
+
+  // 连接线创建的两次点击状态机（见上方 createConnector 注释的交互取舍）：第一次点击记录
+  // 起点，第二次点击记录终点并调用 createConnector 建连。点击的组件解析为其边界矩形最近
+  // 边中点，空白处点击记为自由端点（画布坐标）。
+  const [connectorFirstPick, setConnectorFirstPick] = useState<{
+    id: string | null;
+    point: { x: number; y: number };
+  } | null>(null);
+
+  function nearestEdgeMidpoint(
+    r: { x: number; y: number; w: number; h: number },
+    toward: { x: number; y: number },
+  ): { x: number; y: number } {
+    const pts = [
+      { x: r.x + r.w / 2, y: r.y },
+      { x: r.x + r.w / 2, y: r.y + r.h },
+      { x: r.x, y: r.y + r.h / 2 },
+      { x: r.x + r.w, y: r.y + r.h / 2 },
+    ];
+    let best = pts[0]!;
+    let bestD = Infinity;
+    for (const p of pts) {
+      const d = (p.x - toward.x) ** 2 + (p.y - toward.y) ** 2;
+      if (d < bestD) {
+        bestD = d;
+        best = p;
+      }
+    }
+    return best;
+  }
+
+  const onConnectorPick = useCallback(
+    (itemId: string | null, scenePoint: { x: number; y: number }) => {
+      if (!canEdit) return;
+      const hitItem = itemId ? items.find((it) => it.id === itemId) : undefined;
+      // 连接线本身不能作为新连接线的端点（避免连接线连连接线的无意义嵌套）。
+      if (hitItem && isConnector(hitItem)) return;
+      if (!connectorFirstPick) {
+        const point = hitItem ? nearestEdgeMidpoint(hitItem, scenePoint) : scenePoint;
+        setConnectorFirstPick({ id: itemId, point });
+        return;
+      }
+      // 起终点是同一个组件时不建连（无意义的自环），保留第一次选择等待用户重新点选终点。
+      if (itemId && itemId === connectorFirstPick.id) return;
+      const point = hitItem ? nearestEdgeMidpoint(hitItem, connectorFirstPick.point) : scenePoint;
+      const first = connectorFirstPick;
+      setConnectorFirstPick(null);
+      void createConnector(first.id, itemId, first.point, point);
+    },
+    [canEdit, items, connectorFirstPick],
+  );
+
   // uc-widget-menu-009：刷新选中的可刷新组件。仅对 color:"embed" 的组件生效；
   // 主流程 = 显示处理中 → 重新获取该组件内容（重走 GET /items）→ 内容/状态更新并保持选中。
   // 可见反馈：重载计数自增 + 时间戳更新（data-testid=widget-reloaded-<id>）。
@@ -1017,6 +1191,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     else setOpenPanel(null);
     if (tool === "select") setSelected(new Set());
     setFormatSource(null); // uc-widget-menu-010 主流程 7：切工具即退出取样模式
+    if (tool !== "connector") setConnectorFirstPick(null); // 切出连接线工具即丢弃未完成的起点选择
   }
 
   // 底部悬浮 dock（F01，对齐 prototype FigJam 工具栏）复用同一套 activeTool 真值与
@@ -1107,24 +1282,35 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     });
   }
 
-  // 落库一批 color 变更（共用于 setColor / toggleBold）。经 queuePatch 按 item 串行落库，
-  // 避免同一 item 连续多次样式改动时后发先至覆盖新值（p6:F19 修复的真实回归，见 queuePatch 注释）。
-  async function applyColors(updates: { id: string; color: string }[]) {
-    const map = new Map(updates.map((u) => [u.id, u.color]));
-    setItems((prev) => prev.map((it) => (map.has(it.id) ? { ...it, color: map.get(it.id)! } : it)));
-    await Promise.all(updates.map((u) => queuePatch(u.id, { color: u.color })));
+  // 落库一批 color 变更。compute 基于 itemsRef.current（同步真值）求值并立刻推进
+  // itemsRef，而不是依赖 setState(updater) 的执行时机——React 不保证 updater 在调用点
+  // 同步跑完，同一交互序列里连续调用多个样式 setter（如连接线的 border/borderWidth/
+  // 线型/箭头）时，若指望"上一次 setItems 的 updater 已经算完"来读最新值，会读到空/
+  // 过期数据，导致除最后一次外全部丢失（p6:F16 verify 抓到的真实回归）。用 ref 让每次
+  // applyColors 调用后 itemsRef.current 立刻前进，下一个调用总能读到刚写完的结果，
+  // 与 React 何时真正渲染无关。这跟 p6:F19 修的 queuePatch 落库乱序是同一类"并发写用了
+  // 过期读"问题，只是这次发生在客户端 state 计算层，queuePatch 本身防不住。
+  async function applyColors(compute: (it: Item) => string | null) {
+    const captured: { id: string; color: string }[] = [];
+    const next = itemsRef.current.map((it) => {
+      const color = compute(it);
+      if (color == null) return it;
+      captured.push({ id: it.id, color });
+      return { ...it, color };
+    });
+    itemsRef.current = next;
+    setItems(next);
+    await Promise.all(captured.map((u) => queuePatch(u.id, { color: u.color })));
   }
 
   // F11：改选中便签颜色（保留字重 :bold 修饰 + p6:F12 样式段）
   async function setColor(base: string) {
-    const updates = items
-      .filter((it) => selected.has(it.id) && !getLocked(it))
-      .map((it) => {
-        const head = base + (isBold(it) ? ":bold" : "");
-        const segs = styleSegs(it.color);
-        return { id: it.id, color: [head, ...segs].join("|") };
-      });
-    await applyColors(updates);
+    await applyColors((it) => {
+      if (!selected.has(it.id) || getLocked(it)) return null;
+      const head = base + (isBold(it) ? ":bold" : "");
+      const segs = styleSegs(it.color);
+      return [head, ...segs].join("|");
+    });
   }
 
   // uc-widget-menu-002：切换选中组件字重（bold/normal），编码为 color 的 :bold 后缀。
@@ -1132,13 +1318,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     const targets = items.filter((it) => selected.has(it.id) && !getLocked(it));
     if (targets.length === 0) return;
     const allBold = targets.every(isBold); // 全粗 → 取消；否则 → 全部加粗
-    const updates = targets.map((it) => {
+    await applyColors((it) => {
+      if (!selected.has(it.id) || getLocked(it)) return null;
       const b = baseColor(it.color);
       const segs = styleSegs(it.color);
       const head = allBold ? b : `${b}:bold`;
-      return { id: it.id, color: [head, ...segs].join("|") };
+      return [head, ...segs].join("|");
     });
-    await applyColors(updates);
   }
 
   // uc-widget-menu-013：切换选中组件斜体（italic），编码为 color 的 "|italic=1" 样式段。
@@ -1146,92 +1332,101 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     const targets = items.filter((it) => selected.has(it.id) && !getLocked(it));
     if (targets.length === 0) return;
     const allItalic = targets.every(isItalic);
-    const updates = targets.map((it) => ({
-      id: it.id,
-      color: withStyle(it.color, { italic: allItalic ? null : "1" }),
-    }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || getLocked(it) ? null : withStyle(it.color, { italic: allItalic ? null : "1" }),
+    );
   }
 
   // uc-widget-menu-013：设置选中组件字体，编码为 color 的 "|font=<slug>" 样式段。
   async function setFontFamily(font: string) {
-    const updates = items
-      .filter((it) => selected.has(it.id) && !getLocked(it))
-      .map((it) => ({ id: it.id, color: withStyle(it.color, { font: font === DEFAULT_FONT ? null : font }) }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || getLocked(it)
+        ? null
+        : withStyle(it.color, { font: font === DEFAULT_FONT ? null : font }),
+    );
   }
 
   // uc-widget-menu-013：设置选中组件字号，编码为 color 的 "|size=<n>" 样式段。
   async function setFontSize(size: number) {
-    const updates = items
-      .filter((it) => selected.has(it.id) && !getLocked(it))
-      .map((it) => ({
-        id: it.id,
-        color: withStyle(it.color, { size: size === DEFAULT_FONT_SIZE ? null : String(size) }),
-      }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || getLocked(it)
+        ? null
+        : withStyle(it.color, { size: size === DEFAULT_FONT_SIZE ? null : String(size) }),
+    );
   }
 
   // uc-widget-menu-013：设置选中组件文本对齐方式，编码为 color 的 "|align=<left|center|right>" 样式段。
   async function setAlign(align: "left" | "center" | "right") {
-    const updates = items
-      .filter((it) => selected.has(it.id) && !getLocked(it))
-      .map((it) => ({ id: it.id, color: withStyle(it.color, { align: align === "left" ? null : align }) }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || getLocked(it) ? null : withStyle(it.color, { align: align === "left" ? null : align }),
+    );
   }
 
   // p6:F19（uc-widget-menu-002）：设置选中组件边框色，编码为 color 的 "|border=<token>" 样式段。
   async function setBorder(token: BorderToken) {
-    const updates = items
-      .filter((it) => selected.has(it.id) && !getLocked(it))
-      .map((it) => ({ id: it.id, color: withStyle(it.color, { border: token === DEFAULT_BORDER ? null : token }) }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || getLocked(it)
+        ? null
+        : withStyle(it.color, { border: token === DEFAULT_BORDER ? null : token }),
+    );
   }
 
   // p6:F19（uc-widget-menu-002）：设置选中组件边框宽/线宽，编码为 color 的 "|borderw=<n>" 样式段。
   async function setBorderWidth(width: number) {
-    const updates = items
-      .filter((it) => selected.has(it.id) && !getLocked(it))
-      .map((it) => ({
-        id: it.id,
-        color: withStyle(it.color, { borderw: width === DEFAULT_BORDER_WIDTH ? null : String(width) }),
-      }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || getLocked(it)
+        ? null
+        : withStyle(it.color, { borderw: width === DEFAULT_BORDER_WIDTH ? null : String(width) }),
+    );
   }
 
   // p6:F19（uc-widget-menu-002）：设置选中组件透明度，编码为 color 的 "|opacity=<1-100>" 样式段。
   async function setOpacity(value: number) {
-    const updates = items
-      .filter((it) => selected.has(it.id) && !getLocked(it))
-      .map((it) => ({
-        id: it.id,
-        color: withStyle(it.color, { opacity: value === DEFAULT_OPACITY ? null : String(value) }),
-      }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || getLocked(it)
+        ? null
+        : withStyle(it.color, { opacity: value === DEFAULT_OPACITY ? null : String(value) }),
+    );
   }
 
   // p6:F19（uc-widget-menu-002）：设置选中组件文字色，编码为 color 的 "|textcolor=<token>" 样式段。
   async function setTextColor(token: TextColorToken) {
-    const updates = items
-      .filter((it) => selected.has(it.id) && !getLocked(it))
-      .map((it) => ({
-        id: it.id,
-        color: withStyle(it.color, { textcolor: token === DEFAULT_TEXT_COLOR ? null : token }),
-      }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || getLocked(it)
+        ? null
+        : withStyle(it.color, { textcolor: token === DEFAULT_TEXT_COLOR ? null : token }),
+    );
   }
 
   // p6:F15（uc-widgets-004 备选流程 3 / 业务规则 6）：切换已有形状的具体类型，编码为 color 的
   // "|shape=<token>" 样式段。仅通过 Widget Menu 的可见入口（wm-shape-type）暴露，符合 UC 业务
   // 规则 6「已有形状类型切换由 Widget Menu 可见入口决定」。
   async function setShapeType(shapeType: ShapeType) {
-    const updates = items
-      .filter((it) => selected.has(it.id) && isShape(it) && !getLocked(it))
-      .map((it) => ({
-        id: it.id,
-        color: withStyle(it.color, { shape: shapeType === DEFAULT_SHAPE_TYPE ? null : shapeType }),
-      }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) || !isShape(it) || getLocked(it)
+        ? null
+        : withStyle(it.color, { shape: shapeType === DEFAULT_SHAPE_TYPE ? null : shapeType }),
+    );
+  }
+
+  // p6:F16（uc-widget-menu-012 主流程 6）：设置选中连接线的路径形态（直线/曲线），
+  // 编码为 color 的 "|linetype=curve" 样式段（直线为缺省，省略该段）。
+  async function setConnectorLine(line: ConnectorLineType) {
+    await applyColors((it) =>
+      !selected.has(it.id) || !isConnector(it) || getLocked(it)
+        ? null
+        : withStyle(it.color, { linetype: line === DEFAULT_CONNECTOR_LINE ? null : line }),
+    );
+  }
+
+  // p6:F16（uc-widget-menu-012 主流程 4/5）：设置选中连接线的端点箭头（无/尾部/两端），
+  // 编码为 color 的 "|arrow=<token>" 样式段（无箭头为缺省，省略该段）。
+  async function setConnectorArrow(arrow: ConnectorArrowType) {
+    await applyColors((it) =>
+      !selected.has(it.id) || !isConnector(it) || getLocked(it)
+        ? null
+        : withStyle(it.color, { arrow: arrow === DEFAULT_CONNECTOR_ARROW ? null : arrow }),
+    );
   }
 
   // p6:F20（uc-widget-menu-003）：切换选中组件锁定态，编码为 color 的 "|locked=1" 样式段。
@@ -1241,11 +1436,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     const targets = items.filter((it) => selected.has(it.id));
     if (targets.length === 0) return;
     const allLocked = targets.every(getLocked);
-    const updates = targets.map((it) => ({
-      id: it.id,
-      color: withStyle(it.color, { locked: allLocked ? null : "1" }),
-    }));
-    await applyColors(updates);
+    await applyColors((it) =>
+      !selected.has(it.id) ? null : withStyle(it.color, { locked: allLocked ? null : "1" }),
+    );
   }
 
   // p6:F19（uc-widget-menu-010）：进入/退出格式取样模式。仅支持单选一个文本/便签类对象作为格式来源
@@ -1271,7 +1464,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     const target = items.find((it) => it.id === targetId);
     if (!target || isShape(target) || isReloadable(target)) return false;
     const newColor = applyFormatColor({ color: formatSource.color }, isText(target));
-    await applyColors([{ id: target.id, color: newColor }]);
+    await applyColors((it) => (it.id === target.id ? newColor : null));
     return true;
   }
 
@@ -1468,7 +1661,15 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             <BoardMenuButton testId="add-text" label="文本" active={activeTool === "text"} onClick={() => void addText()}>
               <Type className="h-4 w-4" />
             </BoardMenuButton>
-            <BoardMenuButton testId="board-tool-connector" label="连接线" active={false} disabled>
+            {/* p6:F16（uc-widgets-005 前端入口 1-2）：连接线工具——激活后依次点击两个组件
+                （或空白处，作为自由端点）建立连接（见 onConnectorPick 的两次点击状态机 +
+                createConnector）。 */}
+            <BoardMenuButton
+              testId="board-tool-connector"
+              label="连接线"
+              active={activeTool === "connector"}
+              onClick={() => chooseTool("connector")}
+            >
               <Cable className="h-4 w-4" />
             </BoardMenuButton>
             {/* p6:F15（uc-widgets-004 前端入口 1/2）：形状入口点击直接用上次选择的类型创建
@@ -1598,8 +1799,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               过滤掉锁定项，只对未锁定项生效。 */}
           {!allSelectedLocked && (
             <>
-          {/* 颜色色板（F11）：仅对便签生效；选中项全为文本时隐藏（文本为透明块，不套柔彩色） */}
-          {!items.filter((it) => selected.has(it.id)).every(isText) &&
+          {/* 颜色色板（F11）：仅对便签生效；选中项全为文本或连接线时隐藏（文本为透明块、连接线
+              用边框色表达线条颜色，都不套柔彩背景色，业务规则 1：菜单入口按对象类型区分）。 */}
+          {!items.filter((it) => selected.has(it.id)).every((it) => isText(it) || isConnector(it)) &&
+            items.filter((it) => selected.has(it.id)).every((it) => !isConnector(it)) &&
             COLOR_TOKENS.map((c) => (
             <button
               key={c}
@@ -1610,22 +1813,28 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               className={"h-5 w-5 rounded-full border " + colorClass(c)}
             />
           ))}
-          <Button
-            data-testid="wm-bold"
-            size="sm"
-            variant="ghost"
-            aria-label="字重加粗"
-            aria-pressed={items.filter((it) => selected.has(it.id)).every(isBold)}
-            className="font-bold"
-            onClick={() => void toggleBold()}
-          >
-            B
-          </Button>
+          {/* p6:F16 业务规则 1：连接线无文字排版语义，字重入口不展示（与形状/嵌入组件的
+              既有隐藏逻辑一致，只是本行 wm-bold 历史上未对形状/嵌入设门，这里只加连接线判断，
+              不改动既有对形状/嵌入的展示行为，范围最小化）。 */}
+          {!items.filter((it) => selected.has(it.id)).every(isConnector) && (
+            <Button
+              data-testid="wm-bold"
+              size="sm"
+              variant="ghost"
+              aria-label="字重加粗"
+              aria-pressed={items.filter((it) => selected.has(it.id)).every(isBold)}
+              className="font-bold"
+              onClick={() => void toggleBold()}
+            >
+              B
+            </Button>
+          )}
           {/* uc-widget-menu-013 文本样式：字体/字号/斜体/对齐/转便利贴。仅对文本或便签生效
               （含文字的对象）；形状/嵌入组件无文字排版语义，不显示（业务规则 1）。 */}
           {(() => {
             const sel = items.filter((it) => selected.has(it.id));
-            const allTextLike = sel.length > 0 && sel.every((it) => isText(it) || (!isShape(it) && !isReloadable(it)));
+            const allTextLike =
+              sel.length > 0 && sel.every((it) => isText(it) || (!isShape(it) && !isReloadable(it) && !isConnector(it)));
             if (!allTextLike) return null;
             const first = sel[0]!;
             const mixedFont = !sel.every((it) => getFontFamily(it) === getFontFamily(first));
@@ -1708,11 +1917,15 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           })()}
           {/* p6:F19（uc-widget-menu-002）：边框色/边框宽（含线宽语义）/透明度/文字色。
               对文本/便签/形状均生效（透明度、边框是通用外观属性，不限文字类对象）；
-              嵌入组件（图片/文件占位）暂不开放，避免和刷新/裁剪能力冲突。 */}
+              嵌入组件（图片/文件占位）暂不开放，避免和刷新/裁剪能力冲突。
+              p6:F16（uc-widget-menu-012）：连接线复用同一套 wm-border/wm-border-width 入口
+              表达"颜色/线宽"（UC 业务规则 4 明确连接线样式只描述已确认的颜色/线宽/直线曲线/
+              端点箭头，无透明度和文字色语义，故连接线选中时不展示 wm-opacity/wm-textcolor）。 */}
           {(() => {
             const sel = items.filter((it) => selected.has(it.id));
             const eligible = sel.length > 0 && sel.every((it) => !isReloadable(it));
             if (!eligible) return null;
+            const allConnectors = sel.every(isConnector);
             const first = sel[0]!;
             const mixedBorder = !sel.every((it) => getBorder(it) === getBorder(first));
             const mixedBorderWidth = !sel.every((it) => getBorderWidth(it) === getBorderWidth(first));
@@ -1722,20 +1935,20 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               <>
                 <select
                   data-testid="wm-border"
-                  aria-label="边框色"
+                  aria-label={allConnectors ? "连接线颜色" : "边框色"}
                   value={mixedBorder ? "" : getBorder(first)}
                   onChange={(e) => void setBorder(e.target.value as BorderToken)}
                   className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {mixedBorder && <option value="">混合</option>}
-                  <option value="none">无边框</option>
+                  <option value="none">{allConnectors ? "默认" : "无边框"}</option>
                   <option value="gray">灰色</option>
                   <option value="blue">蓝色</option>
                   <option value="red">红色</option>
                 </select>
                 <select
                   data-testid="wm-border-width"
-                  aria-label="边框/线宽"
+                  aria-label={allConnectors ? "线宽" : "边框/线宽"}
                   value={mixedBorderWidth ? "" : String(getBorderWidth(first))}
                   onChange={(e) => void setBorderWidth(Number(e.target.value))}
                   className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -1747,34 +1960,71 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                     </option>
                   ))}
                 </select>
-                <select
-                  data-testid="wm-opacity"
-                  aria-label="透明度"
-                  value={mixedOpacity ? "" : String(getOpacity(first))}
-                  onChange={(e) => void setOpacity(Number(e.target.value))}
-                  className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {mixedOpacity && <option value="">混合</option>}
-                  {OPACITY_OPTIONS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}%
-                    </option>
-                  ))}
-                </select>
-                <select
-                  data-testid="wm-textcolor"
-                  aria-label="文字色"
-                  value={mixedTextColor ? "" : getTextColor(first)}
-                  onChange={(e) => void setTextColor(e.target.value as TextColorToken)}
-                  className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {mixedTextColor && <option value="">混合</option>}
-                  <option value="default">默认</option>
-                  <option value="slate">石墨</option>
-                  <option value="blue">蓝色</option>
-                  <option value="green">绿色</option>
-                  <option value="red">红色</option>
-                </select>
+                {!allConnectors && (
+                  <>
+                    <select
+                      data-testid="wm-opacity"
+                      aria-label="透明度"
+                      value={mixedOpacity ? "" : String(getOpacity(first))}
+                      onChange={(e) => void setOpacity(Number(e.target.value))}
+                      className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {mixedOpacity && <option value="">混合</option>}
+                      {OPACITY_OPTIONS.map((o) => (
+                        <option key={o} value={o}>
+                          {o}%
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      data-testid="wm-textcolor"
+                      aria-label="文字色"
+                      value={mixedTextColor ? "" : getTextColor(first)}
+                      onChange={(e) => void setTextColor(e.target.value as TextColorToken)}
+                      className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {mixedTextColor && <option value="">混合</option>}
+                      <option value="default">默认</option>
+                      <option value="slate">石墨</option>
+                      <option value="blue">蓝色</option>
+                      <option value="green">绿色</option>
+                      <option value="red">红色</option>
+                    </select>
+                  </>
+                )}
+                {/* p6:F16（uc-widget-menu-012 主流程 6）：连接线专属——直线/曲线、端点箭头。 */}
+                {allConnectors &&
+                  (() => {
+                    const mixedLine = !sel.every((it) => getConnectorLine(it) === getConnectorLine(first));
+                    const mixedArrow = !sel.every((it) => getConnectorArrow(it) === getConnectorArrow(first));
+                    return (
+                      <>
+                        <select
+                          data-testid="wm-connector-line"
+                          aria-label="直线/曲线"
+                          value={mixedLine ? "" : getConnectorLine(first)}
+                          onChange={(e) => void setConnectorLine(e.target.value as ConnectorLineType)}
+                          className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {mixedLine && <option value="">混合</option>}
+                          <option value="straight">直线</option>
+                          <option value="curve">曲线</option>
+                        </select>
+                        <select
+                          data-testid="wm-connector-arrow"
+                          aria-label="端点箭头"
+                          value={mixedArrow ? "" : getConnectorArrow(first)}
+                          onChange={(e) => void setConnectorArrow(e.target.value as ConnectorArrowType)}
+                          className="h-7 rounded-md border border-input bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {mixedArrow && <option value="">混合</option>}
+                          <option value="none">无箭头</option>
+                          <option value="end">尾部箭头</option>
+                          <option value="both">两端箭头</option>
+                        </select>
+                      </>
+                    );
+                  })()}
               </>
             );
           })()}
@@ -1804,11 +2054,11 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             );
           })()}
           {/* p6:F19（uc-widget-menu-010）：应用格式入口。仅单选一个文本/便签类对象时可进入取样模式
-              （形状/嵌入无可复用的文字排版样式，不作为来源，业务规则 1）。 */}
+              （形状/嵌入/连接线无可复用的文字排版样式，不作为来源，业务规则 1）。 */}
           {selected.size === 1 &&
             items
               .filter((it) => selected.has(it.id))
-              .every((it) => !isShape(it) && !isReloadable(it)) && (
+              .every((it) => !isShape(it) && !isReloadable(it) && !isConnector(it)) && (
               <Button
                 data-testid="wm-apply-format"
                 size="sm"
@@ -1948,6 +2198,8 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             onGuides={setGuides}
             onSpacing={setSpacings}
             onOperating={onOperating}
+            connectorPickMode={activeTool === "connector"}
+            onConnectorPick={onConnectorPick}
           />
         }
       >
