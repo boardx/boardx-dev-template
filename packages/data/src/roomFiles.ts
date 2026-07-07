@@ -101,6 +101,15 @@ export async function listRoomFiles(params: {
   return rows;
 }
 
+/** 房间下未软删文件数量（p20/F06 删除房间确认弹窗的级联数量摘要）。 */
+export async function countRoomFiles(roomId: number): Promise<number> {
+  const rows = await query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count FROM room_files WHERE room_id = $1 AND status = 'ready'`,
+    [roomId]
+  );
+  return Number(rows[0]?.count ?? 0);
+}
+
 /** 行级访问：取某房间下未软删的单个文件（预览/删除前置校验共用）。 */
 export async function getReadyRoomFile(roomId: number, fileId: string): Promise<RoomFile | undefined> {
   const rows = await query<RoomFile>(
