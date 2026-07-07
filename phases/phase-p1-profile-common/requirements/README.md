@@ -9,6 +9,8 @@
 复用：Security 分区 = phase-04 已有的修改密码（/account）。
 DEFERRED：uc-profile-003 用户菜单细化、uc-profile-004 个人 Memory（归后续 Memory 能力）、真实 AI 头像生成。
 
-oldcode 参考：`phases/requirements/oldcode/boardx-web-develop`（displayName/avatar/aiModel/privacy 字段）。
+oldcode 参考：`phases/requirements/oldcode/boardx-web-develop`（displayName/avatar 字段）。
+【2026-07-05 p21-F06 修正】aiModel/privacy 偏好是本阶段新设计，并非从 oldcode 移植——核实
+oldcode 的 User 实体并没有这两个字段，此前的溯源描述有误。
 
 每个 feature 必须在 `../feature_list.json` 的 `source_use_cases` 中指向上述阶段快照，避免只靠短 ID 追溯。

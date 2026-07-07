@@ -80,6 +80,15 @@ export const SESSION_COOKIE = "boardx_session";
 export const CURRENT_TEAM_COOKIE = "boardx_current_team";
 export const TEAM_INVITE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 天
 export const ROOM_INVITE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 天（p20 F09：邀请未注册邮箱加入房间）
+export const CONFIRM_EMAIL_TOKEN_TTL_MS = 1000 * 60 * 60 * 24; // 24 小时（uc-auth-005，P21 F03）
+
+// ─── 速率限制（P21 F03 加固：notes 提到的两个最小加固之一）───────────────────
+// login：同一归一化邮箱短时间内的登录尝试次数上限（防穷举密码）。
+export const LOGIN_RATE_LIMIT_WINDOW_MS = 1000 * 60; // 1 分钟
+export const LOGIN_RATE_LIMIT_MAX_ATTEMPTS = 10;
+// forgot-password：同一账号短时间内允许生成的重置令牌数上限（防连续触发发信）。
+export const FORGOT_PASSWORD_RATE_LIMIT_WINDOW_MS = 1000 * 60; // 1 分钟
+export const FORGOT_PASSWORD_RATE_LIMIT_MAX_REQUESTS = 3;
 
 // ─── 团队角色与权限（纯逻辑，可单测）─────────────────────────────────────────
 

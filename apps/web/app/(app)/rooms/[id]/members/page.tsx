@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import RoomAboutAiSection from "./RoomAboutAiSection";
+import { RoomDangerZoneSection } from "@/components/room/RoomDangerZoneSection";
 
 type Role = "owner" | "admin" | "member";
 
@@ -58,9 +60,13 @@ export default function RoomMembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [myRole, setMyRole] = useState<Role | null>(null);
+  const [roomName, setRoomName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("");
+  // uc-rr-010（p20/F11）：About & AI 区块所需的房间字段，独立于成员列表加载
+  const [roomDescription, setRoomDescription] = useState("");
+  const [roomAiInstruction, setRoomAiInstruction] = useState("");
 
   // 邀请（邮箱标签）
   const [emailDraft, setEmailDraft] = useState("");
@@ -98,10 +104,34 @@ export default function RoomMembersPage() {
     setLoading(false);
   }
 
+  // uc-rr-010（p20/F11）：单独取房间详情里的 description/ai_instruction，供 About & AI 区块初始化
+  async function loadRoomAiContext() {
+    const res = await fetch(`/api/rooms/${roomId}`);
+    if (!res.ok) return;
+    const d = await res.json();
+    setRoomDescription(d.room?.description ?? "");
+    setRoomAiInstruction(d.room?.ai_instruction ?? "");
+  }
+
+  // p20/F06：Danger Zone 只有 owner 需要看到房间名（用于删除确认的"输入房间名"校验）。
+  // 独立请求，不与 members 列表接口耦合，member/admin 场景压根不触发这次请求。
+  async function loadRoomName() {
+    const res = await fetch(`/api/rooms/${roomId}`);
+    if (!res.ok) return;
+    const d = await res.json().catch(() => ({}));
+    setRoomName(d.room?.name ?? "");
+  }
+
   useEffect(() => {
     void load();
+    void loadRoomAiContext();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
+
+  useEffect(() => {
+    if (myRole === "owner") void loadRoomName();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId, myRole]);
 
   function commitDraft(): boolean {
     const raw = emailDraft.trim().replace(/,$/, "").trim();
@@ -358,6 +388,16 @@ export default function RoomMembersPage() {
         </p>
       )}
 
+      {/* ===== p20/F11 About & AI 区块 start（独立组件，勿与其他区块交织；DANGER ZONE 等后续区块请另起一段，别插进这两条注释中间）===== */}
+      {!loading && canManage && (
+        <RoomAboutAiSection
+          roomId={roomId}
+          initialDescription={roomDescription}
+          initialAiInstruction={roomAiInstruction}
+        />
+      )}
+      {/* ===== p20/F11 About & AI 区块 end ===== */}
+
       {/* 搜索 */}
       {!loading && members.length > 0 && (
         <Input
@@ -452,6 +492,11 @@ export default function RoomMembersPage() {
             );
           })}
         </ul>
+      )}
+
+      {/* p20/F06 DANGER ZONE — 仅 owner 可见入口（admin/member 无 UI 入口，与后端 403 一致）。 */}
+      {!loading && myRole === "owner" && roomName && (
+        <RoomDangerZoneSection roomId={roomId} roomName={roomName} />
       )}
     </div>
   );

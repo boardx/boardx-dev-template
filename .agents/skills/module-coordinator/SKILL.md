@@ -43,7 +43,15 @@ lease issue label 用 `coordination:lease:<module>`（如 `coordination:lease:co
 > 具体分歧，此后统一为"直接建，不必等批准"。
 
 ### Step 3 — 认领 + 向 coord-main 报到
-1. lease issue 评论 `module-coordinator-claim by:<id> at <ISO8601>`。
+1. lease issue 评论 `module-coordinator-claim by:<id> at <ISO8601>`——推荐直接跑
+   `pnpm harness module-lock-acquire --module <name> --session <id>`（如
+   `--module collab --session coord-collab`），它会自动按
+   `coordination:lease:<module>` label 找到 lease issue 并发这条格式完全一致的
+   评论；手打 `gh issue comment` 依然完全等效，这条命令只是省得每次手拼格式。
+   若设置了 `COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN`（coord-service 迁移
+   Phase 3+，见 `packages/coord-service`），命令还会顺带做一次 opt-in 的
+   dual-write；不设这两个环境变量就是零行为变化，GitHub 评论始终是 Phase 5
+   cutover 之前的唯一权威。
 2. 在总的 coordinator lease issue（`coordination:lease`）下留一条报到评论，声明自己
    接管哪个模块、当前 areas 里有哪些在途 issue/PR——coord-main 靠这个知道你存在。
 
@@ -73,10 +81,17 @@ gh pr list --state open --json number,headRefName,baseRefName,statusCheckRollup
 
 ### Step 6 — 心跳与巡检
 沿用顶层 coordinator 的 L0(60s 事件)/L2(15min 巡检+心跳)节奏，范围限于自己 areas。
+**明确适用**：`.harness/instructions/coordinator-sop.md`"Deadline 与分级补救"表 + 铁律 #6
+（不可静默等待）对 module-coordinator 和 coord-main 一视同仁——发现自己模块下的 lease
+停滞（如 worker 认领锁 6h 无进展），必须先在总线上贴出带明确时限的通牒，窗口到期仍无
+可验证进展才回收重分派，不能只是"注意到了"就默默等，也不能不打招呼直接回收（先例：
+coord-board 对 #282 给 2 小时窗口）。
+心跳评论同样可以用 `pnpm harness module-lock-heartbeat --module <name> --session <id>`。
 
 ## 退位 / 抢占
 同顶层 coordinator：`module-coordinator-release`/`module-coordinator-takeover` +
 `<ISO8601>`，写在自己模块的 lease issue 上；同时在总 lease issue 留一条注销/交接评论。
+退位评论可以用 `pnpm harness module-lock-release --module <name> --session <id>`。
 
 ## 边界（module-coordinator 不做什么）
 - **不合并 PR**（唯一硬边界）——全绿后转交 coord-main。

@@ -8,11 +8,15 @@
 #    迭代者，同样无合并权）/ worker（写码）/ reviewer（评审）。
 #  - reviewer 复用 .harness/agents/*.yaml 已定义的 subagent（agent: 字段指向其名）。
 #  - required_for：该 reviewer 对哪些 area 是**强制**门禁（coordinator 据此路由 review）。
+#  - active：注销（retire/deactivate）状态位，默认 true。改成 false 表示该身份已停用，
+#    不参与新的分派/认领；不删除条目本身（保留 areas/kind 等历史信息）。改这个字段和
+#    新增/删除条目一样是控制平面变更，走正常 PR + review（见 agent-onboarding-checklist.md）。
 version: 1
 
 agents:
   # ── 主 Agent：编排者（唯一）────────────────────────────────────────────────
   - id: coord-main
+    active: true
     kind: coordinator
     model: opus-4.8
     responsibilities:
@@ -27,6 +31,7 @@ agents:
   # 非 Claude 平台 agent）都能靠读文档 + 走 issue/label 总线无缝接入协作，不依赖
   # Claude Code 私有机制。同样无独立合并权，控制平面改动全绿后转交 coord-main。
   - id: coord-architecture
+    active: true
     kind: architecture-coordinator
     model: opus-4.8
     areas: [harness, docs, adr, agent-protocol]
@@ -38,36 +43,43 @@ agents:
   # 调起首轮 reviewer 做初审，返工裁决；PR 全绿后**转交 coord-main 做最终合并**
   # （不可自行 merge——避免跨模块热点文件的合并冲突失去唯一把关人）。
   - id: coord-room
+    active: true
     kind: module-coordinator
     model: opus-4.8
     areas: [room, room-files, room-survey, room-chat, invite, share]
     reports_to: coord-main
   - id: coord-board
+    active: true
     kind: module-coordinator
     model: opus-4.8
     areas: [canvas, board, board-header, board-menu, context-menu, widgets, studio, presentations]
     reports_to: coord-main
   - id: coord-collab
+    active: true
     kind: module-coordinator
     model: opus-4.8
     areas: [collaboration]
     reports_to: coord-main
   - id: coord-ava
+    active: true
     kind: module-coordinator
     model: opus-4.8
     areas: [ai-core, deep-research, voice, ai-settings, attachments, message-actions, knowledge-base]
     reports_to: coord-main
   - id: coord-store-admin
+    active: true
     kind: module-coordinator
     model: opus-4.8
     areas: [ai-store, admin]
     reports_to: coord-main
   - id: coord-survey
+    active: true
     kind: module-coordinator
     model: opus-4.8
     areas: [survey]
     reports_to: coord-main
   - id: coord-platform
+    active: true
     kind: module-coordinator
     model: opus-4.8
     areas: [auth, team, home-page, profile, common, billing, credits]
@@ -75,129 +87,154 @@ agents:
 
   # ── Worker：写码 agent（1 agent = 1 owner，可增删）──────────────────────────
   - id: wrk-claude-1
+    active: true
     kind: worker
     model: opus-4.8
     areas: [canvas, board, home-page, common]   # 领域亲和（分派优先，不是硬限制）
     max_concurrent: 1                            # 每 owner 同时最多 1 个 in_progress（ADR-001）
   - id: wrk-codex-1
+    active: true
     kind: worker
     model: codex
     areas: [auth, team, room, room-chat, invite, share, ava]
     max_concurrent: 1
   - id: wrk-ava-1
+    active: true
     kind: worker
     model: sonnet-5
     areas: [ava]
     max_concurrent: 1
   - id: wrk-kb-1
+    active: true
     kind: worker
     model: sonnet-5
     areas: [knowledge-base]
     max_concurrent: 1
   - id: wrk-store-1
+    active: true
     kind: worker
     model: sonnet-5
     areas: [ai-store]
     max_concurrent: 1
   - id: wrk-store-2
+    active: true
     kind: worker
     model: sonnet-5
     areas: [ai-store]
     max_concurrent: 1
   - id: wrk-survey-1
+    active: true
     kind: worker
     model: sonnet-5
     areas: [survey]
     max_concurrent: 1
   - id: wrk-survey-3
+    active: true
     kind: worker
     model: sonnet-5
     areas: [survey]                              # p17 新增：wrk-survey-1 被 p13-F04 占用时的第二个 survey worker
     max_concurrent: 1
   - id: wrk-credits-1
+    active: true
     kind: worker
     model: sonnet-5
     areas: [credits, billing, common]             # p17-F06 (KB+Credits 收尾 reskin) 归到这里
     max_concurrent: 1
   - id: wrk-admin-1
+    active: true
     kind: worker
     model: sonnet-5
     areas: [admin]
     max_concurrent: 1
   - id: wrk-payment-1
+    active: true
     kind: worker
     model: sonnet-5
     areas: [billing]
     max_concurrent: 1
   - id: wrk-platform-1                             # p21-F01：社交登录后门 gate 修正（安全类，coord-platform 分派）
+    active: true
     kind: worker
     model: sonnet-5
     areas: [auth]
     max_concurrent: 1
   - id: wrk-platform-2                             # p21-F02：团队成员角色越权修正（安全类，coord-platform 分派）
+    active: true
     kind: worker
     model: sonnet-5
     areas: [team]
     max_concurrent: 1
   - id: wrk-studio-1
+    active: true
     kind: worker
     model: sonnet-5
     areas: [studio, presentations]
     max_concurrent: 1
   - id: wrk-admin-2
+    active: true
     kind: worker
     model: sonnet-5
     areas: [admin]
     max_concurrent: 1
   - id: wrk-nav-audit-1
+    active: true
     kind: worker
     model: sonnet-5
     areas: [design, app-shell]
     max_concurrent: 1
   - id: wrk-lint-1
+    active: true
     kind: worker
     model: sonnet-5
     areas: [design]
     max_concurrent: 1
   - id: wrk-ava-p18-1
+    active: true
     kind: worker
     model: sonnet-5
     areas: [ai-core, deep-research, voice, share, ai-settings, attachments, message-actions]  # p18 AVA AI 落地全域
     max_concurrent: 1
   - id: wrk-ava-p18-2
+    active: true
     kind: worker
     model: sonnet-5
     areas: [ai-core, deep-research, voice, share, ai-settings, attachments, message-actions]  # p18 并行 worker
     max_concurrent: 1
   - id: wrk-ava-p18-3
+    active: true
     kind: worker
     model: sonnet-5
     areas: [ai-core, deep-research, voice, share, ai-settings, attachments, message-actions]  # p18 并行 worker
     max_concurrent: 1
 
   - id: wrk-room-1
+    active: true
     kind: worker
     model: fable-5
     areas: [room, room-files, room-survey]        # p20 Room Realignment 专属 worker
     max_concurrent: 1
   - id: wrk-room-2
+    active: true
     kind: worker
     model: fable-5
     areas: [room, room-files, room-survey]
     max_concurrent: 1
   - id: wrk-room-3
+    active: true
     kind: worker
     model: fable-5
     areas: [room, room-files, room-survey]
     max_concurrent: 1
 
   - id: wrk-codex-collab-1
+    active: true
     kind: worker
     model: codex
     areas: [collaboration]                       # p8 实时协作系列（WebSocket/Yjs/presence）
     max_concurrent: 1
 
   - id: wrk-codex-canvas-1
+    active: true
     kind: worker
     model: codex
     areas: [canvas, board]                       # p6/p17 跟进项 worker
@@ -205,21 +242,25 @@ agents:
 
   # ── Reviewer：评审 agent（复用既有 subagent；coordinator 在 PR 阶段调起）──────
   - id: rev-code
+    active: true
     kind: reviewer
     agent: code-reviewer          # .harness/agents/code-reviewer.yaml
     required_for: ["*"]           # 所有 area 强制过代码审查
     emits: review:code-ok         # 通过时打的 verdict label
   - id: rev-e2e
+    active: true
     kind: reviewer
     agent: e2e-verifier           # .harness/agents/e2e-verifier.yaml
     required_for: [canvas, board, board-shell, collab, room-chat]  # 有 UI 交互的 area
     emits: review:e2e-ok
   - id: rev-feature
+    active: true
     kind: reviewer
     agent: feature-evaluator      # .harness/agents/feature-evaluator.yaml
     required_for: ["*"]           # 六维验收，所有 area
     emits: review:feature-ok
   - id: rev-security
+    active: true
     kind: reviewer
     agent: code-reviewer          # 复用 code-reviewer，以安全视角运行（专用 subagent 待建）
     required_for: [auth, billing, admin, share, invite]  # 敏感 area 强制安全审查

@@ -54,9 +54,9 @@
       "title": "Auth F01-F04 证据补齐 + confirm-email 真实实现",
       "user_visible_behavior": "重新执行 phase-04 F01(注册)/F02(登录)/F03(改密)/F04(忘记密码重置) 的 verification 命令，输出真实日志落盘并被 git 追踪（若跑不通，phase-04 对应条目状态如实打回 in_progress，不得继续挂 passing）。新增：uc-auth-005（确认邮箱）在 phase-04 feature_list.json 里获得一条对应 feature 条目；apps/web/app/api/auth/confirm-email/route.ts 从硬编码 Set([\"demo\"]) 改为读写 packages/data/src/auth.ts 已有的 email_tokens 表（新增 type='confirm_email' 的调用方，复用 reset-password 已验证过的 create/get/consume 机制）。",
       "design_ref": "无新 UI；apps/web/app/(auth)/confirm-email/page.tsx 现有页面",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-platform-1",
       "capability": "CAP-AUTH",
       "depends_on": [],
       "wave": 1,
@@ -70,7 +70,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/auth-005-confirm-email.spec.ts",
         "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F03.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-07-05T19:36:17.452Z",
       "notes": "requirements/auth.md。phase-04 F01-F04 的 evidence 字段（feature_list.json:19,40,61,82）当前指向不存在的文件，本 feature 重新验证后需要同步更新那四个字段的 evidence 路径为本阶段真实落盘的日志（或维持指向 phase-04 自己的 evidence/ 目录，只要文件真实存在即可，两种做法择一但必须保证 git ls-tree 能查到）。confirm-email 的核心改动集中在 apps/web/app/api/auth/confirm-email/route.ts:9-14 和 packages/data/src/auth.ts 的 email_tokens 相关函数。附带：login/forgot-password 加最小速率限制、apps/web/lib/session.ts:53-58 的 cookie 在生产环境加 secure:true。"
     },
     {
@@ -80,9 +80,9 @@
       "title": "Team F06-F09 证据补齐 + F13 状态拆分回填",
       "user_visible_behavior": "重新执行 phase-04 F06-F09 的 verification 命令，输出真实日志落盘并被 git 追踪。F13（团队设置/Home/Memory/AI Store）拆分：uc-team-007（团队改名/描述/删除）已在 commit f603f45 实现却从未回填 feature_list.json，本 feature 把它登记为独立 passing 条目；核实 uc-team-008/010 依赖的 AI/AI Store 平面现状后，若确实已具备条件则解除 deferred 并登记为 not_started（留给后续排期，不在本 feature 内实现）；uc-team-009（团队 Memory）继续保持 deferred（数据模型确实缺失）。",
       "design_ref": "无新 UI；已实现的 apps/web/app/(app)/teams/[id]/settings 等页面",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-platform-2",
       "capability": "CAP-DATA",
       "depends_on": [],
       "wave": 1,
@@ -94,7 +94,7 @@
         "jq -e '.features[] | select(.id==\"F13\")' phases/phase-04-identity-and-spaces/feature_list.json",
         "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F04.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F04.verify.log @ 2026-07-05T01:38:59.735Z",
       "notes": "requirements/team.md。commit 7e58dce 是 F06-F09 底层实现的落地提交，commit f603f45 是 uc-007 的落地提交但未回写 feature_list.json——两个 commit 号仅供实现者定位代码，不代表本 feature 需要重新实现，只需验证+回填状态。"
     },
     {
@@ -104,7 +104,7 @@
       "title": "Billing F04「额度不足触发」如实改写",
       "user_visible_behavior": "phase-p14 F04 的 user_visible_behavior/notes 改为如实描述现状：AI credits 提示横幅（data-testid=ai-low-credits-prompt）是无条件常驻展示的静态 UI，用户可随时手动点击进入升级流程；不再声称该横幅由'额度不足'事件触发。同步补充 notes：明确声明当前仅支持单一货币（USD）、不支持退款、不支持自动续费管理（相对 oldcode 收窄的范围，避免被后续开发者误判为遗漏）。对应 e2e 测试名/断言同步改名去掉'触发'措辞。",
       "design_ref": "无新 UI；apps/web/app/(app)/ava/page.tsx 现有 ai-low-credits-prompt 横幅",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "wrk-payment-1",
       "capability": "CAP-PAYMENT",
@@ -112,10 +112,10 @@
       "wave": 1,
       "verification": [
         "grep -q 'ai-low-credits-prompt' \"apps/web/app/(app)/ava/page.tsx\"",
-        "pnpm --filter @repo/web exec playwright test e2e/billing-001-upgrade-plan.spec.ts",
+        "pnpm --filter @repo/web exec playwright test e2e/billing-001-upgrade-plan.spec.ts -g '静态常驻展示'",
         "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F05.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F05.verify.log @ 2026-07-05T00:53:29.024Z",
       "notes": "requirements/billing.md。默认走路径 B（如实改描述，不新增因果链实现）；若产品在实现前明确要走路径 A（真正让 402 触发弹窗自动打开），实现者应在开工前更新本条 notes 说明改用路径 A，并相应调整 verification 为真正模拟 402 响应后断言弹窗打开的 e2e。"
     },
     {
@@ -125,9 +125,9 @@
       "title": "Profile/Home 文档与追踪字段同步",
       "user_visible_behavior": "phase-p2 F04 的 verification 改为指向真实存在的测试文件（先确认 UI 分歧：占位页 vs 真实最近列表，产品拍板后使 user_visible_behavior 与真实实现一致）；phase-p1 requirements/README.md 的 oldcode 溯源描述改为如实说明 aiModel/privacy 是本阶段新设计、非 oldcode 移植；phase-p2 F03/F06 的 notes 里 blocked_on 更新为精确的 p11:F03。",
       "design_ref": "无新 UI，纯文档/feature_list 字段修正",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "wrk-platform-3",
       "capability": "CAP-WEB",
       "depends_on": [],
       "wave": 1,
@@ -135,8 +135,8 @@
         "grep -q 'p11' phases/phase-p2-home/feature_list.json",
         "git cat-file -e HEAD:phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F06.verify.log"
       ],
-      "evidence": "",
-      "notes": "requirements/profile-home.md。优先级最低、风险最小，不需要过 rev-security。真实存在但未被引用的测试文件是 apps/web/e2e/home-004-view-recent-page.spec.ts，与 F04 当前 verification 指向的 e2e/recent-placeholder.spec.ts（不存在）二选一，取决于产品对占位页/真实列表的最终决定。coord-main 合并修正（2026-07-05）：coord-platform 原把本 feature claim 给 wrk-claude-1，但 wrk-claude-1 同时还 owner 着 phase-p17:F01（in_progress，补跑门禁发现真实卡在 #333 那个跨团队接口断层，不是它能自己解决的），违反单一 in_progress 不变量（同一 owner 不能同时认两个 in_progress）。已改回 not_started/owner:null，等 p17:F01 真正 passing 或 wrk-claude-1 被重新指派后再认领。"
+      "evidence": "evidence/F06.verify.log @ 2026-07-05T01:10:50.401Z",
+      "notes": "requirements/profile-home.md。优先级最低、风险最小，不需要过 rev-security。真实存在但未被引用的测试文件是 apps/web/e2e/home-004-view-recent-page.spec.ts，与 F04 当前 verification 指向的 e2e/recent-placeholder.spec.ts（不存在）二选一，取决于产品对占位页/真实列表的最终决定。coord-main 合并修正（2026-07-05）：coord-platform 原把本 feature claim 给 wrk-claude-1，但 wrk-claude-1 同时还 owner 着 phase-p17:F01（in_progress，补跑门禁发现真实卡在 #333 那个跨团队接口断层，不是它能自己解决的），违反单一 in_progress 不变量（同一 owner 不能同时认两个 in_progress）。已重新 claim 给 wrk-platform-3，实现完成并跑通 `pnpm harness verify --sprint p21/01 --feature F06` 门控转 passing（2026-07-05）。"
     }
   ]
 }

@@ -41,7 +41,10 @@ description: >
 ## 启动仪式
 1. 读 `.harness/agents/registry.yaml` 确认自己是 `coord-architecture`。
 2. lease 机制同 module-coordinator（`coordination:lease:architecture`，已登记进
-   multi-agent-coordination.md §1.2）。但你巡检的不是 issue 队列，而是"文档 vs
+   multi-agent-coordination.md §1.2）——可用 `pnpm harness module-lock-acquire
+   --module architecture --session coord-architecture`（及对应的
+   `module-lock-heartbeat`/`module-lock-release`）代替手打 `gh issue comment`，
+   两者格式完全等价。但你巡检的不是 issue 队列，而是"文档 vs
    实际协作事故"的落差——定期读 label 为 `coordination:lease` 的总协调 lease issue
    （靠 label 定位，不要硬编码 issue 号）和各模块 coordinator 的报到评论，收集
    "文档没说清楚导致的真实事故"作为待办输入。

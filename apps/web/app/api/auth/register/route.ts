@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { validateRegister, normalizeEmail, hashPassword } from "@repo/auth";
+import { validateRegister, normalizeEmail, hashPassword, generateToken, expiresAt, CONFIRM_EMAIL_TOKEN_TTL_MS } from "@repo/auth";
 import {
   createUser,
   findUserByEmail,
@@ -7,8 +7,10 @@ import {
   getRoom,
   addRoomMember,
   markRoomInviteAccepted,
+  createEmailToken,
 } from "@repo/data";
 import { startSession, toPublicUser } from "@/lib/session";
+import { sendConfirmEmail } from "@/lib/mailer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -85,6 +87,21 @@ export async function POST(req: Request) {
       } catch (err) {
         console.error("[register] room invite accept failed:", err);
       }
+    }
+
+    // uc-auth-005（P21 F03）：注册确认邮箱。与房间邀请一样是次要副作用，同样包 try/catch——
+    // 发信/建 token 失败不应影响"注册必成功登录"这个主不变量，用户仍可稍后重新发起确认。
+    try {
+      const confirmToken = generateToken();
+      await createEmailToken(confirmToken, user.id, "confirm_email", expiresAt(CONFIRM_EMAIL_TOKEN_TTL_MS));
+      const origin = new URL(req.url).origin;
+      await sendConfirmEmail({
+        to: email,
+        token: confirmToken,
+        confirmUrl: `${origin}/confirm-email?token=${confirmToken}`,
+      });
+    } catch (err) {
+      console.error("[register] confirm-email token/email failed:", err);
     }
 
     return NextResponse.json(
