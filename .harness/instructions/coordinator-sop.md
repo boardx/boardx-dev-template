@@ -18,6 +18,7 @@
 
 ### L1 队列层（~5min 或每次事件处理完顺手做）
 1. **合并队列**：`status:approved` ∩ CI 绿 ∩ 分支 up-to-date → 按约定顺序合并（动共享文件多的最后合），置 `status:merged`、关 issue、跑 `pnpm harness verify`。
+   **热点文件额外一步**：如果待合并 PR 改动的文件，同一批次里还有其它 PR 刚合并过同一文件——"up-to-date"（git 层面无文本冲突，GitHub 显示 mergeable）不代表"合并后仍能编译"：两个 PR 各自在同一文件不同位置插入同名声明/重复逻辑，文本上完全不冲突，语义上会炸（先例：PR #415 与 #417 各自独立给 `board-canvas.tsx` 声明 `itemsRef`，两边 CI 各自绿、mergeable 各自为真，合并后 main 上 `TS2451` 重复声明，靠 hotfix #427 收场，见下方"事故分诊速查"）。本仓库因套餐限制没有 GitHub 的 merge queue（合并前对最新 base 重新跑 CI）可用，兜底只能是社会性约定：**热点文件的 PR 合并前，本地把当前 main 实际 merge 一次，重新跑一遍受影响包的 typecheck，绿了再合**，不要只看 GitHub 界面的 mergeable 状态。
 2. **review 在途**：调起 >15min 未回的 reviewer agent 是否还活着，死了重派。
 3. **分派补给**：有空闲 worker 且存在 `status:ready-for-dev` ∩ 依赖全绿 ∩ 与在途 PR 无同文件热点 → 分派（认领双写：`harness claim` + label）。
 
@@ -79,6 +80,11 @@
 - 共享主 checkout 被并发会话 `reset`/`stash`/`branch -f` 踩踏，分支 commit 无声消失
   （2026-07-03/04 夜间两起：Board agent stash 误伤、AVA 分支 ref 一度被重置）
   → 见 ADR-005；发现即用 `git reflog` 定位恢复，之后确认该分支已 push 到 origin。
+- 两个 PR 各自 mergeable（无文本冲突）、合并后语义冲突（同文件不同位置重复声明同名
+  变量）导致 main typecheck 红（2026-07-07：PR #415 与 #417 各自给
+  `board-canvas.tsx` 声明 `itemsRef`，hotfix #427 收场）→ 见上方 L1"合并队列"热点
+  文件额外一步；发现 main 红，先看是不是这类连带影响（rebase 到修复后的 main 重跑
+  即可，不是自己代码的问题），不要盲目排查自己 PR。
 
 ## 生命周期（启动/退位/抢占）
 coordinator 是**单例角色**，由会话通过启动仪式认领，不是常驻 subagent。
