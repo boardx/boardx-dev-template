@@ -27,7 +27,9 @@
 2. **漂移巡检**：抽查 label 与事实一致性——`review:*-ok` 是否都有对应 reviewer 产出记录（评论）；有无非 coordinator 编排的 verdict label（出现即摘除并留言，见"verdict 权威"）。
 3. **阻塞升级**：`status:blocked` 超过 1 个 L2 周期无进展 → 评论 + 通知人类。
 4. **基础设施健康**：CI 是否整体可用（账单/runner）；不可用时在追踪评论里刷新状态。
-5. **背景任务盘点**：自己派出的 reviewer/verifier agent、监控任务有无僵死；scratchpad worktree 有无该清理的。
+5. **背景任务盘点**：自己派出的 reviewer/verifier agent、监控任务有无僵死；scratchpad worktree 有无该清理的；
+   **对应的 docker compose 栈是否也一并 down 了**——worktree 删了但 docker 栈没 down 是最常见的
+   遗漏（`pnpm harness sweep-docker` 能扫出这类孤儿栈），见 ADR-007。
 
 ## Deadline 与分级补救（2026-07-04 起）
 
@@ -69,6 +71,14 @@
    出现之前逐字一致；配置了才会额外问一次 D1、失败一律静默降级——GitHub
    issue+label（module-coordinator 侧）和本地文件锁（顶层 coordinator 侧）依然是
    默认权威。见 ADR-006（`phases/phase-01-foundation/adr/ADR-006-coord-service-d1-gating.md`）。
+8. **破坏性清理操作需要显式人类/coord-main 授权，任何会话都不能仅凭自己判断"逻辑
+   可靠"就执行**：`pnpm harness sweep-docker --apply`（删容器+卷）、以及其它任何
+   对共享基础设施做删除/回收类操作的命令，一律先跑不带 `--apply` 的只读巡检、把
+   结果贴到总线，等人类或 coord-main 明确说"可以"再执行——跟合并权、
+   registry.yaml 的 schema 变更同一个审批级别。这条是 2026-07-07 的真实教训：
+   一次基于"worktree 目录已不存在"这条本身可靠的判定标准，未经请示就直接跑了
+   `--apply`，即使结果本身没错，这个执行顺序本身不该发生。见 ADR-007
+   （`phases/phase-01-foundation/adr/ADR-007-docker-stack-teardown.md`）。
 
 ## 事故分诊速查（来自实战）
 - CI 秒级失败 + steps 空 → 账单/runner，非代码（2026-07-04 账单事故）。
