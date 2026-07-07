@@ -155,6 +155,12 @@ function isValidResearchPayload(value: unknown): boolean {
   const report = v.report as Record<string, unknown> | undefined;
   if (!report || typeof report.title !== "string" || typeof report.conclusion !== "string") return false;
   if (!Array.isArray(report.sections)) return false;
+  // p18-F05：researchType 是报告双模板的判别字段；旧数据（F04 时期落库、无此字段）
+  // 仍按合法处理——前端对缺失 researchType 会退化渲染（不崩溃），不因为这一个新字段
+  // 让历史研究会话恢复失败。
+  if (report.researchType !== undefined && report.researchType !== "market" && report.researchType !== "user-research") {
+    return false;
+  }
   return true;
 }
 
