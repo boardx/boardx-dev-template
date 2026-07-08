@@ -18,6 +18,7 @@ import {
   Sparkles,
   ClipboardList,
   ShieldCheck,
+  Store,
 } from "lucide-react";
 import { FeedbackLauncher } from "@/components/feedback/feedback-launcher";
 import { CreditRecordsDialog } from "@/components/credits/credit-records-dialog";
@@ -36,11 +37,15 @@ interface SidebarUser {
 // 见 docs/design/boardx-prototype-mapping.md §2.2。
 // p16-F01：新增 Ava（AI 对话）/ Surveys（问卷）全局入口——此前两者均已 passing 但全站
 // 没有导航入口，用户只能手敲 URL。沿用同一 RAIL_ITEMS 结构与视觉，不发明新设计。
+// 补录：AI Store（p11/p17 全部 feature 均已 passing）此前只能靠 home 页空态按钮间接
+// 摸到，全局 rail 里从未真正有过入口（p16-F01 的 notes 里承认了这一点但没跟进），
+// 属于同一类"功能做完了但没人能发现"的问题，照 Ava/Surveys 同款方式补上。
 const RAIL_ITEMS = [
   { label: "Home", icon: Home, href: "/" },
   { label: "Rooms", icon: LayoutGrid, href: "/rooms" },
   { label: "Ava", icon: Sparkles, href: "/ava" },
   { label: "Surveys", icon: ClipboardList, href: "/surveys" },
+  { label: "Store", icon: Store, href: "/ai-store" },
 ] as const;
 
 export function Sidebar({ user }: { user: SidebarUser | null }) {

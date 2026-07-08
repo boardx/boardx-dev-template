@@ -51,6 +51,16 @@ test("已登录用户从 sidebar 点击 Surveys 入口，到达 /surveys", async
   await expect(page).toHaveURL(/\/surveys/, { timeout: NAV_TIMEOUT });
 });
 
+// 补录：AI Store（p11/p17 全部 feature 均已 passing）此前全局 rail 没有真正的入口，
+// 只能靠 home 页空态按钮间接摸到——同一类"功能做完了但没人能发现"的问题，照
+// Ava/Surveys 同款方式补验证。
+test("已登录用户从 sidebar 点击 Store 入口，到达 /ai-store", async ({ page }) => {
+  await registerPlainUser(page);
+  await page.goto("/");
+  await page.getByTestId("rail-nav-store").click();
+  await expect(page).toHaveURL(/\/ai-store/, { timeout: NAV_TIMEOUT });
+});
+
 test("普通用户登录后，导航里看不到 Admin 入口", async ({ page }) => {
   await registerPlainUser(page);
   await page.goto("/");
