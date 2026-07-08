@@ -230,7 +230,7 @@ export function SlidesPanel({ boardId }: { boardId: string }) {
                       type="button"
                       data-testid="slide-move-up"
                       aria-label="上移"
-                      className="rounded px-1 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
+                      className="rounded px-1 text-muted-foreground transition-colors hover:text-foreground disabled:text-disabled-foreground"
                       disabled={i === 0}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -243,7 +243,7 @@ export function SlidesPanel({ boardId }: { boardId: string }) {
                       type="button"
                       data-testid="slide-move-down"
                       aria-label="下移"
-                      className="rounded px-1 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
+                      className="rounded px-1 text-muted-foreground transition-colors hover:text-foreground disabled:text-disabled-foreground"
                       disabled={i === slides.length - 1}
                       onClick={(e) => {
                         e.stopPropagation();

@@ -201,7 +201,7 @@ export function BoardAiOverlay({
                 className={cn(
                   "flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground",
                   "transition-all duration-200 hover:bg-primary/90",
-                  "disabled:cursor-not-allowed disabled:opacity-40",
+                  "disabled:cursor-not-allowed disabled:text-disabled-foreground",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 )}
               >

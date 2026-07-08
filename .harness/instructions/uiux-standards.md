@@ -130,6 +130,28 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
 | **次强调色** | `bg-secondary` `text-secondary-foreground` | `--secondary` / `--secondary-foreground` | 次级按钮、标签背景 |
 | **警示/破坏** | `bg-destructive` `text-destructive-foreground` | `--destructive` | 危险操作按钮（如删除、退出） |
 | **发光圈** | `ring-ring` | `--ring` | Focus 状态时的外发光 |
+| **禁用态** | `disabled:bg-disabled` `disabled:text-disabled-foreground` | `--disabled` / `--disabled-foreground` | 一切禁用控件的底/字（见下方对比度架构节） |
+
+### 1.1 对比度架构（2026-07-09 复盘，机械门禁）
+
+**事故**：Rooms 侧栏的 Create 按钮禁用态呈灰底灰字、几乎不可读。根因不是某个页面
+写错，而是架构缺陷：按钮禁用态用 `disabled:opacity-50` 实现——统一透明度作用在
+`bg-primary`（纯黑）实心按钮上，黑底白字整体被压成 ~2:1 的灰对灰。任何深色实心
+控件 + opacity 方案都会复现，属于"每个新页面都可能再踩"的系统性问题。
+
+**架构规则（lint 机械把关，违规 exit 1）**：
+1. **禁用态一律 token 对**：`disabled:bg-disabled` + `disabled:text-disabled-foreground`
+   （浅灰底 #f0f0f0 + 深灰字 #5c5c5c = 5.9:1，禁用但可读）。**禁止 `disabled:opacity-*`**
+   ——`lint-design.sh` §1.5(a) 全量扫描拦截。
+2. **opacity 不得用于状态语义**：透明度只允许做过渡动画/遮罩层，不允许表达
+   禁用/次要/占位这类语义状态——语义状态必须落在 token 上，否则对比度不可静态验证。
+3. **每个色面 token 必须有配对 foreground 且过对比度线**：`scripts/check-token-contrast.mjs`
+   在 lint 阶段对明暗两套主题机械计算 WCAG 对比度——中性对（background/card/popover/
+   primary/secondary/muted/accent/disabled）≥ 4.5:1，状态色对（destructive/success）
+   ≥ 3:1（大字/UI 组件线，警示红在 4.5 线下无法保持色相辨识度，显式取舍）。
+   **新增色面 token 时必须同时新增 foreground 配对**，缺对或不过线直接 lint 失败。
+4. **组件层不许用 opacity/覆盖类"修"对比度**：对比度问题一律回到 globals.css 改
+   token 值——这是"单一事实来源"原则在对比度上的延伸。
 
 ---
 
