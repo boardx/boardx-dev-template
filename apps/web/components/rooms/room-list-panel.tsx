@@ -8,7 +8,7 @@
 //  / show-create / room-name / room-create-visibility-* / create / room-favorites-filter
 //  / room-deleted-toast / empty-favorites），保证 p20 的 room-rr-002/005 等验证契约
 // 对新 IA 依然成立——不重命名、不砍能力。只有"双栏结构"本身是新增的（room-list-panel）。
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Plus, Search, X } from "lucide-react";
@@ -101,8 +101,15 @@ export function RoomListPanel() {
   const [createError, setCreateError] = useState("");
   // p20/F06：删除房间后跳回 /rooms?deleted=<名>，展示一次性 toast 并清掉 query。
   const [deletedToast, setDeletedToast] = useState("");
+  // 搜索 debounce：窄栏面板去掉了搜索按钮，改为输入时实时过滤（300ms），
+  // 不再硬依赖回车触发（回车仍立即触发）——消除测试里 press Enter 偶发丢失的抖动。
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 并发 load 的乱序守卫：mount 的 load(全部) 与搜索的 load(q) 可能并发，
+  // 若前者晚返回会用"全部"覆盖搜索结果。只应用序号最新的那次响应。
+  const reqSeq = useRef(0);
 
   async function load(search = "", favOnly = favoritesOnly) {
+    const seq = ++reqSeq.current;
     setLoading(true);
     setError("");
     const sp = new URLSearchParams();
@@ -110,12 +117,15 @@ export function RoomListPanel() {
     if (favOnly) sp.set("favorite", "1");
     const qs = sp.toString();
     const res = await fetch(`/api/rooms${qs ? `?${qs}` : ""}`);
+    // 有更新的 load 已发起 → 丢弃本次乱序响应，不覆盖更新的结果。
+    if (seq !== reqSeq.current) return;
     if (res.status === 401) {
       setError("请先登录");
       setLoading(false);
       return;
     }
     const d = await res.json();
+    if (seq !== reqSeq.current) return;
     setRooms(d.rooms ?? []);
     setFavIds(new Set((d.favoriteIds ?? []).map(String)));
     setLoading(false);
@@ -123,6 +133,9 @@ export function RoomListPanel() {
 
   useEffect(() => {
     void load();
+    return () => {
+      if (searchTimer.current) clearTimeout(searchTimer.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -309,8 +322,21 @@ export function RoomListPanel() {
             data-testid="room-list-search"
             placeholder="Search…"
             value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && load(q)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setQ(v);
+              if (searchTimer.current) clearTimeout(searchTimer.current);
+              searchTimer.current = setTimeout(() => void load(v), 300);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                if (searchTimer.current) clearTimeout(searchTimer.current);
+                // 读 DOM 实时值而非闭包里的 q——fill 后紧跟 Enter 时 setQ 尚未
+                // re-render，用 state 会拿到 stale 值触发 load("") 显示全部，与
+                // debounce 的 load(最新值) 竞争产生抖动。读 currentTarget.value 根治。
+                void load(e.currentTarget.value);
+              }
+            }}
             className="h-8 pl-8 text-13"
           />
         </div>
