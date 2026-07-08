@@ -1,13 +1,87 @@
 # 进度日志 — Sprint p7/03
 
 ## 当前已验证状态(唯一真相)
-- 仓库根目录: `.claude/worktrees/p7-03-board-menu`
+- 仓库根目录: `.claude/worktrees/p7-03-link-ctxmenu`（分支 worker/canvas-worker-1-p7-f12-f14-link-ctxmenu）
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F11 已 passing；下一个是 F12（链接组件）
-- 当前 blocker: 无（原竞态阻断已缓解并转为 issue #432 交给 coord-collab 跟进，不再阻断 F11）
+- 当前最高优先级未完成功能: F12/F14 已 passing；sprint p7/03 三个 feature（F11/F12/F14）全部 passing
+- 当前 blocker: 无
 
 ## 会话记录
+### 2026-07-08（续）PR #455 review 打回 — F12 stored XSS 修复
+- coord-main review：F14 干净，F12 有真实 **stored XSS**——`javascript:`/`data:` URL 可经
+  无校验的 PATCH 写入 `link|url=` 哨兵，其他用户点击「打开链接」时在其会话执行脚本。
+- 双侧修复（协议白名单，默认拒绝）：
+  1. **共享校验器**（`packages/canvas/src/index.ts` 新增 export，vitest 可测）：
+     `isSafeLinkUrl`（http/https 白名单）、`isLinkSentinel`/`linkUrlFromSentinel`（哨兵解析）、
+     `isColorSafe`（服务端守门：仅对 link 哨兵校验，其它 color 值一律放行）。
+  2. **服务端 PATCH 守门**（`apps/web/app/api/board-items/[itemId]/route.ts`）：body.color 为
+     link 哨兵且 URL 非 http/https → 400「链接协议不允许」。**POST/restore 路径不接受 color
+     字段**（color 仅经 PATCH 落库），故 PATCH 守门覆盖全部 link 哨兵写入路径，无旁路。
+  3. **客户端纵深防御**：`getLinkUrl` 内置 `isSafeLinkUrl` 校验（不安全/损坏哨兵返回 null），
+     双击/`wm-open-link` 打开前统一走它，不过则不打开 + notice 反馈；`window.open` 带
+     `noopener,noreferrer`（防 tabnabbing）；`addLink` 前置校验也用同一函数。
+- 注入回归测试（红→绿证据）：
+  - **RED 已证明**：git stash 掉服务端守门后跑注入测试，恶意 `javascript:` PATCH 返回
+    **200**（落库成功）——漏洞真实存在。
+  - **GREEN**：恢复守门后，注入测试断言 400 + REST 读回 color 未变 + 正常 https PATCH 200 +
+    便签色 PATCH 不受影响，全部通过。
+  - vitest 校验器矩阵 25/25（http/https 通过；javascript/data/vbscript/file、大小写变体
+    `JaVaScRiPt:`、前导空白/内嵌换行、相对路径/畸形串/空串全部拒绝）。
+  - `board-link-widget.spec.ts` 6/6（含注入回归）、`board-context-menu.spec.ts` 6/6 无回归。
+  - typecheck @repo/canvas + @repo/web 均干净。
+- 证据: `evidence/F12.verify.log`（F12 已 passing 不可逆，harness verify 为 no-op，日志记录
+  直接复验：vitest 矩阵 + e2e 含注入回归）。
+
+### 2026-07-08
+- 本轮目标: F12（链接组件，issue #288）+ F14（右键 Context Menu，issue #289），同一分支一个 PR。
+- 已完成:
+  - **F12 链接组件**（uc-board-menu-011）：Board Menu 新增「链接」入口 + URL 输入面板
+    （`add-link`/`board-link-panel`/`board-link-url`/`board-link-submit`/`board-link-error`）。
+    校验：空、含空白、非 http(s) 就地报错不创建。线上 `type:"note"` 落库（服务端白名单
+    note/rect 未动）+ color 哨兵 `link|url=<encodeURIComponent(URL)>`（URL 含 `|`/`=` 会撞
+    哨兵分隔符，编码是必需的，e2e 用带 `|`/`=` 的 URL 验证往返无损）。fabric 渲染
+    kind=link 白底卡片 + 蓝色下划线域名（text=hostname）；双击 / Widget Menu「打开链接」
+    （`wm-open-link`）新标签打开；可移动/删除与其它 widget 一致。
+  - **F14 右键 Context Menu**（uc-context-menu-001~004）：
+    - 图层顺序**持久化**：color 哨兵新增 `|z=<整数>` 段，客户端渲染前按 (z, 原数组下标)
+      稳定排序；上移/下移/置顶/置底 = 在排序后的层序上算目标下标、批量 PATCH color（只 PATCH
+      与现值不同的项）。不加数据库列、不改白名单；刷新/协作端层序一致（e2e 断言 reload 后保持）。
+    - 菜单按目标收窄：对象级 = 复制/剪切/创建副本/层级×4/锁定/删除；锁定态收窄 = 复制 +
+      层级 + 解锁（隐藏剪切/副本/删除，uc-001 前端入口 3）；空白画布级 = 粘贴（剪贴板空则
+      disabled）+ 选择所有；Esc 关闭菜单不执行动作。
+    - 复制/剪切/粘贴复用 F08 剪贴板；锁定/解锁复用 p6:F20 `toggleLocked`（原
+      `ctx-lock-unavailable` 占位删除，widgets-001 断言同步更新为 `ctx-lock`）。
+    - **编组/取消编组入口留白**：依赖 p6:F21 的 `groupSelected/ungroupSelected`，main 上
+      F21 尚未合并（board-canvas.tsx 无编组实现），入口等 F21 合并后接线，不重复实现编组语义。
+  - 过程中发现并修复两个真实问题：
+    1. 浏览器 WHATWG URL 解析器会把主机名里的空格百分号编码后「成功解析」（Node 会抛错），
+       单靠 `new URL` 兜不住明显非 URL 的输入 → 显式拒绝含空白输入 + 拒绝 host 含 `%`。
+    2. `upsertItem(doc, id, {color})` 对 doc 不认识的 id 会造出 text=""/x=0 的残缺条目，
+       mergeRemoteItems 可能用它覆盖 React state（F12 verify 实测抓到）→ addLink 改为写入
+       **全字段**。addText/addShape/addEmbed 存在同一隐患（在 main 基线上可复现
+       widgets-001 flake），属存量问题不在本轮 scope，已另开后台任务建议同样修法。
+  - 中途 merge 了最新 origin/main（含 #442 collab _rev 根治、#444 fabric 健壮性修复），
+    冲突仅 `.harness/state/PROGRESS.md`（聚合计数，按合并后 feature_list 实算修正）；
+    merge 后 typecheck + 两个 spec 重跑通过。
+- 运行过的验证:
+  - `pnpm --filter @repo/web run typecheck`：干净（每步都跑）。
+  - `playwright test e2e/board-link-widget.spec.ts`：5/5 通过（merge 前后各至少一轮全绿）。
+  - `playwright test e2e/board-context-menu.spec.ts`：6/6 通过（merge 前后各至少一轮全绿；
+    merge 后首轮混跑时 2 条失败，单独重跑立即全绿，判定为负载噪音而非断言失败）。
+  - 回归：context-menu-001 / context-menu-003 / canvas-copy-paste 全过；widgets-001 首条
+    测试失败经 git stash 在**未改动基线**上复现相同失败（addText 竞态 + 该测试自带的
+    add-shape 已知基线失败），非本轮回归。
+  - `pnpm harness verify --feature F12` / `--feature F14`：真实门控通过，两个 feature 转
+    passing（各含 verify:base）。
+- 已记录证据: `evidence/F12.verify.log`、`evidence/F14.verify.log`。
+- 已知风险或未解决问题:
+  - addText/addShape/addEmbed 的 `upsertItem` 单字段写入隐患（见上，存量，已建议后台任务）。
+  - F14 编组入口留白等 F21（F21 合并后接线是小改动：菜单加 ctx-group/ctx-ungroup 调
+    groupSelected/ungroupSelected）。
+  - 链接组件的 URL 编辑/OG 预览留后续增强（feature notes 已声明「OG 预览抓取可后续增强」）。
+- 下一步最佳动作: PR review 通过后合并；F21 合并后回来接编组入口。
+
 ### 2026-07-07
 - 本轮目标: F11（Board Menu 工具栏框架 + 组件创建入口）。issue #282（F01）失联超过约定
   窗口后由 coord-board 重新认领，本轮先完成 F11（unblocked，优先级更高的独立线）。

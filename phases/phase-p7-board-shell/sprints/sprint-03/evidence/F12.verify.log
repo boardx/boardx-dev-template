@@ -1,0 +1,21 @@
+=== F12 security re-verify (PR #455 review: stored XSS 修复) ===
+# F12 已 passing（不可逆），harness verify 为 no-op；以下为直接复验证据。
+
+--- vitest @repo/canvas（校验器矩阵）---
+ ✓ src/index.test.ts  (25 tests) 11ms
+ Test Files  1 passed (1)
+      Tests  25 passed (25)
+
+--- e2e board-link-widget.spec.ts（含恶意 PATCH 注入回归）---
+[WebServer] Yjs was already imported. This breaks constructor checks and will lead to issues! - https://github.com/yjs/yjs/issues/438
+[WebServer] Yjs was already imported. This breaks constructor checks and will lead to issues! - https://github.com/yjs/yjs/issues/438
+  ✓  2 [chromium] › board-link-widget.spec.ts:59:5 › 输入合法 URL → 画布出现链接卡片（域名文本 + link 哨兵），URL 含 |/= 时编码往返无损 (4.0s)
+  ✓  3 [chromium] › board-link-widget.spec.ts:83:5 › 双击链接卡片 → 在新标签打开目标 URL (1.8s)
+[WebServer] Yjs was already imported. This breaks constructor checks and will lead to issues! - https://github.com/yjs/yjs/issues/438
+  ✓  4 [chromium] › board-link-widget.spec.ts:96:5 › 选中链接 → Widget Menu 显示「打开链接」，点击在新标签打开 (1.5s)
+  ✓  5 [chromium] › board-link-widget.spec.ts:113:5 › 链接组件可移动（方向键微移）、可删除 (1.2s)
+  ✓  6 [chromium] › board-link-widget.spec.ts:129:5 › 恶意 PATCH 注入 javascript: 链接被服务端拒绝（400，color 不变） (1.4s)
+
+  Slow test file: [chromium] › board-link-widget.spec.ts (16.1s)
+  Consider splitting slow test files to speed up parallel execution
+  6 passed (22.1s)

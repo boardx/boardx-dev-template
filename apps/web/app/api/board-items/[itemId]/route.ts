@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getItem, getBoardAccessRole, updateItem, deleteItem } from "@repo/data";
+import { isColorSafe } from "@repo/canvas";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -34,7 +35,17 @@ export async function PATCH(req: Request, { params }: { params: { itemId: string
       fields.h = Math.max(8, Math.trunc(Number(body.h)));
     }
     if (typeof body.text === "string") fields.text = body.text;
-    if (body.color !== undefined) fields.color = body.color === null ? null : String(body.color);
+    if (body.color !== undefined) {
+      const color = body.color === null ? null : String(body.color);
+      // p7:F12 stored XSS 防护：链接哨兵（color 头 "link"）的 URL 必须是 http/https。
+      // 无鉴别地放行 color 会让攻击者写入 `javascript:`/`data:` URL，其它用户点击「打开
+      // 链接」时在其会话执行脚本。只对链接哨兵校验，其它 color 值（便签色/文本/形状/连接线/
+      // 锁定/z 等哨兵）不受影响（isColorSafe 对非链接哨兵一律返回 true）。
+      if (!isColorSafe(color)) {
+        return NextResponse.json({ error: "链接协议不允许（仅支持 http/https）" }, { status: 400 });
+      }
+      fields.color = color;
+    }
     await updateItem(params.itemId, fields);
     return NextResponse.json({ ok: true });
   } catch (err) {
