@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyCommand, applyAll, validateNewItem, type BoardItem } from "./index";
+import { applyCommand, applyAll, validateNewItem, type BoardItem, type ItemPatch } from "./index";
 
 const item = (id: string, x = 0, y = 0): BoardItem => ({ id, type: "note", x, y, w: 160, h: 100, text: "" });
 
@@ -45,9 +45,19 @@ describe("patch（字段级更新，p6:F14）", () => {
     const out = applyCommand([item("a")], {
       kind: "patch",
       id: "a",
-      patch: { id: "hacked", type: "rect", x: 1 },
+      patch: { id: "hacked", type: "rect", x: 1 } as unknown as ItemPatch,
     });
     expect(out[0]).toMatchObject({ id: "a", type: "note", x: 1 });
+  });
+  it("patch:{x: undefined} 是显式字段写入，不会被当成缺省字段忽略", () => {
+    const out = applyCommand([item("a", 12, 34)], {
+      kind: "patch",
+      id: "a",
+      patch: { x: undefined },
+    });
+    expect(Object.prototype.hasOwnProperty.call(out[0], "x")).toBe(true);
+    expect(out[0]!.x).toBeUndefined();
+    expect(out[0]!.y).toBe(34);
   });
   it("支持 widget 专有扩展字段（CRDT-ready）", () => {
     let items = [item("a")];
