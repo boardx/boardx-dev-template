@@ -232,6 +232,53 @@ const EMBED_MARK = "embed";
 const DEFAULT_EMBED = "嵌入内容";
 const isReloadable = (it: { color?: string | null }) => baseColor(it.color) === EMBED_MARK;
 
+// p6:F17（uc-widgets-006 手绘）：手绘笔迹组件。沿用既有 color "|k=v" 哨兵编码约定：
+// 线上以 type:"note" 落库 + color:"draw" 判别头（服务端 validateNewItem 白名单不可改）。
+// 笔迹点序列存入既有 text 字段（JSON 字符串 {"points":[[x,y],...]}，点为相对 item 左上角
+// 的局部坐标，随 x/y 移动天然跟随；缩放时渲染层按 w/h 与点集原始包围盒的比例线性缩放）。
+// 笔色/线宽复用 F19 已有的 "|border="/"|borderw=" 段（同连接线的复用理由：不重复定义色板）。
+const DRAW_MARK = "draw";
+const DEFAULT_DRAW_WIDTH = 3; // 画笔默认线宽（比默认边框 1px 粗，符合"笔迹"视觉）
+const isDraw = (it: { color?: string | null }) => baseColor(it.color) === DRAW_MARK;
+const parseDrawPoints = (text: string): Array<{ x: number; y: number }> => {
+  try {
+    const j = JSON.parse(text) as { points?: unknown };
+    if (Array.isArray(j?.points)) {
+      return j.points
+        .filter((p): p is [number, number] => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]))
+        .map(([x, y]) => ({ x, y }));
+    }
+  } catch {
+    // 非法 JSON：按空笔迹处理（渲染层画占位框），不抛错破坏整个画布渲染
+  }
+  return [];
+};
+
+// p6:F18（uc-widgets-008 图表）：图表组件。线上以 type:"note" 落库 + color:"chart|kind=bar"
+// 哨兵，text 字段存图表数据 JSON（{"labels":["A","B"],"values":[3,5]}）。渲染层用 fabric.Rect
+// 组合画简单柱状图（不引入图表库）。数据编辑：选中后 Widget Menu 的「编辑数据」入口（或双击）
+// 打开既有 DOM textarea 直接编辑 text JSON，保存后重渲染。
+const CHART_MARK = "chart";
+const isChart = (it: { color?: string | null }) => baseColor(it.color) === CHART_MARK;
+const DEFAULT_CHART_DATA = { labels: ["A", "B", "C"], values: [3, 5, 2] };
+const parseChartData = (text: string): { labels: string[]; values: number[] } | null => {
+  try {
+    const j = JSON.parse(text) as { labels?: unknown; values?: unknown };
+    if (
+      Array.isArray(j?.labels) &&
+      Array.isArray(j?.values) &&
+      j.values.length > 0 &&
+      j.labels.length === j.values.length &&
+      j.values.every((v) => Number.isFinite(Number(v)))
+    ) {
+      return { labels: j.labels.map(String), values: j.values.map(Number) };
+    }
+  } catch {
+    // 非法 JSON：返回 null，渲染层展示「数据无效」失败反馈（UC 异常流程 1）
+  }
+  return null;
+};
+
 // p6:F16（uc-widgets-005 + uc-widget-menu-012）：连接线组件。沿用 F12/F15/F19/F20/F21 建立的
 // color "|k=v" 哨兵编码约定，不新增持久化列（服务端 validateNewItem 仍只认 type ∈ {note,rect}）。
 // 线上以 type:"note" 落库 + color:"connector" 判别头，紧随其后的样式段：
@@ -303,6 +350,7 @@ type BoardTool =
   | "pan"
   | "sticky"
   | "draw"
+  | "eraser"
   | "text"
   | "connector"
   | "shape"
@@ -954,17 +1002,21 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   );
 
   // 空白按下：清除选择 + 关闭右键菜单（旧 items-layer onClick 语义），随后视口照常平移。
-  const onEmptyPointerDown = useCallback(() => {
-    if (formatSource) return; // 取样模式下点击空白不清空选择/退出（Esc 才退出，主流程 7）
-    // uc-board-menu-007 异常流程 3/9：图表模式下点击画布——底层图表组件（p6:F18）未实现，
-    // 不创建任何对象，只给出「不可用」反馈，画布内容不变（不清空选择，因为图表模式下本就无选中）。
-    if (activeTool === "chart") {
-      setNotice("图表功能即将上线，敬请期待");
-      return;
-    }
-    setSelected(new Set());
-    setCtxMenu(null);
-  }, [formatSource, activeTool]);
+  // p6:F18（uc-board-menu-007）：图表模式下点击画布 = 在点击处创建真实图表组件（替换此前
+  // 的「即将上线」占位反馈），scenePoint 为 fabric 换算好的画布坐标。
+  const onEmptyPointerDown = useCallback(
+    (scenePoint?: { x: number; y: number }) => {
+      if (formatSource) return; // 取样模式下点击空白不清空选择/退出（Esc 才退出，主流程 7）
+      if (activeTool === "chart") {
+        if (canEdit && scenePoint) void addChart(scenePoint);
+        return;
+      }
+      setSelected(new Set());
+      setCtxMenu(null);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [formatSource, activeTool, canEdit],
+  );
 
   const onEditRequest = useCallback(
     (id: string) => {
@@ -1007,7 +1059,19 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         h: it.h,
         text: it.text,
         color: it.color ?? null,
-        kind: isConnector(it) ? "connector" : isText(it) ? "text" : isShape(it) ? "shape" : isReloadable(it) ? "embed" : "note",
+        kind: isConnector(it)
+          ? "connector"
+          : isDraw(it)
+            ? "draw"
+            : isChart(it)
+              ? "chart"
+              : isText(it)
+                ? "text"
+                : isShape(it)
+                  ? "shape"
+                  : isReloadable(it)
+                    ? "embed"
+                    : "note",
         bold: isBold(it),
         italic: isItalic(it),
         fontFamily: getFontFamily(it),
@@ -1022,6 +1086,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         reloadCount: reload[it.id]?.count ?? 0,
         refreshedAt: reload[it.id]?.at ?? null,
         locked: getLocked(it),
+        // p6:F17：手绘笔迹点序列（item 局部坐标），由 text 字段的 JSON 解析而来。
+        drawPoints: isDraw(it) ? parseDrawPoints(it.text) : null,
+        // p6:F18：图表数据（labels/values），由 text 字段的 JSON 解析而来；null = 数据无效。
+        chart: isChart(it) ? parseChartData(it.text) : undefined,
         // p6:F16：连接线专属几何/样式派生视图（见上方 connector "|k=v" 段约定）。
         connector: isConnector(it)
           ? {
@@ -1175,6 +1243,110 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     recordOp({ kind: "add", items: [embedItem] });
     await load();
     setSelected(new Set([item.id]));
+  }
+
+  // p6:F17（uc-widgets-006 主流程 1-3）：一次画笔手势结束（fabric PencilBrush path:created）
+  // → 把笔迹持久化为手绘组件。points 为画布坐标；归一化为相对包围盒左上角的局部坐标存入
+  // text（JSON），x/y/w/h 落为包围盒。服务端 POST 忽略 w/h（用 note 默认尺寸），故 w/h 与
+  // color 哨兵合并成一次 PATCH 补写；随后 upsertItem 直写 collab doc（防 poll()/seedItems
+  // 竞态，同 addShape/addText/addEmbed 的既有规避模式）。
+  const onDrawCreated = useCallback(
+    async (points: Array<{ x: number; y: number }>) => {
+      if (!canEdit || points.length < 2) return;
+      // 采样点抽稀：PencilBrush 逐 mousemove 记点，长笔迹可能上千点；隔点保留（首尾必留），
+      // 上限 ~300 点，控制 text JSON 体积，视觉上无感知差异。
+      const MAX_POINTS = 300;
+      const step = Math.max(1, Math.ceil(points.length / MAX_POINTS));
+      const sampled = points.filter((_, i) => i % step === 0 || i === points.length - 1);
+      const xs = sampled.map((p) => p.x);
+      const ys = sampled.map((p) => p.y);
+      const minX = Math.min(...xs);
+      const minY = Math.min(...ys);
+      const w = Math.max(8, Math.round(Math.max(...xs) - minX));
+      const h = Math.max(8, Math.round(Math.max(...ys) - minY));
+      const local = sampled.map((p) => [Math.round((p.x - minX) * 10) / 10, Math.round((p.y - minY) * 10) / 10]);
+      const res = await fetch(`/api/boards/${boardId}/items`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ type: "note", x: Math.round(minX), y: Math.round(minY), text: JSON.stringify({ points: local }) }),
+      });
+      if (res.status !== 201) return;
+      const { item } = (await res.json()) as { item: Item };
+      const color = `${DRAW_MARK}|borderw=${DEFAULT_DRAW_WIDTH}`;
+      await fetch(`/api/board-items/${item.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ color, w, h }),
+      });
+      // 注意写完整字段而非只写 {color,w,h}：doc 里若还没有这个 id，upsertItem 会新建一个
+      // 只含部分字段的条目，而 seedItems 对已存在 id 永不覆盖 → text（点序列 JSON）在 doc
+      // 视角长期缺失，mergeRemoteItems 的合并窗口里 items 会短暂拿到 text 为空的版本
+      // （F17 verify 抓到的真实回归：e2e 读到 kind=draw 但 text 空，JSON 解析失败）。
+      upsertItem(docRef.current, item.id, { x: item.x, y: item.y, w, h, text: item.text, type: item.type, color });
+      const drawItem: Item = { ...item, color, w, h };
+      recordOp({ kind: "add", items: [drawItem] });
+      await load();
+      setSelected(new Set([item.id]));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [canEdit, boardId, load],
+  );
+
+  // p6:F17（uc-widgets-006 主流程 8 / uc-board-menu-012）：橡皮擦模式下点击笔迹 → 删除整条
+  // 笔迹（stroke 级删除，最小可用；像素级擦除不在本期范围）。只作用于手绘对象（业务规则 4：
+  // 橡皮擦只删除绘制内容），锁定笔迹不可擦（备选流程 3）；删除走既有 DELETE + recordOp 撤销栈。
+  const onErasePick = useCallback(
+    (itemId: string | null) => {
+      if (!canEdit || !itemId) return;
+      const target = itemsRef.current.find((it) => it.id === itemId);
+      if (!target || !isDraw(target)) return; // 非笔迹对象：橡皮擦不作用（不误删便签/形状）
+      if (getLocked(target)) {
+        setNotice("笔迹已锁定，无法擦除");
+        return;
+      }
+      setItems((prev) => prev.filter((it) => it.id !== itemId));
+      setSelected((prev) => {
+        if (!prev.has(itemId)) return prev;
+        const next = new Set(prev);
+        next.delete(itemId);
+        return next;
+      });
+      recordOp({ kind: "delete", items: [target] });
+      void apiDelete([itemId]);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [canEdit, apiDelete],
+  );
+
+  // p6:F18（uc-board-menu-007 + uc-widgets-008）：图表模式下点击画布 → 在点击处创建柱状图
+  // 组件（默认示例数据）。type:"note" 落库 + color:"chart|kind=bar" 哨兵，text 存数据 JSON；
+  // w/h 与 color 合并一次 PATCH 补写（POST 忽略 w/h），并 upsertItem 直写 doc 防竞态。
+  async function addChart(pt: { x: number; y: number }) {
+    const x = Math.round(pt.x);
+    const y = Math.round(pt.y);
+    const res = await fetch(`/api/boards/${boardId}/items`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "note", x, y, text: JSON.stringify(DEFAULT_CHART_DATA) }),
+    });
+    if (res.status !== 201) return;
+    const { item } = (await res.json()) as { item: Item };
+    const color = `${CHART_MARK}|kind=bar`;
+    const w = 280;
+    const h = 180;
+    await fetch(`/api/board-items/${item.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ color, w, h }),
+    });
+    // 写完整字段防 doc 局部条目竞态（同 onDrawCreated 的注释——text 是图表数据 JSON，缺失
+    // 会导致合并窗口里图表短暂渲染为「数据无效」）。
+    upsertItem(docRef.current, item.id, { x: item.x, y: item.y, w, h, text: item.text, type: item.type, color });
+    const chartItem: Item = { ...item, color, w, h };
+    recordOp({ kind: "add", items: [chartItem] });
+    await load();
+    setSelected(new Set([item.id]));
+    setActiveTool("select"); // 一次一个图表的创建节奏（同连接线），创建后回到选择工具
   }
 
   // 连接线创建（uc-widgets-005 主流程 2-3）：两次独立点击——点第一下记录起点（组件或空白处
@@ -1672,7 +1844,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     if (!formatSource || !canEdit) return false;
     if (targetId === formatSource.id) return false;
     const target = items.find((it) => it.id === targetId);
-    if (!target || isShape(target) || isReloadable(target)) return false;
+    // p6:F17/F18：手绘/图表的 color 头是类型判别位，应用格式会把头替换掉导致类型丢失，
+    // 与形状/嵌入一样视为不兼容目标。
+    if (!target || isShape(target) || isReloadable(target) || isDraw(target) || isChart(target)) return false;
     const newColor = applyFormatColor({ color: formatSource.color }, isText(target));
     await applyColors((it) => (it.id === target.id ? newColor : null));
     return true;
@@ -1877,19 +2051,24 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             <BoardMenuButton testId="add-note" label="便利贴" active={activeTool === "sticky"} onClick={() => void addNote()}>
               <StickyNote className="h-4 w-4" />
             </BoardMenuButton>
-            <BoardMenuButton testId="board-tool-draw" label="手绘" active={false} disabled>
+            {/* p6:F17（uc-widgets-006 / uc-board-menu-006）：手绘工具——激活后画布进入 fabric
+                isDrawingMode（PencilBrush 自由绘制），松开鼠标即持久化为手绘组件（见
+                onDrawCreated）。 */}
+            <BoardMenuButton
+              testId="board-tool-draw"
+              label="手绘"
+              active={activeTool === "draw"}
+              onClick={() => chooseTool("draw")}
+            >
               <PenLine className="h-4 w-4" />
             </BoardMenuButton>
-            {/* uc-board-menu-012（橡皮擦入口，手绘相关入口的一部分）：底层手绘组件（p6:F17）
-                尚未实现，画笔本身还是禁用占位（上面 board-tool-draw）。橡皮擦不能真正擦除
-                任何笔迹，但业务规则 3（备选流程 2）要求「入口不可用时…提示当前无法使用」，
-                所以给一个可点击但只报「不可用」反馈的入口，不切换任何真实擦除模式，
-                也不创建/删除任何对象（范围纪律：不越界实现 F17 手绘擦除本身）。 */}
+            {/* p6:F17（uc-board-menu-012）：橡皮擦——激活后点击某条笔迹删除该笔迹（stroke 级
+                删除，见 onErasePick）；只作用于手绘对象，不误删其它组件。 */}
             <BoardMenuButton
               testId="board-tool-eraser"
               label="橡皮擦"
-              active={false}
-              onClick={() => setNotice("手绘功能即将上线，橡皮擦暂不可用")}
+              active={activeTool === "eraser"}
+              onClick={() => chooseTool("eraser")}
             >
               <Eraser className="h-4 w-4" />
             </BoardMenuButton>
@@ -2054,9 +2233,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           {!allSelectedLocked && (
             <>
           {/* 颜色色板（F11）：仅对便签生效；选中项全为文本或连接线时隐藏（文本为透明块、连接线
-              用边框色表达线条颜色，都不套柔彩背景色，业务规则 1：菜单入口按对象类型区分）。 */}
+              用边框色表达线条颜色，都不套柔彩背景色，业务规则 1：菜单入口按对象类型区分）。
+              p6:F17/F18：手绘/图表的 color 头是类型判别位（"draw"/"chart"），setColor 会把头
+              替换成色 token 导致类型丢失，故选中含手绘/图表时色板整体隐藏（笔色走 wm-border）。 */}
           {!items.filter((it) => selected.has(it.id)).every((it) => isText(it) || isConnector(it)) &&
-            items.filter((it) => selected.has(it.id)).every((it) => !isConnector(it)) &&
+            items
+              .filter((it) => selected.has(it.id))
+              .every((it) => !isConnector(it) && !isDraw(it) && !isChart(it)) &&
             COLOR_TOKENS.map((c) => (
             <button
               key={c}
@@ -2070,7 +2253,8 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           {/* p6:F16 业务规则 1：连接线无文字排版语义，字重入口不展示（与形状/嵌入组件的
               既有隐藏逻辑一致，只是本行 wm-bold 历史上未对形状/嵌入设门，这里只加连接线判断，
               不改动既有对形状/嵌入的展示行为，范围最小化）。 */}
-          {!items.filter((it) => selected.has(it.id)).every(isConnector) && (
+          {!items.filter((it) => selected.has(it.id)).every(isConnector) &&
+            items.filter((it) => selected.has(it.id)).every((it) => !isDraw(it) && !isChart(it)) && (
             <Button
               data-testid="wm-bold"
               size="sm"
@@ -2088,7 +2272,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           {(() => {
             const sel = items.filter((it) => selected.has(it.id));
             const allTextLike =
-              sel.length > 0 && sel.every((it) => isText(it) || (!isShape(it) && !isReloadable(it) && !isConnector(it)));
+              sel.length > 0 &&
+              sel.every(
+                (it) => isText(it) || (!isShape(it) && !isReloadable(it) && !isConnector(it) && !isDraw(it) && !isChart(it)),
+              );
             if (!allTextLike) return null;
             const first = sel[0]!;
             const mixedFont = !sel.every((it) => getFontFamily(it) === getFontFamily(first));
@@ -2177,9 +2364,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               端点箭头，无透明度和文字色语义，故连接线选中时不展示 wm-opacity/wm-textcolor）。 */}
           {(() => {
             const sel = items.filter((it) => selected.has(it.id));
-            const eligible = sel.length > 0 && sel.every((it) => !isReloadable(it));
+            // p6:F18：图表无边框/透明度/文字色语义（外观由数据渲染决定），整节不展示。
+            const eligible = sel.length > 0 && sel.every((it) => !isReloadable(it) && !isChart(it));
             if (!eligible) return null;
             const allConnectors = sel.every(isConnector);
+            // p6:F17：手绘复用 wm-border/wm-border-width 表达笔色/线宽（同连接线的复用理由），
+            // 但无文字色语义，textcolor 不展示；透明度保留（笔迹整体透明度有意义）。
+            const allDraw = sel.every(isDraw);
             const first = sel[0]!;
             const mixedBorder = !sel.every((it) => getBorder(it) === getBorder(first));
             const mixedBorderWidth = !sel.every((it) => getBorderWidth(it) === getBorderWidth(first));
@@ -2230,6 +2421,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                         </option>
                       ))}
                     </select>
+                    {!allDraw && (
                     <select
                       data-testid="wm-textcolor"
                       aria-label="文字色"
@@ -2244,6 +2436,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                       <option value="green">绿色</option>
                       <option value="red">红色</option>
                     </select>
+                    )}
                   </>
                 )}
                 {/* p6:F16（uc-widget-menu-012 主流程 6）：连接线专属——直线/曲线、端点箭头。 */}
@@ -2312,7 +2505,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           {selected.size === 1 &&
             items
               .filter((it) => selected.has(it.id))
-              .every((it) => !isShape(it) && !isReloadable(it) && !isConnector(it)) && (
+              .every((it) => !isShape(it) && !isReloadable(it) && !isConnector(it) && !isDraw(it) && !isChart(it)) && (
               <Button
                 data-testid="wm-apply-format"
                 size="sm"
@@ -2325,6 +2518,20 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                 应用格式
               </Button>
             )}
+          {/* p6:F18（uc-widgets-008）：单选图表时显示「编辑数据」入口——复用既有 DOM textarea
+              编辑覆盖层直接编辑 text 里的数据 JSON（{"labels":[...],"values":[...]}），保存后
+              按新数据重渲染柱状图（双击图表进入同一编辑态）。 */}
+          {selected.size === 1 && items.filter((it) => selected.has(it.id)).every(isChart) && (
+            <Button
+              data-testid="wm-chart-data"
+              size="sm"
+              variant="ghost"
+              aria-label="编辑图表数据"
+              onClick={() => setEditingId(Array.from(selected)[0]!)}
+            >
+              编辑数据
+            </Button>
+          )}
           {/* uc-widget-menu-014：仅当单选一个文本组件时显示「转换为便利贴」入口。 */}
           {selected.size === 1 && items.filter((it) => selected.has(it.id)).every(isText) && (
             <Button
@@ -2541,6 +2748,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             onOperating={onOperating}
             connectorPickMode={activeTool === "connector"}
             onConnectorPick={onConnectorPick}
+            drawMode={activeTool === "draw" && canEdit}
+            onDrawCreated={(pts) => void onDrawCreated(pts)}
+            erasePickMode={activeTool === "eraser" && canEdit}
+            onErasePick={onErasePick}
           />
         }
       >

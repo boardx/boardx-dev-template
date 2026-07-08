@@ -32,7 +32,7 @@ export interface RenderItem {
   h: number;
   text: string;
   color: string | null;
-  kind: "note" | "text" | "shape" | "embed" | "connector";
+  kind: "note" | "text" | "shape" | "embed" | "connector" | "draw" | "chart";
   bold: boolean;
   // p6:F12（uc-widget-menu-013）：文本样式字段，均由 color 的 "|k=v" 段解析而来。
   italic: boolean;
@@ -68,6 +68,13 @@ export interface RenderItem {
     stroke: string;
     strokeWidth: number;
   };
+  // p6:F17（uc-widgets-006）：手绘笔迹点序列（item 局部坐标，相对 x/y），由 text 字段的
+  // JSON（{"points":[[x,y],...]}）解析而来。仅 kind === "draw" 时有意义。渲染时按当前 w/h
+  // 与点集原始包围盒的比例线性缩放（缩放组件时笔迹跟随）。
+  drawPoints?: Array<{ x: number; y: number }> | null;
+  // p6:F18（uc-widgets-008）：图表数据，由 text 字段的 JSON 解析而来；null = 数据无效
+  // （渲染失败反馈，UC 异常流程 1）。仅 kind === "chart" 时有意义。
+  chart?: { labels: string[]; values: number[] } | null;
 }
 
 export interface ViewportState {
@@ -98,7 +105,8 @@ interface Props {
   canEdit: boolean;
   viewport: ViewportState;
   onSelectionChange: (ids: string[]) => void;
-  onEmptyPointerDown: () => void;
+  // 空白按下（scenePoint 为画布坐标，供图表模式在点击处创建组件，p6:F18）。
+  onEmptyPointerDown: (scenePoint?: { x: number; y: number }) => void;
   onMoveCommit: (moves: ItemMove[]) => void;
   onResizeCommit: (resize: ItemResize) => void;
   onEditRequest: (id: string) => void;
@@ -113,6 +121,18 @@ interface Props {
   // 但复现稳定），换成更简单的两次点击可完全绕开，避免在同一个诡异 bug 上无限延伸调试。
   connectorPickMode: boolean;
   onConnectorPick: (itemId: string | null, scenePoint: { x: number; y: number }) => void;
+  // p6:F17（uc-widgets-006）：手绘模式——true 时开启 fabric 原生 isDrawingMode（PencilBrush），
+  // 一次画笔手势结束（path:created）后把笔迹点序列（画布坐标）回调给上层持久化，临时 path
+  // 对象立即从画布移除（持久化后的 item 经 reconcile 正式渲染）。
+  // 注意：不采用「mouse:move 手写预览临时对象」的自研方案——那条路径此前被观测到会破坏
+  // fabric 对其它对象的命中判定（见 connectorPickMode 注释的真实事故）；isDrawingMode 是
+  // fabric 原生绘制通道，不往对象树里加临时预览对象。
+  drawMode: boolean;
+  onDrawCreated: (points: Array<{ x: number; y: number }>) => void;
+  // p6:F17（uc-board-menu-012）：橡皮擦模式——点击一次即报告命中的 item（上层判定是否为
+  // 手绘笔迹并删除），交互模式同 connectorPickMode 的单击拾取。
+  erasePickMode: boolean;
+  onErasePick: (itemId: string | null) => void;
 }
 
 type FabricNS = typeof import("fabric");
@@ -201,7 +221,7 @@ export interface CanvasTestApi {
     h: number;
     text: string;
     color: string | null;
-    kind: "note" | "text" | "shape" | "embed" | "connector";
+    kind: "note" | "text" | "shape" | "embed" | "connector" | "draw" | "chart";
     bold: boolean;
     italic: boolean;
     fontFamily: string;
@@ -300,7 +320,11 @@ export function FabricCanvas(props: Props) {
           g =
             it.kind === "connector" && it.connector
               ? buildConnectorObject(fabric, tokens, it, s.items, s.canEdit)
-              : buildItemObject(fabric, tokens, it, s.editingId === it.id, s.canEdit);
+              : it.kind === "draw"
+                ? buildDrawObject(fabric, tokens, it, s.canEdit)
+                : it.kind === "chart"
+                  ? buildChartObject(fabric, tokens, it, s.canEdit)
+                  : buildItemObject(fabric, tokens, it, s.editingId === it.id, s.canEdit);
           objectSigRef.current.set(g, sig);
           objectItemIdRef.current.set(g, it.id);
           fc.add(g);
@@ -393,6 +417,9 @@ export function FabricCanvas(props: Props) {
       // ── 手势事件 ───────────────────────────────────────────────────────────
       fc.on("mouse:down", (opt: TPointerEventInfo<TPointerEvent>) => {
         const s = propsRef.current;
+        // p6:F17：手绘模式下所有指针事件交给 fabric 原生 PencilBrush 处理（isDrawingMode），
+        // 不做命中/选中/平移逻辑（否则绘制起笔会误触发选中态变化）。
+        if (s.drawMode) return;
         const e = opt.e as MouseEvent;
         const target = opt.target as Group | undefined;
         const fcNow = fcRef.current;
@@ -400,6 +427,14 @@ export function FabricCanvas(props: Props) {
         const scene = fcNow.getScenePoint(e);
         const hitId = hitTest(s.items, scene);
         const hitConnector = hitId ? s.items.find((it) => it.id === hitId && it.kind === "connector") : undefined;
+
+        // p6:F17（uc-board-menu-012）：橡皮擦模式——单击拾取命中对象，上层判定是否为手绘
+        // 笔迹并删除（stroke 级删除）；不进入拖拽/选中路径。
+        if (s.erasePickMode && s.canEdit && e.button === 0) {
+          e.stopPropagation();
+          s.onErasePick(hitId);
+          return;
+        }
 
         // p6:F16（uc-widgets-005 主流程 2-3）：连接线创建模式——点击一次即选定一个端点（组件
         // 或空白处的自由端点），不做拖拽手势/实时预览（两次独立点击，见 onConnectorPick）。
@@ -470,8 +505,33 @@ export function FabricCanvas(props: Props) {
           }
         } else {
           // 空白：清除选择/关闭菜单；不阻断冒泡 → CanvasViewport 照常拖拽平移。
-          s.onEmptyPointerDown();
+          // scenePoint 供图表模式在点击处创建组件（p6:F18）。
+          s.onEmptyPointerDown({ x: scene.x, y: scene.y });
         }
+      });
+
+      // p6:F17：一次画笔手势结束——fabric PencilBrush 在画布上留下临时 fabric.Path，这里
+      // 提取路径命令里的点序列（画布坐标）回调上层持久化，并立即移除临时对象（持久化后的
+      // item 会经 reconcile 以受控方式重建，避免画布上残留一份不受 items 驱动的孤儿对象）。
+      fc.on("path:created", (opt) => {
+        const s = propsRef.current;
+        const path = (opt as { path?: FabricObject }).path;
+        const fcNow = fcRef.current;
+        if (path && fcNow) fcNow.remove(path);
+        fcNow?.requestRenderAll();
+        if (!path || !s.drawMode || !s.canEdit) return;
+        const raw = (path as unknown as { path?: Array<Array<string | number>> }).path ?? [];
+        const pts: Array<{ x: number; y: number }> = [];
+        for (const cmd of raw) {
+          // 路径命令（M/L/Q/C…）的最后两个数即该命令的终点坐标；对笔迹持久化而言取每段
+          // 终点足够还原轨迹（控制点是 fabric 平滑的派生值，不需要存）。
+          if (cmd.length >= 3) {
+            const x = Number(cmd[cmd.length - 2]);
+            const y = Number(cmd[cmd.length - 1]);
+            if (Number.isFinite(x) && Number.isFinite(y)) pts.push({ x, y });
+          }
+        }
+        if (pts.length >= 2) s.onDrawCreated(pts);
       });
 
       fc.on("object:moving", (opt) => {
@@ -726,6 +786,16 @@ export function FabricCanvas(props: Props) {
         };
       }
 
+      // p6:F17：fabric 异步加载完成时手绘模式可能已激活（用户先点了手绘按钮），补一次同步
+      // （上面的 drawMode effect 在 fc 为 null 时空跑过，不会再触发）。
+      if (propsRef.current.drawMode) {
+        fc.isDrawingMode = true;
+        const brush = new fabric.PencilBrush(fc);
+        brush.color = "#334155";
+        brush.width = 3;
+        fc.freeDrawingBrush = brush;
+      }
+
       reconcile();
     })();
 
@@ -749,6 +819,22 @@ export function FabricCanvas(props: Props) {
   useEffect(() => {
     reconcile();
   }, [reconcile, props.items, props.selectedIds, props.editingId, props.canEdit]);
+
+  // p6:F17：手绘模式开关 → fabric 原生 isDrawingMode + PencilBrush（fabric v7 不再默认创建
+  // freeDrawingBrush，需显式实例化）。笔迹外观：深灰 3px（与持久化默认 borderw=3 一致，
+  // 绘制中的即时视觉 ≈ 落库后的最终视觉）。
+  useEffect(() => {
+    const fc = fcRef.current;
+    const fabric = nsRef.current;
+    if (!fc || !fabric) return;
+    fc.isDrawingMode = props.drawMode;
+    if (props.drawMode) {
+      const brush = new fabric.PencilBrush(fc);
+      brush.color = "#334155";
+      brush.width = 3;
+      fc.freeDrawingBrush = brush;
+    }
+  }, [props.drawMode]);
 
   // 视口变化 → 镜像到 fabric viewportTransform。
   useEffect(() => {
@@ -1137,6 +1223,163 @@ function buildItemObject(
     subTargetCheck: false,
     selectable: true,
     // p6:F19（uc-widget-menu-002 透明度）：整体透明度，1-100 映射为 fabric 的 0-1 opacity。
+    opacity: it.opacity / 100,
+  });
+  styleInteractive(g as unknown as Interactive, tokens, canEdit, true, it.locked);
+  return g;
+}
+
+// p6:F17（uc-widgets-006）：手绘笔迹渲染。points 为 item 局部坐标（相对 x/y，创建时已归一化
+// 到以包围盒左上角为原点），按当前 w/h 与点集原始包围盒的比例线性缩放（object:scaling →
+// w/h 落库后重建，笔迹随组件缩放自然拉伸）。笔色/线宽复用 border/borderWidth 字段
+// （"none" = 默认深灰墨色——笔迹始终需要可见描边，语义同连接线的 stroke 默认色）。
+const DRAW_STROKE_COLORS: Record<string, string> = {
+  none: "#334155",
+  gray: "#6b7280",
+  blue: "#2563eb",
+  red: "#dc2626",
+};
+function buildDrawObject(fabric: FabricNS, tokens: Tokens, it: RenderItem, canEdit: boolean): Group {
+  const pts = it.drawPoints ?? [];
+  const stroke = DRAW_STROKE_COLORS[it.border] ?? DRAW_STROKE_COLORS.none!;
+  let body: FabricObject;
+  if (pts.length >= 2) {
+    // 原始包围盒（min 恒为 0，创建时已归一化），按当前 w/h 求缩放比。
+    const origW = Math.max(1, ...pts.map((p) => p.x));
+    const origH = Math.max(1, ...pts.map((p) => p.y));
+    const sx = it.w / origW;
+    const sy = it.h / origH;
+    body = new fabric.Polyline(
+      pts.map((p) => ({ x: p.x * sx, y: p.y * sy })),
+      {
+        left: 0,
+        top: 0,
+        originX: "left",
+        originY: "top",
+        fill: "",
+        stroke,
+        strokeWidth: it.borderWidth,
+        strokeUniform: true,
+        strokeLineCap: "round",
+        strokeLineJoin: "round",
+      },
+    );
+  } else {
+    // 点序列无效（text JSON 损坏等）：画一个可选中/可删除的虚线占位框，保留对象可识别状态。
+    body = new fabric.Rect({
+      left: 0,
+      top: 0,
+      originX: "left",
+      originY: "top",
+      width: it.w,
+      height: it.h,
+      fill: "transparent",
+      stroke,
+      strokeWidth: 1,
+      strokeDashArray: [4, 4],
+      strokeUniform: true,
+    });
+  }
+  const g = new fabric.Group([body], {
+    left: it.x,
+    top: it.y,
+    originX: "left",
+    originY: "top",
+    subTargetCheck: false,
+    selectable: true,
+    opacity: it.opacity / 100,
+  });
+  styleInteractive(g as unknown as Interactive, tokens, canEdit, true, it.locked);
+  return g;
+}
+
+// p6:F18（uc-widgets-008）：图表渲染——按 text 里的数据 JSON 画简单柱状图（fabric.Rect 组合 +
+// 标签 Textbox），不引入图表库。数据无效时展示失败反馈占位（UC 异常流程 1：渲染失败展示
+// 失败反馈并保留图表组件的可识别状态）。所有子对象用 [0,w]x[0,h] 局部坐标，随 w/h 重建重排。
+function buildChartObject(fabric: FabricNS, tokens: Tokens, it: RenderItem, canEdit: boolean): Group {
+  const objs: FabricObject[] = [
+    new fabric.Rect({
+      left: 0,
+      top: 0,
+      originX: "left",
+      originY: "top",
+      width: it.w,
+      height: it.h,
+      rx: 7,
+      ry: 7,
+      fill: tokens.surface1,
+      stroke: tokens.borderStrong,
+      strokeWidth: 1,
+      strokeUniform: true,
+    }),
+  ];
+  const data = it.chart;
+  if (data && data.values.length > 0) {
+    const pad = 12;
+    const labelH = 18;
+    const innerW = Math.max(8, it.w - pad * 2);
+    const innerH = Math.max(8, it.h - pad * 2 - labelH);
+    const n = data.values.length;
+    const slot = innerW / n;
+    const barW = Math.max(4, slot * 0.6);
+    const maxV = Math.max(...data.values.map((v) => Math.abs(v)), 1);
+    data.values.forEach((v, i) => {
+      const barH = Math.max(2, (Math.abs(v) / maxV) * innerH);
+      const cx = pad + slot * i + slot / 2;
+      objs.push(
+        new fabric.Rect({
+          left: cx - barW / 2,
+          top: pad + innerH - barH,
+          originX: "left",
+          originY: "top",
+          width: barW,
+          height: barH,
+          rx: 2,
+          ry: 2,
+          fill: tokens.primary,
+        }),
+      );
+      objs.push(
+        new fabric.Textbox(String(data.labels[i] ?? ""), {
+          left: cx,
+          top: pad + innerH + 4,
+          originX: "center",
+          originY: "top",
+          width: slot,
+          fontSize: 11,
+          fontFamily: tokens.fontFamily,
+          fill: tokens.foreground,
+          textAlign: "center",
+          splitByGrapheme: true,
+          editable: false,
+        }),
+      );
+    });
+  } else {
+    // 数据无效：失败反馈（保留可识别的图表占位，可选中后经「编辑数据」修复）。
+    objs.push(
+      new fabric.Textbox("图表数据无效\n选中后点「编辑数据」修复", {
+        left: it.w / 2,
+        top: it.h / 2,
+        originX: "center",
+        originY: "center",
+        width: Math.max(8, it.w - 16),
+        fontSize: 12,
+        fontFamily: tokens.fontFamily,
+        fill: tokens.foreground,
+        textAlign: "center",
+        splitByGrapheme: true,
+        editable: false,
+      }),
+    );
+  }
+  const g = new fabric.Group(objs, {
+    left: it.x,
+    top: it.y,
+    originX: "left",
+    originY: "top",
+    subTargetCheck: false,
+    selectable: true,
     opacity: it.opacity / 100,
   });
   styleInteractive(g as unknown as Interactive, tokens, canEdit, true, it.locked);
