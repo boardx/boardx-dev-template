@@ -31,16 +31,16 @@
       "area": "board-header",
       "title": "Header 标题查看与编辑",
       "user_visible_behavior": "Header 标题输入框可直接查看/修改白板标题，失焦或回车保存（PATCH /api/boards/:id），无权限只读；改名后列表与卡片同步。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-title.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-07-08T02:16:54.342Z",
       "notes": "uc-board-header-002。复用 p5 F05 的 PATCH /api/boards/:id（同一改名入口）。",
       "source_use_cases": [
         "phases/requirements/board/header/uc-board-header-002-manage-board-title.md"
@@ -52,16 +52,16 @@
       "area": "board-header",
       "title": "分享 Board（链接 / 二维码 / 访问范围）",
       "user_visible_behavior": "Header「分享白板」打开分享面板：标题、复制链接按钮、显示/隐藏二维码、访问范围下拉（public/team/room，与所属空间匹配）；非 Room Owner/Admin 时下拉禁用但复制链接与二维码仍可用。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-WEB",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-share.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-07-08T02:43:52.243Z",
       "notes": "uc-board-header-003。访问范围读写复用 p5 F09 的 visibility API；本 feature 落地分享面板 UI 与二维码生成。",
       "source_use_cases": [
         "phases/requirements/board/header/uc-board-header-003-share-board.md"
@@ -115,16 +115,16 @@
       "area": "board-header",
       "title": "Board 统计信息",
       "user_visible_behavior": "Header 入口展示白板相关统计/状态摘要（如组件数量、协作者数、最近编辑时间等），数据从后端汇总返回。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-statistics.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F06.verify.log @ 2026-07-08T03:10:24.879Z",
       "notes": "uc-board-header-014。统计基于 p6 items 与成员数据聚合。",
       "source_use_cases": [
         "phases/requirements/board/header/uc-board-header-014-view-board-statistics.md"

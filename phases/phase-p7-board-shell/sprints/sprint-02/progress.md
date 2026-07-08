@@ -4,7 +4,7 @@
 - 仓库根目录: `.claude/worktrees/p7-02-board-header`
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F01 已 passing；下一个是 F02（Header 标题查看与编辑）
+- 当前最高优先级未完成功能: F01/F02/F03/F06 已 passing；下一个是 F08（备份与恢复）
 - 当前 blocker: 无
 
 ## 会话记录
@@ -39,3 +39,34 @@
 - 提交记录: 见本轮 commit（feat(board-header): p7-F01 ...）。
 - 已知风险或未解决问题: 无新增风险。
 - 下一步最佳动作: F02（Header 标题查看与编辑）依赖 F01 已就位，可以直接派工。
+
+### 2026-07-08（续）
+- 本轮目标: F02 + F03 + F06（同一 owner 顺序认领，逐个走完 claim → 实现 → verify）。
+  F01 合并后旧 worktree 分支已完全并入 main，其余提交在 rebase 时都变成噪音冲突，
+  改用全新 worktree（`p7-02-header-features`）+ 全新分支重新开始。
+- 已完成:
+  - F02：标题从纯展示 `<h1>` 改成行内可编辑，PATCH 权限按 `canManage`（不是更宽松的
+    `canEdit`）门控，跟服务端 `canManageBoard` 保持一致。
+  - F03：分享面板访问范围从只读文案换成真实可交互 `<select>`；二维码从占位换成用
+    `qrcode` 包真实生成。
+  - F06：新增服务端聚合统计接口 `GET /api/boards/:id/statistics`（组件按 kind 分类 +
+    协作者数 + 最近创建时间），替换原来客户端拉全量 items 本地计数的实现。
+  - 顺手修了一个被 F03 压测暴露的既有测试竞态（`board-visibility.spec.ts:72`，
+    `selectOption` 不等待异步保存就 reload），不是本轮引入的回归。
+- 运行过的验证:
+  - 三个 feature 各自 `pnpm exec tsc --noEmit` 干净、专属 e2e 全绿、
+    `pnpm harness verify --phase p7 --sprint p7/02 --feature <F02|F03|F06> --owner
+    canvas-worker-1` 真实门控通过（含 `verify:base`）。
+  - 跑过受影响的旧 sibling spec 确认无回归：`board-header-003-share-board.spec.ts`、
+    `board-header-014-statistics.spec.ts`、`board-header-001-use-board-header.spec.ts`、
+    `board-settings.spec.ts`、`board-visibility.spec.ts`。
+  - F06 首次跑遇到过一次 e2e 假失败（`stat-total` 元素找不到），复测后确认是 Next.js
+    dev 模式下全新路由第一次请求的编译冷启动延迟（同一 spec 里后面两条测试命中同一
+    已编译路由都很快），不是代码问题，单独重跑 + 全量重跑都干净通过。
+- 已记录证据: `evidence/F02.verify.log`、`evidence/F03.verify.log`、
+  `evidence/F06.verify.log`。
+- 提交记录: 见本轮 commit（feat(board-header): p7-F02/F03/F06 ...）。
+- 已知风险或未解决问题: F06 的"最近创建时间"不等价于"最近编辑时间"（board_items 无
+  updated_at 字段可用），已在 session-handoff.md 里记录清楚，不是伪装成已完成。
+- 下一步最佳动作: F08（备份与恢复）是本 sprint 最后一个、也是工作量明显更大的
+  feature（真正从零建，不是"底层已有、缺个入口"的模式），建议单独一轮做。

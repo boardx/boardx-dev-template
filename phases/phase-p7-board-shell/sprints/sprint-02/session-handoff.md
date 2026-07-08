@@ -1,37 +1,69 @@
 # 会话交接 — Sprint p7/02
 
 ## 当前已验证
-- F01（Board Header 框架：状态/授权入口/返回/同步指示/撤销重做）：passing。
+- F01（Board Header 框架）：passing（已合并 main，见 #434）。
+- F02（Header 标题查看与编辑）：passing。
   验证命令：`docker compose -f infra/docker-compose.yml up -d` /
   `pnpm --filter @repo/data run migrate` /
-  `pnpm --filter @repo/web exec playwright test e2e/board-header.spec.ts`（5/5）+
-  `pnpm -w run verify:base`（harness verify 自动跑，通过）。
-  证据：`phases/phase-p7-board-shell/sprints/sprint-02/evidence/F01.verify.log`。
+  `pnpm --filter @repo/web exec playwright test e2e/board-title.spec.ts`（5/5）+
+  `pnpm -w run verify:base`。证据：`evidence/F02.verify.log`。
+- F03（分享 Board）：passing。
+  验证命令：同上 + `pnpm --filter @repo/web exec playwright test e2e/board-share.spec.ts`
+  （3/3）+ `pnpm -w run verify:base`。证据：`evidence/F03.verify.log`。
+- F06（Board 统计信息）：passing。
+  验证命令：同上 + `pnpm --filter @repo/web exec playwright test e2e/board-statistics.spec.ts`
+  （3/3）+ `pnpm -w run verify:base`。证据：`evidence/F06.verify.log`。
 
-## 本轮改动
-- `apps/web/app/(app)/boards/[id]/page.tsx`：新增返回按钮（`board-back`，uc-008），
-  点击导航回所属房间的白板列表（`board?.room_id` 为空时退化到 `/boards`）。
-- `apps/web/components/board/board-canvas.tsx`：撤销/重做按钮补齐禁用态（uc-010 主流程
-  2）——`undoStack`/`redoStack` 是纯 `useRef`，原来改变不触发重渲染，按钮永远可点。
-  新增 `historyTick` 计数器 + `bumpHistory()`，在 `recordOp`/`onMoveCommit`/
-  `onResizeCommit`/`undo`/`redo` 六处栈变更点调用，`useMemo` 依赖 `historyTick` 算
-  `canUndo`/`canRedo`。
-- `apps/web/e2e/board-header.spec.ts`（新增）：5 条测试，见上方"验证"。
+## 本轮改动（F02）
+- `apps/web/app/(app)/boards/[id]/page.tsx`：`board-title` 从纯 `<h1>` 改为可点击行内
+  编辑（`canManage` 才可点，匹配 `PATCH /api/boards/:id` 服务端权限要求，与更宽松的
+  `canEdit` 不同）。点击 → `board-title-input` 替换显示 → Enter/失焦保存，Escape 取消。
+  空标题失焦时恢复原值，不保存空名。保存失败恢复原值并展示 `board-title-err`。新增
+  `document.title` 同步 useEffect（uc-002 主流程 5）。
+  与既有"元信息编辑"侧栏（`board-meta-edit`/`meta-name` 表单）是两条独立入口，本轮不动
+  那条路径。
+
+## 本轮改动（F03）
+- 分享面板的访问范围从只读文案（`<p data-testid="share-visibility">`）改为真实
+  `<select>`（同一个 testid，复用既有 `changeVisibility` 函数），Room Owner/Admin 可切换，
+  其它用户禁用但仍显示当前值（不是隐藏，是 disabled）。移除了不再使用的 `visibilityLabel`
+  变量。
+- 二维码从占位 `<div>` 改为真实生成（新增依赖 `qrcode` + `@types/qrcode`），展开时用
+  `QRCode.toDataURL(shareUrl)` 生成图片，收起后不保留（下次展开重新生成）。
+- **顺手修复一个被本轮暴露的既有测试竞态**（`e2e/board-visibility.spec.ts:72`）：
+  `selectOption("public")` 只触发 onChange，不等待 `changeVisibility` 的
+  PATCH+refresh 异步落地就立刻 `reload()`，是竞态不是本轮引入的回归（baseline 上也存在，
+  概率较低此前未被注意到）。改为先用 REST 直接轮询确认落库，再 reload。
+
+## 本轮改动（F06）
+- 新增 `GET /api/boards/:id/statistics`（服务端聚合，替代原来"客户端拉全量 items 本地数"
+  的实现——原实现在大板场景要整份 items 拉一遍）：组件按 kind 分类计数（note/text/
+  shape/connector/embed，分类规则与 board-canvas.tsx 的 isConnector/isText/isShape/
+  isReloadable 优先级保持一致，两处独立维护，见 route.ts 里的注释说明为什么不做成共享
+  模块）、协作者数（复用既有 `listRoomMembers`）、最近创建时间（`MAX(board_items.
+  created_at)`，诚实标注为"最近创建"而非"最近编辑"——board_items 目前没有 updated_at
+  跟踪字段，不能声称能测到编辑时间）。
+- `apps/web/components/board/board-statistics.tsx`：改为调用新端点；保留
+  `stat-total`/`stat-notes`/`stat-texts` 三个既有 testid 语义不变（旧的
+  `board-header-014-statistics.spec.ts` 依赖这三个，已跑过确认不回归），新增
+  `stat-shapes`/`stat-connectors`/`stat-members`/`stat-last-created`。
 
 ## 仍损坏或未验证
-- 无本 feature 范围内的已知问题。
-- 与本 feature 无关但顺带发现：`(app)/rooms/[id]` 分支的客户端路由切换在系统负载高时
-  可能有 1s+ 的可感知延迟（已确认不是"点击无效"，只是导航慢），本 feature 的测试已放宽
-  超时窗口容忍，未深挖是否值得单独优化（低优先级，不阻塞任何东西）。
+- F06 的"最近创建时间"不等价于"最近编辑时间"（见上方说明），如果后续业务明确要精确到
+  编辑时间，需要给 `board_items` 加 `updated_at` 并在每次 PATCH 时更新，这是数据层改动，
+  超出本轮范围。
+- 与本轮无关：`(app)/rooms/[id]` 分支客户端路由切换偶发 1s+ 延迟（F01 已记录过）。
 
 ## 下一步最佳动作
-- F02（Header 标题查看与编辑）依赖 F01 已就位，可以直接派工，issue #283。
+- F08（备份与恢复，issue #286）是本 sprint 最后一个 feature，是真正从零开始的工作
+  （当前 app 完全没有 `board_backups` 表/API，只在 `phases/requirements/oldcode` 里有
+  参考实现），工作量明显大于本轮三个 feature，建议单独一轮做，不要和其它 feature 一起赶。
 - 不要碰：`apps/web/app/api/board-items/[itemId]/route.ts` 与
   `apps/web/app/api/boards/[id]/items/route.ts` 的白名单（已确认不可扩展）。
-- 每个新 worktree 记得先跑 `bash scripts/init-worktree-env.sh` 再 `docker compose up`，
-  本轮因为漏跑这一步撞过一次端口 3000 冲突，浪费了一轮 verify。
+- 每个新 worktree 记得先跑 `bash scripts/init-worktree-env.sh` 再 `docker compose up`。
 
 ## 命令
 - 启动: `pnpm -w run dev`
-- 验证: `pnpm harness verify --phase p7 --sprint p7/02 --feature F01 --owner canvas-worker-1`
-- 调试: `pnpm --filter @repo/web exec playwright test e2e/board-header.spec.ts --reporter=list`
+- 验证: `pnpm harness verify --phase p7 --sprint p7/02 --feature F02 --owner canvas-worker-1`
+  （F03/F06 同理换 feature id）
+- 调试: `pnpm --filter @repo/web exec playwright test e2e/board-title.spec.ts e2e/board-share.spec.ts e2e/board-statistics.spec.ts --reporter=list`

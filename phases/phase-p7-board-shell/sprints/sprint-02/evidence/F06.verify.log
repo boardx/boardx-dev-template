@@ -1,0 +1,12 @@
+
+> boardx-dev-template@ harness /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/p7-02-header-features
+> tsx .harness/scripts/cli.ts "verify" "--phase" "p7" "--sprint" "p7/02" "--feature" "F06" "--owner" "canvas-worker-1"
+
+==> 验证 F06 — Board 统计信息
+✓ 通过: docker compose -f infra/docker-compose.yml up -d
+✓ 通过: pnpm --filter @repo/data run migrate
+✓ 通过: pnpm --filter @repo/web exec playwright test e2e/board-statistics.spec.ts
+==> 运行基础验证（require_base_pass=true）: pnpm -w run verify:base
+✓ 基础验证通过
+✓ 门控通过 -> F06 = passing
+完成：1 个升级为 passing，0 个未通过。
