@@ -79,7 +79,14 @@ test("UI：房间 owner 在板页切换可见范围到 public", async ({ page })
   await page.goto(`/boards/${board.id}`);
   await page.getByTestId("board-meta-edit").click();
   await page.getByTestId("visibility").selectOption("public");
-  // 重新加载后可见范围持久为 public
+  // selectOption 只触发 onChange，不等待 changeVisibility 的 PATCH+refresh 异步完成——
+  // 落库前就 reload 会读到旧值，是竞态而非真实回归（p7:F03 压测暴露，此前偶发概率低，
+  // 未被注意到）。先等 REST 侧真正落库，再刷新验证持久化。
+  await expect
+    .poll(async () => (await (await page.request.get(`/api/boards/${board.id}`)).json()).board?.visibility, {
+      timeout: 10_000,
+    })
+    .toBe("public");
   await page.reload();
   await page.getByTestId("board-meta-edit").click();
   await expect(page.getByTestId("visibility")).toHaveValue("public");

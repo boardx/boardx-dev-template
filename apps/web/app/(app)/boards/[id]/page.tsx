@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import QRCode from "qrcode";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,13 @@ export default function BoardPage() {
   const [fDescription, setFDescription] = useState("");
   const [saveError, setSaveError] = useState("");
 
+  // p7:F02（uc-board-header-002）：Header 标题行内编辑，与上面"元信息编辑"侧栏
+  // （改名/分类/简介一起改）是两条独立入口——本条只处理标题本身，Enter/失焦即保存。
+  const [titleEditing, setTitleEditing] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [titleSaving, setTitleSaving] = useState(false);
+  const [titleError, setTitleError] = useState("");
+
   // 移动
   const [rooms, setRooms] = useState<RoomOpt[]>([]);
   const [moveTarget, setMoveTarget] = useState("");
@@ -61,6 +69,7 @@ export default function BoardPage() {
   // 分享面板
   const [sharing, setSharing] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState("");
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
   const [shareUrl, setShareUrl] = useState("");
 
@@ -141,6 +150,28 @@ export default function BoardPage() {
     }
   }, [boardId]);
 
+  // p7:F03（uc-board-header-003 主流程 6）：展开二维码区域时才真正绘制，收起后不必
+  // 保留（下次展开重新生成即可，shareUrl 稳定不变，重复生成成本可忽略）。
+  useEffect(() => {
+    if (!showQr || !shareUrl) return;
+    let cancelled = false;
+    QRCode.toDataURL(shareUrl, { width: 160, margin: 1 })
+      .then((url) => {
+        if (!cancelled) setQrDataUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setQrDataUrl("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showQr, shareUrl]);
+
+  // p7:F02（uc-board-header-002 主流程 5）：标题保存成功后浏览器标题同步更新。
+  useEffect(() => {
+    if (board?.name) document.title = `${board.name} · BoardX`;
+  }, [board?.name]);
+
   async function copyShareLink() {
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -150,13 +181,6 @@ export default function BoardPage() {
     }
     setTimeout(() => setCopyStatus("idle"), 2000);
   }
-
-  const visibilityLabel =
-    board?.visibility === "public"
-      ? "公开（任何持链接者可访问）"
-      : board?.visibility === "team"
-        ? "团队成员可访问"
-        : "房间成员可访问";
 
   async function saveMeta(e: React.FormEvent) {
     e.preventDefault();
@@ -172,6 +196,43 @@ export default function BoardPage() {
     } else {
       const d = await res.json().catch(() => ({}));
       setSaveError(d.errors?.name ?? d.error ?? "保存失败");
+    }
+  }
+
+  // p7:F02（uc-board-header-002 主流程 2-7）：点击标题进入行内编辑；Enter/失焦保存。
+  function startTitleEdit() {
+    if (!canManage) return; // PATCH /api/boards/:id 服务端要求管理权限，非管理者不进入编辑态
+    setTitleDraft(board?.name ?? "");
+    setTitleError("");
+    setTitleEditing(true);
+  }
+
+  async function commitTitleEdit() {
+    if (!titleEditing) return;
+    const trimmed = titleDraft.trim();
+    // 主流程 3：输入为空时不保存空名，恢复为保存前的名称（不新造一个"默认名"字符串，
+    // 避免把用户已经取的名字换成一个和原意无关的占位符）。
+    if (!trimmed || trimmed === board?.name) {
+      setTitleEditing(false);
+      setTitleError("");
+      return;
+    }
+    setTitleSaving(true);
+    setTitleError("");
+    const res = await fetch(`/api/boards/${boardId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: trimmed }),
+    });
+    setTitleSaving(false);
+    if (res.ok) {
+      setTitleEditing(false);
+      await refresh();
+    } else {
+      // 主流程 6-7：保存失败，恢复为保存前的名称并展示失败反馈，用户仍停留在当前白板。
+      const d = await res.json().catch(() => ({}));
+      setTitleError(d.errors?.name ?? d.error ?? "保存失败");
+      setTitleEditing(false);
     }
   }
 
@@ -217,9 +278,41 @@ export default function BoardPage() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 data-testid="board-title" className="text-base font-semibold text-foreground">
-            {board?.name}
-          </h1>
+          {titleEditing ? (
+            <Input
+              data-testid="board-title-input"
+              autoFocus
+              value={titleDraft}
+              disabled={titleSaving}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={() => void commitTitleEdit()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void commitTitleEdit();
+                } else if (e.key === "Escape") {
+                  setTitleEditing(false);
+                }
+              }}
+              className="h-7 w-48 text-base font-semibold"
+            />
+          ) : (
+            <h1
+              data-testid="board-title"
+              title={board?.name}
+              onClick={startTitleEdit}
+              className={`max-w-[16rem] truncate text-base font-semibold text-foreground ${
+                canManage ? "cursor-text rounded px-1 transition-colors duration-200 hover:bg-muted" : ""
+              }`}
+            >
+              {board?.name}
+            </h1>
+          )}
+          {titleError && (
+            <span role="alert" data-testid="board-title-err" className="text-xs text-destructive">
+              {titleError}
+            </span>
+          )}
           <Badge variant="muted" data-testid="board-role">
             {role}
           </Badge>
@@ -295,13 +388,24 @@ export default function BoardPage() {
         >
           <h2 className="text-sm font-semibold text-foreground">分享白板</h2>
 
-          {/* 可见性说明（复用 board.visibility） */}
-          <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            访问范围
-          </p>
-          <p data-testid="share-visibility" className="mt-1 text-sm text-foreground">
-            {visibilityLabel}
-          </p>
+          {/* p7:F03（uc-board-header-003 主流程 2-4）：访问范围下拉框，Room Owner/Admin
+              可切换，其他用户禁用但仍能看到当前范围（disabled 的 select 依然渲染选中值，
+              不需要额外的只读文案分支）。 */}
+          <div className="mt-2 flex flex-col gap-1">
+            <Label htmlFor="share-visibility">访问范围</Label>
+            <Select
+              id="share-visibility"
+              data-testid="share-visibility"
+              aria-label="访问范围"
+              disabled={!canSetVisibility}
+              value={board?.visibility ?? "room"}
+              onChange={(e) => void changeVisibility(e.target.value)}
+            >
+              <option value="room">房间成员可访问</option>
+              <option value="team">团队成员可访问</option>
+              <option value="public">公开（任何持链接者可访问）</option>
+            </Select>
+          </div>
 
           {/* 复制分享链接 */}
           <div className="mt-3 flex flex-col gap-1.5">
@@ -337,7 +441,7 @@ export default function BoardPage() {
             )}
           </div>
 
-          {/* 二维码（占位） */}
+          {/* 二维码（uc-board-header-003 主流程 6：展开时绘制，再次点击收起） */}
           <div className="mt-3 border-t pt-3">
             <Button
               type="button"
@@ -352,12 +456,12 @@ export default function BoardPage() {
             </Button>
             {showQr && (
               <div className="mt-3 flex flex-col items-center gap-2">
-                <div
-                  data-testid="share-qr"
-                  aria-label="分享二维码占位"
-                  className="size-28 rounded-md border bg-muted"
-                />
-                <p className="text-xs text-muted-foreground">二维码占位 · 后续接入生成</p>
+                {qrDataUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- data: URL，next/image 不适用
+                  <img data-testid="share-qr" src={qrDataUrl} alt="分享二维码" className="size-28 rounded-md border" />
+                ) : (
+                  <div data-testid="share-qr" aria-label="二维码生成中" className="size-28 animate-pulse rounded-md border bg-muted" />
+                )}
               </div>
             )}
           </div>
