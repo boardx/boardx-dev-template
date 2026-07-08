@@ -179,26 +179,46 @@ describe("@repo/collab board doc", () => {
     // 步骤 1：创建 widget，直写 doc，_rev 被顶到 1。
     upsertItem(doc, "widget-1", { x: 0, y: 0, w: 40, h: 40, text: "", type: "text", color: "text" });
     // 步骤 2：join-sync 完成前的本地样式编辑链（font→size→italic→align 叠加在同一个 color 字段上），
-    // 只反映在 itemsRef.current 里，doc 完全不知道。
-    const itemsRef: import("./index").CollabItem[] = [
-      { id: "widget-1", x: 0, y: 0, w: 40, h: 40, text: "", type: "text", color: "text|font=serif|size=18|italic=1|align=right" },
-    ];
+    // 只反映在 itemsRef.current 里，doc 完全不知道；调用方只声明"本地真的编辑过 color"。
+    const editedColor = "text|font=serif|size=18|italic=1|align=right";
     // 修复前的行为：seedItems 因为 _rev>0 跳过，doc 停留在创建时的旧 color。
-    seedItems(doc, itemsRef);
+    seedItems(doc, [{ id: "widget-1", x: 0, y: 0, w: 40, h: 40, text: "", type: "text", color: editedColor }]);
     expect(readItems(doc).find((i) => i.id === "widget-1")?.color).toBe("text");
-    // 修复：reconcileLocalEdits 无条件补写差异字段，doc 收敛到真正的最新本地值。
-    reconcileLocalEdits(doc, itemsRef);
-    expect(readItems(doc).find((i) => i.id === "widget-1")?.color).toBe(
-      "text|font=serif|size=18|italic=1|align=right",
-    );
+    // 修复：reconcileLocalEdits 只补调用方声明过的字段（这里是 color），doc 收敛到真正的最新本地值。
+    reconcileLocalEdits(doc, [{ id: "widget-1", fields: { color: editedColor } }]);
+    expect(readItems(doc).find((i) => i.id === "widget-1")?.color).toBe(editedColor);
   });
 
-  it("reconcileLocalEdits 不新建条目（新 id 交给 seedItems 负责），也不删除 doc 里存在但 items 未提及的条目", () => {
+  it("reconcileLocalEdits 不新建条目（新 id 交给 seedItems 负责），也不删除 doc 里存在但 patches 未提及的条目", () => {
     const doc = createBoardDoc();
     upsertItem(doc, "1", { x: 0, y: 0, w: 10, h: 10, text: "a", type: "note", color: null });
-    reconcileLocalEdits(doc, [{ id: "brand-new", x: 1, y: 1, w: 1, h: 1, text: "", type: "note", color: null }]);
+    reconcileLocalEdits(doc, [{ id: "brand-new", fields: { x: 1, y: 1 } }]);
     expect(readItems(doc).find((i) => i.id === "brand-new")).toBeUndefined();
     expect(readItems(doc).find((i) => i.id === "1")).toBeDefined();
+  });
+
+  // code-reviewer 在 PR #462 首轮 review 指出的真实回归窗口：如果 reconcileLocalEdits
+  // 对一个 id 无差别覆盖"它所有字段"（哪怕调用方只是想补一个本地真的编辑过的字段），
+  // 会把 join-sync 时 applyEncodedUpdate 刚从对等端合并进来、本地根本没碰过的字段
+  // 覆盖回过期的 REST 快照值。这条测试钉死修复后的行为：reconcileLocalEdits 只处理
+  // patch.fields 里显式列出的字段，即使调用方对同一个 id 只传了 {x, y}（未提及
+  // color），doc 里对等端刚合并进来的 color 也不会被碰。
+  it("issue #414 修复的契约：只覆盖 patch.fields 显式声明的字段，不碰对等端刚合并进来的其它字段", () => {
+    const a = createBoardDoc();
+    const b = createBoardDoc();
+    // A 已经在协作，把 item 的 color 改成了 "blue"（B 加入前，A 这边已经发生）。
+    seedItems(a, [{ id: "1", x: 0, y: 0, w: 10, h: 10, text: "hi", type: "note", color: null }]);
+    upsertItem(a, "1", { color: "blue" });
+    // B 加入：先用 A 的完整状态合并（模拟 y-sync-response 的 applyEncodedUpdate），
+    // 此时 b 的 doc 已经拿到 A 的 color=blue。
+    joinFrom(a, b);
+    // B 自己在 join-sync 完成前只本地移动过这个 item（x/y），从没碰过 color——
+    // 调用方（board-canvas 的 markLocallyEdited）因此只会把 {x, y} 记进 patch.fields，
+    // 不会带上 color（哪怕 B 的 REST 快照里 color 字段是过期的 null）。
+    reconcileLocalEdits(b, [{ id: "1", fields: { x: 99, y: 99 } }]);
+    const item = readItems(b).find((i) => i.id === "1");
+    expect(item?.x).toBe(99); // 本地真实编辑的字段生效
+    expect(item?.color).toBe("blue"); // 未声明的字段完全不碰，对等端已合并的更新不受影响
   });
 
   it("encode/decode update 往返一致", () => {

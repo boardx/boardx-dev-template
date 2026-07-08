@@ -21,6 +21,7 @@ import {
 } from "@/lib/collab-bus";
 import {
   applyEncodedUpdate,
+  type CollabItemFields,
   createBoardDoc,
   encodeFullState,
   encodeUpdate,
@@ -640,17 +641,35 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // 自己是第一个在线的人）。在这之前不能把本地 items 写进 doc——否则会替已存在的
   // item 独立造一份结构上互不相识的 Y.Map，后续增量 update 就合并不回去了。
   const joinSyncedRef = useRef(false);
+  // issue #414 残留根因修复（PR #462 首轮 review 后按 code-reviewer 意见收紧）：
+  // 只记录"本客户端在 join-sync 完成前真的编辑过"的**具体字段**，精确到 id+field，
+  // 不能只记 id 就把该 id 的全量 itemsRef.current 快照传给 reconcileLocalEdits——
+  // 那样即使 id 本身确实有过本地编辑（比如只移动过位置），也会连带把这个 id 里
+  // 本地从未碰过、可能落后于对等端的其它字段（比如 color）一起覆盖，重新引入
+  // #432 类问题（对等端刚经 applyEncodedUpdate 合并进来的更新被覆盖回旧值）。
+  // 也不能靠"itemsRef.current 跟 doc 有没有差异"来判断该记哪些字段——那样会把
+  // poll()/load() 带来的纯 REST 快照差异也当成本地编辑。只在真正的用户操作
+  // （拖拽/缩放/文字/样式/对齐分布）落点处，显式登记这次操作到底改了哪些字段。
+  const pendingJoinEditsRef = useRef<Map<string, Partial<CollabItemFields>>>(new Map());
+  const markLocallyEdited = useCallback((patches: { id: string; fields: Partial<CollabItemFields> }[]) => {
+    if (joinSyncedRef.current) return; // 已经走常规 [items] effect 落 doc 通道，不需要额外补记
+    for (const { id, fields } of patches) {
+      const existing = pendingJoinEditsRef.current.get(id);
+      pendingJoinEditsRef.current.set(id, existing ? { ...existing, ...fields } : fields);
+    }
+  }, []);
 
   const maybeSeed = useCallback(() => {
     if (!joinSyncedRef.current || !itemsLoadedRef.current) return;
     seedItems(docRef.current, itemsRef.current);
-    // issue #414 残留根因修复：seedItems 对已存在且 _rev>0 的条目会跳过覆盖
-    // （该规则保护"REST 快照晚于已连接客户端"的场景），但 itemsRef.current 本身
-    // 可能包含 join-sync 完成前用户已经做过、却因为常规 [items] effect 落 doc
-    // 通道被 joinSyncedRef 门禁挡住而还没写进 doc 的样式编辑（例如刚创建的组件
-    // 立即改字体/字号/对齐）。补一次无条件差异覆盖，避免这些编辑被下面的
-    // mergeRemoteItems 用 doc 里的旧值回滚掉，详见 reconcileLocalEdits 的注释。
-    reconcileLocalEdits(docRef.current, itemsRef.current);
+    // 只对上面显式登记过的 (id, field) 做无条件差异覆盖——这些字段是本地真实编辑
+    // 产生的，不是 REST 快照，才有资格越过 seedItems 的 _rev 门禁；未登记的字段
+    // 完全不碰，详见 reconcileLocalEdits 的调用方契约注释。
+    if (pendingJoinEditsRef.current.size > 0) {
+      const patches = Array.from(pendingJoinEditsRef.current.entries()).map(([id, fields]) => ({ id, fields }));
+      reconcileLocalEdits(docRef.current, patches);
+      pendingJoinEditsRef.current.clear();
+    }
     // seedItems 只补"任何在线客户端都还不知道"的新条目；已存在的条目里，doc
     // 内可能有比这次 REST 快照更新的字段（比如刚加入时另一人正在编辑），
     // 用 doc 当前真实状态回填一次 React state，而不是反过来拿 REST 覆盖 doc。
@@ -1004,12 +1023,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         }),
       );
       setSelected(new Set(moves.map((m) => m.id)));
+      markLocallyEdited(moves.map((m) => ({ id: m.id, fields: { x: m.toX, y: m.toY } })));
       undoStack.current.push({ kind: "move", moves });
       redoStack.current = [];
       bumpHistory();
       await apiMove(moves, false);
     },
-    [apiMove],
+    [apiMove, markLocallyEdited],
   );
 
   // p6:F07 缩放提交：可逆 resize 命令 + PATCH 落库（吸附已在 fabric 层作用于终态尺寸）。
@@ -1017,12 +1037,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     async (resize: ItemResize) => {
       setItems((prev) => prev.map((it) => (it.id === resize.id ? { ...it, ...resize.to } : it)));
       setSelected(new Set([resize.id]));
+      markLocallyEdited([{ id: resize.id, fields: resize.to }]);
       undoStack.current.push({ kind: "resize", resize });
       redoStack.current = [];
       bumpHistory();
       await apiResize(resize.id, resize.to);
     },
-    [apiResize],
+    [apiResize, markLocallyEdited],
   );
 
   const onFabricSelection = useCallback(
@@ -1705,10 +1726,11 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       const ids = new Set(targets.map((it) => it.id));
       const moves: Move[] = targets.map((it) => ({ id: it.id, fromX: it.x, fromY: it.y, toX: it.x + dx, toY: it.y + dy }));
       setItems((prev) => prev.map((it) => (ids.has(it.id) ? { ...it, x: it.x + dx, y: it.y + dy } : it)));
+      markLocallyEdited(targets.map((it) => ({ id: it.id, fields: { x: it.x + dx, y: it.y + dy } })));
       recordOp({ kind: "move", moves });
       await apiMove(moves, false);
     },
-    [canEdit, selected, items, apiMove]
+    [canEdit, selected, items, apiMove, markLocallyEdited]
   );
 
   const pasteClipboard = useCallback(async () => {
@@ -1749,6 +1771,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   async function saveText(id: string, text: string) {
     setEditingId(null);
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, text } : it)));
+    markLocallyEdited([{ id, fields: { text } }]);
     await fetch(`/api/board-items/${id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -1774,6 +1797,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     });
     itemsRef.current = next;
     setItems(next);
+    markLocallyEdited(captured.map((u) => ({ id: u.id, fields: { color: u.color } })));
     await Promise.all(captured.map((u) => queuePatch(u.id, { color: u.color })));
   }
 
@@ -1998,10 +2022,11 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       if (moves.length === 0) return;
       const map = new Map(moves.map((m) => [m.id, m]));
       setItems((prev) => prev.map((it) => (map.has(it.id) ? { ...it, x: map.get(it.id)!.toX, y: map.get(it.id)!.toY } : it)));
+      markLocallyEdited(moves.map((m) => ({ id: m.id, fields: { x: m.toX, y: m.toY } })));
       recordOp({ kind: "move", moves });
       await apiMove(moves, false);
     },
-    [canEdit, selected, items, apiMove],
+    [canEdit, selected, items, apiMove, markLocallyEdited],
   );
 
   // p6:F19（uc-widget-menu-010）：进入/退出格式取样模式。仅支持单选一个文本/便签类对象作为格式来源

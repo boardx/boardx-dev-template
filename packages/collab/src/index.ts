@@ -207,23 +207,38 @@ export function syncItemsIntoDoc(doc: Y.Doc, items: CollabItem[]): void {
  * issue #414 复测 1/6 概率复现的真实根因——独立于 #456 修的 REST poll/load 轴，
  * 因为这里从头到尾没有任何 REST 响应参与，纯粹是 doc 内部的 _rev 裁决误伤）。
  *
- * 修复：join-sync 完成时，在 seedItems 之外，对 itemsRef.current 里"和 doc 当前
- * 值有真实字段差异"的条目做一次无条件覆盖式补写——不看 _rev（这里的 items 已经
- * 是本地真值，不是可能滞后的 REST 快照，没有理由被 _rev 门禁拦下），也不删除任何
- * doc 里存在但 items 没有的条目（这点和 syncItemsIntoDoc 不同：join 时机上还不能
- * 假定"items 没有的 id 就该删"，可能是对等端已经同步进来、自己 REST 尚未来得及
- * 带到的条目）。同一字段真的被并发编辑冲突时，仍是普通的 Yjs Y.Map 写入，由 Yjs
- * 内置 LWW 裁决——和常规编辑路径的冲突处理方式一致，不是新引入的风险。
+ * 修复：join-sync 完成时，在 seedItems 之外，对调用方明确认定"本客户端在 join
+ * 完成前真的编辑过"的**具体字段**做一次无条件覆盖式补写——不看 _rev（这些字段值
+ * 是本地真实编辑产生的，不是可能滞后的 REST 快照，没有理由被 _rev 门禁拦下）。
+ *
+ * ⚠️ 调用方契约（务必遵守，否则会重新引入 #432 类问题）：patches 里每条记录的
+ * `fields` **必须只包含该 id 真正被本地编辑过的字段**（例如移动只带 x/y，改色
+ * 只带 color），不能是整条 item 的全量快照——即使调用方能确定"这个 id 有过本地
+ * 编辑"，也不能假定它 REST 快照里的其它字段是新鲜的。原因：sync-response 处理
+ * 顺序是先 applyEncodedUpdate 把对等端的完整状态（可能含对等端刚做的、本地
+ * REST 快照还不知道的字段更新）合并进 doc，再触发 join 完成回调。如果这里对
+ * 一个 id 不加区分地覆盖"它所有字段"，会把对等端刚合并进来、本地根本没碰过的
+ * 字段（比如本地只移动过位置，但对等端并发改了颜色）覆盖回过期的 REST 快照值——
+ * 这不是"同字段并发编辑由 Yjs LWW 裁决"（LWW 只在 Y.applyUpdate 合并两份 update
+ * 时生效，这里是合并**之后**的单方覆盖，直接赢过刚 apply 的对等端值），而是真实
+ * 的因果正确性回归，等价于把 #432 的病灶从 REST-poll 轴搬到 join-sync 轴。
+ * 也不新建/不删除任何条目（新 id 交给 seedItems 负责；join 时机上不能假定"某个
+ * id 没有 patch 就该删"，可能是对等端已经同步进来、自己 REST 尚未来得及带到的
+ * 条目）。
  */
-export function reconcileLocalEdits(doc: Y.Doc, items: CollabItem[]): void {
+export function reconcileLocalEdits(
+  doc: Y.Doc,
+  patches: { id: string; fields: Partial<CollabItemFields> }[],
+): void {
   const map = itemsMap(doc);
   doc.transact(() => {
-    for (const item of items) {
-      const im = map.get(item.id) as Y.Map<unknown> | undefined;
-      if (!im) continue; // 新 id 交给 seedItems 负责创建，这里只补已存在条目的差异字段
+    for (const patch of patches) {
+      const im = map.get(patch.id) as Y.Map<unknown> | undefined;
+      if (!im) continue; // 新 id 交给 seedItems 负责创建
       let changed = false;
       for (const key of FIELD_KEYS) {
-        const next = item[key] ?? null;
+        if (!(key in patch.fields)) continue; // 只碰调用方明确声明"本地编辑过"的字段
+        const next = patch.fields[key] ?? null;
         const current = im.get(key) ?? null;
         if (current !== next) {
           im.set(key, next);
