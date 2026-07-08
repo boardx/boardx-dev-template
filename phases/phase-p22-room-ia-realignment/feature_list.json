@@ -30,7 +30,7 @@
       "title": "Room Files 双入口职责边界（Files tab 权威 + Chat 面板轻量引用）",
       "user_visible_behavior": "聊天工作区左栏 Room Files 面板（components/room-files/room-files-panel.tsx）头部新增'查看全部 →'链接（data-testid=room-files-panel-open-files-tab）跳转到该房间的 Files tab；面板空文件列表时的提示文案里'前往 Files tab' 是真正可点击的链接（不再是纯文字）；Files tab（房间级文件库）继续保持全功能（搜索/线程过滤/预览/删除），面板保持轻量（勾选 AI 上下文+简单上传，无搜索/预览/删除）——这个职责边界在代码注释中显式记录为产品决策，不是能力缺失。",
       "design_ref": "调研报告优先级1；已在 components/room-files/room-files-panel.tsx 落地（非 mock，真实组件修改）",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "coord-room",
       "capability": "CAP-FILE",
@@ -42,7 +42,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-013-files-panel-entry.spec.ts --retries=2",
         "git cat-file -e HEAD:phases/phase-p22-room-ia-realignment/sprints/sprint-01/evidence/F02.verify.log"
       ],
-      "evidence": "evidence/F02.verify.log",
+      "evidence": "evidence/F02.verify.log @ 2026-07-08T03:45:27.361Z",
       "notes": "uc 见 requirements/00-overview.md 优先级1。与 F01 并行安全（不同文件：room-files-panel.tsx vs rooms/layout.tsx + room-list-panel.tsx）。"
     },
     {
@@ -52,9 +52,9 @@
       "title": "Studio 独立顶级 tab（房间详情六 tab 结构）",
       "user_visible_behavior": "房间详情 tab 导航（rooms/[id]/layout.tsx 的 TABS）恢复为六项：Boards/Members/Files/Chat/Survey/Studio（data-testid=room-tab-studio）；点击 Studio tab 进入独立落地页（data-testid=room-studio-tab，路由 rooms/[id]/studio），展示'本房间近期 Studio 产物'卡片列表（mock 数据，data-testid=room-studio-artifact-list，每项 data-testid=room-studio-artifact-<id>）与'在聊天工作区打开 Studio →'跳转入口（data-testid=room-studio-open-in-chat）；人类已确认本轮维持这个轻量落地页范围，不做成独立生成工作台（真实生成能力仍在聊天工作区三栏内的 RoomStudioPanel）。",
       "design_ref": "人类截图六 tab 证据 + prototype roomTabDefs（Studio isRoute:true）；已在 rooms/[id]/layout.tsx + rooms/[id]/studio/page.tsx 落地（mock 数据，据 ui-signoff 交付形态说明）",
-      "status": "not_started",
+      "status": "in_progress",
       "sprint": "01",
-      "owner": null,
+      "owner": "coord-room",
       "capability": "CAP-WEB",
       "depends_on": [],
       "wave": 0,
