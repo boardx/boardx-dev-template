@@ -52,7 +52,7 @@
       "title": "Studio 独立顶级 tab（房间详情六 tab 结构）",
       "user_visible_behavior": "房间详情 tab 导航（rooms/[id]/layout.tsx 的 TABS）恢复为六项：Boards/Members/Files/Chat/Survey/Studio（data-testid=room-tab-studio）；点击 Studio tab 进入独立落地页（data-testid=room-studio-tab，路由 rooms/[id]/studio），展示'本房间近期 Studio 产物'卡片列表（mock 数据，data-testid=room-studio-artifact-list，每项 data-testid=room-studio-artifact-<id>）与'在聊天工作区打开 Studio →'跳转入口（data-testid=room-studio-open-in-chat）；人类已确认本轮维持这个轻量落地页范围，不做成独立生成工作台（真实生成能力仍在聊天工作区三栏内的 RoomStudioPanel）。",
       "design_ref": "人类截图六 tab 证据 + prototype roomTabDefs（Studio isRoute:true）；已在 rooms/[id]/layout.tsx + rooms/[id]/studio/page.tsx 落地（mock 数据，据 ui-signoff 交付形态说明）",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "coord-room",
       "capability": "CAP-WEB",
@@ -64,7 +64,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-014-studio-tab.spec.ts --retries=2",
         "git cat-file -e HEAD:phases/phase-p22-room-ia-realignment/sprints/sprint-01/evidence/F03.verify.log"
       ],
-      "evidence": "evidence/F03.verify.log",
+      "evidence": "evidence/F03.verify.log @ 2026-07-08T03:46:39.510Z",
       "notes": "uc 见 requirements/00-overview.md 优先级2（人类已确认维持轻量落地页范围，见 ui-signoff.md 人类确认意见）。产物列表为 mock，不接真实 Studio 生成记录——本 feature 只交付 tab 可发现性，不做真实数据源（后续如需真实产物列表，另立 feature，依赖 p12 studio-presentations 的 artifacts 数据）。"
     },
     {
@@ -74,9 +74,9 @@
       "title": "Board 详情页面包屑回退至所属房间",
       "user_visible_behavior": "打开一块房间白板（/boards/[id]）后，页面顶部展示面包屑或返回链接（data-testid=board-back-to-room）指回其所属房间的 Boards tab（/rooms/[roomId]/boards）；点击后正确导航回该房间（非全局 /boards 列表）；此前只有删除/移动白板成功后才会强制跳转，浏览场景下用户完全没有回退路径——本 feature 补上这条历史缺口（原型与 oldcode 均未解决，人类已确认本轮一起做）。",
       "design_ref": "调研报告优先级3（评估后确认这轮做）；boards.room_id 外键已存在（packages/data/migrations/007_board.sql），本 feature 只补前端导航元素，不改数据模型",
-      "status": "not_started",
+      "status": "in_progress",
       "sprint": "01",
-      "owner": null,
+      "owner": "coord-room",
       "capability": "CAP-WEB",
       "depends_on": [],
       "wave": 0,
