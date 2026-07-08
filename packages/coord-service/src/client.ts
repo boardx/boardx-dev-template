@@ -26,15 +26,29 @@ export interface ActiveClaim {
   ttl_seconds: number;
 }
 
+/** Tagged so callers can't accidentally treat "we couldn't tell" the same as
+ *  "we asked and it's free" — the bug this type exists to prevent: a stale
+ *  401/403/429/5xx response used to collapse silently into `null`, which
+ *  `lockAcquire`'s gating check then read identically to a genuinely free
+ *  resource, with zero log output either way. See coordinator-sop.md 铁律 and
+ *  ADR-006 — coord-service errors must always fail open (never block the
+ *  primary mechanism), but "fail open" and "fail silent" are not the same
+ *  thing; a caller that wants to distinguish them now can. */
+export type QueryActiveClaimResult =
+  | { kind: "free" }
+  | { kind: "held"; claim: ActiveClaim }
+  | { kind: "error"; status: number };
+
 export interface CoordServiceClient {
   claim(resourceId: string, resourceType: string, ttlSeconds?: number): Promise<ClaimResult>;
   heartbeat(claimId: number): Promise<ClaimResult>;
   release(claimId: number): Promise<ClaimResult>;
-  /** Reads the current in_progress claim for a resource, or null if free.
-   *  Public endpoint — used by the Phase 5 cutover to decide, before ever
-   *  touching the local file lock, whether D1 says the resource is already
-   *  held by someone else. Never throws on a reachable-but-empty result. */
-  queryActiveClaim(resourceId: string): Promise<ActiveClaim | null>;
+  /** Reads the current in_progress claim for a resource. Distinguishes
+   *  "genuinely free" from "coord-service returned a non-ok status" — a
+   *  thrown exception (network failure) still propagates to the caller,
+   *  unchanged from before; only the previously-silent non-ok-response case
+   *  is now observable instead of collapsing into the same value as "free". */
+  queryActiveClaim(resourceId: string): Promise<QueryActiveClaimResult>;
 }
 
 export function createCoordServiceClient(baseUrl: string, token: string): CoordServiceClient {
@@ -67,9 +81,10 @@ export function createCoordServiceClient(baseUrl: string, token: string): CoordS
     async queryActiveClaim(resourceId) {
       const params = new URLSearchParams({ resource_id: resourceId, status: "in_progress" });
       const result = await call(`/claims?${params.toString()}`, { method: "GET" });
-      if (!result.ok) return null;
+      if (!result.ok) return { kind: "error", status: result.status };
       const claims = (result.body as { claims?: ActiveClaim[] } | undefined)?.claims;
-      return claims?.[0] ?? null;
+      const claim = claims?.[0];
+      return claim ? { kind: "held", claim } : { kind: "free" };
     },
   };
 }

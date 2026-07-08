@@ -86,7 +86,12 @@ gh pr list --state open --json number,headRefName,baseRefName,statusCheckRollup
 停滞（如 worker 认领锁 6h 无进展），必须先在总线上贴出带明确时限的通牒，窗口到期仍无
 可验证进展才回收重分派，不能只是"注意到了"就默默等，也不能不打招呼直接回收（先例：
 coord-board 对 #282 给 2 小时窗口）。
-心跳评论同样可以用 `pnpm harness module-lock-heartbeat --module <name> --session <id>`。
+心跳评论格式 `module-coordinator-heartbeat by:<id> at <ISO8601>`——推荐直接跑
+`pnpm harness module-lock-heartbeat --module <name> --session <id>`，格式完全一致；
+手打 `gh issue comment` 依然完全等效。这个格式同时是 `packages/coord-service` 的
+projector 用来区分"这是模块 coordinator 的心跳"还是"这是 coord-main 的心跳"
+（后者是不带 `by:<id>` 前缀的 `coordinator-heartbeat at <ISO8601>`）的唯一依据——
+两者混用会导致 dual-write 场景下 projector 投影出错误格式的评论。
 
 ## 退位 / 抢占
 同顶层 coordinator：`module-coordinator-release`/`module-coordinator-takeover` +

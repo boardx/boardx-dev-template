@@ -55,3 +55,25 @@ export async function addAgentLabel(env: Env, issueNumber: number, agentId: stri
   });
   if (!res.ok) throw new Error(`github_add_label_failed:${res.status}`);
 }
+
+/** Finds the (single, open) issue carrying a given label — the Workers-safe
+ *  equivalent of `gh issue list --label <label> --state open --json number
+ *  --limit 1`, which module-lock.ts and the coordinator/module-coordinator
+ *  SKILL.md rituals already rely on via the `gh` CLI. Workers have no
+ *  subshell, so the projector needs its own fetch()-based lookup to resolve
+ *  `coordination:lease` / `coordination:lease:<module>` to an issue number.
+ *  Returns null (not a throw) on any failure or "no matching issue" — callers
+ *  treat that identically to "no defined mapping yet", same as an unmapped
+ *  resource_id. */
+export async function findIssueByLabel(env: Env, label: string): Promise<number | null> {
+  const repo = parseRepo(env);
+  if (!repo) return null;
+  const res = await githubFetch(
+    env,
+    `/repos/${repo.owner}/${repo.repo}/issues?labels=${encodeURIComponent(label)}&state=open&per_page=1`,
+    { method: "GET" }
+  );
+  if (!res.ok) return null;
+  const issues = (await res.json().catch(() => [])) as Array<{ number: number }>;
+  return issues[0]?.number ?? null;
+}
