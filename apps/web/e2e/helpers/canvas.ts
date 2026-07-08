@@ -14,7 +14,7 @@ export interface CanvasItem {
   h: number;
   text: string;
   color: string | null;
-  kind: "note" | "text" | "shape" | "embed" | "connector";
+  kind: "note" | "text" | "shape" | "embed" | "connector" | "draw" | "chart";
   bold: boolean;
   italic: boolean;
   fontFamily: string;
