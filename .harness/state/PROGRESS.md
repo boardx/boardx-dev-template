@@ -12,7 +12,7 @@
 | p4 | Room-Chat (P4 补全) | in_progress | 0 | 0 | 1 | 4 |
 | p5 | Board 基础 (P5) | done | 0 | 0 | 0 | 10 |
 | p6 | Canvas & 组件 (P6) | in_progress | 3 | 0 | 3 | 18 |
-| p7 | Board 壳 (P7) | in_progress | 1 | 0 | 5 | 10 |
+| p7 | Board 壳 (P7) | in_progress | 0 | 0 | 5 | 11 |
 | p8 | 实时协作 (P8) | not_started | 0 | 0 | 0 | 5 |
 | p9 | AVA / Chat (P9) | in_progress | 0 | 0 | 1 | 10 |
 | p10 | 知识库 (P10) | in_progress | 0 | 1 | 0 | 3 |

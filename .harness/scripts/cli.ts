@@ -34,11 +34,11 @@ async function main(): Promise<void> {
     case "sweep-worktrees": sweepWorktrees(args); break;
     case "sweep-docker":    sweepDocker(args); break;
     case "dep-graph":      depGraph(args); break;
-    case "lock-status":    lockStatus(args); break;
+    case "lock-status":    await lockStatus(args); break;
     case "lock-acquire":   await lockAcquire(args); break;
     case "lock-heartbeat": await lockHeartbeat(args); break;
     case "lock-release":   await lockRelease(args); break;
-    case "module-lock-status":    moduleLockStatus(args); break;
+    case "module-lock-status":    await moduleLockStatus(args); break;
     case "module-lock-acquire":   await moduleLockAcquire(args); break;
     case "module-lock-heartbeat": await moduleLockHeartbeat(args); break;
     case "module-lock-release":   await moduleLockRelease(args); break;

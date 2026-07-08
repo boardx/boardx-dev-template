@@ -13,6 +13,27 @@
 - F06（Board 统计信息）：passing。
   验证命令：同上 + `pnpm --filter @repo/web exec playwright test e2e/board-statistics.spec.ts`
   （3/3）+ `pnpm -w run verify:base`。证据：`evidence/F06.verify.log`。
+- F08（Board 备份与恢复）：passing。sprint p7/02 至此全部完成。
+  验证命令：同上 + `pnpm --filter @repo/web exec playwright test e2e/board-backup.spec.ts`
+  （3/3）+ `pnpm -w run verify:base`。证据：`evidence/F08.verify.log`。
+
+## 本轮改动（F08）
+- 新表 `board_backups`（migration `031_board_backups.sql`，bigint identity PK + jsonb
+  snapshot）；数据层 `packages/data/src/backups.ts`（create/list/get/restore，restore 为
+  事务删旧插新、保留原 item id、失败 ROLLBACK）；API
+  `apps/web/app/api/boards/[id]/backups/`（POST/GET + :backupId/restore，canManageBoard
+  权限，403/404 风格对齐 boards/[id]/route.ts）；board 页 Header 新增"备份"面板
+  （canManage 才显示，创建 + 列表 + 行内二次确认恢复，成功/失败明确反馈）。恢复后画布
+  由既有 1.5s items 轮询自动刷新，无需额外接线。
+- 踩坑记录（对后人有用）：pg 的 bigint 列以 string 返回，跨层做 id 相等比较必须先
+  `Number()`（本轮 restore 恒 404 的根因）。宿主机多 worktree 并发时 postgres 容器可能
+  被资源压力打进 recovery mode（表现为 "the database system is in recovery mode"），
+  restart postgres + 等 pg_isready 后重跑即可；docker 子网冲突改 infra/.env 的
+  COMPOSE_SUBNET 换一个未占用段即可（该文件 gitignored）。
+
+## 下一步
+- sprint p7/02 五个 feature 全部 passing，无未完成项。PR 见 worker/canvas-worker-1-p7-f08-backup
+  分支（Closes #286），等 review 合并即可关 sprint。
 
 ## 本轮改动（F02）
 - `apps/web/app/(app)/boards/[id]/page.tsx`：`board-title` 从纯 `<h1>` 改为可点击行内

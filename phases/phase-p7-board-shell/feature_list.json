@@ -158,16 +158,16 @@
       "area": "board-header",
       "title": "Board 备份与恢复",
       "user_visible_behavior": "有权限用户可创建白板备份（快照当前 items 与元信息）并查看备份列表，从某个备份恢复白板内容；恢复前确认。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-DATA",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-backup.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F08.verify.log @ 2026-07-08T05:59:31.954Z",
       "notes": "uc-board-header-007。备份存为 items 快照（board_backups 表）。",
       "source_use_cases": [
         "phases/requirements/board/header/uc-board-header-007-manage-board-backup.md"

@@ -54,7 +54,7 @@
 
 ## 铁律（任何层都不可违反）
 1. **verdict 权威**：`review:*-ok` 只能由 coordinator 编排的 reviewer 产出。发现来路不明的 verdict → 摘除 + 留言，以可核验事实（git ls-tree、命令退出码）重裁。
-2. **coordinator 唯一**：唯一性由 `coordination:lease` issue 的心跳裁定（见下方生命周期章节）；接管协调前先向存量协调会话广播；双 coordinator 结论冲突时，以可核验事实为准，并立即收敛为单 coordinator。
+2. **coordinator 唯一**：唯一性由 coord-service (D1) 的 `role:coord-main` claim 裁定（2026-07-08 起，ADR-009；此前的 `coordination:lease` issue 心跳机制已退役，见下方生命周期章节）；接管协调前先向存量协调会话广播；双 coordinator 结论冲突时，以可核验事实为准，并立即收敛为单 coordinator。
 3. **合并独占**：只有 coordinator 执行合并；review 全绿 + CI 绿 + up-to-date 缺一不可（CI 因基础设施不可用时，合并冻结并升级人类，不得以"本地验过"绕行）。
 4. **证据实测**：任何"已验证/已入库"声称都用 `git ls-tree` / `git show` / 退出码实测，不信任 diff 注释、progress 叙述或打分。
 5. **共享主 checkout 隔离**：任何要落地写文件/提交的会话（含 coordinator 自己）一律
@@ -66,11 +66,13 @@
    明确时限的通牒，再据此回收/升级——不能只是内部判断"再等等"或"已经提醒过了"就不再
    跟进。这条对 coord-main 和全体 module-coordinator 一视同仁，没有"层级更高就可以裸等"
    这回事（人类反馈直接触发，2026-07-07）。
-7. **coord-service 是 opt-in 增强，不是新权威**：`COORD_SERVICE_URL`/
-   `COORD_SERVICE_TOKEN` 未配置时，`lock-*`/`module-lock-*` 行为与 coord-service
-   出现之前逐字一致；配置了才会额外问一次 D1、失败一律静默降级——GitHub
-   issue+label（module-coordinator 侧）和本地文件锁（顶层 coordinator 侧）依然是
-   默认权威。见 ADR-006（`phases/phase-01-foundation/adr/ADR-006-coord-service-d1-gating.md`）。
+7. **coord-service 是唯一协调权威（2026-07-08 起，取代本条旧文）**：`lock-*`/
+   `module-lock-*` 必须配置 `COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN` 才能使用，
+   未配置直接报错——不存在降级回 GitHub 的路径（GitHub 协调面已整体退役）。
+   权威（D1）联系不上时 acquire fail-closed 拒绝执行，`--force` 仅限人类授权的
+   抢占仪式。见 ADR-009（`phases/phase-01-foundation/adr/
+   ADR-009-github-coordination-plane-retirement.md`）；本条 2026-07-08 之前的
+   opt-in 版本见 ADR-006（保留为历史决策记录）。
 8. **破坏性清理操作需要显式人类/coord-main 授权，任何会话都不能仅凭自己判断"逻辑
    可靠"就执行**：`pnpm harness sweep-docker --apply`（删容器+卷）、以及其它任何
    对共享基础设施做删除/回收类操作的命令，一律先跑不带 `--apply` 的只读巡检、把
@@ -99,14 +101,18 @@
 ## 生命周期（启动/退位/抢占）
 coordinator 是**单例角色**，由会话通过启动仪式认领，不是常驻 subagent。
 完整仪式见 `.agents/skills/coordinator/SKILL.md`（唯一性握手 → 认领广播 → 冷启动读总线 →
-挂监控 → SOP 循环）。要点：
-- **唯一性来源**：label 为 `coordination:lease` 的专用 issue；heartbeat（每个 L2 tick 一条评论）
-  < 30 分钟视为在任，禁止第二个 coordinator 启动。
-- **抢占**：heartbeat 过期后任何会话可 takeover；冲突以 lease issue 最新合法 claim 为准。
-- **退位**：release 评论 + 交接要点写进 lease issue，状态永远在总线上，不在会话记忆里。
-- 顶层 coordinator 的本地文件锁（`pnpm harness lock-*`）如果配置了 coord-service
-  环境变量，`lock-acquire` 会先问 D1 有没有人已经占着（见 ADR-006）；未配置则
-  完全不受影响。
+挂监控 → SOP 循环）。要点（**2026-07-08 起按 ADR-009 切换到 coord-service**）：
+- **唯一性来源**：D1 的 `role:coord-main` claim（`pnpm harness lock-acquire --session
+  <id>`，需要 `COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN` 凭据）。认领是服务端
+  `uq_active_claim` 唯一索引上的原子 INSERT——两个会话抢，恰好一个成功。
+  ~~label 为 `coordination:lease` 的专用 issue + heartbeat 评论~~ 已退役，存量
+  issue 保留为历史记录。
+- **心跳**：每个 L2 tick `pnpm harness lock-heartbeat`。新鲜度由服务端 sweeper 按
+  ttl 裁定，心跳持续失败 = 租约被自动过期回收，命令会报错让你感知，不要吞掉。
+- **抢占**：`lock-status` 显示权威持有者与心跳年龄；持有者心跳过期后 acquire 即可
+  接任（sweeper 已回收）或 `--force`（人类授权仪式）。冲突以 D1 claim 为准。
+- **退位**：`pnpm harness lock-release` + 交接要点写进总线（issue 评论仍是人类可读
+  叙述层）——租约状态在 D1，叙述在总线，都不在会话记忆里。
 
 ## 二级架构:module-coordinator(2026-07-04 起)
 

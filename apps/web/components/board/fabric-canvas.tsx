@@ -224,6 +224,7 @@ export interface CanvasTestApi {
   }>;
   getSelectedIds: () => string[];
   getItemScreenRect: (id: string) => { x: number; y: number; width: number; height: number } | null;
+  getCanvasBlankScreenPoint: () => { x: number; y: number } | null;
   getFabricObjectCount: () => number;
   // p6:F16：连接线当前实际渲染的端点画布坐标（跟随源/目标组件移动后的最新值），
   // 供 e2e 断言「组件移动后连接线跟随」而不依赖内部私有状态。
@@ -242,6 +243,8 @@ export function FabricCanvas(props: Props) {
   const nsRef = useRef<FabricNS | null>(null);
   const tokensRef = useRef<Tokens | null>(null);
   const objsRef = useRef<Map<string, Group>>(new Map());
+  const objectSigRef = useRef<WeakMap<Group, string>>(new WeakMap());
+  const objectItemIdRef = useRef<WeakMap<Group, string>>(new WeakMap());
   // 拖拽手势：mouse:down（有 target）→ object:moving（吸附）→ object:modified（提交 move）。
   // 位置提交走纯 delta 数学（items 初始位 + fabric 位移），不读 fabric 的绝对坐标，
   // 避免 group 描边外扩 / ActiveSelection 相对坐标带来的漂移。
@@ -274,7 +277,6 @@ export function FabricCanvas(props: Props) {
         return;
       }
       const s = propsRef.current;
-      fc.discardActiveObject();
 
       const seen = new Set<string>();
       s.items.forEach((it, z) => {
@@ -294,7 +296,7 @@ export function FabricCanvas(props: Props) {
           s.editingId === it.id, s.canEdit, anchorSig,
         ]);
         let g = objsRef.current.get(it.id);
-        if (g && (g as unknown as { sig?: string }).sig !== sig) {
+        if (g && objectSigRef.current.get(g) !== sig) {
           fc.remove(g);
           g = undefined;
         }
@@ -303,8 +305,8 @@ export function FabricCanvas(props: Props) {
             it.kind === "connector" && it.connector
               ? buildConnectorObject(fabric, tokens, it, s.items, s.canEdit)
               : buildItemObject(fabric, tokens, it, s.editingId === it.id, s.canEdit);
-          (g as unknown as { sig: string }).sig = sig;
-          (g as unknown as { itemId: string }).itemId = it.id;
+          objectSigRef.current.set(g, sig);
+          objectItemIdRef.current.set(g, it.id);
           fc.add(g);
           objsRef.current.set(it.id, g);
         }
@@ -322,17 +324,24 @@ export function FabricCanvas(props: Props) {
       const sel = s.selectedIds
         .map((id) => objsRef.current.get(id))
         .filter((o): o is Group => Boolean(o));
-      if (sel.length === 1) {
-        fc.setActiveObject(sel[0]!);
-      } else if (sel.length > 1) {
-        const as = new fabric.ActiveSelection(sel, { canvas: fc });
-        // p6:F20：多选时若任一成员锁定，整组按锁定处理——fabric 把 ActiveSelection 当整体拖拽，
-        // 子对象各自的 lockMovementX/Y 不生效，必须在组一级也挡住（object:moving 的补充防线
-        // 覆盖极端时序，这里是主防线）。
-        const selectedIds = new Set(s.selectedIds);
-        const anyLocked = s.items.some((it) => selectedIds.has(it.id) && it.locked);
-        styleInteractive(as, tokensRef.current!, s.canEdit, false, anyLocked);
-        fc.setActiveObject(as);
+      // issue#316：仅当 fabric 当前 active 集合与 React 权威选中集不一致时才重建，
+      // 避免每次 reconcile 无条件 discardActiveObject 造成非拖拽态选中框闪烁。
+      // （被选中对象因 sig 变化重建时，fc.remove 会把它从 active 集合剔除 → 集合
+      // 必然与 selectedIds 不一致 → 仍会走重建分支，不会漏选。）
+      if (!sameStringSet(getActiveObjectIds(fc, objectItemIdRef.current), s.selectedIds)) {
+        fc.discardActiveObject();
+        if (sel.length === 1) {
+          fc.setActiveObject(sel[0]!);
+        } else if (sel.length > 1) {
+          const as = new fabric.ActiveSelection(sel, { canvas: fc });
+          // p6:F20：多选时若任一成员锁定，整组按锁定处理——fabric 把 ActiveSelection 当整体拖拽，
+          // 子对象各自的 lockMovementX/Y 不生效，必须在组一级也挡住（object:moving 的补充防线
+          // 覆盖极端时序，这里是主防线）。
+          const selectedIds = new Set(s.selectedIds);
+          const anyLocked = s.items.some((it) => selectedIds.has(it.id) && it.locked);
+          styleInteractive(as, tokensRef.current!, s.canEdit, false, anyLocked);
+          fc.setActiveObject(as);
+        }
       }
       fc.requestRenderAll();
     };
@@ -365,6 +374,10 @@ export function FabricCanvas(props: Props) {
         fireRightClick: true,
         stopContextMenu: true, // 右键菜单由上层的 context-menu DOM 组件接管
       });
+      if (disposed) {
+        void fc.dispose();
+        return;
+      }
       fcRef.current = fc;
 
       const resize = () => {
@@ -385,7 +398,7 @@ export function FabricCanvas(props: Props) {
       fc.on("mouse:down", (opt: TPointerEventInfo<TPointerEvent>) => {
         const s = propsRef.current;
         const e = opt.e as MouseEvent;
-        const target = opt.target as (Group & { itemId?: string }) | undefined;
+        const target = opt.target as Group | undefined;
         const fcNow = fcRef.current;
         if (!fcNow) return;
         const scene = fcNow.getScenePoint(e);
@@ -409,13 +422,13 @@ export function FabricCanvas(props: Props) {
           // 命中 item（或 ActiveSelection）：阻断视口平移，开始（潜在的）拖拽手势。
           e.stopPropagation();
           const asObjs =
-            "getObjects" in target && !target.itemId
-              ? (target as unknown as { getObjects: () => Array<{ itemId?: string }> }).getObjects()
+            "getObjects" in target && !objectItemIdRef.current.get(target)
+              ? (target as unknown as { getObjects: () => Group[] }).getObjects()
               : null;
           const ids = asObjs
-            ? asObjs.map((o) => o.itemId).filter((x): x is string => Boolean(x))
-            : target.itemId
-              ? [target.itemId]
+            ? asObjs.map((o) => objectItemIdRef.current.get(o)).filter((x): x is string => Boolean(x))
+            : objectItemIdRef.current.get(target)
+              ? [objectItemIdRef.current.get(target)!]
               : [];
           const init: Record<string, { x: number; y: number }> = {};
           for (const it of s.items) if (ids.includes(it.id)) init[it.id] = { x: it.x, y: it.y };
@@ -651,7 +664,7 @@ export function FabricCanvas(props: Props) {
       });
 
       // ── e2e 测试 API（仅非生产环境）──────────────────────────────────────
-      if (process.env.NODE_ENV !== "production") {
+      if (process.env.NODE_ENV !== "production" && !disposed && fcRef.current) {
         window.__canvasTestApi = {
           engine: "fabric",
           getItems: () =>
@@ -687,8 +700,6 @@ export function FabricCanvas(props: Props) {
             const it = propsRef.current.items.find((x) => x.id === id);
             const fcNow = fcRef.current;
             if (!it || !fcNow) return null;
-            const rect = fcNow.getElement().getBoundingClientRect();
-            const { tx, ty, scale } = propsRef.current.viewport;
             // p6:F16：连接线是线段而非矩形——测试锚点需要一个"点击后能真正命中线体"的屏幕矩形，
             // 直接用两端点包围盒的话，中心点（既有 clickItem 的点击目标）多数情况落在线外
             // （斜线的包围盒中心并不在线上）。改为返回以线段中点为中心的一个小矩形，
@@ -697,19 +708,19 @@ export function FabricCanvas(props: Props) {
               const { from, to } = resolveConnectorEndpoints(it.connector, propsRef.current.items);
               const { x: mx, y: my } = connectorMidpoint(from, to, it.connector.line);
               const size = 10;
-              return {
-                x: rect.left + tx + (mx - size / 2) * scale,
-                y: rect.top + ty + (my - size / 2) * scale,
-                width: size * scale,
-                height: size * scale,
-              };
+              return itemToScreenRect(fcNow, propsRef.current.viewport, {
+                x: mx - size / 2,
+                y: my - size / 2,
+                w: size,
+                h: size,
+              });
             }
-            return {
-              x: rect.left + tx + it.x * scale,
-              y: rect.top + ty + it.y * scale,
-              width: it.w * scale,
-              height: it.h * scale,
-            };
+            return itemToScreenRect(fcNow, propsRef.current.viewport, it);
+          },
+          getCanvasBlankScreenPoint: () => {
+            const fcNow = fcRef.current;
+            if (!fcNow) return null;
+            return findCanvasBlankScreenPoint(fcNow, propsRef.current.viewport, propsRef.current.items);
           },
           getFabricObjectCount: () => fcRef.current?.getObjects().length ?? 0,
           getConnectorEndpoints: (id: string) => {
@@ -730,6 +741,8 @@ export function FabricCanvas(props: Props) {
       const c = fcRef.current;
       fcRef.current = null;
       objsRef.current.clear();
+      objectSigRef.current = new WeakMap();
+      objectItemIdRef.current = new WeakMap();
       // dispose 会移除 fabric 包装 DOM；异步竞态下（import 未完成即卸载）无 canvas 可清。
       void c?.dispose();
       if (hostRef.current) hostRef.current.innerHTML = "";
@@ -753,6 +766,81 @@ export function FabricCanvas(props: Props) {
   }, [props.viewport]);
 
   return <div ref={hostRef} data-testid="fabric-host" className="absolute inset-0" />;
+}
+
+function sameStringSet(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const seen = new Set(a);
+  return b.every((x) => seen.has(x));
+}
+
+function getActiveObjectIds(fc: Canvas, itemIds: WeakMap<Group, string>): string[] {
+  const active = fc.getActiveObject() as Group | undefined;
+  if (!active) return [];
+  if ("getObjects" in active && !itemIds.get(active)) {
+    return (active as unknown as { getObjects: () => Group[] })
+      .getObjects()
+      .map((o) => itemIds.get(o))
+      .filter((x): x is string => Boolean(x));
+  }
+  const id = itemIds.get(active);
+  return id ? [id] : [];
+}
+
+function itemToScreenRect(
+  fc: Canvas,
+  viewport: ViewportState,
+  it: Pick<RenderItem, "x" | "y" | "w" | "h">,
+): { x: number; y: number; width: number; height: number } {
+  const rect = fc.getElement().getBoundingClientRect();
+  return {
+    x: rect.left + viewport.tx + it.x * viewport.scale,
+    y: rect.top + viewport.ty + it.y * viewport.scale,
+    width: it.w * viewport.scale,
+    height: it.h * viewport.scale,
+  };
+}
+
+function screenToScene(
+  fc: Canvas,
+  viewport: ViewportState,
+  p: { x: number; y: number },
+): { x: number; y: number } {
+  const rect = fc.getElement().getBoundingClientRect();
+  return {
+    x: (p.x - rect.left - viewport.tx) / viewport.scale,
+    y: (p.y - rect.top - viewport.ty) / viewport.scale,
+  };
+}
+
+function findCanvasBlankScreenPoint(
+  fc: Canvas,
+  viewport: ViewportState,
+  items: RenderItem[],
+): { x: number; y: number } | null {
+  const rect = fc.getElement().getBoundingClientRect();
+  const margin = 24;
+  const xs = [
+    rect.left + rect.width - 30,
+    rect.left + 30,
+    rect.left + rect.width / 2,
+    rect.left + rect.width * 0.25,
+    rect.left + rect.width * 0.75,
+  ];
+  const ys = [
+    rect.top + 18,
+    rect.top + rect.height / 2,
+    rect.top + rect.height * 0.25,
+    rect.top + rect.height * 0.75,
+  ];
+  for (const y of ys) {
+    if (y < rect.top + margin || y > rect.bottom - margin) continue;
+    for (const x of xs) {
+      if (x < rect.left + margin || x > rect.right - margin) continue;
+      if (!hitTest(items, screenToScene(fc, viewport, { x, y }))) return { x, y };
+    }
+  }
+  return null;
 }
 
 // 多选拖拽时以整体包围盒作为吸附主体（单选时用被拖 item 本身，见调用处）。

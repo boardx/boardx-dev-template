@@ -117,3 +117,21 @@
     栈、board-items API w/h 缺 Number.isFinite 防护）本轮未动，范围纪律
     优先，留给下一轮。
 - 下一步最佳动作: 先处理上述"已知风险"三项遗留，再继续 F12 文本组件。
+
+### 2026-07-08（issue #316 重启：cherry-pick f336570 → main 重开 PR）
+- 本轮目标: 完成 GitHub issue #316（p6/08 F13/F14 review 的 Medium/Low 健壮性修复）。
+  原 PR #324 因 base 分支（F07）合并后被删而自动关闭，内容保留在
+  codex/issue-316-canvas-review-fixes；本轮 cherry-pick f336570 到 main 之上重开。
+- 已完成: #316 follow-up 已实现并验证。修复点包括 Fabric reconcile 不再无条件
+  `discardActiveObject()`（改为 active 集合与 selectedIds 不一致时才重建）、
+  Fabric init disposed guard、e2e 空白画布点击改走
+  `window.__canvasTestApi.getCanvasBlankScreenPoint()`、`ItemPatch` 收紧 id/type
+  语义并补 `x: undefined` patch 单测、屏幕矩形计算去重（itemToScreenRect，
+  含 F16 连接线中点分支）以及 Fabric 对象元数据改用 WeakMap。
+  冲突解决要点: 与 main 上后续落地的 F12/F15/F16/F19/F20 合流——保留
+  buildConnectorObject 分支、F20 ActiveSelection anyLocked 主防线、F16
+  连接线 screen rect 逻辑，均在新守卫/新 helper 内重写。
+- 已记录证据: evidence/issue-316-review-followup.md（验证结果见 PR body）
+- 已知风险或未解决问题: 无 #316 新增 blocker；本 issue 是已 passing feature 之上的
+  review follow-up，不手改 harness passing 状态。
+- 下一步最佳动作: 开 PR（base main）并把 GitHub issue #316 推到 status:in-review。

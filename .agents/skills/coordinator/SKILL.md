@@ -21,18 +21,22 @@ description: >
 ## 启动仪式（必须按序，不可跳步）
 
 ### Step 1 — 唯一性握手（防双 coordinator）
+
+**2026-07-08 起（ADR-009）**：唯一性由 coord-service (D1) 裁定，需要
+`COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN` 凭据（没有就先找人类领取，无凭据无法
+担任 coordinator）：
 ```bash
-gh issue list -R <repo> --label coordination:lease --state open --json number
-gh issue view <lease-issue> --json comments --jq '.comments[-1]'
+pnpm harness lock-status                      # 权威状态：谁持有、心跳多久前
+pnpm harness lock-acquire --session <会话标识>  # 原子认领（被占且新鲜会被拒绝）
 ```
-读 **coordinator lease issue**（label `coordination:lease`，全仓唯一，无则创建）最后一条
-heartbeat 评论：
-- **lease 新鲜**（< 30 分钟）且非本会话 → **禁止启动**。要么联系现任退位，要么等 stale。
-- **lease 过期或无** → 可认领。
-- 首次使用：创建该 issue，标题 `[coordination] coordinator lease`，正文写明本文件路径。
+- **被拒（持有者心跳新鲜）** → **禁止启动**。要么联系现任退位，要么等 sweeper 过期回收。
+- **acquire 成功** → 已认领（uq_active_claim 原子判定，无竞态窗口）。
+- ~~lease issue（label `coordination:lease`）+ heartbeat 评论~~ 已退役，存量 issue
+  保留为历史记录，不再读写。
 
 ### Step 2 — 认领 + 广播
-1. 在 lease issue 评论：`coordinator-claim by:<会话标识> at <ISO8601>`。
+1. ~~在 lease issue 评论 `coordinator-claim ...`~~ 认领已由 Step 1 的 `lock-acquire`
+   完成；在总线（如 #323 类协调叙述 issue）留一条人类可读的接管通告即可。
 2. 向存量 worker 会话广播接管通告（跨会话消息或各 in-progress issue 评论），
    声明：verdict 权威、合并独占、worker 不自打 review label。
    > 教训（2026-07-04）：未广播导致双 coordinator 对同一 PR 出具冲突 verdict。
@@ -46,23 +50,25 @@ gh pr list --state open --json number,statusCheckRollup  # CI 与 review 缺口
 
 ### Step 4 — 挂监控（进入事件驱动）
 - L0：60s 轮询 issue label + PR checks 的**变化 diff**（有变化才动作）。
-- L2：15min tick 全局巡检；**每个 tick 顺手在 lease issue 发 heartbeat 评论**
-  （`coordinator-heartbeat at <ISO8601>`）——这就是唯一性握手的心跳源。
+- L2：15min tick 全局巡检；**每个 tick 顺手跑 `pnpm harness lock-heartbeat
+  --session <会话标识>`**——这就是唯一性握手的心跳源（D1，服务端 sweeper 按 ttl
+  裁定新鲜度；命令报错说明租约有异常，必须处理不能吞掉）。
 
 ### Step 5 — 进入 SOP 循环
 按 `coordinator-sop.md` 的 L0/L1/L2 执行。四条铁律（verdict 权威、coordinator 唯一、
 合并独占、证据实测）任何时候不可违反。
 
 ## 退位（主动交接）
-1. lease issue 评论 `coordinator-release at <ISO8601>` + 交接要点
-   （在途 review、冻结原因、未派任务），**状态写总线，不留会话记忆**。
+1. `pnpm harness lock-release --session <会话标识>` 释放 D1 租约；交接要点
+   （在途 review、冻结原因、未派任务）写进总线叙述 issue，**状态写 D1 + 叙述写
+   总线，不留会话记忆**。
 2. 停掉自己挂的监控。
 3. 未完成的协调动作降级为 issue 评论，供下任冷启动读取。
 
 ## 抢占（现任失联）
-- heartbeat 超过 30 分钟：任何会话可评论 `coordinator-takeover at <ISO8601>（前任 heartbeat 过期）`
-  后按 Step 2-5 接管。
-- 双方同时在场且结论冲突：以 lease issue 上**最新合法 claim** 为准，另一方立即退位；
+- `pnpm harness lock-status` 显示持有者心跳过期：sweeper 回收后直接 `lock-acquire`
+  接任（或人类授权下 `--force`）；在总线叙述 issue 留一条 takeover 通告。
+- 双方同时在场且结论冲突：以 D1 上**最新合法 claim** 为准，另一方立即退位；
   已产出的冲突 verdict 以可核验事实重裁（git ls-tree / 退出码 > 打分）。
 
 ## 边界（coordinator 不做什么）

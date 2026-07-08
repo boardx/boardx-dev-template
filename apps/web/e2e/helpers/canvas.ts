@@ -98,10 +98,11 @@ export async function dblclickItem(page: Page, id: string): Promise<void> {
   await page.mouse.dblclick(r.x + r.width / 2, r.y + r.height / 2);
 }
 
-// 点击画布空白处（旧锚点：items-layer 空白 click → 清除选择）。
-// 取视口右上角内缩点，避开 item 常驻区（左上）与缩放控制条/小地图（底部）。
+// 点击画布真实空白处（旧锚点：items-layer 空白 click → 清除选择）。
+// 空白点由渲染层根据当前 viewport + items 命中测试计算，避免硬编码某个角落恒空。
 export async function clickCanvasBlank(page: Page): Promise<void> {
-  const box = await page.getByTestId("canvas-viewport").boundingBox();
-  expect(box).not.toBeNull();
-  await page.mouse.click(box!.x + box!.width - 30, box!.y + 15);
+  await waitForCanvasReady(page);
+  const p = await page.evaluate(() => window.__canvasTestApi!.getCanvasBlankScreenPoint());
+  expect(p, "canvas blank point").not.toBeNull();
+  await page.mouse.click(p!.x, p!.y);
 }

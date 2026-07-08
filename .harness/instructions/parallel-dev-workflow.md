@@ -120,10 +120,20 @@ verification 全绿 + evidence 落盘 + `init.sh` 基础验证不破 + 行为端
 4. `harness sync` 分批投影 issue（建议按 wave 分批，不要一次开 169 个）。
 5. 按 wave 启动并行 agent 开发。
 
-## 8. 跨 agent 认领锁（GitHub label 分布式锁）
+## 8. 跨 agent 认领锁
 
-多个 agent（含本仓其它会话）并行时，用 issue 的 `status:in-progress` label 做认领锁：
-1. **领取前先查**：`gh issue view <N> --json labels`。若已带 `status:in-progress` → 已被他人领取，**跳过**，换下一个。
-2. **领取即标记**：派给某 agent 前，`gh issue edit <N> --add-label status:in-progress --remove-label status:ready-for-dev`。
-3. **完成**：验证通过合并后 `gh issue close <N>` 并加 `passing`（去掉 in-progress）。
-4. **失败/放弃**：回退为 `status:ready-for-dev`（去掉 in-progress），释放锁。
+> **2026-07-08 起（ADR-009）**：跨会话认领互斥由 coord-service (D1) 承担——label
+> 没有 compare-and-swap，两个 agent 抢同一个 issue 可能都"成功"，这正是 D1
+> `uq_active_claim` 唯一索引要解决的原始问题。GitHub label 认领锁（旧 §8）退役。
+
+现行：
+1. **认领**：`pnpm harness claim --phase NN --feature Fxx --owner <id>`（feature_list
+   原子归属，ADR-001，不变）。跨会话互斥以 D1 claim 为准（`issue:<n>` resource）。
+2. **状态可见性**：`status:*` label 继续由 `sync-github.ts` 从 feature_list 单向投影
+   （叙述层）；但**不要**把 label 当锁读——判断"是否已被认领"看 feature_list 的
+   `owner` 字段与 D1 claims，不看 label。
+3. **完成/放弃**：feature_list 状态流转照旧（verify 门控 / 回退 not_started），
+   sync 会把 label 投影跟上。
+
+~~旧机制（GitHub label 分布式锁，已退役，仅历史记录）：领取前查 `status:in-progress`
+label → 领取即改 label → 完成关 issue → 放弃回退 label。~~

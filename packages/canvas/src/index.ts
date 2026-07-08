@@ -9,7 +9,7 @@
 
 export type ItemType = "note" | "rect";
 
-export interface BoardItem {
+interface BoardItemCore {
   id: string;
   type: ItemType;
   x: number;
@@ -17,12 +17,19 @@ export interface BoardItem {
   w: number;
   h: number;
   text: string;
+}
+
+export interface BoardItem extends BoardItemCore {
   /** widget 类型专有字段（形状/连接线/手绘…在 F15+ 各自扩展），字段级可寻址。 */
   [field: string]: unknown;
 }
 
 /** 字段级 patch：不允许改 id/type（身份字段），其余字段任意子集。 */
-export type ItemPatch = Partial<Omit<BoardItem, "id" | "type">> & Record<string, unknown>;
+export type ItemPatch = Partial<Omit<BoardItemCore, "id" | "type">> &
+  Record<string, unknown> & {
+    id?: never;
+    type?: never;
+  };
 
 export type Command =
   | { kind: "add"; item: BoardItem }

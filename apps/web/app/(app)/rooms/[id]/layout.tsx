@@ -20,12 +20,15 @@ interface MemberRow {
   role: "owner" | "admin" | "member";
 }
 
+// p22/F04：Studio 恢复为顶级 tab（对齐原型 roomTabDefs 与人类截图确认的六 tab 结构），
+// 不再只依附在某条聊天线程内部才可见。
 const TABS = [
   { key: "boards", label: "Boards", segment: "boards" },
   { key: "members", label: "Members", segment: "members" },
   { key: "files", label: "Files", segment: "files" },
   { key: "chat", label: "Chat", segment: "chats" },
   { key: "survey", label: "Survey", segment: "surveys" },
+  { key: "studio", label: "Studio", segment: "studio" },
 ] as const;
 
 function initials(email: string): string {
