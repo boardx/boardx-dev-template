@@ -1,20 +1,24 @@
 // module-lock.ts — CLI 封装：pnpm harness module-lock-status|acquire|heartbeat|release
 //   --module <name> --session <agent-id>
 //
-// Phase 4（coord-service 迁移）：module-coordinator 的租约今天纯靠手动
-// `gh issue comment` 达成（见 .agents/skills/module-coordinator/SKILL.md），没有像
-// coord-main 那样的本地文件锁可以包一层。这个命令把"发规范格式评论"这件事固化
-// 成一条命令而不是每个会话手打 gh——评论内容、格式与今天的 SKILL.md 约定完全一致，
-// 只是不用再手动拼命令。GitHub 评论在 Phase 5 之前仍是唯一权威；coord-service
-// dual-write 是 opt-in 的（同 Phase 3：COORD_SERVICE_URL/COORD_SERVICE_TOKEN 都设了
-// 才发起网络调用，失败只记日志，不影响 GitHub 评论已经发出去这件事）。
+// 2026-07-08 cutover（ADR-009）：coord-service (D1) 是 module-coordinator 租约的
+// **唯一权威**。此前版本的"发 GitHub lease issue 评论为主 + 可选 D1 影子写"已按
+// 人类决定整体退役——本命令不再读写任何 GitHub issue/评论/label。
 //
-// 这条命令是新增能力，不强制任何人使用——不设置这两个环境变量、继续手打
-// `gh issue comment` 完全等价，行为不变。
-import { sh } from "./lib/sh";
+// 语义变化（对照 ADR-006 时代）：
+// - COORD_SERVICE_URL/COORD_SERVICE_TOKEN 未配置 → 直接报错退出，不再有
+//   "静默降级回 GitHub"的路径（那条路已被取消，见 ADR-009 激活门槛一节）。
+// - acquire 先问 D1 是否被占：被占且未过期 → 拒绝；查询失败 → 拒绝（fail-closed，
+//   权威联系不上就不假装能协调）。真正的原子性仍由服务端 uq_active_claim 唯一索引
+//   保证，这里的预查询只是为了给出可读的"被谁占着"报错，抢占竞态最终以 INSERT
+//   冲突（409）为准。
+// - heartbeat 失败 → 报错退出（可见），租约新鲜度现在完全由 D1 sweeper 裁定，
+//   心跳丢失的后果是租约会被自动过期回收，会话必须知道这件事，不能静默吞掉。
+// - release 失败 → 大声警告但不阻塞（sweeper 最终会过期回收，释放动作宽容处理）。
 import { req } from "./lib/args";
-import { log } from "./lib/log";
+import { log, die } from "./lib/log";
 import { createCoordServiceClientFromEnv } from "@repo/coord-service/client";
+import type { CoordServiceClient } from "@repo/coord-service/client";
 import {
   readModuleRemoteClaimId,
   writeModuleRemoteClaimId,
@@ -22,119 +26,122 @@ import {
 } from "./lib/module-lock-state";
 import type { Args } from "./lib/args";
 
-function leaseLabel(moduleName: string): string {
-  return `coordination:lease:${moduleName}`;
+const RESOURCE_TYPE = "coordinator-role";
+
+function resourceId(moduleName: string): string {
+  // 与 projector 的 role:coord-<module> ↔ coordination:lease:<module> 映射约定一致
+  // （projector 本身已随 ADR-009 退役，但 resource_id 命名约定保留，dashboard/
+  // status API 按同一约定展示）。
+  return `role:coord-${moduleName}`;
 }
 
-function findLeaseIssueNumber(moduleName: string): number {
-  const label = leaseLabel(moduleName);
-  const result = sh(`gh issue list --state open --label ${JSON.stringify(label)} --json number --limit 1`);
-  if (result.code !== 0) {
-    throw new Error(`gh issue list 失败：${result.stderr || result.stdout}`);
-  }
-  const parsed = JSON.parse(result.stdout || "[]") as Array<{ number: number }>;
-  const first = parsed[0];
-  if (!first) {
-    throw new Error(
-      `找不到 label 为 "${label}" 的 lease issue——先按 module-coordinator SKILL.md 建一个`
+function requireClient(): CoordServiceClient {
+  const client = createCoordServiceClientFromEnv();
+  if (!client) {
+    die(
+      "COORD_SERVICE_URL/COORD_SERVICE_TOKEN 未配置。2026-07-08 起 coord-service (D1) 是" +
+        "协调租约的唯一权威（ADR-009），GitHub issue 评论机制已退役——没有凭据就无法认领/" +
+        "心跳/退位。找人类或 coord-main 领取本会话身份的 token（packages/coord-service/" +
+        "scripts/seed-agents.ts 产出，只显示一次）。"
     );
   }
-  return first.number;
+  return client;
 }
 
-function postComment(issueNumber: number, body: string): void {
-  const result = sh(`gh issue comment ${issueNumber} --body ${JSON.stringify(body)}`);
-  if (result.code !== 0) {
-    throw new Error(`gh issue comment 失败：${result.stderr || result.stdout}`);
-  }
-}
-
-async function dualWriteClaim(moduleName: string, sessionId: string): Promise<void> {
-  const client = createCoordServiceClientFromEnv();
-  if (!client) return;
-  try {
-    const result = await client.claim(`role:${sessionId}`, "coordinator-role");
-    if (result.ok) {
-      const claim = (result.body as { claim?: { id: number } } | undefined)?.claim;
-      if (claim) {
-        writeModuleRemoteClaimId(moduleName, claim.id);
-        log.info(`[coord-service] dual-write claim 成功：id=${claim.id}`);
-      }
-    } else {
-      log.info(`[coord-service] dual-write claim 未成功（status=${result.status}），GitHub 评论不受影响`);
-    }
-  } catch (e) {
-    log.info(`[coord-service] dual-write 网络调用失败（${(e as Error).message}），GitHub 评论不受影响`);
-  }
-}
-
-async function dualWriteHeartbeat(moduleName: string): Promise<void> {
-  const client = createCoordServiceClientFromEnv();
-  const remoteClaimId = readModuleRemoteClaimId(moduleName);
-  if (!client || !remoteClaimId) return;
-  try {
-    const result = await client.heartbeat(remoteClaimId);
-    if (!result.ok) log.info(`[coord-service] dual-write heartbeat 未成功（status=${result.status}）`);
-  } catch (e) {
-    log.info(`[coord-service] dual-write heartbeat 网络调用失败（${(e as Error).message}）`);
-  }
-}
-
-async function dualWriteRelease(moduleName: string): Promise<void> {
-  const client = createCoordServiceClientFromEnv();
-  const remoteClaimId = readModuleRemoteClaimId(moduleName);
-  if (client && remoteClaimId) {
-    try {
-      const result = await client.release(remoteClaimId);
-      if (!result.ok) log.info(`[coord-service] dual-write release 未成功（status=${result.status}）`);
-    } catch (e) {
-      log.info(`[coord-service] dual-write release 网络调用失败（${(e as Error).message}）`);
-    }
-  }
-  clearModuleRemoteClaimId(moduleName);
-}
-
-export function moduleLockStatus(args: Args): void {
+export async function moduleLockStatus(args: Args): Promise<void> {
   const moduleName = req(args, "module");
-  const issueNumber = findLeaseIssueNumber(moduleName);
-  log.info(`lease issue: #${issueNumber}（label ${leaseLabel(moduleName)}）`);
-  const remoteClaimId = readModuleRemoteClaimId(moduleName);
-  if (remoteClaimId) log.info(`coord-service claim id: ${remoteClaimId}`);
-  log.info(`最近评论请看：gh issue view ${issueNumber} --comments`);
+  const client = requireClient();
+  const rid = resourceId(moduleName);
+
+  const outcome = await client.queryActiveClaim(rid);
+  if (outcome.kind === "error") {
+    die(`[coord-service] 查询 ${rid} 失败（HTTP ${outcome.status}）——权威联系不上，无法给出状态。`);
+  }
+  if (outcome.kind === "free") {
+    log.info(`${rid}: 无活跃租约 — 可以 acquire`);
+    return;
+  }
+  const heartbeatAgeMinutes = (Date.now() - new Date(outcome.claim.last_heartbeat_at).getTime()) / 60000;
+  log.info(`${rid}: 由 "${outcome.claim.agent_id}" 持有（claim id=${outcome.claim.id}）`);
+  log.info(`最后心跳：${outcome.claim.last_heartbeat_at}（${heartbeatAgeMinutes.toFixed(1)} 分钟前，ttl=${outcome.claim.ttl_seconds}s）`);
 }
 
 export async function moduleLockAcquire(args: Args): Promise<void> {
   const moduleName = req(args, "module");
   const sessionId = req(args, "session");
-  const issueNumber = findLeaseIssueNumber(moduleName);
-  const at = new Date().toISOString();
+  const client = requireClient();
+  const rid = resourceId(moduleName);
 
-  postComment(issueNumber, `module-coordinator-claim by:${sessionId} at ${at}`);
-  log.ok(`已在 lease issue #${issueNumber} 发认领评论：${sessionId}`);
+  const outcome = await client.queryActiveClaim(rid);
+  if (outcome.kind === "error") {
+    die(
+      `[coord-service] 查询 ${rid} 失败（HTTP ${outcome.status}）——权威联系不上时不假装能协调，` +
+        `拒绝认领（fail-closed，见 ADR-009）。`
+    );
+  }
+  if (outcome.kind === "held" && outcome.claim.agent_id !== sessionId) {
+    const heartbeatAgeMinutes = (Date.now() - new Date(outcome.claim.last_heartbeat_at).getTime()) / 60000;
+    die(
+      `${rid} 已由 "${outcome.claim.agent_id}" 持有（最后心跳 ${heartbeatAgeMinutes.toFixed(1)} 分钟前）。` +
+        `过期租约由服务端 sweeper 自动回收——等它过期，或与持有者协调交接。`
+    );
+  }
 
-  await dualWriteClaim(moduleName, sessionId);
+  const result = await client.claim(rid, RESOURCE_TYPE);
+  if (!result.ok) {
+    if (result.status === 409) {
+      die(`${rid} 认领冲突（另一会话刚抢先一步）——这是 uq_active_claim 原子判定的结果，不要重试抢占。`);
+    }
+    die(`[coord-service] 认领失败（HTTP ${result.status}）。`);
+  }
+  const claim = (result.body as { claim?: { id: number } } | undefined)?.claim;
+  if (!claim) {
+    die("[coord-service] 认领响应缺少 claim id——响应格式异常，视为失败。");
+  }
+  writeModuleRemoteClaimId(moduleName, claim.id);
+  log.ok(`已认领 ${rid}：session=${sessionId}，claim id=${claim.id}`);
 }
 
 export async function moduleLockHeartbeat(args: Args): Promise<void> {
   const moduleName = req(args, "module");
-  const sessionId = req(args, "session");
-  const issueNumber = findLeaseIssueNumber(moduleName);
-  const at = new Date().toISOString();
+  req(args, "session"); // 保持接口不变；身份最终由 token 决定，不信任这里的自称
+  const client = requireClient();
 
-  postComment(issueNumber, `module-coordinator-heartbeat by:${sessionId} at ${at}`);
-  log.ok(`已在 lease issue #${issueNumber} 发心跳评论：${sessionId}`);
-
-  await dualWriteHeartbeat(moduleName);
+  const remoteClaimId = readModuleRemoteClaimId(moduleName);
+  if (!remoteClaimId) {
+    die(`本地没有 ${moduleName} 的 claim id 记录——先 module-lock-acquire，或该租约已在别处释放。`);
+  }
+  const result = await client.heartbeat(remoteClaimId);
+  if (!result.ok) {
+    die(
+      `[coord-service] 心跳失败（HTTP ${result.status}，claim id=${remoteClaimId}）——租约新鲜度由 D1 ` +
+        `sweeper 裁定，心跳持续失败会导致租约被自动过期回收，请尽快排查。`
+    );
+  }
+  log.ok(`心跳已更新：module=${moduleName}，claim id=${remoteClaimId}`);
 }
 
 export async function moduleLockRelease(args: Args): Promise<void> {
   const moduleName = req(args, "module");
-  const sessionId = req(args, "session");
-  const issueNumber = findLeaseIssueNumber(moduleName);
-  const at = new Date().toISOString();
+  req(args, "session");
+  const client = requireClient();
 
-  postComment(issueNumber, `module-coordinator-release by:${sessionId} at ${at}`);
-  log.ok(`已在 lease issue #${issueNumber} 发退位评论：${sessionId}`);
-
-  await dualWriteRelease(moduleName);
+  const remoteClaimId = readModuleRemoteClaimId(moduleName);
+  if (!remoteClaimId) {
+    log.info(`本地没有 ${moduleName} 的 claim id 记录——无可释放的远端租约（可能已释放/已过期）。`);
+    return;
+  }
+  try {
+    const result = await client.release(remoteClaimId);
+    if (!result.ok) {
+      log.err(
+        `[coord-service] 释放未成功（HTTP ${result.status}，claim id=${remoteClaimId}）——服务端 sweeper ` +
+          `会在 ttl 过期后自动回收，本地记录照常清理，但请在总线上留一句，避免下任按"仍被持有"误判。`
+      );
+    } else {
+      log.ok(`已释放：module=${moduleName}，claim id=${remoteClaimId}`);
+    }
+  } finally {
+    clearModuleRemoteClaimId(moduleName);
+  }
 }

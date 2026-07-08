@@ -29,31 +29,26 @@ description: >
 同时被 room 和 invite 域碰）交给 coord-main 仲裁，不要自己抢着改。
 
 ### Step 2 — 唯一性握手（同模块防双协调）
-lease issue label 用 `coordination:lease:<module>`（如 `coordination:lease:collab`），
-其余同顶层 coordinator 的 Step 1（新鲜心跳则禁止启动、否则可认领）。
 
-> **不存在对应 lease issue 时，直接创建，不需要额外的人类授权。**
-> `coordination:lease:<module>` 已经是 `multi-agent-coordination.md` §1.2 登记在案的
-> 规范 label——建这个 issue 是在**执行**已确立的协议，不是**提出**新协议，两者标准
-> 不同：后者（改 registry.yaml schema、新增协调角色种类等）才需要走 coord-architecture
-> 审阅。2026-07-04 夜间的实践里，当晚在 #323 报到过的五个模块 coordinator（room/board/
-> collab/ava/platform；registry.yaml 另注册的 store-admin/survey 当晚未报到，不在此列）
-> 对这一步的处理并不一致（coord-room/coord-platform 直接建了 #351/#352；coord-board/coord-collab/coord-ava
-> 出于谨慎选择不建、退化为沿用旧的 `agent:<id>` 认领机制）——这是本条澄清要消除的
-> 具体分歧，此后统一为"直接建，不必等批准"。
+**2026-07-08 起（ADR-009）**：唯一性由 coord-service (D1) 的 `role:coord-<module>`
+claim 裁定，需要 `COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN` 凭据（没有就先找人类或
+coord-main 领取，无凭据无法担任 module-coordinator）：
+```bash
+pnpm harness module-lock-status --module <name>   # 权威状态：谁持有、心跳多久前
+```
+- **被占且心跳新鲜** → 禁止启动，联系现任或等 sweeper 过期回收。
+- **空闲/已过期** → Step 3 直接认领。
+- ~~lease issue（label `coordination:lease:<module>`）+ 评论仪式~~ 已退役；存量
+  lease issue（#351/#352 等）保留为历史记录，不再读写，也不需要为新模块创建。
 
 ### Step 3 — 认领 + 向 coord-main 报到
-1. lease issue 评论 `module-coordinator-claim by:<id> at <ISO8601>`——推荐直接跑
-   `pnpm harness module-lock-acquire --module <name> --session <id>`（如
-   `--module collab --session coord-collab`），它会自动按
-   `coordination:lease:<module>` label 找到 lease issue 并发这条格式完全一致的
-   评论；手打 `gh issue comment` 依然完全等效，这条命令只是省得每次手拼格式。
-   若设置了 `COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN`（coord-service 迁移
-   Phase 3+，见 `packages/coord-service`），命令还会顺带做一次 opt-in 的
-   dual-write；不设这两个环境变量就是零行为变化，GitHub 评论始终是 Phase 5
-   cutover 之前的唯一权威。
-2. 在总的 coordinator lease issue（`coordination:lease`）下留一条报到评论，声明自己
-   接管哪个模块、当前 areas 里有哪些在途 issue/PR——coord-main 靠这个知道你存在。
+1. `pnpm harness module-lock-acquire --module <name> --session <id>`（如
+   `--module collab --session coord-collab`）——直接对 D1 做原子认领
+   （uq_active_claim 唯一索引判定，两个会话抢恰好一个成功），不再发任何
+   GitHub 评论。认领冲突（409）说明别人刚抢先，不要重试抢占。
+2. 在协调叙述 issue（如 #323）下留一条人类可读的报到评论，声明自己接管哪个模块、
+   当前 areas 里有哪些在途 issue/PR——coord-main 靠这个知道你存在（叙述层，
+   非权威；权威在 D1）。
 
 ### Step 4 — 冷启动读总线（限定 areas）
 ```bash
@@ -86,17 +81,14 @@ gh pr list --state open --json number,headRefName,baseRefName,statusCheckRollup
 停滞（如 worker 认领锁 6h 无进展），必须先在总线上贴出带明确时限的通牒，窗口到期仍无
 可验证进展才回收重分派，不能只是"注意到了"就默默等，也不能不打招呼直接回收（先例：
 coord-board 对 #282 给 2 小时窗口）。
-心跳评论格式 `module-coordinator-heartbeat by:<id> at <ISO8601>`——推荐直接跑
-`pnpm harness module-lock-heartbeat --module <name> --session <id>`，格式完全一致；
-手打 `gh issue comment` 依然完全等效。这个格式同时是 `packages/coord-service` 的
-projector 用来区分"这是模块 coordinator 的心跳"还是"这是 coord-main 的心跳"
-（后者是不带 `by:<id>` 前缀的 `coordinator-heartbeat at <ISO8601>`）的唯一依据——
-两者混用会导致 dual-write 场景下 projector 投影出错误格式的评论。
+心跳：每个 L2 tick 跑 `pnpm harness module-lock-heartbeat --module <name>
+--session <id>`（写 D1，新鲜度由服务端 sweeper 按 ttl 裁定；命令报错 = 租约异常，
+必须处理不能吞掉）。~~lease issue 心跳评论~~ 已退役（ADR-009）。
 
 ## 退位 / 抢占
-同顶层 coordinator：`module-coordinator-release`/`module-coordinator-takeover` +
-`<ISO8601>`，写在自己模块的 lease issue 上；同时在总 lease issue 留一条注销/交接评论。
-退位评论可以用 `pnpm harness module-lock-release --module <name> --session <id>`。
+同顶层 coordinator：退位跑 `pnpm harness module-lock-release --module <name>
+--session <id>` 释放 D1 租约；抢占先 `module-lock-status` 确认持有者心跳已过期再
+acquire。交接要点在协调叙述 issue 留一条人类可读评论（叙述层，非权威）。
 
 ## 边界（module-coordinator 不做什么）
 - **不合并 PR**（唯一硬边界）——全绿后转交 coord-main。
