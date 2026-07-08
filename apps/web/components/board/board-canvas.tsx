@@ -462,6 +462,14 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const clipboard = useRef<Item[]>([]); // 应用内剪贴板（F08）
   const undoStack = useRef<Op[]>([]); // F09
   const redoStack = useRef<Op[]>([]);
+  // p7:F01（uc-board-header-010 主流程 2）：撤销/重做按钮要反映"当前是否有可撤销/可重做
+  // 记录"并禁用相应按钮——undoStack/redoStack 是 ref，改变不会触发重渲染，光看 ref.length
+  // 算不出实时禁用态。加一个纯计数器，每次栈变化时 +1 强制重渲染一次，渲染时机到了再读
+  // ref 的最新长度即可，不需要真的把栈本身搬进 state。
+  const [historyTick, setHistoryTick] = useState(0);
+  const bumpHistory = useCallback(() => setHistoryTick((t) => t + 1), []);
+  const canUndo = useMemo(() => undoStack.current.length > 0, [historyTick]);
+  const canRedo = useMemo(() => redoStack.current.length > 0, [historyTick]);
   // 视口快照（CanvasViewport 上报），供 fabric viewportTransform 镜像与测试 API 坐标换算。
   const [vp, setVp] = useState<ViewportState>({ tx: 0, ty: 0, scale: 1 });
   // fabric 拖拽进行中（onOperating 回调驱动）：轮询同步在拖拽中不合并服务端快照。
@@ -807,6 +815,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   function recordOp(op: Op) {
     undoStack.current.push(op);
     redoStack.current = [];
+    bumpHistory();
   }
 
   // ── fabric 渲染层回调（F13）：手势在 fabric.Canvas 上发生，这里转成既有命令/落库路径 ──
@@ -823,6 +832,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       setSelected(new Set(moves.map((m) => m.id)));
       undoStack.current.push({ kind: "move", moves });
       redoStack.current = [];
+      bumpHistory();
       await apiMove(moves, false);
     },
     [apiMove],
@@ -835,6 +845,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       setSelected(new Set([resize.id]));
       undoStack.current.push({ kind: "resize", resize });
       redoStack.current = [];
+      bumpHistory();
       await apiResize(resize.id, resize.to);
     },
     [apiResize],
@@ -1569,6 +1580,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     else if (op.kind === "resize") await apiResize(op.resize.id, op.resize.from);
     else await apiMove(op.moves, true);
     redoStack.current.push(op);
+    bumpHistory();
     setSelected(new Set());
     await load();
   }, [canEdit, apiDelete, apiRestore, apiMove, apiResize, load]);
@@ -1582,6 +1594,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     else if (op.kind === "resize") await apiResize(op.resize.id, op.resize.to);
     else await apiMove(op.moves, false);
     undoStack.current.push(op);
+    bumpHistory();
     setSelected(new Set());
     await load();
   }, [canEdit, apiDelete, apiRestore, apiMove, apiResize, load]);
@@ -1713,10 +1726,26 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             </BoardMenuButton>
 
             <div className="mx-1 h-5 w-px bg-border" />
-            <Button data-testid="undo" size="icon" variant="ghost" title="撤销" aria-label="撤销" onClick={() => void undo()}>
+            <Button
+              data-testid="undo"
+              size="icon"
+              variant="ghost"
+              title="撤销"
+              aria-label="撤销"
+              disabled={!canUndo}
+              onClick={() => void undo()}
+            >
               <Undo2 className="h-4 w-4" />
             </Button>
-            <Button data-testid="redo" size="icon" variant="ghost" title="重做" aria-label="重做" onClick={() => void redo()}>
+            <Button
+              data-testid="redo"
+              size="icon"
+              variant="ghost"
+              title="重做"
+              aria-label="重做"
+              disabled={!canRedo}
+              onClick={() => void redo()}
+            >
               <Redo2 className="h-4 w-4" />
             </Button>
             <span data-testid="selection-count" className="ml-1 text-xs text-muted-foreground">

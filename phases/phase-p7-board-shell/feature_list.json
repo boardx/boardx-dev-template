@@ -7,16 +7,16 @@
       "area": "board-header",
       "title": "Board Header 框架（状态/授权入口/返回/同步指示/撤销重做）",
       "user_visible_behavior": "打开 Board 顶部显示 Header：白板标题、当前用户角色对应的可用入口（无权项隐藏/禁用）、返回按钮（回到所属房间或列表）、同步状态指示（同步中/已保存/离线）、撤销/重做按钮；返回时安全离开当前白板。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-WEB",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-header.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-07-07T23:38:03.126Z",
       "notes": "uc-board-header-001 + 008 + 009 + 010。依赖 p5 打开壳与 p6 撤销重做栈（F09）；同步指示在 p8 接真实同步前显示本地保存态。",
       "source_use_cases": [
         "phases/requirements/board/header/uc-board-header-001-use-board-header.md",

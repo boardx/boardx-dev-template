@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -198,12 +199,24 @@ export default function BoardPage() {
   return (
     <div className="relative flex h-[80vh] flex-col">
       <BoardHelpGuide />
-      {/* Header 占位（真实 Header 功能在 p7） */}
       <header
         data-testid="board-header"
         className="flex items-center justify-between border-b bg-card px-4 py-2.5"
       >
         <div className="flex items-center gap-2">
+          {/* p7:F01（uc-board-header-008）：返回房间列表页。备份保存中不可离开的检查留给
+              F08（备份恢复）落地时接入——目前没有备份能力，没有东西可以阻塞，先只做
+              导航本身，不假装已经有备份感知。 */}
+          <Button
+            data-testid="board-back"
+            size="icon"
+            variant="ghost"
+            title="返回"
+            aria-label="返回"
+            onClick={() => router.push(board?.room_id ? `/rooms/${board.room_id}/boards` : "/boards")}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <h1 data-testid="board-title" className="text-base font-semibold text-foreground">
             {board?.name}
           </h1>
