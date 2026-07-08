@@ -321,7 +321,7 @@ export default function BoardPage() {
 
   if (loading) {
     return (
-      <div data-testid="loading" className="flex h-[60vh] animate-pulse flex-col gap-4 p-6">
+      <div data-testid="loading" className="flex h-screen animate-pulse flex-col gap-4 p-6">
         <div className="h-10 w-1/3 rounded bg-muted" />
         <div className="flex-1 rounded-lg bg-muted" />
       </div>
@@ -330,7 +330,7 @@ export default function BoardPage() {
 
   if (error) {
     return (
-      <div className="flex h-[60vh] flex-col items-center justify-center gap-3">
+      <div className="flex h-screen flex-col items-center justify-center gap-3">
         <p role="alert" data-testid="err" className="text-sm text-destructive">
           {error}
         </p>
@@ -341,7 +341,7 @@ export default function BoardPage() {
   const canEdit = role === "owner" || role === "editor";
 
   return (
-    <div className="relative flex h-[80vh] flex-col">
+    <div className="relative flex h-screen flex-col overflow-hidden">
       <BoardHelpGuide />
       <header
         data-testid="board-header"

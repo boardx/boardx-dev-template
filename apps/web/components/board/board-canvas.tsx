@@ -2256,7 +2256,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   }, [items, selected, deleteSelected, moveSelected, pasteClipboard, undo, redo, canEdit]);
 
   return (
-    <div className="relative flex flex-1 flex-col" onMouseMove={publishLocalCursor} onMouseLeave={clearLocalCursor}>
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden" onMouseMove={publishLocalCursor} onMouseLeave={clearLocalCursor}>
       {/* Board Menu：编辑者可见的工具入口；不可用能力保留禁用状态，避免误导为已实现。 */}
       {canEdit && (
         <div className="relative border-b bg-card px-3 py-1.5">
