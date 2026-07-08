@@ -149,6 +149,16 @@ export function RoomListPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
+  // 新建房间弹窗：ESC 关闭（标准弹窗体验）。
+  useEffect(() => {
+    if (!showForm) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setShowForm(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showForm]);
+
   // uc-rr-004（p20/F05）：星标即时切换（乐观更新 + 网络失败回滚）。
   async function toggleFav(id: Room["id"]) {
     const key = String(id);
@@ -224,7 +234,7 @@ export function RoomListPanel() {
           size="icon"
           aria-label="New room"
           className="h-7 w-7"
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => setShowForm(true)}
         >
           <Plus className="h-4 w-4" />
         </Button>
@@ -252,67 +262,108 @@ export function RoomListPanel() {
         </div>
       )}
 
+      {/* p22：新建房间用居中弹窗（对齐 RoomDangerZoneSection 的弹窗风格），
+          不再是左栏内联折叠表单。点遮罩/X/取消关闭；testid 沿用 p20 命名（show-create
+          打开，room-name、room-create-visibility、create 均在弹窗内），room-rr-002 契约不破。 */}
       {showForm && (
-        <form
-          onSubmit={create}
-          data-testid="room-list-create-form"
-          className="mx-4 mt-3 flex flex-col gap-2.5 rounded-lg border border-border bg-surface-1 p-3"
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-surface-dark-2/40 p-6"
+          onClick={() => setShowForm(false)}
         >
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="room-list-name">Room name</Label>
-            <Input
-              id="room-list-name"
-              data-testid="room-name"
-              placeholder="My room"
-              value={name}
-              aria-invalid={name.length > 0 && nameTooShort}
-              onChange={(e) => setName(e.target.value)}
-            />
-            {name.length > 0 && nameTooShort && (
-              <p role="alert" data-testid="room-name-hint" className="text-xs text-destructive">
-                Room name must be at least 3 characters
+          <form
+            onSubmit={create}
+            role="dialog"
+            aria-modal="true"
+            aria-label="New room"
+            data-testid="room-create-modal"
+            className="flex w-full max-w-md flex-col gap-4 rounded-16 border border-border bg-card p-6 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-15 font-semibold text-foreground">New room</h2>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="关闭"
+                data-testid="room-create-close"
+                className="h-7 w-7"
+                onClick={() => setShowForm(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="room-list-name">Room name</Label>
+              <Input
+                id="room-list-name"
+                data-testid="room-name"
+                placeholder="My room"
+                autoFocus
+                value={name}
+                aria-invalid={name.length > 0 && nameTooShort}
+                onChange={(e) => setName(e.target.value)}
+              />
+              {name.length > 0 && nameTooShort && (
+                <p role="alert" data-testid="room-name-hint" className="text-xs text-destructive">
+                  Room name must be at least 3 characters
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label>Visibility</Label>
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Visibility">
+                {VISIBILITY_OPTIONS.map((opt) => {
+                  const selected = visibility === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      data-testid={`room-create-visibility-${opt.value}`}
+                      onClick={() => setVisibility(opt.value)}
+                      className={cn(
+                        "flex flex-col items-start gap-0.5 rounded-10 border p-2.5 text-left transition-colors duration-200",
+                        selected
+                          ? "border-foreground bg-background ring-1 ring-ring"
+                          : "border-border text-muted-foreground hover:border-border-strong",
+                      )}
+                    >
+                      <span className="text-13 font-medium text-foreground">
+                        {opt.icon} {opt.title}
+                      </span>
+                      <span className="text-xs text-muted-foreground">{opt.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {createError && (
+              <p role="alert" data-testid="err-create" className="text-xs text-destructive">
+                {createError}
               </p>
             )}
-          </div>
-          <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Visibility">
-            {VISIBILITY_OPTIONS.map((opt) => {
-              const selected = visibility === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  data-testid={`room-create-visibility-${opt.value}`}
-                  onClick={() => setVisibility(opt.value)}
-                  className={cn(
-                    "rounded-md border p-1.5 text-left text-xs font-medium transition-colors duration-200",
-                    selected
-                      ? "border-foreground bg-background ring-1 ring-ring"
-                      : "border-border text-muted-foreground hover:border-border-strong",
-                  )}
-                  title={opt.desc}
-                >
-                  {opt.icon} {opt.title}
-                </button>
-              );
-            })}
-          </div>
-          {createError && (
-            <p role="alert" data-testid="err-create" className="text-xs text-destructive">
-              {createError}
-            </p>
-          )}
-          <Button
-            data-testid="create"
-            type="submit"
-            size="sm"
-            disabled={nameTooShort}
-            className="self-start"
-          >
-            Create
-          </Button>
-        </form>
+
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                data-testid="room-create-cancel"
+                onClick={() => setShowForm(false)}
+              >
+                Cancel
+              </Button>
+              <Button data-testid="create" type="submit" size="sm" disabled={nameTooShort}>
+                Create
+              </Button>
+            </div>
+          </form>
+        </div>
       )}
 
       <div className="mt-3 px-4">
