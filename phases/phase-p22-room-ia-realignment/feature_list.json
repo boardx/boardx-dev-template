@@ -4,18 +4,90 @@
     {
       "id": "F01",
       "priority": 1,
-      "area": "orchestrator",
-      "title": "示例:健康检查端点",
-      "user_visible_behavior": "GET /api/health 返回 200 且 body 为 {\"ok\": true}",
+      "area": "room",
+      "title": "Room 主从（master-detail）双栏布局壳",
+      "user_visible_behavior": "进入 Rooms 应用后，内容区是左右双栏（data-testid=rooms-two-pane）：左栏（data-testid=room-list-panel，宽 288px）常驻显示房间列表（搜索 data-testid=room-list-search、Favorites 筛选 data-testid=room-list-favorites-filter、新建 data-testid=room-list-new，列表项 data-testid=room-list-item-<id> 含收藏星标与可见性图标），右栏渲染当前选中房间的详情（面包屑/名称/tab/内容）；未选中任何房间时右栏展示空态（data-testid=rooms-empty-state：'选择一个房间查看详情'）；点击左栏另一房间时左栏不消失、保持常驻，右栏内容随之替换且该房间列表项高亮（data-active=true）；本轮不做窄屏/移动端响应式降级（人类已确认此范围裁剪）。",
+      "design_ref": "人类截图（Rooms 应用左右双栏）+ prototype 六 tab 结构；已由 ui-prototyper 用真实数据验证（apps/web/app/(app)/rooms/layout.tsx + components/rooms/room-list-panel.tsx）",
       "status": "not_started",
       "sprint": null,
       "owner": null,
       "capability": "CAP-WEB",
+      "depends_on": [],
+      "wave": 0,
       "verification": [
-        "curl -sf http://localhost:3000/api/health | jq -e '.ok == true'"
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-012-two-pane-shell.spec.ts",
+        "git cat-file -e HEAD:phases/phase-p22-room-ia-realignment/sprints/sprint-01/evidence/F01.verify.log"
       ],
-      "evidence": "",
-      "notes": "把示例替换成你自己的功能。粒度=一次会话能完成。"
+      "evidence": "evidence/F01.verify.log",
+      "notes": "uc 见 requirements/00-overview.md 优先级0。UI 原型已在 apps/web 落地（真实组件+真实 API，非 mock），本 feature 的工作是补齐 e2e 验证契约、核实原型代码质量（例如 room-list-panel.tsx 的收藏/搜索状态与 p20 F02/F05 的既有 API 语义一致）、按需微调。地基 feature，F02/F03 均依赖右栏渲染出的既有 rooms/[id] 结构（间接依赖，非阻塞——F02/F03 的组件本身嵌套在 rooms/[id] 下，不直接依赖这层新壳，可与 F01 并行开发但建议 F01 先行验证壳本身不破坏既有 tab 内容）。"
+    },
+    {
+      "id": "F02",
+      "priority": 2,
+      "area": "room-files",
+      "title": "Room Files 双入口职责边界（Files tab 权威 + Chat 面板轻量引用）",
+      "user_visible_behavior": "聊天工作区左栏 Room Files 面板（components/room-files/room-files-panel.tsx）头部新增'查看全部 →'链接（data-testid=room-files-panel-open-files-tab）跳转到该房间的 Files tab；面板空文件列表时的提示文案里'前往 Files tab' 是真正可点击的链接（不再是纯文字）；Files tab（房间级文件库）继续保持全功能（搜索/线程过滤/预览/删除），面板保持轻量（勾选 AI 上下文+简单上传，无搜索/预览/删除）——这个职责边界在代码注释中显式记录为产品决策，不是能力缺失。",
+      "design_ref": "调研报告优先级1；已在 components/room-files/room-files-panel.tsx 落地（非 mock，真实组件修改）",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-FILE",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-013-files-panel-entry.spec.ts",
+        "git cat-file -e HEAD:phases/phase-p22-room-ia-realignment/sprints/sprint-01/evidence/F02.verify.log"
+      ],
+      "evidence": "evidence/F02.verify.log",
+      "notes": "uc 见 requirements/00-overview.md 优先级1。与 F01 并行安全（不同文件：room-files-panel.tsx vs rooms/layout.tsx + room-list-panel.tsx）。"
+    },
+    {
+      "id": "F03",
+      "priority": 2,
+      "area": "room",
+      "title": "Studio 独立顶级 tab（房间详情六 tab 结构）",
+      "user_visible_behavior": "房间详情 tab 导航（rooms/[id]/layout.tsx 的 TABS）恢复为六项：Boards/Members/Files/Chat/Survey/Studio（data-testid=room-tab-studio）；点击 Studio tab 进入独立落地页（data-testid=room-studio-tab，路由 rooms/[id]/studio），展示'本房间近期 Studio 产物'卡片列表（mock 数据，data-testid=room-studio-artifact-list，每项 data-testid=room-studio-artifact-<id>）与'在聊天工作区打开 Studio →'跳转入口（data-testid=room-studio-open-in-chat）；人类已确认本轮维持这个轻量落地页范围，不做成独立生成工作台（真实生成能力仍在聊天工作区三栏内的 RoomStudioPanel）。",
+      "design_ref": "人类截图六 tab 证据 + prototype roomTabDefs（Studio isRoute:true）；已在 rooms/[id]/layout.tsx + rooms/[id]/studio/page.tsx 落地（mock 数据，据 ui-signoff 交付形态说明）",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-014-studio-tab.spec.ts",
+        "git cat-file -e HEAD:phases/phase-p22-room-ia-realignment/sprints/sprint-01/evidence/F03.verify.log"
+      ],
+      "evidence": "evidence/F03.verify.log",
+      "notes": "uc 见 requirements/00-overview.md 优先级2（人类已确认维持轻量落地页范围，见 ui-signoff.md 人类确认意见）。产物列表为 mock，不接真实 Studio 生成记录——本 feature 只交付 tab 可发现性，不做真实数据源（后续如需真实产物列表，另立 feature，依赖 p12 studio-presentations 的 artifacts 数据）。"
+    },
+    {
+      "id": "F04",
+      "priority": 3,
+      "area": "room",
+      "title": "Board 详情页面包屑回退至所属房间",
+      "user_visible_behavior": "打开一块房间白板（/boards/[id]）后，页面顶部展示面包屑或返回链接（data-testid=board-back-to-room）指回其所属房间的 Boards tab（/rooms/[roomId]/boards）；点击后正确导航回该房间（非全局 /boards 列表）；此前只有删除/移动白板成功后才会强制跳转，浏览场景下用户完全没有回退路径——本 feature 补上这条历史缺口（原型与 oldcode 均未解决，人类已确认本轮一起做）。",
+      "design_ref": "调研报告优先级3（评估后确认这轮做）；boards.room_id 外键已存在（packages/data/migrations/007_board.sql），本 feature 只补前端导航元素，不改数据模型",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-015-board-breadcrumb.spec.ts",
+        "git cat-file -e HEAD:phases/phase-p22-room-ia-realignment/sprints/sprint-01/evidence/F04.verify.log"
+      ],
+      "evidence": "evidence/F04.verify.log",
+      "notes": "uc 见 requirements/00-overview.md 优先级3。尚未实现（UI 原型阶段未动，见 ui-signoff.md 核心改动说明第4条），是本阶段唯一的全新开发工作，其余三个 feature 是把已落地的原型代码补齐验证契约。需要 boardId→roomId 的查询（GET /api/boards/[id] 若已含 room_id 字段可直接用，否则查 packages/data/src/boards.ts）。"
     }
   ]
 }
