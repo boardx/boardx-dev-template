@@ -15,3 +15,13 @@ describe("public status endpoint", () => {
     expect(typeof body.generated_at).toBe("string");
   });
 });
+
+describe("root endpoint", () => {
+  it("returns a human-friendly service description instead of not_found", async () => {
+    const res = await SELF.fetch("http://coord-service.local/");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { service: string; endpoints: Record<string, string> };
+    expect(body.service).toBe("coord-service");
+    expect(body.endpoints["GET /status"]).toBeTruthy();
+  });
+});
