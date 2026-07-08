@@ -187,6 +187,54 @@ export function syncItemsIntoDoc(doc: Y.Doc, items: CollabItem[]): void {
   }, LOCAL_ORIGIN);
 }
 
+/**
+ * 加入房间（join-sync）完成时的"本地编辑优先"补写（issue #414 残留根因的修复点）。
+ *
+ * 背景：item **创建**走 upsertItem 直写 doc（立即 bump _rev），但**样式类编辑**
+ * （改色/字体/字号/斜体/对齐等，board-canvas 的 applyColors 通道）只通过常规的
+ * `[items]` effect 调 syncItemsIntoDoc 落 doc——这条常规通道在 join-sync 完成前
+ * 是关着的（joinSyncedRef 门禁本身是必要的，防止在还没跟其它在线客户端换过
+ * sync-response 前就抢先造出互不相识的 Y.Map 结构，见 encodeFullState 注释）。
+ *
+ * 于是会出现这个真实竞态：item 创建时已经把 doc 的 _rev 顶到 >0，随后用户在
+ * join-sync 完成前连续做了几次样式编辑（itemsRef.current 已经是最新值，只是
+ * 因为门禁还没来得及走常规通道落 doc）；join-sync 一旦完成，maybeSeed() 用
+ * seedItems 把 itemsRef.current 补进 doc——但 seedItems 的"_rev>0 就跳过"规则
+ * 是为了保护"REST 快照相对已连接客户端更晚到达"的场景（该场景下 doc 里的值确实
+ * 更新），套用在这里恰好反了：itemsRef.current 才是真正最新的值，却被当成过期
+ * 快照挡在外面，随后 mergeRemoteItems 把 doc 里那份还没同步到样式编辑的旧值合并
+ * 回 React state，样式编辑在 UI 上被回滚（widget-text.spec.ts:40 间歇失败、
+ * issue #414 复测 1/6 概率复现的真实根因——独立于 #456 修的 REST poll/load 轴，
+ * 因为这里从头到尾没有任何 REST 响应参与，纯粹是 doc 内部的 _rev 裁决误伤）。
+ *
+ * 修复：join-sync 完成时，在 seedItems 之外，对 itemsRef.current 里"和 doc 当前
+ * 值有真实字段差异"的条目做一次无条件覆盖式补写——不看 _rev（这里的 items 已经
+ * 是本地真值，不是可能滞后的 REST 快照，没有理由被 _rev 门禁拦下），也不删除任何
+ * doc 里存在但 items 没有的条目（这点和 syncItemsIntoDoc 不同：join 时机上还不能
+ * 假定"items 没有的 id 就该删"，可能是对等端已经同步进来、自己 REST 尚未来得及
+ * 带到的条目）。同一字段真的被并发编辑冲突时，仍是普通的 Yjs Y.Map 写入，由 Yjs
+ * 内置 LWW 裁决——和常规编辑路径的冲突处理方式一致，不是新引入的风险。
+ */
+export function reconcileLocalEdits(doc: Y.Doc, items: CollabItem[]): void {
+  const map = itemsMap(doc);
+  doc.transact(() => {
+    for (const item of items) {
+      const im = map.get(item.id) as Y.Map<unknown> | undefined;
+      if (!im) continue; // 新 id 交给 seedItems 负责创建，这里只补已存在条目的差异字段
+      let changed = false;
+      for (const key of FIELD_KEYS) {
+        const next = item[key] ?? null;
+        const current = im.get(key) ?? null;
+        if (current !== next) {
+          im.set(key, next);
+          changed = true;
+        }
+      }
+      if (changed) bumpRev(im);
+    }
+  }, LOCAL_ORIGIN);
+}
+
 /** 浏览器与 Node 都能用的 base64 编解码（不依赖 Buffer，Yjs update 是 Uint8Array）。 */
 export function encodeUpdate(update: Uint8Array): string {
   let binary = "";
