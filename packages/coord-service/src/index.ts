@@ -1,6 +1,7 @@
 import { Router } from "./router";
 import { claimResource, heartbeatRoute, queryClaims, releaseRoute } from "./routes/claims";
 import { submitVerdict } from "./routes/verdicts";
+import { submitEvent } from "./routes/events";
 import { publicStatus } from "./routes/status";
 import { sweepStaleClaims } from "./cron/sweeper";
 import { runProjector } from "./cron/projector";
@@ -22,6 +23,7 @@ router.get("/", async () =>
       "POST /claims/:id/heartbeat": "refresh lease (Bearer token)",
       "POST /claims/:id/release": "release lease (Bearer token)",
       "POST /verdicts": "record review verdict (Bearer token)",
+      "POST /events": "record a narrative event: cycle-plan | cycle-result | andon (Bearer token)",
     },
   })
 );
@@ -30,6 +32,7 @@ router.get("/claims", queryClaims);
 router.post("/claims/:id/heartbeat", heartbeatRoute);
 router.post("/claims/:id/release", releaseRoute);
 router.post("/verdicts", submitVerdict);
+router.post("/events", submitEvent);
 router.get("/status", publicStatus);
 
 export default {

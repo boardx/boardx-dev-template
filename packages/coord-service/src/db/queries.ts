@@ -138,6 +138,26 @@ export async function insertEvent(
     .run();
 }
 
+/** 同 insertEvent，但用 RETURNING * 回读写入的整行——供 POST /events 把创建的
+ *  叙述事件回给调用方（claim 生命周期事件用 insertEvent 即可，不需要回读）。 */
+export async function insertEventReturning(
+  db: D1Database,
+  params: { type: EventType; resourceId: string; agentId: string; payload?: unknown; at: string }
+): Promise<EventRow> {
+  const row = await db
+    .prepare("INSERT INTO events (type, resource_id, agent_id, payload, at) VALUES (?, ?, ?, ?, ?) RETURNING *")
+    .bind(
+      params.type,
+      params.resourceId,
+      params.agentId,
+      params.payload === undefined ? null : JSON.stringify(params.payload),
+      params.at
+    )
+    .first<EventRow>();
+  if (!row) throw new Error("insert_event_no_row_returned");
+  return row;
+}
+
 export async function listRecentEvents(db: D1Database, limit: number): Promise<EventRow[]> {
   const { results } = await db
     .prepare("SELECT * FROM events ORDER BY id DESC LIMIT ?")
