@@ -26,6 +26,26 @@ export type CollabItem = { id: string } & CollabItemFields;
 
 const FIELD_KEYS: (keyof CollabItemFields)[] = ["x", "y", "w", "h", "text", "type", "color"];
 
+// issue #432：条目级逻辑修订号（内部字段，readItems 不暴露）。
+// 语义：_rev 只统计"有意编辑"——upsertItem 的直接写入、以及 syncItemsIntoDoc 对
+// **已存在**条目的字段更新（说明 React state 相对 doc 有真实变化）。
+// 反之，syncItemsIntoDoc 首次把一个 doc 不认识的 id 镜像进来（可能是过期 poll 快照
+// 经 setItems → useEffect 带进来的）**不**记 rev——它只是"临时占位"，权威性不如
+// 后续 seedItems 带来的 REST 快照。seedItems 据此裁决：_rev===0（含旧数据缺失
+// _rev 的情况，向后兼容按 0 处理）的条目可以被权威快照覆盖；_rev>0 的条目有过
+// 有意编辑，跳过不覆盖（保留"不打断在飞编辑"的原语义）。
+// 并发场景下 _rev 本身也是 Y.Map 字段，由 Yjs LWW 裁决，无需全局协调。
+const REV_KEY = "_rev";
+
+function revOf(im: Y.Map<unknown>): number {
+  const raw = im.get(REV_KEY);
+  return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
+}
+
+function bumpRev(im: Y.Map<unknown>): void {
+  im.set(REV_KEY, revOf(im) + 1);
+}
+
 // transact 时传入的 origin：区分"这次变更是本地发起的（需要广播出去）"还是
 // "这次变更是应用一个远端传来的 update（不能再广播回去，否则死循环）"。
 export const LOCAL_ORIGIN = Symbol("collab:local");
@@ -39,12 +59,35 @@ export function itemsMap(doc: Y.Doc): Y.Map<Y.Map<unknown>> {
   return doc.getMap("items");
 }
 
-/** 用 REST 拉到的权威快照初始化本地 doc；已存在的 key 不覆盖（避免打断已经在飞的本地编辑）。 */
+/**
+ * 用 REST 拉到的权威快照初始化本地 doc。
+ *
+ * 覆盖裁决（issue #432 的根治点）：
+ * - id 不存在 → 新建（原行为）。
+ * - id 已存在且 _rev > 0 → 跳过（该条目有过本地/远端的**有意编辑**，REST 快照
+ *   可能落后于这些编辑，不能覆盖——保留"不打断在飞编辑"的原语义）。
+ * - id 已存在但 _rev === 0（含无 _rev 的旧条目）→ 用快照覆盖差异字段。这类条目
+ *   只被 syncItemsIntoDoc 的"新 id 镜像"占位过（典型来源：poll() 在创建与首次
+ *   PATCH 之间 GET 到的过期快照），而 seedItems 的调用方拿到的是更新的 REST
+ *   权威快照，覆盖才能让正确值收敛，否则过期值永久卡死（#432 的原始病灶就是
+ *   这里对已存在 id 无脑 continue）。
+ * 覆盖时只写真正不同的字段（幂等，不产生空 update 广播），且不 bump _rev——
+ * seed 不是编辑，多次 seed 之间仍按"最新快照胜出"。
+ */
 export function seedItems(doc: Y.Doc, items: CollabItem[]): void {
   const map = itemsMap(doc);
   doc.transact(() => {
     for (const item of items) {
-      if (map.has(item.id)) continue;
+      const existing = map.get(item.id) as Y.Map<unknown> | undefined;
+      if (existing) {
+        if (revOf(existing) > 0) continue; // 有过有意编辑，权威快照也不覆盖
+        for (const key of FIELD_KEYS) {
+          const value = item[key];
+          if (value === undefined) continue;
+          if (existing.get(key) !== value) existing.set(key, value);
+        }
+        continue;
+      }
       const im = new Y.Map<unknown>();
       for (const key of FIELD_KEYS) {
         if (item[key] !== undefined) im.set(key, item[key]);
@@ -54,7 +97,11 @@ export function seedItems(doc: Y.Doc, items: CollabItem[]): void {
   }, LOCAL_ORIGIN);
 }
 
-/** 把一个 item 的（部分）字段写入 doc；item 不存在则新建。 */
+/**
+ * 把一个 item 的（部分）字段写入 doc；item 不存在则新建。
+ * 这是"有意编辑"通道（拖动/改色/board-canvas 的直写缓解都走这里）：
+ * 实际写入任何字段时 bump _rev，此后 seedItems 不会再用 REST 快照覆盖该条目。
+ */
 export function upsertItem(doc: Y.Doc, id: string, fields: Partial<CollabItemFields>, origin: unknown = LOCAL_ORIGIN): void {
   const map = itemsMap(doc);
   doc.transact(() => {
@@ -63,10 +110,15 @@ export function upsertItem(doc: Y.Doc, id: string, fields: Partial<CollabItemFie
       im = new Y.Map<unknown>();
       map.set(id, im);
     }
+    let wrote = false;
     for (const key of FIELD_KEYS) {
       const value = fields[key];
-      if (value !== undefined) im.set(key, value);
+      if (value !== undefined) {
+        im.set(key, value);
+        wrote = true;
+      }
     }
+    if (wrote) bumpRev(im);
   }, origin);
 }
 
@@ -76,7 +128,7 @@ export function removeItem(doc: Y.Doc, id: string, origin: unknown = LOCAL_ORIGI
   }, origin);
 }
 
-/** 把 doc 当前状态摊平成普通数组，供 React state 渲染。 */
+/** 把 doc 当前状态摊平成普通数组，供 React state 渲染。只挑 FIELD_KEYS 白名单字段，内部字段（_rev）不外泄。 */
 export function readItems(doc: Y.Doc): CollabItem[] {
   const out: CollabItem[] = [];
   itemsMap(doc).forEach((im, id) => {
@@ -107,14 +159,27 @@ export function syncItemsIntoDoc(doc: Y.Doc, items: CollabItem[]): void {
     for (const item of items) {
       const im = map.get(item.id) as Y.Map<unknown> | undefined;
       if (!im) {
-        upsertItem(doc, item.id, item, LOCAL_ORIGIN);
+        // doc 里第一次出现这个 id：只是把 React state 镜像进来占位，state 里这份
+        // 数据可能来自过期的 poll 快照（issue #432 的入侵路径），所以**不** bump
+        // _rev——保持 rev=0，让后续 seedItems 的权威 REST 快照有权覆盖它。
+        const created = new Y.Map<unknown>();
+        for (const key of FIELD_KEYS) {
+          if (item[key] !== undefined) created.set(key, item[key]);
+        }
+        map.set(item.id, created);
         continue;
       }
+      // 已存在条目的字段更新 = React state 相对 doc 有真实变化 = 有意编辑，bump _rev。
+      let changed = false;
       for (const key of FIELD_KEYS) {
         const next = item[key] ?? null;
         const current = im.get(key) ?? null;
-        if (current !== next) im.set(key, next);
+        if (current !== next) {
+          im.set(key, next);
+          changed = true;
+        }
       }
+      if (changed) bumpRev(im);
     }
     for (const key of Array.from(map.keys())) {
       if (!seen.has(key)) map.delete(key);
