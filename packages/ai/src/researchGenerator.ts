@@ -22,10 +22,24 @@ export interface ResearchTimelineItem {
   task: string;
   status: "queued" | "running" | "complete";
 }
+// p18-F05：报告双模板。researchType 是判别字段——"market" 展示 Executive summary /
+// Key findings / Recommendation；"user-research" 展示 Summary / Personas / Top pain
+// points / Opportunities。两套类型专属字段互斥存在（market 报告没有 personas 等，反之
+// 亦然），title/conclusion 通用（conclusion 语义随类型分别对应 Executive summary 或
+// Summary），sections 保留作为两种类型共享的兜底展示（对应"次要细节"，不是主字段）。
+export type ResearchType = "market" | "user-research";
 export interface ResearchReport {
+  researchType: ResearchType;
   title: string;
   conclusion: string;
   sections: Array<{ heading: string; bullets: string[] }>;
+  // market 专属
+  keyFindings?: string[];
+  recommendation?: string;
+  // user-research 专属
+  personas?: string[];
+  topPainPoints?: string[];
+  opportunities?: string[];
 }
 export interface ResearchPayload {
   clarifyingQuestions: string[];
@@ -46,9 +60,18 @@ const RESEARCH_JSON_SYSTEM_PROMPT = [
   '  "clarifyingQuestions": string[3],',
   '  "plan": { "audience": string, "phases": [{ "name": string, "tasks": string[3] }, ...] } (exactly 3 phases),',
   '  "report": {',
+  '    "researchType": "market" | "user-research" (pick whichever best fits the TOPIC itself —',
+  "    the audience string is a fixed generic label and should not influence this choice),",
   '    "title": string,',
-  '    "conclusion": string,',
-  '    "sections": [{ "heading": string, "bullets": string[3] }, ...] (exactly 2 sections)',
+  '    "conclusion": string (Executive summary if researchType is "market", Summary if "user-research"),',
+  '    "sections": [{ "heading": string, "bullets": string[3] }, ...] (exactly 2 sections),',
+  '    // when researchType is "market", also include:',
+  '    "keyFindings": string[3],',
+  '    "recommendation": string,',
+  '    // when researchType is "user-research", also include instead:',
+  '    "personas": string[3],',
+  '    "topPainPoints": string[3],',
+  '    "opportunities": string[3]',
   "  }",
   "}",
   "Every field must be specific to the given topic and audience — do not use generic filler text.",
@@ -85,6 +108,34 @@ function extractJson(text: string): unknown {
 
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === "string" && v.trim().length > 0;
+}
+
+function isStringArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.filter(isNonEmptyString).length > 0;
+}
+
+/** 关键词启发式：模型省略/输出非法 researchType 时的兜底判定，不依赖模型必须听话。
+ *  "user"/"persona"/"customer"/"用户"/"访谈" 等词面向研究对象是人；否则默认按市场类处理
+ *  （历史上报告模板本就是市场类的泛化写法，默认落回它风险最低）。
+ *  只看 topic，不看 audience——前端 composer 目前对所有研究请求都发送同一句固定的
+ *  audience 文案（"Product leaders and user research stakeholders"，见 apps/web/app/(app)/
+ *  ava/page.tsx 的 RESEARCH_AUDIENCE 常量），这句话本身就含有 "user research" 四个字，
+ *  一旦把 audience 也纳入判定，所有研究请求都会被误判成 user-research，market 模板永远
+ *  测不到——这是本 feature 联调时发现的真实坑，不是假设性风险。 */
+function inferResearchType(topic: string): ResearchType {
+  const haystack = topic.toLowerCase();
+  const userResearchHints = [
+    "user research",
+    "persona",
+    "user interview",
+    "customer interview",
+    "pain point",
+    "usability",
+    "用户研究",
+    "用户访谈",
+    "用户画像",
+  ];
+  return userResearchHints.some((hint) => haystack.includes(hint)) ? "user-research" : "market";
 }
 
 /** 校验并归一化模型输出的 shape；不满足最低要求（分节/问题数组）时抛错，
@@ -131,15 +182,43 @@ function normalizeResearchJson(raw: unknown, topic: string, audience: string): R
 
   const planAudience = isNonEmptyString(planRaw?.audience) ? (planRaw!.audience as string) : audience;
 
+  // p18-F05：researchType 决定报告用哪套模板字段。模型输出非法/缺失时按关键词兜底判定，
+  // 而不是直接报错——报告模板选择不应该因为模型少输出一个字段就让整个研究失败。
+  const researchType: ResearchType =
+    reportRaw.researchType === "market" || reportRaw.researchType === "user-research"
+      ? reportRaw.researchType
+      : inferResearchType(topic);
+
+  const report: ResearchReport = {
+    researchType,
+    title: reportRaw.title as string,
+    conclusion: reportRaw.conclusion as string,
+    sections,
+  };
+  if (researchType === "market") {
+    report.keyFindings = isStringArray(reportRaw.keyFindings)
+      ? (reportRaw.keyFindings as string[]).filter(isNonEmptyString)
+      : sections[0]?.bullets ?? [];
+    report.recommendation = isNonEmptyString(reportRaw.recommendation)
+      ? (reportRaw.recommendation as string)
+      : (reportRaw.conclusion as string);
+  } else {
+    report.personas = isStringArray(reportRaw.personas)
+      ? (reportRaw.personas as string[]).filter(isNonEmptyString)
+      : [`${planAudience} — primary persona derived from "${topic}"`];
+    report.topPainPoints = isStringArray(reportRaw.topPainPoints)
+      ? (reportRaw.topPainPoints as string[]).filter(isNonEmptyString)
+      : sections[0]?.bullets ?? [];
+    report.opportunities = isStringArray(reportRaw.opportunities)
+      ? (reportRaw.opportunities as string[]).filter(isNonEmptyString)
+      : sections[1]?.bullets ?? sections[0]?.bullets ?? [];
+  }
+
   return {
     clarifyingQuestions,
     plan: { audience: planAudience, phases },
     timeline: buildTimeline(phases),
-    report: {
-      title: reportRaw.title as string,
-      conclusion: reportRaw.conclusion as string,
-      sections,
-    },
+    report,
   };
 }
 

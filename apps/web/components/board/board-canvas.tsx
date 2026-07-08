@@ -96,6 +96,13 @@ const isItalic = (it: { color?: string | null }) => styleGet(it.color, "italic")
 // F12/F19 建立的 "|k=v" 哨兵编码约定，不新增持久化列。锁定后不可移动/缩放/旋转/编辑，
 // Widget Menu 显示解锁入口（见 wm-lock/wm-unlock）。
 const getLocked = (it: { color?: string | null }) => styleGet(it.color, "locked") === "1";
+// p6:F21（uc-widgets-010 编组/解组）：编组编码为 color 的 "|group=<groupId>" 样式段，沿用
+// F12/F19/F20 建立的 "|k=v" 哨兵编码约定，不新增持久化列/表。groupId 取该组任一成员（编组时
+// 触发编组动作所在的选中集合里的第一个 item）的 id 作为组标识，够用且不需要额外的 id 生成器。
+// 范围克制（notes 同步说明）：不支持组嵌套（编组时若成员已属于某组，直接用新 groupId 覆盖旧值，
+// 相当于「重新编组」，不做多级分组树）；组内对象允许通过双击等既有单选路径再单独选中/编辑
+// （不额外禁止，最简单可靠）。
+const getGroupId = (it: { color?: string | null }): string | null => styleGet(it.color, "group");
 const getFontFamily = (it: { color?: string | null }) => styleGet(it.color, "font") ?? DEFAULT_FONT;
 const getFontSize = (it: { color?: string | null }) => {
   const v = styleGet(it.color, "size");
@@ -249,7 +256,7 @@ const getLinkUrl = (it: { color?: string | null }): string | null => {
   return isSafeLinkUrl(decoded) ? decoded : null;
 };
 
-// p7:F14（uc-context-menu-003）：图层顺序。渲染顺序原本 = items 数组顺序（服务端按 created_at
+// p7:F14(uc-context-menu-003)：图层顺序。渲染顺序原本 = items 数组顺序（服务端按 created_at
 // 排序），无 z 持久化列。沿用 withStyle 的 "|k=v" 哨兵约定，把层序编码为 color 的 "|z=<整数>"
 // 段：客户端渲染前按 (z ?? 0, 原数组下标) 稳定排序，上移/下移/置顶/置底 = 重算 z 后 PATCH
 // color——不加数据库列、不改服务端白名单，刷新/协作端天然一致。
@@ -257,6 +264,53 @@ const getZ = (it: { color?: string | null }): number => {
   const v = styleGet(it.color, "z");
   const n = v != null ? Number(v) : NaN;
   return Number.isFinite(n) ? n : 0;
+};
+
+// p6:F17（uc-widgets-006 手绘）：手绘笔迹组件。沿用既有 color "|k=v" 哨兵编码约定：
+// 线上以 type:"note" 落库 + color:"draw" 判别头（服务端 validateNewItem 白名单不可改）。
+// 笔迹点序列存入既有 text 字段（JSON 字符串 {"points":[[x,y],...]}，点为相对 item 左上角
+// 的局部坐标，随 x/y 移动天然跟随；缩放时渲染层按 w/h 与点集原始包围盒的比例线性缩放）。
+// 笔色/线宽复用 F19 已有的 "|border="/"|borderw=" 段（同连接线的复用理由：不重复定义色板）。
+const DRAW_MARK = "draw";
+const DEFAULT_DRAW_WIDTH = 3; // 画笔默认线宽（比默认边框 1px 粗，符合"笔迹"视觉）
+const isDraw = (it: { color?: string | null }) => baseColor(it.color) === DRAW_MARK;
+const parseDrawPoints = (text: string): Array<{ x: number; y: number }> => {
+  try {
+    const j = JSON.parse(text) as { points?: unknown };
+    if (Array.isArray(j?.points)) {
+      return j.points
+        .filter((p): p is [number, number] => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]))
+        .map(([x, y]) => ({ x, y }));
+    }
+  } catch {
+    // 非法 JSON：按空笔迹处理（渲染层画占位框），不抛错破坏整个画布渲染
+  }
+  return [];
+};
+
+// p6:F18（uc-widgets-008 图表）：图表组件。线上以 type:"note" 落库 + color:"chart|kind=bar"
+// 哨兵，text 字段存图表数据 JSON（{"labels":["A","B"],"values":[3,5]}）。渲染层用 fabric.Rect
+// 组合画简单柱状图（不引入图表库）。数据编辑：选中后 Widget Menu 的「编辑数据」入口（或双击）
+// 打开既有 DOM textarea 直接编辑 text JSON，保存后重渲染。
+const CHART_MARK = "chart";
+const isChart = (it: { color?: string | null }) => baseColor(it.color) === CHART_MARK;
+const DEFAULT_CHART_DATA = { labels: ["A", "B", "C"], values: [3, 5, 2] };
+const parseChartData = (text: string): { labels: string[]; values: number[] } | null => {
+  try {
+    const j = JSON.parse(text) as { labels?: unknown; values?: unknown };
+    if (
+      Array.isArray(j?.labels) &&
+      Array.isArray(j?.values) &&
+      j.values.length > 0 &&
+      j.labels.length === j.values.length &&
+      j.values.every((v) => Number.isFinite(Number(v)))
+    ) {
+      return { labels: j.labels.map(String), values: j.values.map(Number) };
+    }
+  } catch {
+    // 非法 JSON：返回 null，渲染层展示「数据无效」失败反馈（UC 异常流程 1）
+  }
+  return null;
 };
 
 // p6:F16（uc-widgets-005 + uc-widget-menu-012）：连接线组件。沿用 F12/F15/F19/F20/F21 建立的
@@ -330,6 +384,7 @@ type BoardTool =
   | "pan"
   | "sticky"
   | "draw"
+  | "eraser"
   | "text"
   | "connector"
   | "shape"
@@ -515,6 +570,14 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         }),
       );
     patchQueue.current.set(id, next);
+    // p6:F21 review（PR #416）指出的真实泄漏：条目从不删除，map 无限增长，且 load() 里
+    // `await Promise.all(patchQueue.current.values())` 会连带 await 所有历史已完成链
+    // （已 resolve 的立即返回，语义上无害，但内存和遍历成本随会话时长线性涨，且任何
+    // 依赖 size 判断"是否有在途 PATCH"的逻辑会永久失真）。落地后若自己仍是该 id 的
+    // 最新链尾（没有更新的 PATCH 链上来）才清掉，避免误删后来者。
+    void next.finally(() => {
+      if (patchQueue.current.get(id) === next) patchQueue.current.delete(id);
+    });
     return next;
   }
 
@@ -808,11 +871,25 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     let stop = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     async function poll() {
-      if (!stop && !editingId && !draggingRef.current) {
+      // p6:F21 v2：requestGenRef 只防"请求间乱序"（后发请求的响应先到），防不住
+      // "响应比本地乐观写入更旧"——poll 的 GET 在某次样式 PATCH 落库前发出、落库后
+      // 才返回时，gen 仍是最新，快照却是旧的，会把刚写入的乐观更新（如编组的 group 段）
+      // 整体冲掉（e2e 插桩实测复现：REST 已确认两成员都有 group 段，本地却被覆盖回
+      // null）。这正是 patchQueue 守卫要防的独立轴：有 PATCH 在途就跳过本轮合并。
+      // PR #416 review 指出该守卫因 patchQueue 泄漏（条目从不删除）永久失真——问题在
+      // 泄漏不在守卫本身；泄漏已在 queuePatch 里用 .finally 清理修复，守卫恢复有效。
+      if (!stop && !editingId && !draggingRef.current && patchQueue.current.size === 0) {
         try {
           const gen = ++requestGenRef.current;
           const res = await fetch(`/api/boards/${boardId}/items`);
-          if (res.ok && gen === requestGenRef.current && !stop && !editingId && !draggingRef.current) {
+          if (
+            res.ok &&
+            gen === requestGenRef.current &&
+            !stop &&
+            !editingId &&
+            !draggingRef.current &&
+            patchQueue.current.size === 0
+          ) {
             const next = ((await res.json()).items ?? []) as Item[];
             itemsRef.current = next;
             setItems((prev) =>
@@ -938,23 +1015,45 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         });
         return;
       }
-      setSelected(new Set(ids));
+      // p6:F21（uc-widgets-010 主流程 6：编组整体选中）：选中集合中任一对象属于某个组时，
+      // 把该组全部成员并入选中集合（编组后整体选中/整体拖动/整体删除，业务规则由此达成——
+      // fabric 层不感知 groupId，只在这里把点击命中的单个/多个 id 展开为组闭包）。
+      // 读 itemsRef 而非 items closure（v2 复跑抓到的真实竞态）：groupSelected 刚写完
+      // group 段、React 还没把带新 items 的回调重渲染下发给 fabric 层时，用户立刻点击组
+      // 成员会走到旧闭包——items 里还没有 group 段，组闭包展开失败（间歇复现"编组后点击
+      // 成员仍只选中自己"）。itemsRef 由 applyColors 同步推进，永远是最新真值。
+      const latest = itemsRef.current;
+      const expanded = new Set(ids);
+      const itemById = new Map(latest.map((it) => [it.id, it]));
+      for (const id of ids) {
+        const found = itemById.get(id);
+        const gid = found ? getGroupId(found) : null;
+        if (gid == null) continue;
+        for (const it of latest) {
+          if (getGroupId(it) === gid) expanded.add(it.id);
+        }
+      }
+      setSelected(expanded);
     },
-    [formatSource, items, canEdit],
+    [formatSource, canEdit],
   );
 
   // 空白按下：清除选择 + 关闭右键菜单（旧 items-layer onClick 语义），随后视口照常平移。
-  const onEmptyPointerDown = useCallback(() => {
-    if (formatSource) return; // 取样模式下点击空白不清空选择/退出（Esc 才退出，主流程 7）
-    // uc-board-menu-007 异常流程 3/9：图表模式下点击画布——底层图表组件（p6:F18）未实现，
-    // 不创建任何对象，只给出「不可用」反馈，画布内容不变（不清空选择，因为图表模式下本就无选中）。
-    if (activeTool === "chart") {
-      setNotice("图表功能即将上线，敬请期待");
-      return;
-    }
-    setSelected(new Set());
-    setCtxMenu(null);
-  }, [formatSource, activeTool]);
+  // p6:F18（uc-board-menu-007）：图表模式下点击画布 = 在点击处创建真实图表组件（替换此前
+  // 的「即将上线」占位反馈），scenePoint 为 fabric 换算好的画布坐标。
+  const onEmptyPointerDown = useCallback(
+    (scenePoint?: { x: number; y: number }) => {
+      if (formatSource) return; // 取样模式下点击空白不清空选择/退出（Esc 才退出，主流程 7）
+      if (activeTool === "chart") {
+        if (canEdit && scenePoint) void addChart(scenePoint);
+        return;
+      }
+      setSelected(new Set());
+      setCtxMenu(null);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [formatSource, activeTool, canEdit],
+  );
 
   const onEditRequest = useCallback(
     (id: string) => {
@@ -1025,13 +1124,17 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           ? "connector"
           : isLink(it)
             ? "link"
-            : isText(it)
-              ? "text"
-              : isShape(it)
-                ? "shape"
-                : isReloadable(it)
-                  ? "embed"
-                  : "note",
+            : isDraw(it)
+              ? "draw"
+              : isChart(it)
+                ? "chart"
+                : isText(it)
+                  ? "text"
+                  : isShape(it)
+                    ? "shape"
+                    : isReloadable(it)
+                      ? "embed"
+                      : "note",
         linkUrl: getLinkUrl(it),
         bold: isBold(it),
         italic: isItalic(it),
@@ -1047,6 +1150,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         reloadCount: reload[it.id]?.count ?? 0,
         refreshedAt: reload[it.id]?.at ?? null,
         locked: getLocked(it),
+        // p6:F17：手绘笔迹点序列（item 局部坐标），由 text 字段的 JSON 解析而来。
+        drawPoints: isDraw(it) ? parseDrawPoints(it.text) : null,
+        // p6:F18：图表数据（labels/values），由 text 字段的 JSON 解析而来；null = 数据无效。
+        chart: isChart(it) ? parseChartData(it.text) : undefined,
         // p6:F16：连接线专属几何/样式派生视图（见上方 connector "|k=v" 段约定）。
         connector: isConnector(it)
           ? {
@@ -1290,6 +1397,110 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     },
     [],
   );
+
+  // p6:F17（uc-widgets-006 主流程 1-3）：一次画笔手势结束（fabric PencilBrush path:created）
+  // → 把笔迹持久化为手绘组件。points 为画布坐标；归一化为相对包围盒左上角的局部坐标存入
+  // text（JSON），x/y/w/h 落为包围盒。服务端 POST 忽略 w/h（用 note 默认尺寸），故 w/h 与
+  // color 哨兵合并成一次 PATCH 补写；随后 upsertItem 直写 collab doc（防 poll()/seedItems
+  // 竞态，同 addShape/addText/addEmbed 的既有规避模式）。
+  const onDrawCreated = useCallback(
+    async (points: Array<{ x: number; y: number }>) => {
+      if (!canEdit || points.length < 2) return;
+      // 采样点抽稀：PencilBrush 逐 mousemove 记点，长笔迹可能上千点；隔点保留（首尾必留），
+      // 上限 ~300 点，控制 text JSON 体积，视觉上无感知差异。
+      const MAX_POINTS = 300;
+      const step = Math.max(1, Math.ceil(points.length / MAX_POINTS));
+      const sampled = points.filter((_, i) => i % step === 0 || i === points.length - 1);
+      const xs = sampled.map((p) => p.x);
+      const ys = sampled.map((p) => p.y);
+      const minX = Math.min(...xs);
+      const minY = Math.min(...ys);
+      const w = Math.max(8, Math.round(Math.max(...xs) - minX));
+      const h = Math.max(8, Math.round(Math.max(...ys) - minY));
+      const local = sampled.map((p) => [Math.round((p.x - minX) * 10) / 10, Math.round((p.y - minY) * 10) / 10]);
+      const res = await fetch(`/api/boards/${boardId}/items`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ type: "note", x: Math.round(minX), y: Math.round(minY), text: JSON.stringify({ points: local }) }),
+      });
+      if (res.status !== 201) return;
+      const { item } = (await res.json()) as { item: Item };
+      const color = `${DRAW_MARK}|borderw=${DEFAULT_DRAW_WIDTH}`;
+      await fetch(`/api/board-items/${item.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ color, w, h }),
+      });
+      // 注意写完整字段而非只写 {color,w,h}：doc 里若还没有这个 id，upsertItem 会新建一个
+      // 只含部分字段的条目，而 seedItems 对已存在 id 永不覆盖 → text（点序列 JSON）在 doc
+      // 视角长期缺失，mergeRemoteItems 的合并窗口里 items 会短暂拿到 text 为空的版本
+      // （F17 verify 抓到的真实回归：e2e 读到 kind=draw 但 text 空，JSON 解析失败）。
+      upsertItem(docRef.current, item.id, { x: item.x, y: item.y, w, h, text: item.text, type: item.type, color });
+      const drawItem: Item = { ...item, color, w, h };
+      recordOp({ kind: "add", items: [drawItem] });
+      await load();
+      setSelected(new Set([item.id]));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [canEdit, boardId, load],
+  );
+
+  // p6:F17（uc-widgets-006 主流程 8 / uc-board-menu-012）：橡皮擦模式下点击笔迹 → 删除整条
+  // 笔迹（stroke 级删除，最小可用；像素级擦除不在本期范围）。只作用于手绘对象（业务规则 4：
+  // 橡皮擦只删除绘制内容），锁定笔迹不可擦（备选流程 3）；删除走既有 DELETE + recordOp 撤销栈。
+  const onErasePick = useCallback(
+    (itemId: string | null) => {
+      if (!canEdit || !itemId) return;
+      const target = itemsRef.current.find((it) => it.id === itemId);
+      if (!target || !isDraw(target)) return; // 非笔迹对象：橡皮擦不作用（不误删便签/形状）
+      if (getLocked(target)) {
+        setNotice("笔迹已锁定，无法擦除");
+        return;
+      }
+      setItems((prev) => prev.filter((it) => it.id !== itemId));
+      setSelected((prev) => {
+        if (!prev.has(itemId)) return prev;
+        const next = new Set(prev);
+        next.delete(itemId);
+        return next;
+      });
+      recordOp({ kind: "delete", items: [target] });
+      void apiDelete([itemId]);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [canEdit, apiDelete],
+  );
+
+  // p6:F18（uc-board-menu-007 + uc-widgets-008）：图表模式下点击画布 → 在点击处创建柱状图
+  // 组件（默认示例数据）。type:"note" 落库 + color:"chart|kind=bar" 哨兵，text 存数据 JSON；
+  // w/h 与 color 合并一次 PATCH 补写（POST 忽略 w/h），并 upsertItem 直写 doc 防竞态。
+  async function addChart(pt: { x: number; y: number }) {
+    const x = Math.round(pt.x);
+    const y = Math.round(pt.y);
+    const res = await fetch(`/api/boards/${boardId}/items`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "note", x, y, text: JSON.stringify(DEFAULT_CHART_DATA) }),
+    });
+    if (res.status !== 201) return;
+    const { item } = (await res.json()) as { item: Item };
+    const color = `${CHART_MARK}|kind=bar`;
+    const w = 280;
+    const h = 180;
+    await fetch(`/api/board-items/${item.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ color, w, h }),
+    });
+    // 写完整字段防 doc 局部条目竞态（同 onDrawCreated 的注释——text 是图表数据 JSON，缺失
+    // 会导致合并窗口里图表短暂渲染为「数据无效」）。
+    upsertItem(docRef.current, item.id, { x: item.x, y: item.y, w, h, text: item.text, type: item.type, color });
+    const chartItem: Item = { ...item, color, w, h };
+    recordOp({ kind: "add", items: [chartItem] });
+    await load();
+    setSelected(new Set([item.id]));
+    setActiveTool("select"); // 一次一个图表的创建节奏（同连接线），创建后回到选择工具
+  }
 
   // 连接线创建（uc-widgets-005 主流程 2-3）：两次独立点击——点第一下记录起点（组件或空白处
   // 的自由端点），点第二下记录终点并立即建连（见下方 connectorFirstPick 状态 + onConnectorPick
@@ -1678,6 +1889,95 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     );
   }
 
+  // p6:F21（uc-widgets-010 主流程 6：编组/解组）：把选中的 ≥2 个未锁定对象编成一组，
+  // 编码为 color 的 "|group=<groupId>" 样式段（groupId 取选中集合中第一个 item 的 id）。
+  // 锁定对象不参与编组（业务规则 5：锁定组件不得通过多选操作绕过锁定限制），若过滤后不足
+  // 2 个则短路不执行。已属于某组的成员重新编组时直接覆盖旧 groupId（不支持组嵌套，范围克制）。
+  async function groupSelected() {
+    const targets = items.filter((it) => selected.has(it.id) && !getLocked(it));
+    if (targets.length < 2) return;
+    const groupId = targets[0]!.id;
+    const targetIds = new Set(targets.map((it) => it.id));
+    await applyColors((it) => (targetIds.has(it.id) ? withStyle(it.color, { group: groupId }) : null));
+    setSelected(targetIds);
+  }
+
+  // 解组：清除选中集合中所有对象的 group 段，恢复为可独立选择的组件（主流程 6 后半）。
+  async function ungroupSelected() {
+    const targets = items.filter((it) => selected.has(it.id) && getGroupId(it) != null && !getLocked(it));
+    if (targets.length === 0) return;
+    const targetIds = new Set(targets.map((it) => it.id));
+    await applyColors((it) => (targetIds.has(it.id) ? withStyle(it.color, { group: null }) : null));
+  }
+
+  // p6:F21（uc-widget-menu-011 对齐选中组件）：选中 ≥2 个对象后按包围盒批量对齐/等间距分布。
+  // 基准以选中对象（过滤锁定项后）的包围盒为准；锁定对象不参与移动（业务规则 5，沿用
+  // F20 的 moveSelected/deleteSelected「先过滤 getLocked 再操作」模式）。过滤后不足 2 个则短路。
+  type AlignMode = "left" | "right" | "top" | "bottom" | "hcenter" | "vcenter" | "distribute-h" | "distribute-v";
+  const alignSelected = useCallback(
+    async (mode: AlignMode) => {
+      if (!canEdit) return;
+      const targets = items.filter((it) => selected.has(it.id) && !getLocked(it));
+      if (targets.length < 2) return;
+
+      let moves: Move[];
+      if (mode === "distribute-h" || mode === "distribute-v") {
+        // 等间距分布：按主轴排序，首尾位置不变，中间按总跨度均匀分布间隙。
+        const axis = mode === "distribute-h" ? "x" : "y";
+        const size = mode === "distribute-h" ? "w" : "h";
+        const sorted = [...targets].sort((a, b) => a[axis] - b[axis]);
+        if (sorted.length < 3) {
+          moves = []; // 少于 3 个对象等间距分布没有意义（首尾已固定，无中间项可调整）
+        } else {
+          const totalSpan =
+            (sorted[sorted.length - 1]![axis] + sorted[sorted.length - 1]![size]) - sorted[0]![axis];
+          const totalSize = sorted.reduce((sum, it) => sum + it[size], 0);
+          const gap = (totalSpan - totalSize) / (sorted.length - 1);
+          let cursor = sorted[0]![axis];
+          moves = sorted.map((it, i) => {
+            const from = { fromX: it.x, fromY: it.y };
+            if (i === 0) {
+              cursor += it[size] + gap;
+              return { id: it.id, ...from, toX: it.x, toY: it.y };
+            }
+            const pos = cursor;
+            cursor += it[size] + gap;
+            return {
+              id: it.id,
+              ...from,
+              toX: axis === "x" ? pos : it.x,
+              toY: axis === "y" ? pos : it.y,
+            };
+          });
+        }
+      } else {
+        const minX = Math.min(...targets.map((it) => it.x));
+        const maxX = Math.max(...targets.map((it) => it.x + it.w));
+        const minY = Math.min(...targets.map((it) => it.y));
+        const maxY = Math.max(...targets.map((it) => it.y + it.h));
+        moves = targets.map((it) => {
+          let toX = it.x;
+          let toY = it.y;
+          if (mode === "left") toX = minX;
+          else if (mode === "right") toX = maxX - it.w;
+          else if (mode === "hcenter") toX = minX + (maxX - minX) / 2 - it.w / 2;
+          else if (mode === "top") toY = minY;
+          else if (mode === "bottom") toY = maxY - it.h;
+          else if (mode === "vcenter") toY = minY + (maxY - minY) / 2 - it.h / 2;
+          return { id: it.id, fromX: it.x, fromY: it.y, toX, toY };
+        });
+      }
+
+      moves = moves.filter((m) => m.toX !== m.fromX || m.toY !== m.fromY);
+      if (moves.length === 0) return;
+      const map = new Map(moves.map((m) => [m.id, m]));
+      setItems((prev) => prev.map((it) => (map.has(it.id) ? { ...it, x: map.get(it.id)!.toX, y: map.get(it.id)!.toY } : it)));
+      recordOp({ kind: "move", moves });
+      await apiMove(moves, false);
+    },
+    [canEdit, selected, items, apiMove],
+  );
+
   // p6:F19（uc-widget-menu-010）：进入/退出格式取样模式。仅支持单选一个文本/便签类对象作为格式来源
   // （形状/嵌入组件无文字排版语义，不作为来源，业务规则 1）。
   function startFormatPaint() {
@@ -1699,7 +1999,17 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     if (!formatSource || !canEdit) return false;
     if (targetId === formatSource.id) return false;
     const target = items.find((it) => it.id === targetId);
-    if (!target || isShape(target) || isReloadable(target) || isLink(target)) return false; // p7:F12：应用格式会重写判别头，链接不作为目标
+    // 应用格式会重写 color 判别头，会导致类型丢失，故形状/嵌入/链接（p7:F12）/手绘/图表
+    // （p6:F17/F18）一律视为不兼容目标。
+    if (
+      !target ||
+      isShape(target) ||
+      isReloadable(target) ||
+      isLink(target) ||
+      isDraw(target) ||
+      isChart(target)
+    )
+      return false;
     const newColor = applyFormatColor({ color: formatSource.color }, isText(target));
     await applyColors((it) => (it.id === target.id ? newColor : null));
     return true;
@@ -1919,19 +2229,24 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             <BoardMenuButton testId="add-note" label="便利贴" active={activeTool === "sticky"} onClick={() => void addNote()}>
               <StickyNote className="h-4 w-4" />
             </BoardMenuButton>
-            <BoardMenuButton testId="board-tool-draw" label="手绘" active={false} disabled>
+            {/* p6:F17（uc-widgets-006 / uc-board-menu-006）：手绘工具——激活后画布进入 fabric
+                isDrawingMode（PencilBrush 自由绘制），松开鼠标即持久化为手绘组件（见
+                onDrawCreated）。 */}
+            <BoardMenuButton
+              testId="board-tool-draw"
+              label="手绘"
+              active={activeTool === "draw"}
+              onClick={() => chooseTool("draw")}
+            >
               <PenLine className="h-4 w-4" />
             </BoardMenuButton>
-            {/* uc-board-menu-012（橡皮擦入口，手绘相关入口的一部分）：底层手绘组件（p6:F17）
-                尚未实现，画笔本身还是禁用占位（上面 board-tool-draw）。橡皮擦不能真正擦除
-                任何笔迹，但业务规则 3（备选流程 2）要求「入口不可用时…提示当前无法使用」，
-                所以给一个可点击但只报「不可用」反馈的入口，不切换任何真实擦除模式，
-                也不创建/删除任何对象（范围纪律：不越界实现 F17 手绘擦除本身）。 */}
+            {/* p6:F17（uc-board-menu-012）：橡皮擦——激活后点击某条笔迹删除该笔迹（stroke 级
+                删除，见 onErasePick）；只作用于手绘对象，不误删其它组件。 */}
             <BoardMenuButton
               testId="board-tool-eraser"
               label="橡皮擦"
-              active={false}
-              onClick={() => setNotice("手绘功能即将上线，橡皮擦暂不可用")}
+              active={activeTool === "eraser"}
+              onClick={() => chooseTool("eraser")}
             >
               <Eraser className="h-4 w-4" />
             </BoardMenuButton>
@@ -2133,7 +2448,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       {canEdit && selected.size > 0 && (
         <div
           data-testid="widget-menu"
-          className="absolute left-1/2 top-14 z-20 flex -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-lg"
+          // p6:F21：对齐/编组按钮加入后单行操作数明显增多，改为 flex-wrap + max-w 避免菜单宽度
+          // 超出视口在两侧「溢出」并遮挡画布空白区域（真实回归：曾导致点击视口边缘空白处误命中
+          // 菜单而非清空选择，见 canvas-select.spec.ts「点选/Shift多选/点空白清除」）。
+          className="absolute left-1/2 top-14 z-20 flex max-w-[92vw] flex-wrap -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-lg"
         >
           <span className="px-1 text-xs text-muted-foreground">{selected.size} 项</span>
           {/* p6:F20（uc-widget-menu-003 主流程 3/4，业务规则 1）：全部选中项已锁定时，样式/编辑
@@ -2143,11 +2461,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           {!allSelectedLocked && (
             <>
           {/* 颜色色板（F11）：仅对便签生效；选中项全为文本或连接线时隐藏（文本为透明块、连接线
-              用边框色表达线条颜色，都不套柔彩背景色，业务规则 1：菜单入口按对象类型区分）。 */}
-          {/* p7:F12：链接组件同样不套柔彩背景色（setColor 会重写判别头，链接卡片固定白底卡片
-              视觉）——选中含链接时隐藏色板，防止把 "link" 哨兵头改成色 token 破坏判别。 */}
+              用边框色表达线条颜色，都不套柔彩背景色，业务规则 1：菜单入口按对象类型区分）。
+              连接线/链接（p7:F12）/手绘/图表（p6:F17/F18）的 color 头都是类型判别位，setColor
+              会把头替换成色 token 导致类型丢失，故选中含这些类型时色板整体隐藏（笔色走 wm-border）。 */}
           {!items.filter((it) => selected.has(it.id)).every((it) => isText(it) || isConnector(it)) &&
-            items.filter((it) => selected.has(it.id)).every((it) => !isConnector(it) && !isLink(it)) &&
+            items
+              .filter((it) => selected.has(it.id))
+              .every((it) => !isConnector(it) && !isLink(it) && !isDraw(it) && !isChart(it)) &&
             COLOR_TOKENS.map((c) => (
             <button
               key={c}
@@ -2161,7 +2481,8 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           {/* p6:F16 业务规则 1：连接线无文字排版语义，字重入口不展示（与形状/嵌入组件的
               既有隐藏逻辑一致，只是本行 wm-bold 历史上未对形状/嵌入设门，这里只加连接线判断，
               不改动既有对形状/嵌入的展示行为，范围最小化）。 */}
-          {!items.filter((it) => selected.has(it.id)).every(isConnector) && (
+          {!items.filter((it) => selected.has(it.id)).every(isConnector) &&
+            items.filter((it) => selected.has(it.id)).every((it) => !isDraw(it) && !isChart(it)) && (
             <Button
               data-testid="wm-bold"
               size="sm"
@@ -2180,7 +2501,11 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             const sel = items.filter((it) => selected.has(it.id));
             const allTextLike =
               sel.length > 0 &&
-              sel.every((it) => isText(it) || (!isShape(it) && !isReloadable(it) && !isConnector(it) && !isLink(it)));
+              sel.every(
+                (it) =>
+                  isText(it) ||
+                  (!isShape(it) && !isReloadable(it) && !isConnector(it) && !isLink(it) && !isDraw(it) && !isChart(it)),
+              );
             if (!allTextLike) return null;
             const first = sel[0]!;
             const mixedFont = !sel.every((it) => getFontFamily(it) === getFontFamily(first));
@@ -2269,9 +2594,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               端点箭头，无透明度和文字色语义，故连接线选中时不展示 wm-opacity/wm-textcolor）。 */}
           {(() => {
             const sel = items.filter((it) => selected.has(it.id));
-            const eligible = sel.length > 0 && sel.every((it) => !isReloadable(it));
+            // p6:F18：图表无边框/透明度/文字色语义（外观由数据渲染决定），整节不展示。
+            const eligible = sel.length > 0 && sel.every((it) => !isReloadable(it) && !isChart(it));
             if (!eligible) return null;
             const allConnectors = sel.every(isConnector);
+            // p6:F17：手绘复用 wm-border/wm-border-width 表达笔色/线宽（同连接线的复用理由），
+            // 但无文字色语义，textcolor 不展示；透明度保留（笔迹整体透明度有意义）。
+            const allDraw = sel.every(isDraw);
             const first = sel[0]!;
             const mixedBorder = !sel.every((it) => getBorder(it) === getBorder(first));
             const mixedBorderWidth = !sel.every((it) => getBorderWidth(it) === getBorderWidth(first));
@@ -2322,6 +2651,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                         </option>
                       ))}
                     </select>
+                    {!allDraw && (
                     <select
                       data-testid="wm-textcolor"
                       aria-label="文字色"
@@ -2336,6 +2666,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                       <option value="green">绿色</option>
                       <option value="red">红色</option>
                     </select>
+                    )}
                   </>
                 )}
                 {/* p6:F16（uc-widget-menu-012 主流程 6）：连接线专属——直线/曲线、端点箭头。 */}
@@ -2418,7 +2749,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           {selected.size === 1 &&
             items
               .filter((it) => selected.has(it.id))
-              .every((it) => !isShape(it) && !isReloadable(it) && !isConnector(it) && !isLink(it)) && (
+              .every(
+                (it) => !isShape(it) && !isReloadable(it) && !isConnector(it) && !isLink(it) && !isDraw(it) && !isChart(it),
+              ) && (
               <Button
                 data-testid="wm-apply-format"
                 size="sm"
@@ -2431,6 +2764,20 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                 应用格式
               </Button>
             )}
+          {/* p6:F18（uc-widgets-008）：单选图表时显示「编辑数据」入口——复用既有 DOM textarea
+              编辑覆盖层直接编辑 text 里的数据 JSON（{"labels":[...],"values":[...]}），保存后
+              按新数据重渲染柱状图（双击图表进入同一编辑态）。 */}
+          {selected.size === 1 && items.filter((it) => selected.has(it.id)).every(isChart) && (
+            <Button
+              data-testid="wm-chart-data"
+              size="sm"
+              variant="ghost"
+              aria-label="编辑图表数据"
+              onClick={() => setEditingId(Array.from(selected)[0]!)}
+            >
+              编辑数据
+            </Button>
+          )}
           {/* uc-widget-menu-014：仅当单选一个文本组件时显示「转换为便利贴」入口。 */}
           {selected.size === 1 && items.filter((it) => selected.has(it.id)).every(isText) && (
             <Button
@@ -2476,6 +2823,80 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           <Button data-testid="wm-duplicate" size="sm" variant="ghost" onClick={duplicateSelected}>
             复制
           </Button>
+          {/* p6:F21（uc-widget-menu-011 对齐选中组件）：选中 ≥2 个对象时展示对齐/分布入口；
+              不足 2 个隐藏（主流程 8：选中对象不足两个时，系统隐藏多对象对齐入口）。
+              锁定对象已在 alignSelected 内部过滤，混合选中态下只对未锁定项生效。
+              testid 用 "wm-align-objects-*" 前缀与既有文本对齐入口 "wm-align-left/center/right"
+              （uc-widget-menu-013，控制文字排版对齐）区分——两者语义完全不同，不能复用同名 testid。 */}
+          {selected.size >= 2 && (
+            <>
+              <div className="mx-1 h-5 w-px bg-border" />
+              <Button data-testid="wm-align-objects-left" size="sm" variant="ghost" aria-label="对象左对齐" onClick={() => void alignSelected("left")}>
+                左对齐
+              </Button>
+              <Button data-testid="wm-align-objects-hcenter" size="sm" variant="ghost" aria-label="对象水平居中" onClick={() => void alignSelected("hcenter")}>
+                水平居中
+              </Button>
+              <Button data-testid="wm-align-objects-right" size="sm" variant="ghost" aria-label="对象右对齐" onClick={() => void alignSelected("right")}>
+                右对齐
+              </Button>
+              <Button data-testid="wm-align-objects-top" size="sm" variant="ghost" aria-label="对象顶对齐" onClick={() => void alignSelected("top")}>
+                顶对齐
+              </Button>
+              <Button data-testid="wm-align-objects-vcenter" size="sm" variant="ghost" aria-label="对象垂直居中" onClick={() => void alignSelected("vcenter")}>
+                垂直居中
+              </Button>
+              <Button data-testid="wm-align-objects-bottom" size="sm" variant="ghost" aria-label="对象底对齐" onClick={() => void alignSelected("bottom")}>
+                底对齐
+              </Button>
+              {selected.size >= 3 && (
+                <>
+                  <Button
+                    data-testid="wm-distribute-h"
+                    size="sm"
+                    variant="ghost"
+                    aria-label="水平等间距分布"
+                    onClick={() => void alignSelected("distribute-h")}
+                  >
+                    水平分布
+                  </Button>
+                  <Button
+                    data-testid="wm-distribute-v"
+                    size="sm"
+                    variant="ghost"
+                    aria-label="垂直等间距分布"
+                    onClick={() => void alignSelected("distribute-v")}
+                  >
+                    垂直分布
+                  </Button>
+                </>
+              )}
+            </>
+          )}
+          {/* p6:F21（uc-widgets-010 主流程 6：编组/解组）：选中 ≥2 个对象且未全部同属一组时
+              显示「编组」；选中集合中含已编组成员时显示「解组」（两者可能同时出现——如选中一个
+              独立组内成员追加一个组外对象，此时点编组会把两者合并为新组，点解组只解开已有组的
+              那部分，语义均以 groupSelected/ungroupSelected 内部过滤为准）。 */}
+          {(() => {
+            const sel = items.filter((it) => selected.has(it.id));
+            const anyGrouped = sel.some((it) => getGroupId(it) != null);
+            const allSameGroup =
+              sel.length >= 2 && sel.every((it) => getGroupId(it) != null && getGroupId(it) === getGroupId(sel[0]!));
+            return (
+              <>
+                {selected.size >= 2 && !allSameGroup && (
+                  <Button data-testid="wm-group" size="sm" variant="ghost" aria-label="编组" onClick={() => void groupSelected()}>
+                    编组
+                  </Button>
+                )}
+                {anyGrouped && (
+                  <Button data-testid="wm-ungroup" size="sm" variant="ghost" aria-label="解组" onClick={() => void ungroupSelected()}>
+                    解组
+                  </Button>
+                )}
+              </>
+            );
+          })()}
             </>
           )}
           {/* uc-widget-menu-008 主流程 2：对象被锁定时删除入口隐藏或不可用；全部选中项锁定时
@@ -2573,6 +2994,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             onOperating={onOperating}
             connectorPickMode={activeTool === "connector"}
             onConnectorPick={onConnectorPick}
+            drawMode={activeTool === "draw" && canEdit}
+            onDrawCreated={(pts) => void onDrawCreated(pts)}
+            erasePickMode={activeTool === "eraser" && canEdit}
+            onErasePick={onErasePick}
           />
         }
       >

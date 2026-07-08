@@ -1,0 +1,39 @@
+
+Running 15 tests using 1 worker
+
+  ✓  1 [chromium] › widget-active-selection.spec.ts:39:5 › 对齐入口：选中不足两个隐藏，选中两个及以上显示 (9.9s)
+[WebServer] Yjs was already imported. This breaks constructor checks and will lead to issues! - https://github.com/yjs/yjs/issues/438
+  ✓  2 [chromium] › widget-active-selection.spec.ts:60:5 › 左对齐：选中对象的 x 收敛为包围盒最小 x (1.8s)
+[WebServer] Yjs was already imported. This breaks constructor checks and will lead to issues! - https://github.com/yjs/yjs/issues/438
+  ✓  3 [chromium] › widget-active-selection.spec.ts:72:5 › 右对齐/顶对齐/底对齐/水平居中/垂直居中：按包围盒收敛 (2.3s)
+  ✓  4 [chromium] › widget-active-selection.spec.ts:93:5 › 等间距水平分布：3 个对象，首尾不变，中间按总跨度均匀分布 (1.3s)
+  ✓  5 [chromium] › widget-active-selection.spec.ts:115:5 › 对齐遇锁定对象：锁定项不移动，未锁定项仍按包围盒对齐 (1.4s)
+  ✓  6 [chromium] › widget-active-selection.spec.ts:131:5 › 编组：选中两个对象点编组后，点击任一成员整体选中，整体拖动/整体删除 (1.8s)
+[WebServer] Yjs was already imported. This breaks constructor checks and will lead to issues! - https://github.com/yjs/yjs/issues/438
+  ✓  7 [chromium] › widget-active-selection.spec.ts:168:5 › 解组：解组后成员恢复为可独立选择，点击单个成员只选中自己 (3.3s)
+  ✓  8 [chromium] › widget-active-selection.spec.ts:193:5 › 编组入口：不足两个选中或全部同属一组时不显示编组按钮 (2.5s)
+  ✓  9 [chromium] › widget-style.spec.ts:28:5 › Widget Menu 显示边框/线宽/透明度/文字色入口 + 应用格式入口 (1.2s)
+  ✓  10 [chromium] › widget-style.spec.ts:39:5 › 边框色/线宽/透明度/文字色：实时预览 + 持久化（刷新仍在） (3.0s)
+  ✓  11 [chromium] › widget-style.spec.ts:70:5 › 默认值不写样式段（保持 color 干净，与 F12 约定一致） (1.4s)
+  ✓  12 [chromium] › widget-style.spec.ts:81:5 › 多选混合态：两个便签边框不同 → wm-border 显示混合；统一设置后不再混合 (1.8s)
+  ✓  13 [chromium] › widget-style.spec.ts:102:5 › 应用格式：设置源便签样式 → 进入取样模式 → 点击目标便签 → 样式复制过去 (1.8s)
+  ✓  14 [chromium] › widget-style.spec.ts:145:5 › 应用格式：连续应用到多个目标，直到 Esc 退出取样模式 (2.9s)
+  ✓  15 [chromium] › widget-style.spec.ts:186:5 › 应用格式：形状不作为来源，取样入口对形状隐藏 (1.1s)
+
+  Slow test file: [chromium] › widget-active-selection.spec.ts (24.2s)
+  Consider splitting slow test files to speed up parallel execution
+  15 passed (43.1s)
+
+# v2 重做过程记录（PR #416 review 后）
+- 从最新 main 重建分支，仅 cherry-pick F21 三个核心提交，丢弃两个冗余竞态补丁。
+- 修复 review 点名的 patchQueue 泄漏（queuePatch .finally 清理链尾）。
+- 压测抓出并修复两个真实竞态：
+  1. onFabricSelection 读 items closure 而非 itemsRef（编组后立即点击成员，组闭包展开
+     失败——修复前隔离复跑 3/3 失败，修复后 0 复现）。
+  2. poll() 过期快照冲掉在途乐观写入——requestGenRef 只防请求间乱序，防不住"响应早于
+     本地写入"轴（e2e 插桩实测：REST 已有 group 段、本地被覆盖回 null）。恢复
+     patchQueue.size===0 守卫（泄漏已修，守卫恢复有效；这证明旧分支的守卫设计方向是
+     对的，错在泄漏）。
+- 最终 widget-active-selection + widget-style 全量 15/15 绿（43.1s，无环境签名）。
+- 唯一残余 flake 轴：极端负载下 addNote 创建发现慢于 10s（expectItemCount 超时，
+  与本 feature 逻辑无关，全 session 各 spec 均观测过该环境签名）。

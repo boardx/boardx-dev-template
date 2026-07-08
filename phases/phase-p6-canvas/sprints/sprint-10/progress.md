@@ -1,13 +1,59 @@
 # 进度日志 — Sprint p6/10
 
 ## 当前已验证状态(唯一真相)
-- 仓库根目录: worktree `.claude/worktrees/p6-10-connector`（分支 worker/canvas-worker-1-p6-f16-connector，直接基于 main，不再堆栈）
+- 仓库根目录: worktree `.claude/worktrees/p6-10-draw-chart`（分支 worker/canvas-worker-1-p6-f17-f18-draw-chart，直接基于 main）
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`（本 worktree 已通过）
-- 当前最高优先级未完成功能: F17（手绘组件）
+- 当前最高优先级未完成功能: 本 sprint F17/F18 均已 passing；剩余按 feature_list 排期
 - 当前 blocker: 无
 
 ## 会话记录
+### 2026-07-08 F17 手绘组件 + F18 图表组件（同分支同 PR）
+- 本轮目标: 连续完成 F17（手绘）与 F18（图表），一个分支一个 PR。
+- 已完成: F17 → passing，F18 → passing（均经 harness verify 门控，含 verify:base）。
+  - **F17 手绘**：
+    - 绘制走 fabric 原生 `isDrawingMode` + `PencilBrush`（v7 需显式实例化 brush），
+      刻意避开"mouse:move 画临时预览对象"的自研路径（F16 已证实会破坏 fabric 命中判定）。
+      `path:created` 时提取路径点序列、移除临时 path，由 items 数据流受控重渲染。
+    - 持久化：type:"note"（服务端白名单未动）+ color 头 `draw` + `|borderw=3`；
+      点序列存 text 字段 JSON `{"points":[[x,y],...]}`（相对包围盒左上角局部坐标，
+      抽稀至 ≤300 点）。x/y/w/h 落包围盒（POST 忽略 w/h，与 color 合并一次 PATCH 补写）。
+    - 渲染：fabric.Polyline 按 w/h 与原始包围盒比例缩放重建，笔色/线宽复用 F19 的
+      border/borderw 段（Widget Menu wm-border/wm-border-width 免费获得编辑能力）。
+    - 橡皮擦：eraser 工具 = 单击拾取（同 connectorPickMode 模式），只删 kind=draw
+      的笔迹（不误删便签/形状），锁定笔迹给 notice；删除走 recordOp 撤销栈。
+    - 回归：canvas-select.spec.ts 5/5 通过（isDrawingMode 未破坏点选/多选命中）。
+  - **F18 图表**：
+    - C 键图表模式（F11 占位）点击画布 → 真实创建柱状图（280x180，默认数据
+      `{"labels":["A","B","C"],"values":[3,5,2]}`）。type:"note" + color `chart|kind=bar`。
+    - 渲染：fabric.Rect 组合柱状图 + Textbox 标签，不引入图表库；数据 JSON 无效时
+      渲染"数据无效"占位（可选中、可经编辑修复），不丢组件。
+    - 编辑：单选图表 Widget Menu 出现 wm-chart-data「编辑数据」→ 复用既有 DOM
+      textarea 编辑 text JSON（双击同效），保存即重渲染。
+    - 菜单边界：图表/手绘不展示色板（color 头是类型判别位，setColor 会毁类型）、
+      字重/文本样式/应用格式入口；图表额外隐藏边框/透明度节。
+  - **修复一个 verify 抓到的真实竞态**（addShape/addText/addEmbed 同类潜伏问题）：
+    "创建后 upsertItem 直写 collab doc"若只写部分字段（{color,w,h}），doc 会新建
+    只含部分字段的条目，seedItems 对已存在 id 永不覆盖 → text 在 doc 视角长期缺失，
+    mergeRemoteItems 合并窗口里 items 短暂拿到 text 为空的版本（e2e 实抓：kind=draw
+    但 text 空）。修复：onDrawCreated/addChart 的 upsertItem 写完整字段
+    （x/y/w/h/text/type/color）。既有三处旧调用未动（范围纪律，它们的 text 是短
+    文案且无测试依赖，风险低——但属于同类潜伏问题，留给 coord-collab 的根治方案）。
+  - board-menu.spec.ts 的 uc-board-menu-001/006/007/012 按新现状重写（原断言
+    draw disabled / eraser 报不可用 / 图表点击不创建，均已与现实矛盾）10/10 通过。
+- 运行过的验证:
+  - `pnpm harness verify --sprint p6/10 --feature F17`（widget-draw.spec.ts 4/4 + verify:base）
+  - `pnpm harness verify --sprint p6/10 --feature F18`（widget-chart.spec.ts 3/3 + verify:base）
+  - 回归：canvas-select.spec.ts 5/5、board-menu.spec.ts 10/10
+- 已记录证据: evidence/F17.verify.log、evidence/F18.verify.log
+- 已知风险或未解决问题:
+  - 环境：宿主机多 worktree 并行时 postgres 会被打进 recovery mode（register 500、
+    room.id undefined 的假失败签名），docker restart postgres + 重跑 migrate 可恢复；
+    docker 子网 172.23.0.0/24 与他人冲突，本 worktree 已改用 172.52.0.0/24。
+  - 橡皮擦为 stroke 级删除（点击删除整条笔迹），像素级擦除不在本期范围（如实降级）。
+  - 图表本期仅柱状图（UC 提到柱/线/饼；数据模型 kind=bar 段已为扩展留位）；AI 辅助
+    生成图表 blocked-on p9（feature notes 已声明）。
+- 下一步最佳动作: 开 PR（Closes #277/#278）、切 label in-review，等 coord-main 合并。
 ### 2026-07-06 F16 连接线组件
 - 本轮目标: 完成 F16（连接线组件 + 连接线样式）
 - 已完成: F16 → passing（verify 门控通过）。

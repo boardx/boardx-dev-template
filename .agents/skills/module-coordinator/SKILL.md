@@ -85,6 +85,13 @@ coord-board 对 #282 给 2 小时窗口）。
 --session <id>`（写 D1，新鲜度由服务端 sweeper 按 ttl 裁定；命令报错 = 租约异常，
 必须处理不能吞掉）。~~lease issue 心跳评论~~ 已退役（ADR-009）。
 
+**C-cycle 义务（2026-07-08 起，见 work-cycle-proposal.md + coordinator-sop.md
+C-cycle 章节）**：每个 3h 周期（UTC 整点 00/03/06/…锚定）在专用
+`[coordination] work-cycle` issue 发 `cycle-plan`（周期开始 10 分钟内，承诺 1-3 件
+小批量可验证完成的事，没有就诚实写 none）与 `cycle-result`（done/miss/flow，可与
+下周期 plan 合并成一条）。动 hotspots.md 所列文件的 PR 必须在 cycle-plan 申报。
+自己 areas 的 WIP（同时 in_progress 的 feature）≤ 2。
+
 ## 退位 / 抢占
 同顶层 coordinator：退位跑 `pnpm harness module-lock-release --module <name>
 --session <id>` 释放 D1 租约；抢占先 `module-lock-status` 确认持有者心跳已过期再

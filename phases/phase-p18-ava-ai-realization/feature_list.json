@@ -94,9 +94,9 @@
       "title": "研究报告双模板（market / user-research）",
       "user_visible_behavior": "报告面板（research-report-panel）按研究类型渲染两套结构：市场类展示 Executive summary / Key findings / Recommendation；用户研究类展示 Summary / Personas / Top pain points / Opportunities，两类字段在 UI 上分别正确呈现。",
       "design_ref": "prototype:<!-- market report --> / <!-- user research report -->；requirements/02-deep-research-realization.md",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "03",
+      "owner": "wrk-ava-p18-1",
       "capability": "CAP-AI",
       "depends_on": [
         "F04"
@@ -105,7 +105,7 @@
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/ava-research-report-templates.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F05.verify.log @ 2026-07-07T08:12:43.191Z",
       "notes": "requirements/02。102 人专家人格库为可选丰富化项，不在本 feature 验收范围。"
     },
     {
