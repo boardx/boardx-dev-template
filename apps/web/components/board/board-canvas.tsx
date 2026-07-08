@@ -786,11 +786,25 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     let stop = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     async function poll() {
-      if (!stop && !editingId && !draggingRef.current) {
+      // p6:F21 v2：requestGenRef 只防"请求间乱序"（后发请求的响应先到），防不住
+      // "响应比本地乐观写入更旧"——poll 的 GET 在某次样式 PATCH 落库前发出、落库后
+      // 才返回时，gen 仍是最新，快照却是旧的，会把刚写入的乐观更新（如编组的 group 段）
+      // 整体冲掉（e2e 插桩实测复现：REST 已确认两成员都有 group 段，本地却被覆盖回
+      // null）。这正是 patchQueue 守卫要防的独立轴：有 PATCH 在途就跳过本轮合并。
+      // PR #416 review 指出该守卫因 patchQueue 泄漏（条目从不删除）永久失真——问题在
+      // 泄漏不在守卫本身；泄漏已在 queuePatch 里用 .finally 清理修复，守卫恢复有效。
+      if (!stop && !editingId && !draggingRef.current && patchQueue.current.size === 0) {
         try {
           const gen = ++requestGenRef.current;
           const res = await fetch(`/api/boards/${boardId}/items`);
-          if (res.ok && gen === requestGenRef.current && !stop && !editingId && !draggingRef.current) {
+          if (
+            res.ok &&
+            gen === requestGenRef.current &&
+            !stop &&
+            !editingId &&
+            !draggingRef.current &&
+            patchQueue.current.size === 0
+          ) {
             const next = ((await res.json()).items ?? []) as Item[];
             itemsRef.current = next;
             setItems((prev) =>
@@ -919,19 +933,24 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       // p6:F21（uc-widgets-010 主流程 6：编组整体选中）：选中集合中任一对象属于某个组时，
       // 把该组全部成员并入选中集合（编组后整体选中/整体拖动/整体删除，业务规则由此达成——
       // fabric 层不感知 groupId，只在这里把点击命中的单个/多个 id 展开为组闭包）。
+      // 读 itemsRef 而非 items closure（v2 复跑抓到的真实竞态）：groupSelected 刚写完
+      // group 段、React 还没把带新 items 的回调重渲染下发给 fabric 层时，用户立刻点击组
+      // 成员会走到旧闭包——items 里还没有 group 段，组闭包展开失败（间歇复现"编组后点击
+      // 成员仍只选中自己"）。itemsRef 由 applyColors 同步推进，永远是最新真值。
+      const latest = itemsRef.current;
       const expanded = new Set(ids);
-      const itemById = new Map(items.map((it) => [it.id, it]));
+      const itemById = new Map(latest.map((it) => [it.id, it]));
       for (const id of ids) {
         const found = itemById.get(id);
         const gid = found ? getGroupId(found) : null;
         if (gid == null) continue;
-        for (const it of items) {
+        for (const it of latest) {
           if (getGroupId(it) === gid) expanded.add(it.id);
         }
       }
       setSelected(expanded);
     },
-    [formatSource, items, canEdit],
+    [formatSource, canEdit],
   );
 
   // 空白按下：清除选择 + 关闭右键菜单（旧 items-layer onClick 语义），随后视口照常平移。
