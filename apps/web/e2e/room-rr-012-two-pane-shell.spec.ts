@@ -28,8 +28,8 @@ test("未选中任何房间时：双栏壳渲染，左栏房间列表 + 右栏�
   await page.goto("/rooms");
   await expect(page.getByTestId("rooms-two-pane")).toBeVisible();
   await expect(page.getByTestId("room-list-panel")).toBeVisible();
-  await expect(page.getByTestId(`room-list-item-${roomA}`)).toBeVisible();
-  await expect(page.getByTestId(`room-list-item-${roomB}`)).toBeVisible();
+  await expect(page.getByTestId(`room-${roomA}`)).toBeVisible();
+  await expect(page.getByTestId(`room-${roomB}`)).toBeVisible();
   await expect(page.getByTestId("rooms-empty-state")).toBeVisible();
 });
 
@@ -38,11 +38,11 @@ test("点击左栏房间：左栏不消失，右栏渲染该房间详情并高�
   const roomId = await createRoom(page, "Gamma Room");
 
   await page.goto("/rooms");
-  await page.getByTestId(`room-list-item-${roomId}`).click();
+  await page.getByTestId(`room-${roomId}`).click();
 
   // 左栏依旧常驻可见（不是整页替换）。
   await expect(page.getByTestId("room-list-panel")).toBeVisible();
-  await expect(page.getByTestId(`room-list-item-${roomId}`)).toHaveAttribute("data-active", "true");
+  await expect(page.getByTestId(`room-${roomId}`)).toHaveAttribute("data-active", "true");
 
   // 右栏渲染详情壳（复用既有五 tab 结构，默认落 Boards）。
   await expect(page.getByTestId("room-shell")).toBeVisible();
@@ -56,12 +56,12 @@ test("切换到另一个房间：左栏高亮切换，右栏内容随之替换�
   const roomB = await createRoom(page, "Room B");
 
   await page.goto(`/rooms/${roomA}/boards`);
-  await expect(page.getByTestId(`room-list-item-${roomA}`)).toHaveAttribute("data-active", "true");
+  await expect(page.getByTestId(`room-${roomA}`)).toHaveAttribute("data-active", "true");
 
-  await page.getByTestId(`room-list-item-${roomB}`).click();
+  await page.getByTestId(`room-${roomB}`).click();
   await expect(page.getByTestId("room-list-panel")).toBeVisible();
-  await expect(page.getByTestId(`room-list-item-${roomB}`)).toHaveAttribute("data-active", "true");
-  await expect(page.getByTestId(`room-list-item-${roomA}`)).toHaveAttribute("data-active", "false");
+  await expect(page.getByTestId(`room-${roomB}`)).toHaveAttribute("data-active", "true");
+  await expect(page.getByTestId(`room-${roomA}`)).toHaveAttribute("data-active", "false");
   await expect(page.getByTestId("room-header-name")).toHaveText("Room B");
 });
 
@@ -75,13 +75,13 @@ test("搜索/收藏筛选：左栏功能与既有 API 语义一致（p20/F02 搜
   await page.goto("/rooms");
   await page.getByTestId("room-list-search").fill(uniqueMarker);
   await page.getByTestId("room-list-search").press("Enter");
-  await expect(page.getByTestId(`room-list-item-${alpha}`)).toBeVisible({ timeout: 30000 });
+  await expect(page.getByTestId(`room-${alpha}`)).toBeVisible({ timeout: 30000 });
   await expect(page.getByTestId("room-list").locator("li")).toHaveCount(1, { timeout: 30000 });
 
   // 清空搜索，收藏 Alpha，再用 Favorites 筛选。
   await page.getByTestId("room-list-search").fill("");
   await page.getByTestId("room-list-search").press("Enter");
   await page.request.post(`/api/rooms/${alpha}/favorite`);
-  await page.getByTestId("room-list-favorites-filter").click();
-  await expect(page.getByTestId(`room-list-item-${alpha}`)).toBeVisible({ timeout: 30000 });
+  await page.getByTestId("room-favorites-filter").click();
+  await expect(page.getByTestId(`room-${alpha}`)).toBeVisible({ timeout: 30000 });
 });
