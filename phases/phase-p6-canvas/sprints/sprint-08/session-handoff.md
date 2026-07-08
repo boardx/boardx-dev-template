@@ -67,8 +67,9 @@
 - docker project `worker-canvas-p6-sprint08`（pg:65380/redis:65381/web:65382，
   E2E_PORT=65382 见 apps/web/.env.local）。
 - 分支栈：worker/canvas-p6-f07-guidelines → base worker/canvas-p6-f13-fabric（stacked PR）。
-- #316 使用独立 Codex worktree `/private/tmp/boardx-worktrees/issue-316-canvas-review-fixes`
-  与分支 `codex/issue-316-canvas-review-fixes`，base 为 `worker/canvas-p6-f07-guidelines`。
+- #316 首轮在分支 `codex/issue-316-canvas-review-fixes`（base F07，PR #324 因
+  base 合并后被删自动关闭）；2026-07-08 cherry-pick f336570 到 main 之上，
+  改在分支 `worker/canvas-worker-1-issue-316-review-fixes` 重开 PR。
 
 ## 下一个 feature：F12（文本组件 + 文本样式 + 文本转便利贴）
 - 在 fabric 对象模型上做（kind:"text" 渲染分支已在 fabric-canvas.tsx）。
