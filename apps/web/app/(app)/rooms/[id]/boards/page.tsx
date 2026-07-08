@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,10 +57,17 @@ export default function RoomBoardsPage() {
   // uc-rr-010（p20/F11）：Boards 空态展示房间 description
   const [roomDescription, setRoomDescription] = useState<string | null>(null);
 
+  // issue #333 排查发现的真实竞态：初始 load()（React 18 StrictMode 下 effect 双触发，
+  // 有两个在途）与用户点击搜索触发的 load(q) 并发时，先发出的未过滤响应可能后返回，
+  // 把已过滤的列表覆盖回全量。用请求代数守卫丢弃过期响应（同 board-canvas requestGenRef 手法）。
+  const loadGenRef = useRef(0);
+
   async function load(search = "") {
+    const gen = ++loadGenRef.current;
     setLoading(true);
     setError("");
     const res = await fetch(`/api/rooms/${roomId}/boards${search ? `?q=${encodeURIComponent(search)}` : ""}`);
+    if (gen !== loadGenRef.current) return; // 已有更新的 load 发出，本响应过期
     if (res.status === 401) {
       setError("请先登录");
       setLoading(false);
@@ -72,6 +79,7 @@ export default function RoomBoardsPage() {
       return;
     }
     const d = await res.json();
+    if (gen !== loadGenRef.current) return;
     setBoards(d.boards ?? []);
     setFavs(new Set((d.favoriteIds ?? []).map(String)));
     setLoading(false);

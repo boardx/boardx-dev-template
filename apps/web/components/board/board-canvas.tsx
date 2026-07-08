@@ -521,7 +521,17 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // 用 per-item Promise 链保证同一 item 的 PATCH 严格按发起顺序落库，不影响乐观 UI 更新
   // （setItems 仍同步先行，用户感知无延迟）。
   const patchQueue = useRef<Map<string, Promise<unknown>>>(new Map());
+  // issue #414 根因：poll()/load() 的 GET 快照相对"GET 发出之后才发生的本地写入"是过期的。
+  // requestGenRef 防不住（响应确实属于最新一次请求，只是比本地写入旧）；patchQueue.size
+  // 守卫也防不住"响应恰好落在两次写入之间的空档"（上一条 PATCH 已落地清队、下一次点击
+  // 还没发生）。e2e 插桩实测：字体/字号/斜体/对齐连续点击链中，早发的 poll 响应在空档
+  // 合并进来，把 items/itemsRef 整体回滚到无样式快照，下一个 setter 基于回滚后的 color
+  // 计算，其 PATCH 反过来把此前已落库的样式段全部摧毁（widget-text.spec.ts:40 间歇失败）。
+  // 修复：单调写代数。每次本地写发起时 +1；poll/load 在 GET 发出前记录当前代，响应返回后
+  // 代数前进过就说明快照已过期，丢弃本轮合并（下个周期会拉到含新写入的快照）。
+  const writeGenRef = useRef(0);
   function queuePatch(id: string, body: Record<string, unknown>): Promise<unknown> {
+    writeGenRef.current++;
     const prev = patchQueue.current.get(id) ?? Promise.resolve();
     const next = prev
       .catch(() => {})
@@ -533,7 +543,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         }),
       );
     patchQueue.current.set(id, next);
-    // p6:F21 review（PR #416）指出的真实泄漏：条目从不删除，map 无限增长，且 load() 里
+    // p6:F21 review（PR #416/#451）指出的真实泄漏：条目从不删除，map 无限增长，且 load() 里
     // `await Promise.all(patchQueue.current.values())` 会连带 await 所有历史已完成链
     // （已 resolve 的立即返回，语义上无害，但内存和遍历成本随会话时长线性涨，且任何
     // 依赖 size 判断"是否有在途 PATCH"的逻辑会永久失真）。落地后若自己仍是该 id 的
@@ -609,9 +619,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const load = useCallback(async () => {
     await Promise.all(patchQueue.current.values());
     const gen = ++requestGenRef.current;
+    const writeGen = writeGenRef.current; // issue #414：快照相对本地写入的新鲜度基准
     const res = await fetch(`/api/boards/${boardId}/items`);
     if (res.ok && gen === requestGenRef.current) {
       const next = ((await res.json()).items ?? []) as Item[];
+      // GET 在途期间有新的本地写入 → 快照已过期，合并会回滚乐观更新（见 writeGenRef 注释）。
+      // 丢弃本轮；itemsLoaded/seed 交给下一次 load/poll（1.5s 内）。
+      if (writeGen !== writeGenRef.current) return;
       itemsRef.current = next;
       itemsLoadedRef.current = true;
       setItems(next);
@@ -834,20 +848,24 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     let stop = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     async function poll() {
-      // p6:F21 v2：requestGenRef 只防"请求间乱序"（后发请求的响应先到），防不住
-      // "响应比本地乐观写入更旧"——poll 的 GET 在某次样式 PATCH 落库前发出、落库后
-      // 才返回时，gen 仍是最新，快照却是旧的，会把刚写入的乐观更新（如编组的 group 段）
-      // 整体冲掉（e2e 插桩实测复现：REST 已确认两成员都有 group 段，本地却被覆盖回
-      // null）。这正是 patchQueue 守卫要防的独立轴：有 PATCH 在途就跳过本轮合并。
-      // PR #416 review 指出该守卫因 patchQueue 泄漏（条目从不删除）永久失真——问题在
-      // 泄漏不在守卫本身；泄漏已在 queuePatch 里用 .finally 清理修复，守卫恢复有效。
+      // p6:F21 v2（#451）：requestGenRef 只防"请求间乱序"（后发请求的响应先到），防不住
+      // "响应比本地乐观写入更旧"——poll 的 GET 在某次样式 PATCH 落库前发出、落库后才返回
+      // 时，gen 仍是最新，快照却是旧的，会把刚写入的乐观更新整体冲掉。patchQueue.size===0
+      // 守卫挡住"有 PATCH 在途"的窗口；但 issue #414 发现它挡不住"响应恰好落在两次写入
+      // 之间的空档"（上一条 PATCH 已落地清队、下一次点击还没发生，size 短暂归零）——早发
+      // 的 poll 响应在此空档合并进来，把 items/itemsRef 回滚到无样式快照，下一个 setter
+      // 基于回滚值计算，其 PATCH 反过来摧毁此前已落库的样式段（widget-text.spec.ts:40
+      // 间歇失败根因，e2e 插桩实测复现）。补 writeGenRef 单调写代数：GET 发出前记录，响应
+      // 返回后代数前进过即快照已过期，丢弃本轮合并（下个周期会拉到含新写入的快照）。
       if (!stop && !editingId && !draggingRef.current && patchQueue.current.size === 0) {
         try {
           const gen = ++requestGenRef.current;
+          const writeGen = writeGenRef.current; // issue #414：快照相对本地写入的新鲜度基准
           const res = await fetch(`/api/boards/${boardId}/items`);
           if (
             res.ok &&
             gen === requestGenRef.current &&
+            writeGen === writeGenRef.current && // issue #414：GET 在途期间无新本地写入，快照才可合并
             !stop &&
             !editingId &&
             !draggingRef.current &&

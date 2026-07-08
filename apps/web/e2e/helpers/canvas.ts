@@ -62,7 +62,23 @@ export function selectedIds(page: Page): Promise<string[]> {
   return page.evaluate(() => window.__canvasTestApi!.getSelectedIds());
 }
 
+// 等待指定 item 出现在渲染层并返回它（issue #333：DOM 时代 expect(item-<id>).toBeVisible()
+// 自带 auto-wait；迁移到 canvasItems() 一次性读取后丢失了重试语义——引擎就绪(waitForCanvasReady)
+// 与首次 items 拉取完成之间存在窗口，预置 item 在该窗口内还没进渲染层，导致间歇失败）。
+export async function waitForItem(page: Page, id: string): Promise<CanvasItem> {
+  await waitForCanvasReady(page);
+  await expect
+    .poll(async () => (await canvasItems(page)).some((it) => it.id === id), {
+      timeout: 10_000,
+      message: `item ${id} 不在渲染层`,
+    })
+    .toBe(true);
+  return (await canvasItems(page)).find((it) => it.id === id)!;
+}
+
 export async function itemScreenRect(page: Page, id: string): Promise<ScreenRect> {
+  // 同上（issue #333）：对齐 locator.click() 的 actionability auto-wait——先等 item 进渲染层。
+  await waitForItem(page, id);
   const rect = await page.evaluate((itemId) => window.__canvasTestApi!.getItemScreenRect(itemId), id);
   expect(rect, `item ${id} 不在渲染层`).not.toBeNull();
   return rect!;
