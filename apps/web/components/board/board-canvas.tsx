@@ -3297,7 +3297,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           <button
             type="button"
             data-testid="ctx-paste"
-            className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted disabled:opacity-40"
+            className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted disabled:text-disabled-foreground"
             disabled={clipboard.current.length === 0}
             title={clipboard.current.length === 0 ? "剪贴板暂无可粘贴内容" : undefined}
             onClick={() => {

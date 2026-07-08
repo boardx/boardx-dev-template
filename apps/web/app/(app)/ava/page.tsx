@@ -489,6 +489,10 @@ export default function AvaPage() {
     setRegeneratingId(null);
     setRegenerateErrorId(null);
     attachments.reset();
+    // 已在空态时点击 New chat 原本毫无可见变化（线程要到首条消息才创建），
+    // 用户会以为按钮坏了；聚焦 composer 让点击始终有可感知的反馈。
+    // rAF：移动端 chat 面板要等本次 setMobileView 重渲染后才可见/可聚焦。
+    requestAnimationFrame(() => composerRef.current?.focus());
   }
 
   function startRename(thread: ThreadSummary) {

@@ -20,6 +20,15 @@ px=$(grep -rnE "\[[0-9]+px\]" app components --include="*.tsx" 2>/dev/null || tr
 pal=$(grep -rnE "(bg|text|border)-(neutral|gray|slate|zinc|red|green|blue|yellow)-[0-9]+" app components --include="*.tsx" 2>/dev/null || true)
 [ -n "$pal" ] && err "调色板硬编码色（改用 bg-primary/text-destructive 等语义 token）:" && echo "$pal"
 
+# ── 1.5 对比度架构（2026-07-09 复盘：Rooms Create 按钮灰底灰字事故）──────────
+# (a) 禁用态禁止用整体透明度——opacity 作用在实心深色按钮上会把黑底白字压成灰对灰。
+#     一律用 disabled:bg-disabled / disabled:text-disabled-foreground token 对。
+dis_op=$(grep -rn "disabled:opacity-" app components --include="*.tsx" 2>/dev/null || true)
+[ -n "$dis_op" ] && err "禁用态使用 disabled:opacity-*（改用 disabled:bg-disabled/disabled:text-disabled-foreground token 对，见 uiux-standards.md 对比度架构节）:" && echo "$dis_op"
+
+# (b) 主题 token 对的 WCAG 对比度机械计算（明暗两套；中性对 ≥4.5:1，状态色对 ≥3:1）
+node scripts/check-token-contrast.mjs || viol=1
+
 # ── 2. 原生表单元素（必须用 shadcn 封装）────────────────────────────────────
 # 允许 shadcn 组件本身内部使用（components/ui/ 路径排除）；只扫 app/ 页面层
 raw_select=$(grep -rn "<select" app --include="*.tsx" 2>/dev/null || true)
