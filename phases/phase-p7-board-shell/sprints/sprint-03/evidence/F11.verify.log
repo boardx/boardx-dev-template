@@ -1,12 +1,30 @@
 
+Running 10 tests using 1 worker
+
+  ✓  1 [chromium] › board-menu.spec.ts:21:5 › uc-board-menu-001：工具栏可见，已实现入口可用，未实现入口保持禁用 (11.5s)
+[WebServer] Yjs was already imported. This breaks constructor checks and will lead to issues! - https://github.com/yjs/yjs/issues/438
+  ✓  2 [chromium] › board-menu.spec.ts:39:5 › uc-board-menu-001：选中态在工具间正确切换 (4.0s)
+[WebServer] Yjs was already imported. This breaks constructor checks and will lead to issues! - https://github.com/yjs/yjs/issues/438
+  ✓  3 [chromium] › board-menu.spec.ts:50:5 › uc-board-menu-002：创建便利贴 → 出现在画布并自动选中 (5.6s)
+  ✓  4 [chromium] › board-menu.spec.ts:60:5 › uc-board-menu-003：创建文本 → 出现在画布并自动选中 (4.5s)
+[WebServer] Yjs was already imported. This breaks constructor checks and will lead to issues! - https://github.com/yjs/yjs/issues/438
+  ✓  5 [chromium] › board-menu.spec.ts:71:5 › uc-board-menu-004：创建形状 → 出现在画布，形状类型面板可切换类型 (2.3s)
+  ✓  6 [chromium] › board-menu.spec.ts:96:5 › uc-board-menu-005：连接线入口已上线（p6:F16），点击进入连接线取点模式 (1.3s)
+  ✓  7 [chromium] › board-menu.spec.ts:108:5 › uc-board-menu-006：手绘入口当前禁用（p6:F17 未实现），不误导为已实现 (2.1s)
+  ✓  8 [chromium] › board-menu.spec.ts:116:5 › uc-board-menu-007：C 键切换图表模式（无工具栏按钮），点击画布给出不可用反馈且不创建内容 (1.7s)
+  ✓  9 [chromium] › board-menu.spec.ts:139:5 › uc-board-menu-012：橡皮擦入口点击给出不可用反馈（p6:F17 手绘擦除未实现），不改变画布 (2.5s)
+[WebServer] Yjs was already imported. This breaks constructor checks and will lead to issues! - https://github.com/yjs/yjs/issues/438
+  ✓  10 [chromium] › board-menu.spec.ts:156:5 › viewer 不显示会改变内容的 Board Menu (2.0s)
+
+  Slow test file: [chromium] › board-menu.spec.ts (37.3s)
+  Consider splitting slow test files to speed up parallel execution
+  10 passed (48.1s)
+
+# rebase 后追加复验（coord-main review 要求）
+见 harness verify no-op 证据：
+
 > boardx-dev-template@ harness /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/p7-03-board-menu
 > tsx .harness/scripts/cli.ts "verify" "--phase" "p7" "--sprint" "p7/03" "--feature" "F11" "--owner" "canvas-worker-1"
 
-==> 验证 F11 — Board Menu 工具栏框架 + 组件创建入口
-✓ 通过: docker compose -f infra/docker-compose.yml up -d
-✓ 通过: pnpm --filter @repo/data run migrate
-✓ 通过: pnpm --filter @repo/web exec playwright test e2e/board-menu.spec.ts
-==> 运行基础验证（require_base_pass=true）: pnpm -w run verify:base
-✓ 基础验证通过
-✓ 门控通过 -> F11 = passing
-完成：1 个升级为 passing，0 个未通过。
+F11 已 passing，跳过（不可逆）
+完成：0 个升级为 passing，0 个未通过。

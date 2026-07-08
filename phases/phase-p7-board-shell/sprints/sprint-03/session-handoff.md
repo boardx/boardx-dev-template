@@ -22,6 +22,25 @@
   其中 uc-board-menu-004 用 `expect.poll` 容忍上述已知竞态的收敛窗口（不是弱化断言，
   断言意图不变，只是给一个合理等待窗口）。
 
+## Rebase 后追加修复（coord-main review 要求，PR #433 changes-requested）
+coord-main review 指出两个真实问题（非行政性）：
+1. PR 基于过期 base（merge-base 7c99f2b，main 已前进 9 commit）跑的 verify，"当时通过"
+   不等于"现在仍成立"，分支实测 CONFLICTING，且撞在今天 main 出过事故的同一热点区
+   （itemsRef，见 hotfix #427）：main 的 F16（#415）已把 itemsRef 重构成顶部单次声明，
+   本 PR 仍基于旧结构在附近插入新逻辑。已手动 rebase 到最新 main，冲突点（chooseTool
+   切工具时的两处清理逻辑：connectorFirstPick + notice）是互补关系不是真冲突，两条都保留；
+   `itemsRef` 复用 main 现有单一声明，rebase 后本地 `tsc --noEmit` 确认干净（按 SOP #429
+   要求）。
+2. e2e 断言与 main 现状矛盾：`board-menu.spec.ts` 的 uc-board-menu-001/005 原来断言
+   connector 工具 `disabled`（写这两条测试时 F16 还没合并），但 F16（#415）已合并上线、
+   connector 现在是启用状态。已按现状重写：uc-board-menu-001 改断言 `board-tool-connector`
+   为 `toBeEnabled()`；uc-board-menu-005 整条重写为验证点击后进入取值/取点模式
+   （`aria-pressed`），具体的两次点击建连行为留给 F16 自己的 `widget-connector.spec.ts`
+   覆盖，不重复造轮子。
+- 修复后本地 rebase 分支跑 `board-menu.spec.ts` 全量 10/10 通过（48.1s），`tsc --noEmit`
+  干净。`pnpm harness verify` 因 F11 已 passing（不可逆）而 no-op（同 F21 遇到的情况），
+  证据以直接 e2e 复验为准，见 `evidence/F11.verify.log` 末尾追加的记录。
+
 ## 仍损坏或未验证
 - issue #432（packages/collab 竞态）未关闭，coord-board 已就地缓解但未根治，交给
   coord-collab。`board-menu.spec.ts` 的 uc-board-menu-004 理论上仍有低概率因此偶发失败
