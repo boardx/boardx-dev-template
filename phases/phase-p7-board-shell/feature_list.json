@@ -218,16 +218,16 @@
       "area": "board-menu",
       "title": "Board Menu 工具栏框架 + 组件创建入口",
       "user_visible_behavior": "画布侧/底部 Board Menu 列出工具：便利贴(矩形/方形/圆形)、文本/标题、形状(矩形/圆/三角/菱形/圆角矩形/六边形)、连接线(直线/箭头)、手绘画笔、图表快捷键；选工具后在画布点击/拖拽创建对应组件。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "03",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-menu.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F11.verify.log @ 2026-07-07T22:39:42.145Z",
       "notes": "uc-board-menu-001~007 + 012。是 p6 各 widget 创建能力（F11 便利贴/F12 文本/F15 形状/F16 连接线/F17 手绘/F18 图表）的 UI 入口；橡皮擦入口触发 p6 F17 手绘擦除。",
       "source_use_cases": [
         "phases/requirements/board/board-menu/uc-board-menu-001-use-board-menu.md",

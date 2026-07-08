@@ -29,12 +29,14 @@ import {
   readItems as readCollabItems,
   seedItems,
   syncItemsIntoDoc,
+  upsertItem,
 } from "@repo/collab";
 import {
   AlignCenter,
   AlignLeft,
   AlignRight,
   Cable,
+  Eraser,
   Hand,
   Image,
   LayoutTemplate,
@@ -289,7 +291,17 @@ type Op =
   | { kind: "move"; moves: Move[] }
   | { kind: "resize"; resize: ItemResize }; // p6:F07 组件缩放
 
-type BoardTool = "select" | "pan" | "sticky" | "draw" | "text" | "connector" | "shape" | "assets" | "templates";
+type BoardTool =
+  | "select"
+  | "pan"
+  | "sticky"
+  | "draw"
+  | "text"
+  | "connector"
+  | "shape"
+  | "assets"
+  | "templates"
+  | "chart";
 
 // p6:F15：形状类型面板/Widget Menu 切换入口的小图标（纯 SVG，不依赖 lucide 里没有的形状）。
 function ShapeGlyph({ type, className }: { type: ShapeType; className?: string }) {
@@ -424,6 +436,16 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const [openPanel, setOpenPanel] = useState<"assets" | "templates" | "shape" | null>(null);
   // p6:F15（uc-widgets-004 主流程 4）：形状工具记住上次选择的形状类型，默认矩形。
   const [lastShapeType, setLastShapeType] = useState<ShapeType>(DEFAULT_SHAPE_TYPE);
+  // uc-board-menu-007（图表快捷键）：底层图表组件（p6:F18）尚未实现，C 键只切换「图表模式」
+  // 高亮态并在画布点击时给出「即将上线」反馈，不创建任何真实对象（范围纪律：不越界实现 F18）。
+  const [notice, setNotice] = useState<string | null>(null);
+  // 「暂不可用」提示条自动收起（3 秒），避免像格式刷提示条那样常驻挡住画布；
+  // 用户切工具/按 Esc 时也会提前清空（见 chooseTool / onKey 的 setNotice(null)）。
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 3000);
+    return () => clearTimeout(timer);
+  }, [notice]);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null); // 右键上下文菜单（uc-context-menu-001）
   const [guides, setGuides] = useState<Guide[]>([]); // 拖动时的对齐参考线（uc-canvas-007）
   const [spacings, setSpacings] = useState<SpacingHint[]>([]); // p6:F07 等间距提示
@@ -494,6 +516,15 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // （itemsRef.current = next）先于 setItems/maybeSeed 同步执行，Yjs 种子逻辑读到的
   // 仍是最新值，和渲染期自动同步（itemsRef.current = items）不冲突。
   const itemsLoadedRef = useRef(false);
+  // p7:F11 e2e 压测暴露的真实回归：load()（新增组件后主动调用）和 poll()（1.5s 轮询同步）
+  // 都是裸 fetch 全量快照 + setItems，谁的响应后到谁生效——但网络时序不保证跟发起顺序一致。
+  // 具体复现：连续两次创建组件（比如形状面板连点两种类型），第二次 addShape 结尾的
+  // load() 已经拿到含两个组件的最新快照并 setItems，但如果这之前 poll() 恰好也发出过一个
+  // GET（那时只有第一个组件），且它的响应因为系统负载被拖到 load() 之后才到达，就会用
+  // 过期快照把刚创建的组件"覆盖没了"（e2e 断言最后一个组件的 shapeType 时而对时而错，
+  // 表现为 flaky，实为真实竞态而非环境噪音）。修复：每次发起 GET 前领一个自增的请求代，
+  // 响应到达时只有"仍是最新一次请求"的那个才允许生效，比谁发起得晚，不比谁响应得晚。
+  const requestGenRef = useRef(0);
   // 是否已经完成"加入房间"的初次同步判定（收到 peer 的完整状态，或等待超时判定
   // 自己是第一个在线的人）。在这之前不能把本地 items 写进 doc——否则会替已存在的
   // item 独立造一份结构上互不相识的 Y.Map，后续增量 update 就合并不回去了。
@@ -514,8 +545,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // 先等所有排队中的 PATCH 落地，再拉取快照，保证 load() 不会撤销尚未确认的用户操作。
   const load = useCallback(async () => {
     await Promise.all(patchQueue.current.values());
+    const gen = ++requestGenRef.current;
     const res = await fetch(`/api/boards/${boardId}/items`);
-    if (res.ok) {
+    if (res.ok && gen === requestGenRef.current) {
       const next = ((await res.json()).items ?? []) as Item[];
       itemsRef.current = next;
       itemsLoadedRef.current = true;
@@ -741,9 +773,11 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     async function poll() {
       if (!stop && !editingId && !draggingRef.current) {
         try {
+          const gen = ++requestGenRef.current;
           const res = await fetch(`/api/boards/${boardId}/items`);
-          if (res.ok && !stop && !editingId && !draggingRef.current) {
+          if (res.ok && gen === requestGenRef.current && !stop && !editingId && !draggingRef.current) {
             const next = ((await res.json()).items ?? []) as Item[];
+            itemsRef.current = next;
             setItems((prev) =>
               JSON.stringify(prev) === JSON.stringify(next) ? prev : next
             );
@@ -875,9 +909,15 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // 空白按下：清除选择 + 关闭右键菜单（旧 items-layer onClick 语义），随后视口照常平移。
   const onEmptyPointerDown = useCallback(() => {
     if (formatSource) return; // 取样模式下点击空白不清空选择/退出（Esc 才退出，主流程 7）
+    // uc-board-menu-007 异常流程 3/9：图表模式下点击画布——底层图表组件（p6:F18）未实现，
+    // 不创建任何对象，只给出「不可用」反馈，画布内容不变（不清空选择，因为图表模式下本就无选中）。
+    if (activeTool === "chart") {
+      setNotice("图表功能即将上线，敬请期待");
+      return;
+    }
     setSelected(new Set());
     setCtxMenu(null);
-  }, [formatSource]);
+  }, [formatSource, activeTool]);
 
   const onEditRequest = useCallback(
     (id: string) => {
@@ -1002,6 +1042,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ color: TEXT_MARK }),
     });
+    // p7:F11 e2e 压测暴露的真实回归——见 addShape 里的详细注释：poll() 若在 POST/PATCH
+    // 之间的窗口发起过 GET，会把无 color 的旧版本"卡死"进 collab doc，之后 seedItems
+    // 永远不会覆盖。这里同样直接 upsertItem 无条件写入，规避同一类竞态。
+    upsertItem(docRef.current, item.id, { color: TEXT_MARK });
     const textItem: Item = { ...item, color: TEXT_MARK };
     recordOp({ kind: "add", items: [textItem] });
     await load();
@@ -1039,6 +1083,18 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ color }),
       });
+      // p7:F11 e2e 压测暴露的真实回归（packages/collab 边界，非本 feature 范围，narrow
+      // 本地规避）：seedItems() 对 doc 里已存在的 id 直接跳过、不覆盖（"避免打断本地在飞
+      // 编辑"是其设计初衷）。但如果 1.5s 的后台 poll() 恰好在"POST 已落库、PATCH 还没
+      // 落库"这个窗口期发起过一次 GET，会把这个新 item 的无 color 版本通过
+      // syncItemsIntoDoc 写进 doc；一旦 doc 认识了这个 id，之后 seedItems 就再也不会
+      // 用 REST 的最新快照覆盖它，导致 color 从此在 doc 视角"卡死"在空值，mergeRemoteItems
+      // 又会用这个卡死的值覆盖掉刚 load() 回来的正确数据（复现条件苛刻，系统负载越高
+      // 越容易触发，故此前观测为不稳定的 flaky 现象，实为真实竞态）。这里直接 upsertItem
+      // 无条件写入 doc（不像 seedItems 那样跳过已存在的 key），确保 doc 侧不会卡在旧值。
+      // 根治需要 packages/collab 增加版本号/时间戳裁决，超出 coord-board 的 area，
+      // 留给 coord-collab 评估（见 evidence 里的记录）。
+      upsertItem(docRef.current, item.id, { color });
     }
     const shapeItem: Item = { ...item, color };
     recordOp({ kind: "add", items: [shapeItem] });
@@ -1065,6 +1121,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ color: EMBED_MARK }),
     });
+    // p7:F11 e2e 压测暴露的真实回归——见 addShape 里的详细注释，同一类 poll()/seedItems
+    // 竞态在所有"创建后立即 PATCH color 哨兵"的创建函数里都存在，这里同样规避。
+    upsertItem(docRef.current, item.id, { color: EMBED_MARK });
     const embedItem: Item = { ...item, color: EMBED_MARK };
     recordOp({ kind: "add", items: [embedItem] });
     await load();
@@ -1206,6 +1265,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     if (tool === "select") setSelected(new Set());
     setFormatSource(null); // uc-widget-menu-010 主流程 7：切工具即退出取样模式
     if (tool !== "connector") setConnectorFirstPick(null); // 切出连接线工具即丢弃未完成的起点选择
+    setNotice(null); // uc-board-menu-007/012 备选流程 1：切到其它工具即退出「暂不可用」提示
   }
 
   // 底部悬浮 dock（F01，对齐 prototype FigJam 工具栏）复用同一套 activeTool 真值与
@@ -1608,9 +1668,19 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         setOpenPanel(null);
         setActiveTool("select");
         setFormatSource(null); // uc-widget-menu-010 主流程 7：Esc 退出取样模式
+        setNotice(null);
         return setSelected(new Set());
       }
       const mod = e.metaKey || e.ctrlKey;
+      // uc-board-menu-007：无修饰键的纯 "c"/"C" 才切换图表模式（区别于下方 mod+C 复制）。
+      // 仅编辑者可用；Board Menu 当前不直接渲染图表按钮，只有这一条快捷键入口。
+      if (!mod && !e.shiftKey && !e.altKey && (e.key === "c" || e.key === "C") && canEdit) {
+        e.preventDefault();
+        setActiveTool((prev) => (prev === "chart" ? "select" : "chart"));
+        setOpenPanel(null);
+        setNotice(null);
+        return;
+      }
       if (mod && (e.key === "z" || e.key === "Z")) {
         e.preventDefault();
         return void (e.shiftKey ? redo() : undo());
@@ -1644,7 +1714,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     }
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [items, selected, deleteSelected, moveSelected, pasteClipboard, undo, redo]);
+  }, [items, selected, deleteSelected, moveSelected, pasteClipboard, undo, redo, canEdit]);
 
   return (
     <div className="relative flex flex-1 flex-col" onMouseMove={publishLocalCursor} onMouseLeave={clearLocalCursor}>
@@ -1673,6 +1743,19 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             </BoardMenuButton>
             <BoardMenuButton testId="board-tool-draw" label="手绘" active={false} disabled>
               <PenLine className="h-4 w-4" />
+            </BoardMenuButton>
+            {/* uc-board-menu-012（橡皮擦入口，手绘相关入口的一部分）：底层手绘组件（p6:F17）
+                尚未实现，画笔本身还是禁用占位（上面 board-tool-draw）。橡皮擦不能真正擦除
+                任何笔迹，但业务规则 3（备选流程 2）要求「入口不可用时…提示当前无法使用」，
+                所以给一个可点击但只报「不可用」反馈的入口，不切换任何真实擦除模式，
+                也不创建/删除任何对象（范围纪律：不越界实现 F17 手绘擦除本身）。 */}
+            <BoardMenuButton
+              testId="board-tool-eraser"
+              label="橡皮擦"
+              active={false}
+              onClick={() => setNotice("手绘功能即将上线，橡皮擦暂不可用")}
+            >
+              <Eraser className="h-4 w-4" />
             </BoardMenuButton>
             <BoardMenuButton testId="add-text" label="文本" active={activeTool === "text"} onClick={() => void addText()}>
               <Type className="h-4 w-4" />
@@ -2209,6 +2292,19 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           <Button data-testid="wm-apply-format-exit" size="sm" variant="ghost" onClick={exitFormatPaint}>
             退出
           </Button>
+        </div>
+      )}
+
+      {/* uc-board-menu-007 / uc-board-menu-012：图表模式点击画布、或点击橡皮擦入口时的
+          「暂不可用」反馈条（p6:F18 图表 / p6:F17 手绘擦除均未实现）。3 秒后自动收起，
+          避免和格式刷提示条一样常驻挡住画布；用户切工具/按 Esc 时也会被清空（见 onKey/chooseTool）。 */}
+      {notice && (
+        <div
+          data-testid="board-menu-notice"
+          role="status"
+          className="absolute left-1/2 top-24 z-30 -translate-x-1/2 rounded-md border bg-card px-3 py-1.5 text-xs shadow-lg"
+        >
+          {notice}
         </div>
       )}
 
