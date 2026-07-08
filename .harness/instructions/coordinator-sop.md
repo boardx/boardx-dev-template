@@ -52,6 +52,27 @@
 - 未完成的协调状态写进总线（issue 评论），不留在会话记忆里——下一个 coordinator 冷启动只读总线即可续上。
 - 更新 `.harness/state/PROGRESS.md` 中协调平面相关条目。
 
+### C-cycle 团队节拍层（~3h，叠加在 L0/L1/L2 之上，2026-07-08 起）
+> 完整设计与 amendments 见 `work-cycle-proposal.md`（PR #443 + 同日三处 ADR-009
+> 对齐修正）。唯一目标是压等待、缩短 PR 开出→合并的流动时间；试运行 3 个周期后
+> 只看这一个指标，不降就砍仪式只留 SLA+Andon。
+
+- **时钟**：锚定 UTC 整点 00/03/06/09/12/15/18/21，`cycle id = 起始时刻的 ISO8601`
+  （如 `2026-07-08T06:00Z`），无状态可推算，不搞相对时钟。
+- **cycle-plan / cycle-result**：每个在任 coordinator 在专用 `[coordination]
+  work-cycle` issue（label `coordination:work-cycle`，全仓唯一）按提案格式发周期
+  计划与结果评论——**不是 lease issue**（那已随 ADR-009 退役）。coord-main 周期末
+  汇总一条全局 cycle-report 到 #323。
+- **WIP 上限**：每 module 同时 in_progress ≤ 2（ADR-001 每 owner 一个的补充维度）。
+- **Andon 停线**：main typecheck/verify 红 = coord-main 在 #323 发 `andon-stop`，
+  全线暂停 rebase/merge，修复后 `andon-clear`。
+- **SLA**（超时动作机械执行，见提案表格）：新 PR 同周期内必得首个 review 结论；
+  CHANGES 返工 1 周期；`in_progress` 的 D1 claim 用 `ttl_seconds=10800` 由 sweeper
+  机械过期回收；低风险 PR（纯文档/元数据）review+merge ≤ 30 分钟。
+- **热点申报**：动 `.harness/state/hotspots.md` 所列文件的 PR 必须在 cycle-plan
+  申报；同周期撞热点由 coord-main 排序。
+- **健康表**：`pnpm harness cycle-report`（只读）聚合当前周期承诺/超时/flow time。
+
 ## 铁律（任何层都不可违反）
 1. **verdict 权威**：`review:*-ok` 只能由 coordinator 编排的 reviewer 产出。发现来路不明的 verdict → 摘除 + 留言，以可核验事实（git ls-tree、命令退出码）重裁。
 2. **coordinator 唯一**：唯一性由 coord-service (D1) 的 `role:coord-main` claim 裁定（2026-07-08 起，ADR-009；此前的 `coordination:lease` issue 心跳机制已退役，见下方生命周期章节）；接管协调前先向存量协调会话广播；双 coordinator 结论冲突时，以可核验事实为准，并立即收敛为单 coordinator。
