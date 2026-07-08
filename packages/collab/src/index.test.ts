@@ -9,6 +9,7 @@ import {
   itemsMap,
   onLocalUpdate,
   readItems,
+  reconcileLocalEdits,
   removeItem,
   seedItems,
   syncItemsIntoDoc,
@@ -160,6 +161,44 @@ describe("@repo/collab board doc", () => {
     });
     expect(() => seedItems(doc, [{ id: "old-1", x: 5, y: 5, w: 10, h: 10, text: "fresh", type: "note", color: null }])).not.toThrow();
     expect(readItems(doc).find((i) => i.id === "old-1")?.text).toBe("fresh");
+  });
+
+  // issue #414 残留根因精确复现：
+  //   1. 组件创建走 upsertItem 直写 doc（立即 bump _rev>0）——模拟 board-canvas 里
+  //      新建文本/形状/连接线等 widget 时的直写通道。
+  //   2. join-sync 完成前，用户连续做了几次样式编辑（font→size→italic→align），
+  //      itemsRef.current 已经是最新值，但常规 [items] effect 落 doc 的通道被
+  //      joinSyncedRef 门禁挡住，doc 里的 color 字段还停留在步骤 1 的旧值。
+  //   3. join-sync 完成，maybeSeed() 依次调 seedItems + reconcileLocalEdits。
+  //      修复前只有 seedItems：因为 _rev>0，样式编辑被当成"过期快照"跳过，doc
+  //      永久卡在旧 color，随后 mergeRemoteItems 会用这份旧值把 React state 回滚。
+  //      修复后 reconcileLocalEdits 用 itemsRef.current（真正的最新本地值）
+  //      无条件补写差异字段，doc 收敛到正确值。
+  it("issue #414：join-sync 完成前的样式编辑不能被 seedItems 的 _rev 门禁挡在 doc 外", () => {
+    const doc = createBoardDoc();
+    // 步骤 1：创建 widget，直写 doc，_rev 被顶到 1。
+    upsertItem(doc, "widget-1", { x: 0, y: 0, w: 40, h: 40, text: "", type: "text", color: "text" });
+    // 步骤 2：join-sync 完成前的本地样式编辑链（font→size→italic→align 叠加在同一个 color 字段上），
+    // 只反映在 itemsRef.current 里，doc 完全不知道。
+    const itemsRef: import("./index").CollabItem[] = [
+      { id: "widget-1", x: 0, y: 0, w: 40, h: 40, text: "", type: "text", color: "text|font=serif|size=18|italic=1|align=right" },
+    ];
+    // 修复前的行为：seedItems 因为 _rev>0 跳过，doc 停留在创建时的旧 color。
+    seedItems(doc, itemsRef);
+    expect(readItems(doc).find((i) => i.id === "widget-1")?.color).toBe("text");
+    // 修复：reconcileLocalEdits 无条件补写差异字段，doc 收敛到真正的最新本地值。
+    reconcileLocalEdits(doc, itemsRef);
+    expect(readItems(doc).find((i) => i.id === "widget-1")?.color).toBe(
+      "text|font=serif|size=18|italic=1|align=right",
+    );
+  });
+
+  it("reconcileLocalEdits 不新建条目（新 id 交给 seedItems 负责），也不删除 doc 里存在但 items 未提及的条目", () => {
+    const doc = createBoardDoc();
+    upsertItem(doc, "1", { x: 0, y: 0, w: 10, h: 10, text: "a", type: "note", color: null });
+    reconcileLocalEdits(doc, [{ id: "brand-new", x: 1, y: 1, w: 1, h: 1, text: "", type: "note", color: null }]);
+    expect(readItems(doc).find((i) => i.id === "brand-new")).toBeUndefined();
+    expect(readItems(doc).find((i) => i.id === "1")).toBeDefined();
   });
 
   it("encode/decode update 往返一致", () => {

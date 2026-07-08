@@ -27,6 +27,7 @@ import {
   onLocalUpdate,
   onRemoteItemsChange,
   readItems as readCollabItems,
+  reconcileLocalEdits,
   seedItems,
   syncItemsIntoDoc,
   upsertItem,
@@ -643,6 +644,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const maybeSeed = useCallback(() => {
     if (!joinSyncedRef.current || !itemsLoadedRef.current) return;
     seedItems(docRef.current, itemsRef.current);
+    // issue #414 残留根因修复：seedItems 对已存在且 _rev>0 的条目会跳过覆盖
+    // （该规则保护"REST 快照晚于已连接客户端"的场景），但 itemsRef.current 本身
+    // 可能包含 join-sync 完成前用户已经做过、却因为常规 [items] effect 落 doc
+    // 通道被 joinSyncedRef 门禁挡住而还没写进 doc 的样式编辑（例如刚创建的组件
+    // 立即改字体/字号/对齐）。补一次无条件差异覆盖，避免这些编辑被下面的
+    // mergeRemoteItems 用 doc 里的旧值回滚掉，详见 reconcileLocalEdits 的注释。
+    reconcileLocalEdits(docRef.current, itemsRef.current);
     // seedItems 只补"任何在线客户端都还不知道"的新条目；已存在的条目里，doc
     // 内可能有比这次 REST 快照更新的字段（比如刚加入时另一人正在编辑），
     // 用 doc 当前真实状态回填一次 React state，而不是反过来拿 REST 覆盖 doc。
