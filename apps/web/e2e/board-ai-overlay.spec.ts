@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { canvasItems, expectItemCount, waitForCanvasReady } from "./helpers/canvas";
 
 // F01（uc-board-ai-001）：Board 内嵌 AI 浮层 + 底部工具 dock + board chat 面板。
 // 端到端覆盖 user_visible_behavior：
@@ -83,9 +84,12 @@ test("从底部 dock 新建便签：dock 与画布内容真值一致", async ({ 
   const dock = page.getByTestId("board-bottom-dock");
   await expect(dock).toBeVisible();
 
-  const itemsBefore = await page.getByTestId("items-layer").locator("[data-testid^='item-']").count();
+  // F13 后画布渲染切到 fabric.Canvas，item 不再产出 DOM 节点；
+  // 改用 e2e/helpers/canvas.ts 的渲染层真值锚点（断言意图不变：dock 新建 → 画布 item 数 +1）。
+  await waitForCanvasReady(page);
+  const itemsBefore = (await canvasItems(page)).length;
   await dock.getByTestId("dock-tool-sticky").click();
-  await expect(page.getByTestId("items-layer").locator("[data-testid^='item-']")).toHaveCount(itemsBefore + 1);
+  await expectItemCount(page, itemsBefore + 1);
 
   // AI 浮层的头部展示当前画布组件数（"就当前画布内容"提问的可见依据）
   await page.getByTestId("board-ai-toggle").click();
