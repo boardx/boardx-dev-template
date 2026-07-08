@@ -275,7 +275,7 @@ export function RoomListPanel() {
                     </span>
                     <span className="min-w-0 flex-1 truncate">{r.name}</span>
                     {favIds.has(String(r.id)) && <span className="shrink-0 text-xs text-amber-500">★</span>}
-                    <Badge variant="muted" className="shrink-0 px-1.5 py-0 text-[10px]">
+                    <Badge variant="muted" className="shrink-0 px-1.5 py-0 text-10">
                       {r.visibility === "team" ? "🌐" : "🔒"}
                     </Badge>
                   </Link>

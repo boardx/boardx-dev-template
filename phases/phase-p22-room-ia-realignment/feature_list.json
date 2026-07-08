@@ -8,7 +8,7 @@
       "title": "Room 主从（master-detail）双栏布局壳",
       "user_visible_behavior": "进入 Rooms 应用后，内容区是左右双栏（data-testid=rooms-two-pane）：左栏（data-testid=room-list-panel，宽 288px）常驻显示房间列表（搜索 data-testid=room-list-search、Favorites 筛选 data-testid=room-list-favorites-filter、新建 data-testid=room-list-new，列表项 data-testid=room-list-item-<id> 含收藏星标与可见性图标），右栏渲染当前选中房间的详情（面包屑/名称/tab/内容）；未选中任何房间时右栏展示空态（data-testid=rooms-empty-state：'选择一个房间查看详情'）；点击左栏另一房间时左栏不消失、保持常驻，右栏内容随之替换且该房间列表项高亮（data-active=true）；本轮不做窄屏/移动端响应式降级（人类已确认此范围裁剪）。",
       "design_ref": "人类截图（Rooms 应用左右双栏）+ prototype 六 tab 结构；已由 ui-prototyper 用真实数据验证（apps/web/app/(app)/rooms/layout.tsx + components/rooms/room-list-panel.tsx）",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "coord-room",
       "capability": "CAP-WEB",
@@ -20,7 +20,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-012-two-pane-shell.spec.ts --retries=2",
         "git cat-file -e HEAD:phases/phase-p22-room-ia-realignment/sprints/sprint-01/evidence/F01.verify.log"
       ],
-      "evidence": "evidence/F01.verify.log",
+      "evidence": "evidence/F01.verify.log @ 2026-07-08T03:43:33.551Z",
       "notes": "uc 见 requirements/00-overview.md 优先级0。UI 原型已在 apps/web 落地（真实组件+真实 API，非 mock），本 feature 的工作是补齐 e2e 验证契约、核实原型代码质量（例如 room-list-panel.tsx 的收藏/搜索状态与 p20 F02/F05 的既有 API 语义一致）、按需微调。地基 feature，F02/F03 均依赖右栏渲染出的既有 rooms/[id] 结构（间接依赖，非阻塞——F02/F03 的组件本身嵌套在 rooms/[id] 下，不直接依赖这层新壳，可与 F01 并行开发但建议 F01 先行验证壳本身不破坏既有 tab 内容）。"
     },
     {
@@ -30,9 +30,9 @@
       "title": "Room Files 双入口职责边界（Files tab 权威 + Chat 面板轻量引用）",
       "user_visible_behavior": "聊天工作区左栏 Room Files 面板（components/room-files/room-files-panel.tsx）头部新增'查看全部 →'链接（data-testid=room-files-panel-open-files-tab）跳转到该房间的 Files tab；面板空文件列表时的提示文案里'前往 Files tab' 是真正可点击的链接（不再是纯文字）；Files tab（房间级文件库）继续保持全功能（搜索/线程过滤/预览/删除），面板保持轻量（勾选 AI 上下文+简单上传，无搜索/预览/删除）——这个职责边界在代码注释中显式记录为产品决策，不是能力缺失。",
       "design_ref": "调研报告优先级1；已在 components/room-files/room-files-panel.tsx 落地（非 mock，真实组件修改）",
-      "status": "not_started",
+      "status": "in_progress",
       "sprint": "01",
-      "owner": null,
+      "owner": "coord-room",
       "capability": "CAP-FILE",
       "depends_on": [],
       "wave": 0,
