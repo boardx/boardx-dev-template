@@ -27,5 +27,6 @@
 | p19 | AVA 画布/记忆扩展 (P19，待决策) | not_started | 1 | 0 | 0 | 0 |
 | p20 | Room Realignment (P20) | not_started | 1 | 0 | 0 | 10 |
 | p21 | platform-accounts-hardening | not_started | 0 | 0 | 0 | 6 |
+| p22 | Room IA Realignment | not_started | 0 | 1 | 0 | 3 |
 
-_最近聚合:2026-07-08T06:35:57.854Z_
+_最近聚合:2026-07-08T07:33:00.954Z_

@@ -121,3 +121,45 @@ test("链接组件可移动（方向键微移）、可删除", async ({ page }) 
   await page.keyboard.press("Delete");
   await expectItemCount(page, 0);
 });
+
+// stored XSS 回归（PR #455 review）：攻击者不经 UI，直接 PATCH 把 link 哨兵的 url 段
+// 改成 javascript: 载荷。服务端 isColorSafe 守门必须 400 拒绝、color 保持不变；
+// 正常 https PATCH 仍 200。若守门缺失，恶意 color 会落库，其他用户点击「打开链接」
+// 时在其会话执行脚本。
+test("恶意 PATCH 注入 javascript: 链接被服务端拒绝（400，color 不变）", async ({ page }) => {
+  await openOwnBoard(page);
+  await createLink(page, TRICKY_URL);
+  const it = (await canvasItems(page))[0]!;
+  const safeColor = it.color!;
+  expect(safeColor).toContain("link|url=");
+
+  // 恶意注入：javascript: 载荷（encodeURIComponent 后塞进 url 段）
+  const evil = `link|url=${encodeURIComponent("javascript:alert(document.cookie)")}`;
+  const res = await page.request.patch(`/api/board-items/${it.id}`, { data: { color: evil } });
+  expect(res.status()).toBe(400);
+
+  // REST 读回：color 未被篡改（仍是原安全值）
+  const board = page.url().split("/boards/")[1]!.split(/[/?#]/)[0]!;
+  const items = (await (await page.request.get(`/api/boards/${board}/items`)).json()).items as Array<{
+    id: string;
+    color: string | null;
+  }>;
+  expect(items.find((x) => x.id === it.id)!.color).toBe(safeColor);
+
+  // data: 载荷同样被拒
+  const evilData = `link|url=${encodeURIComponent("data:text/html,<script>alert(1)</script>")}`;
+  expect((await page.request.patch(`/api/board-items/${it.id}`, { data: { color: evilData } })).status()).toBe(400);
+
+  // 正常 https 改写仍 200（守门不误伤合法链接）
+  const okColor = `link|url=${encodeURIComponent(`${BASE_URL}/login?x=1`)}`;
+  const okRes = await page.request.patch(`/api/board-items/${it.id}`, { data: { color: okColor } });
+  expect(okRes.status()).toBe(200);
+  const items2 = (await (await page.request.get(`/api/boards/${board}/items`)).json()).items as Array<{
+    id: string;
+    color: string | null;
+  }>;
+  expect(items2.find((x) => x.id === it.id)!.color).toBe(okColor);
+
+  // 非链接哨兵不受守门影响（回归：便签色 PATCH 仍 200）
+  expect((await page.request.patch(`/api/board-items/${it.id}`, { data: { color: "blue" } })).status()).toBe(200);
+});

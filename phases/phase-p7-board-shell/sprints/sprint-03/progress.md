@@ -8,6 +8,31 @@
 - 当前 blocker: 无
 
 ## 会话记录
+### 2026-07-08（续）PR #455 review 打回 — F12 stored XSS 修复
+- coord-main review：F14 干净，F12 有真实 **stored XSS**——`javascript:`/`data:` URL 可经
+  无校验的 PATCH 写入 `link|url=` 哨兵，其他用户点击「打开链接」时在其会话执行脚本。
+- 双侧修复（协议白名单，默认拒绝）：
+  1. **共享校验器**（`packages/canvas/src/index.ts` 新增 export，vitest 可测）：
+     `isSafeLinkUrl`（http/https 白名单）、`isLinkSentinel`/`linkUrlFromSentinel`（哨兵解析）、
+     `isColorSafe`（服务端守门：仅对 link 哨兵校验，其它 color 值一律放行）。
+  2. **服务端 PATCH 守门**（`apps/web/app/api/board-items/[itemId]/route.ts`）：body.color 为
+     link 哨兵且 URL 非 http/https → 400「链接协议不允许」。**POST/restore 路径不接受 color
+     字段**（color 仅经 PATCH 落库），故 PATCH 守门覆盖全部 link 哨兵写入路径，无旁路。
+  3. **客户端纵深防御**：`getLinkUrl` 内置 `isSafeLinkUrl` 校验（不安全/损坏哨兵返回 null），
+     双击/`wm-open-link` 打开前统一走它，不过则不打开 + notice 反馈；`window.open` 带
+     `noopener,noreferrer`（防 tabnabbing）；`addLink` 前置校验也用同一函数。
+- 注入回归测试（红→绿证据）：
+  - **RED 已证明**：git stash 掉服务端守门后跑注入测试，恶意 `javascript:` PATCH 返回
+    **200**（落库成功）——漏洞真实存在。
+  - **GREEN**：恢复守门后，注入测试断言 400 + REST 读回 color 未变 + 正常 https PATCH 200 +
+    便签色 PATCH 不受影响，全部通过。
+  - vitest 校验器矩阵 25/25（http/https 通过；javascript/data/vbscript/file、大小写变体
+    `JaVaScRiPt:`、前导空白/内嵌换行、相对路径/畸形串/空串全部拒绝）。
+  - `board-link-widget.spec.ts` 6/6（含注入回归）、`board-context-menu.spec.ts` 6/6 无回归。
+  - typecheck @repo/canvas + @repo/web 均干净。
+- 证据: `evidence/F12.verify.log`（F12 已 passing 不可逆，harness verify 为 no-op，日志记录
+  直接复验：vitest 矩阵 + e2e 含注入回归）。
+
 ### 2026-07-08
 - 本轮目标: F12（链接组件，issue #288）+ F14（右键 Context Menu，issue #289），同一分支一个 PR。
 - 已完成:

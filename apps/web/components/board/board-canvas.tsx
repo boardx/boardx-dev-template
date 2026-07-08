@@ -31,6 +31,7 @@ import {
   syncItemsIntoDoc,
   upsertItem,
 } from "@repo/collab";
+import { isSafeLinkUrl } from "@repo/canvas";
 import {
   AlignCenter,
   AlignLeft,
@@ -233,14 +234,19 @@ const isReloadable = (it: { color?: string | null }) => baseColor(it.color) === 
 // 不编码会把哨兵切碎（真实风险，不是理论）。item.text 存域名（hostname），供卡片展示。
 const LINK_MARK = "link";
 const isLink = (it: { color?: string | null }) => baseColor(it.color) === LINK_MARK;
+// getLinkUrl 除了 decode，还做**协议白名单纵深防御**（isSafeLinkUrl）：即使服务端守门被
+// 绕过、或历史数据里已存了 javascript:/data: 哨兵，客户端也拒绝把它当作可打开链接返回。
+// 打开路径（双击/wm-open-link）与渲染派生视图共用此函数，从源头保证不会打开危险协议。
 const getLinkUrl = (it: { color?: string | null }): string | null => {
   const v = styleGet(it.color, "url");
   if (!v) return null;
+  let decoded: string;
   try {
-    return decodeURIComponent(v);
+    decoded = decodeURIComponent(v);
   } catch {
     return null; // 编码损坏时视为无链接（防御，不抛错）
   }
+  return isSafeLinkUrl(decoded) ? decoded : null;
 };
 
 // p7:F14（uc-context-menu-003）：图层顺序。渲染顺序原本 = items 数组顺序（服务端按 created_at
@@ -959,8 +965,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       // p7:F12：链接组件双击 = 在新标签打开链接（不进入文本编辑——text 是展示用域名，
       // 手改会与 url 哨兵脱节；URL 修改路径留给后续 OG 预览增强，见 feature notes）。
       if (target && isLink(target)) {
-        const url = getLinkUrl(target);
+        const url = getLinkUrl(target); // 已含协议白名单校验（纵深防御）
         if (url) window.open(url, "_blank", "noopener,noreferrer");
+        else setNotice("该链接协议不被允许，无法打开");
         return;
       }
       setEditingId(id);
@@ -1221,9 +1228,15 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       setLinkError("链接格式不可用，请修改后重试");
       return;
     }
-    // 主机名不得残留百分号编码（同上：浏览器解析器把非法字符编码进 host 而不报错）。
-    if ((url.protocol !== "http:" && url.protocol !== "https:") || !url.hostname || url.hostname.includes("%")) {
+    // 协议白名单（stored XSS 前置防御，与服务端 isColorSafe / 打开路径共用同一判定）：
+    // 拒绝 javascript:/data:/vbscript: 等（含大小写/空白变体，WHATWG 归一化后由白名单拦下）。
+    if (!isSafeLinkUrl(url.href)) {
       setLinkError("仅支持 http/https 链接");
+      return;
+    }
+    // 主机名不得残留百分号编码（浏览器解析器把非法字符编码进 host 而不报错）。
+    if (!url.hostname || url.hostname.includes("%")) {
+      setLinkError("链接格式不可用，请修改后重试");
       return;
     }
     const x = 40;
@@ -1266,11 +1279,14 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   }
 
   // p7:F12：在新标签打开链接组件的 URL（Widget Menu「打开链接」入口 + 双击组件）。
+  // getLinkUrl 已做协议白名单校验（纵深防御）：不安全/损坏的哨兵返回 null，此处不打开并提示。
+  // window.open 带 noopener,noreferrer 防 tabnabbing。
   const openLink = useCallback(
     (id: string) => {
       const target = itemsRef.current.find((it) => it.id === id);
       const url = target ? getLinkUrl(target) : null;
       if (url) window.open(url, "_blank", "noopener,noreferrer");
+      else setNotice("该链接协议不被允许，无法打开");
     },
     [],
   );
