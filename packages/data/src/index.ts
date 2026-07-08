@@ -48,6 +48,8 @@ export * from "./admin";
 export * from "./mailbox";
 // CAP-FILE 房间级文件库仓储（room_files / p20 F03，uc-rr-003 核心模型修正）
 export * from "./roomFiles";
+// CAP-DATA 白板备份仓储（board_backups / p7 F08，uc-board-header-007）
+export * from "./backups";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 

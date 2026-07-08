@@ -12,13 +12,13 @@
 | p4 | Room-Chat (P4 补全) | in_progress | 0 | 0 | 1 | 4 |
 | p5 | Board 基础 (P5) | done | 0 | 0 | 0 | 10 |
 | p6 | Canvas & 组件 (P6) | in_progress | 3 | 0 | 3 | 18 |
-| p7 | Board 壳 (P7) | in_progress | 6 | 0 | 5 | 5 |
+| p7 | Board 壳 (P7) | in_progress | 2 | 0 | 5 | 9 |
 | p8 | 实时协作 (P8) | not_started | 0 | 0 | 0 | 5 |
 | p9 | AVA / Chat (P9) | in_progress | 0 | 0 | 1 | 10 |
 | p10 | 知识库 (P10) | in_progress | 0 | 1 | 0 | 3 |
 | p11 | AI Store (P11) | in_progress | 0 | 1 | 0 | 5 |
 | p12 | Studio & 演示 (P12) | in_progress | 0 | 0 | 0 | 3 |
-| p13 | 问卷 (P13) | in_progress | 0 | 1 | 0 | 6 |
+| p13 | 问卷 (P13) | in_progress | 0 | 0 | 0 | 7 |
 | p14 | 积分 & 计费 (P14) | in_progress | 0 | 1 | 0 | 4 |
 | p15 | Admin 后台 (P15) | in_progress | 0 | 0 | 0 | 5 |
 | p16 | UI 导航接线与差距审计 | not_started | 0 | 0 | 0 | 3 |
@@ -28,4 +28,4 @@
 | p20 | Room Realignment (P20) | not_started | 1 | 0 | 0 | 10 |
 | p21 | platform-accounts-hardening | not_started | 0 | 0 | 0 | 6 |
 
-_最近聚合:2026-07-08T01:01:40.536Z_
+_最近聚合:2026-07-08T05:59:31.969Z_
