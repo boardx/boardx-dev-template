@@ -14,7 +14,9 @@ export interface CanvasItem {
   h: number;
   text: string;
   color: string | null;
-  kind: "note" | "text" | "shape" | "embed" | "connector";
+  kind: "note" | "text" | "shape" | "embed" | "connector" | "link";
+  // p7:F12：链接组件的目标 URL（已 decode），仅 kind === "link" 时非空。
+  linkUrl: string | null;
   bold: boolean;
   italic: boolean;
   fontFamily: string;

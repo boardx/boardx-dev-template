@@ -72,7 +72,8 @@ test("编辑者创建并管理 CanvasX widgets，菜单显示能力边界", asyn
   await expect(page.getByTestId("ctx-duplicate")).toBeVisible();
   await expect(page.getByTestId("ctx-delete")).toBeVisible();
   await expect(page.getByTestId("ctx-paste")).toBeVisible();
-  await expect(page.getByTestId("ctx-lock-unavailable")).toBeDisabled();
+  // p7:F14：锁定入口由占位（ctx-lock-unavailable）升级为真实的锁定/解锁（复用 p6:F20 toggleLocked）。
+  await expect(page.getByTestId("ctx-lock")).toBeVisible();
 });
 
 test("viewer 只能查看 CanvasX widgets，不能创建或打开编辑菜单", async ({ page, playwright }) => {
