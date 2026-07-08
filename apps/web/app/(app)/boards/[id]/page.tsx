@@ -32,6 +32,13 @@ interface RoomOpt {
   name: string;
 }
 
+// p7:F08（uc-board-header-007）：备份列表条目（不含快照体）
+interface BackupRow {
+  id: number | string;
+  label: string;
+  created_at: string;
+}
+
 type Role = "owner" | "editor" | "viewer";
 
 export default function BoardPage() {
@@ -65,6 +72,15 @@ export default function BoardPage() {
   const [moveTarget, setMoveTarget] = useState("");
   // 删除（行内确认）
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  // p7:F08（uc-board-header-007）：备份面板。创建备份 + 列表 + 行内二次确认恢复
+  //（确认模式参考本文件 board-delete 的 confirmingDelete）。
+  const [backupOpen, setBackupOpen] = useState(false);
+  const [backups, setBackups] = useState<BackupRow[]>([]);
+  const [backupLabel, setBackupLabel] = useState("");
+  const [backupBusy, setBackupBusy] = useState(false); // 创建/恢复请求进行中
+  const [backupMsg, setBackupMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [confirmingRestore, setConfirmingRestore] = useState<string | null>(null); // backupId
 
   // 分享面板
   const [sharing, setSharing] = useState(false);
@@ -126,6 +142,73 @@ export default function BoardPage() {
       body: JSON.stringify({ visibility: v }),
     });
     await refresh();
+  }
+
+  // p7:F08：备份面板逻辑。列表刷新 / 创建 / 恢复（行内二次确认后调用）。
+  async function loadBackups() {
+    const res = await fetch(`/api/boards/${boardId}/backups`);
+    if (res.ok) {
+      const d = await res.json();
+      setBackups(d.backups ?? []);
+    }
+  }
+
+  function toggleBackupPanel() {
+    const next = !backupOpen;
+    setBackupOpen(next);
+    setBackupMsg(null);
+    setConfirmingRestore(null);
+    if (next) void loadBackups();
+  }
+
+  async function createBackupNow(e: React.FormEvent) {
+    e.preventDefault();
+    const label = backupLabel.trim();
+    if (!label || backupBusy) return;
+    setBackupBusy(true);
+    setBackupMsg(null);
+    try {
+      const res = await fetch(`/api/boards/${boardId}/backups`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ label }),
+      });
+      if (res.ok) {
+        setBackupLabel("");
+        setBackupMsg({ kind: "ok", text: "备份已创建" });
+        await loadBackups();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setBackupMsg({ kind: "err", text: d.errors?.label ?? d.error ?? "备份失败" });
+      }
+    } catch {
+      // uc-board-header-007 异常流程 2：失败保留原状态并提示
+      setBackupMsg({ kind: "err", text: "备份失败" });
+    }
+    setBackupBusy(false);
+  }
+
+  async function restoreFromBackup(backupId: string) {
+    if (backupBusy) return;
+    setBackupBusy(true);
+    setBackupMsg(null);
+    try {
+      const res = await fetch(`/api/boards/${boardId}/backups/${backupId}/restore`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        // 恢复成功：画布 1.5s 轮询会自动拉到恢复后的 items；这里只反馈结果。
+        setBackupMsg({ kind: "ok", text: "恢复成功，画布已回到备份时刻" });
+      } else {
+        // 异常流程 2：恢复失败（服务端事务已回滚），白板保持原状态，仅提示。
+        const d = await res.json().catch(() => ({}));
+        setBackupMsg({ kind: "err", text: d.error ?? "恢复失败，白板保持原状态" });
+      }
+    } catch {
+      setBackupMsg({ kind: "err", text: "恢复失败，白板保持原状态" });
+    }
+    setConfirmingRestore(null);
+    setBackupBusy(false);
   }
 
   async function remove() {
@@ -358,6 +441,18 @@ export default function BoardPage() {
               加入协作
             </Button>
           )}
+          {/* p7:F08（uc-board-header-007）：备份入口，仅管理者可见（权限与恢复 API 一致） */}
+          {canManage && (
+            <Button
+              data-testid="board-backup"
+              size="sm"
+              variant="secondary"
+              aria-expanded={backupOpen}
+              onClick={toggleBackupPanel}
+            >
+              {backupOpen ? "关闭备份" : "备份"}
+            </Button>
+          )}
           {/* 管理者可改元信息 */}
           {canManage && (
             <Button
@@ -463,6 +558,113 @@ export default function BoardPage() {
                   <div data-testid="share-qr" aria-label="二维码生成中" className="size-28 animate-pulse rounded-md border bg-muted" />
                 )}
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* p7:F08 白板备份面板（管理者）：创建备份 + 历史列表 + 行内二次确认恢复 */}
+      {backupOpen && canManage && (
+        <div
+          data-testid="backup-panel"
+          role="dialog"
+          aria-label="白板备份"
+          className="absolute right-4 top-20 z-30 w-96 rounded-xl border bg-popover p-4 text-popover-foreground shadow-xl"
+        >
+          <h2 className="text-sm font-semibold text-foreground">白板备份</h2>
+
+          {/* 创建备份 */}
+          <form onSubmit={createBackupNow} className="mt-2 flex gap-2">
+            <Input
+              data-testid="backup-label"
+              placeholder="备份名称"
+              value={backupLabel}
+              disabled={backupBusy}
+              onChange={(e) => setBackupLabel(e.target.value)}
+              className="flex-1"
+            />
+            <Button
+              type="submit"
+              data-testid="backup-create"
+              size="sm"
+              disabled={backupBusy || !backupLabel.trim()}
+            >
+              {backupBusy ? "处理中…" : "备份当前状态"}
+            </Button>
+          </form>
+
+          {/* 操作反馈（uc-board-header-007 业务规则 3：动作必须有明确反馈） */}
+          {backupMsg && (
+            <p
+              data-testid="backup-msg"
+              role={backupMsg.kind === "err" ? "alert" : "status"}
+              className={`mt-2 text-xs ${backupMsg.kind === "err" ? "text-destructive" : "text-muted-foreground"}`}
+            >
+              {backupMsg.text}
+            </p>
+          )}
+
+          {/* 历史备份列表 */}
+          <div data-testid="backup-list" className="mt-3 flex max-h-64 flex-col gap-2 overflow-y-auto border-t pt-3">
+            {backups.length === 0 ? (
+              <p data-testid="backup-empty" className="text-xs text-muted-foreground">
+                未找到白板备份
+              </p>
+            ) : (
+              backups.map((b) => (
+                <div
+                  key={String(b.id)}
+                  data-testid={`backup-row-${b.id}`}
+                  className="flex items-center justify-between gap-2 rounded-md border px-2 py-1.5"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-foreground">{b.label}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(b.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                  {confirmingRestore === String(b.id) ? (
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <span data-testid="restore-confirm-text" className="text-xs text-destructive">
+                        用该备份覆盖当前白板？
+                      </span>
+                      <Button
+                        type="button"
+                        data-testid={`backup-restore-confirm-${b.id}`}
+                        size="sm"
+                        variant="destructive"
+                        disabled={backupBusy}
+                        onClick={() => void restoreFromBackup(String(b.id))}
+                      >
+                        确认恢复
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setConfirmingRestore(null)}
+                      >
+                        取消
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      data-testid={`backup-restore-${b.id}`}
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0"
+                      disabled={backupBusy}
+                      onClick={() => {
+                        setBackupMsg(null);
+                        setConfirmingRestore(String(b.id));
+                      }}
+                    >
+                      恢复
+                    </Button>
+                  )}
+                </div>
+              ))
             )}
           </div>
         </div>

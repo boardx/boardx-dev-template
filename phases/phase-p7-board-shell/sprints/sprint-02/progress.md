@@ -4,10 +4,39 @@
 - 仓库根目录: `.claude/worktrees/p7-02-board-header`
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F01/F02/F03/F06 已 passing；下一个是 F08（备份与恢复）
+- 当前最高优先级未完成功能: F01/F02/F03/F06/F08 全部 passing，sprint p7/02 完结
 - 当前 blocker: 无
 
 ## 会话记录
+### 2026-07-08（F08 备份与恢复）
+- 本轮目标: F08（Board 备份与恢复，issue #286），本 sprint 唯一从零开始的 feature。
+- 已完成:
+  - Migration `031_board_backups.sql`：`board_backups` 表（bigint identity PK，对齐本库
+    惯例——全库无 uuid PK 先例；snapshot 为 items 的 jsonb 数组；(board_id, created_at DESC) 索引）。
+  - 数据层 `packages/data/src/backups.ts`：createBackup（读当前 board_items 全量存 jsonb）、
+    listBackups（不含快照体）、getBackup、restoreBackup（事务：DELETE 全部 items → 逐条
+    INSERT 快照内容保留原 id → COMMIT，失败 ROLLBACK 白板保持原状态）。
+  - API：`POST/GET /api/boards/:id/backups`、`POST /api/boards/:id/backups/:backupId/restore`，
+    权限均为 canManageBoard（403 否则），错误码风格照抄 boards/[id]/route.ts；restore 前
+    校验 backup 属于该 board（否则 404）。
+  - UI：board 页 Header 加"备份"入口（canManage 才显示）→ 面板：label 输入 + 创建、
+    历史列表（label+时间）、每条"恢复"→ 行内二次确认（同 confirmingDelete 模式）→
+    成功/失败均有明确反馈；恢复失败服务端事务已回滚，白板保持原状态。
+  - e2e `board-backup.spec.ts`（3 条）：API 创建/列表/恢复回到备份时刻（含空 label 400、
+    跨 board backupId 404）；UI 全流程含行内确认 + REST 断言 items；viewer 无入口 + API 403。
+- 发现并修掉的真实 bug: pg 把 bigint 列以 string 返回，`backup.board_id !== boardId`
+  严格比较恒不相等 → restore 恒 404。统一 `Number()` 后比较（数据层 + 路由两处）。
+- 运行过的验证: `pnpm --filter @repo/data run typecheck`、`pnpm --filter @repo/web run
+  typecheck` 干净；`pnpm harness verify --sprint p7/02 --feature F08` 真实门控通过
+  （migrate + board-backup.spec.ts 3/3 + verify:base），F08 → passing。
+- 环境噪音记录: 宿主机资源压力导致 postgres 容器多次被打进 recovery mode（全系统多
+  worktree 共性问题，非本栈引入），另遇 docker 子网 172.23.0.0/24 与旧 worktree 网络冲突，
+  改用 172.39.0.0/24（仅 infra/.env，gitignored）。重启 postgres + 预热 dev server 后
+  spec 与 verify 均完整绿。
+- 已记录证据: `evidence/F08.verify.log`。
+- 已知风险或未解决问题: UC 提到的备份缩略图未做（feature 定义只要求 label+时间+恢复，
+  快照无截图来源）；备份保存中阻塞返回导航（F01 留的口子）未接——创建备份是短同步请求，
+  面板内有 busy 态，实际窗口极小。
 ### 2026-07-07~08
 - 本轮目标: F01（Board Header 框架）。issue #282 原 owner wrk-room-3 认领后超过约定的
   2 小时通牒窗口零进展（无 commit/PR/回复），经用户授权后由 coord-board 重新认领，
