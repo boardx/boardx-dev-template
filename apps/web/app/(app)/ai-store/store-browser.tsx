@@ -509,6 +509,11 @@ export function StoreBrowser() {
     setType("all");
   }
 
+  function searchExplore(nextQ: string) {
+    setQ(nextQ);
+    void load({ type, tags: activeTags, q: nextQ, page: 1 });
+  }
+
   function goToPage(p: number) {
     if (p < 1 || p > totalPages || p === page) return;
     void load({ type, tags: activeTags, q, page: p });
@@ -793,7 +798,11 @@ export function StoreBrowser() {
                 placeholder="Search by name or description…"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && load({ type, tags: activeTags, q, page: 1 })}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  e.preventDefault();
+                  searchExplore(e.currentTarget.value);
+                }}
                 className="pl-10"
               />
             </div>
