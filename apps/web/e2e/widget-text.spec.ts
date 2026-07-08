@@ -52,9 +52,16 @@ test("调整字体/字号/斜体/对齐 → 渲染层与持久化均更新（刷
   await expect.poll(async () => (await canvasItems(page))[0]!.italic).toBe(true);
   await expect.poll(async () => (await canvasItems(page))[0]!.align).toBe("right");
 
+  // issue #414：持久化断言收紧——四段样式全部确认落库（含最后点击的 align）再刷新。
+  // 之前只 poll font=serif，最后一条 align PATCH 可能仍在途，reload 会把它中止在半路，
+  // 表现为"align 间歇丢失"的一种模式（另一种是客户端过期快照回滚，见 board-canvas.tsx
+  // writeGenRef 修复）。
   await expect
     .poll(async () => (await (await page.request.get(`/api/boards/${board.id}/items`)).json()).items[0].color as string)
     .toContain("font=serif");
+  await expect
+    .poll(async () => (await (await page.request.get(`/api/boards/${board.id}/items`)).json()).items[0].color as string)
+    .toContain("align=right");
 
   await page.reload();
   await expectItemCount(page, 1);

@@ -32,7 +32,10 @@ export interface RenderItem {
   h: number;
   text: string;
   color: string | null;
-  kind: "note" | "text" | "shape" | "embed" | "connector" | "draw" | "chart";
+  kind: "note" | "text" | "shape" | "embed" | "connector" | "draw" | "chart" | "link";
+  // p7:F12（uc-board-menu-011）：链接组件的目标 URL（已 decode 的完整 URL），由 color 的
+  // "|url=<encodeURIComponent 后的 URL>" 段解析而来。仅 kind === "link" 时非空。
+  linkUrl?: string | null;
   bold: boolean;
   // p6:F12（uc-widget-menu-013）：文本样式字段，均由 color 的 "|k=v" 段解析而来。
   italic: boolean;
@@ -221,7 +224,8 @@ export interface CanvasTestApi {
     h: number;
     text: string;
     color: string | null;
-    kind: "note" | "text" | "shape" | "embed" | "connector" | "draw" | "chart";
+    kind: "note" | "text" | "shape" | "embed" | "connector" | "draw" | "chart" | "link";
+    linkUrl: string | null;
     bold: boolean;
     italic: boolean;
     fontFamily: string;
@@ -734,6 +738,7 @@ export function FabricCanvas(props: Props) {
               text: it.text,
               color: it.color,
               kind: it.kind,
+              linkUrl: it.linkUrl ?? null,
               bold: it.bold,
               italic: it.italic,
               fontFamily: it.fontFamily,
@@ -1138,10 +1143,13 @@ function buildItemObject(
 ): Group {
   const isTextKind = it.kind === "text";
   const isShapeKind = it.kind === "shape";
+  // p7:F12（uc-board-menu-011）：链接组件渲染为白底卡片 + 蓝色下划线域名文本（对齐常见
+  // 链接视觉直觉），与便签的柔彩背景区分；选中/移动/删除交互与其它 widget 完全一致。
+  const isLinkKind = it.kind === "link";
   const base = (it.color ?? "amber").split(":")[0] || "amber";
   const fill = isTextKind
     ? "transparent"
-    : isShapeKind
+    : isShapeKind || isLinkKind
       ? tokens.surface1
       : tokens.tags[base] ?? tokens.tags.amber!;
   // p6:F19（uc-widget-menu-002）：用户可调边框色/边框宽（"none" 沿用原有默认描边，
@@ -1197,8 +1205,9 @@ function buildItemObject(
     green: "#16a34a",
     red: "#dc2626",
   };
-  const textFill = TEXT_COLORS[it.textColor] ?? tokens.foreground;
+  const textFill = isLinkKind ? "#2563eb" : TEXT_COLORS[it.textColor] ?? tokens.foreground;
   const text = new fabric.Textbox(it.text, {
+    underline: isLinkKind, // p7:F12：链接卡片文本加下划线，视觉表明可打开
     width: Math.max(8, it.w - pad * 2),
     fontSize: it.fontSize,
     lineHeight: 1.35,

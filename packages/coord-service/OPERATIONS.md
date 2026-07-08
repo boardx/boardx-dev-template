@@ -1,0 +1,167 @@
+# coord-service 人类操作手册（app / API / 数据怎么用）
+
+> 面向**人类**（仓库所有者/运维），不是 agent。agent 侧的使用约定见
+> `coordinator-sop.md` / 各 SKILL.md；架构决策见 ADR-006/008/009。
+> 2026-07-08 起（ADR-009），这套东西是 agent 协调的**唯一权威**——GitHub issue
+> 上不再有租约评论可看，你看协调状态就靠本文的三个入口。
+
+## 0. 一分钟认识它
+
+```
+┌─ 你（人类）────────────────────────────────────────────┐
+│  ① Web 仪表盘 /admin/coordination（最省事）              │
+│  ② curl /status（公开只读 API）                          │
+│  ③ Cloudflare Dash 的 D1 Console（直接查 SQL，最底层）    │
+└──────────────┬─────────────────────────────────────────┘
+               ▼
+   Cloudflare Worker: coord-service-staging
+   https://coord-service-staging.boardx.workers.dev
+               │  （每 5 分钟 cron：sweeper 自动回收过期租约）
+               ▼
+   D1 数据库: coord-service-staging
+   表：agents（身份+token哈希） claims（租约） events（只增历史） verdicts
+               ▲
+   agent 会话通过 pnpm harness lock-* / module-lock-* 读写（需 token）
+```
+
+## 1. 看协调状态的三种方式
+
+### ① Web 仪表盘（推荐日常使用）
+
+打开应用的 **`/admin/coordination`**（需要以 SysAdmin 登录）。三张卡：
+
+| 卡片 | 内容 |
+|---|---|
+| Coordinators | registry.yaml 的身份名录（谁被注册过、active 与否） |
+| Active Claims | **谁此刻持有什么租约**、心跳多久前、ttl（30 秒自动刷新） |
+| Recent Events | 最近 50 条协调事件（claim/release/heartbeat/expire），按类型着色 |
+
+前置条件：apps/web 的部署环境要配 `COORD_SERVICE_URL=https://coord-service-staging.boardx.workers.dev`
+——没配时卡片会显示 "COORD_SERVICE_URL is not configured"，这是提示不是故障。
+
+### ② /status API（公开只读，脚本/快速检查用）
+
+无需任何凭据：
+
+```bash
+curl -s https://coord-service-staging.boardx.workers.dev/status | jq
+```
+
+返回 `active_claims`（当前所有 in_progress 租约）+ `recent_events`（最近 50 条）
++ `generated_at`。几个常用过滤：
+
+```bash
+# 谁在当 coord-main？（空数组 = 席位空缺）
+curl -s .../status | jq '.active_claims[] | select(.resource_id=="role:coord-main")'
+
+# 所有协调者租约的心跳时间
+curl -s .../status | jq '.active_claims[] | {resource_id, agent_id, last_heartbeat_at}'
+
+# 最近有没有租约被 sweeper 强制过期（值得关注的异常信号）
+curl -s .../status | jq '.recent_events[] | select(.type=="expire")'
+```
+
+### ③ Cloudflare Dash 的 D1 Console（查历史/审计用）
+
+dash.cloudflare.com → **Storage & Databases → D1 → `coord-service-staging`** → Console 标签，
+直接跑 SQL。常用查询：
+
+```sql
+-- 某个角色的完整租约历史（含已释放/已过期的）
+SELECT * FROM claims WHERE resource_id='role:coord-main' ORDER BY claimed_at DESC LIMIT 20;
+
+-- 协调层最近 100 条事件（events 表只增不改，是唯一可信历史）
+SELECT * FROM events ORDER BY id DESC LIMIT 100;
+
+-- 有哪些注册身份、谁被停用了
+SELECT id, kind, active, created_at FROM agents ORDER BY kind, id;
+```
+
+命令行等价（需要 `packages/coord-service/.env.cloudflare`，见 §3）：
+
+```bash
+cd packages/coord-service
+sh -c 'set -a; . ./.env.cloudflare; set +a; npx wrangler d1 execute coord-service-staging \
+  --remote --env staging --command "SELECT ..." --json'
+```
+
+## 2. 凭据（token）管理
+
+### 本地凭据文件（agent 会话自取）
+
+```
+.harness/state/.cache/coord-credentials.json    ← gitignored，mode 600
+```
+
+内容：`COORD_SERVICE_URL` + 各协调者身份的 token。agent 会话用法：
+
+```bash
+export COORD_SERVICE_URL=$(jq -r '.COORD_SERVICE_URL' .harness/state/.cache/coord-credentials.json)
+export COORD_SERVICE_TOKEN=$(jq -r '.tokens["coord-<你的id>"]' .harness/state/.cache/coord-credentials.json)
+```
+
+### 给新身份发 token（registry.yaml 加了新 agent 之后）
+
+```bash
+cd packages/coord-service
+npx tsx scripts/seed-agents.ts        # 幂等：只给 D1 里还没有的 id 生成新行+新 token
+```
+
+**token 只在生成那一刻打印一次**，立刻存进凭据文件，别贴进 issue/PR/聊天记录。
+
+### 轮换（token 疑似泄漏 / 丢失时）
+
+轮换 = `UPDATE agents SET token_hash='<新token的sha256hex>' WHERE id='<id>'`——
+**永远不要 DELETE**（会孤立该身份的 claims/events 历史）。
+
+⚠️ **治理要求（铁律 #8 同级）**：轮换是对共享协调基础设施的变更，每次执行前需要
+人类明确授权——即使执行者认为"这个 token 反正丢了、轮换无害"。2026-07-08 的
+8 身份轮换即按此流程执行（会话内人类逐次确认）。
+
+## 3. 部署与运维
+
+前置：`packages/coord-service/.env.cloudflare`（gitignored）里放 Cloudflare API
+token（`CLOUDFLARE_API_TOKEN=...`，需要 Workers + D1 权限）。
+
+```bash
+cd packages/coord-service
+
+# 部署 Worker（改了 src/ 之后）
+sh -c 'set -a; . ./.env.cloudflare; set +a; npx wrangler deploy --env staging'
+
+# 应用新的 D1 迁移（migrations/ 加了新文件之后）
+sh -c 'set -a; . ./.env.cloudflare; set +a; npx wrangler d1 migrations apply coord-service-staging --remote --env staging'
+
+# 实时看 Worker 日志（排查请求为什么 401/500）
+sh -c 'set -a; . ./.env.cloudflare; set +a; npx wrangler tail --env staging'
+
+# 本地跑测试（不碰任何云端资源）
+pnpm --filter @repo/coord-service test
+```
+
+**cron**：sweeper 每 5 分钟跑一次，把 `last_heartbeat_at + ttl_seconds < now` 的
+in_progress 租约标记为 expired 并写一条 expire 事件——不需要人干预，这就是
+"心跳断了租约自动回收"的机械保证。
+
+**projector 保持熄灭**（ADR-009）：staging 环境**不要**配置 `GITHUB_TOKEN`/`GITHUB_REPO`
+这两个 secret。配了它就会开始往 GitHub 投影评论——那是被人类决定退役的行为。
+
+## 4. 故障排查速查
+
+| 症状 | 原因 | 处置 |
+|---|---|---|
+| agent 报 `COORD_SERVICE_URL/COORD_SERVICE_TOKEN 未配置` | 会话没 source 凭据 | 按 §2 的用法 export 两个变量；这是 ADR-009 有意的强制换轨，不是 bug |
+| agent 调用返回 401 | token 错/被轮换过 | 从凭据文件重新取；确认取的是自己身份的 token |
+| acquire 返回 409 | 别的会话刚抢先认领 | 正常的原子判定结果，不要重试抢占；`/status` 看谁拿到了 |
+| acquire 报 fail-closed 拒绝 | Worker/D1 不可达 | `curl /status` 验证；Cloudflare 侧故障时协调暂停是设计行为（ADR-009 接受的代价）；人类确认后可 `--force` |
+| 租约显示被持有但会话早就没了 | 心跳断了但 ttl（默认 6h）未到 | 等 sweeper 到点回收，或 D1 Console 手动 `UPDATE claims SET status='expired' WHERE id=<n>`（这属于共享基础设施变更，先在总线留言） |
+| dashboard 卡片显示 unconfigured | apps/web 没配 COORD_SERVICE_URL | 部署环境加该变量，重启 |
+| dashboard 卡片报 Couldn't reach | Worker 不可达/超时 | 同 fail-closed 行；`wrangler tail` 看日志 |
+
+## 5. 安全纪律（public 仓库）
+
+- token/API key **只**存在于：D1 的 hash 列、本地 gitignored 文件、Cloudflare secret。
+  任何时候不进 git、不进 issue/PR/评论（总线全球可读）。
+- `.env.cloudflare` 与 `.harness/state/.cache/coord-credentials.json` 都是 gitignored
+  ——不要为了"备份"把它们复制到仓库内的其它路径。
+- 发现泄漏：立即按 §2 轮换受影响身份 + 在总线留一条（不含新 token）说明轮换原因。

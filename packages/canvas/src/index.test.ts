@@ -1,5 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { applyCommand, applyAll, validateNewItem, type BoardItem, type ItemPatch } from "./index";
+import {
+  applyCommand,
+  applyAll,
+  validateNewItem,
+  isSafeLinkUrl,
+  isLinkSentinel,
+  linkUrlFromSentinel,
+  isColorSafe,
+  type BoardItem,
+  type ItemPatch,
+} from "./index";
 
 const item = (id: string, x = 0, y = 0): BoardItem => ({ id, type: "note", x, y, w: 160, h: 100, text: "" });
 
@@ -95,5 +105,66 @@ describe("validateNewItem", () => {
   it("非法 type / 坐标", () => {
     expect(validateNewItem({ type: "blob", x: 1, y: 2 }).ok).toBe(false);
     expect(validateNewItem({ type: "note", x: "n", y: 2 }).ok).toBe(false);
+  });
+});
+
+// p7:F12 stored XSS 防护：链接 URL 协议白名单（默认拒绝）。
+describe("isSafeLinkUrl（协议白名单）", () => {
+  it("http/https 通过", () => {
+    expect(isSafeLinkUrl("http://example.com")).toBe(true);
+    expect(isSafeLinkUrl("https://example.com/x?a=1|b=2&c=x=y")).toBe(true);
+    expect(isSafeLinkUrl("HTTPS://EXAMPLE.COM")).toBe(true); // 协议大小写归一化
+  });
+  it("javascript/data/vbscript 被拒（stored XSS 载荷）", () => {
+    expect(isSafeLinkUrl("javascript:alert(1)")).toBe(false);
+    expect(isSafeLinkUrl("data:text/html,<script>alert(1)</script>")).toBe(false);
+    expect(isSafeLinkUrl("vbscript:msgbox(1)")).toBe(false);
+    expect(isSafeLinkUrl("file:///etc/passwd")).toBe(false);
+  });
+  it("大小写/前导空白变体被 WHATWG 归一化后仍被白名单拦下", () => {
+    expect(isSafeLinkUrl("JaVaScRiPt:alert(1)")).toBe(false);
+    expect(isSafeLinkUrl("  javascript:alert(1)")).toBe(false);
+    expect(isSafeLinkUrl("\tjavascript:alert(1)")).toBe(false);
+    expect(isSafeLinkUrl("java\nscript:alert(1)")).toBe(false); // 内嵌换行变体
+  });
+  it("相对路径/畸形串/空串被拒（解析失败即拒绝）", () => {
+    expect(isSafeLinkUrl("/relative/path")).toBe(false);
+    expect(isSafeLinkUrl("example.com")).toBe(false); // 无 scheme
+    expect(isSafeLinkUrl("not a url")).toBe(false);
+    expect(isSafeLinkUrl("")).toBe(false);
+  });
+});
+
+describe("链接哨兵解析 + isColorSafe（服务端守门）", () => {
+  const enc = (u: string) => `link|url=${encodeURIComponent(u)}`;
+  it("isLinkSentinel 仅认判别头 link", () => {
+    expect(isLinkSentinel("link|url=x")).toBe(true);
+    expect(isLinkSentinel("amber")).toBe(false);
+    expect(isLinkSentinel("amber|z=3")).toBe(false);
+    expect(isLinkSentinel(null)).toBe(false);
+    expect(isLinkSentinel(undefined)).toBe(false);
+  });
+  it("linkUrlFromSentinel 编码往返无损（含 |/= 的 URL）", () => {
+    const u = "https://example.com/x?a=1|b=2&c=x=y";
+    expect(linkUrlFromSentinel(enc(u))).toBe(u);
+    expect(linkUrlFromSentinel("amber")).toBeNull();
+  });
+  it("isColorSafe 对非链接 color 一律放行（不影响既有哨兵）", () => {
+    for (const c of [null, undefined, "amber", "amber:bold", "text|font=serif", "connector|from=a|to=b", "amber|z=5", "amber|locked=1"]) {
+      expect(isColorSafe(c)).toBe(true);
+    }
+  });
+  it("isColorSafe 放行 https 链接哨兵", () => {
+    expect(isColorSafe(enc("https://example.com"))).toBe(true);
+  });
+  it("isColorSafe 拒绝 javascript/data 链接哨兵（含大小写变体）", () => {
+    expect(isColorSafe(enc("javascript:alert(1)"))).toBe(false);
+    expect(isColorSafe(enc("JaVaScRiPt:alert(1)"))).toBe(false);
+    expect(isColorSafe(enc("data:text/html,<script>alert(1)</script>"))).toBe(false);
+  });
+  it("isColorSafe 拒绝缺 url 段/编码损坏的链接哨兵", () => {
+    expect(isColorSafe("link")).toBe(false);
+    expect(isColorSafe("link|foo=bar")).toBe(false);
+    expect(isColorSafe("link|url=%E0%A4%A")).toBe(false); // 畸形百分号编码 → decode 抛错
   });
 });

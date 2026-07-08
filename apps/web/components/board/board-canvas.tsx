@@ -31,6 +31,7 @@ import {
   syncItemsIntoDoc,
   upsertItem,
 } from "@repo/collab";
+import { isSafeLinkUrl } from "@repo/canvas";
 import {
   AlignCenter,
   AlignLeft,
@@ -40,6 +41,7 @@ import {
   Hand,
   Image,
   LayoutTemplate,
+  Link2,
   MousePointer2,
   Paintbrush,
   PenLine,
@@ -231,6 +233,38 @@ const SHAPE_TOOL_LAST_KEY = "board_shape_tool_last";
 const EMBED_MARK = "embed";
 const DEFAULT_EMBED = "嵌入内容";
 const isReloadable = (it: { color?: string | null }) => baseColor(it.color) === EMBED_MARK;
+
+// p7:F12（uc-board-menu-011）：链接组件。沿用 TEXT_MARK/EMBED_MARK 建立的 color 哨兵约定，
+// 线上以 type:"note" 落库（服务端 validateNewItem 只放行 note/rect，不可改）+ color 判别头
+// "link"，URL 存于 "|url=<encodeURIComponent 后的完整 URL>" 样式段。**URL 必须
+// encodeURIComponent**：URL 里可能含 "|"（撞 splitColor 的段分隔符）和 "="（撞 k=v 分隔符），
+// 不编码会把哨兵切碎（真实风险，不是理论）。item.text 存域名（hostname），供卡片展示。
+const LINK_MARK = "link";
+const isLink = (it: { color?: string | null }) => baseColor(it.color) === LINK_MARK;
+// getLinkUrl 除了 decode，还做**协议白名单纵深防御**（isSafeLinkUrl）：即使服务端守门被
+// 绕过、或历史数据里已存了 javascript:/data: 哨兵，客户端也拒绝把它当作可打开链接返回。
+// 打开路径（双击/wm-open-link）与渲染派生视图共用此函数，从源头保证不会打开危险协议。
+const getLinkUrl = (it: { color?: string | null }): string | null => {
+  const v = styleGet(it.color, "url");
+  if (!v) return null;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(v);
+  } catch {
+    return null; // 编码损坏时视为无链接（防御，不抛错）
+  }
+  return isSafeLinkUrl(decoded) ? decoded : null;
+};
+
+// p7:F14(uc-context-menu-003)：图层顺序。渲染顺序原本 = items 数组顺序（服务端按 created_at
+// 排序），无 z 持久化列。沿用 withStyle 的 "|k=v" 哨兵约定，把层序编码为 color 的 "|z=<整数>"
+// 段：客户端渲染前按 (z ?? 0, 原数组下标) 稳定排序，上移/下移/置顶/置底 = 重算 z 后 PATCH
+// color——不加数据库列、不改服务端白名单，刷新/协作端天然一致。
+const getZ = (it: { color?: string | null }): number => {
+  const v = styleGet(it.color, "z");
+  const n = v != null ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : 0;
+};
 
 // p6:F17（uc-widgets-006 手绘）：手绘笔迹组件。沿用既有 color "|k=v" 哨兵编码约定：
 // 线上以 type:"note" 落库 + color:"draw" 判别头（服务端 validateNewItem 白名单不可改）。
@@ -488,7 +522,10 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const [editingId, setEditingId] = useState<string | null>(null); // F11 文本编辑中的便签
   const [activeTool, setActiveTool] = useState<BoardTool>("select");
   const [aiOpen, setAiOpen] = useState(false); // F01: Board AI 浮层/board chat 面板开关，dock 与浮层共享同一真值
-  const [openPanel, setOpenPanel] = useState<"assets" | "templates" | "shape" | null>(null);
+  const [openPanel, setOpenPanel] = useState<"assets" | "templates" | "shape" | "link" | null>(null);
+  // p7:F12（uc-board-menu-011 主流程 5-6）：链接输入框草稿 + 校验错误提示。
+  const [linkDraft, setLinkDraft] = useState("");
+  const [linkError, setLinkError] = useState<string | null>(null);
   // p6:F15（uc-widgets-004 主流程 4）：形状工具记住上次选择的形状类型，默认矩形。
   const [lastShapeType, setLastShapeType] = useState<ShapeType>(DEFAULT_SHAPE_TYPE);
   // uc-board-menu-007（图表快捷键）：底层图表组件（p6:F18）尚未实现，C 键只切换「图表模式」
@@ -521,7 +558,17 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // 用 per-item Promise 链保证同一 item 的 PATCH 严格按发起顺序落库，不影响乐观 UI 更新
   // （setItems 仍同步先行，用户感知无延迟）。
   const patchQueue = useRef<Map<string, Promise<unknown>>>(new Map());
+  // issue #414 根因：poll()/load() 的 GET 快照相对"GET 发出之后才发生的本地写入"是过期的。
+  // requestGenRef 防不住（响应确实属于最新一次请求，只是比本地写入旧）；patchQueue.size
+  // 守卫也防不住"响应恰好落在两次写入之间的空档"（上一条 PATCH 已落地清队、下一次点击
+  // 还没发生）。e2e 插桩实测：字体/字号/斜体/对齐连续点击链中，早发的 poll 响应在空档
+  // 合并进来，把 items/itemsRef 整体回滚到无样式快照，下一个 setter 基于回滚后的 color
+  // 计算，其 PATCH 反过来把此前已落库的样式段全部摧毁（widget-text.spec.ts:40 间歇失败）。
+  // 修复：单调写代数。每次本地写发起时 +1；poll/load 在 GET 发出前记录当前代，响应返回后
+  // 代数前进过就说明快照已过期，丢弃本轮合并（下个周期会拉到含新写入的快照）。
+  const writeGenRef = useRef(0);
   function queuePatch(id: string, body: Record<string, unknown>): Promise<unknown> {
+    writeGenRef.current++;
     const prev = patchQueue.current.get(id) ?? Promise.resolve();
     const next = prev
       .catch(() => {})
@@ -533,7 +580,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         }),
       );
     patchQueue.current.set(id, next);
-    // p6:F21 review（PR #416）指出的真实泄漏：条目从不删除，map 无限增长，且 load() 里
+    // p6:F21 review（PR #416/#451）指出的真实泄漏：条目从不删除，map 无限增长，且 load() 里
     // `await Promise.all(patchQueue.current.values())` 会连带 await 所有历史已完成链
     // （已 resolve 的立即返回，语义上无害，但内存和遍历成本随会话时长线性涨，且任何
     // 依赖 size 判断"是否有在途 PATCH"的逻辑会永久失真）。落地后若自己仍是该 id 的
@@ -609,9 +656,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const load = useCallback(async () => {
     await Promise.all(patchQueue.current.values());
     const gen = ++requestGenRef.current;
+    const writeGen = writeGenRef.current; // issue #414：快照相对本地写入的新鲜度基准
     const res = await fetch(`/api/boards/${boardId}/items`);
     if (res.ok && gen === requestGenRef.current) {
       const next = ((await res.json()).items ?? []) as Item[];
+      // GET 在途期间有新的本地写入 → 快照已过期，合并会回滚乐观更新（见 writeGenRef 注释）。
+      // 丢弃本轮；itemsLoaded/seed 交给下一次 load/poll（1.5s 内）。
+      if (writeGen !== writeGenRef.current) return;
       itemsRef.current = next;
       itemsLoadedRef.current = true;
       setItems(next);
@@ -834,20 +885,24 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     let stop = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     async function poll() {
-      // p6:F21 v2：requestGenRef 只防"请求间乱序"（后发请求的响应先到），防不住
-      // "响应比本地乐观写入更旧"——poll 的 GET 在某次样式 PATCH 落库前发出、落库后
-      // 才返回时，gen 仍是最新，快照却是旧的，会把刚写入的乐观更新（如编组的 group 段）
-      // 整体冲掉（e2e 插桩实测复现：REST 已确认两成员都有 group 段，本地却被覆盖回
-      // null）。这正是 patchQueue 守卫要防的独立轴：有 PATCH 在途就跳过本轮合并。
-      // PR #416 review 指出该守卫因 patchQueue 泄漏（条目从不删除）永久失真——问题在
-      // 泄漏不在守卫本身；泄漏已在 queuePatch 里用 .finally 清理修复，守卫恢复有效。
+      // p6:F21 v2（#451）：requestGenRef 只防"请求间乱序"（后发请求的响应先到），防不住
+      // "响应比本地乐观写入更旧"——poll 的 GET 在某次样式 PATCH 落库前发出、落库后才返回
+      // 时，gen 仍是最新，快照却是旧的，会把刚写入的乐观更新整体冲掉。patchQueue.size===0
+      // 守卫挡住"有 PATCH 在途"的窗口；但 issue #414 发现它挡不住"响应恰好落在两次写入
+      // 之间的空档"（上一条 PATCH 已落地清队、下一次点击还没发生，size 短暂归零）——早发
+      // 的 poll 响应在此空档合并进来，把 items/itemsRef 回滚到无样式快照，下一个 setter
+      // 基于回滚值计算，其 PATCH 反过来摧毁此前已落库的样式段（widget-text.spec.ts:40
+      // 间歇失败根因，e2e 插桩实测复现）。补 writeGenRef 单调写代数：GET 发出前记录，响应
+      // 返回后代数前进过即快照已过期，丢弃本轮合并（下个周期会拉到含新写入的快照）。
       if (!stop && !editingId && !draggingRef.current && patchQueue.current.size === 0) {
         try {
           const gen = ++requestGenRef.current;
+          const writeGen = writeGenRef.current; // issue #414：快照相对本地写入的新鲜度基准
           const res = await fetch(`/api/boards/${boardId}/items`);
           if (
             res.ok &&
             gen === requestGenRef.current &&
+            writeGen === writeGenRef.current && // issue #414：GET 在途期间无新本地写入，快照才可合并
             !stop &&
             !editingId &&
             !draggingRef.current &&
@@ -1024,6 +1079,14 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       if (!canEdit) return;
       const target = items.find((it) => it.id === id);
       if (target && getLocked(target)) return;
+      // p7:F12：链接组件双击 = 在新标签打开链接（不进入文本编辑——text 是展示用域名，
+      // 手改会与 url 哨兵脱节；URL 修改路径留给后续 OG 预览增强，见 feature notes）。
+      if (target && isLink(target)) {
+        const url = getLinkUrl(target); // 已含协议白名单校验（纵深防御）
+        if (url) window.open(url, "_blank", "noopener,noreferrer");
+        else setNotice("该链接协议不被允许，无法打开");
+        return;
+      }
       setEditingId(id);
     },
     [canEdit, items],
@@ -1033,6 +1096,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     (pos: { x: number; y: number }, itemId: string | null) => {
       if (!canEdit) return;
       if (itemId && !selected.has(itemId)) setSelected(new Set([itemId]));
+      // p7:F14（uc-context-menu-001 备选流程 1）：空白处右键 = 画布级菜单，不携带对象级动作
+      // ——清空选中，菜单按 selected.size === 0 渲染画布级入口（粘贴/选择所有）。
+      if (!itemId) setSelected(new Set());
       setCtxMenu(pos);
     },
     [canEdit, selected],
@@ -1047,10 +1113,23 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     setOperating(op);
   }, []);
 
+  // p7:F14（uc-context-menu-003）：渲染顺序 = 按 (z, 原数组下标) 稳定排序后的顺序。
+  // z 缺省为 0，全部缺省时排序退化为服务端 created_at 顺序（与旧行为完全一致）。
+  // fabric reconcile 按该顺序添加对象（z-order 即添加顺序），测试 API getItems() 的 z
+  // （数组下标）自然反映排序后的层序。
+  const sortedItems = useMemo<Item[]>(
+    () =>
+      items
+        .map((it, i) => [it, i] as const)
+        .sort((a, b) => getZ(a[0]) - getZ(b[0]) || a[1] - b[1])
+        .map(([it]) => it),
+    [items],
+  );
+
   // fabric 渲染层的输入视图：把 color 哨兵/字重等判别预解析成渲染语义（fabric 组件不懂业务哨兵）。
   const renderItems = useMemo<RenderItem[]>(
     () =>
-      items.map((it) => ({
+      sortedItems.map((it) => ({
         id: it.id,
         type: it.type,
         x: it.x,
@@ -1061,17 +1140,20 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         color: it.color ?? null,
         kind: isConnector(it)
           ? "connector"
-          : isDraw(it)
-            ? "draw"
-            : isChart(it)
-              ? "chart"
-              : isText(it)
-                ? "text"
-                : isShape(it)
-                  ? "shape"
-                  : isReloadable(it)
-                    ? "embed"
-                    : "note",
+          : isLink(it)
+            ? "link"
+            : isDraw(it)
+              ? "draw"
+              : isChart(it)
+                ? "chart"
+                : isText(it)
+                  ? "text"
+                  : isShape(it)
+                    ? "shape"
+                    : isReloadable(it)
+                      ? "embed"
+                      : "note",
+        linkUrl: getLinkUrl(it),
         bold: isBold(it),
         italic: isItalic(it),
         fontFamily: getFontFamily(it),
@@ -1104,7 +1186,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             }
           : undefined,
       })),
-    [items, reload],
+    [sortedItems, reload],
   );
   const selectedIdList = useMemo(
     () => items.filter((it) => selected.has(it.id)).map((it) => it.id),
@@ -1244,6 +1326,95 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     await load();
     setSelected(new Set([item.id]));
   }
+
+  // p7:F12（uc-board-menu-011 主流程 5-7）：创建链接组件。校验 URL（空/格式不可用时在输入框
+  // 内提示，不创建）；通过后以 type:"note" 落库（text=域名，供卡片展示标题/域名），再 PATCH
+  // color 写入 "link|url=<encodeURIComponent(URL)>" 哨兵，并 upsertItem 直写 collab doc
+  // （防 poll()/seedItems 竞态把无 color 版本卡进 doc，见 addShape 的详细注释）。
+  async function addLink(raw: string) {
+    const input = raw.trim();
+    if (!input) {
+      setLinkError("请输入链接地址");
+      return;
+    }
+    // 含空白字符的输入直接判为格式不可用：浏览器的 WHATWG URL 解析器会把主机名里的空格
+    // 百分号编码后「成功解析」（"not a valid url" → https://not%20a%20valid%20url/，与 Node
+    // 的抛错行为不同，e2e 实测），单靠 new URL 抛错兜不住这类明显非 URL 的输入。
+    if (/\s/.test(input)) {
+      setLinkError("链接格式不可用，请修改后重试");
+      return;
+    }
+    // 无 scheme 时默认按 https 补全（用户常直接粘贴 example.com/x）。
+    const candidate = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(input) ? input : `https://${input}`;
+    let url: URL;
+    try {
+      url = new URL(candidate);
+    } catch {
+      setLinkError("链接格式不可用，请修改后重试");
+      return;
+    }
+    // 协议白名单（stored XSS 前置防御，与服务端 isColorSafe / 打开路径共用同一判定）：
+    // 拒绝 javascript:/data:/vbscript: 等（含大小写/空白变体，WHATWG 归一化后由白名单拦下）。
+    if (!isSafeLinkUrl(url.href)) {
+      setLinkError("仅支持 http/https 链接");
+      return;
+    }
+    // 主机名不得残留百分号编码（浏览器解析器把非法字符编码进 host 而不报错）。
+    if (!url.hostname || url.hostname.includes("%")) {
+      setLinkError("链接格式不可用，请修改后重试");
+      return;
+    }
+    const x = 40;
+    const y = 40 + placeN.current++ * 130;
+    const res = await fetch(`/api/boards/${boardId}/items`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "note", x, y, w: 220, h: 60, text: url.hostname }),
+    });
+    if (res.status !== 201) {
+      setLinkError("创建失败，请稍后重试"); // UC 异常流程 1：失败反馈，保留已有内容
+      return;
+    }
+    const { item } = (await res.json()) as { item: Item };
+    const color = withStyle(LINK_MARK, { url: encodeURIComponent(url.href) });
+    await fetch(`/api/board-items/${item.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ color }),
+    });
+    // 注意：这里写入**全字段**而不是只写 { color }——若 doc 尚不认识该 id，只写 color 会
+    // 造出一个 text=""/x=0 的残缺 Y.Map，随后 mergeRemoteItems 用它覆盖 React state，
+    // 链接卡片的域名文本会被清空（F12 verify 实测抓到的真实回归，非理论）。
+    upsertItem(docRef.current, item.id, {
+      x: item.x,
+      y: item.y,
+      w: item.w,
+      h: item.h,
+      text: item.text,
+      type: item.type,
+      color,
+    });
+    const linkItem: Item = { ...item, color };
+    recordOp({ kind: "add", items: [linkItem] });
+    await load();
+    setSelected(new Set([item.id]));
+    setOpenPanel(null);
+    setLinkDraft("");
+    setLinkError(null);
+  }
+
+  // p7:F12：在新标签打开链接组件的 URL（Widget Menu「打开链接」入口 + 双击组件）。
+  // getLinkUrl 已做协议白名单校验（纵深防御）：不安全/损坏的哨兵返回 null，此处不打开并提示。
+  // window.open 带 noopener,noreferrer 防 tabnabbing。
+  const openLink = useCallback(
+    (id: string) => {
+      const target = itemsRef.current.find((it) => it.id === id);
+      const url = target ? getLinkUrl(target) : null;
+      if (url) window.open(url, "_blank", "noopener,noreferrer");
+      else setNotice("该链接协议不被允许，无法打开");
+    },
+    [],
+  );
 
   // p6:F17（uc-widgets-006 主流程 1-3）：一次画笔手势结束（fabric PencilBrush path:created）
   // → 把笔迹持久化为手绘组件。points 为画布坐标；归一化为相对包围盒左上角的局部坐标存入
@@ -1539,7 +1710,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       const res = await fetch(`/api/boards/${boardId}/items`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ type: it.type, x: it.x + 20, y: it.y + 20, text: it.text }),
+        // p7:F12/F14：带上 w/h——链接卡片等非默认尺寸组件复制/粘贴后保持原尺寸
+        // （旧版只传 x/y/text，粘贴出的副本会退回服务端默认尺寸）。
+        body: JSON.stringify({ type: it.type, x: it.x + 20, y: it.y + 20, w: it.w, h: it.h, text: it.text }),
       });
       if (res.status !== 201) continue;
       const copy = (await res.json()).item as Item;
@@ -1830,7 +2003,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     const sel = items.filter((it) => selected.has(it.id));
     if (sel.length !== 1) return;
     const source = sel[0]!;
-    if (isShape(source) || isReloadable(source)) return;
+    if (isShape(source) || isReloadable(source) || isLink(source)) return; // p7:F12：链接头会随格式复制污染目标，排除
     setFormatSource({ id: source.id, color: source.color ?? null });
   }
   function exitFormatPaint() {
@@ -1844,9 +2017,17 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     if (!formatSource || !canEdit) return false;
     if (targetId === formatSource.id) return false;
     const target = items.find((it) => it.id === targetId);
-    // p6:F17/F18：手绘/图表的 color 头是类型判别位，应用格式会把头替换掉导致类型丢失，
-    // 与形状/嵌入一样视为不兼容目标。
-    if (!target || isShape(target) || isReloadable(target) || isDraw(target) || isChart(target)) return false;
+    // 应用格式会重写 color 判别头，会导致类型丢失，故形状/嵌入/链接（p7:F12）/手绘/图表
+    // （p6:F17/F18）一律视为不兼容目标。
+    if (
+      !target ||
+      isShape(target) ||
+      isReloadable(target) ||
+      isLink(target) ||
+      isDraw(target) ||
+      isChart(target)
+    )
+      return false;
     const newColor = applyFormatColor({ color: formatSource.color }, isText(target));
     await applyColors((it) => (it.id === target.id ? newColor : null));
     return true;
@@ -1891,37 +2072,51 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     setSelected(new Set(created.map((c) => c.id))); // 新便利贴按多选态展示（主流程 4）
   }
 
-  // uc-context-menu-003：调整图层顺序（z-order）。items 数组顺序即 DOM 绘制顺序，
-  // 越靠后越在上层（同 z-index、position:absolute → 后绘制覆盖先绘制）。
-  // 通过重排 items 数组实现「置顶/上移/下移/置底」，并保留选中态。
-  // z-order 为纯客户端视图关注点（后端 item 无 order 字段），重排数组即改变遮挡关系。
+  // uc-context-menu-003 / p7:F14：调整图层顺序（z-order）并**持久化**。
+  // 旧版只重排本地 items 数组（刷新即丢）；现改为：在按 (z, 原下标) 排序后的当前层序上
+  // 计算目标顺序，然后把每个 item 的 z 段写成其目标下标（仅 PATCH 与现值不同的项——
+  // 首次操作会给多数 item 补显式 z，之后每次只动少数项）。排序读取见 sortedItems/getZ。
+  // 多选时按选中集合整体移动，保留选中项彼此相对次序（uc-003 主流程 6）；锁定对象允许
+  // 被层级动作调整（uc-001 前端入口 3：锁定对象菜单收窄但保留层级入口）。
   const arrange = useCallback(
-    (mode: "front" | "forward" | "backward" | "back") => {
+    async (mode: "front" | "forward" | "backward" | "back") => {
       if (!canEdit || selected.size === 0) return;
-      setItems((prev) => {
-        if (!prev.some((it) => selected.has(it.id))) return prev;
-        const sel = prev.filter((it) => selected.has(it.id));
-        const rest = prev.filter((it) => !selected.has(it.id));
-        if (mode === "front") return [...rest, ...sel];
-        if (mode === "back") return [...sel, ...rest];
-        const next = [...prev];
+      const cur = itemsRef.current
+        .map((it, i) => [it, i] as const)
+        .sort((a, b) => getZ(a[0]) - getZ(b[0]) || a[1] - b[1])
+        .map(([it]) => it);
+      if (!cur.some((it) => selected.has(it.id))) return;
+      let order: Item[];
+      if (mode === "front") {
+        order = [...cur.filter((it) => !selected.has(it.id)), ...cur.filter((it) => selected.has(it.id))];
+      } else if (mode === "back") {
+        order = [...cur.filter((it) => selected.has(it.id)), ...cur.filter((it) => !selected.has(it.id))];
+      } else {
+        order = [...cur];
         if (mode === "forward") {
-          // 整体上移一层：从右往左，把每个选中项与其右侧最近的未选中项交换，
-          // 保留选中项彼此相对次序。
-          for (let i = next.length - 2; i >= 0; i--) {
-            if (selected.has(next[i]!.id) && !selected.has(next[i + 1]!.id)) {
-              [next[i], next[i + 1]] = [next[i + 1]!, next[i]!];
+          // 整体上移一层：从上层往下扫，把每个选中项与其上方最近的未选中项交换。
+          for (let i = order.length - 2; i >= 0; i--) {
+            if (selected.has(order[i]!.id) && !selected.has(order[i + 1]!.id)) {
+              [order[i], order[i + 1]] = [order[i + 1]!, order[i]!];
             }
           }
         } else {
-          // 整体下移一层：从左往右，把每个选中项与其左侧最近的未选中项交换。
-          for (let i = 1; i < next.length; i++) {
-            if (selected.has(next[i]!.id) && !selected.has(next[i - 1]!.id)) {
-              [next[i], next[i - 1]] = [next[i - 1]!, next[i]!];
+          // 整体下移一层：从底层往上扫，把每个选中项与其下方最近的未选中项交换。
+          for (let i = 1; i < order.length; i++) {
+            if (selected.has(order[i]!.id) && !selected.has(order[i - 1]!.id)) {
+              [order[i], order[i - 1]] = [order[i - 1]!, order[i]!];
             }
           }
         }
-        return next;
+      }
+      const zByld = new Map(order.map((it, idx) => [it.id, idx]));
+      // applyColors：乐观更新 + per-item 串行 PATCH 落库（复用既有样式段写路径）。
+      // 目标 z 与当前生效 z 相同的项返回 null（不 PATCH）；每次操作后所有 item 的生效 z
+      // 恰为其目标下标（0..n-1 各一次），不会产生并列。
+      await applyColors((it) => {
+        const target = zByld.get(it.id);
+        if (target == null || getZ(it) === target) return null;
+        return withStyle(it.color, { z: String(target) });
       });
     },
     [canEdit, selected]
@@ -1979,6 +2174,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         setActiveTool("select");
         setFormatSource(null); // uc-widget-menu-010 主流程 7：Esc 退出取样模式
         setNotice(null);
+        setCtxMenu(null); // uc-context-menu-001 主流程 7：Esc 关闭右键菜单且不执行动作
         return setSelected(new Set());
       }
       const mod = e.metaKey || e.ctrlKey;
@@ -2102,6 +2298,19 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             >
               <span className="text-10 leading-none">▾</span>
             </button>
+            {/* p7:F12（uc-board-menu-011）：链接组件创建入口——点击展开 URL 输入面板，
+                校验通过后在画布放置链接卡片（见 addLink）。 */}
+            <BoardMenuButton
+              testId="add-link"
+              label="链接"
+              active={openPanel === "link"}
+              onClick={() => {
+                setOpenPanel((p) => (p === "link" ? null : "link"));
+                setLinkError(null);
+              }}
+            >
+              <Link2 className="h-4 w-4" />
+            </BoardMenuButton>
             <BoardMenuButton
               testId="board-tool-assets"
               label="资源"
@@ -2178,6 +2387,43 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             </div>
           )}
 
+          {/* p7:F12（uc-board-menu-011 主流程 5-6）：链接输入面板——输入 URL、校验（空/格式
+              不可用时就地提示，UC 主流程 6），确认后创建链接组件。 */}
+          {openPanel === "link" && (
+            <div
+              data-testid="board-link-panel"
+              className="absolute left-3 top-12 z-20 w-72 rounded-lg border bg-popover p-3 shadow-lg"
+            >
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void addLink(linkDraft);
+                }}
+              >
+                <input
+                  data-testid="board-link-url"
+                  aria-label="链接地址"
+                  placeholder="https://example.com"
+                  autoFocus
+                  value={linkDraft}
+                  onChange={(e) => {
+                    setLinkDraft(e.target.value);
+                    setLinkError(null);
+                  }}
+                  className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+                {linkError && (
+                  <div data-testid="board-link-error" role="alert" className="mt-1.5 text-xs text-destructive">
+                    {linkError}
+                  </div>
+                )}
+                <Button data-testid="board-link-submit" type="submit" size="sm" className="mt-2 w-full">
+                  添加到画布
+                </Button>
+              </form>
+            </div>
+          )}
+
           {openPanel === "assets" && (
             <div
               data-testid="board-assets-panel"
@@ -2234,12 +2480,12 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             <>
           {/* 颜色色板（F11）：仅对便签生效；选中项全为文本或连接线时隐藏（文本为透明块、连接线
               用边框色表达线条颜色，都不套柔彩背景色，业务规则 1：菜单入口按对象类型区分）。
-              p6:F17/F18：手绘/图表的 color 头是类型判别位（"draw"/"chart"），setColor 会把头
-              替换成色 token 导致类型丢失，故选中含手绘/图表时色板整体隐藏（笔色走 wm-border）。 */}
+              连接线/链接（p7:F12）/手绘/图表（p6:F17/F18）的 color 头都是类型判别位，setColor
+              会把头替换成色 token 导致类型丢失，故选中含这些类型时色板整体隐藏（笔色走 wm-border）。 */}
           {!items.filter((it) => selected.has(it.id)).every((it) => isText(it) || isConnector(it)) &&
             items
               .filter((it) => selected.has(it.id))
-              .every((it) => !isConnector(it) && !isDraw(it) && !isChart(it)) &&
+              .every((it) => !isConnector(it) && !isLink(it) && !isDraw(it) && !isChart(it)) &&
             COLOR_TOKENS.map((c) => (
             <button
               key={c}
@@ -2274,7 +2520,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             const allTextLike =
               sel.length > 0 &&
               sel.every(
-                (it) => isText(it) || (!isShape(it) && !isReloadable(it) && !isConnector(it) && !isDraw(it) && !isChart(it)),
+                (it) =>
+                  isText(it) ||
+                  (!isShape(it) && !isReloadable(it) && !isConnector(it) && !isLink(it) && !isDraw(it) && !isChart(it)),
               );
             if (!allTextLike) return null;
             const first = sel[0]!;
@@ -2502,10 +2750,26 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           })()}
           {/* p6:F19（uc-widget-menu-010）：应用格式入口。仅单选一个文本/便签类对象时可进入取样模式
               （形状/嵌入/连接线无可复用的文字排版样式，不作为来源，业务规则 1）。 */}
+          {/* p7:F12：链接组件在新标签打开的可见入口（uc-board-menu-011 后置：用户可继续操作组件；
+              user_visible_behavior：点击在新标签打开）。双击组件同样触发（见 onEditRequest）。 */}
+          {selected.size === 1 && items.filter((it) => selected.has(it.id)).every(isLink) && (
+            <Button
+              data-testid="wm-open-link"
+              size="sm"
+              variant="ghost"
+              aria-label="打开链接"
+              onClick={() => openLink(Array.from(selected)[0]!)}
+            >
+              <Link2 className="mr-1 h-3.5 w-3.5" />
+              打开链接
+            </Button>
+          )}
           {selected.size === 1 &&
             items
               .filter((it) => selected.has(it.id))
-              .every((it) => !isShape(it) && !isReloadable(it) && !isConnector(it) && !isDraw(it) && !isChart(it)) && (
+              .every(
+                (it) => !isShape(it) && !isReloadable(it) && !isConnector(it) && !isLink(it) && !isDraw(it) && !isChart(it),
+              ) && (
               <Button
                 data-testid="wm-apply-format"
                 size="sm"
@@ -2849,7 +3113,13 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         </div>
       </CanvasViewport>
 
-      {/* 右键上下文菜单（uc-context-menu-001）：复用复制/粘贴/副本/删除 */}
+      {/* 右键上下文菜单（p7:F14，uc-context-menu-001~004）：按当前目标显示允许的操作——
+          对象菜单：复制/剪切/创建副本 + 图层顺序（持久化 z，见 arrange）+ 锁定/解锁 + 删除；
+          锁定对象菜单收窄（uc-001 前端入口 3）：保留复制与层级，隐藏剪切/副本/删除，锁定入口
+          变为解锁；空白画布：粘贴 + 选择所有（uc-001 备选流程 1：不展示对象级动作）。
+          编组/取消编组入口：依赖 p6:F21 的 groupSelected/ungroupSelected，F21 尚未合并到
+          main（board-canvas 里没有编组实现），入口等 F21 合并后接线，不在本 feature 重新实现
+          编组语义（见 feature notes）。 */}
       {canEdit && ctxMenu && (
         <div
           data-testid="context-menu"
@@ -2859,6 +3129,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         >
           {selected.size > 0 && (
             <>
+              {/* 复制不改变画布内容，锁定对象也允许（uc-001 前端入口 3）。 */}
               <button
                 type="button"
                 data-testid="ctx-copy"
@@ -2870,25 +3141,45 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
               >
                 复制
               </button>
-              <button
-                type="button"
-                data-testid="ctx-duplicate"
-                className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
-                onClick={() => {
-                  duplicateSelected();
-                  setCtxMenu(null);
-                }}
-              >
-                创建副本
-              </button>
-              {/* uc-context-menu-003：调整图层顺序（z-order）。重排后关闭菜单、保留选中态。 */}
+              {!allSelectedLocked && (
+                <>
+                  {/* uc-context-menu-002 主流程 3：剪切 = 放入待粘贴状态并从画布移除
+                      （锁定项不参与——deleteSelected 本就保留锁定项，剪贴板同步排除，
+                      避免"画布上还在、粘贴又多一份"的错位）。 */}
+                  <button
+                    type="button"
+                    data-testid="ctx-cut"
+                    className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
+                    onClick={() => {
+                      clipboard.current = items.filter((it) => selected.has(it.id) && !getLocked(it));
+                      void deleteSelected();
+                      setCtxMenu(null);
+                    }}
+                  >
+                    剪切
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="ctx-duplicate"
+                    className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
+                    onClick={() => {
+                      duplicateSelected();
+                      setCtxMenu(null);
+                    }}
+                  >
+                    创建副本
+                  </button>
+                </>
+              )}
+              {/* uc-context-menu-003：调整图层顺序（z 持久化，见 arrange）。重排后关闭菜单、
+                  保留选中态。锁定对象保留层级入口（uc-001 前端入口 3：锁定菜单收窄但保留层级）。 */}
               <div className="my-1 h-px bg-border" />
               <button
                 type="button"
                 data-testid="ctx-bring-front"
                 className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
                 onClick={() => {
-                  arrange("front");
+                  void arrange("front");
                   setCtxMenu(null);
                 }}
               >
@@ -2899,7 +3190,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                 data-testid="ctx-bring-forward"
                 className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
                 onClick={() => {
-                  arrange("forward");
+                  void arrange("forward");
                   setCtxMenu(null);
                 }}
               >
@@ -2910,7 +3201,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                 data-testid="ctx-send-backward"
                 className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
                 onClick={() => {
-                  arrange("backward");
+                  void arrange("backward");
                   setCtxMenu(null);
                 }}
               >
@@ -2921,24 +3212,53 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
                 data-testid="ctx-send-back"
                 className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
                 onClick={() => {
-                  arrange("back");
+                  void arrange("back");
                   setCtxMenu(null);
                 }}
               >
                 置于底层
               </button>
               <div className="my-1 h-px bg-border" />
-              <button
-                type="button"
-                data-testid="ctx-delete"
-                className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 text-destructive transition-colors hover:bg-muted"
-                onClick={() => {
-                  void deleteSelected();
-                  setCtxMenu(null);
-                }}
-              >
-                删除
-              </button>
+              {/* uc-context-menu-004 主流程 5/6：锁定/解锁（复用 p6:F20 的 toggleLocked 批量
+                  语义：全部已锁定 → 解锁；否则（含混合）→ 全部锁定）。 */}
+              {allSelectedLocked ? (
+                <button
+                  type="button"
+                  data-testid="ctx-unlock"
+                  className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
+                  onClick={() => {
+                    void toggleLocked();
+                    setCtxMenu(null);
+                  }}
+                >
+                  解锁
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  data-testid="ctx-lock"
+                  className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
+                  onClick={() => {
+                    void toggleLocked();
+                    setCtxMenu(null);
+                  }}
+                >
+                  锁定
+                </button>
+              )}
+              {!allSelectedLocked && (
+                <button
+                  type="button"
+                  data-testid="ctx-delete"
+                  className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 text-destructive transition-colors hover:bg-muted"
+                  onClick={() => {
+                    void deleteSelected();
+                    setCtxMenu(null);
+                  }}
+                >
+                  删除
+                </button>
+              )}
             </>
           )}
           <button
@@ -2946,6 +3266,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
             data-testid="ctx-paste"
             className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted disabled:opacity-40"
             disabled={clipboard.current.length === 0}
+            title={clipboard.current.length === 0 ? "剪贴板暂无可粘贴内容" : undefined}
             onClick={() => {
               void pasteClipboard();
               setCtxMenu(null);
@@ -2953,15 +3274,20 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           >
             粘贴
           </button>
-          <button
-            type="button"
-            data-testid="ctx-lock-unavailable"
-            className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
-            disabled
-            title="锁定能力将在后续组件权限矩阵接入"
-          >
-            锁定暂不可用
-          </button>
+          {/* uc-context-menu-001 前端入口 2：空白画布级动作（无目标时不展示对象级动作）。 */}
+          {selected.size === 0 && (
+            <button
+              type="button"
+              data-testid="ctx-select-all"
+              className="flex w-full items-center rounded px-2 py-1.5 text-left text-13 transition-colors hover:bg-muted"
+              onClick={() => {
+                setSelected(new Set(items.map((it) => it.id)));
+                setCtxMenu(null);
+              }}
+            >
+              选择所有
+            </button>
+          )}
         </div>
       )}
 

@@ -79,6 +79,62 @@ export function applyAll(items: BoardItem[], cmds: Command[]): BoardItem[] {
   return cmds.reduce(applyCommand, items);
 }
 
+// ── p7:F12 链接组件 URL 安全校验（stored XSS 防护）─────────────────────────────
+// 链接组件把目标 URL 存进 color 哨兵 `link|url=<encodeURIComponent(URL)>`。若不校验协议，
+// 攻击者可经无鉴别的 PATCH 写入 `javascript:`/`data:`/`vbscript:` URL，其它用户点击「打开
+// 链接」时会在**其会话**里执行脚本（stored XSS）。防御以**协议白名单**为准（默认拒绝）——
+// 不用 blacklist：黑名单会漏掉大小写/空白前缀变体（`  JaVaScRiPt:`）与未来新增的危险协议，
+// 而 WHATWG URL 解析器会把这些变体归一化后再由白名单统一拦下。
+const SAFE_LINK_PROTOCOLS = new Set(["http:", "https:"]);
+
+/** 仅 http/https 视为安全链接；解析失败或其它协议一律拒绝（默认拒绝）。 */
+export function isSafeLinkUrl(raw: string): boolean {
+  try {
+    return SAFE_LINK_PROTOCOLS.has(new URL(raw).protocol);
+  } catch {
+    return false;
+  }
+}
+
+// 链接哨兵编码：`link|url=<encodeURIComponent(URL)>`。判别头固定为 "link"，与 board-canvas.tsx
+// 的 LINK_MARK 一致（此处独立定义，避免 packages/canvas 反向依赖 apps/web）。
+const LINK_SENTINEL_HEAD = "link";
+
+/** 该 color 值是否为链接哨兵（判别头 === "link"）。 */
+export function isLinkSentinel(color: string | null | undefined): boolean {
+  if (typeof color !== "string") return false;
+  return color.split("|")[0] === LINK_SENTINEL_HEAD;
+}
+
+/** 从链接哨兵里取出并 decode 目标 URL；非链接哨兵或解码失败返回 null。 */
+export function linkUrlFromSentinel(color: string | null | undefined): string | null {
+  if (!isLinkSentinel(color)) return null;
+  for (const seg of (color as string).split("|").slice(1)) {
+    const eq = seg.indexOf("=");
+    if (eq === -1) continue;
+    if (seg.slice(0, eq) === "url") {
+      try {
+        return decodeURIComponent(seg.slice(eq + 1));
+      } catch {
+        return null; // 编码损坏
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * 校验一个待落库的 color 值是否安全（服务端 PATCH/写入路径的守门）。
+ * 只对**链接哨兵**做协议白名单校验；其它任何 color 值（便签色/文本/形状/连接线/锁定/z 等
+ * 哨兵）一律放行，绝不影响既有 sentinel 写入路径。
+ */
+export function isColorSafe(color: string | null | undefined): boolean {
+  if (!isLinkSentinel(color)) return true; // 非链接哨兵：不干预
+  const url = linkUrlFromSentinel(color);
+  if (url == null) return false; // link 哨兵但取不出 URL（缺 url 段/编码损坏）→ 拒绝
+  return isSafeLinkUrl(url);
+}
+
 /** 校验新增 item 的输入（坐标有限、type 合法）。 */
 export function validateNewItem(input: {
   type?: unknown;

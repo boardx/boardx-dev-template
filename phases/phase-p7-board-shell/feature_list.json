@@ -246,16 +246,16 @@
       "area": "board-menu",
       "title": "链接组件",
       "user_visible_behavior": "从 Board Menu 把 URL 放到画布生成链接组件，显示标题/域名，点击在新标签打开；可移动/删除。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "03",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-link-widget.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F12.verify.log @ 2026-07-08T06:25:57.586Z",
       "notes": "uc-board-menu-011。基础链接组件可建；OG 预览抓取可后续增强。",
       "source_use_cases": [
         "phases/requirements/board/board-menu/uc-board-menu-011-create-link-widget.md"
@@ -288,16 +288,16 @@
       "area": "context-menu",
       "title": "右键 Context Menu（框架 + 图层顺序 + 复用复制/编组）",
       "user_visible_behavior": "在画布/组件上右键弹出 Context Menu，只展示当前目标允许的操作：复制/剪切/粘贴（uc-context-menu-002）、图层顺序上移/置顶/下移/置底（uc-context-menu-003）、编组/取消编组/锁定/解锁（uc-context-menu-004），无目标时显示画布级操作。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "03",
-      "owner": null,
+      "owner": "canvas-worker-1",
       "capability": "CAP-CANVAS",
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/board-context-menu.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F14.verify.log @ 2026-07-08T06:35:57.841Z",
       "notes": "uc-context-menu-001~004。复制/剪切/粘贴复用 p6 F08、编组/锁定复用 p6 F21（多选组合批量操作）；图层顺序为 z-index 批量 update（本 feature 新增）。",
       "source_use_cases": [
         "phases/requirements/board/context-menu/uc-context-menu-001-use-context-menu.md",

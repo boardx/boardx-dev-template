@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { canvasItems, waitForCanvasReady } from "./helpers/canvas";
+import { waitForItem } from "./helpers/canvas";
 
 // p20-F10：legacy 单画布下线后，本 spec 迁移到 board 模型
 // （先建板 → API 预置 item → 画布页 /boards/[id] 渲染）。
@@ -18,8 +18,8 @@ test("打开白板画布，渲染已有 item", async ({ page }) => {
   })).json()).item;
 
   await page.goto(`/boards/${board.id}`);
-  await waitForCanvasReady(page);
-  const rendered = (await canvasItems(page)).find((it) => it.id === item.id);
-  expect(rendered, `item ${item.id} 不在渲染层`).toBeTruthy();
-  expect(rendered!.text).toContain("已有便签");
+  // issue #333：waitForCanvasReady 只等引擎就绪，不等首次 items 拉取；改用带重试的
+  // waitForItem（断言意图不变：预置 item 出现在渲染层且文字正确）。
+  const rendered = await waitForItem(page, item.id);
+  expect(rendered.text).toContain("已有便签");
 });
