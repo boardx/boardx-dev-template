@@ -206,7 +206,9 @@ export default function BoardPage() {
         <div className="flex items-center gap-2">
           {/* p7:F01（uc-board-header-008）：返回房间列表页。备份保存中不可离开的检查留给
               F08（备份恢复）落地时接入——目前没有备份能力，没有东西可以阻塞，先只做
-              导航本身，不假装已经有备份感知。 */}
+              导航本身，不假装已经有备份感知。
+              （p22/F04 原本打算在此加一个几乎相同的返回链接，发现 p7:F01 已经做了，
+              避免重复实现——直接复用这个既有的 board-back 按钮，见 F04 e2e spec。） */}
           <Button
             data-testid="board-back"
             size="icon"
