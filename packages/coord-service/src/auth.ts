@@ -25,3 +25,12 @@ export async function requireReviewer(request: Request, env: Env): Promise<Agent
   if (agent.kind !== "reviewer") throw new HttpError(403, "reviewer_identity_required");
   return agent;
 }
+
+// coord-main / module-coordinator / architecture-coordinator——即 registry.yaml 里
+// 所有 coordinator 层身份。andon 停线信号是协调层专属权力（见 coordinator-sop.md），
+// 不能让普通 worker 伪造一个 stop 拉停整个 fleet、或伪造 clear 在 main 仍红时解除停线。
+export const COORDINATOR_KINDS: ReadonlySet<string> = new Set([
+  "coordinator",
+  "module-coordinator",
+  "architecture-coordinator",
+]);

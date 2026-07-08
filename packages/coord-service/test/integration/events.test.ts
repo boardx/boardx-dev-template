@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { sha256Hex } from "../../src/lib/crypto";
 
 async function seedAgent(id: string, token: string, kind = "module-coordinator"): Promise<void> {
+  // 默认 module-coordinator（有权写 andon）；测 andon 授权边界时单独 seed 一个 worker。
   const tokenHash = await sha256Hex(token);
   await env.DB.prepare(
     "INSERT INTO agents (id, kind, areas, token_hash, active, created_at) VALUES (?, ?, ?, ?, 1, ?)"
@@ -79,5 +80,21 @@ describe("POST /events (narrative events — ADR-009 GitHub 协调面退役后�
   it("缺 resource_id → 400", async () => {
     const res = await SELF.fetch(req("/events", "events-token", { type: "cycle-result" }));
     expect(res.status).toBe(400);
+  });
+
+  it("worker 身份写 andon → 403（停线信号是 coordinator 层专属，防伪造拉停 fleet）", async () => {
+    await seedAgent("plain-worker", "worker-token", "worker");
+    const res = await SELF.fetch(
+      req("/events", "worker-token", { type: "andon", resource_id: "andon:main", payload: { signal: "stop" } })
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("worker 身份写 cycle-plan → 201（叙述站会不限 coordinator）", async () => {
+    await seedAgent("plain-worker-2", "worker-token-2", "worker");
+    const res = await SELF.fetch(
+      req("/events", "worker-token-2", { type: "cycle-plan", resource_id: "cycle:x", payload: {} })
+    );
+    expect(res.status).toBe(201);
   });
 });

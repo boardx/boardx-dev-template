@@ -1,4 +1,4 @@
-import { requireAgent } from "../auth";
+import { requireAgent, COORDINATOR_KINDS } from "../auth";
 import { HttpError } from "../lib/errors";
 import { nowIso } from "../lib/time";
 import { insertEventReturning } from "../db/queries";
@@ -36,6 +36,10 @@ function requireStringField(body: unknown, field: string): string {
  *    stop/clear+reason）。原样存进 events.payload。
  */
 export const submitEvent: Handler = async (request, env: Env) => {
+  // 先认证到 agent，再按事件类型分级授权：cycle-plan/cycle-result 任意已认证身份可写
+  // （每个在任 coordinator 都该能发自己的站会条目）；andon 是全线停线/恢复信号，属
+  // coordinator 层专属权力（见 coordinator-sop.md），普通 worker 不能伪造——否则可
+  // 拉停整个 fleet 或在 main 仍红时伪造 clear 解除合法停线。
   const agent = await requireAgent(request, env);
   const body: unknown = await request.json().catch(() => {
     throw new HttpError(400, "invalid_json_body");
@@ -43,6 +47,9 @@ export const submitEvent: Handler = async (request, env: Env) => {
   const type = requireStringField(body, "type") as EventType;
   if (!NARRATIVE_TYPES.has(type)) {
     throw new HttpError(400, "type_not_narrative"); // claim 生命周期事件不接受手写
+  }
+  if (type === "andon" && !COORDINATOR_KINDS.has(agent.kind)) {
+    throw new HttpError(403, "andon_requires_coordinator");
   }
   const resourceId = requireStringField(body, "resource_id");
   const payloadRaw = (body as Record<string, unknown>)["payload"];
