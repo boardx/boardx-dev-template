@@ -485,6 +485,14 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
         }),
       );
     patchQueue.current.set(id, next);
+    // p6:F21 review（PR #416）指出的真实泄漏：条目从不删除，map 无限增长，且 load() 里
+    // `await Promise.all(patchQueue.current.values())` 会连带 await 所有历史已完成链
+    // （已 resolve 的立即返回，语义上无害，但内存和遍历成本随会话时长线性涨，且任何
+    // 依赖 size 判断"是否有在途 PATCH"的逻辑会永久失真）。落地后若自己仍是该 id 的
+    // 最新链尾（没有更新的 PATCH 链上来）才清掉，避免误删后来者。
+    void next.finally(() => {
+      if (patchQueue.current.get(id) === next) patchQueue.current.delete(id);
+    });
     return next;
   }
 
@@ -1543,17 +1551,17 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     const targets = items.filter((it) => selected.has(it.id) && !getLocked(it));
     if (targets.length < 2) return;
     const groupId = targets[0]!.id;
-    const updates = targets.map((it) => ({ id: it.id, color: withStyle(it.color, { group: groupId }) }));
-    await applyColors(updates);
-    setSelected(new Set(targets.map((it) => it.id)));
+    const targetIds = new Set(targets.map((it) => it.id));
+    await applyColors((it) => (targetIds.has(it.id) ? withStyle(it.color, { group: groupId }) : null));
+    setSelected(targetIds);
   }
 
   // 解组：清除选中集合中所有对象的 group 段，恢复为可独立选择的组件（主流程 6 后半）。
   async function ungroupSelected() {
     const targets = items.filter((it) => selected.has(it.id) && getGroupId(it) != null && !getLocked(it));
     if (targets.length === 0) return;
-    const updates = targets.map((it) => ({ id: it.id, color: withStyle(it.color, { group: null }) }));
-    await applyColors(updates);
+    const targetIds = new Set(targets.map((it) => it.id));
+    await applyColors((it) => (targetIds.has(it.id) ? withStyle(it.color, { group: null }) : null));
   }
 
   // p6:F21（uc-widget-menu-011 对齐选中组件）：选中 ≥2 个对象后按包围盒批量对齐/等间距分布。
