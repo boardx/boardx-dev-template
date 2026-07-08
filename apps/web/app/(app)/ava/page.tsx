@@ -104,10 +104,19 @@ interface ResearchTimelineItem {
   task: string;
   status: "queued" | "running" | "complete";
 }
+// p18-F05：报告双模板。researchType 缺失（历史 F04 数据）时按 undefined 处理，
+// ReportPanel 退化为原来的通用 sections 渲染，不因为字段缺失而崩溃。
+type ResearchType = "market" | "user-research";
 interface ResearchReport {
+  researchType?: ResearchType;
   title: string;
   conclusion: string;
   sections: Array<{ heading: string; bullets: string[] }>;
+  keyFindings?: string[];
+  recommendation?: string;
+  personas?: string[];
+  topPainPoints?: string[];
+  opportunities?: string[];
 }
 interface ResearchPayload {
   clarifyingQuestions: string[];
@@ -2176,16 +2185,46 @@ function TimelineDot({ status }: { status: ResearchTimelineItem["status"] }) {
   return <span className="mt-0.5 h-5 w-5 flex-none rounded-full border border-border bg-muted" />;
 }
 
+// p18-F05：报告面板按 researchType 渲染两套结构。market → Executive summary /
+// Key findings / Recommendation；user-research → Summary / Personas / Top pain points /
+// Opportunities。缺失 researchType（历史 F04 数据）时退化为原来的通用 sections 渲染。
+function BulletCard({
+  testId,
+  heading,
+  bullets,
+}: {
+  testId: string;
+  heading: string;
+  bullets: string[];
+}) {
+  return (
+    <section data-testid={testId} className="rounded-9 border border-border bg-surface-1 p-3">
+      <h3 className="text-13 font-semibold text-foreground">{heading}</h3>
+      <ul className="mt-2 list-disc space-y-1 pl-4 text-13 text-muted-foreground">
+        {bullets.map((bullet) => (
+          <li key={bullet}>{bullet}</li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function ReportPanel({ report, onClose }: { report: ResearchReport; onClose: () => void }) {
+  const summaryLabel = report.researchType === "user-research" ? "Summary" : "Executive summary";
+
   return (
     <aside
       data-testid="research-report-panel"
+      data-report-type={report.researchType ?? "generic"}
       className="flex max-h-80 flex-none flex-col border-t border-border bg-background px-6 py-4"
     >
       <div className="mx-auto flex w-full max-w-2xl items-start justify-between gap-4">
         <div>
           <h2 className="text-17 font-semibold text-foreground">{report.title}</h2>
-          <p data-testid="report-conclusion" className="mt-2 text-13 leading-relaxed text-muted-foreground">
+          <p data-testid="report-summary-label" className="mt-2 text-11 font-medium uppercase tracking-wide text-muted-foreground">
+            {summaryLabel}
+          </p>
+          <p data-testid="report-conclusion" className="mt-1 text-13 leading-relaxed text-muted-foreground">
             {report.conclusion}
           </p>
         </div>
@@ -2199,18 +2238,36 @@ function ReportPanel({ report, onClose }: { report: ResearchReport; onClose: () 
           Close
         </Button>
       </div>
-      <div className="mx-auto mt-4 grid w-full max-w-2xl gap-3 overflow-auto md:grid-cols-2">
-        {report.sections.map((section) => (
-          <section key={section.heading} className="rounded-9 border border-border bg-surface-1 p-3">
-            <h3 className="text-13 font-semibold text-foreground">{section.heading}</h3>
-            <ul className="mt-2 list-disc space-y-1 pl-4 text-13 text-muted-foreground">
-              {section.bullets.map((bullet) => (
-                <li key={bullet}>{bullet}</li>
-              ))}
-            </ul>
+
+      {report.researchType === "market" && (
+        <div className="mx-auto mt-4 grid w-full max-w-2xl gap-3 overflow-auto md:grid-cols-2">
+          <BulletCard testId="report-key-findings" heading="Key findings" bullets={report.keyFindings ?? []} />
+          <section data-testid="report-recommendation" className="rounded-9 border border-border bg-surface-1 p-3">
+            <h3 className="text-13 font-semibold text-foreground">Recommendation</h3>
+            <p className="mt-2 text-13 text-muted-foreground">{report.recommendation}</p>
           </section>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {report.researchType === "user-research" && (
+        <div className="mx-auto mt-4 grid w-full max-w-2xl gap-3 overflow-auto md:grid-cols-3">
+          <BulletCard testId="report-personas" heading="Personas" bullets={report.personas ?? []} />
+          <BulletCard
+            testId="report-top-pain-points"
+            heading="Top pain points"
+            bullets={report.topPainPoints ?? []}
+          />
+          <BulletCard testId="report-opportunities" heading="Opportunities" bullets={report.opportunities ?? []} />
+        </div>
+      )}
+
+      {report.researchType == null && (
+        <div className="mx-auto mt-4 grid w-full max-w-2xl gap-3 overflow-auto md:grid-cols-2">
+          {report.sections.map((section) => (
+            <BulletCard key={section.heading} testId={`report-section-${section.heading}`} heading={section.heading} bullets={section.bullets} />
+          ))}
+        </div>
+      )}
     </aside>
   );
 }

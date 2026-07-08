@@ -55,6 +55,23 @@ export const RESEARCH_JSON_SYSTEM_MARKER = "__ava_research_json_system__";
  *  重新导出。 */
 export const RESEARCH_FORCE_FAIL_MARKER = "__ava_research_generate_fail__";
 
+// p18-F05：stub 报告双模板的判定关键词——含这些词的 topic/audience 走 user-research
+// 模板（Summary/Personas/Top pain points/Opportunities），否则走 market 模板
+// （Executive summary/Key findings/Recommendation）。与 researchGenerator.ts 的
+// inferResearchType 是同一套判定口径（真实 provider 场景），这里是 stub 场景下确定性地
+// 覆盖两条模板路径，供 e2e 在 mock-provider 模式下验证两套字段分别正确渲染。
+const STUB_USER_RESEARCH_HINTS = [
+  "user research",
+  "persona",
+  "user interview",
+  "customer interview",
+  "pain point",
+  "usability",
+  "用户研究",
+  "用户访谈",
+  "用户画像",
+];
+
 /** stub provider 专用：当请求携带 RESEARCH_JSON_SYSTEM_MARKER 时，从用户提示词里的
  *  topic/audience 派生出确定性但随主题变化的 JSON 文本，使 e2e 在 mock-provider 模式下
  *  也能验证"不同主题产出不同内容"。真实 provider（anthropicProvider）不识别这个标记，
@@ -73,6 +90,91 @@ function buildStubResearchJson(userPrompt: string): string {
     .filter(Boolean);
   const keyword = slug[0] ?? "topic";
   const secondKeyword = slug[1] ?? keyword;
+
+  // 只看 topic，不看 audience：前端 composer 目前对所有研究请求都发送同一句固定的
+  // audience 文案（含 "user research" 四个字，见 apps/web/app/(app)/ava/page.tsx 的
+  // RESEARCH_AUDIENCE 常量），把 audience 也纳入判定会导致所有请求都被误判成
+  // user-research，market 模板永远测不到——与 researchGenerator.ts 的 inferResearchType
+  // 同一个坑、同一个修法。
+  const haystack = topic.toLowerCase();
+  const researchType = STUB_USER_RESEARCH_HINTS.some((hint) => haystack.includes(hint))
+    ? "user-research"
+    : "market";
+
+  const sections =
+    researchType === "market"
+      ? [
+          {
+            heading: "Key findings",
+            bullets: [
+              `Stakeholders in ${audience} need a clearer reason tied to ${keyword} than broad claims.`,
+              `Research should compare current workaround cost against ${secondKeyword} gains.`,
+              "The next interview round should prioritize high-frequency, high-signal participants.",
+            ],
+          },
+          {
+            heading: "Recommended next steps",
+            bullets: [
+              `Confirm the primary audience for ${keyword} with five targeted interviews.`,
+              `Prototype one ${secondKeyword}-specific message and measure comprehension.`,
+              "Track follow-up objections in the same AVA thread.",
+            ],
+          },
+        ]
+      : [
+          {
+            heading: "Interview themes",
+            bullets: [
+              `Participants in ${audience} describe ${keyword} as a recurring friction point.`,
+              `Workarounds around ${secondKeyword} reveal unmet needs worth prototyping.`,
+              "Recruit high-frequency users for the next round of interviews.",
+            ],
+          },
+          {
+            heading: "Opportunity areas",
+            bullets: [
+              `Simplify the ${keyword} workflow to remove the most-cited pain point.`,
+              `Explore a lightweight ${secondKeyword} feature to close the gap.`,
+              "Validate opportunities with a follow-up usability test.",
+            ],
+          },
+        ];
+
+  const report =
+    researchType === "market"
+      ? {
+          researchType,
+          title: `Deep Research Report: ${topic}`,
+          conclusion: `For "${topic}", the strongest opportunity is to narrow the ${keyword} segment, validate the top workflow pain around ${secondKeyword}, and test one focused positioning angle before expanding scope.`,
+          sections,
+          keyFindings: [
+            `Stakeholders in ${audience} need a clearer reason tied to ${keyword} than broad claims.`,
+            `Current workaround cost around ${secondKeyword} outweighs perceived switching effort.`,
+            "High-frequency, high-signal participants should anchor the next validation round.",
+          ],
+          recommendation: `Prioritize the ${keyword} segment, validate the ${secondKeyword} pain point with five targeted interviews, and ship one focused positioning test before expanding scope.`,
+        }
+      : {
+          researchType,
+          title: `Deep Research Report: ${topic}`,
+          conclusion: `Users in ${audience} consistently struggle with ${keyword}; the clearest opportunity is to address the ${secondKeyword} workaround before expanding scope.`,
+          sections,
+          personas: [
+            `${audience} member evaluating ${keyword} day-to-day`,
+            `Power user who has already built a ${secondKeyword} workaround`,
+            `New user encountering ${keyword} for the first time`,
+          ],
+          topPainPoints: [
+            `${keyword} requires too many manual steps for ${audience}.`,
+            `Workarounds around ${secondKeyword} are fragile and error-prone.`,
+            "Onboarding does not explain the intended workflow clearly.",
+          ],
+          opportunities: [
+            `Simplify the ${keyword} workflow to remove the most-cited pain point.`,
+            `Ship a guided ${secondKeyword} flow to replace the fragile workaround.`,
+            "Add contextual onboarding at the point of first friction.",
+          ],
+        };
 
   return JSON.stringify({
     clarifyingQuestions: [
@@ -101,28 +203,7 @@ function buildStubResearchJson(userPrompt: string): string {
         },
       ],
     },
-    report: {
-      title: `Deep Research Report: ${topic}`,
-      conclusion: `For "${topic}", the strongest opportunity is to narrow the ${keyword} segment, validate the top workflow pain around ${secondKeyword}, and test one focused positioning angle before expanding scope.`,
-      sections: [
-        {
-          heading: "Key findings",
-          bullets: [
-            `Stakeholders in ${audience} need a clearer reason tied to ${keyword} than broad claims.`,
-            `Research should compare current workaround cost against ${secondKeyword} gains.`,
-            "The next interview round should prioritize high-frequency, high-signal participants.",
-          ],
-        },
-        {
-          heading: "Recommended next steps",
-          bullets: [
-            `Confirm the primary audience for ${keyword} with five targeted interviews.`,
-            `Prototype one ${secondKeyword}-specific message and measure comprehension.`,
-            "Track follow-up objections in the same AVA thread.",
-          ],
-        },
-      ],
-    },
+    report,
   });
 }
 
