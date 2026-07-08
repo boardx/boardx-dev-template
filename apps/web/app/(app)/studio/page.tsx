@@ -33,7 +33,7 @@ const TYPE_LABEL: Record<ArtifactType, string> = {
 };
 
 const textareaCls =
-  "flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground transition-colors placeholder:text-placeholder focus-visible:outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50";
+  "flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground transition-colors placeholder:text-placeholder focus-visible:outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:bg-disabled disabled:text-disabled-foreground";
 
 export default function StudioPage() {
   const router = useRouter();

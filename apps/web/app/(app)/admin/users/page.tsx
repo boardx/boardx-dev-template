@@ -679,7 +679,7 @@ export default function AdminUsersPage() {
                   size="icon"
                   aria-label={`Delete ${fullName(u)}`}
                   data-testid={`delete-${u.id}`}
-                  className="h-7.5 w-7.5 text-placeholder hover:text-destructive disabled:opacity-40"
+                  className="h-7.5 w-7.5 text-placeholder hover:text-destructive disabled:text-disabled-foreground"
                   onClick={() => setDeleting(u)}
                   disabled={u.id === currentUserId}
                   title={u.id === currentUserId ? "You cannot delete your own account" : undefined}

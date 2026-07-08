@@ -84,7 +84,7 @@ export function BoardBottomDock({
             "flex h-9 w-9 items-center justify-center rounded-lg transition-colors duration-200",
             "hover:bg-accent hover:text-accent-foreground",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-            "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent",
+            "disabled:cursor-not-allowed disabled:text-disabled-foreground disabled:hover:bg-transparent",
             activeTool === tool.key ? "bg-secondary text-secondary-foreground" : "text-muted-foreground"
           )}
         >

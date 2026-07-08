@@ -253,7 +253,7 @@ export function PresentationPreviewCard({
                   aria-label="上一页"
                   disabled={pageIndex === 0}
                   onClick={goPrev}
-                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-border bg-background disabled:opacity-30"
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-border bg-background disabled:text-disabled-foreground disabled:border-border/60"
                 >
                   ‹
                 </button>
@@ -273,7 +273,7 @@ export function PresentationPreviewCard({
                   aria-label="下一页"
                   disabled={pageIndex >= slides.length - 1}
                   onClick={goNext}
-                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-border bg-background disabled:opacity-30"
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-border bg-background disabled:text-disabled-foreground disabled:border-border/60"
                 >
                   ›
                 </button>
