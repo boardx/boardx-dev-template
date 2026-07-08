@@ -5,7 +5,18 @@ export interface Env {
 }
 
 export type ClaimStatus = "in_progress" | "released" | "expired";
-export type EventType = "claim" | "heartbeat" | "release" | "expire" | "verdict" | "merge";
+export type EventType =
+  | "claim"
+  | "heartbeat"
+  | "release"
+  | "expire"
+  | "verdict"
+  | "merge"
+  // 叙述层事件（ADR-009 后 GitHub 协调面退役，站会/停线信号迁到 D1）：
+  // cycle-plan/cycle-result = C-cycle 周期站会；andon = main 打挂的停线/恢复信号。
+  | "cycle-plan"
+  | "cycle-result"
+  | "andon";
 export type VerdictResult = "ok" | "changes";
 
 export interface AgentRow {
