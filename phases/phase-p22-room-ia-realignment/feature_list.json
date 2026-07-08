@@ -6,7 +6,7 @@
       "priority": 1,
       "area": "room",
       "title": "Room 主从（master-detail）双栏布局壳",
-      "user_visible_behavior": "进入 Rooms 应用后，内容区是左右双栏（data-testid=rooms-two-pane）：左栏（data-testid=room-list-panel，宽 288px）常驻显示房间列表（搜索 data-testid=room-list-search、Favorites 筛选 data-testid=room-list-favorites-filter、新建 data-testid=room-list-new，列表项 data-testid=room-list-item-<id> 含收藏星标与可见性图标），右栏渲染当前选中房间的详情（面包屑/名称/tab/内容）；未选中任何房间时右栏展示空态（data-testid=rooms-empty-state：'选择一个房间查看详情'）；点击左栏另一房间时左栏不消失、保持常驻，右栏内容随之替换且该房间列表项高亮（data-active=true）；本轮不做窄屏/移动端响应式降级（人类已确认此范围裁剪）。",
+      "user_visible_behavior": "进入 Rooms 应用后，内容区是左右双栏（data-testid=rooms-two-pane）：左栏（data-testid=room-list-panel，宽 288px）常驻承载 p20 整页房间列表的全部能力——搜索 data-testid=room-list-search、Favorites 筛选 data-testid=room-favorites-filter、新建 data-testid=show-create（展开创建表单：room-name 输入 + <3 字符 room-name-hint 校验 + room-create-visibility-private/-team 二选一 + create 提交）；列表项 data-testid=room-<id> 含可点击收藏星标 room-favorite-toggle-<id>、可见性徽章 room-visibility-badge-<id>、team 房间非成员的 join 入口 room-join-<id>；删除房间后跳回带一次性 toast room-deleted-toast。右栏渲染当前选中房间的详情（面包屑/名称/tab/内容）；未选中任何房间时右栏展示空态（data-testid=rooms-empty-state：'选择一个房间查看详情'）；点击左栏另一房间时左栏不消失、保持常驻，右栏内容随之替换且该房间列表项高亮（data-active=true）；本轮不做窄屏/移动端响应式降级（人类已确认此范围裁剪）。",
       "design_ref": "人类截图（Rooms 应用左右双栏）+ prototype 六 tab 结构；已由 ui-prototyper 用真实数据验证（apps/web/app/(app)/rooms/layout.tsx + components/rooms/room-list-panel.tsx）",
       "status": "passing",
       "sprint": "01",
@@ -17,11 +17,11 @@
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web exec playwright test e2e/room-rr-012-two-pane-shell.spec.ts --retries=2",
+        "pnpm --filter @repo/web exec playwright test e2e/room-rr-012-two-pane-shell.spec.ts e2e/room-rr-002-visibility.spec.ts e2e/room-rr-005-favorite.spec.ts --retries=2",
         "git cat-file -e HEAD:phases/phase-p22-room-ia-realignment/sprints/sprint-01/evidence/F01.verify.log"
       ],
-      "evidence": "evidence/F01.verify.log @ 2026-07-08T03:43:33.551Z",
-      "notes": "uc 见 requirements/00-overview.md 优先级0。UI 原型已在 apps/web 落地（真实组件+真实 API，非 mock），本 feature 的工作是补齐 e2e 验证契约、核实原型代码质量（例如 room-list-panel.tsx 的收藏/搜索状态与 p20 F02/F05 的既有 API 语义一致）、按需微调。地基 feature，F02/F03 均依赖右栏渲染出的既有 rooms/[id] 结构（间接依赖，非阻塞——F02/F03 的组件本身嵌套在 rooms/[id] 下，不直接依赖这层新壳，可与 F01 并行开发但建议 F01 先行验证壳本身不破坏既有 tab 内容）。"
+      "evidence": "evidence/F01.verify.log @ 2026-07-08T07:25:53.287Z",
+      "notes": "uc 见 requirements/00-overview.md 优先级0。左栏 room-list-panel.tsx 承载 p20 整页 rooms/page.tsx 的**全部**能力（可点击收藏 room-favorite-toggle / team 房间 join room-join / 删除成功 toast room-deleted-toast / 可见性徽章 / 创建表单含 <3 校验 / favorites 筛选），testid 沿用 p20 命名，故 verification 显式纳入 p20 的 room-rr-002（可见性+join）与 room-rr-005（收藏）两个既有验证契约——证明新 IA 不破坏这两个 feature，这是回归无破坏的直接证据（第一版 PR 漏跑这两个 spec 是真实疏漏，已补）。"
     },
     {
       "id": "F02",
@@ -72,9 +72,9 @@
       "priority": 3,
       "area": "room",
       "title": "Board 详情页面包屑回退至所属房间",
-      "user_visible_behavior": "打开一块房间白板（/boards/[id]）后，页面顶部展示面包屑或返回链接（data-testid=board-back-to-room）指回其所属房间的 Boards tab（/rooms/[roomId]/boards）；点击后正确导航回该房间（非全局 /boards 列表）；此前只有删除/移动白板成功后才会强制跳转，浏览场景下用户完全没有回退路径——本 feature 补上这条历史缺口（原型与 oldcode 均未解决，人类已确认本轮一起做）。",
-      "design_ref": "调研报告优先级3（评估后确认这轮做）；boards.room_id 外键已存在（packages/data/migrations/007_board.sql），本 feature 只补前端导航元素，不改数据模型",
-      "status": "in_progress",
+      "user_visible_behavior": "打开一块房间白板（/boards/[id]）后，页面顶部展示返回按钮（data-testid=board-back）指回其所属房间的 Boards tab（/rooms/[roomId]/boards）；点击后正确导航回该房间（非全局 /boards 列表）；此前只有删除/移动白板成功后才会强制跳转，浏览场景下用户完全没有回退路径——本 feature 补上这条历史缺口（原型与 oldcode 均未解决，人类已确认本轮一起做）。",
+      "design_ref": "调研报告优先级3（评估后确认这轮做）；boards.room_id 外键已存在（packages/data/migrations/007_board.sql），本 feature 只补前端导航元素，不改数据模型。实现时发现 p7:F01（uc-board-header-008，Board Menu 工具栏框架）已有等价的 board-back 返回按钮（router.push 到 /rooms/${room_id}/boards，无 room_id 兜底 /boards），故复用既有实现、不新增重复的 board-back-to-room 链接——testid 契约相应改为 board-back。",
+      "status": "passing",
       "sprint": "01",
       "owner": "coord-room",
       "capability": "CAP-WEB",
@@ -86,8 +86,8 @@
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-015-board-breadcrumb.spec.ts --retries=2",
         "git cat-file -e HEAD:phases/phase-p22-room-ia-realignment/sprints/sprint-01/evidence/F04.verify.log"
       ],
-      "evidence": "evidence/F04.verify.log",
-      "notes": "uc 见 requirements/00-overview.md 优先级3。尚未实现（UI 原型阶段未动，见 ui-signoff.md 核心改动说明第4条），是本阶段唯一的全新开发工作，其余三个 feature 是把已落地的原型代码补齐验证契约。需要 boardId→roomId 的查询（GET /api/boards/[id] 若已含 room_id 字段可直接用，否则查 packages/data/src/boards.ts）。"
+      "evidence": "evidence/F04.verify.log @ 2026-07-08T07:28:24.625Z",
+      "notes": "uc 见 requirements/00-overview.md 优先级3。实现方式：rebase 到最新 main 后发现 p7:F01（Board Menu 工具栏框架）已实现等价的 board-back 返回按钮（GET /api/boards/[id] 已返回 room_id，router.push 到 /rooms/${room_id}/boards），故复用既有实现、删除本阶段一度新增的重复 board-back-to-room 链接，只对既有 board-back 补 e2e 验证契约（room-rr-015）。"
     }
   ]
 }

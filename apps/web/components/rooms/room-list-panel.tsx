@@ -1,10 +1,17 @@
 "use client";
 // p22/F01：Rooms 主从（master-detail）双栏布局的左栏——房间列表常驻，
 // 切换房间时本面板不消失，右侧详情区域随路由替换（见 ../../app/(app)/rooms/layout.tsx）。
-import { useEffect, useState } from "react";
+//
+// 重要（p22 回归修复）：本面板承载的是 p20 整页 rooms/page.tsx 的**全部**能力，
+// 只是从整页 grid/list 改成常驻窄栏列表。因此 testid 沿用 p20 既有命名
+// （room-<id> / room-favorite-toggle-<id> / room-join-<id> / room-visibility-badge-<id>
+//  / show-create / room-name / room-create-visibility-* / create / room-favorites-filter
+//  / room-deleted-toast / empty-favorites），保证 p20 的 room-rr-002/005 等验证契约
+// 对新 IA 依然成立——不重命名、不砍能力。只有"双栏结构"本身是新增的（room-list-panel）。
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
-import { Plus, Search } from "lucide-react";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +40,38 @@ function fillFor(id: string | number) {
   return TAG_FILLS[h % TAG_FILLS.length];
 }
 
+/** 列表徽章：与创建时的可见性选择一致（🔒 private / 🌐 team）。沿用 p20 testid。 */
+function VisibilityBadge({ room }: { room: Room }) {
+  const team = room.visibility === "team";
+  return (
+    <Badge variant="muted" data-testid={`room-visibility-badge-${room.id}`} className="shrink-0 px-1.5 py-0 text-10">
+      {team ? "🌐" : "🔒"}
+    </Badge>
+  );
+}
+
+/** 可点击的收藏星标（p20/F05）：乐观切换，沿用 room-favorite-toggle-<id> testid。 */
+function FavoriteToggle({ active, onToggle, testId }: { active: boolean; onToggle: () => void; testId: string }) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      data-testid={testId}
+      aria-pressed={active}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onToggle();
+      }}
+      className="h-6 w-6 shrink-0 text-sm leading-none text-amber-500"
+      title={active ? "取消收藏" : "收藏"}
+    >
+      {active ? "★" : "☆"}
+    </Button>
+  );
+}
+
 function RoomListSkeleton() {
   return (
     <div data-testid="room-list-loading" className="flex flex-col gap-1 p-2">
@@ -46,6 +85,8 @@ function RoomListSkeleton() {
 export function RoomListPanel() {
   const params = useParams<{ id?: string }>();
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const activeRoomId = params?.id ? String(params.id) : null;
 
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -58,8 +99,17 @@ export function RoomListPanel() {
   const [name, setName] = useState("");
   const [visibility, setVisibility] = useState("private");
   const [createError, setCreateError] = useState("");
+  // p20/F06：删除房间后跳回 /rooms?deleted=<名>，展示一次性 toast 并清掉 query。
+  const [deletedToast, setDeletedToast] = useState("");
+  // 搜索 debounce：窄栏面板去掉了搜索按钮，改为输入时实时过滤（300ms），
+  // 不再硬依赖回车触发（回车仍立即触发）——消除测试里 press Enter 偶发丢失的抖动。
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 并发 load 的乱序守卫：mount 的 load(全部) 与搜索的 load(q) 可能并发，
+  // 若前者晚返回会用"全部"覆盖搜索结果。只应用序号最新的那次响应。
+  const reqSeq = useRef(0);
 
   async function load(search = "", favOnly = favoritesOnly) {
+    const seq = ++reqSeq.current;
     setLoading(true);
     setError("");
     const sp = new URLSearchParams();
@@ -67,12 +117,15 @@ export function RoomListPanel() {
     if (favOnly) sp.set("favorite", "1");
     const qs = sp.toString();
     const res = await fetch(`/api/rooms${qs ? `?${qs}` : ""}`);
+    // 有更新的 load 已发起 → 丢弃本次乱序响应，不覆盖更新的结果。
+    if (seq !== reqSeq.current) return;
     if (res.status === 401) {
       setError("请先登录");
       setLoading(false);
       return;
     }
     const d = await res.json();
+    if (seq !== reqSeq.current) return;
     setRooms(d.rooms ?? []);
     setFavIds(new Set((d.favoriteIds ?? []).map(String)));
     setLoading(false);
@@ -80,9 +133,23 @@ export function RoomListPanel() {
 
   useEffect(() => {
     void load();
+    return () => {
+      if (searchTimer.current) clearTimeout(searchTimer.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // p20/F06：从 ?deleted= 读一次性删除成功 toast，随后清掉 query 参数。
+  useEffect(() => {
+    const deleted = searchParams.get("deleted");
+    if (deleted) {
+      setDeletedToast(deleted);
+      router.replace("/rooms");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // uc-rr-004（p20/F05）：星标即时切换（乐观更新 + 网络失败回滚）。
   async function toggleFav(id: Room["id"]) {
     const key = String(id);
     const isFav = favIds.has(key);
@@ -103,6 +170,7 @@ export function RoomListPanel() {
         else next.delete(key);
         return next;
       });
+      setError("收藏操作失败，请重试");
     }
   }
 
@@ -112,6 +180,7 @@ export function RoomListPanel() {
     void load(q, next);
   }
 
+  // uc-rr-002 E1：房间名 ≥3 字符才可提交
   const nameTooShort = name.trim().length < 3;
 
   async function create(e: React.FormEvent) {
@@ -133,6 +202,12 @@ export function RoomListPanel() {
     }
   }
 
+  // uc-rr-002（p20/F02）：team 可见房间的同团队成员自助加入（加入即成为 member）。
+  async function join(id: Room["id"]) {
+    const res = await fetch(`/api/rooms/${id}/join`, { method: "POST" });
+    if (res.ok) await load(q);
+  }
+
   // 切换房间时保留当前 tab（若能从路径解析出来），否则默认落 boards。
   const currentSegment = activeRoomId ? pathname.split(`/rooms/${activeRoomId}`)[1]?.split("/")[1] : null;
 
@@ -144,7 +219,7 @@ export function RoomListPanel() {
       <div className="flex items-center justify-between gap-2 px-4 pt-4">
         <h1 className="text-15 font-bold tracking-tight text-foreground">Rooms</h1>
         <Button
-          data-testid="room-list-new"
+          data-testid="show-create"
           variant="ghost"
           size="icon"
           aria-label="New room"
@@ -154,6 +229,28 @@ export function RoomListPanel() {
           <Plus className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* p20/F06：房间删除成功 toast（一次性，来自 ?deleted= 跳转） */}
+      {deletedToast && (
+        <div
+          data-testid="room-deleted-toast"
+          className="mx-4 mt-3 flex items-center justify-between gap-2 rounded-lg border border-border bg-surface-1 px-3 py-2 text-xs text-foreground"
+        >
+          <span>
+            <span className="font-semibold">{deletedToast}</span> deleted.
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="关闭提示"
+            className="h-5 w-5"
+            onClick={() => setDeletedToast("")}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
 
       {showForm && (
         <form
@@ -165,11 +262,17 @@ export function RoomListPanel() {
             <Label htmlFor="room-list-name">Room name</Label>
             <Input
               id="room-list-name"
-              data-testid="room-list-name-input"
+              data-testid="room-name"
               placeholder="My room"
               value={name}
+              aria-invalid={name.length > 0 && nameTooShort}
               onChange={(e) => setName(e.target.value)}
             />
+            {name.length > 0 && nameTooShort && (
+              <p role="alert" data-testid="room-name-hint" className="text-xs text-destructive">
+                Room name must be at least 3 characters
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Visibility">
             {VISIBILITY_OPTIONS.map((opt) => {
@@ -180,14 +283,15 @@ export function RoomListPanel() {
                   type="button"
                   role="radio"
                   aria-checked={selected}
-                  data-testid={`room-list-visibility-${opt.value}`}
+                  data-testid={`room-create-visibility-${opt.value}`}
                   onClick={() => setVisibility(opt.value)}
                   className={cn(
-                    "rounded-md border p-1.5 text-left text-xs font-medium",
+                    "rounded-md border p-1.5 text-left text-xs font-medium transition-colors duration-200",
                     selected
                       ? "border-foreground bg-background ring-1 ring-ring"
-                      : "border-border text-muted-foreground",
+                      : "border-border text-muted-foreground hover:border-border-strong",
                   )}
+                  title={opt.desc}
                 >
                   {opt.icon} {opt.title}
                 </button>
@@ -195,12 +299,12 @@ export function RoomListPanel() {
             })}
           </div>
           {createError && (
-            <p role="alert" data-testid="room-list-create-err" className="text-xs text-destructive">
+            <p role="alert" data-testid="err-create" className="text-xs text-destructive">
               {createError}
             </p>
           )}
           <Button
-            data-testid="room-list-create-submit"
+            data-testid="create"
             type="submit"
             size="sm"
             disabled={nameTooShort}
@@ -218,8 +322,21 @@ export function RoomListPanel() {
             data-testid="room-list-search"
             placeholder="Search…"
             value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && load(q)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setQ(v);
+              if (searchTimer.current) clearTimeout(searchTimer.current);
+              searchTimer.current = setTimeout(() => void load(v), 300);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                if (searchTimer.current) clearTimeout(searchTimer.current);
+                // 读 DOM 实时值而非闭包里的 q——fill 后紧跟 Enter 时 setQ 尚未
+                // re-render，用 state 会拿到 stale 值触发 load("") 显示全部，与
+                // debounce 的 load(最新值) 竞争产生抖动。读 currentTarget.value 根治。
+                void load(e.currentTarget.value);
+              }
+            }}
             className="h-8 pl-8 text-13"
           />
         </div>
@@ -229,7 +346,7 @@ export function RoomListPanel() {
         <Button
           variant={favoritesOnly ? "secondary" : "ghost"}
           size="sm"
-          data-testid="room-list-favorites-filter"
+          data-testid="room-favorites-filter"
           aria-pressed={favoritesOnly}
           onClick={toggleFavoritesOnly}
           className="h-7 gap-1 px-2 text-xs"
@@ -249,9 +366,15 @@ export function RoomListPanel() {
         {loading ? (
           <RoomListSkeleton />
         ) : rooms.length === 0 ? (
-          <p data-testid="room-list-empty" className="px-4 py-6 text-center text-13 text-muted-foreground">
-            {favoritesOnly ? "还没有收藏的房间" : "还没有房间，点击右上角新建"}
-          </p>
+          favoritesOnly ? (
+            <p data-testid="empty-favorites" className="px-4 py-6 text-center text-13 text-muted-foreground">
+              还没有收藏的房间
+            </p>
+          ) : (
+            <p data-testid="empty" className="px-4 py-6 text-center text-13 text-muted-foreground">
+              还没有房间，点击右上角新建
+            </p>
+          )
         ) : (
           <ul data-testid="room-list" className="flex flex-col gap-0.5 px-2 pb-3">
             {rooms.map((r) => {
@@ -261,23 +384,40 @@ export function RoomListPanel() {
                 <li key={String(r.id)}>
                   <Link
                     href={`/rooms/${r.id}/${targetSegment}`}
-                    data-testid={`room-list-item-${r.id}`}
+                    data-testid={`room-${r.id}`}
                     data-active={active ? "true" : "false"}
                     className={cn(
-                      "flex items-center gap-2 rounded-lg px-2 py-2 text-13 transition-colors",
+                      "flex items-center gap-1.5 rounded-lg px-2 py-2 text-13 transition-colors",
                       active ? "bg-muted font-semibold text-foreground" : "text-foreground hover:bg-surface-1",
                     )}
                   >
+                    <FavoriteToggle
+                      active={favIds.has(String(r.id))}
+                      onToggle={() => toggleFav(r.id)}
+                      testId={`room-favorite-toggle-${r.id}`}
+                    />
                     <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-bold text-foreground/30 ${fillFor(r.id)}`}
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-bold text-foreground/30 ${fillFor(r.id)}`}
                     >
                       {r.name.charAt(0).toUpperCase()}
                     </span>
                     <span className="min-w-0 flex-1 truncate">{r.name}</span>
-                    {favIds.has(String(r.id)) && <span className="shrink-0 text-xs text-amber-500">★</span>}
-                    <Badge variant="muted" className="shrink-0 px-1.5 py-0 text-10">
-                      {r.visibility === "team" ? "🌐" : "🔒"}
-                    </Badge>
+                    {r.is_member === false && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        data-testid={`room-join-${r.id}`}
+                        className="h-5 shrink-0 px-1.5 text-11"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          void join(r.id);
+                        }}
+                      >
+                        Join
+                      </Button>
+                    )}
+                    <VisibilityBadge room={r} />
                   </Link>
                 </li>
               );
