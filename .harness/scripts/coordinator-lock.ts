@@ -59,12 +59,17 @@ export async function lockAcquire(args: Args): Promise<void> {
   // treated as "no opinion," never as a block.
   if (client && !force) {
     try {
-      const activeClaim = await client.queryActiveClaim(REMOTE_RESOURCE_ID);
-      if (activeClaim && activeClaim.agent_id !== sessionId) {
-        const staleMinutes = (Date.now() - new Date(activeClaim.last_heartbeat_at).getTime()) / 60000;
+      const outcome = await client.queryActiveClaim(REMOTE_RESOURCE_ID);
+      if (outcome.kind === "error") {
+        // Previously unreachable: a non-ok HTTP response used to collapse
+        // into the same value as "genuinely free", with zero log output
+        // either way. Now it's a distinct, visible case.
+        log.info(`[coord-service] 查询远端认领状态返回非成功状态（HTTP ${outcome.status}），降级为仅本地文件锁把关`);
+      } else if (outcome.kind === "held" && outcome.claim.agent_id !== sessionId) {
+        const staleMinutes = (Date.now() - new Date(outcome.claim.last_heartbeat_at).getTime()) / 60000;
         if (staleMinutes <= STALE_THRESHOLD_MINUTES) {
           die(
-            `[coord-service] 已有 coordinator "${activeClaim.agent_id}" 持有 role:coord-main 租约` +
+            `[coord-service] 已有 coordinator "${outcome.claim.agent_id}" 持有 role:coord-main 租约` +
               `（最后心跳 ${staleMinutes.toFixed(1)} 分钟前）。不要重复调度——如确认它已失效，加 --force 抢占。`
           );
         }

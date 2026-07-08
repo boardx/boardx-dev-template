@@ -10,3 +10,6 @@
 - [ ] 没有半成品处于未记录状态。
 - [ ] 同一时刻只有一个 feature 处于 `in_progress`。
 - [ ] 关键运行输出已归档到 sprint 的 `evidence/`。
+- [ ] **本 worktree 起过的 docker compose 栈已 down**（`docker compose -f infra/docker-compose.yml down`）——
+  feature/PR 收尾后不需要保留一份实时可跑的数据库。跑
+  `pnpm harness sweep-docker` 核实没有本会话遗留的孤儿栈（见 ADR-007）。

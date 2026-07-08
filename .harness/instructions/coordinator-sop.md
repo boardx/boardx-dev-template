@@ -18,6 +18,7 @@
 
 ### L1 队列层（~5min 或每次事件处理完顺手做）
 1. **合并队列**：`status:approved` ∩ CI 绿 ∩ 分支 up-to-date → 按约定顺序合并（动共享文件多的最后合），置 `status:merged`、关 issue、跑 `pnpm harness verify`。
+   **热点文件额外一步**：如果待合并 PR 改动的文件，同一批次里还有其它 PR 刚合并过同一文件——"up-to-date"（git 层面无文本冲突，GitHub 显示 mergeable）不代表"合并后仍能编译"：两个 PR 各自在同一文件不同位置插入同名声明/重复逻辑，文本上完全不冲突，语义上会炸（先例：PR #415 与 #417 各自独立给 `board-canvas.tsx` 声明 `itemsRef`，两边 CI 各自绿、mergeable 各自为真，合并后 main 上 `TS2451` 重复声明，靠 hotfix #427 收场，见下方"事故分诊速查"）。本仓库因套餐限制没有 GitHub 的 merge queue（合并前对最新 base 重新跑 CI）可用，兜底只能是社会性约定：**热点文件的 PR 合并前，本地把当前 main 实际 merge 一次，重新跑一遍受影响包的 typecheck，绿了再合**，不要只看 GitHub 界面的 mergeable 状态。
 2. **review 在途**：调起 >15min 未回的 reviewer agent 是否还活着，死了重派。
 3. **分派补给**：有空闲 worker 且存在 `status:ready-for-dev` ∩ 依赖全绿 ∩ 与在途 PR 无同文件热点 → 分派（认领双写：`harness claim` + label）。
 
@@ -26,7 +27,9 @@
 2. **漂移巡检**：抽查 label 与事实一致性——`review:*-ok` 是否都有对应 reviewer 产出记录（评论）；有无非 coordinator 编排的 verdict label（出现即摘除并留言，见"verdict 权威"）。
 3. **阻塞升级**：`status:blocked` 超过 1 个 L2 周期无进展 → 评论 + 通知人类。
 4. **基础设施健康**：CI 是否整体可用（账单/runner）；不可用时在追踪评论里刷新状态。
-5. **背景任务盘点**：自己派出的 reviewer/verifier agent、监控任务有无僵死；scratchpad worktree 有无该清理的。
+5. **背景任务盘点**：自己派出的 reviewer/verifier agent、监控任务有无僵死；scratchpad worktree 有无该清理的；
+   **对应的 docker compose 栈是否也一并 down 了**——worktree 删了但 docker 栈没 down 是最常见的
+   遗漏（`pnpm harness sweep-docker` 能扫出这类孤儿栈），见 ADR-007。
 
 ## Deadline 与分级补救（2026-07-04 起）
 
@@ -36,7 +39,7 @@
 
 | 对象 | Deadline | Tier 1（软提醒） | Tier 2（升级） | Tier 3（补救） |
 |---|---|---|---|---|
-| `status:in-progress`（worker 认领锁） | 6h 无进展 | — | — | 回收 lease、回退 `ready-for-dev`，可重分派（已有，ADR-004 §4） |
+| `status:in-progress`（worker 认领锁） | 6h 无进展 | — | **强制**：在总线（issue/PR）上贴一条带明确时限的通牒（例："接下来 N 分钟/小时内如果看不到实际进展（哪怕是 draft PR），我会视为 stale 直接回收重分派"），不能只是"注意到了"就默默等或默默回收（先例：coord-main 对 #406 给 45 分钟窗口、coord-board 对 #282 给 2 小时窗口，均在窗口内/窗口后收到明确结果或据此回收）——**本条对 coord-main 和全体 module-coordinator 一视同仁，不因层级或角色豁免** | 窗口到期仍无可验证进展（commit/push/评论）→ 回收 lease、回退 `ready-for-dev`，可重分派（已有，ADR-004 §4） |
 | `status:changes-requested`（返工中） | 2h 无新提交 | 总线追加提醒评论 @worker，附上次返工清单链接 | 4h 无新提交：判断 worker 会话是否仍在运行——仍在运行但静默＝排队中，不追加动作；会话已停止/不可达＝视同 lease 超时，回收或重分派 | 若纯机械性小改、已给过明确修法、且已返工 ≥2 轮未落地：coordinator/module-coordinator 可直接代为修复（先例：PR #327 第三轮），修完仍需过独立 review，不可自我豁免 |
 | `status:in-review`（等 reviewer） | 30min 内未派出 reviewer | 自查为何漏派 | — | 立即补派，属 coordinator 自身失职，不算 worker 责任 |
 | `coordinator`/`module-coordinator` 心跳 | 30min（已有，见生命周期章节） | — | 抢占仪式（已有） | 抢占 |
@@ -59,11 +62,23 @@
    `branch -f`/`checkout <branch>`；分支建好立即 push。见 ADR-005
    （`phases/phase-01-foundation/adr/ADR-005-shared-checkout-isolation.md`），本地另有
    `reference-transaction` git hook 兜底拦截非快进更新。
-6. **coord-service 是 opt-in 增强，不是新权威**：`COORD_SERVICE_URL`/
+6. **不可静默等待**：发现 lease/PR 停滞（见上方 Deadline 表）时，必须在总线上贴出带
+   明确时限的通牒，再据此回收/升级——不能只是内部判断"再等等"或"已经提醒过了"就不再
+   跟进。这条对 coord-main 和全体 module-coordinator 一视同仁，没有"层级更高就可以裸等"
+   这回事（人类反馈直接触发，2026-07-07）。
+7. **coord-service 是 opt-in 增强，不是新权威**：`COORD_SERVICE_URL`/
    `COORD_SERVICE_TOKEN` 未配置时，`lock-*`/`module-lock-*` 行为与 coord-service
    出现之前逐字一致；配置了才会额外问一次 D1、失败一律静默降级——GitHub
    issue+label（module-coordinator 侧）和本地文件锁（顶层 coordinator 侧）依然是
    默认权威。见 ADR-006（`phases/phase-01-foundation/adr/ADR-006-coord-service-d1-gating.md`）。
+8. **破坏性清理操作需要显式人类/coord-main 授权，任何会话都不能仅凭自己判断"逻辑
+   可靠"就执行**：`pnpm harness sweep-docker --apply`（删容器+卷）、以及其它任何
+   对共享基础设施做删除/回收类操作的命令，一律先跑不带 `--apply` 的只读巡检、把
+   结果贴到总线，等人类或 coord-main 明确说"可以"再执行——跟合并权、
+   registry.yaml 的 schema 变更同一个审批级别。这条是 2026-07-07 的真实教训：
+   一次基于"worktree 目录已不存在"这条本身可靠的判定标准，未经请示就直接跑了
+   `--apply`，即使结果本身没错，这个执行顺序本身不该发生。见 ADR-007
+   （`phases/phase-01-foundation/adr/ADR-007-docker-stack-teardown.md`）。
 
 ## 事故分诊速查（来自实战）
 - CI 秒级失败 + steps 空 → 账单/runner，非代码（2026-07-04 账单事故）。
@@ -75,6 +90,11 @@
 - 共享主 checkout 被并发会话 `reset`/`stash`/`branch -f` 踩踏，分支 commit 无声消失
   （2026-07-03/04 夜间两起：Board agent stash 误伤、AVA 分支 ref 一度被重置）
   → 见 ADR-005；发现即用 `git reflog` 定位恢复，之后确认该分支已 push 到 origin。
+- 两个 PR 各自 mergeable（无文本冲突）、合并后语义冲突（同文件不同位置重复声明同名
+  变量）导致 main typecheck 红（2026-07-07：PR #415 与 #417 各自给
+  `board-canvas.tsx` 声明 `itemsRef`，hotfix #427 收场）→ 见上方 L1"合并队列"热点
+  文件额外一步；发现 main 红，先看是不是这类连带影响（rebase 到修复后的 main 重跑
+  即可，不是自己代码的问题），不要盲目排查自己 PR。
 
 ## 生命周期（启动/退位/抢占）
 coordinator 是**单例角色**，由会话通过启动仪式认领，不是常驻 subagent。

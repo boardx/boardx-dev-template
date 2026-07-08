@@ -1,0 +1,185 @@
+PR #406 — 回归测试 RED/GREEN 证明
+测试：apps/web/e2e/ai-store-001-browse-items.spec.ts
+用例："输入后立即按 Enter 使用当前搜索词刷新网格"
+关联：issue #387（ai-store Explore 搜索：输入后立即 Enter 使用了 stale 的 q closure）
+分支：worker/wrk-codex-store-1-issue-387-search（PR #406）
+日期：2026-07-08
+
+============================================================
+背景
+============================================================
+apps/web/app/(app)/ai-store/store-browser.tsx 的搜索框 onKeyDown 处理器曾经用：
+
+    onKeyDown={(e) => e.key === "Enter" && load({ q })}
+
+在打完最后一个字符后立刻按 Enter 时，读到的是 React state `q` 的旧闭包值（上一次
+渲染时捕获的），而不是 DOM 里已经包含最后一个字符的实时值——因为 keydown 事件处理
+可能发生在 React 把最后一次 setQ 冲刷、重渲染、重新创建 onKeyDown 闭包之前。
+
+已确认修复（本 PR，不在本次改动范围内，store-browser.tsx 逻辑未改动）：
+
+    onKeyDown={(e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      searchExplore(e.currentTarget.value);
+    }}
+
+改读 e.currentTarget.value（keydown 事件触发时刻的实时 DOM 值），不再依赖闭包里的
+React state。
+
+本文件证明：修复后的回归测试用例，在真实复现该 bug 时会失败（RED），在真实修复代码
+上会通过（GREEN）——不是"重写测试让它看起来测到了 bug"，是真的能区分新旧实现。
+
+============================================================
+测试设计过程中踩过的坑（为什么最终用了 page.evaluate + capture 监听器）
+============================================================
+本用例此前已被 3 轮独立 review 驳回，理由都是"测不出真实回归"（tautological /
+non-discriminating）。本轮继续验证/迭代时，依次实测排除了以下三种看似合理的写法，
+每种都用"刻意还原的旧 bug 实现"跑过，结果全部仍然通过（说明没测出回归）：
+
+  1) search.pressSequentially(text) 后单独再 search.press("Enter")
+     → 两次调用之间有独立的 Playwright action 边界，足够 React flush，
+       Enter 触发时 q 早已是最新值。（这是被第 3 轮 review 驳回的版本。）
+
+  2) search.pressSequentially(text + "\n")（把 Enter 作为字符串结尾内嵌进
+     同一次 pressSequentially 调用）
+     → Playwright 对序列里的每个字符（包括结尾的 "\n"）仍然各自走一次独立的
+       keydown/keypress/input/keyup 派发 + await，最后一个真实字符与结尾 "\n"
+       之间照样留了一个事件循环 tick 给 React flush，同样测不出回归。
+     实测：对刻意还原的旧实现跑此写法，用例仍然 1 passed（应该失败但没失败）。
+
+  3) 同一个 page.evaluate 调用里，背靠背（不 await）依次派发最后一个字符的
+     "input" 事件、然后派发 Enter 的 "keydown" 事件
+     → dispatchEvent() 本身虽是同步调用，但 React 在处理 "input" 事件时会
+       在该次 dispatchEvent() 返回前就同步完成 setQ 状态更新与重渲染（重新
+       创建 onKeyDown 闭包）。等代码执行到下一行去派发 keydown 时，closure
+       里的 q 已经是新值——即使两次 dispatchEvent 之间没有 await/没有独立
+       Playwright action 边界，也测不出回归。
+     实测：对刻意还原的旧实现跑此写法，用例仍然 1 passed。
+     用网络请求进一步定位验证：请求 URL 里的 q 参数已经是完整新值，证实
+     React 确实抢在下一行代码执行前把 state 冲刷完了。
+
+最终能验证出回归的写法（本文件采用的实现）：
+  在 input 元素自身注册一个"capture 阶段 + { once: true }"的原生 "input"
+  监听器，抢在 React 挂载在根节点上的委托监听器（bubble 阶态）之前同步触发——
+  于是可以在 React 自己的 onChange/setQ 真正执行之前，就同步派发 Enter 的
+  keydown 事件。这样 keydown 处理时 React state 必然还停留在"打最后一个字
+  符之前"的旧值，真实复现了"最后一个字符的 setQ 还没被 React 处理完、Enter
+  的 keydown 就已经需要读值"这个竞态窗口。
+
+另外还踩了一个断言设计的坑：后端 /api/ai-store/items 用 `ILIKE '%q%'` 做
+子串匹配（packages/data/src/aiStore.ts）。最初一版断言用 "Translat" →
+"Translate"（旧实现读到的前缀 "Translat" 本身就已经是 "Translate" 的子串，
+依然能 ILIKE 命中同一个 item），导致新旧实现下断言都成立、测不出回归。
+最终改为：前缀 "Translat" 命中 "Translate" 这个真实 item，追加末位字符
+"9" 后变成 "Translat9"，不再是任何 item 名称/描述的子串、必然零命中——
+旧实现（用未冲刷的前缀 "Translat" 去查）网格仍非空，新实现（用完整的
+"Translat9" 去查）应显示空态。这才是真正能区分新旧实现的断言点。
+
+============================================================
+RED：刻意还原旧 bug 实现，跑本用例，必须失败
+============================================================
+临时改动（跑完 RED 后已 git checkout 撤销，未提交）：
+
+    apps/web/app/(app)/ai-store/store-browser.tsx 第 804 行
+    - searchExplore(e.currentTarget.value);
+    + searchExplore(q);
+
+命令：
+    cd apps/web && pnpm exec playwright test e2e/ai-store-001-browse-items.spec.ts -g "输入后立即按 Enter"
+
+真实终端输出（原始、未删减）：
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › ai-store-001-browse-items.spec.ts:59:5 › 输入后立即按 Enter 使用当前搜索词刷新网格 (19.4s)
+
+
+  1) [chromium] › ai-store-001-browse-items.spec.ts:59:5 › 输入后立即按 Enter 使用当前搜索词刷新网格 ────────────────
+
+    Error: Timed out 10000ms waiting for expect(locator).toBeVisible()
+
+    Locator: getByTestId('empty')
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+      - expect.toBeVisible with timeout 10000ms
+      - waiting for getByTestId('empty')
+
+
+      141 |   // 子串的子串）。所以"前缀不匹配→加字符后才匹配"这个方向在子串匹配下不可能
+      142 |   // 构造出反例，唯一能区分新旧实现的方向就是这里用的"前缀匹配→加字符后不匹配"。
+    > 143 |   await expect(page.getByTestId("empty")).toBeVisible();
+          |                                           ^
+      144 |   await expect(grid).toHaveCount(0);
+      145 | });
+      146 |
+
+        at .../apps/web/e2e/ai-store-001-browse-items.spec.ts:143:43
+
+  Slow test file: [chromium] › ai-store-001-browse-items.spec.ts (19.4s)
+  Consider splitting slow test files to speed up parallel execution
+  1 failed
+    [chromium] › ai-store-001-browse-items.spec.ts:59:5 › 输入后立即按 Enter 使用当前搜索词刷新网格 ─────────────────
+
+结论：旧实现下，追加最后一个字符 "9"（构成不匹配任何 item 的 "Translat9"）后，
+onKeyDown 仍然用闭包里滞后一步的 q="Translat" 去发起搜索请求，命中 "Translate"
+item，网格没有清空、"empty" 空态一直没出现，10s 超时——用例真实失败。这就是
+issue #387 描述的 bug 的真实复现。
+
+============================================================
+GREEN：还原真实修复代码，跑本用例，必须通过
+============================================================
+还原命令：
+    git checkout -- 'apps/web/app/(app)/ai-store/store-browser.tsx'
+
+（已确认 git diff 对该文件为空，即完全恢复为 PR #406 实际提交的版本，
+ e.currentTarget.value 修复原样保留，未做任何改动。）
+
+命令：
+    cd apps/web && pnpm exec playwright test e2e/ai-store-001-browse-items.spec.ts -g "输入后立即按 Enter"
+
+真实终端输出（原始、未删减）：
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › ai-store-001-browse-items.spec.ts:59:5 › 输入后立即按 Enter 使用当前搜索词刷新网格 (11.6s)
+
+  1 passed (21.2s)
+
+结论：修复后的实现下，onKeyDown 读 e.currentTarget.value（实时 DOM 值，已包含
+追加的 "9"），用完整的 "Translat9" 去发起搜索请求，零命中，"empty" 空态正确
+出现——用例真实通过。
+
+============================================================
+补充：完整回归套件（同一 spec 文件全部 10 条用例）在修复代码上全绿
+============================================================
+命令：
+    cd apps/web && pnpm exec playwright test e2e/ai-store-001-browse-items.spec.ts
+
+Running 10 tests using 1 worker
+
+  ✓  1 [chromium] › ai-store-001-browse-items.spec.ts:11:5 › 未登录访问 /ai-store 重定向到 /login (6.1s)
+  ✓  2 [chromium] › ai-store-001-browse-items.spec.ts:17:5 › 登录后浏览：submenu 分类 + 内容网格 (2.2s)
+  ✓  3 [chromium] › ai-store-001-browse-items.spec.ts:34:5 › 类型筛选只显示该类型，并在页面上下文生效 (1.2s)
+  ✓  4 [chromium] › ai-store-001-browse-items.spec.ts:47:5 › 搜索按名称/描述收窄列表 (962ms)
+  ✓  5 [chromium] › ai-store-001-browse-items.spec.ts:59:5 › 输入后立即按 Enter 使用当前搜索词刷新网格 (1.4s)
+  ✓  6 [chromium] › ai-store-001-browse-items.spec.ts:147:5 › 无匹配结果显示空状态 + 清空筛选入口 (1.5s)
+  ✓  7 [chromium] › ai-store-001-browse-items.spec.ts:162:5 › 标签筛选高亮并显示 filters active，Clear all 复位 (1.1s)
+  ✓  8 [chromium] › ai-store-001-browse-items.spec.ts:176:5 › 未登录调用 GET /api/ai-store/items 返回未授权 (143ms)
+  ✓  9 [chromium] › ai-store-001-browse-items.spec.ts:182:5 › 分页：种子数据超过一页时显示分页控件，翻页后内容更新 (2.6s)
+  ✓  10 [chromium] › ai-store-001-browse-items.spec.ts:205:5 › 点卡片打开详情弹窗：展示描述/示例/统计/订阅入口，可关闭 (1.7s)
+
+  10 passed (30.7s)
+
+============================================================
+环境
+============================================================
+- bash scripts/init-worktree-env.sh（分配独立 docker 端口，project name
+  coord-main-406-fix：postgres 60216 / redis 60217 / web e2e 60218）
+- docker compose -f infra/docker-compose.yml up -d（postgres/redis/minio 三个
+  容器 healthy）
+- pnpm --filter @repo/data run migrate（全部迁移成功，包括 016_ai_store.sql）
+- playwright.config.ts 的 webServer 配置负责按 E2E_PORT 拉起/复用 next dev
+- RED 和 GREEN 跑完后已执行 docker compose -f infra/docker-compose.yml down
+  释放本机资源

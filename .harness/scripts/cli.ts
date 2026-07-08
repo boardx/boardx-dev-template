@@ -9,6 +9,7 @@ import { claim } from "./claim";
 import { migrateLabels } from "./migrate-labels";
 import { sweepUnblock } from "./sweep-unblock";
 import { sweepWorktrees } from "./sweep-worktrees";
+import { sweepDocker } from "./sweep-docker";
 import { depGraph } from "./dep-graph";
 import { lockStatus, lockAcquire, lockHeartbeat, lockRelease } from "./coordinator-lock";
 import { moduleLockStatus, moduleLockAcquire, moduleLockHeartbeat, moduleLockRelease } from "./module-lock";
@@ -31,6 +32,7 @@ async function main(): Promise<void> {
     case "migrate-labels": migrateLabels(args); break;
     case "sweep-unblock":  sweepUnblock(args); break;
     case "sweep-worktrees": sweepWorktrees(args); break;
+    case "sweep-docker":    sweepDocker(args); break;
     case "dep-graph":      depGraph(args); break;
     case "lock-status":    lockStatus(args); break;
     case "lock-acquire":   await lockAcquire(args); break;
@@ -52,6 +54,7 @@ async function main(): Promise<void> {
       log.info("  pnpm harness migrate-labels            # 收敛线上 label 到规范 status:*（ADR-004）；加 --apply 执行");
       log.info("  pnpm harness sweep-unblock [--dry-run]                 # depends_on 全 passing 的 blocked → not_started");
       log.info("  pnpm harness sweep-worktrees [--threshold-minutes N]   # 巡检未提交改动的 worker worktree（默认阈值 60）");
+      log.info("  pnpm harness sweep-docker [--apply]                    # 巡检孤儿 docker compose 栈（ADR-007）；--apply 实际清理");
       log.info("  pnpm harness dep-graph                                 # 生成 .harness/state/dep-graph.md 依赖图快照");
       log.info("  pnpm harness lock-status");
       log.info("  pnpm harness lock-acquire   --session <id> [--force] [--note <text>]");
