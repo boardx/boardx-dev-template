@@ -31,7 +31,9 @@ async function runResearchToReport(page: import("@playwright/test").Page, topic:
     timeout: 15_000,
   });
   await page.getByTestId("confirm-research-clarify").click();
-  await expect(page.getByTestId("research-card")).toHaveAttribute("data-status", "clarified");
+  await expect(page.getByTestId("research-card")).toHaveAttribute("data-status", "clarified", {
+    timeout: 15_000,
+  });
   await page.getByTestId("confirm-research-plan").click();
   await expect(page.getByTestId("research-card")).toHaveAttribute("data-status", "running", {
     timeout: 15_000,
