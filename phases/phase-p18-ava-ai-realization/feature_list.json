@@ -257,6 +257,28 @@
       ],
       "evidence": "evidence/F12.verify.log @ 2026-07-03T17:46:12.111Z",
       "notes": "requirements/05。实现层四态已基本存在（p9-F05），本 feature 主要是补齐验证覆盖 + 修补发现的缺口；风险最低，可最早排期。"
+    },
+    {
+      "id": "F13",
+      "priority": 1,
+      "area": "ai-core",
+      "title": "AVA 界面对齐 prototype/oldcode 迁移",
+      "user_visible_behavior": "/ava 界面与 BoardX UI Prototype V1 的 AVA 区块及 oldcode 实现对齐：侧栏黑色「+ New chat」主按钮 + 日期分组线程列表（每条 hover 出现「…」菜单）；线程头部为 Agent 头像 + 线程标题 + Agent 名称/角色副标题，右上角「模型名 ▾」pill 模型选择器 + Share 按钮（Model/Agent 不再作为裸 select 平铺在 composer 区）；用户消息右对齐灰色气泡（hover 出现 Edit/Delete），AI 消息左侧带头像、下方一行内联文本操作（Copy / Regenerate / 👍 / 👎 / Send to board / 发送邮件）；composer 为圆角容器（placeholder「Message AVA…」），底部一行左侧附件/语音图标 + 「@ Expert」「# Skill」「✦ Deep Research」pill 入口（Skill/Deep Research 点击弹出选择菜单），右侧圆形发送按钮，Chat/Deep Research 不再是 composer 顶部的两个 tab；AI credits 横幅保留功能但视觉收敛。功能行为（发送/流式/附件/语音/研究/分享/消息操作）不变。",
+      "design_ref": "phases/requirements/BoardX UI Prototype V1.html（AVA 区块，视觉最终真相）；phases/requirements/oldcode/boardx-web-develop/src/components/ava/ChatUIComponent/（交互结构迁移源）",
+      "status": "passing",
+      "sprint": "03",
+      "owner": "wrk-ava-p18-2",
+      "capability": "CAP-UI",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/ava-ui-parity.spec.ts",
+        "pnpm --filter @repo/web exec playwright test e2e/ava-chat-basic.spec.ts e2e/ava-threads.spec.ts e2e/ava-message-actions.spec.ts e2e/ava-message-send-actions.spec.ts e2e/ava-attach-files.spec.ts e2e/ava-voice-input.spec.ts e2e/ava-deep-research.spec.ts e2e/ava-ai-settings.spec.ts e2e/ava-suggested-actions.spec.ts e2e/ava-edit-delete-message.spec.ts"
+      ],
+      "evidence": "evidence/F13.verify.log @ 2026-07-08T23:35:01.368Z",
+      "notes": "issue #465。p17-F02 reskin 纠偏重做（人类 2026-07-09 截图比对指示）：以 prototype + oldcode 为迁移源做视觉与信息架构迁移，复用现有 fetch + Next.js API routes 数据层，不做功能重写。既有 15 个 ava spec 是回归面，data-testid 全部保留在等价控件上。"
     }
   ]
 }

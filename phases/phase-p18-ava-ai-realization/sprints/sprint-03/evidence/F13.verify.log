@@ -1,0 +1,644 @@
+$ docker compose -f infra/docker-compose.yml up -d
+[exit 0]
+ Container worker-wrk-ava-p18-2-p18-f13-ava-ui-pari-redis-1 Running 
+ Container worker-wrk-ava-p18-2-p18-f13-ava-ui-pari-minio-1 Running 
+ Container worker-wrk-ava-p18-2-p18-f13-ava-ui-pari-postgres-1 Running 
+
+
+$ pnpm --filter @repo/data run migrate
+[exit 0]
+
+> @repo/data@0.1.0 migrate /private/tmp/f13-ava-ui/packages/data
+> sh -c 'set -a; [ -f ../../apps/web/.env.local ] && . ../../apps/web/.env.local; set +a; tsx src/migrate.ts'
+
+✓ 已应用，跳过：001_init.sql
+✓ 已应用，跳过：002_auth.sql
+✓ 已应用，跳过：003_team.sql
+✓ 已应用，跳过：004_room.sql
+✓ 已应用，跳过：005_canvas.sql
+✓ 已应用，跳过：006_profile.sql
+✓ 已应用，跳过：007_board.sql
+✓ 已应用，跳过：008_board_visits.sql
+✓ 已应用，跳过：009_board_favorites.sql
+✓ 已应用，跳过：010_room_chat.sql
+✓ 已应用，跳过：011_board_settings.sql
+✓ 已应用，跳过：012_board_items_board_id.sql
+✓ 已应用，跳过：013_board_items_color.sql
+✓ 已应用，跳过：014_feedback.sql
+✓ 已应用，跳过：014_room_chat_messages.sql
+✓ 已应用，跳过：015_team_general.sql
+✓ 已应用，跳过：016_admin_role.sql
+✓ 已应用，跳过：016_ai_store.sql
+✓ 已应用，跳过：016_ava_chat.sql
+✓ 已应用，跳过：016_credits.sql
+✓ 已应用，跳过：016_kb_files.sql
+✓ 已应用，跳过：016_survey.sql
+✓ 已应用，跳过：017_ai_store_item_config.sql
+✓ 已应用，跳过：017_payment_orders.sql
+✓ 已应用，跳过：017_studio_artifacts.sql
+✓ 已应用，跳过：017_survey_templates.sql
+✓ 已应用，跳过：018_ai_store_favorites.sql
+✓ 已应用，跳过：018_ava_message_attachments.sql
+✓ 已应用，跳过：018_ava_thread_share.sql
+✓ 已应用，跳过：018_user_plan.sql
+✓ 已应用，跳过：019_ai_store_subscriptions.sql
+✓ 已应用，跳过：019_credit_transaction_idempotency.sql
+✓ 已应用，跳过：019_presentation_artifacts.sql
+✓ 已应用，跳过：020_ava_message_feedback.sql
+✓ 已应用，跳过：021_ai_store_share.sql
+✓ 已应用，跳过：021_presentation_revisions.sql
+✓ 已应用，跳过：022_retire_room_canvas.sql
+✓ 已应用，跳过：023_outbound_emails.sql
+✓ 已应用，跳过：024_room_favorites.sql
+✓ 已应用，跳过：025_room_invites.sql
+✓ 已应用，跳过：026_room_files.sql
+✓ 已应用，跳过：026_survey_room_scope.sql
+✓ 已应用，跳过：027_ava_research_sessions.sql
+✓ 已应用，跳过：028_ava_research_clarify_stage.sql
+✓ 已应用，跳过：029_email_confirmation.sql
+✓ 已应用，跳过：030_room_ai_context.sql
+✓ 已应用，跳过：031_board_backups.sql
+迁移完成。
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/ava-ui-parity.spec.ts
+[exit 0]
+
+Running 4 tests using 1 worker
+
+  ✓  1 [chromium] › ava-ui-parity.spec.ts:14:5 › 侧栏：黑色 New chat 主按钮 + 日期分组线程列表（Today 分组头可见） (2.6s)
+  ✓  2 [chromium] › ava-ui-parity.spec.ts:30:5 › 线程头部：Agent 头像/副标题 + 模型 pill + Share；Model 不再平铺在 composer 区 (434ms)
+  ✓  3 [chromium] › ava-ui-parity.spec.ts:49:5 › composer：底部一行 @ Expert / # Skill / ✦ Deep Research pill + 圆形发送按钮；Skill 弹出选单 (628ms)
+  ✓  4 [chromium] › ava-ui-parity.spec.ts:87:5 › 消息区：用户消息右对齐灰气泡（hover 出 Edit/Delete）、AI 消息左侧头像 + 内联文本操作行 (971ms)
+
+  4 passed (8.3s)
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/ava-chat-basic.spec.ts e2e/ava-threads.spec.ts e2e/ava-message-actions.spec.ts e2e/ava-message-send-actions.spec.ts e2e/ava-attach-files.spec.ts e2e/ava-voice-input.spec.ts e2e/ava-deep-research.spec.ts e2e/ava-ai-settings.spec.ts e2e/ava-suggested-actions.spec.ts e2e/ava-edit-delete-message.spec.ts
+[exit 0]
+
+Running 42 tests using 1 worker
+
+  ✓  1 [chromium] › ava-ai-settings.spec.ts:12:5 › 模型/Agent/工具选择在发送前生效，并由 stub 回复回显 (2.4s)
+  ✓  2 [chromium] › ava-ai-settings.spec.ts:42:5 › 普通团队成员不可选择 team-restricted 模型 (883ms)
+  ✓  3 [chromium] › ava-ai-settings.spec.ts:62:5 › 受限模型被伪造提交时服务端回退默认模型 (260ms)
+  ✓  4 [chromium] › ava-attach-files.spec.ts:20:5 › composer 附件入口：选择图片 → 预览条展示上传中到完成 → 发送后随消息进入聊天历史，AI 提及文件名 (4.7s)
+  ✓  5 [chromium] › ava-attach-files.spec.ts:87:5 › 拖拽上传：拖一个文件到 composer 区域也能触发上传 (541ms)
+  ✓  6 [chromium] › ava-attach-files.spec.ts:118:5 › 校验：不支持的文件类型 → 预览条展示失败态 + 可读提示，可重试 (505ms)
+  ✓  7 [chromium] › ava-attach-files.spec.ts:134:5 › 校验：超过大小上限的文件 → 失败态提示 (490ms)
+  ✓  8 [chromium] › ava-attach-files.spec.ts:148:5 › 校验：超过数量上限一次性选择 6 个文件 → 拒绝并提示，不触发上传 (383ms)
+  ✓  9 [chromium] › ava-attach-files.spec.ts:164:5 › 移除附件：上传完成后可移除，移除后不随消息发送 (522ms)
+  ✓  10 [chromium] › ava-attach-files.spec.ts:183:5 › 服务端二次校验：绕过前端直接 POST 不支持类型 → 400 且不落库 (395ms)
+  ✓  11 [chromium] › ava-attach-files.spec.ts:202:5 › 未登录访问附件上传接口 → 401 (154ms)
+  ✓  12 [chromium] › ava-chat-basic.spec.ts:11:5 › 登录用户：空态建议 → 发送 → user+assistant(Markdown/代码块) 气泡 → 线程入列表 → reload 后可继续追问 (1.2s)
+  ✓  13 [chromium] › ava-chat-basic.spec.ts:50:5 › 未登录访问 /ava：跳转 /login (1.2s)
+  ✓  14 [chromium] › ava-chat-basic.spec.ts:56:5 › 空消息被 API 拒绝（400，不创建线程） (164ms)
+  ✓  15 [chromium] › ava-chat-basic.spec.ts:68:5 › 生成失败：展示失败态，用户输入已持久化不丢失 (1.0s)
+  ✓  16 [chromium] › ava-chat-basic.spec.ts:89:5 › 未登录调用发消息接口 → 401 (153ms)
+  ✓  17 [chromium] › ava-deep-research.spec.ts:11:5 › Deep Research：提交主题 → 两步确认（澄清→计划）→ 执行时间线 → 报告面板 → 继续追问 (3.5s)
+  ✓  18 [chromium] › ava-deep-research.spec.ts:55:5 › Deep Research：主题过短时展示错误并保留可恢复输入 (784ms)
+  ✓  19 [chromium] › ava-deep-research.spec.ts:68:5 › Deep Research：额度不足时展示提示并保留主题 (839ms)
+  ✓  20 [chromium] › ava-deep-research.spec.ts:83:5 › Deep Research：启动失败时展示可重试错误态 (893ms)
+  ✓  21 [chromium] › ava-edit-delete-message.spec.ts:17:5 › 最后一条用户消息可编辑并重生成；非最后消息隐藏入口；删除最后一次请求需确认 (2.1s)
+  ✓  22 [chromium] › ava-edit-delete-message.spec.ts:57:5 › 编辑后重新生成失败时展示提示且用户消息保持可见 (1.2s)
+  ✓  23 [chromium] › ava-message-actions.spec.ts:22:5 › 消息操作条：复制整条消息、代码块单独复制、点赞/点踩持久化、重新生成不丢原问题 (2.6s)
+  ✓  24 [chromium] › ava-message-actions.spec.ts:81:5 › 重新生成失败时保留原回复不丢，展示错误提示 (885ms)
+  ✓  25 [chromium] › ava-message-actions.spec.ts:96:5 › 未登录调用反馈/重新生成接口 → 401 (257ms)
+  ✓  26 [chromium] › ava-message-actions.spec.ts:127:5 › 反馈只允许对 assistant 消息提交，对 user 消息返回 404 (264ms)
+  ✓  27 [chromium] › ava-message-send-actions.spec.ts:22:5 › 发送到 Board：选择有编辑权限的白板后写入便利贴并展示成功提示 (3.1s)
+  ✓  28 [chromium] › ava-message-send-actions.spec.ts:52:5 › 发送到 Board：无编辑权限的白板不可选或提示权限不足 (696ms)
+  ✓  29 [chromium] › ava-message-send-actions.spec.ts:63:5 › 发送到 Board：非编辑权限 Board 调用底层接口返回 403 权限不足 (263ms)
+  ✓  30 [chromium] › ava-message-send-actions.spec.ts:100:5 › 发送邮件：成功发送到当前用户邮箱，独立成功提示 (1.2s)
+  ✓  31 [chromium] › ava-message-send-actions.spec.ts:119:5 › 发送邮件：频控——同一分钟内连续点击第二次被拦截，不发第二封 (3.7s)
+  ✓  32 [chromium] › ava-suggested-actions.spec.ts:11:5 › 建议动作填入 composer，用户可编辑后按普通消息发送，并在回复下方刷新下一步建议 (835ms)
+  ✓  33 [chromium] › ava-suggested-actions.spec.ts:45:5 › 无可用建议时隐藏建议动作区域：失败回复下方不展示下一步建议 (536ms)
+  ✓  34 [chromium] › ava-threads.spec.ts:43:5 › 线程列表按日期分组，可分页加载、切换、重命名、删除，并按团队隔离 (2.8s)
+  ✓  35 [chromium] › ava-voice-input.spec.ts:30:5 › 录音结束后：真实转写文本回填输入框（替换固定占位文案） (2.8s)
+  ✓  36 [chromium] › ava-voice-input.spec.ts:57:5 › 取消录音：不产生任何文本，输入框保持录音前状态 (1.1s)
+  ✓  37 [chromium] › ava-voice-input.spec.ts:77:5 › 转写请求失败时展示 transcription-failed 错误文案 (2.1s)
+  ✓  38 [chromium] › ava-voice-input.spec.ts:96:5 › 音频超过体积上限时（413）展示 transcription-failed 错误文案 (2.1s)
+  ✓  39 [chromium] › ava-voice-input.spec.ts:118:5 › 音频 MIME 类型不受支持时（415）展示 transcription-failed 错误文案 (2.1s)
+  ✓  40 [chromium] › ava-voice-input.spec.ts:141:5 › POST /api/ava/transcribe：超过 25MB 返回结构化 413 (152ms)
+  ✓  41 [chromium] › ava-voice-input.spec.ts:159:5 › POST /api/ava/transcribe：MIME 类型不在白名单返回结构化 415 (125ms)
+  ✓  42 [chromium] › ava-voice-input.spec.ts:178:5 › 无转写服务凭证时：转写结果附带占位提示（不伪装成真实转写） (2.2s)
+
+  42 passed (57.0s)
+[WebServer] [ava-reply-stream] generate failed: Error: forced AVA failure for e2e
+[WebServer]     at Object.start (webpack-internal:///(rsc)/./app/api/ava/threads/[id]/messages/reply-stream.ts:36:27)
+[WebServer] [90m    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+[WebServer] [ava-reply-stream] generate failed: Error: forced AVA failure for e2e
+[WebServer]     at Object.start (webpack-internal:///(rsc)/./app/api/ava/threads/[id]/messages/reply-stream.ts:36:27)
+[WebServer] [90m    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+[WebServer] [ava-reply-stream] generate failed: Error: forced AVA failure for e2e
+[WebServer]     at Object.start (webpack-internal:///(rsc)/./app/api/ava/threads/[id]/messages/reply-stream.ts:36:27)
+[WebServer] [90m    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+[WebServer] [ava-reply-stream] generate failed: Error: forced AVA failure for e2e
+[WebServer]     at Object.start (webpack-internal:///(rsc)/./app/api/ava/threads/[id]/messages/reply-stream.ts:36:27)
+[WebServer] [90m    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+
+
+
+[BASE VERIFY] $ pnpm -w run verify:base
+[exit 0]
+
+> boardx-dev-template@ verify:base /private/tmp/f13-ava-ui
+> turbo run typecheck lint test
+
+• Packages in scope: @repo/agent-core, @repo/ai, @repo/auth, @repo/canvas, @repo/collab, @repo/coord-service, @repo/data, @repo/memory, @repo/orchestrator, @repo/queue, @repo/storage, @repo/tools, @repo/web, @repo/workflow-worker
+• Running typecheck, lint, test in 14 packages
+• Remote caching disabled
+@repo/queue:typecheck: cache hit, replaying logs 1b233dbfcf67bd25
+@repo/ai:test: cache hit, replaying logs 3f44aca7ba005791
+@repo/agent-core:test: cache hit, replaying logs 9fb4ace94579a1c3
+@repo/memory:build: cache hit, replaying logs 47363cc26de4425d
+@repo/storage:build: cache hit, replaying logs 25bd89ac0a1b319d
+@repo/queue:typecheck: 
+@repo/queue:typecheck: > @repo/queue@0.1.0 typecheck /private/tmp/f13-ava-ui/packages/queue
+@repo/memory:build: 
+@repo/memory:build: > @repo/memory@0.1.0 build /private/tmp/f13-ava-ui/packages/memory
+@repo/memory:build: > tsc --noEmit
+@repo/agent-core:test: 
+@repo/ai:test: 
+@repo/ai:test: > @repo/ai@0.1.0 test /private/tmp/f13-ava-ui/packages/ai
+@repo/ai:test: > vitest run
+@repo/ai:test: 
+@repo/ai:test: 
+@repo/ai:test:  RUN  v2.0.0 /private/tmp/f13-ava-ui/packages/ai
+@repo/ai:test: 
+@repo/ai:test:  ✓ src/studioGenerator.test.ts  (4 tests) 3ms
+@repo/ai:test:  ✓ src/index.test.ts  (12 tests) 9ms
+@repo/ai:test:  ✓ src/anthropicProvider.test.ts  (13 tests) 33ms
+@repo/ai:test:  ✓ src/sttProvider.test.ts  (6 tests) 16ms
+@repo/ai:test: 
+@repo/ai:test:  Test Files  4 passed (4)
+@repo/ai:test:       Tests  35 passed (35)
+@repo/ai:test:    Start at  07:32:27
+@repo/queue:typecheck: > tsc --noEmit
+@repo/queue:typecheck: 
+@repo/memory:build: 
+@repo/ai:test:    Duration  496ms (transform 167ms, setup 0ms, collect 287ms, tests 61ms, environment 1ms, prepare 397ms)
+@repo/ai:test: 
+@repo/agent-core:test: > @repo/agent-core@0.1.0 test /private/tmp/f13-ava-ui/packages/agent-core
+@repo/agent-core:test: > vitest run
+@repo/agent-core:test: 
+@repo/agent-core:test: 
+@repo/agent-core:test:  RUN  v2.0.0 /private/tmp/f13-ava-ui/packages/agent-core
+@repo/agent-core:test: 
+@repo/agent-core:test:  ✓ src/index.test.ts  (3 tests) 4ms
+@repo/agent-core:test: 
+@repo/agent-core:test:  Test Files  1 passed (1)
+@repo/agent-core:test:       Tests  3 passed (3)
+@repo/agent-core:test:    Start at  07:32:27
+@repo/agent-core:test:    Duration  417ms (transform 54ms, setup 0ms, collect 39ms, tests 4ms, environment 0ms, prepare 96ms)
+@repo/agent-core:test: 
+@repo/storage:build: 
+@repo/storage:build: > @repo/storage@0.1.0 build /private/tmp/f13-ava-ui/packages/storage
+@repo/storage:build: > tsc --noEmit
+@repo/storage:build: 
+@repo/data:build: cache hit, replaying logs d040042dc3a30e44
+@repo/data:build: 
+@repo/data:build: > @repo/data@0.1.0 build /private/tmp/f13-ava-ui/packages/data
+@repo/data:build: > tsc --noEmit
+@repo/data:build: 
+@repo/data:test: cache hit, replaying logs 880334192d71be41
+@repo/data:test: 
+@repo/data:test: > @repo/data@0.1.0 test /private/tmp/f13-ava-ui/packages/data
+@repo/data:test: > vitest run
+@repo/data:test: 
+@repo/data:test: 
+@repo/data:test:  RUN  v2.0.0 /private/tmp/f13-ava-ui/packages/data
+@repo/data:test: 
+@repo/data:test:  ✓ src/aiStore.test.ts  (15 tests) 6ms
+@repo/data:test:  ✓ src/roomChat.test.ts  (4 tests) 1ms
+@repo/data:test:  ✓ src/avaChat.test.ts  (5 tests) 3ms
+@repo/data:test:  ✓ src/index.test.ts  (3 tests) 2ms
+@repo/data:test:  ✓ src/board.test.ts  (9 tests) 2ms
+@repo/data:test:  ✓ src/survey.test.ts  (4 tests) 3ms
+@repo/data:test: 
+@repo/data:test:  Test Files  6 passed (6)
+@repo/data:test:       Tests  40 passed (40)
+@repo/data:test:    Start at  07:32:28
+@repo/data:test:    Duration  1.03s (transform 412ms, setup 0ms, collect 1.86s, tests 17ms, environment 1ms, prepare 715ms)
+@repo/data:test: 
+@repo/canvas:test: cache hit, replaying logs f0068b0b83afb326
+@repo/canvas:test: 
+@repo/canvas:test: > @repo/canvas@0.1.0 test /private/tmp/f13-ava-ui/packages/canvas
+@repo/canvas:test: > vitest run
+@repo/canvas:test: 
+@repo/canvas:test: 
+@repo/canvas:test:  RUN  v2.0.0 /private/tmp/f13-ava-ui/packages/canvas
+@repo/canvas:test: 
+@repo/canvas:test:  ✓ src/index.test.ts  (25 tests) 6ms
+@repo/canvas:test: 
+@repo/canvas:test:  Test Files  1 passed (1)
+@repo/canvas:test:       Tests  25 passed (25)
+@repo/canvas:test:    Start at  07:32:23
+@repo/canvas:test:    Duration  1.21s (transform 439ms, setup 0ms, collect 443ms, tests 6ms, environment 0ms, prepare 71ms)
+@repo/canvas:test: 
+@repo/memory:test: cache hit, replaying logs b2a74f1d30848a8a
+@repo/memory:test: 
+@repo/memory:test: > @repo/memory@0.1.0 test /private/tmp/f13-ava-ui/packages/memory
+@repo/memory:test: > vitest run
+@repo/memory:test: 
+@repo/memory:test: 
+@repo/memory:test:  RUN  v2.0.0 /private/tmp/f13-ava-ui/packages/memory
+@repo/memory:test: 
+@repo/memory:test:  ✓ src/index.test.ts  (13 tests) 9ms
+@repo/memory:test: 
+@repo/memory:test:  Test Files  1 passed (1)
+@repo/memory:test:       Tests  13 passed (13)
+@repo/memory:test:    Start at  07:32:26
+@repo/memory:test:    Duration  638ms (transform 210ms, setup 0ms, collect 247ms, tests 9ms, environment 0ms, prepare 122ms)
+@repo/memory:test: 
+@repo/agent-core:build: cache hit, replaying logs 054c254834fe2133
+@repo/agent-core:build: 
+@repo/agent-core:build: > @repo/agent-core@0.1.0 build /private/tmp/f13-ava-ui/packages/agent-core
+@repo/agent-core:build: > tsc --noEmit
+@repo/agent-core:build: 
+@repo/queue:build: cache hit, replaying logs f42f99a5d6ec1f31
+@repo/queue:build: 
+@repo/queue:build: > @repo/queue@0.1.0 build /private/tmp/f13-ava-ui/packages/queue
+@repo/queue:build: > tsc --noEmit
+@repo/queue:build: 
+@repo/collab:typecheck: cache hit, replaying logs 7591e9a0462767b9
+@repo/collab:typecheck: 
+@repo/collab:typecheck: > @repo/collab@0.1.0 typecheck /private/tmp/f13-ava-ui/packages/collab
+@repo/collab:typecheck: > tsc --noEmit
+@repo/collab:typecheck: 
+@repo/coord-service:lint: cache hit, replaying logs a064a41b1e069a44
+@repo/coord-service:lint: 
+@repo/coord-service:lint: > @repo/coord-service@0.1.0 lint /private/tmp/f13-ava-ui/packages/coord-service
+@repo/coord-service:lint: > echo 'lint: ok'
+@repo/coord-service:lint: 
+@repo/coord-service:lint: lint: ok
+@repo/workflow-worker:lint: cache hit, replaying logs c12466b91487735a
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: > @repo/workflow-worker@0.1.0 lint /private/tmp/f13-ava-ui/apps/workflow-worker
+@repo/workflow-worker:lint: > echo 'lint: ok'
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: lint: ok
+@repo/storage:typecheck: cache hit, replaying logs 589e6475b9ec49d8
+@repo/storage:typecheck: 
+@repo/storage:typecheck: > @repo/storage@0.1.0 typecheck /private/tmp/f13-ava-ui/packages/storage
+@repo/storage:typecheck: > tsc --noEmit
+@repo/storage:typecheck: 
+@repo/coord-service:test: cache hit, replaying logs ab9c3896ab9bc95a
+@repo/coord-service:test: 
+@repo/coord-service:test: > @repo/coord-service@0.1.0 test /private/tmp/f13-ava-ui/packages/coord-service
+@repo/coord-service:test: > vitest run
+@repo/coord-service:test: 
+@repo/coord-service:test: 
+@repo/coord-service:test:  RUN  v2.0.0 /private/tmp/f13-ava-ui/packages/coord-service
+@repo/coord-service:test: 
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_tty_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_fs_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_http_modules` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_perf_hooks_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:info] Starting isolated runtimes for vitest.config.ts...
+@repo/coord-service:test:  ✓ test/integration/sweeper.test.ts  (2 tests) 282ms
+@repo/coord-service:test:  ✓ test/unit/time.test.ts  (3 tests) 300ms
+@repo/coord-service:test:  ✓ test/integration/status.test.ts  (2 tests) 325ms
+@repo/coord-service:test:  ✓ test/integration/claims.auth.test.ts  (4 tests) 350ms
+@repo/coord-service:test:  ✓ test/integration/claims.lifecycle.test.ts  (4 tests) 404ms
+@repo/coord-service:test:  ✓ test/unit/auth.test.ts  (7 tests) 267ms
+@repo/coord-service:test:  ✓ test/unit/projector.test.ts  (8 tests) 489ms
+@repo/coord-service:test:  ✓ test/integration/claims.concurrency.test.ts  (5 tests) 562ms
+@repo/coord-service:test: 
+@repo/coord-service:test:  Test Files  8 passed (8)
+@repo/coord-service:test:       Tests  35 passed (35)
+@repo/coord-service:test:    Start at  07:32:28
+@repo/coord-service:test:    Duration  7.22s (transform 501ms, setup 4.65s, collect 697ms, tests 2.98s, environment 0ms, prepare 10.11s)
+@repo/coord-service:test: 
+@repo/coord-service:test: [vpw:debug] Shutting down runtimes...
+@repo/coord-service:test: [vpw:debug] Disposing remote proxy sessions...
+@repo/tools:test: cache hit, replaying logs 2f7dc7492ff0da05
+@repo/tools:test: 
+@repo/tools:test: > @repo/tools@0.1.0 test /private/tmp/f13-ava-ui/packages/tools
+@repo/tools:test: > vitest run
+@repo/tools:test: 
+@repo/tools:test: 
+@repo/tools:test:  RUN  v2.0.0 /private/tmp/f13-ava-ui/packages/tools
+@repo/tools:test: 
+@repo/tools:test:  ✓ src/index.test.ts  (12 tests) 50ms
+@repo/tools:test: 
+@repo/tools:test:  Test Files  1 passed (1)
+@repo/tools:test:       Tests  12 passed (12)
+@repo/tools:test:    Start at  07:32:24
+@repo/tools:test:    Duration  614ms (transform 43ms, setup 0ms, collect 54ms, tests 50ms, environment 0ms, prepare 140ms)
+@repo/tools:test: 
+@repo/data:typecheck: cache hit, replaying logs 9ccae8cad6830930
+@repo/data:typecheck: 
+@repo/data:typecheck: > @repo/data@0.1.0 typecheck /private/tmp/f13-ava-ui/packages/data
+@repo/data:typecheck: > tsc --noEmit
+@repo/data:typecheck: 
+@repo/agent-core:lint: cache hit, replaying logs c302601ece09a003
+@repo/agent-core:lint: 
+@repo/agent-core:lint: > @repo/agent-core@0.1.0 lint /private/tmp/f13-ava-ui/packages/agent-core
+@repo/agent-core:lint: > echo 'lint: ok'
+@repo/agent-core:lint: 
+@repo/agent-core:lint: lint: ok
+@repo/coord-service:typecheck: cache hit, replaying logs e444017a265a465d
+@repo/coord-service:typecheck: 
+@repo/coord-service:typecheck: > @repo/coord-service@0.1.0 typecheck /private/tmp/f13-ava-ui/packages/coord-service
+@repo/coord-service:typecheck: > tsc --noEmit
+@repo/coord-service:typecheck: 
+@repo/data:lint: cache hit, replaying logs 72ff80204340b21c
+@repo/data:lint: 
+@repo/data:lint: > @repo/data@0.1.0 lint /private/tmp/f13-ava-ui/packages/data
+@repo/data:lint: > echo 'lint: ok'
+@repo/data:lint: 
+@repo/data:lint: lint: ok
+@repo/canvas:build: cache hit, replaying logs 0dd5309a6369e852
+@repo/canvas:build: 
+@repo/canvas:build: > @repo/canvas@0.1.0 build /private/tmp/f13-ava-ui/packages/canvas
+@repo/canvas:build: > tsc --noEmit
+@repo/canvas:build: 
+@repo/agent-core:typecheck: cache hit, replaying logs 052cd0d7e6fb79f5
+@repo/agent-core:typecheck: 
+@repo/agent-core:typecheck: > @repo/agent-core@0.1.0 typecheck /private/tmp/f13-ava-ui/packages/agent-core
+@repo/agent-core:typecheck: > tsc --noEmit
+@repo/agent-core:typecheck: 
+@repo/web:lint: cache hit, replaying logs 17515f4f0b58c523
+@repo/web:lint: 
+@repo/web:lint: > @repo/web@0.1.0 lint /private/tmp/f13-ava-ui/apps/web
+@repo/web:lint: > bash scripts/lint-design.sh
+@repo/web:lint: 
+@repo/web:lint: · 扫描范围：app/ + components/（含 ava/ai-store/surveys/admin/studio/presentations 等模块）
+@repo/web:lint: ⚠ LABEL-LANG-MIX(同文件内中英混用，警告，不拦截；修复归属 phase-p17 reskin)：
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:172:  { id: "understand-file", label: "理解文件", prompt: "帮我理解这份材料，并总结关键结论。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:173:  { id: "draft-email", label: "起草邮件", prompt: "帮我起草一封项目进展同步邮件。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:174:  { id: "summarize-trends", label: "总结趋势", prompt: "帮我总结最近用户反馈中的主要趋势。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:175:  { id: "brainstorm", label: "头脑风暴", prompt: "围绕这个目标帮我头脑风暴 5 个可执行方案。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:181:  { id: "make-tasks", label: "拆成任务", prompt: "把上面的建议拆成可执行任务，并按优先级排序。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:182:  { id: "find-risks", label: "识别风险", prompt: "基于上面的回复，列出主要风险和缓解措施。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:183:  { id: "shorten", label: "压缩摘要", prompt: "把上面的回复压缩成 5 条要点。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2676:  if (diffDays === 0) return { key: "today", label: "Today" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2677:  if (diffDays === 1) return { key: "yesterday", label: "Yesterday" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2678:  if (diffDays < 7) return { key: "last-7-days", label: "Last 7 days" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2679:  return { key: "older", label: "Older" };
+@repo/web:lint: ⚠ LABEL-LANG-MIX(跨文件中英混用，警告，不拦截；修复归属 phase-p17 reskin)：以下文件整体用中文 label，而以下文件整体用英文 label，同一层级 UI 组件的文案语言应统一：
+@repo/web:lint:     LABEL-LANG-MIX: components/board/board-canvas.tsx:192:  { value: "sans-serif", label: "无衬线" },
+@repo/web:lint:     LABEL-LANG-MIX: components/board/sync-status.tsx:14:  synced: { label: "已同步", dot: "bg-tag-green", text: "text-success" },
+@repo/web:lint:     LABEL-LANG-MIX: components/studio/studio-panel.tsx:29:  { type: "audio", label: "音频概览", icon: AudioLines },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/account/page.tsx:15:  { key: "personal", label: "Personal info", icon: User },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/admin-home.tsx:113:        { testKey: "users", label: "Total users", stat: stats.users },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/ai-store/featured/page.tsx:33:  { key: "", label: "All approved" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/ai-store/review/page.tsx:36:  { key: "", label: "All" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/credits/page.tsx:237:              <SummaryCard value={fmt(wallet.balance)} label="Current balance" />
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/rooms/[id]/layout.tsx:26:  { key: "boards", label: "Boards", segment: "boards" },
+@repo/web:lint:     LABEL-LANG-MIX: components/app-shell/sidebar.tsx:40:  { label: "Home", icon: Home, href: "/" },
+@repo/web:lint:   示例（Board 工具条 vs Sidebar 导航）：见 components/board/board-canvas.tsx 与 components/app-shell/sidebar.tsx
+@repo/web:lint: ✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性/文案语言一致性）
+@repo/queue:lint: cache hit, replaying logs 02344b676b2936ec
+@repo/queue:lint: 
+@repo/queue:lint: > @repo/queue@0.1.0 lint /private/tmp/f13-ava-ui/packages/queue
+@repo/queue:lint: > echo 'lint: ok'
+@repo/queue:lint: 
+@repo/queue:lint: lint: ok
+@repo/tools:build: cache hit, replaying logs 9faa2c5964090f58
+@repo/tools:build: 
+@repo/tools:build: > @repo/tools@0.1.0 build /private/tmp/f13-ava-ui/packages/tools
+@repo/tools:build: > tsc --noEmit
+@repo/tools:build: 
+@repo/storage:lint: cache hit, replaying logs a10560650d26ee53
+@repo/storage:lint: 
+@repo/storage:lint: > @repo/storage@0.1.0 lint /private/tmp/f13-ava-ui/packages/storage
+@repo/storage:lint: > echo 'lint: ok'
+@repo/storage:lint: 
+@repo/storage:lint: lint: ok
+@repo/tools:typecheck: cache hit, replaying logs 63c9780e30806b45
+@repo/tools:typecheck: 
+@repo/tools:typecheck: > @repo/tools@0.1.0 typecheck /private/tmp/f13-ava-ui/packages/tools
+@repo/tools:typecheck: > tsc --noEmit
+@repo/tools:typecheck: 
+@repo/queue:test: cache hit, replaying logs 47995dc56f4fb38e
+@repo/queue:test: 
+@repo/queue:test: > @repo/queue@0.1.0 test /private/tmp/f13-ava-ui/packages/queue
+@repo/queue:test: > vitest run
+@repo/queue:test: 
+@repo/queue:test: 
+@repo/queue:test:  RUN  v2.0.0 /private/tmp/f13-ava-ui/packages/queue
+@repo/queue:test: 
+@repo/queue:test:  ✓ src/index.test.ts  (4 tests) 3ms
+@repo/queue:test: 
+@repo/queue:test:  Test Files  1 passed (1)
+@repo/queue:test:       Tests  4 passed (4)
+@repo/queue:test:    Start at  07:32:23
+@repo/queue:test:    Duration  1.51s (transform 419ms, setup 0ms, collect 818ms, tests 3ms, environment 0ms, prepare 154ms)
+@repo/queue:test: 
+@repo/tools:lint: cache hit, replaying logs f664bbcc7a7b49ac
+@repo/tools:lint: 
+@repo/tools:lint: > @repo/tools@0.1.0 lint /private/tmp/f13-ava-ui/packages/tools
+@repo/tools:lint: > echo 'lint: ok'
+@repo/tools:lint: 
+@repo/tools:lint: lint: ok
+@repo/ai:lint: cache hit, replaying logs f8d777931ee63c7d
+@repo/ai:lint: 
+@repo/ai:lint: > @repo/ai@0.1.0 lint /private/tmp/f13-ava-ui/packages/ai
+@repo/ai:lint: > echo 'lint: ok'
+@repo/ai:lint: 
+@repo/ai:lint: lint: ok
+@repo/storage:test: cache hit, replaying logs 02dec65e6c73c11a
+@repo/storage:test: 
+@repo/storage:test: > @repo/storage@0.1.0 test /private/tmp/f13-ava-ui/packages/storage
+@repo/storage:test: > vitest run
+@repo/storage:test: 
+@repo/storage:test: 
+@repo/storage:test:  RUN  v2.0.0 /private/tmp/f13-ava-ui/packages/storage
+@repo/storage:test: 
+@repo/storage:test:  ✓ src/index.test.ts  (19 tests) 4ms
+@repo/storage:test: 
+@repo/storage:test:  Test Files  1 passed (1)
+@repo/storage:test:       Tests  19 passed (19)
+@repo/storage:test:    Start at  07:32:28
+@repo/storage:test:    Duration  858ms (transform 84ms, setup 0ms, collect 309ms, tests 4ms, environment 0ms, prepare 296ms)
+@repo/storage:test: 
+@repo/memory:typecheck: cache hit, replaying logs be2ba8d0b7950f98
+@repo/memory:typecheck: 
+@repo/memory:typecheck: > @repo/memory@0.1.0 typecheck /private/tmp/f13-ava-ui/packages/memory
+@repo/memory:typecheck: > tsc --noEmit
+@repo/memory:typecheck: 
+@repo/collab:lint: cache hit, replaying logs 634b090b89579aac
+@repo/collab:lint: 
+@repo/collab:lint: > @repo/collab@0.1.0 lint /private/tmp/f13-ava-ui/packages/collab
+@repo/collab:lint: > echo 'lint: ok'
+@repo/collab:lint: 
+@repo/collab:lint: lint: ok
+@repo/ai:typecheck: cache hit, replaying logs 7741420e38a6ad4e
+@repo/ai:typecheck: 
+@repo/ai:typecheck: > @repo/ai@0.1.0 typecheck /private/tmp/f13-ava-ui/packages/ai
+@repo/ai:typecheck: > tsc --noEmit
+@repo/ai:typecheck: 
+@repo/collab:build: cache hit, replaying logs 1edfdd3aa2266fe3
+@repo/collab:build: 
+@repo/collab:build: > @repo/collab@0.1.0 build /private/tmp/f13-ava-ui/packages/collab
+@repo/collab:build: > tsc --noEmit
+@repo/collab:build: 
+@repo/ai:build: cache hit, replaying logs 5cec043321c43c56
+@repo/ai:build: 
+@repo/ai:build: > @repo/ai@0.1.0 build /private/tmp/f13-ava-ui/packages/ai
+@repo/ai:build: > tsc --noEmit
+@repo/ai:build: 
+@repo/canvas:typecheck: cache hit, replaying logs 691bd3a86a228f8a
+@repo/canvas:typecheck: 
+@repo/canvas:typecheck: > @repo/canvas@0.1.0 typecheck /private/tmp/f13-ava-ui/packages/canvas
+@repo/canvas:typecheck: > tsc --noEmit
+@repo/canvas:typecheck: 
+@repo/auth:test: cache hit, replaying logs 7b1f66153053956e
+@repo/auth:test: 
+@repo/auth:test: > @repo/auth@0.1.0 test /private/tmp/f13-ava-ui/packages/auth
+@repo/auth:test: > vitest run
+@repo/auth:test: 
+@repo/auth:test: 
+@repo/auth:test:  RUN  v2.0.0 /private/tmp/f13-ava-ui/packages/auth
+@repo/auth:test: 
+@repo/auth:test:  ✓ src/index.test.ts  (15 tests) 749ms
+@repo/auth:test: 
+@repo/auth:test:  Test Files  1 passed (1)
+@repo/auth:test:       Tests  15 passed (15)
+@repo/auth:test:    Start at  07:32:30
+@repo/auth:test:    Duration  1.36s (transform 107ms, setup 0ms, collect 118ms, tests 749ms, environment 0ms, prepare 116ms)
+@repo/auth:test: 
+@repo/orchestrator:lint: cache hit, replaying logs 9e0a1e05387c6773
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: > @repo/orchestrator@0.1.0 lint /private/tmp/f13-ava-ui/apps/orchestrator
+@repo/orchestrator:lint: > echo 'lint: ok'
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: lint: ok
+@repo/memory:lint: cache hit, replaying logs a85a8a5f2d500bc9
+@repo/memory:lint: 
+@repo/memory:lint: > @repo/memory@0.1.0 lint /private/tmp/f13-ava-ui/packages/memory
+@repo/memory:lint: > echo 'lint: ok'
+@repo/memory:lint: 
+@repo/memory:lint: lint: ok
+@repo/auth:build: cache hit, replaying logs ddd454baeafd9b36
+@repo/auth:build: 
+@repo/auth:build: > @repo/auth@0.1.0 build /private/tmp/f13-ava-ui/packages/auth
+@repo/auth:build: > tsc --noEmit
+@repo/auth:build: 
+@repo/collab:test: cache hit, replaying logs 5143627957692195
+@repo/collab:test: 
+@repo/collab:test: > @repo/collab@0.1.0 test /private/tmp/f13-ava-ui/packages/collab
+@repo/collab:test: > vitest run
+@repo/collab:test: 
+@repo/collab:test: 
+@repo/collab:test:  RUN  v2.0.0 /private/tmp/f13-ava-ui/packages/collab
+@repo/collab:test: 
+@repo/collab:test:  ✓ src/index.test.ts  (14 tests) 48ms
+@repo/collab:test: 
+@repo/collab:test:  Test Files  1 passed (1)
+@repo/collab:test:       Tests  14 passed (14)
+@repo/collab:test:    Start at  07:32:26
+@repo/collab:test:    Duration  627ms (transform 58ms, setup 0ms, collect 119ms, tests 48ms, environment 0ms, prepare 119ms)
+@repo/collab:test: 
+@repo/auth:typecheck: cache hit, replaying logs b6d79df9a70697bc
+@repo/auth:typecheck: 
+@repo/auth:typecheck: > @repo/auth@0.1.0 typecheck /private/tmp/f13-ava-ui/packages/auth
+@repo/auth:typecheck: > tsc --noEmit
+@repo/auth:typecheck: 
+@repo/canvas:lint: cache hit, replaying logs b3cd5015b101283d
+@repo/canvas:lint: 
+@repo/canvas:lint: > @repo/canvas@0.1.0 lint /private/tmp/f13-ava-ui/packages/canvas
+@repo/canvas:lint: > echo 'lint: ok'
+@repo/canvas:lint: 
+@repo/canvas:lint: lint: ok
+@repo/auth:lint: cache hit, replaying logs d3458999a153a6a4
+@repo/auth:lint: 
+@repo/auth:lint: > @repo/auth@0.1.0 lint /private/tmp/f13-ava-ui/packages/auth
+@repo/auth:lint: > echo 'lint: ok'
+@repo/auth:lint: 
+@repo/auth:lint: lint: ok
+@repo/orchestrator:test: cache hit, replaying logs efad1a62e3bf6537
+@repo/orchestrator:test: 
+@repo/orchestrator:test: > @repo/orchestrator@0.1.0 test /private/tmp/f13-ava-ui/apps/orchestrator
+@repo/orchestrator:test: > vitest run
+@repo/orchestrator:test: 
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  RUN  v2.0.0 /private/tmp/f13-ava-ui/apps/orchestrator
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  ✓ src/orchestrator.test.ts  (3 tests) 45ms
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  Test Files  1 passed (1)
+@repo/orchestrator:test:       Tests  3 passed (3)
+@repo/orchestrator:test:    Start at  07:32:32
+@repo/orchestrator:test:    Duration  784ms (transform 105ms, setup 0ms, collect 163ms, tests 45ms, environment 0ms, prepare 153ms)
+@repo/orchestrator:test: 
+@repo/orchestrator:typecheck: cache hit, replaying logs a0e49588406a7dab
+@repo/orchestrator:typecheck: 
+@repo/orchestrator:typecheck: > @repo/orchestrator@0.1.0 typecheck /private/tmp/f13-ava-ui/apps/orchestrator
+@repo/orchestrator:typecheck: > tsc --noEmit
+@repo/orchestrator:typecheck: 
+@repo/workflow-worker:typecheck: cache hit, replaying logs ec96addff1c51e1e
+@repo/workflow-worker:typecheck: 
+@repo/workflow-worker:typecheck: > @repo/workflow-worker@0.1.0 typecheck /private/tmp/f13-ava-ui/apps/workflow-worker
+@repo/workflow-worker:typecheck: > tsc --noEmit
+@repo/workflow-worker:typecheck: 
+@repo/workflow-worker:test: cache hit, replaying logs 3ef119f46bd3f45d
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test: > @repo/workflow-worker@0.1.0 test /private/tmp/f13-ava-ui/apps/workflow-worker
+@repo/workflow-worker:test: > vitest run
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  RUN  v2.0.0 /private/tmp/f13-ava-ui/apps/workflow-worker
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  ✓ src/kbFileJob.test.ts  (2 tests) 1ms
+@repo/workflow-worker:test:  ✓ src/job.test.ts  (3 tests) 1ms
+@repo/workflow-worker:test:  ✓ src/presentationRevisionJob.test.ts  (4 tests) 3ms
+@repo/workflow-worker:test:  ✓ src/studioJob.test.ts  (2 tests) 3ms
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  Test Files  4 passed (4)
+@repo/workflow-worker:test:       Tests  11 passed (11)
+@repo/workflow-worker:test:    Start at  07:32:33
+@repo/workflow-worker:test:    Duration  1.02s (transform 270ms, setup 0ms, collect 535ms, tests 8ms, environment 0ms, prepare 1.05s)
+@repo/workflow-worker:test: 
+@repo/web:typecheck: cache hit, replaying logs 66f442a5726c0924
+@repo/web:typecheck: 
+@repo/web:typecheck: > @repo/web@0.1.0 typecheck /private/tmp/f13-ava-ui/apps/web
+@repo/web:typecheck: > tsc --noEmit
+@repo/web:typecheck: 
+@repo/web:test: cache hit, replaying logs f44cb814756051c7
+@repo/web:test: 
+@repo/web:test: > @repo/web@0.1.0 test /private/tmp/f13-ava-ui/apps/web
+@repo/web:test: > vitest run
+@repo/web:test: 
+@repo/web:test: [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+@repo/web:test: 
+@repo/web:test:  RUN  v2.0.0 /private/tmp/f13-ava-ui/apps/web
+@repo/web:test: 
+@repo/web:test:  ✓ lib/collab-bus.test.ts  (4 tests) 2ms
+@repo/web:test:  ✓ lib/agents.test.ts  (5 tests) 3ms
+@repo/web:test:  ✓ lib/feedback.test.ts  (2 tests) 5ms
+@repo/web:test:  ✓ lib/canvas-snap.test.ts  (14 tests) 4ms
+@repo/web:test:  ✓ app/api/admin/coordination/status/route.test.ts  (6 tests) 9ms
+@repo/web:test: stderr | app/api/admin/coordination/status/route.test.ts > GET /api/admin/coordination/status > 502 when upstream fetch throws (network failure / timeout)
+@repo/web:test: [admin/coordination/status] coord-service fetch failed Error: fetch failed
+@repo/web:test:     at /private/tmp/f13-ava-ui/apps/web/app/api/admin/coordination/status/route.test.ts:75:15
+@repo/web:test:     at mockCall (file:///private/tmp/f13-ava-ui/node_modules/.pnpm/@vitest+spy@2.0.0/node_modules/@vitest/spy/dist/index.js:61:17)
+@repo/web:test:     at spy (file:///private/tmp/f13-ava-ui/node_modules/.pnpm/tinyspy@3.0.2/node_modules/tinyspy/dist/index.js:45:80)
+@repo/web:test:     at Module.GET (/private/tmp/f13-ava-ui/apps/web/app/api/admin/coordination/status/route.ts:31:23)
+@repo/web:test:     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+@repo/web:test:     at /private/tmp/f13-ava-ui/apps/web/app/api/admin/coordination/status/route.test.ts:78:17
+@repo/web:test:     at runTest (file:///private/tmp/f13-ava-ui/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:939:11)
+@repo/web:test:     at runSuite (file:///private/tmp/f13-ava-ui/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runSuite (file:///private/tmp/f13-ava-ui/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runFiles (file:///private/tmp/f13-ava-ui/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1152:5)
+@repo/web:test: 
+@repo/web:test:  ✓ app/api/ava/threads/[id]/share/route.test.ts  (5 tests) 5ms
+@repo/web:test:  ✓ app/api/ava/threads/[id]/route.test.ts  (4 tests) 11ms
+@repo/web:test:  ✓ app/api/ai-store/items/[id]/route.test.ts  (2 tests) 4ms
+@repo/web:test:  ✓ app/api/boards/[id]/ai-chat/route.test.ts  (3 tests) 11ms
+@repo/web:test:  ✓ lib/health.test.ts  (1 test) 1ms
+@repo/web:test:  ✓ lib/viewport.test.ts  (4 tests) 2ms
+@repo/web:test: 
+@repo/web:test:  Test Files  11 passed (11)
+@repo/web:test:       Tests  50 passed (50)
+@repo/web:test:    Start at  07:32:32
+@repo/web:test:    Duration  1.90s (transform 1.19s, setup 0ms, collect 2.94s, tests 57ms, environment 2ms, prepare 2.92s)
+@repo/web:test: 
+
+ Tasks:    52 successful, 52 total
+Cached:    52 cached, 52 total
+  Time:    271ms >>> FULL TURBO
+
+turbo 2.5.0
+
