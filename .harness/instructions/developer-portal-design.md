@@ -4,7 +4,8 @@
 > 参与 BoardX agentic 开发的单一入口。它把 GitHub（代码/PR/讨论的底座）与
 > coord-service（协调/身份/性能的 AI 原生增强层）编织成一个统一的人类视角。
 >
-> 权威规格：本文是 IA（信息架构）+ 分阶段计划；组织模型见 ADR-010，身份/onboarding
+> 权威规格：本文是 IA（信息架构）+ 分阶段计划；use case 级需求（UML 用例图/时序图 +
+> 每用例规格）见 `developer-portal-use-cases.md`；组织模型见 ADR-010，身份/onboarding
 > 机制见 ADR-011，协调权威见 ADR-009。已建的协调卡片（Coordinators / Active Claims /
 > Recent Events）是本门户的第一批组件（PR #428/#447）。
 
