@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Copy,
   ImageOff,
+  ImagePlus,
   LayoutGrid,
   List,
   MoreHorizontal,
@@ -221,6 +222,31 @@ export default function RoomBoardsPage() {
     await load(q);
   }
 
+  // 上传封面：单个受控 file input，记录目标 boardId。
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const coverTargetRef = useRef<number | string | null>(null);
+
+  function triggerCoverUpload(id: number | string) {
+    coverTargetRef.current = id;
+    coverInputRef.current?.click();
+  }
+
+  async function onCoverFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    const id = coverTargetRef.current;
+    e.target.value = ""; // 允许再次选同一文件
+    if (!file || id == null) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`/api/boards/${id}/cover`, { method: "POST", body: fd });
+    if (res.ok) {
+      await load(q);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      setError(d.errors?.file ?? d.error ?? "封面上传失败");
+    }
+  }
+
   async function removeCover(b: Board) {
     await fetch(`/api/boards/${b.id}`, {
       method: "PATCH",
@@ -356,7 +382,15 @@ export default function RoomBoardsPage() {
           >
             移除封面
           </DropdownMenuItem>
-        ) : null}
+        ) : (
+          <DropdownMenuItem
+            testId={`board-menu-upload-cover-${b.id}`}
+            icon={<ImagePlus className="h-4 w-4" />}
+            onSelect={() => triggerCoverUpload(b.id)}
+          >
+            上传封面
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           testId={`board-menu-duplicate-${b.id}`}
           icon={<Copy className="h-4 w-4" />}
@@ -404,6 +438,16 @@ export default function RoomBoardsPage() {
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6 p-6">
+      {/* 上传封面：隐藏 file input，独立于下拉菜单（菜单项 onSelect 里 ref.click() 触发） */}
+      <Input
+        ref={coverInputRef}
+        type="file"
+        accept="image/*"
+        aria-label="上传封面图片"
+        className="hidden"
+        data-testid="board-cover-file-input"
+        onChange={onCoverFileChange}
+      />
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">房间白板</h1>
         <div className="flex items-center gap-2">
@@ -604,10 +648,19 @@ export default function RoomBoardsPage() {
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               )}
             >
-              {/* 缩略图色块（自身裁圆角，卡片根不再 overflow-hidden 以免裁掉菜单浮层） */}
-              <div className={cn("flex h-24 items-center justify-center rounded-t-xl", thumbTone(b.id))}>
-                <Presentation className="h-6 w-6 text-muted-foreground/50" />
-              </div>
+              {/* 缩略图：有封面显示真实封面图，否则回退色块（自身裁圆角，卡片根不再 overflow-hidden 以免裁掉菜单浮层） */}
+              {b.cover ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img alt=""
+                  src={`/api/boards/${b.id}/cover?v=${encodeURIComponent(b.updated_at ?? "")}`}
+                  className="h-24 w-full rounded-t-xl object-cover"
+                  data-testid={`board-cover-img-${b.id}`}
+                />
+              ) : (
+                <div className={cn("flex h-24 items-center justify-center rounded-t-xl", thumbTone(b.id))}>
+                  <Presentation className="h-6 w-6 text-muted-foreground/50" />
+                </div>
+              )}
               {/* 悬浮操作：更多操作菜单（group-hover 显现） */}
               {moreMenu(
                 b,
@@ -666,9 +719,18 @@ export default function RoomBoardsPage() {
               )}
             >
               {favStar(b)}
-              <span className={cn("flex h-7 w-9 flex-none items-center justify-center rounded-md", thumbTone(b.id))}>
-                <Presentation className="h-3.5 w-3.5 text-muted-foreground/60" />
-              </span>
+              {b.cover ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img alt=""
+                  src={`/api/boards/${b.id}/cover?v=${encodeURIComponent(b.updated_at ?? "")}`}
+                  className="h-7 w-9 flex-none rounded-md object-cover"
+                  data-testid={`board-cover-img-${b.id}`}
+                />
+              ) : (
+                <span className={cn("flex h-7 w-9 flex-none items-center justify-center rounded-md", thumbTone(b.id))}>
+                  <Presentation className="h-3.5 w-3.5 text-muted-foreground/60" />
+                </span>
+              )}
               <a
                 href={`/boards/${b.id}`}
                 onClick={(e) => e.stopPropagation()}

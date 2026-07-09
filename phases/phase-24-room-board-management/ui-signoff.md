@@ -47,8 +47,10 @@ confirmed_at:            # 确认时间（ISO，如 2026-07-01T10:00:00Z）
 - `ui-preview/real-02-card-menu.png` — 卡片三点"更多操作"菜单（重命名/编辑标签/复制/移动到房间/删除；无封面时"移除封面"按规则隐藏）
 - `ui-preview/real-03-tag-filter.png` — 点 Planning 过滤，列表收窄到含该标签的白板 + 清除
 - `ui-preview/real-04-create-tags.png` — 新建 Dialog 带多标签输入（Urgent chip）
+- `ui-preview/real-05-cover.png` — 封面上传后卡片显示真实封面图
 
-> 本轮已在真实页面端到端验证（playwright 全绿）。真实封面**上传**留作紧跟的后续（后端 `PATCH cover` 就绪，需接 presigned 上传）。
+> 本轮已在真实页面端到端验证。**封面上传也已闭环**（服务端 `putObject` 直传 → `cover` 存 objectKey → 展示端点 `presignGetUrl` 302）。
+> committed e2e：`apps/web/e2e/room-board-p24-management.spec.ts`（4 条：多标签建/显示/过滤、菜单删除、编辑标签、封面上传），`--retries=2` 全绿。
 
 ## 人类确认意见
 <!-- 确认人填写：通过 / 需修改（列出修改点）。改完再确认。 -->
