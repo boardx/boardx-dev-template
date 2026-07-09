@@ -96,6 +96,19 @@ export default function BoardPage() {
   const [moreDeleteArmed, setMoreDeleteArmed] = useState(false);
   // 欢迎引导重开信号：More 菜单的 welcome-reopen 菜单项递增，BoardHelpGuide 监听后重展卡片。
   const [welcomeTick, setWelcomeTick] = useState(0);
+
+  // issue #488：More 菜单支持 Esc 关闭（菜单 a11y 惯例；e2e 也用它代替硬编码坐标点空白）。
+  useEffect(() => {
+    if (!moreOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setMoreOpen(false);
+        setMoreDeleteArmed(false);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [moreOpen]);
   const [showQr, setShowQr] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
@@ -506,7 +519,9 @@ export default function BoardPage() {
             </Button>
             {moreOpen && (
               <>
-                {/* 点击外部关闭（仿右键菜单遮罩模式） */}
+                {/* 点击外部关闭（仿右键菜单遮罩模式）。层级契约（issue #488）：
+                    遮罩 z-40 < More 面板 z-50 < 子面板（统计/快捷键弹层）z-[60]——
+                    子面板永远可交互，不会被 More 面板或遮罩拦截。 */}
                 <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
                 <div
                   data-testid="board-more-panel"

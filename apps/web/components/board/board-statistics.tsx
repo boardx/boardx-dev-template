@@ -50,7 +50,7 @@ export function BoardStatistics({ boardId }: { boardId: string }) {
         <div
           data-testid="board-stats-panel"
           role="dialog"
-          className="absolute right-0 top-full z-50 mt-2 w-64 rounded-12 border border-border bg-popover p-4 text-popover-foreground shadow-[0_16px_40px_rgba(0,0,0,0.18)]"
+          className="absolute right-0 top-full z-[60] mt-2 w-64 rounded-12 border border-border bg-popover p-4 text-popover-foreground shadow-[0_16px_40px_rgba(0,0,0,0.18)]"
         >
           <div className="mb-2 text-13 font-semibold">Board statistics</div>
           {loading ? (
