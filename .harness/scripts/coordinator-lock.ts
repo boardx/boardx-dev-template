@@ -111,6 +111,23 @@ export async function lockAcquire(args: Args): Promise<void> {
         );
       }
     }
+    if (outcome.kind === "held" && outcome.claim.agent_id === sessionId) {
+      // acquire-or-renew（2026-07-08 租约语义定稿）：自己仍持有 → 续约 + 刷新本地
+      // 文件锁，而不是撞 uq_active_claim 得 409。规范是"每个 tick acquire-or-renew"，
+      // tick 间隔撑不过 ttl 时租约正常过期、下次 acquire 自愈。
+      const renew = await client.heartbeat(outcome.claim.id);
+      if (renew.ok) {
+        try {
+          acquireLock(sessionId, { force: true, note });
+        } catch {
+          /* 本地文件锁刷新失败不影响权威续约结果 */
+        }
+        patchLock({ remoteClaimId: outcome.claim.id });
+        log.ok(`已续约：session=${sessionId}，coord-service claim id=${outcome.claim.id}（本来就由你持有）`);
+        return;
+      }
+      log.info(`[coord-service] 续约未成功（HTTP ${renew.status}），按新认领处理`);
+    }
   }
 
   let lock: CoordinatorLock;
