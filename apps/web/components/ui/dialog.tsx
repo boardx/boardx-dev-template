@@ -16,15 +16,19 @@ export function Dialog({
   open,
   onClose,
   title,
+  description,
   testId,
   closeTestId,
   className,
   children,
+  footer,
 }: {
   open: boolean;
   onClose: () => void;
   /** 弹窗标题：渲染在头部行，同时作为 aria-label。 */
   title: string;
+  /** 可选副标题：渲染在标题下方。 */
+  description?: string;
   /** 落在弹窗面板（role=dialog）上的 data-testid。 */
   testId?: string;
   /** 右上角关闭按钮的 data-testid。 */
@@ -32,6 +36,8 @@ export function Dialog({
   /** 附加到面板的样式（如自定义 max-w）。 */
   className?: string;
   children: ReactNode;
+  /** 可选底部操作区（如取消/确认按钮），右对齐渲染在内容下方。 */
+  footer?: ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
@@ -95,8 +101,11 @@ export function Dialog({
           className
         )}
       >
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-15 font-semibold text-foreground">{title}</h2>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-15 font-semibold text-foreground">{title}</h2>
+            {description && <p className="text-13 text-muted-foreground">{description}</p>}
+          </div>
           <Button
             type="button"
             variant="ghost"
@@ -110,6 +119,7 @@ export function Dialog({
           </Button>
         </div>
         {children}
+        {footer && <div className="mt-1 flex justify-end gap-2">{footer}</div>}
       </div>
     </div>
   );

@@ -178,3 +178,10 @@ phases:
     status: not_started
     depends_on: []
     has_ui: true
+  - id: "p24"
+    slug: room-board-management
+    name: room-board-management
+    goal: "Room 内 Board 列表管理补齐真实缺口（main 已有卡片化/Grid-List/创建弹窗）：卡片三点更多操作菜单（删除/重命名/编辑标签/上传·移除封面/移动）+ 多标签全套（新建打标/卡片显示/编辑/按 tag 过滤，需 boards.tags text[] schema）。对齐 oldcode uc-board-001/003/005/008 + 净新增多标签过滤"
+    status: not_started
+    depends_on: []
+    has_ui: true
