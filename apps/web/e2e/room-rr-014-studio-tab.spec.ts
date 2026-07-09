@@ -1,6 +1,7 @@
-// p22/F03 Studio 独立顶级 tab（uc 见 requirements/00-overview.md 优先级2）
-// 契约：房间详情 tab 导航恢复六项（含 Studio）；点击进入独立落地页，展示 mock 产物列表
-// + 跳转聊天工作区入口；人类已确认本轮维持轻量落地页范围（见 ui-signoff.md）。
+// p22 Studio 全屏三栏工作区（uc 见 requirements/00-overview.md 优先级2）
+// 契约：房间详情 tab 导航含六项（含 Studio）；点 Studio tab 进入沉浸式全屏工作区——
+// 脱离房间壳（无左侧房间列表、无房间头部/六 tab），三栏布局（左房间文件 sources /
+// 中产物区 / 右生成配置面板），顶部「返回房间」导航回房间 Boards tab。
 import { test, expect, type Page } from "@playwright/test";
 
 const uniq = (p: string) => `${p}_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
@@ -20,7 +21,7 @@ async function createRoom(page: Page, name: string): Promise<number> {
   return d.room.id as number;
 }
 
-test("房间详情 tab 导航含六项，Studio 可独立到达", async ({ page }) => {
+test("房间详情 tab 导航含六项；点 Studio tab 进入全屏工作区（脱离房间壳与双栏）", async ({ page }) => {
   await register(page, "studiotab1");
   const roomId = await createRoom(page, "Studio Room");
 
@@ -28,22 +29,35 @@ test("房间详情 tab 导航含六项，Studio 可独立到达", async ({ page 
   for (const t of ["boards", "members", "files", "chat", "survey", "studio"]) {
     await expect(page.getByTestId(`room-tab-${t}`)).toBeVisible();
   }
+  // 进入 studio 前，房间壳（六 tab）与双栏（房间列表）都在。
+  await expect(page.getByTestId("room-list-panel")).toBeVisible();
 
   await page.getByTestId("room-tab-studio").click();
-  await expect(page).toHaveURL(new RegExp(`/rooms/${roomId}/studio$`));
-  await expect(page.getByTestId("room-tab-studio")).toHaveAttribute("data-active", "true");
+  await page.waitForURL(new RegExp(`/rooms/${roomId}/studio$`), { timeout: 20000 });
+
+  // 全屏：Studio 工作区可见，房间壳的六 tab 与左侧房间列表都已脱去。
+  await expect(page.getByTestId("room-studio-tab")).toBeVisible();
+  await expect(page.getByTestId("room-tab-studio")).toHaveCount(0);
+  await expect(page.getByTestId("room-list-panel")).toHaveCount(0);
 });
 
-test("Studio 落地页展示 mock 产物列表 + 跳转聊天工作区入口", async ({ page }) => {
+test("Studio 全屏三栏工作区：左房间文件 / 中产物区 / 右生成配置；顶部返回房间", async ({ page }) => {
   await register(page, "studiotab2");
   const roomId = await createRoom(page, "Studio Room 2");
 
   await page.goto(`/rooms/${roomId}/studio`);
   await expect(page.getByTestId("room-studio-tab")).toBeVisible();
-  await expect(page.getByTestId("room-studio-artifact-list")).toBeVisible();
-  const items = page.getByTestId("room-studio-artifact-list").locator("li");
-  await expect(items).toHaveCount(3);
 
-  await page.getByTestId("room-studio-open-in-chat").click();
-  await expect(page).toHaveURL(new RegExp(`/rooms/${roomId}/chats$`));
+  // 三栏：左房间文件 sources / 中产物区 / 右生成配置面板。
+  await expect(page.getByTestId("pane-files")).toBeVisible();
+  await expect(page.getByTestId("pane-artifacts")).toBeVisible();
+  await expect(page.getByTestId("pane-studio")).toBeVisible();
+
+  // 中栏产物列表（mock，3 项）。
+  await expect(page.getByTestId("room-studio-artifact-list").locator("li")).toHaveCount(3);
+
+  // 顶部返回房间 → 回到该房间 Boards tab（重新出现房间壳/双栏）。
+  await page.getByTestId("room-studio-back").click();
+  await page.waitForURL(new RegExp(`/rooms/${roomId}/boards$`), { timeout: 20000 });
+  await expect(page.getByTestId("room-list-panel")).toBeVisible();
 });
