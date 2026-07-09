@@ -247,6 +247,9 @@ export default function AvaPage() {
   const [sendEmailErrorId, setSendEmailErrorId] = useState<number | null>(null);
   const [sendEmailErrorText, setSendEmailErrorText] = useState("");
   const [menuThreadId, setMenuThreadId] = useState<number | null>(null);
+  // p18-F13：composer 底部「# Skill」pill 弹出的技能/工具选单（迁移自 oldcode
+  // AIToolSelector 的弹层形态：条目 = 名称 + 描述 + 选中勾）。
+  const [skillMenuOpen, setSkillMenuOpen] = useState(false);
   const [editingThreadId, setEditingThreadId] = useState<number | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   // 移动端视图切换：list-first。桌面端（md 及以上）始终双栏，此状态被 CSS 忽略。
@@ -420,6 +423,7 @@ export default function AvaPage() {
     setActionError("");
     setMenuThreadId(null);
     setEditingThreadId(null);
+    setSkillMenuOpen(false);
     setMessages([]);
     setResearchRun(null);
     setReportOpen(false);
@@ -479,6 +483,7 @@ export default function AvaPage() {
     setActionError("");
     setMenuThreadId(null);
     setEditingThreadId(null);
+    setSkillMenuOpen(false);
     setDraft("");
     setResearchRun(null);
     setReportOpen(false);
@@ -1208,6 +1213,8 @@ export default function AvaPage() {
     requestAnimationFrame(() => composerRef.current?.focus());
   }
   const currentShareUrl = shareUrl();
+  // p18-F13：线程头部标题（prototype：Agent 头像 + 线程标题 + agent · 角色副标题）。
+  const activeThreadTitle = threads.find((t) => t.id === activeId)?.title ?? "New chat";
   const lastUserMessageId = [...messages].reverse().find((m) => m.role === "user")?.id ?? null;
   const lastAssistantMessageId =
     [...messages].reverse().find((m) => m.role === "assistant")?.id ?? null;
@@ -1294,11 +1301,19 @@ export default function AvaPage() {
                               >
                                 <span className="block w-full truncate text-13 font-medium text-foreground">{t.title}</span>
                               </Button>
+                              {/* p18-F13：「…」菜单按钮 hover 才浮现（prototype/oldcode 的
+                                  thread hover menu 形态）。opacity-0 对 Playwright 仍是
+                                  可见可点击的，thread-menu-* 直接 click 不受影响。 */}
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 data-testid={`thread-menu-${t.id}`}
-                                className="mr-1 h-8 w-8 rounded-9 transition-colors"
+                                className={cn(
+                                  "mr-1 h-8 w-8 rounded-9 transition-opacity",
+                                  menuThreadId === t.id
+                                    ? "opacity-100"
+                                    : "opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                                )}
                                 onClick={() => setMenuThreadId((prev) => (prev === t.id ? null : t.id))}
                                 aria-label="Thread actions"
                               >
@@ -1346,31 +1361,76 @@ export default function AvaPage() {
           </div>
         ) : (
           <>
-            <div className="relative flex flex-none items-center gap-2 border-b border-border px-4 py-2.5">
+            {/* p18-F13：线程头部对齐 prototype——左侧 Agent 头像 + 线程标题 +
+                「agent · Agent」副标题；右侧「模型名 ▾」pill 模型选择器 + Share。
+                model-select 从 composer 区迁到这里（仍是 ui/select 的原生 select，
+                Playwright selectOption / option[disabled] 断言不变）。 */}
+            <div
+              data-testid="thread-header"
+              className="relative flex h-14 flex-none items-center gap-2.5 border-b border-border px-4"
+            >
               <Button
                 variant="ghost"
                 size="icon"
                 data-testid="back-to-list"
-                className="h-8 w-8 md:hidden"
+                className="h-8 w-8 flex-none md:hidden"
                 onClick={() => setMobileView("list")}
                 aria-label="Back to thread list"
               >
                 <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
               </Button>
-              <span className="text-13 font-medium text-foreground">AVA</span>
-              <div className="ml-auto">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  data-testid="ava-share"
-                  className="h-8 gap-1.5 transition-colors hover:bg-surface-1"
-                  onClick={() => void toggleSharePanel()}
-                  disabled={!activeId}
+              <span
+                aria-hidden
+                className="flex h-8 w-8 flex-none items-center justify-center rounded-9 bg-surface-1 text-foreground"
+              >
+                <Bot className="h-4 w-4" strokeWidth={1.5} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-13 font-semibold text-foreground">{activeThreadTitle}</div>
+                <div
+                  data-testid="thread-header-agent"
+                  className="truncate text-11 text-muted-foreground"
                 >
-                  <Share2 className="h-4 w-4" strokeWidth={1.5} />
-                  Share
-                </Button>
+                  {activeAgent?.label ?? agentId} · Agent
+                </div>
               </div>
+              <div data-testid="thread-header-model-pill" className="flex flex-none items-center">
+                <Select
+                  data-testid="model-select"
+                  aria-label="Select AVA model"
+                  value={modelId}
+                  onChange={(e) => {
+                    const next = capabilities?.models.find((model) => model.id === e.target.value);
+                    if (!next || next.disabled) {
+                      setSettingsError("This model is currently unavailable — kept the previous model");
+                      return;
+                    }
+                    setSettingsError("");
+                    setModelId(next.id);
+                  }}
+                  className="h-8 w-auto rounded-full border-border bg-background px-3 text-12 shadow-none"
+                >
+                  {(capabilities?.models ?? [{ id: modelId, label: modelId } as CapabilityOption]).map(
+                    (model) => (
+                      <option key={model.id} value={model.id} disabled={model.disabled}>
+                        {model.label}
+                        {model.disabled ? " (restricted)" : ""}
+                      </option>
+                    )
+                  )}
+                </Select>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                data-testid="ava-share"
+                className="h-8 flex-none gap-1.5 rounded-full transition-colors hover:bg-surface-1"
+                onClick={() => void toggleSharePanel()}
+                disabled={!activeId}
+              >
+                <Share2 className="h-4 w-4" strokeWidth={1.5} />
+                Share
+              </Button>
               {shareOpen && (
                 <div
                   data-testid="share-panel"
@@ -1467,15 +1527,21 @@ export default function AvaPage() {
 
             <div ref={scrollRef} className="flex-1 overflow-auto py-6">
               <div className="mx-auto flex max-w-2xl flex-col gap-5 px-6">
+                {/* p18-F13：AI credits 横幅按 prototype 视觉收敛为一行浅提示（保留功能）。 */}
                 <div
                   data-testid="ai-low-credits-prompt"
-                  className="flex items-center justify-between gap-3 rounded-12 border border-border bg-surface-1 px-4 py-3"
+                  className="flex items-center justify-between gap-3 rounded-9 border border-border bg-surface-1 px-3 py-1.5"
                 >
-                  <div>
-                    <div className="text-13 font-semibold text-foreground">AI credits</div>
-                    <div className="text-12 text-muted-foreground">Buy credits or upgrade your plan before a heavy AVA run.</div>
-                  </div>
-                  <Button data-testid="ai-low-credits-open-billing" size="sm" onClick={() => setBillingOpen(true)}>
+                  <span className="text-11 text-muted-foreground">
+                    AI credits — buy credits or upgrade your plan before a heavy AVA run.
+                  </span>
+                  <Button
+                    data-testid="ai-low-credits-open-billing"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 flex-none px-2 text-11 font-semibold"
+                    onClick={() => setBillingOpen(true)}
+                  >
                     Upgrade
                   </Button>
                 </div>
@@ -1500,10 +1566,13 @@ export default function AvaPage() {
                         m.id === latestMessage?.id && replySuggestedActions.length > 0;
                       return (
                         <li key={m.id} className="flex flex-col gap-2.5">
+                          {/* p18-F13：data-align 是 ava-ui-parity 的结构锚点——用户消息
+                              右对齐灰气泡 / AI 消息左对齐带头像（prototype 消息区形态）。 */}
                           <div
                             data-testid={`msg-${m.role}`}
                             data-status={m.status}
-                            className={`flex items-start gap-2.5 ${m.role === "user" ? "justify-end" : ""}`}
+                            data-align={m.role === "user" ? "end" : "start"}
+                            className={`group flex items-start gap-2.5 ${m.role === "user" ? "justify-end" : ""}`}
                           >
                             {m.role === "assistant" && (
                               <span className="flex h-7 w-7 flex-none items-center justify-center rounded-7 bg-primary text-11 font-bold text-primary-foreground">
@@ -1594,13 +1663,24 @@ export default function AvaPage() {
 
                                 {m.id === lastUserMessageId && editingId !== m.id && (
                                   <div className="flex flex-col items-end gap-2">
-                                    <div className="flex items-center gap-1">
+                                    {/* p18-F13：Edit/Delete 改为 hover 才浮现的内联文本操作
+                                        （prototype 用户气泡 footer 形态）。opacity-0 对
+                                        Playwright 仍可直接 click。确认框打开时保持常显。 */}
+                                    <div
+                                      data-testid="msg-user-actions"
+                                      className={cn(
+                                        "flex items-center gap-1 transition-opacity",
+                                        deleteConfirmId === m.id
+                                          ? "opacity-100"
+                                          : "opacity-0 focus-within:opacity-100 group-hover:opacity-100"
+                                      )}
+                                    >
                                       <Button
                                         type="button"
                                         variant="ghost"
                                         size="sm"
                                         data-testid="msg-edit"
-                                        className="h-7 px-2 text-11 text-muted-foreground"
+                                        className="h-7 gap-1 px-2 text-11 font-normal text-muted-foreground hover:text-foreground"
                                         onClick={() => startEdit(m)}
                                         disabled={sending || deletingId != null}
                                       >
@@ -1612,7 +1692,7 @@ export default function AvaPage() {
                                         variant="ghost"
                                         size="sm"
                                         data-testid="msg-delete"
-                                        className="h-7 px-2 text-11 text-destructive"
+                                        className="h-7 gap-1 px-2 text-11 font-normal text-destructive"
                                         onClick={() => setDeleteConfirmId(m.id)}
                                         disabled={sending || deletingId != null}
                                       >
@@ -1764,138 +1844,6 @@ export default function AvaPage() {
                   if (e.dataTransfer.files.length > 0) void attachments.addFiles(e.dataTransfer.files);
                 }}
               >
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={composerMode === "chat" ? "default" : "outline"}
-                    data-testid="mode-chat"
-                    onClick={() => setComposerMode("chat")}
-                    className="gap-1.5 transition-all hover:shadow-sm"
-                  >
-                    <Sparkles className="h-4 w-4" strokeWidth={1.5} />
-                    Chat
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={composerMode === "research" ? "default" : "outline"}
-                    data-testid="mode-research"
-                    onClick={() => setComposerMode("research")}
-                    className="gap-1.5 transition-all hover:shadow-sm"
-                  >
-                    <Search className="h-4 w-4" strokeWidth={1.5} />
-                    Deep Research
-                  </Button>
-                </div>
-                <div className="mb-3 flex flex-col gap-2 rounded-9 bg-surface-1 p-2">
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <span data-testid="current-model" className="font-medium text-foreground">
-                      Model: {activeModel?.label ?? modelId}
-                    </span>
-                    <span data-testid="current-agent">Agent: {activeAgent?.label ?? agentId}</span>
-                    <span data-testid="current-tools">
-                      Tools: {activeTools.length > 0 ? activeTools.join(", ") : "None"}
-                    </span>
-                  </div>
-                  {settingsError && (
-                    <p role="alert" data-testid="err-ai-settings" className="text-xs text-destructive">
-                      {settingsError}
-                    </p>
-                  )}
-                  {capabilities ? (
-                    <div data-testid="ai-settings" className="grid gap-2 md:grid-cols-[1fr_1fr_1.3fr]">
-                      <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
-                        Model
-                        <Select
-                          data-testid="model-select"
-                          aria-label="Select AVA model"
-                          value={modelId}
-                          onChange={(e) => {
-                            const next = capabilities.models.find((model) => model.id === e.target.value);
-                            if (!next || next.disabled) {
-                              setSettingsError("This model is currently unavailable — kept the previous model");
-                              return;
-                            }
-                            setSettingsError("");
-                            setModelId(next.id);
-                          }}
-                        >
-                          {capabilities.models.map((model) => (
-                            <option key={model.id} value={model.id} disabled={model.disabled}>
-                              {model.label}
-                              {model.disabled ? " (restricted)" : ""}
-                            </option>
-                          ))}
-                        </Select>
-                      </label>
-                      <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
-                        Agent
-                        <Select
-                          data-testid="agent-select"
-                          aria-label="Select AVA agent"
-                          value={agentId}
-                          disabled={!canSwitchAgent}
-                          onChange={(e) => {
-                            if (!canSwitchAgent) {
-                              setSettingsError("Agent can't be switched once a thread has messages");
-                              return;
-                            }
-                            setSettingsError("");
-                            setAgentId(e.target.value);
-                          }}
-                        >
-                          {capabilities.agents.map((agent) => (
-                            <option key={agent.id} value={agent.id}>
-                              {agent.label}
-                            </option>
-                          ))}
-                        </Select>
-                      </label>
-                      <div className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
-                        <span>Tools</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {capabilities.tools.map((tool) => {
-                            const selected = toolIds.includes(tool.id);
-                            return (
-                              <Button
-                                key={tool.id}
-                                type="button"
-                                variant={selected ? "default" : "outline"}
-                                size="sm"
-                                data-testid={`tool-${tool.id}`}
-                                className="h-9 gap-1.5 rounded-9 px-2.5 text-xs transition-colors"
-                                onClick={() => {
-                                  setSettingsError("");
-                                  setToolIds((prev) =>
-                                    prev.includes(tool.id)
-                                      ? prev.filter((id) => id !== tool.id)
-                                      : [...prev, tool.id]
-                                  );
-                                }}
-                              >
-                                <Wrench className="h-3.5 w-3.5" strokeWidth={1.5} />
-                                {tool.label}
-                              </Button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div data-testid="loading" className="grid animate-pulse gap-2 md:grid-cols-3">
-                      {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="h-9 rounded-md bg-muted" />
-                      ))}
-                    </div>
-                  )}
-                  {!canSwitchAgent && (
-                    <p data-testid="agent-locked" className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Bot className="h-3.5 w-3.5" strokeWidth={1.5} />
-                      Agent is locked after messages exist in this thread.
-                    </p>
-                  )}
-                </div>
                 <AttachmentPreviewStrip
                   entries={attachments.entries}
                   onRetry={attachments.retry}
@@ -1925,51 +1873,200 @@ export default function AvaPage() {
                     {sendError}
                   </p>
                 )}
-                <div className="mt-2 flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <AttachmentTrigger onFiles={(files) => void attachments.addFiles(files)} />
-                    <VoiceInputControl
-                      disabled={sending}
-                      onTranscribed={(text) =>
-                        setDraft((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text))
-                      }
-                    />
-                  </div>
-                  {sending && !isResearchMode ? (
-                    // P18 F02：流式回复进行中，Send 变成 Stop——点击真实中断请求
-                    // （AbortController.abort()），而不是等回显自然结束。
-                    <Button
-                      data-testid="stop"
-                      size="icon"
-                      variant="outline"
-                      className="h-8 w-8 rounded-9"
-                      onClick={stop}
-                      aria-label="Stop generating"
-                    >
-                      <Square className="h-3.5 w-3.5" strokeWidth={2} fill="currentColor" />
-                    </Button>
+                {/* p18-F13：composer 底部一行对齐 prototype——左侧附件/语音图标 +
+                    「@ Expert」「# Skill」「✦ Deep Research」pill 入口，右侧圆形发送按钮。
+                    Chat/Deep Research 不再是 composer 顶部的两个 tab：mode-research 落在
+                    Deep Research pill 上（点击进入/退出研究模式），研究模式下旁边出现
+                    mode-chat（✕ 返回聊天）。ai-settings 区域即这一行（模型选择在线程
+                    头部，agent/工具入口在这里）。 */}
+                <div data-testid="ai-settings" className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <AttachmentTrigger onFiles={(files) => void attachments.addFiles(files)} />
+                  <VoiceInputControl
+                    disabled={sending}
+                    onTranscribed={(text) =>
+                      setDraft((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text))
+                    }
+                  />
+                  <span aria-hidden className="mx-1 hidden h-4 w-px bg-border md:inline-block" />
+                  {capabilities ? (
+                    <>
+                      <label
+                        data-testid="composer-agent-pill"
+                        className={cn(
+                          "flex h-8 items-center gap-0.5 rounded-full border border-border bg-background pl-2.5 pr-1 text-12 font-medium transition-colors",
+                          canSwitchAgent ? "text-foreground hover:bg-surface-1" : "text-muted-foreground"
+                        )}
+                      >
+                        <span aria-hidden>@</span>
+                        <Select
+                          data-testid="agent-select"
+                          aria-label="Select AVA agent (expert)"
+                          value={agentId}
+                          disabled={!canSwitchAgent}
+                          onChange={(e) => {
+                            if (!canSwitchAgent) {
+                              setSettingsError("Agent can't be switched once a thread has messages");
+                              return;
+                            }
+                            setSettingsError("");
+                            setAgentId(e.target.value);
+                          }}
+                          className="h-7 w-auto rounded-full border-0 bg-transparent px-1 text-12 shadow-none"
+                        >
+                          {capabilities.agents.map((agent) => (
+                            <option key={agent.id} value={agent.id}>
+                              {agent.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </label>
+                      <div className="relative">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          data-testid="composer-skill-trigger"
+                          aria-expanded={skillMenuOpen}
+                          aria-haspopup="menu"
+                          onClick={() => setSkillMenuOpen((open) => !open)}
+                          className="h-8 gap-1 rounded-full px-3 text-12 font-medium transition-colors"
+                        >
+                          <span aria-hidden>#</span>
+                          Skill
+                        </Button>
+                        {skillMenuOpen && (
+                          <div
+                            data-testid="composer-skill-menu"
+                            className="absolute bottom-10 left-0 z-20 w-64 rounded-12 border border-border bg-background p-1.5 shadow-lg"
+                          >
+                            <p className="px-2 py-1 text-10 font-semibold uppercase tracking-wide text-muted-foreground">
+                              Skills &amp; tools
+                            </p>
+                            {capabilities.tools.map((tool) => {
+                              const selected = toolIds.includes(tool.id);
+                              return (
+                                <Button
+                                  key={tool.id}
+                                  type="button"
+                                  variant="ghost"
+                                  data-testid={`tool-${tool.id}`}
+                                  aria-pressed={selected}
+                                  className="h-auto w-full flex-col items-start gap-0.5 px-2 py-1.5 text-left transition-colors"
+                                  onClick={() => {
+                                    setSettingsError("");
+                                    setToolIds((prev) =>
+                                      prev.includes(tool.id)
+                                        ? prev.filter((id) => id !== tool.id)
+                                        : [...prev, tool.id]
+                                    );
+                                  }}
+                                >
+                                  <span className="flex w-full items-center gap-1.5 text-12 font-medium text-foreground">
+                                    <Wrench className="h-3.5 w-3.5" strokeWidth={1.5} />
+                                    {tool.label}
+                                    {selected && (
+                                      <Check className="ml-auto h-3.5 w-3.5" strokeWidth={1.5} />
+                                    )}
+                                  </span>
+                                  <span className="whitespace-normal text-11 font-normal text-muted-foreground">
+                                    {tool.description}
+                                  </span>
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </>
                   ) : (
+                    <div data-testid="loading" className="h-8 w-40 animate-pulse rounded-full bg-muted" />
+                  )}
+                  <span data-testid="composer-deep-research-pill" className="flex items-center gap-1">
                     <Button
-                      data-testid="send"
-                      size="icon"
-                      className="h-8 w-8 rounded-9"
-                      onClick={() => void send()}
-                      disabled={
-                        (!draft.trim() && attachments.uploadedIds.length === 0) ||
-                        sending ||
-                        attachments.hasPending ||
-                        researchRun?.status === "running"
-                      }
-                      aria-label={isResearchMode ? "Start Deep Research" : "Send message"}
+                      type="button"
+                      size="sm"
+                      variant={isResearchMode ? "default" : "outline"}
+                      data-testid="mode-research"
+                      aria-pressed={isResearchMode}
+                      onClick={() => setComposerMode(isResearchMode ? "chat" : "research")}
+                      className="h-8 gap-1 rounded-full px-3 text-12 font-medium transition-colors"
                     >
-                      {isResearchMode ? (
-                        <Search className="h-4 w-4" strokeWidth={2} />
-                      ) : (
-                        <ArrowUp className="h-4 w-4" strokeWidth={2} />
-                      )}
+                      <Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      Deep Research
                     </Button>
+                    {isResearchMode && (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        data-testid="mode-chat"
+                        aria-label="Back to chat"
+                        onClick={() => setComposerMode("chat")}
+                        className="h-7 w-7 rounded-full transition-colors"
+                      >
+                        <X className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      </Button>
+                    )}
+                  </span>
+                  <div className="ml-auto">
+                    {sending && !isResearchMode ? (
+                      // P18 F02：流式回复进行中，Send 变成 Stop——点击真实中断请求
+                      // （AbortController.abort()），而不是等回显自然结束。
+                      <Button
+                        data-testid="stop"
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 rounded-full"
+                        onClick={stop}
+                        aria-label="Stop generating"
+                      >
+                        <Square className="h-3.5 w-3.5" strokeWidth={2} fill="currentColor" />
+                      </Button>
+                    ) : (
+                      <Button
+                        data-testid="send"
+                        size="icon"
+                        className="h-8 w-8 rounded-full"
+                        onClick={() => void send()}
+                        disabled={
+                          (!draft.trim() && attachments.uploadedIds.length === 0) ||
+                          sending ||
+                          attachments.hasPending ||
+                          researchRun?.status === "running"
+                        }
+                        aria-label={isResearchMode ? "Start Deep Research" : "Send message"}
+                      >
+                        {isResearchMode ? (
+                          <Search className="h-4 w-4" strokeWidth={2} />
+                        ) : (
+                          <ArrowUp className="h-4 w-4" strokeWidth={2} />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {/* p18-F13：当前 AI 设置的低调 caption（current-* 回归锚点保留），
+                    以及 agent 锁定提示 / 设置错误提示。 */}
+                <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-11 text-muted-foreground">
+                  <span data-testid="current-model">{activeModel?.label ?? modelId}</span>
+                  <span aria-hidden>·</span>
+                  <span data-testid="current-agent">{activeAgent?.label ?? agentId}</span>
+                  <span aria-hidden>·</span>
+                  <span data-testid="current-tools">
+                    {activeTools.length > 0 ? activeTools.join(", ") : "None"}
+                  </span>
+                  {!canSwitchAgent && (
+                    <span data-testid="agent-locked" className="flex items-center gap-1">
+                      <Bot className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      Agent is locked after messages exist in this thread.
+                    </span>
                   )}
                 </div>
+                {settingsError && (
+                  <p role="alert" data-testid="err-ai-settings" className="mt-1 text-xs text-destructive">
+                    {settingsError}
+                  </p>
+                )}
               </div>
             </div>
           </>
@@ -2334,19 +2431,37 @@ function MessageActionsBar({
   onSendEmail: () => void;
 }) {
   return (
+    // p18-F13：AI 消息下方一行内联文本操作（prototype footer：⧉ Copy / ↻ Regenerate /
+    // 👍 / 👎 / → Send to board / Email），由图标按钮阵改为文本操作行；testid 全部保留。
     <div data-testid={`msg-actions-${message.id}`} className="relative flex flex-col gap-1">
-      <div className="flex items-center gap-0.5">
+      <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-11 text-muted-foreground">
         <Button
           type="button"
           variant="ghost"
-          size="icon"
+          size="sm"
           data-testid="msg-copy"
-          className="h-7 w-7 text-muted-foreground transition-colors hover:bg-surface-1"
+          className="h-7 gap-1 px-1.5 text-11 font-normal text-muted-foreground transition-colors hover:bg-surface-1 hover:text-foreground"
           onClick={onCopy}
           aria-label="Copy message"
         >
           {copied ? <Check className="h-3.5 w-3.5" strokeWidth={1.5} /> : <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />}
+          Copy
         </Button>
+        {isLast && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            data-testid="msg-regenerate"
+            className="h-7 gap-1 px-1.5 text-11 font-normal text-muted-foreground transition-colors hover:bg-surface-1 hover:text-foreground"
+            onClick={onRegenerate}
+            disabled={disabled}
+            aria-label="Regenerate response"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", regenerating && "animate-spin")} strokeWidth={1.5} />
+            Regenerate
+          </Button>
+        )}
         <Button
           type="button"
           variant="ghost"
@@ -2379,45 +2494,33 @@ function MessageActionsBar({
         >
           <ThumbsDown className="h-3.5 w-3.5" strokeWidth={1.5} />
         </Button>
-        {isLast && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            data-testid="msg-regenerate"
-            className="h-7 w-7 text-muted-foreground transition-colors hover:bg-surface-1"
-            onClick={onRegenerate}
-            disabled={disabled}
-            aria-label="Regenerate response"
-          >
-            <RefreshCw className={cn("h-3.5 w-3.5", regenerating && "animate-spin")} strokeWidth={1.5} />
-          </Button>
-        )}
         <Button
           type="button"
           variant="ghost"
-          size="icon"
+          size="sm"
           data-testid="msg-send-to-board"
-          className="h-7 w-7 text-muted-foreground transition-colors hover:bg-surface-1"
+          className="h-7 gap-1 px-1.5 text-11 font-normal text-muted-foreground transition-colors hover:bg-surface-1 hover:text-foreground"
           onClick={onToggleBoardPicker}
           disabled={sendBoardPending}
           aria-label="Send to a Board"
           title="Send this message to a Board you can edit"
         >
           <LayoutGrid className="h-3.5 w-3.5" strokeWidth={1.5} />
+          Send to board
         </Button>
         <Button
           type="button"
           variant="ghost"
-          size="icon"
+          size="sm"
           data-testid="msg-send-email"
-          className="h-7 w-7 text-muted-foreground transition-colors hover:bg-surface-1"
+          className="h-7 gap-1 px-1.5 text-11 font-normal text-muted-foreground transition-colors hover:bg-surface-1 hover:text-foreground"
           onClick={onSendEmail}
           disabled={sendEmailPending}
           aria-label="Send via email"
           title="Send this message to your email"
         >
           <Mail className="h-3.5 w-3.5" strokeWidth={1.5} />
+          Email
         </Button>
       </div>
       {copied && (

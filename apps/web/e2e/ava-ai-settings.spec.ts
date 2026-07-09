@@ -18,7 +18,12 @@ test("模型/Agent/工具选择在发送前生效，并由 stub 回复回显", a
 
   await page.getByTestId("model-select").selectOption("stub:planner");
   await page.getByTestId("agent-select").selectOption("research");
+  // p18-F13 视觉改版（issue #465）：工具开关从 composer 平铺区移入「# Skill」pill 的
+  // 弹出选单（对齐 prototype/oldcode 的 AIToolSelector 形态），点选前需先展开选单，
+  // 选完再点一次 pill 收起。tool-* testid 本身不变。
+  await page.getByTestId("composer-skill-trigger").click();
   await page.getByTestId("tool-board-context").click();
+  await page.getByTestId("composer-skill-trigger").click();
   await expect(page.getByTestId("current-model")).toContainText("Stub Planner");
   await expect(page.getByTestId("current-agent")).toContainText("Research Agent");
   await expect(page.getByTestId("current-tools")).toContainText("Board Context");
