@@ -1,5 +1,14 @@
 # Agent 接入清单 — 任何平台的 agent 加入协作的最小成本
 
+> ⚠️ **2026-07-09 起（ADR-009 + ADR-010）读本文前先知道两件事**：
+> 1. **协调权威已迁到 coord-service (D1)**，不再是 GitHub issue/label。本文下方仍有
+>    多处把 issue/label 描述成"协调权威"的表述，那是 ADR-009 之前的历史框架——认领/
+>    心跳/租约现在一律走 `pnpm harness lock-*` / `module-lock-*`（需 coord-service
+>    凭据），GitHub 只保留 feature 规格 + 人类可读叙述用途。以 ADR-009 为准。
+> 2. **组织模型见 ADR-010**：三级 coordinator（main/module/architecture）+ 角色子
+>    agent（必须登记进 coord-service）+ 全员 3h 性能周期 + 防断链。人类开发者带
+>    agent 加入看 `human-developer-onboarding.md`。
+
 > 维护者：architecture-coordinator（`coord-architecture`，见 registry.yaml）。目标读者
 > 不是"这批 Claude Code 会话"，而是**任何**未来能读写 GitHub 的 agent——不同厂商的模型、
 > 不同工具集、甚至开源社区贡献的自定义脚本/机器人。协议本体只依赖 git + GitHub

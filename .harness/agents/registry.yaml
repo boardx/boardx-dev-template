@@ -5,7 +5,11 @@
 #  - id 是 agent 的唯一身份，投影为 issue 的 `agent:<id>` label，也用作 claim 的 --owner。
 #  - kind 决定角色：coordinator（总协调，唯一，独占合并权）/ module-coordinator（模块二级
 #    协调，分派+初审+返工裁决，无合并权）/ architecture-coordinator（控制平面/协议本身的
-#    迭代者，同样无合并权）/ worker（写码）/ reviewer（评审）。
+#    迭代者，同样无合并权）/ worker（写码）/ reviewer（评审）/ sub-agent（module-coordinator
+#    运行时派出的角色子 agent，见 ADR-010）。
+#  - sub-agent 条目额外带：parent（派它的 coordinator id）、role（designer/architect/
+#    board-dev/ava-dev/verifier…）、spawned_at。子 agent 必须登记进 coord-service（ADR-010
+#    防断链不变量）；自动登记落地前，由派它的 module-coordinator 手动保证其在 D1 有身份+claim。
 #  - reviewer 复用 .harness/agents/*.yaml 已定义的 subagent（agent: 字段指向其名）。
 #  - required_for：该 reviewer 对哪些 area 是**强制**门禁（coordinator 据此路由 review）。
 #  - active：注销（retire/deactivate）状态位，默认 true。改成 false 表示该身份已停用，
