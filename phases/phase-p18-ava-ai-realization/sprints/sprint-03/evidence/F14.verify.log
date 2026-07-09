@@ -1,0 +1,665 @@
+$ docker compose -f infra/docker-compose.yml up -d
+[exit 0]
+ Container worker-wrk-ava-p18-1-p18-f14-research-ty-redis-1 Running 
+ Container worker-wrk-ava-p18-1-p18-f14-research-ty-minio-1 Running 
+ Container worker-wrk-ava-p18-1-p18-f14-research-ty-postgres-1 Running 
+
+
+$ pnpm --filter @repo/data run migrate
+[exit 0]
+
+> @repo/data@0.1.0 migrate /private/tmp/f14-research-type/packages/data
+> sh -c 'set -a; [ -f ../../apps/web/.env.local ] && . ../../apps/web/.env.local; set +a; tsx src/migrate.ts'
+
+✓ 已应用，跳过：001_init.sql
+✓ 已应用，跳过：002_auth.sql
+✓ 已应用，跳过：003_team.sql
+✓ 已应用，跳过：004_room.sql
+✓ 已应用，跳过：005_canvas.sql
+✓ 已应用，跳过：006_profile.sql
+✓ 已应用，跳过：007_board.sql
+✓ 已应用，跳过：008_board_visits.sql
+✓ 已应用，跳过：009_board_favorites.sql
+✓ 已应用，跳过：010_room_chat.sql
+✓ 已应用，跳过：011_board_settings.sql
+✓ 已应用，跳过：012_board_items_board_id.sql
+✓ 已应用，跳过：013_board_items_color.sql
+✓ 已应用，跳过：014_feedback.sql
+✓ 已应用，跳过：014_room_chat_messages.sql
+✓ 已应用，跳过：015_team_general.sql
+✓ 已应用，跳过：016_admin_role.sql
+✓ 已应用，跳过：016_ai_store.sql
+✓ 已应用，跳过：016_ava_chat.sql
+✓ 已应用，跳过：016_credits.sql
+✓ 已应用，跳过：016_kb_files.sql
+✓ 已应用，跳过：016_survey.sql
+✓ 已应用，跳过：017_ai_store_item_config.sql
+✓ 已应用，跳过：017_payment_orders.sql
+✓ 已应用，跳过：017_studio_artifacts.sql
+✓ 已应用，跳过：017_survey_templates.sql
+✓ 已应用，跳过：018_ai_store_favorites.sql
+✓ 已应用，跳过：018_ava_message_attachments.sql
+✓ 已应用，跳过：018_ava_thread_share.sql
+✓ 已应用，跳过：018_user_plan.sql
+✓ 已应用，跳过：019_ai_store_subscriptions.sql
+✓ 已应用，跳过：019_credit_transaction_idempotency.sql
+✓ 已应用，跳过：019_presentation_artifacts.sql
+✓ 已应用，跳过：020_ava_message_feedback.sql
+✓ 已应用，跳过：021_ai_store_share.sql
+✓ 已应用，跳过：021_presentation_revisions.sql
+✓ 已应用，跳过：022_retire_room_canvas.sql
+✓ 已应用，跳过：023_outbound_emails.sql
+✓ 已应用，跳过：024_room_favorites.sql
+✓ 已应用，跳过：025_room_invites.sql
+✓ 已应用，跳过：026_room_files.sql
+✓ 已应用，跳过：026_survey_room_scope.sql
+✓ 已应用，跳过：027_ava_research_sessions.sql
+✓ 已应用，跳过：028_ava_research_clarify_stage.sql
+✓ 已应用，跳过：029_email_confirmation.sql
+✓ 已应用，跳过：030_room_ai_context.sql
+✓ 已应用，跳过：031_board_backups.sql
+迁移完成。
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/ava-research-type-selector.spec.ts
+[exit 0]
+
+Running 5 tests using 1 worker
+
+  ✓  1 [chromium] › ava-research-type-selector.spec.ts:44:5 › 类型选单：两种类型带名称/描述/选中勾，pill 显示激活类型，可切换与退出 (2.9s)
+  ✓  2 [chromium] › ava-research-type-selector.spec.ts:86:5 › 显式选 用户研究 + 中性主题 → user-research 模板（显式类型胜过关键词推断）+ 刷新后类型保持 (6.6s)
+  ✓  3 [chromium] › ava-research-type-selector.spec.ts:127:5 › 显式选 深度研究 + 含用户研究关键词的主题 → market 模板（显式类型胜过关键词推断） (3.2s)
+  ✓  4 [chromium] › ava-research-type-selector.spec.ts:152:5 › 无显式类型时关键词兜底仍在（历史会话/老客户端兼容，API 级） (174ms)
+  ✓  5 [chromium] › ava-research-type-selector.spec.ts:183:5 › composer 聚焦样式：不再是浏览器默认 outline（橙色 auto ring） (743ms)
+
+  5 passed (17.5s)
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/ava-deep-research.spec.ts e2e/ava-research-persistence.spec.ts e2e/ava-research-real-generation.spec.ts e2e/ava-research-report-templates.spec.ts e2e/ava-ui-parity.spec.ts
+[exit 0]
+
+Running 19 tests using 1 worker
+
+  ✓  1 [chromium] › ava-deep-research.spec.ts:11:5 › Deep Research：提交主题 → 两步确认（澄清→计划）→ 执行时间线 → 报告面板 → 继续追问 (7.7s)
+  ✓  2 [chromium] › ava-deep-research.spec.ts:55:5 › Deep Research：主题过短时展示错误并保留可恢复输入 (1.1s)
+  ✓  3 [chromium] › ava-deep-research.spec.ts:68:5 › Deep Research：额度不足时展示提示并保留主题 (978ms)
+  ✓  4 [chromium] › ava-deep-research.spec.ts:83:5 › Deep Research：启动失败时展示可重试错误态 (807ms)
+  ✓  5 [chromium] › ava-research-persistence.spec.ts:24:5 › draft 阶段刷新：research-card 恢复澄清问题与计划内容，且仍待确认澄清 (2.5s)
+  ✓  6 [chromium] › ava-research-persistence.spec.ts:51:5 › clarified 阶段刷新：确认澄清后立即刷新，research-card 恢复到 clarified 而非跳回 draft (1.7s)
+  ✓  7 [chromium] › ava-research-persistence.spec.ts:76:5 › running 阶段刷新：确认计划后立即刷新，research-card 恢复到 running 而非跳回更早阶段 (1.8s)
+  ✓  8 [chromium] › ava-research-persistence.spec.ts:109:5 › complete 阶段刷新：research-card 恢复为 complete，报告仍可打开 (3.8s)
+  ✓  9 [chromium] › ava-research-persistence.spec.ts:137:5 › 未发起过研究的线程刷新：不出现 research-card（无会话时不误报） (1.7s)
+  ✓  10 [chromium] › ava-research-real-generation.spec.ts:31:5 › 同一线程两次不同主题的研究：澄清问题/计划/报告内容不同（真实生成而非固定文案） (1.5s)
+  ✓  11 [chromium] › ava-research-real-generation.spec.ts:64:5 › 两步交互确认：研究计划确认按钮在澄清问题确认前不存在，确认后才出现 (1.2s)
+  ✓  12 [chromium] › ava-research-real-generation.spec.ts:94:5 › 执行时间线来自后端真实阶段进度：刷新后仍看到服务端持久化的中间阶段 (2.8s)
+  ✓  13 [chromium] › ava-research-real-generation.spec.ts:131:5 › 研究内容生成失败：展示可重试的失败态，主题保留 (924ms)
+  ✓  14 [chromium] › ava-research-report-templates.spec.ts:60:5 › 市场类研究主题：报告面板展示 Executive summary / Key findings / Recommendation (3.1s)
+  ✓  15 [chromium] › ava-research-report-templates.spec.ts:89:5 › 用户研究类主题：报告面板展示 Summary / Personas / Top pain points / Opportunities (3.1s)
+  ✓  16 [chromium] › ava-ui-parity.spec.ts:14:5 › 侧栏：黑色 New chat 主按钮 + 日期分组线程列表（Today 分组头可见） (826ms)
+  ✓  17 [chromium] › ava-ui-parity.spec.ts:30:5 › 线程头部：Agent 头像/副标题 + 模型 pill + Share；Model 不再平铺在 composer 区 (704ms)
+  ✓  18 [chromium] › ava-ui-parity.spec.ts:49:5 › composer：底部一行 @ Expert / # Skill / ✦ Deep Research pill + 圆形发送按钮；Skill 弹出选单 (1.1s)
+  ✓  19 [chromium] › ava-ui-parity.spec.ts:87:5 › 消息区：用户消息右对齐灰气泡（hover 出 Edit/Delete）、AI 消息左侧头像 + 内联文本操作行 (1.3s)
+
+  19 passed (42.7s)
+[WebServer] [ava/research] 研究内容生成失败: Error: 研究内容生成失败（测试触发）
+[WebServer]     at generateResearch (webpack-internal:///(rsc)/../../packages/ai/src/researchGenerator.ts:172:15)
+[WebServer]     at POST (webpack-internal:///(rsc)/./app/api/ava/threads/[id]/research/route.ts:99:84)
+[WebServer] [90m    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+[WebServer]     at async /private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/compiled/next-server/app-route.runtime.dev.js:6:55038
+[WebServer]     at async ek.execute (/private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/compiled/next-server/app-route.runtime.dev.js:6:45808)
+[WebServer]     at async ek.handle (/private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/compiled/next-server/app-route.runtime.dev.js:6:56292)
+[WebServer]     at async doRender (/private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/base-server.js:1377:42)
+[WebServer]     at async cacheEntry.responseCache.get.routeKind (/private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/base-server.js:1587:40)
+[WebServer]     at async DevServer.renderToResponseWithComponentsImpl (/private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/base-server.js:1507:28)
+[WebServer]     at async DevServer.renderPageComponent (/private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/base-server.js:1931:24)
+[WebServer]     at async DevServer.renderToResponseImpl (/private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/base-server.js:1969:32)
+[WebServer]     at async DevServer.pipeImpl (/private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/base-server.js:920:25)
+[WebServer]     at async NextNodeServer.handleCatchallRenderRequest (/private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/next-server.js:272:17)
+[WebServer]     at async DevServer.handleRequestImpl (/private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/base-server.js:816:17)
+[WebServer]     at async /private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/dev/next-dev-server.js:339:20
+[WebServer]     at async Span.traceAsyncFn (/private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/trace/trace.js:154:20)
+[WebServer]     at async DevServer.handleRequest (/private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/dev/next-dev-server.js:336:24)
+[WebServer]     at async invokeRender (/private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/lib/router-server.js:174:21)
+[WebServer]     at async handleRequest (/private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/lib/router-server.js:353:24)
+[WebServer]     at async requestHandlerImpl (/private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/lib/router-server.js:377:13)
+[WebServer]     at async Server.requestListener (/private/tmp/f14-research-type/node_modules/[4m.pnpm[24m/next@14.2.5_@playwright+test@1.47.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/lib/start-server.js:141:13)
+
+
+
+[BASE VERIFY] $ pnpm -w run verify:base
+[exit 0]
+
+> boardx-dev-template@ verify:base /private/tmp/f14-research-type
+> turbo run typecheck lint test
+
+• Packages in scope: @repo/agent-core, @repo/ai, @repo/auth, @repo/canvas, @repo/collab, @repo/coord-dashboard, @repo/coord-service, @repo/data, @repo/memory, @repo/orchestrator, @repo/queue, @repo/storage, @repo/tools, @repo/web, @repo/workflow-worker
+• Running typecheck, lint, test in 15 packages
+• Remote caching disabled
+@repo/auth:lint: cache miss, executing 63b46b8aaeb29314
+@repo/canvas:lint: cache miss, executing 2abaeec7f824d84a
+@repo/collab:typecheck: cache miss, executing 86411b6f7b77da2f
+@repo/data:test: cache miss, executing 2ffbf352fdf85e0f
+@repo/web:lint: cache miss, executing 9bec8b4a61284c8f
+@repo/queue:typecheck: cache miss, executing f770c43ca8c69ece
+@repo/tools:typecheck: cache miss, executing 4aa14e2d5f6b9df6
+@repo/agent-core:typecheck: cache miss, executing 0206d52b50f1f015
+@repo/storage:build: cache miss, executing bc2afa8f48bba3bf
+@repo/queue:lint: cache miss, executing c3961df589317753
+@repo/canvas:lint: 
+@repo/canvas:lint: > @repo/canvas@0.1.0 lint /private/tmp/f14-research-type/packages/canvas
+@repo/canvas:lint: > echo 'lint: ok'
+@repo/canvas:lint: 
+@repo/canvas:lint: lint: ok
+@repo/agent-core:typecheck: 
+@repo/agent-core:typecheck: > @repo/agent-core@0.1.0 typecheck /private/tmp/f14-research-type/packages/agent-core
+@repo/agent-core:typecheck: > tsc --noEmit
+@repo/agent-core:typecheck: 
+@repo/auth:lint: 
+@repo/auth:lint: > @repo/auth@0.1.0 lint /private/tmp/f14-research-type/packages/auth
+@repo/auth:lint: > echo 'lint: ok'
+@repo/auth:lint: 
+@repo/collab:typecheck: 
+@repo/collab:typecheck: > @repo/collab@0.1.0 typecheck /private/tmp/f14-research-type/packages/collab
+@repo/collab:typecheck: > tsc --noEmit
+@repo/collab:typecheck: 
+@repo/queue:typecheck: 
+@repo/queue:typecheck: > @repo/queue@0.1.0 typecheck /private/tmp/f14-research-type/packages/queue
+@repo/queue:typecheck: > tsc --noEmit
+@repo/queue:typecheck: 
+@repo/tools:typecheck: 
+@repo/tools:typecheck: > @repo/tools@0.1.0 typecheck /private/tmp/f14-research-type/packages/tools
+@repo/tools:typecheck: > tsc --noEmit
+@repo/tools:typecheck: 
+@repo/web:lint: 
+@repo/web:lint: > @repo/web@0.1.0 lint /private/tmp/f14-research-type/apps/web
+@repo/web:lint: > bash scripts/lint-design.sh
+@repo/web:lint: 
+@repo/auth:lint: lint: ok
+@repo/data:test: 
+@repo/data:test: > @repo/data@0.1.0 test /private/tmp/f14-research-type/packages/data
+@repo/data:test: > vitest run
+@repo/data:test: 
+@repo/auth:build: cache miss, executing b5e2529c5b96e0a7
+@repo/storage:build: 
+@repo/storage:build: > @repo/storage@0.1.0 build /private/tmp/f14-research-type/packages/storage
+@repo/storage:build: > tsc --noEmit
+@repo/storage:build: 
+@repo/queue:lint: 
+@repo/queue:lint: > @repo/queue@0.1.0 lint /private/tmp/f14-research-type/packages/queue
+@repo/queue:lint: > echo 'lint: ok'
+@repo/queue:lint: 
+@repo/web:lint: · 扫描范围：app/ + components/（含 ava/ai-store/surveys/admin/studio/presentations 等模块）
+@repo/queue:lint: lint: ok
+@repo/ai:lint: cache miss, executing 5e96c27722c471a1
+@repo/agent-core:lint: cache miss, executing 84c1a114aa3d4721
+@repo/web:lint: ✓ token 对比度：全部色面/文字对过线（中性 ≥4.5:1，状态色 ≥3:1，明暗两套）
+@repo/ai:lint: 
+@repo/ai:lint: > @repo/ai@0.1.0 lint /private/tmp/f14-research-type/packages/ai
+@repo/ai:lint: > echo 'lint: ok'
+@repo/ai:lint: 
+@repo/ai:lint: lint: ok
+@repo/auth:build: 
+@repo/auth:build: > @repo/auth@0.1.0 build /private/tmp/f14-research-type/packages/auth
+@repo/auth:build: > tsc --noEmit
+@repo/auth:build: 
+@repo/agent-core:lint: 
+@repo/agent-core:lint: > @repo/agent-core@0.1.0 lint /private/tmp/f14-research-type/packages/agent-core
+@repo/agent-core:lint: > echo 'lint: ok'
+@repo/agent-core:lint: 
+@repo/canvas:build: cache miss, executing 37855696de4faa19
+@repo/agent-core:lint: lint: ok
+@repo/queue:test: cache miss, executing 7db574e060109201
+@repo/canvas:build: 
+@repo/canvas:build: > @repo/canvas@0.1.0 build /private/tmp/f14-research-type/packages/canvas
+@repo/canvas:build: > tsc --noEmit
+@repo/canvas:build: 
+@repo/queue:test: 
+@repo/queue:test: > @repo/queue@0.1.0 test /private/tmp/f14-research-type/packages/queue
+@repo/queue:test: > vitest run
+@repo/queue:test: 
+@repo/memory:test: cache miss, executing 03f26c9d8dc11ecf
+@repo/web:lint: ⚠ LABEL-LANG-MIX(同文件内中英混用，警告，不拦截；修复归属 phase-p17 reskin)：
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:173:  { id: "understand-file", label: "理解文件", prompt: "帮我理解这份材料，并总结关键结论。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:174:  { id: "draft-email", label: "起草邮件", prompt: "帮我起草一封项目进展同步邮件。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:175:  { id: "summarize-trends", label: "总结趋势", prompt: "帮我总结最近用户反馈中的主要趋势。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:176:  { id: "brainstorm", label: "头脑风暴", prompt: "围绕这个目标帮我头脑风暴 5 个可执行方案。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:193:    label: "深度研究",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:199:    label: "用户研究",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:206:  { id: "make-tasks", label: "拆成任务", prompt: "把上面的建议拆成可执行任务，并按优先级排序。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:207:  { id: "find-risks", label: "识别风险", prompt: "基于上面的回复，列出主要风险和缓解措施。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:208:  { id: "shorten", label: "压缩摘要", prompt: "把上面的回复压缩成 5 条要点。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2787:  if (diffDays === 0) return { key: "today", label: "Today" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2788:  if (diffDays === 1) return { key: "yesterday", label: "Yesterday" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2789:  if (diffDays < 7) return { key: "last-7-days", label: "Last 7 days" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2790:  return { key: "older", label: "Older" };
+@repo/collab:build: cache miss, executing 37b0a239d937b3f3
+@repo/web:lint: ⚠ LABEL-LANG-MIX(跨文件中英混用，警告，不拦截；修复归属 phase-p17 reskin)：以下文件整体用中文 label，而以下文件整体用英文 label，同一层级 UI 组件的文案语言应统一：
+@repo/web:lint:     LABEL-LANG-MIX: app/portal-prototype/page.tsx:92:  { key: "pulse", label: "脉搏与进度" },
+@repo/web:lint:     LABEL-LANG-MIX: components/board/board-canvas.tsx:180:  { value: "sans-serif", label: "无衬线" },
+@repo/web:lint:     LABEL-LANG-MIX: components/board/sync-status.tsx:14:  synced: { label: "已同步", dot: "bg-tag-green", text: "text-success" },
+@repo/web:lint:     LABEL-LANG-MIX: components/studio/studio-panel.tsx:29:  { type: "audio", label: "音频概览", icon: AudioLines },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/account/page.tsx:15:  { key: "personal", label: "Personal info", icon: User },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/admin-home.tsx:113:        { testKey: "users", label: "Total users", stat: stats.users },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/admin-tabs.tsx:8:  { key: "overview", label: "Overview", href: "/admin" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/ai-store/featured/page.tsx:33:  { key: "", label: "All approved" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/ai-store/review/page.tsx:36:  { key: "", label: "All" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/credits/page.tsx:237:              <SummaryCard value={fmt(wallet.balance)} label="Current balance" />
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/rooms/[id]/layout.tsx:26:  { key: "boards", label: "Boards", segment: "boards" },
+@repo/web:lint:     LABEL-LANG-MIX: components/app-shell/sidebar.tsx:44:  { label: "Home", icon: Home, href: "/" },
+@repo/web:lint:   示例（Board 工具条 vs Sidebar 导航）：见 components/board/board-canvas.tsx 与 components/app-shell/sidebar.tsx
+@repo/web:lint: ✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性/文案语言一致性）
+@repo/storage:typecheck: cache miss, executing da7bdde476d30467
+@repo/data:lint: cache miss, executing fcdbdb2cb3dcb1a4
+@repo/memory:test: 
+@repo/memory:test: > @repo/memory@0.1.0 test /private/tmp/f14-research-type/packages/memory
+@repo/memory:test: > vitest run
+@repo/memory:test: 
+@repo/data:test: 
+@repo/data:test:  RUN  v2.0.0 /private/tmp/f14-research-type/packages/data
+@repo/data:test: 
+@repo/collab:build: 
+@repo/collab:build: > @repo/collab@0.1.0 build /private/tmp/f14-research-type/packages/collab
+@repo/collab:build: > tsc --noEmit
+@repo/collab:build: 
+@repo/data:lint: 
+@repo/data:lint: > @repo/data@0.1.0 lint /private/tmp/f14-research-type/packages/data
+@repo/data:lint: > echo 'lint: ok'
+@repo/data:lint: 
+@repo/data:lint: lint: ok
+@repo/storage:typecheck: 
+@repo/storage:typecheck: > @repo/storage@0.1.0 typecheck /private/tmp/f14-research-type/packages/storage
+@repo/storage:typecheck: > tsc --noEmit
+@repo/storage:typecheck: 
+@repo/data:build: cache miss, executing eb59a4c222b5be7c
+@repo/queue:test: 
+@repo/queue:test:  RUN  v2.0.0 /private/tmp/f14-research-type/packages/queue
+@repo/queue:test: 
+@repo/memory:test: 
+@repo/memory:test:  RUN  v2.0.0 /private/tmp/f14-research-type/packages/memory
+@repo/memory:test: 
+@repo/agent-core:test: cache miss, executing 8173137a54ae768d
+@repo/data:test:  ✓ src/aiStore.test.ts  (15 tests) 24ms
+@repo/data:build: 
+@repo/data:build: > @repo/data@0.1.0 build /private/tmp/f14-research-type/packages/data
+@repo/data:build: > tsc --noEmit
+@repo/data:build: 
+@repo/data:test:  ✓ src/survey.test.ts  (4 tests) 3ms
+@repo/data:test:  ✓ src/index.test.ts  (3 tests) 6ms
+@repo/workflow-worker:lint: cache miss, executing 23448e7ecff71ec8
+@repo/data:test:  ✓ src/board.test.ts  (9 tests) 13ms
+@repo/data:test:  ✓ src/avaChat.test.ts  (5 tests) 17ms
+@repo/data:test:  ✓ src/roomChat.test.ts  (4 tests) 16ms
+@repo/data:test: 
+@repo/data:test:  Test Files  6 passed (6)
+@repo/data:test:       Tests  40 passed (40)
+@repo/data:test:    Start at  01:02:46
+@repo/data:test:    Duration  5.65s (transform 6.32s, setup 0ms, collect 20.12s, tests 79ms, environment 6ms, prepare 2.31s)
+@repo/data:test: 
+@repo/queue:test:  ✓ src/index.test.ts  (4 tests) 43ms
+@repo/queue:test: 
+@repo/queue:test:  Test Files  1 passed (1)
+@repo/queue:test:       Tests  4 passed (4)
+@repo/queue:test:    Start at  01:02:47
+@repo/queue:test:    Duration  4.41s (transform 480ms, setup 0ms, collect 2.62s, tests 43ms, environment 0ms, prepare 416ms)
+@repo/queue:test: 
+@repo/queue:build: cache miss, executing 5b1de80dff94df7f
+@repo/auth:test: cache miss, executing c74ac734f8c85b40
+@repo/memory:test:  ✓ src/index.test.ts  (13 tests) 18ms
+@repo/memory:test: 
+@repo/memory:test:  Test Files  1 passed (1)
+@repo/memory:test:       Tests  13 passed (13)
+@repo/memory:test:    Start at  01:02:49
+@repo/memory:test:    Duration  3.13s (transform 438ms, setup 0ms, collect 476ms, tests 18ms, environment 0ms, prepare 600ms)
+@repo/memory:test: 
+@repo/canvas:typecheck: cache miss, executing 3956f8d620eeccca
+@repo/agent-core:test: 
+@repo/agent-core:test: > @repo/agent-core@0.1.0 test /private/tmp/f14-research-type/packages/agent-core
+@repo/agent-core:test: > vitest run
+@repo/agent-core:test: 
+@repo/storage:lint: cache miss, executing 30aa6652f25acb28
+@repo/auth:typecheck: cache miss, executing 7fbcd10ef3a0a1a5
+@repo/auth:test: 
+@repo/auth:test: > @repo/auth@0.1.0 test /private/tmp/f14-research-type/packages/auth
+@repo/auth:test: > vitest run
+@repo/auth:test: 
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: > @repo/workflow-worker@0.1.0 lint /private/tmp/f14-research-type/apps/workflow-worker
+@repo/workflow-worker:lint: > echo 'lint: ok'
+@repo/workflow-worker:lint: 
+@repo/queue:build: 
+@repo/queue:build: > @repo/queue@0.1.0 build /private/tmp/f14-research-type/packages/queue
+@repo/queue:build: > tsc --noEmit
+@repo/queue:build: 
+@repo/workflow-worker:lint: lint: ok
+@repo/tools:lint: cache miss, executing 2ffb4964df258d96
+@repo/canvas:typecheck: 
+@repo/canvas:typecheck: > @repo/canvas@0.1.0 typecheck /private/tmp/f14-research-type/packages/canvas
+@repo/canvas:typecheck: > tsc --noEmit
+@repo/canvas:typecheck: 
+@repo/storage:lint: 
+@repo/storage:lint: > @repo/storage@0.1.0 lint /private/tmp/f14-research-type/packages/storage
+@repo/storage:lint: > echo 'lint: ok'
+@repo/storage:lint: 
+@repo/storage:lint: lint: ok
+@repo/ai:build: cache miss, executing c0aaa16c8b57131c
+@repo/auth:typecheck: 
+@repo/auth:typecheck: > @repo/auth@0.1.0 typecheck /private/tmp/f14-research-type/packages/auth
+@repo/auth:typecheck: > tsc --noEmit
+@repo/auth:typecheck: 
+@repo/agent-core:test: 
+@repo/agent-core:test:  RUN  v2.0.0 /private/tmp/f14-research-type/packages/agent-core
+@repo/agent-core:test: 
+@repo/ai:test: cache miss, executing afcaed0bda477314
+@repo/tools:lint: 
+@repo/tools:lint: > @repo/tools@0.1.0 lint /private/tmp/f14-research-type/packages/tools
+@repo/tools:lint: > echo 'lint: ok'
+@repo/tools:lint: 
+@repo/tools:lint: lint: ok
+@repo/data:typecheck: cache miss, executing 0034141e428b48d4
+@repo/agent-core:test:  ✓ src/index.test.ts  (3 tests) 5ms
+@repo/agent-core:test: 
+@repo/agent-core:test:  Test Files  1 passed (1)
+@repo/agent-core:test:       Tests  3 passed (3)
+@repo/agent-core:test:    Start at  01:02:54
+@repo/agent-core:test:    Duration  983ms (transform 53ms, setup 0ms, collect 59ms, tests 5ms, environment 0ms, prepare 277ms)
+@repo/agent-core:test: 
+@repo/ai:typecheck: cache miss, executing ea728adcbfdd03cd
+@repo/auth:test: 
+@repo/auth:test:  RUN  v2.0.0 /private/tmp/f14-research-type/packages/auth
+@repo/auth:test: 
+@repo/ai:build: 
+@repo/ai:build: > @repo/ai@0.1.0 build /private/tmp/f14-research-type/packages/ai
+@repo/ai:build: > tsc --noEmit
+@repo/ai:build: 
+@repo/ai:test: 
+@repo/ai:test: > @repo/ai@0.1.0 test /private/tmp/f14-research-type/packages/ai
+@repo/ai:test: > vitest run
+@repo/ai:test: 
+@repo/collab:lint: cache miss, executing f52e9693da7d50ec
+@repo/data:typecheck: 
+@repo/data:typecheck: > @repo/data@0.1.0 typecheck /private/tmp/f14-research-type/packages/data
+@repo/data:typecheck: > tsc --noEmit
+@repo/data:typecheck: 
+@repo/ai:typecheck: 
+@repo/ai:typecheck: > @repo/ai@0.1.0 typecheck /private/tmp/f14-research-type/packages/ai
+@repo/ai:typecheck: > tsc --noEmit
+@repo/ai:typecheck: 
+@repo/collab:lint: 
+@repo/collab:lint: > @repo/collab@0.1.0 lint /private/tmp/f14-research-type/packages/collab
+@repo/collab:lint: > echo 'lint: ok'
+@repo/collab:lint: 
+@repo/collab:lint: lint: ok
+@repo/agent-core:build: cache miss, executing f299d73485c191b0
+@repo/tools:test: cache miss, executing 28b231c10843559e
+@repo/ai:test: 
+@repo/ai:test:  RUN  v2.0.0 /private/tmp/f14-research-type/packages/ai
+@repo/ai:test: 
+@repo/memory:lint: cache miss, executing ec705ebe35d766a2
+@repo/storage:test: cache miss, executing aea9bae6cf1fd4c4
+@repo/memory:build: cache miss, executing 29bc958ad261755d
+@repo/auth:test:  ✓ src/index.test.ts  (15 tests) 2633ms
+@repo/auth:test: 
+@repo/auth:test:  Test Files  1 passed (1)
+@repo/auth:test:       Tests  15 passed (15)
+@repo/auth:test:    Start at  01:02:55
+@repo/auth:test:    Duration  4.44s (transform 101ms, setup 0ms, collect 87ms, tests 2.63s, environment 0ms, prepare 341ms)
+@repo/auth:test: 
+@repo/memory:typecheck: cache miss, executing 487e9da2af28e2c4
+@repo/ai:test:  ✓ src/sttProvider.test.ts  (6 tests) 11ms
+@repo/ai:test:  ✓ src/studioGenerator.test.ts  (4 tests) 5ms
+@repo/agent-core:build: 
+@repo/agent-core:build: > @repo/agent-core@0.1.0 build /private/tmp/f14-research-type/packages/agent-core
+@repo/agent-core:build: > tsc --noEmit
+@repo/agent-core:build: 
+@repo/ai:test:  ✓ src/index.test.ts  (12 tests) 9ms
+@repo/memory:lint: 
+@repo/memory:lint: > @repo/memory@0.1.0 lint /private/tmp/f14-research-type/packages/memory
+@repo/memory:lint: > echo 'lint: ok'
+@repo/memory:lint: 
+@repo/tools:test: 
+@repo/tools:test: > @repo/tools@0.1.0 test /private/tmp/f14-research-type/packages/tools
+@repo/tools:test: > vitest run
+@repo/tools:test: 
+@repo/ai:test:  ✓ src/anthropicProvider.test.ts  (13 tests) 51ms
+@repo/ai:test: 
+@repo/ai:test:  Test Files  4 passed (4)
+@repo/ai:test:       Tests  35 passed (35)
+@repo/ai:test:    Start at  01:02:58
+@repo/ai:test:    Duration  2.25s (transform 1.21s, setup 2ms, collect 2.52s, tests 76ms, environment 26ms, prepare 2.03s)
+@repo/ai:test: 
+@repo/memory:lint: lint: ok
+@repo/coord-service:typecheck: cache miss, executing 2dfeda7b3407aac9
+@repo/collab:test: cache miss, executing a0d963d56b59b662
+@repo/storage:test: 
+@repo/storage:test: > @repo/storage@0.1.0 test /private/tmp/f14-research-type/packages/storage
+@repo/storage:test: > vitest run
+@repo/storage:test: 
+@repo/memory:build: 
+@repo/memory:build: > @repo/memory@0.1.0 build /private/tmp/f14-research-type/packages/memory
+@repo/memory:build: > tsc --noEmit
+@repo/memory:build: 
+@repo/memory:typecheck: 
+@repo/memory:typecheck: > @repo/memory@0.1.0 typecheck /private/tmp/f14-research-type/packages/memory
+@repo/memory:typecheck: > tsc --noEmit
+@repo/memory:typecheck: 
+@repo/collab:test: 
+@repo/collab:test: > @repo/collab@0.1.0 test /private/tmp/f14-research-type/packages/collab
+@repo/collab:test: > vitest run
+@repo/collab:test: 
+@repo/coord-service:typecheck: 
+@repo/coord-service:typecheck: > @repo/coord-service@0.1.0 typecheck /private/tmp/f14-research-type/packages/coord-service
+@repo/coord-service:typecheck: > tsc --noEmit
+@repo/coord-service:typecheck: 
+@repo/tools:test: 
+@repo/tools:test:  RUN  v2.0.0 /private/tmp/f14-research-type/packages/tools
+@repo/tools:test: 
+@repo/tools:build: cache miss, executing 147f397a0a2f655d
+@repo/storage:test: 
+@repo/storage:test:  RUN  v2.0.0 /private/tmp/f14-research-type/packages/storage
+@repo/storage:test: 
+@repo/tools:build: 
+@repo/tools:build: > @repo/tools@0.1.0 build /private/tmp/f14-research-type/packages/tools
+@repo/tools:build: > tsc --noEmit
+@repo/tools:build: 
+@repo/tools:test:  ✓ src/index.test.ts  (12 tests) 393ms
+@repo/tools:test: 
+@repo/tools:test:  Test Files  1 passed (1)
+@repo/tools:test:       Tests  12 passed (12)
+@repo/tools:test:    Start at  01:03:02
+@repo/tools:test:    Duration  3.66s (transform 534ms, setup 8ms, collect 1.14s, tests 393ms, environment 0ms, prepare 1.02s)
+@repo/tools:test: 
+@repo/collab:test: 
+@repo/collab:test:  RUN  v2.0.0 /private/tmp/f14-research-type/packages/collab
+@repo/collab:test: 
+@repo/canvas:test: cache miss, executing bf3a73b3e6c4af0e
+@repo/coord-service:test: cache miss, executing c31d31fe3a3df1b1
+@repo/orchestrator:lint: cache miss, executing c816b3ccb8832314
+@repo/coord-service:lint: cache miss, executing 70f098a56cdbbbf6
+@repo/storage:test:  ✓ src/index.test.ts  (19 tests) 7ms
+@repo/storage:test: 
+@repo/storage:test:  Test Files  1 passed (1)
+@repo/storage:test:       Tests  19 passed (19)
+@repo/storage:test:    Start at  01:03:02
+@repo/storage:test:    Duration  4.11s (transform 715ms, setup 0ms, collect 1.49s, tests 7ms, environment 0ms, prepare 1.11s)
+@repo/storage:test: 
+@repo/workflow-worker:test: cache miss, executing ab7cea6769080a6e
+@repo/collab:test:  ✓ src/index.test.ts  (14 tests) 124ms
+@repo/collab:test: 
+@repo/collab:test:  Test Files  1 passed (1)
+@repo/collab:test:       Tests  14 passed (14)
+@repo/collab:test:    Start at  01:03:05
+@repo/collab:test:    Duration  1.71s (transform 109ms, setup 0ms, collect 333ms, tests 124ms, environment 0ms, prepare 339ms)
+@repo/collab:test: 
+@repo/web:test: cache miss, executing 11e912d0345de2f0
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: > @repo/orchestrator@0.1.0 lint /private/tmp/f14-research-type/apps/orchestrator
+@repo/orchestrator:lint: > echo 'lint: ok'
+@repo/orchestrator:lint: 
+@repo/canvas:test: 
+@repo/canvas:test: > @repo/canvas@0.1.0 test /private/tmp/f14-research-type/packages/canvas
+@repo/canvas:test: > vitest run
+@repo/canvas:test: 
+@repo/orchestrator:lint: lint: ok
+@repo/web:typecheck: cache miss, executing e9885d20e6849656
+@repo/coord-service:test: 
+@repo/coord-service:test: > @repo/coord-service@0.1.0 test /private/tmp/f14-research-type/packages/coord-service
+@repo/coord-service:test: > vitest run
+@repo/coord-service:test: 
+@repo/coord-service:lint: 
+@repo/coord-service:lint: > @repo/coord-service@0.1.0 lint /private/tmp/f14-research-type/packages/coord-service
+@repo/coord-service:lint: > echo 'lint: ok'
+@repo/coord-service:lint: 
+@repo/coord-service:lint: lint: ok
+@repo/workflow-worker:typecheck: cache miss, executing ae3c698e534fc852
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test: > @repo/workflow-worker@0.1.0 test /private/tmp/f14-research-type/apps/workflow-worker
+@repo/workflow-worker:test: > vitest run
+@repo/workflow-worker:test: 
+@repo/web:test: 
+@repo/web:test: > @repo/web@0.1.0 test /private/tmp/f14-research-type/apps/web
+@repo/web:test: > vitest run
+@repo/web:test: 
+@repo/web:typecheck: 
+@repo/web:typecheck: > @repo/web@0.1.0 typecheck /private/tmp/f14-research-type/apps/web
+@repo/web:typecheck: > tsc --noEmit
+@repo/web:typecheck: 
+@repo/canvas:test: 
+@repo/canvas:test:  RUN  v2.0.0 /private/tmp/f14-research-type/packages/canvas
+@repo/canvas:test: 
+@repo/orchestrator:typecheck: cache miss, executing 44981db9519b4f8a
+@repo/orchestrator:test: cache miss, executing 27876f4e449bc08b
+@repo/workflow-worker:typecheck: 
+@repo/workflow-worker:typecheck: > @repo/workflow-worker@0.1.0 typecheck /private/tmp/f14-research-type/apps/workflow-worker
+@repo/workflow-worker:typecheck: > tsc --noEmit
+@repo/workflow-worker:typecheck: 
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  RUN  v2.0.0 /private/tmp/f14-research-type/apps/workflow-worker
+@repo/workflow-worker:test: 
+@repo/canvas:test:  ✓ src/index.test.ts  (25 tests) 41ms
+@repo/web:test: [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+@repo/canvas:test: 
+@repo/canvas:test:  Test Files  1 passed (1)
+@repo/canvas:test:       Tests  25 passed (25)
+@repo/canvas:test:    Start at  01:03:10
+@repo/canvas:test:    Duration  1.53s (transform 171ms, setup 0ms, collect 187ms, tests 41ms, environment 0ms, prepare 442ms)
+@repo/canvas:test: 
+@repo/web:test: 
+@repo/web:test:  RUN  v2.0.0 /private/tmp/f14-research-type/apps/web
+@repo/web:test: 
+@repo/workflow-worker:test:  ✓ src/kbFileJob.test.ts  (2 tests) 39ms
+@repo/workflow-worker:test:  ✓ src/job.test.ts  (3 tests) 2ms
+@repo/orchestrator:test: 
+@repo/orchestrator:test: > @repo/orchestrator@0.1.0 test /private/tmp/f14-research-type/apps/orchestrator
+@repo/orchestrator:test: > vitest run
+@repo/orchestrator:test: 
+@repo/orchestrator:typecheck: 
+@repo/orchestrator:typecheck: > @repo/orchestrator@0.1.0 typecheck /private/tmp/f14-research-type/apps/orchestrator
+@repo/orchestrator:typecheck: > tsc --noEmit
+@repo/orchestrator:typecheck: 
+@repo/workflow-worker:test:  ✓ src/presentationRevisionJob.test.ts  (4 tests) 50ms
+@repo/workflow-worker:test:  ✓ src/studioJob.test.ts  (2 tests) 45ms
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  Test Files  4 passed (4)
+@repo/workflow-worker:test:       Tests  11 passed (11)
+@repo/workflow-worker:test:    Start at  01:03:11
+@repo/workflow-worker:test:    Duration  3.69s (transform 1.51s, setup 3ms, collect 4.21s, tests 136ms, environment 2ms, prepare 1.56s)
+@repo/workflow-worker:test: 
+@repo/web:test:  ✓ lib/feedback.test.ts  (2 tests) 10ms
+@repo/web:test:  ✓ lib/canvas-snap.test.ts  (14 tests) 16ms
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  RUN  v2.0.0 /private/tmp/f14-research-type/apps/orchestrator
+@repo/orchestrator:test: 
+@repo/web:test:  ✓ lib/collab-bus.test.ts  (4 tests) 4ms
+@repo/web:test:  ✓ app/api/admin/coordination/status/route.test.ts  (6 tests) 21ms
+@repo/web:test: stderr | app/api/admin/coordination/status/route.test.ts > GET /api/admin/coordination/status > 502 when upstream fetch throws (network failure / timeout)
+@repo/web:test: [admin/coordination/status] coord-service fetch failed Error: fetch failed
+@repo/web:test:     at /private/tmp/f14-research-type/apps/web/app/api/admin/coordination/status/route.test.ts:75:15
+@repo/web:test:     at mockCall (file:///private/tmp/f14-research-type/node_modules/.pnpm/@vitest+spy@2.0.0/node_modules/@vitest/spy/dist/index.js:61:17)
+@repo/web:test:     at spy (file:///private/tmp/f14-research-type/node_modules/.pnpm/tinyspy@3.0.2/node_modules/tinyspy/dist/index.js:45:80)
+@repo/web:test:     at Module.GET (/private/tmp/f14-research-type/apps/web/app/api/admin/coordination/status/route.ts:31:23)
+@repo/web:test:     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+@repo/web:test:     at /private/tmp/f14-research-type/apps/web/app/api/admin/coordination/status/route.test.ts:78:17
+@repo/web:test:     at runTest (file:///private/tmp/f14-research-type/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:939:11)
+@repo/web:test:     at runSuite (file:///private/tmp/f14-research-type/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runSuite (file:///private/tmp/f14-research-type/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runFiles (file:///private/tmp/f14-research-type/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1152:5)
+@repo/web:test: 
+@repo/web:test:  ✓ lib/utils.test.ts  (14 tests) 18ms
+@repo/web:test:  ✓ app/api/ava/threads/[id]/share/route.test.ts  (5 tests) 22ms
+@repo/coord-service:test: 
+@repo/coord-service:test:  RUN  v2.0.0 /private/tmp/f14-research-type/packages/coord-service
+@repo/coord-service:test: 
+@repo/web:test:  ✓ app/api/ai-store/items/[id]/route.test.ts  (2 tests) 25ms
+@repo/web:test:  ✓ app/api/ava/threads/[id]/route.test.ts  (4 tests) 18ms
+@repo/web:test:  ✓ app/api/boards/[id]/ai-chat/route.test.ts  (3 tests) 12ms
+@repo/web:test:  ✓ lib/viewport.test.ts  (4 tests) 15ms
+@repo/web:test:  ✓ lib/agents.test.ts  (5 tests) 16ms
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_tty_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_fs_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_http_modules` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_perf_hooks_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/web:test:  ✓ lib/health.test.ts  (1 test) 5ms
+@repo/web:test: 
+@repo/web:test:  Test Files  12 passed (12)
+@repo/web:test:       Tests  64 passed (64)
+@repo/web:test:    Start at  01:03:12
+@repo/web:test:    Duration  7.30s (transform 2.73s, setup 3ms, collect 7.48s, tests 182ms, environment 8ms, prepare 4.89s)
+@repo/web:test: 
+@repo/orchestrator:test:  ✓ src/orchestrator.test.ts  (3 tests) 42ms
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  Test Files  1 passed (1)
+@repo/orchestrator:test:       Tests  3 passed (3)
+@repo/orchestrator:test:    Start at  01:03:16
+@repo/orchestrator:test:    Duration  2.91s (transform 889ms, setup 0ms, collect 1.05s, tests 42ms, environment 0ms, prepare 780ms)
+@repo/orchestrator:test: 
+@repo/coord-service:test: [vpw:info] Starting isolated runtimes for vitest.config.ts...
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's suite "POST /events (narrative events — ADR-009 GitHub 协调面退役后的站会/andon 信道)"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x50\x4f\x53\x54\x20\x2f\x65\x76\x65\x6e\x74\x73\x20\x28\x6e\x61\x72\x72\x61\x74\x69\x76\x65\x20\x65\x76\x65\x6e\x74\x73\x20\xe2\x80\x94\x20\x41\x44\x52\x2d\x30\x30\x39\x20\x47\x69\x74\x48\x75\x62\x20\xe5\x8d\x8f\xe8\xb0\x83\xe9\x9d\xa2\xe9\x80\x80\xe5\xbd\xb9\xe5\x90\x8e\xe7\x9a\x84\xe7\xab\x99\xe4\xbc\x9a\x2f\x61\x6e\x64\x6f\x6e\x20\xe4\xbf\xa1\xe9\x81\x93\x29\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "no bearer token → 401"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x6e\x6f\x20\x62\x65\x61\x72\x65\x72\x20\x74\x6f\x6b\x65\x6e\x20\xe2\x86\x92\x20\x34\x30\x31\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "no bearer token → 401"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x6e\x6f\x20\x62\x65\x61\x72\x65\x72\x20\x74\x6f\x6b\x65\x6e\x20\xe2\x86\x92\x20\x34\x30\x31\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "cycle-plan 写入成功并可在 /status 的 recent_events 里看到"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xe5\xb9\xb6\xe5\x8f\xaf\xe5\x9c\xa8\x20\x2f\x73\x74\x61\x74\x75\x73\x20\xe7\x9a\x84\x20\x72\x65\x63\x65\x6e\x74\x5f\x65\x76\x65\x6e\x74\x73\x20\xe9\x87\x8c\xe7\x9c\x8b\xe5\x88\xb0\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "cycle-plan 写入成功并可在 /status 的 recent_events 里看到"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xe5\xb9\xb6\xe5\x8f\xaf\xe5\x9c\xa8\x20\x2f\x73\x74\x61\x74\x75\x73\x20\xe7\x9a\x84\x20\x72\x65\x63\x65\x6e\x74\x5f\x65\x76\x65\x6e\x74\x73\x20\xe9\x87\x8c\xe7\x9c\x8b\xe5\x88\xb0\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "andon stop 信号写入成功，payload 原样保留"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x61\x6e\x64\x6f\x6e\x20\x73\x74\x6f\x70\x20\xe4\xbf\xa1\xe5\x8f\xb7\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x8c\x70\x61\x79\x6c\x6f\x61\x64\x20\xe5\x8e\x9f\xe6\xa0\xb7\xe4\xbf\x9d\xe7\x95\x99\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "andon stop 信号写入成功，payload 原样保留"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x61\x6e\x64\x6f\x6e\x20\x73\x74\x6f\x70\x20\xe4\xbf\xa1\xe5\x8f\xb7\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x8c\x70\x61\x79\x6c\x6f\x61\x64\x20\xe5\x8e\x9f\xe6\xa0\xb7\xe4\xbf\x9d\xe7\x95\x99\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/sweeper.test.ts  (2 tests) 227ms
+@repo/coord-service:test:  ✓ test/unit/time.test.ts  (3 tests) 334ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "claim 生命周期类型（如 claim）不接受手写 → 400，防止伪造审计历史"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x6c\x61\x69\x6d\x20\xe7\x94\x9f\xe5\x91\xbd\xe5\x91\xa8\xe6\x9c\x9f\xe7\xb1\xbb\xe5\x9e\x8b\xef\xbc\x88\xe5\xa6\x82\x20\x63\x6c\x61\x69\x6d\xef\xbc\x89\xe4\xb8\x8d\xe6\x8e\xa5\xe5\x8f\x97\xe6\x89\x8b\xe5\x86\x99\x20\xe2\x86\x92\x20\x34\x30\x30\xef\xbc\x8c\xe9\x98\xb2\xe6\xad\xa2\xe4\xbc\xaa\xe9\x80\xa0\xe5\xae\xa1\xe8\xae\xa1\xe5\x8e\x86\xe5\x8f\xb2\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/status.test.ts  (2 tests) 340ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "claim 生命周期类型（如 claim）不接受手写 → 400，防止伪造审计历史"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x6c\x61\x69\x6d\x20\xe7\x94\x9f\xe5\x91\xbd\xe5\x91\xa8\xe6\x9c\x9f\xe7\xb1\xbb\xe5\x9e\x8b\xef\xbc\x88\xe5\xa6\x82\x20\x63\x6c\x61\x69\x6d\xef\xbc\x89\xe4\xb8\x8d\xe6\x8e\xa5\xe5\x8f\x97\xe6\x89\x8b\xe5\x86\x99\x20\xe2\x86\x92\x20\x34\x30\x30\xef\xbc\x8c\xe9\x98\xb2\xe6\xad\xa2\xe4\xbc\xaa\xe9\x80\xa0\xe5\xae\xa1\xe8\xae\xa1\xe5\x8e\x86\xe5\x8f\xb2\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "缺 resource_id → 400"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe7\xbc\xba\x20\x72\x65\x73\x6f\x75\x72\x63\x65\x5f\x69\x64\x20\xe2\x86\x92\x20\x34\x30\x30\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "缺 resource_id → 400"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe7\xbc\xba\x20\x72\x65\x73\x6f\x75\x72\x63\x65\x5f\x69\x64\x20\xe2\x86\x92\x20\x34\x30\x30\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/claims.auth.test.ts  (4 tests) 417ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 andon → 403（停线信号是 coordinator 层专属，防伪造拉停 fleet）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x61\x6e\x64\x6f\x6e\x20\xe2\x86\x92\x20\x34\x30\x33\xef\xbc\x88\xe5\x81\x9c\xe7\xba\xbf\xe4\xbf\xa1\xe5\x8f\xb7\xe6\x98\xaf\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe5\xb1\x82\xe4\xb8\x93\xe5\xb1\x9e\xef\xbc\x8c\xe9\x98\xb2\xe4\xbc\xaa\xe9\x80\xa0\xe6\x8b\x89\xe5\x81\x9c\x20\x66\x6c\x65\x65\x74\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/claims.lifecycle.test.ts  (4 tests) 384ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 andon → 403（停线信号是 coordinator 层专属，防伪造拉停 fleet）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x61\x6e\x64\x6f\x6e\x20\xe2\x86\x92\x20\x34\x30\x33\xef\xbc\x88\xe5\x81\x9c\xe7\xba\xbf\xe4\xbf\xa1\xe5\x8f\xb7\xe6\x98\xaf\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe5\xb1\x82\xe4\xb8\x93\xe5\xb1\x9e\xef\xbc\x8c\xe9\x98\xb2\xe4\xbc\xaa\xe9\x80\xa0\xe6\x8b\x89\xe5\x81\x9c\x20\x66\x6c\x65\x65\x74\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 cycle-plan → 201（叙述站会不限 coordinator）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe2\x86\x92\x20\x32\x30\x31\xef\xbc\x88\xe5\x8f\x99\xe8\xbf\xb0\xe7\xab\x99\xe4\xbc\x9a\xe4\xb8\x8d\xe9\x99\x90\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 cycle-plan → 201（叙述站会不限 coordinator）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe2\x86\x92\x20\x32\x30\x31\xef\xbc\x88\xe5\x8f\x99\xe8\xbf\xb0\xe7\xab\x99\xe4\xbc\x9a\xe4\xb8\x8d\xe9\x99\x90\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/unit/auth.test.ts  (7 tests) 370ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's suite "POST /events (narrative events — ADR-009 GitHub 协调面退役后的站会/andon 信道)"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x50\x4f\x53\x54\x20\x2f\x65\x76\x65\x6e\x74\x73\x20\x28\x6e\x61\x72\x72\x61\x74\x69\x76\x65\x20\x65\x76\x65\x6e\x74\x73\x20\xe2\x80\x94\x20\x41\x44\x52\x2d\x30\x30\x39\x20\x47\x69\x74\x48\x75\x62\x20\xe5\x8d\x8f\xe8\xb0\x83\xe9\x9d\xa2\xe9\x80\x80\xe5\xbd\xb9\xe5\x90\x8e\xe7\x9a\x84\xe7\xab\x99\xe4\xbc\x9a\x2f\x61\x6e\x64\x6f\x6e\x20\xe4\xbf\xa1\xe9\x81\x93\x29\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/events.test.ts  (7 tests) 447ms
+@repo/coord-service:test:  ✓ test/unit/projector.test.ts  (8 tests) 443ms
+@repo/coord-service:test:  ✓ test/integration/claims.concurrency.test.ts  (5 tests) 522ms
+@repo/coord-service:test: 
+@repo/coord-service:test:  Test Files  9 passed (9)
+@repo/coord-service:test:       Tests  42 passed (42)
+@repo/coord-service:test:    Start at  01:03:17
+@repo/coord-service:test:    Duration  10.59s (transform 1.17s, setup 5.05s, collect 2.04s, tests 3.48s, environment 2ms, prepare 6.94s)
+@repo/coord-service:test: 
+@repo/coord-service:test: [vpw:debug] Shutting down runtimes...
+@repo/coord-service:test: [vpw:debug] Disposing remote proxy sessions...
+
+ Tasks:    52 successful, 52 total
+Cached:    0 cached, 52 total
+  Time:    46.332s 
+
+turbo 2.5.0
+
+ WARNING  no output files found for task @repo/agent-core#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/ai#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/auth#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/canvas#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/collab#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/data#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/memory#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/queue#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/storage#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/tools#build. Please check your `outputs` key in `turbo.json`
