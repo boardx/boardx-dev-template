@@ -42,10 +42,13 @@ confirmed_at:            # 确认时间（ISO，如 2026-07-01T10:00:00Z）
 - **多标签（非单值 category）**：人类 2026-07-10 拍板 → 后端 F02 需 `boards.tags text[]` migration。
 - data-testid 锚点规划见 `requirements/00-overview.md` 末节。
 
-## 截图证据
-> 旧 mock 原型截图已移除（那批是 from-scratch 布局，与 main 真实页面不一致）。
-> 真实实现接进 boards 页后，会在真实页面重拍并补回此处，再交人类确认。
-- （待补：真实 boards 页扩展后的 grid/menu/tags/filter 截图）
+## 截图证据（真实 `/rooms/[id]/boards` 页，非 mock）
+- `ui-preview/real-01-grid-tags.png` — 卡片网格，每张显示 tag chips + 顶部 tag 过滤条
+- `ui-preview/real-02-card-menu.png` — 卡片三点"更多操作"菜单（重命名/编辑标签/复制/移动到房间/删除；无封面时"移除封面"按规则隐藏）
+- `ui-preview/real-03-tag-filter.png` — 点 Planning 过滤，列表收窄到含该标签的白板 + 清除
+- `ui-preview/real-04-create-tags.png` — 新建 Dialog 带多标签输入（Urgent chip）
+
+> 本轮已在真实页面端到端验证（playwright 全绿）。真实封面**上传**留作紧跟的后续（后端 `PATCH cover` 就绪，需接 presigned 上传）。
 
 ## 人类确认意见
 <!-- 确认人填写：通过 / 需修改（列出修改点）。改完再确认。 -->

@@ -15,9 +15,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   if (!(await canViewRoom(roomId, user.id))) {
     return NextResponse.json({ error: "无权限" }, { status: 403 });
   }
-  const q = new URL(req.url).searchParams.get("q") ?? undefined;
+  const sp = new URL(req.url).searchParams;
+  const q = sp.get("q") ?? undefined;
+  const tagsParam = sp.get("tags");
+  const tags = tagsParam ? tagsParam.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
   const [boards, favoriteIds] = await Promise.all([
-    listBoardsInRoom(roomId, q),
+    listBoardsInRoom(roomId, q, tags),
     listFavoriteBoardIds(user.id),
   ]);
   return NextResponse.json({ boards, favoriteIds });
@@ -34,9 +37,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (!(await canViewRoom(roomId, user.id))) {
       return NextResponse.json({ error: "无权限" }, { status: 403 });
     }
-    const body = (await req.json().catch(() => ({}))) as { name?: unknown };
+    const body = (await req.json().catch(() => ({}))) as { name?: unknown; tags?: unknown };
     const name = typeof body.name === "string" ? body.name : undefined;
-    const board = await createBoard(roomId, user.id, name, room.team_id);
+    const tags = Array.isArray(body.tags)
+      ? body.tags.filter((t): t is string => typeof t === "string").map((s) => s.trim()).filter(Boolean)
+      : [];
+    const board = await createBoard(roomId, user.id, name, room.team_id, undefined, tags);
     return NextResponse.json({ board }, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
