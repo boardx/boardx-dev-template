@@ -22,7 +22,8 @@ confirmed_at:            # 确认时间（ISO，如 2026-07-01T10:00:00Z）
 - [ ] 实时协调（活跃租约 Active Claims / 协调事件 Recent Events，语义状态点）— 同上
 - [ ] 讨论流（👤/🤖/待拍板过滤 / 分级降噪巡检折叠 / 待拍板问题加粗+快捷回应）— 同上
 - [ ] 加入开发（5 步 stepper 含耗时与 SLA / 第 5 步现实版人工发放 / 学习页列表）— 同上
-- [ ] 性能（per-agent 归属树表 / C-cycle 周期报告表）— 同上
+- [ ] 性能（按 开发者→agents 配对分组：👤 人类分组头 + 🤖 agent 行 + sub-agent 缩进 / C-cycle 周期报告表）— 同上
+- [ ] 开发者身份呈现（页头 👤 身份 chip：姓名/@github/agent 数；"谁在干活"行标注归属开发者）— 同上（v3 新增，响应人类 2026-07-09 补充需求）
 
 > 实机确认方式：PR #497 分支起 dev server 访问 `/portal-prototype`（评审期间跑在
 > localhost:3300），或看会话内已交付的实机截图（v1 四屏 + v2 首屏与 onboarding 第 5 步）。

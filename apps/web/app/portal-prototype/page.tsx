@@ -34,10 +34,13 @@ const MATRIX: Record<string, { p: number; i: number; b: number; features: string
   p6: { p: 19, i: 1, b: 1, features: ["F21 多选批量操作 · passing", "F12 文本组件 · in_progress"] },
 };
 const FLOW_TREND = [2.4, 2.1, 1.8, 1.9, 1.4, 0.9, 1.1];
+// 开发者（人类）是一等实体：每个 agent 都归属一个开发者（owner），
+// owner=人类归属，区别于 sub-agent 的 parent（agent 派生树）——两条关系并存。
+const CURRENT_DEV = { name: "Usam Shen", github: "usam-shen", initial: "U", agentCount: 3 };
 const ACTIVE_AGENTS = [
-  { id: "coord-main", doing: "清合并队列 + p22 分派", hbMin: 0.5 },
-  { id: "coord-architecture", doing: "Portal 原型迭代（PR 497）", hbMin: 2 },
-  { id: "coord-ava", doing: "p18 结项收尾", hbMin: 41 },
+  { id: "coord-main", owner: "usam-shen", doing: "清合并队列 + p22 分派", hbMin: 0.5 },
+  { id: "coord-architecture", owner: "usam-shen", doing: "Portal 原型迭代（PR 497）", hbMin: 2 },
+  { id: "coord-ava", owner: "alice-dev", doing: "p18 结项收尾", hbMin: 41 },
 ];
 const PR_QUEUE = [
   { n: 478, title: "lock/module-lock 续约语义", state: "可合并", age: "9h", stale: true },
@@ -54,11 +57,23 @@ const DISCUSSIONS: Talk[] = [
   { who: "coord-ava", human: false, at: "10:12", src: "#323", tier: "patrol", text: "AVA 域（p18）13/13 passing，域结项。" },
   { who: "coord-architecture", human: false, at: "10:32", src: "#323", tier: "patrol", text: "巡检：双租约新鲜，无新风险。" },
 ];
-const AGENT_PERF = [
-  { id: "coord-ava", kind: "module", flow: "0.8h", commit: "6/6", merged: 13, lease: "role:coord-ava" },
-  { id: "coord-board", kind: "module", flow: "1.4h", commit: "4/5", merged: 8, lease: "—" },
-  { id: "coord-board.designer-1", kind: "sub-agent", flow: "—", commit: "2/2", merged: 2, lease: "issue:469" },
-  { id: "wrk-room-1", kind: "worker", flow: "1.9h", commit: "3/4", merged: 4, lease: "issue:455" },
+// 性能按 开发者 → 其 agents 分组：开发者是人类（👤 分组头，不是 agent 行），
+// agents（🤖）挂在其下；sub-agent 再按 parent 缩进。
+const DEV_PERF = [
+  {
+    dev: { name: "Usam Shen", github: "usam-shen", isMe: true },
+    agents: [
+      { id: "coord-board", kind: "module", flow: "1.4h", commit: "4/5", merged: 8, lease: "—" },
+      { id: "coord-board.designer-1", kind: "sub-agent", flow: "—", commit: "2/2", merged: 2, lease: "issue:469" },
+      { id: "wrk-room-1", kind: "worker", flow: "1.9h", commit: "3/4", merged: 4, lease: "issue:455" },
+    ],
+  },
+  {
+    dev: { name: "Alice Chen", github: "alice-dev", isMe: false },
+    agents: [
+      { id: "coord-ava", kind: "module", flow: "0.8h", commit: "6/6", merged: 13, lease: "role:coord-ava" },
+    ],
+  },
 ];
 const CYCLES = [
   { id: "2026-07-09T09Z", plans: 3, done: 5, miss: 1, flow: "0.9h", sla: 0 },
@@ -171,7 +186,8 @@ function PulseTab({ sim }: { sim: SimState }) {
             {ACTIVE_AGENTS.map((a) => (
               <li key={a.id} title={`最后心跳 ${a.hbMin} 分钟前`} className="flex items-center gap-2 rounded-8 px-2 py-1.5 transition-colors duration-200 hover:bg-muted">
                 {hbDot(a.hbMin)}
-                <span className="text-13 font-medium text-foreground">{a.id}</span>
+                <span className="text-13 font-medium text-foreground">🤖 {a.id}</span>
+                <Badge variant={a.owner === CURRENT_DEV.github ? "secondary" : "muted"} className="shrink-0 text-11">👤 {a.owner === CURRENT_DEV.github ? "我" : a.owner}</Badge>
                 <span className="min-w-0 flex-1 truncate text-right text-13 text-muted-foreground">{a.doing}</span>
               </li>
             ))}
@@ -395,12 +411,12 @@ function JoinTab({ sim }: { sim: SimState }) {
 function PerfTab({ sim }: { sim: SimState }) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <Card sim={sim} wide title="每个 agent 的表现（含子 agent，按归属树）">
+      <Card sim={sim} wide title="表现：按 开发者 → 其 agents 分组（开发者是人，agent 是队伍）">
         <div className="overflow-x-auto">
           <table className="w-full text-13">
             <thead>
               <tr className="text-left text-11 uppercase tracking-wide text-muted-foreground">
-                <th className="pb-2 font-medium">Agent</th>
+                <th className="pb-2 font-medium">开发者 / Agent</th>
                 <th className="pb-2 font-medium">类型</th>
                 <th className="pb-2 font-medium">流动时长</th>
                 <th className="pb-2 font-medium">周期承诺达成</th>
@@ -408,16 +424,27 @@ function PerfTab({ sim }: { sim: SimState }) {
                 <th className="pb-2 font-medium">当前租约</th>
               </tr>
             </thead>
-            <tbody>
-              {AGENT_PERF.map((a) => (
-                <tr key={a.id} className="border-t border-border transition-colors duration-200 hover:bg-muted">
-                  <td className={`py-2 text-foreground ${a.kind === "sub-agent" ? "pl-5" : ""}`}>{a.kind === "sub-agent" ? "└ " : ""}{a.id}</td>
-                  <td className="py-2"><Badge variant="outline" className="text-11">{a.kind}</Badge></td>
-                  <td className="py-2 tabular-nums text-foreground">{a.flow}</td>
-                  <td className="py-2 tabular-nums text-foreground">{a.commit}</td>
-                  <td className="py-2 tabular-nums text-foreground">{a.merged}</td>
-                  <td className="py-2 text-11 text-muted-foreground">{a.lease}</td>
-                </tr>
+            <tbody data-testid="perf-dev-groups">
+              {DEV_PERF.map((g) => (
+                <>
+                  <tr key={g.dev.github} className="border-t border-border bg-surface-2">
+                    <td className="py-2 font-medium text-foreground" colSpan={2}>
+                      👤 {g.dev.name} <span className="text-11 text-muted-foreground">@{g.dev.github}</span>
+                      {g.dev.isMe && <Badge variant="secondary" className="ml-2 text-11">我</Badge>}
+                    </td>
+                    <td className="py-2 text-11 text-muted-foreground" colSpan={4}>带来 {g.agents.length} 个 agent · 合计合并 {g.agents.reduce((n, a) => n + a.merged, 0)}</td>
+                  </tr>
+                  {g.agents.map((a) => (
+                    <tr key={a.id} className="border-t border-border transition-colors duration-200 hover:bg-muted">
+                      <td className={`py-2 text-foreground ${a.kind === "sub-agent" ? "pl-9" : "pl-4"}`}>{a.kind === "sub-agent" ? "└ " : ""}🤖 {a.id}</td>
+                      <td className="py-2"><Badge variant="outline" className="text-11">{a.kind}</Badge></td>
+                      <td className="py-2 tabular-nums text-foreground">{a.flow}</td>
+                      <td className="py-2 tabular-nums text-foreground">{a.commit}</td>
+                      <td className="py-2 tabular-nums text-foreground">{a.merged}</td>
+                      <td className="py-2 text-11 text-muted-foreground">{a.lease}</td>
+                    </tr>
+                  ))}
+                </>
               ))}
             </tbody>
           </table>
@@ -477,6 +504,13 @@ export default function PortalPrototypePage() {
           <p className="mt-1 text-13 text-muted-foreground">BoardX agentic 开发的统一人类入口 · GitHub 是底座，coord-service 是 AI 增强</p>
         </div>
         <div className="flex items-center gap-2">
+          <div data-testid="dev-identity-chip" className="flex items-center gap-2 rounded-12 border border-border bg-surface-1 px-3 py-1.5">
+            <span aria-hidden className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-13 font-semibold text-primary-foreground">{CURRENT_DEV.initial}</span>
+            <span className="leading-tight">
+              <span className="block text-13 font-medium text-foreground">👤 {CURRENT_DEV.name}</span>
+              <span className="block text-11 text-muted-foreground">@{CURRENT_DEV.github} · 带来 {CURRENT_DEV.agentCount} 个 agent</span>
+            </span>
+          </div>
           <span className="text-11 text-muted-foreground">三态演示：</span>
           {(["normal", "loading", "down"] as const).map((s) => (
             <Button key={s} size="sm" variant={sim === s ? "default" : "outline"} className="h-7 px-2 text-11" onClick={() => setSim(s)}>

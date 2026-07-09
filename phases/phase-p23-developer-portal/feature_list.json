@@ -7,13 +7,14 @@
       "priority": 1,
       "area": "portal",
       "title": "门户骨架：五 tab 导航 + 待人类拍板全局通知 + 访客分流带",
-      "user_visible_behavior": "打开 /portal 看到五个板块 tab（窄屏横滚）；存在待拍板事项时顶栏出现常驻通知条（含数量与'去处理'跳转）、讨论流 tab 带红点计数、浏览器标题前缀 (N)；顶部有未登录访客分流带（3 分钟了解 / 开始 onboarding）。",
+      "user_visible_behavior": "打开 /portal 看到五个板块 tab（窄屏横滚）；存在待拍板事项时顶栏出现常驻通知条（含数量与'去处理'跳转）、讨论流 tab 带红点计数、浏览器标题前缀 (N)；顶部有未登录访客分流带（3 分钟了解 / 开始 onboarding）；页头显示当前开发者身份 chip（👤 姓名 + @github + 带来的 agent 数）——开发者是人类一等实体，不混同于 agent。",
       "status": "not_started",
       "sprint": null,
       "owner": null,
       "capability": "CAP-WEB",
       "verification": [
         "grep -q 'data-testid=\"decide-banner\"' apps/web/app/portal/page.tsx",
+        "grep -q 'data-testid=\"dev-identity-chip\"' apps/web/app/portal/page.tsx",
         "grep -q 'data-testid=\"visitor-band\"' apps/web/app/portal/page.tsx",
         "pnpm --filter @repo/web exec playwright test e2e/portal-001-shell-decide-banner.spec.ts"
       ],
@@ -72,7 +73,7 @@
       "priority": 1,
       "area": "portal",
       "title": "谁在干活 + PR 队列（堵点高亮与行动按钮）",
-      "user_visible_behavior": "'现在谁在干活'每行显示 agent、正在做什么（当前 claim/cycle-plan）、🟢🟡🔴 心跳状态点（时间在悬停）；PR 队列超 1 个周期（3h）未动的行红框高亮并提供 催办/认领 review/去 GitHub 行动按钮。",
+      "user_visible_behavior": "'现在谁在干活'每行显示 agent、正在做什么（当前 claim/cycle-plan）、🟢🟡🔴 心跳状态点（时间在悬停）；PR 队列超 1 个周期（3h）未动的行红框高亮并提供 催办/认领 review/去 GitHub 行动按钮；每个 agent 行标注归属开发者（👤 owner，当前开发者显示为'我'并高亮）。",
       "status": "not_started",
       "sprint": null,
       "owner": null,
@@ -160,17 +161,18 @@
       "id": "F08",
       "priority": 2,
       "area": "portal",
-      "title": "性能板块：per-agent 表（归属树）+ C-cycle 周期报告",
-      "user_visible_behavior": "per-agent 表显示 流动时长/周期承诺达成/近 7 天合并/当前租约，sub-agent 按 parent 缩进成树；周期报告表=cycle-report 的 Web 版（计划数/完成/流动时长/超 SLA）。",
+      "title": "性能板块：按 开发者→agents 配对分组 + C-cycle 周期报告",
+      "user_visible_behavior": "性能表按'开发者（👤 人类分组头，含姓名/@github/合计数）→ 其 agents（🤖 行）'分组呈现——开发者不是 agent 行、但与其 agents 成对出现；当前登录开发者的分组标'我'；sub-agent 在所属 agent 下按 parent 缩进；周期报告表=cycle-report 的 Web 版。",
       "status": "not_started",
       "sprint": null,
       "owner": null,
       "capability": "CAP-WEB",
       "verification": [
+        "grep -q 'data-testid=\"perf-dev-groups\"' -r apps/web/components/portal/",
         "pnpm --filter @repo/web exec playwright test e2e/portal-007-performance.spec.ts"
       ],
       "evidence": "",
-      "notes": "UC-18/19/20；per-agent flow-time 归因是 ADR-010 已记录的差距，本 feature 一并实现（cycle-report 按 agent 细分）。",
+      "notes": "UC-18/19/20 + 人类补充需求（2026-07-09）：开发者↔agents 配对关系必须正确呈现——owner（人类归属）与 parent（agent 派生树）是两条并存的关系，数据模型见 ADR-011 修订。per-agent flow-time 归因（ADR-010 差距）一并实现。",
       "depends_on": [
         "F01",
         "F02"
