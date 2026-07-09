@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Coordination Dashboard · coord-service</title>
+  <meta name="description" content="Live read-only view of the agent coordination plane (coord-service D1 atomic-lock service)." />
+  <style>
+    :root {
+      --bg: #0b0e14;
+      --panel: #121722;
+      --panel-2: #161c29;
+      --border: #232c3d;
+      --text: #e6eaf2;
+      --muted: #8792a6;
+      --faint: #5c667a;
+      --accent: #5b9dff;
+      --green: #3fb950;
+      --amber: #d29922;
+      --red: #f85149;
+      --purple: #a371f7;
+      --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px 64px; }
+
+    header.top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; margin-bottom: 4px; }
+    header.top h1 { font-size: 20px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+    header.top .sub { color: var(--muted); font-size: 13px; }
+    .meta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin: 10px 0 26px; font-size: 12.5px; color: var(--muted); }
+    .meta-row code { font-family: var(--mono); color: var(--faint); }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    .dot.live { background: var(--green); box-shadow: 0 0 0 0 rgba(63,185,80,0.5); animation: pulse 2s infinite; }
+    .dot.err { background: var(--red); animation: none; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(63,185,80,0.45); } 70% { box-shadow: 0 0 0 6px rgba(63,185,80,0); } 100% { box-shadow: 0 0 0 0 rgba(63,185,80,0); } }
+    .refresh-btn { background: var(--panel-2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; font-family: var(--sans); }
+    .refresh-btn:hover { border-color: var(--accent); }
+
+    .cards { display: grid; grid-template-columns: 1fr; gap: 18px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .card > h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0; padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+    .card > h2 .count { color: var(--faint); font-weight: 500; letter-spacing: 0; text-transform: none; font-size: 12px; }
+
+    .tbl-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 9px 16px; white-space: nowrap; }
+    th { color: var(--faint); font-weight: 500; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); }
+    tbody tr { border-bottom: 1px solid rgba(35,44,61,0.5); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--panel-2); }
+    td.mono, .mono { font-family: var(--mono); font-size: 12.5px; }
+    td.who { color: var(--text); font-weight: 550; }
+    td.res { color: var(--muted); }
+
+    .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; font-family: var(--mono); border: 1px solid transparent; }
+    .pill.fresh { color: var(--green); background: rgba(63,185,80,0.10); border-color: rgba(63,185,80,0.28); }
+    .pill.warn { color: var(--amber); background: rgba(210,153,34,0.10); border-color: rgba(210,153,34,0.30); }
+    .pill.stale { color: var(--red); background: rgba(248,81,73,0.10); border-color: rgba(248,81,73,0.30); }
+
+    .ev-type { display: inline-block; min-width: 84px; padding: 1px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; font-family: var(--mono); text-align: center; }
+    .ev-claim { color: var(--green); background: rgba(63,185,80,0.12); }
+    .ev-release { color: var(--muted); background: rgba(135,146,166,0.12); }
+    .ev-heartbeat { color: var(--faint); background: rgba(92,102,122,0.14); }
+    .ev-expire { color: var(--red); background: rgba(248,81,73,0.12); }
+    .ev-verdict { color: var(--accent); background: rgba(91,157,255,0.12); }
+    .ev-cycle-plan, .ev-cycle-result { color: var(--purple); background: rgba(163,113,247,0.12); }
+    .ev-andon { color: #fff; background: var(--red); }
+    .ev-other { color: var(--muted); background: rgba(135,146,166,0.10); }
+
+    .empty { padding: 22px 16px; color: var(--faint); font-size: 13px; }
+    .banner { display: none; margin-bottom: 18px; padding: 11px 14px; border-radius: 8px; font-size: 13px; border: 1px solid var(--red); background: rgba(248,81,73,0.08); color: #ffb4ae; }
+    .banner.show { display: block; }
+    .banner code { font-family: var(--mono); font-size: 12px; }
+
+    footer { margin-top: 34px; color: var(--faint); font-size: 12px; line-height: 1.7; }
+    footer code { font-family: var(--mono); }
+    .ago { color: var(--faint); font-variant-numeric: tabular-nums; }
+    .payload { color: var(--faint); font-family: var(--mono); font-size: 11.5px; max-width: 340px; overflow: hidden; text-overflow: ellipsis; }
+    @media (max-width: 640px) { .wrap { padding: 16px 12px 48px; } header.top h1 { font-size: 18px; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <h1>Coordination Dashboard</h1>
+      <span class="sub">agent coordination plane · read-only</span>
+    </header>
+    <div class="meta-row">
+      <span id="status-ind"><span class="dot live" id="dot"></span><span id="status-text">connecting…</span></span>
+      <span>updated <span class="ago" id="updated">—</span></span>
+      <span>source <code>coord-service /status</code></span>
+      <button class="refresh-btn" id="refresh" type="button">↻ refresh</button>
+    </div>
+
+    <div class="banner" id="banner"></div>
+
+    <div class="cards">
+      <section class="card">
+        <h2>Active Claims <span class="count" id="claims-count"></span></h2>
+        <div class="tbl-scroll">
+          <table>
+            <thead>
+              <tr><th>Holder</th><th>Resource</th><th>Heartbeat</th><th>Freshness</th><th>Claimed</th><th>TTL</th></tr>
+            </thead>
+            <tbody id="claims-body"><tr><td colspan="6" class="empty">loading…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Recent Events <span class="count" id="events-count"></span></h2>
+        <div class="tbl-scroll">
+          <table>
+            <thead>
+              <tr><th>Type</th><th>Resource</th><th>Agent</th><th>When</th><th>Payload</th></tr>
+            </thead>
+            <tbody id="events-body"><tr><td colspan="5" class="empty">loading…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      Live read-only view of the coordination plane — who holds which lease and the recent coordination event stream, straight from
+      coord-service's public <code>/status</code>. Refreshes every 30s. This is an observability surface: it does not mutate state.<br>
+      Coordination authority is the D1 atomic-lock service (ADR-009). Write operations (claim / heartbeat / release / verdict / narrative events) require a bearer token and happen through <code>pnpm harness lock-*</code>, not here.
+    </footer>
+  </div>
+
+  <script>
+    var REFRESH_MS = 30000;
+    var timer = null;
+
+    // Escapes &<>"' — single-quote included as defense-in-depth so the helper stays
+    // safe even if a future attribute is single-quote delimited (all current
+    // attributes use double quotes). Data can be attacker-controlled: event
+    // payloads are written to D1 by workers.
+    function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]; }); }
+
+    function fmtAgo(iso, nowMs) {
+      if (!iso) return "—";
+      var t = Date.parse(iso);
+      if (isNaN(t)) return "—";
+      var s = Math.max(0, Math.round((nowMs - t) / 1000));
+      if (s < 60) return s + "s ago";
+      var m = Math.floor(s / 60);
+      if (m < 60) return m + "m ago";
+      var h = Math.floor(m / 60);
+      if (h < 24) return h + "h " + (m % 60) + "m ago";
+      var d = Math.floor(h / 24);
+      return d + "d " + (h % 24) + "h ago";
+    }
+
+    function fmtTtl(sec) {
+      if (sec == null || typeof sec !== "number" || !isFinite(sec) || sec < 0) return "—";
+      if (sec % 3600 === 0) return (sec / 3600) + "h";
+      if (sec % 60 === 0) return (sec / 60) + "m";
+      return sec + "s";
+    }
+
+    // A lease is stale when its heartbeat is older than its ttl (the sweeper will
+    // expire it on its next 5-min pass). "warn" flags heartbeats past half-ttl —
+    // a session that has gone quiet but is not yet reclaimable.
+    function freshness(hbIso, ttlSec, nowMs) {
+      var t = Date.parse(hbIso);
+      if (isNaN(t) || ttlSec == null) return { cls: "warn", label: "unknown" };
+      var ageS = (nowMs - t) / 1000;
+      if (ageS > ttlSec) return { cls: "stale", label: "stale" };
+      if (ageS > ttlSec / 2) return { cls: "warn", label: "aging" };
+      return { cls: "fresh", label: "fresh" };
+    }
+
+    function evClass(type) {
+      var known = { "claim": "ev-claim", "release": "ev-release", "heartbeat": "ev-heartbeat", "expire": "ev-expire", "verdict": "ev-verdict", "cycle-plan": "ev-cycle-plan", "cycle-result": "ev-cycle-result", "andon": "ev-andon", "merge": "ev-claim" };
+      return known[type] || "ev-other";
+    }
+
+    function payloadSummary(p) {
+      if (p == null) return "";
+      var obj = p;
+      if (typeof p === "string") { try { obj = JSON.parse(p); } catch (e) { return p; } }
+      if (typeof obj !== "object") return String(obj);
+      try { return JSON.stringify(obj); } catch (e) { return ""; }
+    }
+
+    function renderClaims(claims, nowMs) {
+      var body = document.getElementById("claims-body");
+      document.getElementById("claims-count").textContent = claims.length ? "· " + claims.length + " held" : "";
+      if (!claims.length) { body.innerHTML = '<tr><td colspan="6" class="empty">No active claims — every coordinator seat is free.</td></tr>'; return; }
+      claims.sort(function (a, b) { return String(a.resource_id).localeCompare(String(b.resource_id)); });
+      body.innerHTML = claims.map(function (c) {
+        var f = freshness(c.last_heartbeat_at, c.ttl_seconds, nowMs);
+        return "<tr>" +
+          '<td class="who mono">' + esc(c.agent_id) + "</td>" +
+          '<td class="res mono">' + esc(c.resource_id) + "</td>" +
+          '<td class="ago">' + esc(fmtAgo(c.last_heartbeat_at, nowMs)) + "</td>" +
+          '<td><span class="pill ' + f.cls + '">' + f.label + "</span></td>" +
+          '<td class="ago">' + esc(fmtAgo(c.claimed_at, nowMs)) + "</td>" +
+          '<td class="mono">' + esc(fmtTtl(c.ttl_seconds)) + "</td>" +
+          "</tr>";
+      }).join("");
+    }
+
+    function renderEvents(events, nowMs) {
+      var body = document.getElementById("events-body");
+      document.getElementById("events-count").textContent = events.length ? "· last " + events.length : "";
+      if (!events.length) { body.innerHTML = '<tr><td colspan="5" class="empty">No events yet.</td></tr>'; return; }
+      body.innerHTML = events.map(function (e) {
+        var ps = payloadSummary(e.payload);
+        return "<tr>" +
+          '<td><span class="ev-type ' + evClass(e.type) + '">' + esc(e.type) + "</span></td>" +
+          '<td class="res mono">' + esc(e.resource_id) + "</td>" +
+          '<td class="mono">' + esc(e.agent_id) + "</td>" +
+          '<td class="ago">' + esc(fmtAgo(e.at, nowMs)) + "</td>" +
+          '<td class="payload" title="' + esc(ps) + '">' + esc(ps) + "</td>" +
+          "</tr>";
+      }).join("");
+    }
+
+    function setStatus(ok, text) {
+      document.getElementById("dot").className = "dot " + (ok ? "live" : "err");
+      document.getElementById("status-text").textContent = text;
+    }
+
+    function showBanner(msg) {
+      var b = document.getElementById("banner");
+      if (!msg) { b.className = "banner"; b.textContent = ""; return; }
+      b.className = "banner show"; b.innerHTML = msg;
+    }
+
+    function load() {
+      fetch("/api/status", { headers: { accept: "application/json" }, cache: "no-store" })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, status: r.status, body: j }; }); })
+        .then(function (res) {
+          var nowMs = Date.now();
+          if (!res.ok || res.body.error) {
+            setStatus(false, "coord-service unreachable");
+            showBanner("Couldn't reach coord-service" + (res.body && res.body.upstream ? ' (<code>' + esc(res.body.upstream) + "</code>)" : "") + ". Tables below hold the last successful fetch; retrying every 30s.");
+            document.getElementById("updated").textContent = new Date(nowMs).toLocaleTimeString();
+            return;
+          }
+          showBanner("");
+          setStatus(true, "live");
+          renderClaims(res.body.active_claims || [], nowMs);
+          renderEvents(res.body.recent_events || [], nowMs);
+          document.getElementById("updated").textContent = new Date(nowMs).toLocaleTimeString();
+        })
+        .catch(function (err) {
+          setStatus(false, "network error");
+          showBanner("Network error fetching status: <code>" + esc(String(err)) + "</code>. Retrying every 30s.");
+        });
+    }
+
+    document.getElementById("refresh").addEventListener("click", load);
+    function schedule() { if (timer) clearInterval(timer); timer = setInterval(load, REFRESH_MS); }
+    load();
+    schedule();
+    // Pause polling when the tab is hidden; refresh immediately on return.
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) { if (timer) { clearInterval(timer); timer = null; } }
+      else { load(); schedule(); }
+    });
+  </script>
+</body>
+</html>

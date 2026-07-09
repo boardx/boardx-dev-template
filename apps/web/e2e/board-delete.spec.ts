@@ -47,6 +47,10 @@ test("UI：属主确认删除后回到房间白板列表且不含该板", async 
   const board = (await (await page.request.post(`/api/rooms/${room.id}/boards`, { data: { name: "DeleteUI" } })).json()).board;
 
   await page.goto(`/boards/${board.id}`);
+  // 新板欢迎引导卡（bottom-left）会遮住 meta 面板低处的删除按钮，先关掉（同 canvas-guidelines）。
+  await page.getByTestId("welcome-dismiss").click();
+  // reskin(issue #468): 该入口收进 Header ⋯More 菜单，先确保面板展开。
+  if (!(await page.getByTestId("board-more-panel").isVisible())) await page.getByTestId("board-more-menu").click();
   await page.getByTestId("board-meta-edit").click();
   await page.getByTestId("board-delete").click();
   await page.getByTestId("board-delete-confirm").click();

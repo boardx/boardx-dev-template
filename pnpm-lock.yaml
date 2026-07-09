@@ -251,6 +251,12 @@ importers:
         specifier: '*'
         version: 2.0.0(@types/node@22.0.0)(jsdom@26.1.0(canvas@3.2.3))
 
+  packages/coord-dashboard:
+    devDependencies:
+      wrangler:
+        specifier: ^4.0.0
+        version: 4.107.0(@cloudflare/workers-types@4.20260702.1)
+
   packages/coord-service:
     devDependencies:
       '@cloudflare/vitest-pool-workers':

@@ -49,8 +49,8 @@
       "id": "F03",
       "priority": 2,
       "area": "room",
-      "title": "Studio 独立顶级 tab（房间详情六 tab 结构）",
-      "user_visible_behavior": "房间详情 tab 导航（rooms/[id]/layout.tsx 的 TABS）恢复为六项：Boards/Members/Files/Chat/Survey/Studio（data-testid=room-tab-studio）；点击 Studio tab 进入独立落地页（data-testid=room-studio-tab，路由 rooms/[id]/studio），展示'本房间近期 Studio 产物'卡片列表（mock 数据，data-testid=room-studio-artifact-list，每项 data-testid=room-studio-artifact-<id>）与'在聊天工作区打开 Studio →'跳转入口（data-testid=room-studio-open-in-chat）；人类已确认本轮维持这个轻量落地页范围，不做成独立生成工作台（真实生成能力仍在聊天工作区三栏内的 RoomStudioPanel）。",
+      "title": "Studio 独立顶级 tab → 沉浸式全屏三栏工作台（房间详情六 tab 结构）",
+      "user_visible_behavior": "房间详情 tab 导航（rooms/[id]/layout.tsx 的 TABS）恢复为六项：Boards/Members/Files/Chat/Survey/Studio（data-testid=room-tab-studio）；点击 Studio tab 进入沉浸式全屏工作台（data-testid=room-studio-tab，路由 rooms/[id]/studio）——脱离房间壳：无左侧房间列表（room-list-panel 计数为 0）、无房间头部与六 tab（room-tab-studio 计数为 0），仅保留最左 app 导航；三栏布局：左房间文件 sources（data-testid=pane-files，真实 RoomFilesPanel）/ 中产物区（data-testid=pane-artifacts，'本房间的 Studio 产物'列表 data-testid=room-studio-artifact-list，mock 3 项，每项 data-testid=room-studio-artifact-<id>）/ 右生成配置面板（data-testid=pane-studio，真实 StudioPanel）；顶部'返回房间'（data-testid=room-studio-back）导航回该房间 Boards tab（重新出现房间壳与双栏）。",
       "design_ref": "人类截图六 tab 证据 + prototype roomTabDefs（Studio isRoute:true）；已在 rooms/[id]/layout.tsx + rooms/[id]/studio/page.tsx 落地（mock 数据，据 ui-signoff 交付形态说明）",
       "status": "passing",
       "sprint": "01",
@@ -65,7 +65,7 @@
         "git cat-file -e HEAD:phases/phase-p22-room-ia-realignment/sprints/sprint-01/evidence/F03.verify.log"
       ],
       "evidence": "evidence/F03.verify.log @ 2026-07-08T03:46:39.510Z",
-      "notes": "uc 见 requirements/00-overview.md 优先级2（人类已确认维持轻量落地页范围，见 ui-signoff.md 人类确认意见）。产物列表为 mock，不接真实 Studio 生成记录——本 feature 只交付 tab 可发现性，不做真实数据源（后续如需真实产物列表，另立 feature，依赖 p12 studio-presentations 的 artifacts 数据）。"
+      "notes": "uc 见 requirements/00-overview.md 优先级2。范围演进：初版交付轻量落地页（room-studio-open-in-chat 跳聊天工作区）并 passing；2026-07-09 人类改主意——Studio tab 应是独立全屏 layout，遂升级为沉浸式全屏三栏工作台（脱房间壳 + 左文件/中产物/右生成配置），移除 open-in-chat 入口，改为顶部 room-studio-back 返回房间。room-rr-014 spec 同步改写为全屏契约（脱壳断言 + 三栏 + 返回），--retries=2 两条全绿。产物列表仍为 mock，右栏 StudioPanel 真实渲染但生成逻辑（onGenerate/真实 sources）需 thread 上下文，接真后端为后续 feature（依赖 p12 studio-presentations artifacts）。"
     },
     {
       "id": "F04",

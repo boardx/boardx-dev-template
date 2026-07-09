@@ -1,0 +1,13 @@
+{
+  "name": "@repo/coord-dashboard",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Standalone Cloudflare Pages dashboard for the agent coordination plane (reads coord-service /status). Independent of apps/web.",
+  "scripts": {
+    "dev": "wrangler pages dev public --compatibility-date=2024-11-01",
+    "deploy": "wrangler pages deploy public --project-name coord-dashboard --commit-dirty=true"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
