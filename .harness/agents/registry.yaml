@@ -17,7 +17,7 @@ agents:
   # ── 主 Agent：编排者（唯一）────────────────────────────────────────────────
   - id: coord-main
     active: true
-    owner: usam.shen@gmail.com
+    owner: usamshen
     kind: coordinator
     model: opus-4.8
     responsibilities:
@@ -33,7 +33,7 @@ agents:
   # Claude Code 私有机制。同样无独立合并权，控制平面改动全绿后转交 coord-main。
   - id: coord-architecture
     active: true
-    owner: usam.shen@gmail.com
+    owner: usamshen
     kind: architecture-coordinator
     model: opus-4.8
     areas: [harness, docs, adr, agent-protocol]
@@ -46,49 +46,49 @@ agents:
   # （不可自行 merge——避免跨模块热点文件的合并冲突失去唯一把关人）。
   - id: coord-room
     active: true
-    owner: usam.shen@gmail.com
+    owner: usamshen
     kind: module-coordinator
     model: opus-4.8
     areas: [room, room-files, room-survey, room-chat, invite, share]
     reports_to: coord-main
   - id: coord-board
     active: true
-    owner: usam.shen@gmail.com
+    owner: usamshen
     kind: module-coordinator
     model: opus-4.8
     areas: [canvas, board, board-header, board-menu, context-menu, widgets, studio, presentations]
     reports_to: coord-main
   - id: coord-collab
     active: true
-    owner: usam.shen@gmail.com
+    owner: usamshen
     kind: module-coordinator
     model: opus-4.8
     areas: [collaboration]
     reports_to: coord-main
   - id: coord-ava
     active: true
-    owner: usam.shen@gmail.com
+    owner: usamshen
     kind: module-coordinator
     model: opus-4.8
     areas: [ai-core, deep-research, voice, ai-settings, attachments, message-actions, knowledge-base]
     reports_to: coord-main
   - id: coord-store-admin
     active: true
-    owner: usam.shen@gmail.com
+    owner: usamshen
     kind: module-coordinator
     model: opus-4.8
     areas: [ai-store, admin]
     reports_to: coord-main
   - id: coord-survey
     active: true
-    owner: usam.shen@gmail.com
+    owner: usamshen
     kind: module-coordinator
     model: opus-4.8
     areas: [survey]
     reports_to: coord-main
   - id: coord-platform
     active: true
-    owner: usam.shen@gmail.com
+    owner: usamshen
     kind: module-coordinator
     model: opus-4.8
     areas: [auth, team, home-page, profile, common, billing, credits]
@@ -100,7 +100,7 @@ agents:
     kind: sub-agent
     parent: coord-architecture
     role: portal-dev
-    owner: usam.shen@gmail.com
+    owner: usamshen
     areas: [portal]
     spawned_at: 2026-07-09T12:20:00Z
     responsibilities: [p23 wave1 F03+F04（脉搏与进度 / 谁在干活+PR队列）]
@@ -109,7 +109,7 @@ agents:
     kind: sub-agent
     parent: coord-architecture
     role: portal-dev
-    owner: usam.shen@gmail.com
+    owner: usamshen
     areas: [portal]
     spawned_at: 2026-07-09T12:20:00Z
     responsibilities: [p23 wave1 F05+F06（实时协调 / 讨论流）]
@@ -118,7 +118,7 @@ agents:
     kind: sub-agent
     parent: coord-architecture
     role: portal-dev
-    owner: usam.shen@gmail.com
+    owner: usamshen
     areas: [portal]
     spawned_at: 2026-07-09T12:20:00Z
     responsibilities: [p23 wave1 F07+F08（加入开发 / 性能）]

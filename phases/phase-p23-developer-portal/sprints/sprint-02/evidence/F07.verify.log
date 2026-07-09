@@ -1,0 +1,15 @@
+$ grep -q 'data-testid="credential-step"' -r apps/web/components/portal/
+[exit 0]
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/portal-006-onboarding.spec.ts
+[exit 0]
+
+Running 4 tests using 1 worker
+
+  ✓  1 [chromium] › portal-006-onboarding.spec.ts:21:5 › 5 步 stepper：每步标预计耗时+所需条件，任意步可点击预览 (2.0s)
+  ✓  2 [chromium] › portal-006-onboarding.spec.ts:43:5 › 第 4 步显示审批 SLA；第 3 步提交申请是诚实占位（disabled + 原因，不伪造成功） (856ms)
+  ✓  3 [chromium] › portal-006-onboarding.spec.ts:58:5 › 第 5 步领凭据：人工发放三步流程 + export 命令模板 + 自动发放待 ADR-011 说明 (951ms)
+  ✓  4 [chromium] › portal-006-onboarding.spec.ts:78:5 › 学习页：4 条教程条目 + 注明渲染自 human-developer-onboarding.md (845ms)
+
+  4 passed (8.2s)

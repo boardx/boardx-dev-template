@@ -1,0 +1,13 @@
+$ test ! -e apps/web/app/portal-prototype
+[exit 0]
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/portal-008-gate.spec.ts
+[exit 0]
+
+Running 2 tests using 1 worker
+
+  ✓  1 [chromium] › portal-008-gate.spec.ts:8:5 › 原型路由 /portal-prototype 已退役（404） (1.1s)
+  ✓  2 [chromium] › portal-008-gate.spec.ts:13:5 › /portal 未登录 = 访客视图（分流带+登录入口），登录后 = 完整门户 (3.9s)
+
+  2 passed (8.4s)

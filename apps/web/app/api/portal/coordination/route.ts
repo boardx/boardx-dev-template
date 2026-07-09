@@ -32,7 +32,7 @@ export async function GET() {
     const body = (await res.json()) as Record<string, unknown>;
     return NextResponse.json({ configured: true, ...body });
   } catch (err) {
-    console.error("[portal/coordination] coord-service fetch failed", err);
+    console.warn("[portal/coordination] coord-service fetch failed", err);
     return NextResponse.json({ error: "coord_service_unavailable" }, { status: 502 });
   }
 }

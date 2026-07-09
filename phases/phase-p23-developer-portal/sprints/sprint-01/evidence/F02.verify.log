@@ -1,0 +1,44 @@
+$ ls apps/web/app/api/portal/pulse/route.ts apps/web/app/api/portal/discussions/route.ts
+[exit 0]
+apps/web/app/api/portal/discussions/route.ts
+apps/web/app/api/portal/pulse/route.ts
+
+
+$ pnpm --filter @repo/web test -- app/api/portal
+[exit 0]
+
+> @repo/web@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/a705b119-1958-4f6e-b4a5-510044dbd688/scratchpad/portal-proto/apps/web
+> vitest run "app/api/portal"
+
+
+ RUN  v2.0.0 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/a705b119-1958-4f6e-b4a5-510044dbd688/scratchpad/portal-proto/apps/web
+
+ ✓ app/api/portal/pulse/route.test.ts  (3 tests) 8ms
+ ✓ app/api/portal/prs/route.test.ts  (5 tests) 11ms
+ ✓ app/api/portal/coordination/route.test.ts  (5 tests) 14ms
+ ✓ app/api/portal/agents/route.test.ts  (4 tests) 24ms
+ ✓ app/api/portal/discussions/route.test.ts  (4 tests) 58ms
+
+ Test Files  5 passed (5)
+      Tests  21 passed (21)
+   Start at  07:52:49
+   Duration  716ms (transform 198ms, setup 0ms, collect 550ms, tests 115ms, environment 1ms, prepare 436ms)
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+stderr | app/api/portal/coordination/route.test.ts > GET /api/portal/coordination > 上游网络失败 → 502（不抛未捕获异常）
+[portal/coordination] coord-service fetch failed Error: net down
+    at /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/a705b119-1958-4f6e-b4a5-510044dbd688/scratchpad/portal-proto/apps/web/app/api/portal/coordination/route.test.ts:61:54
+    at mockCall (file:///private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/a705b119-1958-4f6e-b4a5-510044dbd688/scratchpad/portal-proto/node_modules/.pnpm/@vitest+spy@2.0.0/node_modules/@vitest/spy/dist/index.js:61:17)
+    at spy (file:///private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/a705b119-1958-4f6e-b4a5-510044dbd688/scratchpad/portal-proto/node_modules/.pnpm/tinyspy@3.0.2/node_modules/tinyspy/dist/index.js:45:80)
+    at Module.GET (/private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/a705b119-1958-4f6e-b4a5-510044dbd688/scratchpad/portal-proto/apps/web/app/api/portal/coordination/route.ts:25:23)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/a705b119-1958-4f6e-b4a5-510044dbd688/scratchpad/portal-proto/apps/web/app/api/portal/coordination/route.test.ts:62:17
+    at runTest (file:///private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/a705b119-1958-4f6e-b4a5-510044dbd688/scratchpad/portal-proto/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:939:11)
+    at runSuite (file:///private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/a705b119-1958-4f6e-b4a5-510044dbd688/scratchpad/portal-proto/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+    at runSuite (file:///private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/a705b119-1958-4f6e-b4a5-510044dbd688/scratchpad/portal-proto/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+    at runFiles (file:///private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/a705b119-1958-4f6e-b4a5-510044dbd688/scratchpad/portal-proto/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1152:5)
+
+
+
+$ grep -q 'data-testid="card-degraded"' -r apps/web/components/portal/
+[exit 0]

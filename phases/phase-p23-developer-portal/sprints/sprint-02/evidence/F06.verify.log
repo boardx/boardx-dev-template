@@ -1,0 +1,15 @@
+$ grep -q 'data-testid="decide-question"' -r apps/web/components/portal/
+[exit 0]
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/portal-005-discussions.spec.ts
+[exit 0]
+
+Running 4 tests using 1 worker
+
+  ✓  1 [chromium] › portal-005-discussions.spec.ts:48:5 › 未配置数据源：unconfigured 态而非报错（合法部署中间态），且无评论输入框 (2.2s)
+  ✓  2 [chromium] › portal-005-discussions.spec.ts:56:5 › 过滤按钮：👤 人类 / 🤖 AI / ⚡待拍板 三向分流 + 待拍板计数 (817ms)
+  ✓  3 [chromium] › portal-005-discussions.spec.ts:79:5 › 待拍板优先排序 + 待拍板卡强化：红框 + 问题首行加粗放大 + 快捷回应跳该评论 (616ms)
+  ✓  4 [chromium] › portal-005-discussions.spec.ts:103:5 › 巡检类（【coord-* 巡检】开头）默认折叠，可展开/收起 (967ms)
+
+  4 passed (8.0s)

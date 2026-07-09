@@ -23,11 +23,13 @@ interface PhasePulse {
   total: number;
 }
 
+type CoordClaim = { resource_id: string; agent_id: string; last_heartbeat_at: string; ttl_seconds: number };
+
 interface PulsePayload {
   phases: { items: PhasePulse[]; totals: { passing: number; total: number } };
   coord:
     | { configured: false }
-    | { configured: true; active_claims: Array<{ resource_id: string; agent_id: string; last_heartbeat_at: string; ttl_seconds: number }> }
+    | { configured: true; active_claims: CoordClaim[] }
     | { configured: true; error: string };
   github:
     | { configured: false }
@@ -73,8 +75,8 @@ async function readCoord(): Promise<PulsePayload["coord"]> {
   try {
     const res = await fetch(`${baseUrl}/status`, { signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS), cache: "no-store" });
     if (!res.ok) return { configured: true, error: `upstream_${res.status}` };
-    const body = (await res.json()) as { active_claims?: PulsePayload["coord"] extends { active_claims: infer T } ? T : never };
-    return { configured: true, active_claims: (body.active_claims ?? []) as never };
+    const body = (await res.json()) as { active_claims?: CoordClaim[] };
+    return { configured: true, active_claims: body.active_claims ?? [] };
   } catch {
     return { configured: true, error: "unreachable" };
   }

@@ -152,7 +152,7 @@ export async function GET() {
     cache = { key, payload, expiresAt: Date.now() + CACHE_TTL_MS };
     return NextResponse.json(payload);
   } catch (err) {
-    console.error("[portal/agents] failed to read registry.yaml", err);
+    console.warn("[portal/agents] failed to read registry.yaml", err);
     return NextResponse.json({ error: "registry_unavailable" }, { status: 500 });
   }
 }

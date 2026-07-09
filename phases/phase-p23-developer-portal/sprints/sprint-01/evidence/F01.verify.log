@@ -1,0 +1,21 @@
+$ grep -qr 'data-testid="decide-banner"' apps/web/app/portal apps/web/components/portal
+[exit 0]
+
+
+$ grep -qr 'data-testid="dev-identity-chip"' apps/web/app/portal apps/web/components/portal
+[exit 0]
+
+
+$ grep -qr 'data-testid="visitor-band"' apps/web/app/portal apps/web/components/portal
+[exit 0]
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/portal-001-shell-decide-banner.spec.ts
+[exit 0]
+
+Running 2 tests using 1 worker
+
+  ✓  1 [chromium] › portal-001-shell-decide-banner.spec.ts:9:5 › 未登录访问 /portal：访客分流带 + 登录入口，不暴露板块内容 (3.0s)
+  ✓  2 [chromium] › portal-001-shell-decide-banner.spec.ts:17:5 › 登录后 /portal：五 tab 骨架 + 开发者身份 chip（👤 姓名 + 带来 N 个 agent） (1.7s)
+
+  2 passed (9.4s)

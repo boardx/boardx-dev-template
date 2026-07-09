@@ -18,7 +18,7 @@
         "grep -qr 'data-testid=\"visitor-band\"' apps/web/app/portal apps/web/components/portal",
         "pnpm --filter @repo/web exec playwright test e2e/portal-001-shell-decide-banner.spec.ts"
       ],
-      "evidence": "2026-07-09T15:11:18.989Z",
+      "evidence": "evidence/F01.verify.log @ 2026-07-09T23:52:48.888Z",
       "notes": "以 #497 v2 原型为界面契约；待拍板数据源=讨论聚合中 tier=decide 的条目数。",
       "depends_on": [],
       "wave": 0,
@@ -39,7 +39,7 @@
         "pnpm --filter @repo/web test -- app/api/portal",
         "grep -q 'data-testid=\"card-degraded\"' -r apps/web/components/portal/"
       ],
-      "evidence": "2026-07-09T12:25:24.732Z",
+      "evidence": "evidence/F02.verify.log @ 2026-07-09T23:52:50.290Z",
       "notes": "聚合源：phases/*/feature_list.json、gh pr/issue、coord-service /status（复用现有代理模式与 60s 缓存思路）。",
       "depends_on": [],
       "wave": 0,
@@ -59,7 +59,7 @@
         "grep -q 'data-testid=\"phase-drill\"' -r apps/web/components/portal/",
         "pnpm --filter @repo/web exec playwright test e2e/portal-002-pulse-drill.spec.ts"
       ],
-      "evidence": "2026-07-09T17:06:24.584Z",
+      "evidence": "evidence/F03.verify.log @ 2026-07-09T23:54:27.521Z",
       "notes": "UC-01/02/03；flow-time 算法与 cycle-report 同源。",
       "depends_on": [
         "F01",
@@ -82,7 +82,7 @@
         "grep -q 'data-testid=\"pr-actions\"' -r apps/web/components/portal/",
         "pnpm --filter @repo/web exec playwright test e2e/portal-003-pr-queue-actions.spec.ts"
       ],
-      "evidence": "2026-07-09T23:08:00.875Z",
+      "evidence": "evidence/F04.verify.log @ 2026-07-09T23:54:35.421Z",
       "notes": "UC-08 + review Top4/次优先；催办=预填评论跳 GitHub，认领 review=预填 self-assign 跳转。",
       "depends_on": [
         "F01",
@@ -104,7 +104,7 @@
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/portal-004-coordination.spec.ts"
       ],
-      "evidence": "2026-07-09T23:08:10.915Z",
+      "evidence": "evidence/F05.verify.log @ 2026-07-09T23:54:51.962Z",
       "notes": "UC-04/05/06；复用 /api/admin/coordination/status 代理与现有卡片组件抽取。",
       "depends_on": [
         "F01"
@@ -126,7 +126,7 @@
         "grep -q 'data-testid=\"decide-question\"' -r apps/web/components/portal/",
         "pnpm --filter @repo/web exec playwright test e2e/portal-005-discussions.spec.ts"
       ],
-      "evidence": "2026-07-09T17:07:22.060Z",
+      "evidence": "evidence/F06.verify.log @ 2026-07-09T23:54:44.122Z",
       "notes": "UC-10/11/12 + review 次优先；作者分类=匹配身份表（🤖）否则 👤；needs_human 识别规则见 use-cases UC-11。",
       "depends_on": [
         "F01",
@@ -149,7 +149,7 @@
         "grep -q 'data-testid=\"credential-step\"' -r apps/web/components/portal/",
         "pnpm --filter @repo/web exec playwright test e2e/portal-006-onboarding.spec.ts"
       ],
-      "evidence": "2026-07-09T17:07:33.496Z",
+      "evidence": "evidence/F07.verify.log @ 2026-07-09T23:55:00.738Z",
       "notes": "UC-13~16 + review Top2；本 feature 不做 OAuth 与自动发 token（那是 ADR-011 P2/P3，落地后升级第 1/5 步）。",
       "depends_on": [
         "F01"
@@ -171,7 +171,7 @@
         "grep -q 'data-testid=\"perf-dev-groups\"' -r apps/web/components/portal/",
         "pnpm --filter @repo/web exec playwright test e2e/portal-007-performance.spec.ts"
       ],
-      "evidence": "2026-07-09T23:08:21.760Z",
+      "evidence": "evidence/F08.verify.log @ 2026-07-09T23:55:12.505Z",
       "notes": "UC-18/19/20 + 人类补充需求（2026-07-09）：开发者↔agents 配对关系必须正确呈现——owner（人类归属）与 parent（agent 派生树）是两条并存的关系，数据模型见 ADR-011 修订。per-agent flow-time 归因（ADR-010 差距）一并实现。",
       "depends_on": [
         "F01",
@@ -187,14 +187,14 @@
       "title": "门禁与路由收口：/portal 正式路由 + 登录门禁 + 原型退役",
       "user_visible_behavior": "门户挂在 /portal（develop.boardx.us 首页跳转到它）；板块页登录可见（先复用现有会话/SysAdmin 门禁，OAuth 随 ADR-011 P2 升级），未登录见分流带+学习页只读；/portal-prototype 原型路由移除。",
       "status": "passing",
-      "sprint": null,
+      "sprint": "02",
       "owner": "coord-architecture",
       "capability": "CAP-WEB",
       "verification": [
         "test ! -e apps/web/app/portal-prototype",
         "pnpm --filter @repo/web exec playwright test e2e/portal-008-gate.spec.ts"
       ],
-      "evidence": "2026-07-09T23:31:10.422Z",
+      "evidence": "evidence/F09.verify.log @ 2026-07-09T23:55:21.592Z",
       "notes": "非功能 N1/N3；收尾 feature，等 F03-F08 全绿后做。",
       "depends_on": [
         "F03",
