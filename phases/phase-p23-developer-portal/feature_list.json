@@ -51,9 +51,9 @@
       "area": "portal",
       "title": "脉搏与进度板块：整体进度+周变化、flow-time 趋势、phase 下钻",
       "user_visible_behavior": "总进度 N/M 旁显示本周增量；每 phase 进度条带 ↑n；点击 phase 展开下钻（通过/进行中/受阻徽章 + feature 明细，语义色 token）；flow-time 卡显示当前中位值、与基线对比、近 7 天趋势线。",
-      "status": "not_started",
+      "status": "in_progress",
       "sprint": "02",
-      "owner": null,
+      "owner": "coord-architecture.portal-dev-1",
       "capability": "CAP-WEB",
       "verification": [
         "grep -q 'data-testid=\"phase-drill\"' -r apps/web/components/portal/",
@@ -97,9 +97,9 @@
       "area": "portal",
       "title": "实时协调板块迁入门户（状态点语义化）",
       "user_visible_behavior": "活跃租约/协调事件两卡迁入门户（中文标题+术语括注），租约行用 🟢🟡🔴 状态点表达心跳新鲜度（阈值同 admin/coordination 现有逻辑），expire 类事件红色徽章。",
-      "status": "not_started",
+      "status": "in_progress",
       "sprint": "02",
-      "owner": null,
+      "owner": "coord-architecture.portal-dev-2",
       "capability": "CAP-WEB",
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/portal-004-coordination.spec.ts"
@@ -141,9 +141,9 @@
       "area": "portal",
       "title": "加入开发：onboarding 向导（现实版）+ 学习页",
       "user_visible_behavior": "5 步 stepper（每步标预计耗时+所需条件，任意步可预览）；第 4 步显示审批 SLA；第 5 步如实呈现人工发放三步流程+命令自取（注明自动发放待 ADR-011 P2/P3）；提交申请自动创建预填 onboarding issue；学习页渲染 human-developer-onboarding.md 并随 main 更新。",
-      "status": "not_started",
+      "status": "in_progress",
       "sprint": "02",
-      "owner": null,
+      "owner": "coord-architecture.portal-dev-3",
       "capability": "CAP-WEB",
       "verification": [
         "grep -q 'data-testid=\"credential-step\"' -r apps/web/components/portal/",
