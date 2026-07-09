@@ -6,7 +6,11 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PortalCard } from "@/components/portal/portal-card";
+import { PulseTab } from "@/components/portal/tabs/pulse-tab";
+import { CoordTab } from "@/components/portal/tabs/coord-tab";
+import { TalkTab } from "@/components/portal/tabs/talk-tab";
+import { JoinTab } from "@/components/portal/tabs/join-tab";
+import { PerfTab } from "@/components/portal/tabs/perf-tab";
 
 const TABS = [
   { key: "pulse", label: "脉搏与进度" },
@@ -93,12 +97,12 @@ export function PortalShell({ developer }: { developer: { name: string; email: s
         ))}
       </nav>
 
-      <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2" data-testid={`tab-${tab}`}>
-        <PortalCard title={TABS.find((t) => t.key === tab)!.label} state="ready" wide>
-          <p className="text-13 text-muted-foreground">
-            板块接入中——wave 1（F03-F08）逐板块上线；界面契约见 p23 ui-signoff 确认的原型。
-          </p>
-        </PortalCard>
+      <div className="mt-5" data-testid={`tab-${tab}`}>
+        {tab === "pulse" && <PulseTab />}
+        {tab === "coord" && <CoordTab />}
+        {tab === "talk" && <TalkTab />}
+        {tab === "join" && <JoinTab />}
+        {tab === "perf" && <PerfTab />}
       </div>
     </div>
   );
