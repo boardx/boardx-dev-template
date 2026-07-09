@@ -1,8 +1,8 @@
 ---
 phase: "p23"
-status: pending          # pending | confirmed —— 人类工程师确认 UI 后，把这里改成 confirmed
-confirmed_by:            # 确认人（姓名/邮箱）
-confirmed_at:            # 确认时间（ISO，如 2026-07-01T10:00:00Z）
+status: confirmed          # pending | confirmed —— 人类工程师确认 UI 后，把这里改成 confirmed
+confirmed_by: yanbin shen            # 确认人（姓名/邮箱）
+confirmed_at:  2026-07-09T10:00:00Z          # 确认时间（ISO，如 2026-07-01T10:00:00Z）
 ---
 
 # UI 先行确认 — developer-portal（Phase p23）
