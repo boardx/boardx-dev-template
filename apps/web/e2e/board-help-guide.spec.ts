@@ -11,17 +11,11 @@ async function openBoard(page: any) {
   await page.goto(`/boards/${board.id}`);
 }
 
-test("快捷键帮助面板可开关并列出快捷键", async ({ page }) => {
-  await openBoard(page);
-  await expect(page.getByTestId("shortcuts-panel")).toBeHidden();
-  await page.getByTestId("help-open").click();
-  await expect(page.getByTestId("shortcuts-panel")).toBeVisible();
-  await expect(page.getByTestId("shortcuts-panel")).toContainText("撤销");
-  await page.getByTestId("help-close").click();
-  await expect(page.getByTestId("shortcuts-panel")).toBeHidden();
-});
+// board-shell reskin（issue #468）：老 help-guide 的独立「快捷键」面板已删除（与
+// shortcuts-help 功能重复，后者由 board-header-011 spec 覆盖）；欢迎引导重开入口
+// 收进 Header 的 ⋯More 菜单（welcome-reopen 菜单项）。
 
-test("欢迎引导可关闭、刷新保持、可重新打开", async ({ page }) => {
+test("欢迎引导可关闭、刷新保持、可从 More 菜单重新打开", async ({ page }) => {
   await openBoard(page);
   await expect(page.getByTestId("welcome-guide")).toBeVisible();
   await page.getByTestId("welcome-dismiss").click();
@@ -29,6 +23,7 @@ test("欢迎引导可关闭、刷新保持、可重新打开", async ({ page }) 
 
   await page.reload();
   await expect(page.getByTestId("welcome-guide")).toBeHidden();
+  await page.getByTestId("board-more-menu").click();
   await expect(page.getByTestId("welcome-reopen")).toBeVisible();
   await page.getByTestId("welcome-reopen").click();
   await expect(page.getByTestId("welcome-guide")).toBeVisible();

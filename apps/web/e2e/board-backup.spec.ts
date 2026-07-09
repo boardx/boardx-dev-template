@@ -89,6 +89,8 @@ test("UI：备份面板创建备份→列表可见→行内确认恢复→items 
   await expect(page.getByTestId("board-header")).toBeVisible();
 
   // 打开备份面板：空状态
+  // reskin(issue #468): 该入口收进 Header ⋯More 菜单，先确保面板展开。
+  if (!(await page.getByTestId("board-more-panel").isVisible())) await page.getByTestId("board-more-menu").click();
   await page.getByTestId("board-backup").click();
   await expect(page.getByTestId("backup-panel")).toBeVisible();
   await expect(page.getByTestId("backup-empty")).toBeVisible();

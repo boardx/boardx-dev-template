@@ -11,14 +11,15 @@ async function openBoard(page: any) {
     await (await page.request.post(`/api/rooms/${room.id}/boards`, { data: { name: "H" } })).json()
   ).board;
   await page.goto(`/boards/${board.id}`);
-  // Header 入口存在即可继续。
+  // board-shell reskin（issue #468）：快捷键入口收进 Header 的 ⋯More 菜单，先展开。
+  await page.getByTestId("board-more-menu").click();
   await expect(page.getByTestId("board-shortcuts-open")).toBeVisible();
 }
 
 test("Header 快捷键入口打开帮助弹窗并按分类列出快捷键", async ({ page }) => {
   await openBoard(page);
 
-  // 入口在 Header 内（不破坏既有 board-header 结构）。
+  // 入口在 Header 的 More 菜单内（不破坏既有 board-header 结构）。
   await expect(page.getByTestId("board-header").getByTestId("board-shortcuts-open")).toBeVisible();
 
   // 初始隐藏。
@@ -73,6 +74,6 @@ test("既有 Header testid 仍在（board-header/board-title/board-role/快捷�
   await expect(page.getByTestId("board-header")).toBeVisible();
   await expect(page.getByTestId("board-title")).toBeVisible();
   await expect(page.getByTestId("board-role")).toBeVisible();
-  // 既有 help-guide 入口未被破坏。
-  await expect(page.getByTestId("help-open")).toBeVisible();
+  // 欢迎引导重开入口迁入 More 菜单（reskin：老 help-open 快捷键面板已删，见 shortcuts-help）。
+  await expect(page.getByTestId("welcome-reopen")).toBeVisible();
 });

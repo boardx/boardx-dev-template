@@ -2,8 +2,11 @@ import { expect, test } from "@playwright/test";
 import { canvasItems, expectItemCount } from "./helpers/canvas";
 
 // p6:F13：item 锚点迁为 canvas 兼容锚点（策略 2 / issue #269），断言意图不变。
+// board-shell reskin（issue #468）：顶部 Board Menu 工具条 → 底部悬浮 dock（board-bottom-dock）。
+// 工具 testid 不变（add-note/add-text/board-tool-*）；draw/connector 已上线（enabled）；
+// 旧 assets/templates 面板整组下线，dock 中 table/kanban/code/image 为 disabled 占位。
 
-// uc-board-menu-001-use-board-menu：通过 Board Menu 选择工具并在画布创建或放置内容。
+// uc-board-menu-001-use-board-menu：通过底部工具 dock 选择工具并在画布创建或放置内容。
 const uniq = () => `bm001_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 const BASE_URL = process.env.E2E_PORT ? `http://localhost:${process.env.E2E_PORT}` : "http://localhost:3000";
 
@@ -17,35 +20,32 @@ async function openOwnBoard(page: import("@playwright/test").Page) {
   return board;
 }
 
-test("编辑者使用 Board Menu：工具可见、面板可打开、创建后选中", async ({ page }) => {
+test("编辑者使用底部工具 dock：工具可见、占位禁用、创建后选中", async ({ page }) => {
   await openOwnBoard(page);
 
-  await expect(page.getByTestId("board-menu")).toBeVisible();
+  await expect(page.getByTestId("board-bottom-dock")).toBeVisible();
   await expect(page.getByTestId("board-tool-select")).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("board-tool-pan")).toBeEnabled();
   await expect(page.getByTestId("add-note")).toBeEnabled();
   await expect(page.getByTestId("add-text")).toBeEnabled();
   await expect(page.getByTestId("board-tool-shape")).toBeEnabled();
-  await expect(page.getByTestId("board-tool-draw")).toBeDisabled();
-  await expect(page.getByTestId("board-tool-connector")).toBeDisabled();
+  await expect(page.getByTestId("board-tool-draw")).toBeEnabled();
+  await expect(page.getByTestId("board-tool-connector")).toBeEnabled();
+
+  // 未实现能力以禁用占位存在（不消失，给用户能力地图）。
+  await expect(page.getByTestId("dock-tool-table")).toBeDisabled();
+  await expect(page.getByTestId("dock-tool-kanban")).toBeDisabled();
+  await expect(page.getByTestId("dock-tool-code")).toBeDisabled();
+  await expect(page.getByTestId("dock-tool-image")).toBeDisabled();
 
   await page.getByTestId("board-tool-pan").click();
   await expect(page.getByTestId("board-tool-pan")).toHaveAttribute("aria-pressed", "true");
 
-  await page.getByTestId("board-tool-assets").click();
-  await expect(page.getByTestId("board-assets-panel")).toBeVisible();
-  await expect(page.getByTestId("board-assets-search")).toBeVisible();
-  await expect(page.getByText("图片")).toBeVisible();
-  await expect(page.getByText("图标")).toBeVisible();
-
-  await page.getByTestId("board-tool-templates").click();
-  await expect(page.getByTestId("board-templates-panel")).toBeVisible();
-  await expect(page.getByText("Brainstorm")).toBeVisible();
-  await expect(page.getByText("Kanban")).toBeVisible();
-
+  // 形状类型切换：dock 上 shape 按钮旁的下拉箭头打开 shape picker。
+  await page.getByTestId("board-tool-shape-menu").click();
+  await expect(page.getByTestId("board-shape-panel")).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByTestId("board-templates-panel")).toHaveCount(0);
-  await expect(page.getByTestId("board-tool-select")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("board-shape-panel")).toHaveCount(0);
 
   await page.getByTestId("add-note").click();
   await expectItemCount(page, 1);
@@ -58,7 +58,7 @@ test("编辑者使用 Board Menu：工具可见、面板可打开、创建后选
   await expect(page.getByTestId("board-tool-shape")).toHaveAttribute("aria-pressed", "true");
 });
 
-test("viewer 不显示会改变内容的 Board Menu", async ({ page, playwright }) => {
+test("viewer 不显示会改变内容的工具 dock", async ({ page, playwright }) => {
   const owner = await playwright.request.newContext({ baseURL: BASE_URL });
   await owner.post("/api/auth/register", {
     data: { firstName: "O", lastName: "O", email: uniq(), password: "secret123", agreeTerms: true },
@@ -72,7 +72,7 @@ test("viewer 不显示会改变内容的 Board Menu", async ({ page, playwright 
   });
   await page.goto(`/boards/${board.id}`);
 
-  await expect(page.getByTestId("board-menu")).toHaveCount(0);
+  await expect(page.getByTestId("board-bottom-dock")).toHaveCount(0);
   await expect(page.getByTestId("add-note")).toHaveCount(0);
   await expect(page.getByTestId("add-text")).toHaveCount(0);
 

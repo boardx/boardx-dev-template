@@ -77,6 +77,8 @@ test("UI：房间 owner 在板页切换可见范围到 public", async ({ page })
   const board = (await (await page.request.post(`/api/rooms/${room.id}/boards`, { data: { name: "VisUI" } })).json()).board;
 
   await page.goto(`/boards/${board.id}`);
+  // reskin(issue #468): 该入口收进 Header ⋯More 菜单，先确保面板展开。
+  if (!(await page.getByTestId("board-more-panel").isVisible())) await page.getByTestId("board-more-menu").click();
   await page.getByTestId("board-meta-edit").click();
   await page.getByTestId("visibility").selectOption("public");
   // selectOption 只触发 onChange，不等待 changeVisibility 的 PATCH+refresh 异步完成——
@@ -88,6 +90,8 @@ test("UI：房间 owner 在板页切换可见范围到 public", async ({ page })
     })
     .toBe("public");
   await page.reload();
+  // reskin(issue #468): 该入口收进 Header ⋯More 菜单，先确保面板展开。
+  if (!(await page.getByTestId("board-more-panel").isVisible())) await page.getByTestId("board-more-menu").click();
   await page.getByTestId("board-meta-edit").click();
   await expect(page.getByTestId("visibility")).toHaveValue("public");
 });

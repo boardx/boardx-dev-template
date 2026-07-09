@@ -1,5 +1,5 @@
 "use client";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CanvasViewport } from "@/components/board/canvas-viewport";
 import {
@@ -38,21 +38,9 @@ import {
   AlignCenter,
   AlignLeft,
   AlignRight,
-  Cable,
-  Eraser,
-  Hand,
-  Image,
-  LayoutTemplate,
   Link2,
-  MousePointer2,
   Paintbrush,
-  PenLine,
-  Redo2,
   RefreshCw,
-  Shapes,
-  StickyNote,
-  Type,
-  Undo2,
 } from "lucide-react";
 
 interface Item {
@@ -390,8 +378,6 @@ type BoardTool =
   | "text"
   | "connector"
   | "shape"
-  | "assets"
-  | "templates"
   | "chart";
 
 // p6:F15：形状类型面板/Widget Menu 切换入口的小图标（纯 SVG，不依赖 lucide 里没有的形状）。
@@ -443,42 +429,6 @@ const BIG_NUDGE = 10;
 // 对齐吸附（uc-canvas-007）纯逻辑已抽到 @/lib/canvas-snap（F13：DOM 参考线渲染
 // 与 fabric 拖拽吸附共用），本文件只渲染参考线 DOM（testid=alignment-guide 不变）。
 
-function BoardMenuButton({
-  testId,
-  label,
-  active,
-  disabled,
-  onClick,
-  children,
-}: {
-  testId: string;
-  label: string;
-  active: boolean;
-  disabled?: boolean;
-  onClick?: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <Button
-      type="button"
-      data-testid={testId}
-      size="sm"
-      variant={active ? "secondary" : "ghost"}
-      title={disabled ? `${label}（暂不可用）` : label}
-      aria-label={label}
-      aria-pressed={active}
-      disabled={disabled}
-      onClick={onClick}
-      className={`transition-colors duration-200 ${
-        active ? "bg-muted text-foreground ring-1 ring-border-strong" : "text-muted-foreground hover:text-foreground"
-      }`}
-    >
-      {children}
-      <span className="text-xs">{label}</span>
-    </Button>
-  );
-}
-
 // p8:F02 — 把 Yjs doc 的最新状态合并回本地 items，但正在本地编辑/拖拽的那一条
 // 保留本地版本，不被远端覆盖（避免打断用户正在做的操作；等编辑/拖拽结束后，
 // 下一次远端事件或 editingId 清空时的兜底 reconcile 会把merge 的那部分带回来，
@@ -505,7 +455,22 @@ function mergeRemoteItems(
 // p6:F13 渲染引擎：item 的渲染与指针交互（选中框/拖拽/多选/双击）由 FabricCanvas
 // （fabric.Canvas 适配器）承担；本组件仍是数据权威（REST 持久化 + 撤销栈 + 剪贴板），
 // 周边 DOM UI（工具栏 / Widget Menu / 右键菜单 / selection-count / 参考线 / 编辑框 / 徽标）不变。
-export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: boolean }) {
+// board-shell reskin（issue #468）：撤销/重做按钮迁到页面 header（page.tsx），通过
+// ref 句柄调用组件内的 undo/redo，可用态经 onHistoryChange 回传（键盘 mod+Z 快捷键
+// 仍在组件内不变）。
+export interface BoardCanvasHandle {
+  undo: () => void;
+  redo: () => void;
+}
+
+export const BoardCanvas = forwardRef<
+  BoardCanvasHandle,
+  {
+    boardId: string;
+    canEdit: boolean;
+    onHistoryChange?: (s: { canUndo: boolean; canRedo: boolean }) => void;
+  }
+>(function BoardCanvas({ boardId, canEdit, onHistoryChange }, ref) {
   const [items, setItems] = useState<Item[]>([]);
   // applyColors 的同步真值来源：React 的 setState(updater) 不保证 updater 在调用点同步执行
   // （它可能被推迟到下一次渲染阶段才处理），所以不能指望"setItems(prev => ...) 内部算出的
@@ -524,7 +489,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   const [editingId, setEditingId] = useState<string | null>(null); // F11 文本编辑中的便签
   const [activeTool, setActiveTool] = useState<BoardTool>("select");
   const [aiOpen, setAiOpen] = useState(false); // F01: Board AI 浮层/board chat 面板开关，dock 与浮层共享同一真值
-  const [openPanel, setOpenPanel] = useState<"assets" | "templates" | "shape" | "link" | null>(null);
+  const [openPanel, setOpenPanel] = useState<"shape" | "link" | null>(null);
   // p7:F12（uc-board-menu-011 主流程 5-6）：链接输入框草稿 + 校验错误提示。
   const [linkDraft, setLinkDraft] = useState("");
   const [linkError, setLinkError] = useState<string | null>(null);
@@ -1331,7 +1296,8 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   // 嵌入/资源组件创建（uc-widget-menu-009）：可刷新组件。线上以 type:"note" 落库 +
   // color:"embed" 哨兵，创建后立即 PATCH 写入标记，刷新/重载后仍判别为可刷新组件。
   async function addEmbed() {
-    setActiveTool("assets");
+    // reskin 后 assets 工具态已删除（dock 无 assets），嵌入创建后回到选择工具。
+    setActiveTool("select");
     setOpenPanel(null);
     const x = 580;
     const y = 40 + placeN.current++ * 130;
@@ -1679,8 +1645,7 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
 
   function chooseTool(tool: BoardTool) {
     setActiveTool(tool);
-    if (tool === "assets" || tool === "templates") setOpenPanel(tool);
-    else setOpenPanel(null);
+    setOpenPanel(null);
     if (tool === "select") setSelected(new Set());
     setFormatSource(null); // uc-widget-menu-010 主流程 7：切工具即退出取样模式
     if (tool !== "connector") setConnectorFirstPick(null); // 切出连接线工具即丢弃未完成的起点选择
@@ -1700,10 +1665,22 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       return;
     }
     if (tool === "shape") {
+      // uc-widgets-004 主流程 4：点形状入口直接沿用上次类型创建；类型切换走 shape picker
+      // （dock 上的 board-tool-shape-menu 下拉箭头，见 BoardBottomDock 的 onShapeMenu）。
       void addShape();
       return;
     }
-    if (tool === "select" || tool === "pan") {
+    if (tool === "embed") {
+      void addEmbed();
+      return;
+    }
+    if (tool === "link") {
+      // p7:F12：链接创建走 URL 输入面板（校验通过才落画布），toggle 语义与原顶部条一致。
+      setOpenPanel((p) => (p === "link" ? null : "link"));
+      setLinkError(null);
+      return;
+    }
+    if (tool === "select" || tool === "pan" || tool === "draw" || tool === "eraser" || tool === "connector") {
       chooseTool(tool);
     }
   }
@@ -2197,6 +2174,14 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
     await load();
   }, [canEdit, apiDelete, apiRestore, apiMove, apiResize, load]);
 
+  // board-shell reskin（issue #468）：撤销/重做按钮在页面 header（page.tsx）渲染，
+  // 经 ref 句柄调进来；可用态随 historyTick 变化回传（初始也发一次，header 首屏即禁用态）。
+  useImperativeHandle(ref, () => ({ undo: () => void undo(), redo: () => void redo() }), [undo, redo]);
+  useEffect(() => {
+    onHistoryChange?.({ canUndo, canRedo });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canUndo, canRedo]);
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const target = e.target as HTMLElement | null;
@@ -2256,241 +2241,68 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
   }, [items, selected, deleteSelected, moveSelected, pasteClipboard, undo, redo, canEdit]);
 
   return (
-    <div className="relative flex flex-1 flex-col" onMouseMove={publishLocalCursor} onMouseLeave={clearLocalCursor}>
-      {/* Board Menu：编辑者可见的工具入口；不可用能力保留禁用状态，避免误导为已实现。 */}
-      {canEdit && (
-        <div className="relative border-b bg-card px-3 py-1.5">
-          <div data-testid="board-menu" aria-label="Board Menu" className="flex items-center gap-1.5">
-            <BoardMenuButton
-              testId="board-tool-select"
-              label="选择"
-              active={activeTool === "select"}
-              onClick={() => chooseTool("select")}
-            >
-              <MousePointer2 className="h-4 w-4" />
-            </BoardMenuButton>
-            <BoardMenuButton
-              testId="board-tool-pan"
-              label="平移"
-              active={activeTool === "pan"}
-              onClick={() => chooseTool("pan")}
-            >
-              <Hand className="h-4 w-4" />
-            </BoardMenuButton>
-            <BoardMenuButton testId="add-note" label="便利贴" active={activeTool === "sticky"} onClick={() => void addNote()}>
-              <StickyNote className="h-4 w-4" />
-            </BoardMenuButton>
-            {/* p6:F17（uc-widgets-006 / uc-board-menu-006）：手绘工具——激活后画布进入 fabric
-                isDrawingMode（PencilBrush 自由绘制），松开鼠标即持久化为手绘组件（见
-                onDrawCreated）。 */}
-            <BoardMenuButton
-              testId="board-tool-draw"
-              label="手绘"
-              active={activeTool === "draw"}
-              onClick={() => chooseTool("draw")}
-            >
-              <PenLine className="h-4 w-4" />
-            </BoardMenuButton>
-            {/* p6:F17（uc-board-menu-012）：橡皮擦——激活后点击某条笔迹删除该笔迹（stroke 级
-                删除，见 onErasePick）；只作用于手绘对象，不误删其它组件。 */}
-            <BoardMenuButton
-              testId="board-tool-eraser"
-              label="橡皮擦"
-              active={activeTool === "eraser"}
-              onClick={() => chooseTool("eraser")}
-            >
-              <Eraser className="h-4 w-4" />
-            </BoardMenuButton>
-            <BoardMenuButton testId="add-text" label="文本" active={activeTool === "text"} onClick={() => void addText()}>
-              <Type className="h-4 w-4" />
-            </BoardMenuButton>
-            {/* p6:F16（uc-widgets-005 前端入口 1-2）：连接线工具——激活后依次点击两个组件
-                （或空白处，作为自由端点）建立连接（见 onConnectorPick 的两次点击状态机 +
-                createConnector）。 */}
-            <BoardMenuButton
-              testId="board-tool-connector"
-              label="连接线"
-              active={activeTool === "connector"}
-              onClick={() => chooseTool("connector")}
-            >
-              <Cable className="h-4 w-4" />
-            </BoardMenuButton>
-            {/* p6:F15（uc-widgets-004 前端入口 1/2）：形状入口点击直接用上次选择的类型创建
-                （主流程 4：沿用上次），旁边的下拉箭头（board-tool-shape-menu）展开形状类型面板
-                （主流程 1-3：展示可创建的形状类型下拉菜单，供切换）。 */}
-            <BoardMenuButton testId="board-tool-shape" label="形状" active={activeTool === "shape"} onClick={() => void addShape()}>
-              <Shapes className="h-4 w-4" />
-            </BoardMenuButton>
-            <button
-              type="button"
-              data-testid="board-tool-shape-menu"
-              aria-label="选择形状类型"
-              aria-expanded={openPanel === "shape"}
-              onClick={() => setOpenPanel((p) => (p === "shape" ? null : "shape"))}
-              className="flex h-9 w-4 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
-            >
-              <span className="text-10 leading-none">▾</span>
-            </button>
-            {/* p7:F12（uc-board-menu-011）：链接组件创建入口——点击展开 URL 输入面板，
-                校验通过后在画布放置链接卡片（见 addLink）。 */}
-            <BoardMenuButton
-              testId="add-link"
-              label="链接"
-              active={openPanel === "link"}
-              onClick={() => {
-                setOpenPanel((p) => (p === "link" ? null : "link"));
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden" onMouseMove={publishLocalCursor} onMouseLeave={clearLocalCursor}>
+      {/* 顶部 Board Menu 工具条已删除（board-shell reskin，issue #468）——工具入口统一走
+          底部 BoardBottomDock（见文件末尾渲染点）。shape picker / 链接输入两个二级面板由
+          dock 的对应按钮触发，从 dock 上方弹出。 */}
+      {canEdit && openPanel === "shape" && (
+        <div
+          data-testid="board-shape-panel"
+          className="absolute bottom-20 left-1/2 z-20 w-56 -translate-x-1/2 rounded-xl border bg-popover p-1.5 shadow-xl"
+        >
+          <div className="grid grid-cols-3 gap-1.5">
+            {SHAPE_TYPES.map((s) => (
+              <button
+                key={s}
+                type="button"
+                data-testid={`board-shape-${s}`}
+                aria-label={SHAPE_LABELS[s]}
+                title={SHAPE_LABELS[s]}
+                onClick={() => void addShape(s)}
+                className="flex flex-col items-center gap-1 rounded-lg border border-transparent p-2 text-10 text-muted-foreground transition-colors duration-200 hover:border-input hover:bg-accent"
+              >
+                <ShapeGlyph type={s} className="h-5 w-5" />
+                {SHAPE_LABELS[s]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* p7:F12（uc-board-menu-011 主流程 5-6）：链接输入面板——输入 URL、校验（空/格式
+          不可用时就地提示，UC 主流程 6），确认后创建链接组件。 */}
+      {canEdit && openPanel === "link" && (
+        <div
+          data-testid="board-link-panel"
+          className="absolute bottom-20 left-1/2 z-20 w-72 -translate-x-1/2 rounded-xl border bg-popover p-3 shadow-xl"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void addLink(linkDraft);
+            }}
+          >
+            <input
+              data-testid="board-link-url"
+              aria-label="链接地址"
+              placeholder="https://example.com"
+              autoFocus
+              value={linkDraft}
+              onChange={(e) => {
+                setLinkDraft(e.target.value);
                 setLinkError(null);
               }}
-            >
-              <Link2 className="h-4 w-4" />
-            </BoardMenuButton>
-            <BoardMenuButton
-              testId="board-tool-assets"
-              label="资源"
-              active={activeTool === "assets"}
-              onClick={() => chooseTool("assets")}
-            >
-              <Image className="h-4 w-4" />
-            </BoardMenuButton>
-            {/* 嵌入/资源组件（可刷新）：uc-widget-menu-009 的刷新入口只对这类组件出现 */}
-            <BoardMenuButton testId="add-embed" label="嵌入" active={false} onClick={() => void addEmbed()}>
-              <RefreshCw className="h-4 w-4" />
-            </BoardMenuButton>
-            <BoardMenuButton
-              testId="board-tool-templates"
-              label="模板"
-              active={activeTool === "templates"}
-              onClick={() => chooseTool("templates")}
-            >
-              <LayoutTemplate className="h-4 w-4" />
-            </BoardMenuButton>
-
-            <div className="mx-1 h-5 w-px bg-border" />
-            <Button
-              data-testid="undo"
-              size="icon"
-              variant="ghost"
-              title="撤销"
-              aria-label="撤销"
-              disabled={!canUndo}
-              onClick={() => void undo()}
-            >
-              <Undo2 className="h-4 w-4" />
+              className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            {linkError && (
+              <div data-testid="board-link-error" role="alert" className="mt-1.5 text-xs text-destructive">
+                {linkError}
+              </div>
+            )}
+            <Button data-testid="board-link-submit" type="submit" size="sm" className="mt-2 w-full">
+              添加到画布
             </Button>
-            <Button
-              data-testid="redo"
-              size="icon"
-              variant="ghost"
-              title="重做"
-              aria-label="重做"
-              disabled={!canRedo}
-              onClick={() => void redo()}
-            >
-              <Redo2 className="h-4 w-4" />
-            </Button>
-            <span data-testid="selection-count" className="ml-1 text-xs text-muted-foreground">
-              已选 {selected.size}
-            </span>
-          </div>
-
-          {/* p6:F15（uc-widgets-004 主流程 1-3）：形状类型下拉——当前确认展示圆形/三角形/菱形/
-              圆角矩形/矩形/六边形（业务规则 5）。选中后把该类型设为当前形状工具并立即创建一个
-              该类型的形状（与「点击形状入口沿用上次类型」共用同一个 addShape，只是显式指定类型）。 */}
-          {openPanel === "shape" && (
-            <div
-              data-testid="board-shape-panel"
-              className="absolute left-3 top-12 z-20 w-56 rounded-lg border bg-popover p-2 shadow-lg"
-            >
-              <div className="grid grid-cols-3 gap-1.5">
-                {SHAPE_TYPES.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    data-testid={`board-shape-${s}`}
-                    aria-label={SHAPE_LABELS[s]}
-                    title={SHAPE_LABELS[s]}
-                    onClick={() => void addShape(s)}
-                    className="flex flex-col items-center gap-1 rounded-md border border-transparent p-2 text-10 text-muted-foreground hover:border-input hover:bg-accent"
-                  >
-                    <ShapeGlyph type={s} className="h-5 w-5" />
-                    {SHAPE_LABELS[s]}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* p7:F12（uc-board-menu-011 主流程 5-6）：链接输入面板——输入 URL、校验（空/格式
-              不可用时就地提示，UC 主流程 6），确认后创建链接组件。 */}
-          {openPanel === "link" && (
-            <div
-              data-testid="board-link-panel"
-              className="absolute left-3 top-12 z-20 w-72 rounded-lg border bg-popover p-3 shadow-lg"
-            >
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void addLink(linkDraft);
-                }}
-              >
-                <input
-                  data-testid="board-link-url"
-                  aria-label="链接地址"
-                  placeholder="https://example.com"
-                  autoFocus
-                  value={linkDraft}
-                  onChange={(e) => {
-                    setLinkDraft(e.target.value);
-                    setLinkError(null);
-                  }}
-                  className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
-                {linkError && (
-                  <div data-testid="board-link-error" role="alert" className="mt-1.5 text-xs text-destructive">
-                    {linkError}
-                  </div>
-                )}
-                <Button data-testid="board-link-submit" type="submit" size="sm" className="mt-2 w-full">
-                  添加到画布
-                </Button>
-              </form>
-            </div>
-          )}
-
-          {openPanel === "assets" && (
-            <div
-              data-testid="board-assets-panel"
-              className="absolute left-3 top-12 z-20 w-72 rounded-lg border bg-popover p-3 shadow-lg"
-            >
-              <input
-                data-testid="board-assets-search"
-                aria-label="搜索资源"
-                placeholder="搜索图片或图标"
-                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-              <div className="mt-2 flex gap-1.5">
-                <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">图片</span>
-                <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">图标</span>
-              </div>
-            </div>
-          )}
-
-          {openPanel === "templates" && (
-            <div
-              data-testid="board-templates-panel"
-              className="absolute left-3 top-12 z-20 w-72 rounded-lg border bg-popover p-3 shadow-lg"
-            >
-              <div className="text-xs font-semibold text-muted-foreground">模板</div>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <button type="button" className="rounded-md border bg-background p-2 text-left text-xs">
-                  Brainstorm
-                </button>
-                <button type="button" className="rounded-md border bg-background p-2 text-left text-xs">
-                  Kanban
-                </button>
-              </div>
-            </div>
-          )}
+          </form>
         </div>
       )}
 
@@ -2504,7 +2316,11 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
           // 菜单而非清空选择，见 canvas-select.spec.ts「点选/Shift多选/点空白清除」）。
           className="absolute left-1/2 top-14 z-20 flex max-w-[92vw] flex-wrap -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-lg"
         >
-          <span className="px-1 text-xs text-muted-foreground">{selected.size} 项</span>
+          {/* selection-count 原在顶部工具条，reskin 后迁入 widget-menu（testid 保活，
+              spec 断言"已选 N"文本不变；widget-menu 本就 selected.size>0 才渲染，语义一致）。 */}
+          <span data-testid="selection-count" className="px-1 text-xs text-muted-foreground">
+            已选 {selected.size}
+          </span>
           {/* p6:F20（uc-widget-menu-003 主流程 3/4，业务规则 1）：全部选中项已锁定时，样式/编辑
               类入口整体隐藏——锁定对象只保留锁定状态入口（此处即下方的解锁）与删除（已置灰）。
               混合锁定态（部分选中项锁定）仍展示样式入口，setColor/toggleBold 等 setter 已各自
@@ -3330,7 +3146,9 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       {canEdit && (
         <BoardBottomDock
           activeTool={activeTool}
+          activePanel={openPanel}
           onSelectTool={chooseDockTool}
+          onShapeMenu={() => setOpenPanel((p) => (p === "shape" ? null : "shape"))}
           aiOpen={aiOpen}
           onToggleAi={() => setAiOpen((prev) => !prev)}
         />
@@ -3338,4 +3156,4 @@ export function BoardCanvas({ boardId, canEdit }: { boardId: string; canEdit: bo
       <BoardAiOverlay boardId={boardId} itemCount={items.length} open={aiOpen} onOpenChange={setAiOpen} />
     </div>
   );
-}
+});

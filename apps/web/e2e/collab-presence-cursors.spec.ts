@@ -114,7 +114,7 @@ test("头像溢出列表可展开，只读访问者能观察 presence/cursor 但
     await expect(ownerPage.getByTestId("presence-list")).toBeVisible();
     await expect(ownerPage.getByTestId("presence-list-member")).toHaveCount(2);
 
-    await expect(viewerPage.getByTestId("board-menu")).toBeHidden();
+    await expect(viewerPage.getByTestId("board-bottom-dock")).toBeHidden();
     const ownerId = await selfId(ownerPage);
     await moveInsideCanvas(ownerPage);
     await expect(viewerPage.getByTestId(`collab-cursor-${ownerId}`)).toBeVisible({ timeout: 15_000 });

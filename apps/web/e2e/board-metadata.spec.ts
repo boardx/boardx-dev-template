@@ -64,6 +64,8 @@ test("UI：属主在板页编辑名称，标题刷新", async ({ page }) => {
 
   await page.goto(`/boards/${board.id}`);
   await expect(page.getByTestId("board-title")).toHaveText("Before");
+  // reskin(issue #468): 该入口收进 Header ⋯More 菜单，先确保面板展开。
+  if (!(await page.getByTestId("board-more-panel").isVisible())) await page.getByTestId("board-more-menu").click();
   await page.getByTestId("board-meta-edit").click();
   await page.getByTestId("meta-name").fill("After");
   await page.getByTestId("meta-save").click();
