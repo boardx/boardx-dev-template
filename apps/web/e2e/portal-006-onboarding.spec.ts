@@ -52,7 +52,7 @@ test("第 4 步显示审批 SLA；第 3 步提交申请是诚实占位（disable
   // 第 4 步：审批 SLA
   await stepper.getByRole("button", { name: "4. 等审批" }).click();
   await expect(page.getByTestId("approval-sla")).toContainText("通常 < 1 个工作周期（3h）");
-  await expect(page.getByText("coord-main 或仓库所有者")).toBeVisible();
+  await expect(page.getByText("审批人：coord-main 或仓库所有者")).toBeVisible();
 });
 
 test("第 5 步领凭据：人工发放三步流程 + export 命令模板 + 自动发放待 ADR-011 说明", async ({ page }) => {

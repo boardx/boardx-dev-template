@@ -91,7 +91,7 @@ export function PulseTab() {
       <PortalCard title="整体进度" state={phasesState}>
         <div className="flex items-end justify-between">
           <p className="text-26 font-bold text-foreground">
-            {totals.passing}
+            <span data-testid="totals-passing">{totals.passing}</span>
             <span className="text-15 font-normal text-muted-foreground"> / {totals.total} 项通过</span>
           </p>
           {/* 周增量需要历史快照数据源（pulse API 暂无）——诚实空态，不虚构 +N */}
