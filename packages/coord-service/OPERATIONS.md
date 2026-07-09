@@ -28,7 +28,9 @@
 
 ### ① Web 仪表盘（推荐日常使用）
 
-打开应用的 **`/admin/coordination`**（需要以 SysAdmin 登录）。三张卡：
+正式地址：**https://develop.boardx.us/admin/coordination**（本地开发则是
+`http://localhost:<port>/admin/coordination`）。需要以 **SysAdmin** 登录，否则
+重定向到 /login。三张卡：
 
 | 卡片 | 内容 |
 |---|---|
