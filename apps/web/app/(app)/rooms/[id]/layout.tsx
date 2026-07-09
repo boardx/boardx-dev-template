@@ -85,6 +85,13 @@ export default function RoomShellLayout({ children }: { children: React.ReactNod
   // 当前 tab：/rooms/[id]/<segment>/... 的第一段
   const activeSegment = pathname.split(`/rooms/${roomId}`)[1]?.split("/")[1] ?? "boards";
 
+  // p22 Studio 全屏：Studio 路由脱离房间壳（不渲染面包屑/房间头部/六 tab），
+  // Studio 页自己占满内容区（三栏工作区 + 顶部返回房间）。非成员/加载态仍走下方 errorCode。
+  const isStudioFullscreen = activeSegment === "studio";
+  if (isStudioFullscreen && !errorCode) {
+    return <div data-testid="room-studio-fullscreen" className="h-full min-h-0">{children}</div>;
+  }
+
   if (errorCode) {
     return (
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 p-12 text-center">
