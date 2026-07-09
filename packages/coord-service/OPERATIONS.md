@@ -34,7 +34,7 @@
 |---|---|
 | Coordinators | registry.yaml 的身份名录（谁被注册过、active 与否） |
 | Active Claims | **谁此刻持有什么租约**、心跳多久前、ttl（30 秒自动刷新） |
-| Recent Events | 最近 50 条协调事件（claim/release/heartbeat/expire），按类型着色 |
+| Recent Events | 最近 50 条协调事件（claim/release/heartbeat/expire + 叙述层 cycle-plan/cycle-result/andon），按类型着色 |
 
 前置条件：apps/web 的部署环境要配 `COORD_SERVICE_URL=https://coord-service-staging.boardx.workers.dev`
 ——没配时卡片会显示 "COORD_SERVICE_URL is not configured"，这是提示不是故障。
@@ -85,20 +85,65 @@ sh -c 'set -a; . ./.env.cloudflare; set +a; npx wrangler d1 execute coord-servic
   --remote --env staging --command "SELECT ..." --json'
 ```
 
-## 2. 凭据（token）管理
+## 1.5 HTTP API 全表（写操作都要 Bearer token）
 
-### 本地凭据文件（agent 会话自取）
+根路由 `GET /` 返回服务简介 + 这张端点清单。完整表：
 
-```
-.harness/state/.cache/coord-credentials.json    ← gitignored，mode 600
-```
+| 方法 | 路径 | 鉴权 | 用途 |
+|---|---|---|---|
+| GET | `/` | 公开 | 服务简介 + 端点清单 |
+| GET | `/status` | 公开 | active_claims + 最近 50 事件（见 §1②） |
+| GET | `/claims?resource_id=&status=` | 公开 | 查租约 |
+| POST | `/claims` | token | 原子认领租约（撞 `uq_active_claim` → 409） |
+| POST | `/claims/:id/heartbeat` | token（须持有者） | 续约（刷新 last_heartbeat_at） |
+| POST | `/claims/:id/release` | token（须持有者） | 交还租约 |
+| POST | `/verdicts` | token（须 `kind: reviewer`） | 记一条 review verdict |
+| POST | `/events` | token（andon 须 coordinator 层） | 写一条**叙述层事件**，见下 |
 
-内容：`COORD_SERVICE_URL` + 各协调者身份的 token。agent 会话用法：
+### 叙述层事件 `POST /events`（ADR-009 后站会/停线信号的家）
+
+GitHub 协调面退役后，原本发在 issue 上的**站会**（cycle-plan/cycle-result）和
+**Andon 停线信号**改写进 D1 events 表。只接受这三种叙述类型；claim 生命周期类型
+（claim/heartbeat/release/expire/verdict/merge）手写一律 400（防伪造审计历史）。
 
 ```bash
-export COORD_SERVICE_URL=$(jq -r '.COORD_SERVICE_URL' .harness/state/.cache/coord-credentials.json)
-export COORD_SERVICE_TOKEN=$(jq -r '.tokens["coord-<你的id>"]' .harness/state/.cache/coord-credentials.json)
+# 站会：发本周期的 cycle-plan（任意已认证身份都能发自己的）
+curl -s -X POST .../events -H "Authorization: Bearer $COORD_SERVICE_TOKEN" \
+  -H 'content-type: application/json' \
+  -d '{"type":"cycle-plan","resource_id":"cycle:2026-07-09T00:00Z",
+       "payload":{"commit":["ship X"],"carry":[],"blocked":[]}}'
+
+# Andon：main 打挂时发停线信号（**仅 coordinator 层身份**，worker 发会 403——
+# 防止普通 worker 伪造 stop 拉停整个 fleet 或伪造 clear 解除合法停线）
+curl -s -X POST .../events -H "Authorization: Bearer $COORD_SERVICE_TOKEN" \
+  -H 'content-type: application/json' \
+  -d '{"type":"andon","resource_id":"andon:main","payload":{"signal":"stop","reason":"main typecheck red"}}'
 ```
+
+写进去的叙述事件在 `GET /status` 的 recent_events 和仪表盘 Recent Events 卡片里可见。
+
+## 2. 凭据（token）管理
+
+### token 怎么发到 agent 会话（实际现状，非自动）
+
+**没有一个自动生成的中央凭据文件。** `seed-agents.ts` 只在生成那一刻把新 token
+**打印到 stdout 一次**（`console.log`，见下），不落任何文件。分发是人工的：谁跑的
+seed，谁负责把每个 token 写进对应 agent 会话能读到的本地文件，再让会话 source。
+
+2026-07-08 的 8 身份分发实际就是这么做的：每个身份一个独立文件（mode 600、
+放在 git worktree 之外），文件内容两行——
+
+```bash
+# <coord-id>.env（gitignored 或放在仓库树外，绝不进 git）
+export COORD_SERVICE_URL="https://coord-service-staging.boardx.workers.dev"
+export COORD_SERVICE_TOKEN="<该身份的 token>"
+```
+
+agent 会话每次跑 lock 命令前 `source` 它即可。分发时只把**文件路径**贴到总线
+（如各自 lease issue / #323），**token 值绝不贴**。
+
+> 一个自动写中央 `coord-credentials.json` 的便利脚本尚未实现——现状是"seed 打印
+> → 人工分发到 per-session 文件"。要做成自动的话是独立改进，别假设那个 json 已存在。
 
 ### 给新身份发 token（registry.yaml 加了新 agent 之后）
 
@@ -107,7 +152,8 @@ cd packages/coord-service
 npx tsx scripts/seed-agents.ts        # 幂等：只给 D1 里还没有的 id 生成新行+新 token
 ```
 
-**token 只在生成那一刻打印一次**，立刻存进凭据文件，别贴进 issue/PR/聊天记录。
+**token 只在生成那一刻打印一次**（stdout），立刻按上面的方式分发进 per-session
+文件，别贴进 issue/PR/聊天记录。
 
 ### 轮换（token 疑似泄漏 / 丢失时）
 
@@ -162,6 +208,6 @@ in_progress 租约标记为 expired 并写一条 expire 事件——不需要人
 
 - token/API key **只**存在于：D1 的 hash 列、本地 gitignored 文件、Cloudflare secret。
   任何时候不进 git、不进 issue/PR/评论（总线全球可读）。
-- `.env.cloudflare` 与 `.harness/state/.cache/coord-credentials.json` 都是 gitignored
-  ——不要为了"备份"把它们复制到仓库内的其它路径。
+- `.env.cloudflare` 与各 per-session 的 `<coord-id>.env` 凭据文件都必须 gitignored
+  或放在仓库树外——不要为了"备份"把它们复制到仓库内会被 git 追踪的路径。
 - 发现泄漏：立即按 §2 轮换受影响身份 + 在总线留一条（不含新 token）说明轮换原因。
