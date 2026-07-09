@@ -122,7 +122,7 @@ export function BoardBottomDock({
                     "flex h-9 w-9 items-center justify-center rounded-lg transition-colors duration-200",
                     "hover:bg-muted hover:text-foreground",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent",
+                    "disabled:cursor-not-allowed disabled:text-disabled-foreground disabled:hover:bg-transparent",
                     active ? "bg-muted text-foreground" : "text-muted-foreground"
                   )}
                 >
