@@ -9,6 +9,8 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PortalCard, type PortalCardState } from "@/components/portal/portal-card";
+import { ActiveAgentsCard } from "@/components/portal/active-agents-card";
+import { PrQueueCard } from "@/components/portal/pr-queue-card";
 
 const FLOW_BASELINE_HOURS = 1.8;
 
@@ -73,6 +75,8 @@ export function PulseTab() {
   const phasesState: PortalCardState = failed ? "degraded" : !pulse ? "loading" : "ready";
   const github = pulse?.github ?? null;
   const flowState = sourceCardState(failed, pulse, github);
+  const coord = pulse?.coord ?? null;
+  const coordState = sourceCardState(failed, pulse, coord);
   const flowReady = github && github.configured && !("error" in github) ? github : null;
 
   const items = pulse?.phases.items ?? [];
@@ -149,6 +153,9 @@ export function PulseTab() {
             <p className="mt-2 text-11 text-muted-foreground">近 7 天趋势线：数据积累中（需要按日历史快照）。</p>
           </div>
         </PortalCard>
+        {/* p23/F04：谁在干活（pulse.coord）+ PR 队列（/api/portal/prs，卡内自取） */}
+        <ActiveAgentsCard state={coordState} coord={coord} />
+        <PrQueueCard />
       </div>
     </div>
   );
