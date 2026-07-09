@@ -13,6 +13,12 @@ import { test, expect } from "@playwright/test";
 // 本 spec 全程走 stub: 模型（mock-provider 模式）：packages/ai/src/gateway.ts 的
 // buildStubResearchJson 按 topic/audience 关键词确定性地派生 market 或 user-research
 // 两套结构中的一套，供这里确定性地断言两套字段分别正确渲染。
+//
+// p18-F14 更新（issue #514，deliberate）：composer 现在总是显式下发用户在研究类型选单
+// 里选中的类型（深度研究 → market / 用户研究 → user-research），UI 路径不再依赖主题
+// 关键词推断——本 spec 相应改为在选单里显式选择类型（helper 的 type 参数）。原来的
+// 关键词兜底路径（无显式类型的历史会话/老客户端请求）仍然保留，其回归由
+// e2e/ava-research-type-selector.spec.ts 的 API 级用例覆盖。两套模板的字段断言不变。
 
 const uniq = () => `ava_research_tpl_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 
@@ -22,8 +28,15 @@ async function register(page: import("@playwright/test").Page) {
   });
 }
 
-async function runResearchToReport(page: import("@playwright/test").Page, topic: string) {
+async function runResearchToReport(
+  page: import("@playwright/test").Page,
+  topic: string,
+  // p18-F14：显式研究类型。点击 mode-research 进入研究模式并弹出类型选单，
+  // 从选单里显式选中对应类型（不再依赖 topic 关键词推断）。
+  type: "market" | "user-research"
+) {
   await page.getByTestId("mode-research").click();
+  await page.getByTestId(`research-type-${type}`).click();
   await page.getByTestId("composer").fill(topic);
   await page.getByTestId("send").click();
 
@@ -52,7 +65,8 @@ test("市场类研究主题：报告面板展示 Executive summary / Key finding
 
   await runResearchToReport(
     page,
-    "Pricing strategy for enterprise whiteboard market expansion"
+    "Pricing strategy for enterprise whiteboard market expansion",
+    "market" // p18-F14：显式选 深度研究（market），不再靠 topic 关键词推断
   );
 
   await expect(page.getByTestId("research-report-panel")).toHaveAttribute(
@@ -80,7 +94,8 @@ test("用户研究类主题：报告面板展示 Summary / Personas / Top pain p
 
   await runResearchToReport(
     page,
-    "User research on onboarding friction for new workspace admins"
+    "User research on onboarding friction for new workspace admins",
+    "user-research" // p18-F14：显式选 用户研究（user-research），不再靠 topic 关键词推断
   );
 
   await expect(page.getByTestId("research-report-panel")).toHaveAttribute(

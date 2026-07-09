@@ -139,8 +139,16 @@ function inferResearchType(topic: string): ResearchType {
 }
 
 /** 校验并归一化模型输出的 shape；不满足最低要求（分节/问题数组）时抛错，
- *  由调用方（route.ts）落成研究失败态，而不是把畸形数据透传给前端渲染。 */
-function normalizeResearchJson(raw: unknown, topic: string, audience: string): ResearchPayload {
+ *  由调用方（route.ts）落成研究失败态，而不是把畸形数据透传给前端渲染。
+ *  p18-F14：explicitType 是用户在 composer 研究类型选单里显式选中的类型（深度研究 →
+ *  market / 用户研究 → user-research），优先级最高——模型输出什么都不能覆盖用户的
+ *  显式选择；仅当无显式类型（历史会话/老客户端请求）时才回退到模型输出 + 关键词推断。 */
+function normalizeResearchJson(
+  raw: unknown,
+  topic: string,
+  audience: string,
+  explicitType?: ResearchType
+): ResearchPayload {
   if (!raw || typeof raw !== "object") throw new Error("研究生成结果缺少必需字段");
   const v = raw as Record<string, unknown>;
 
@@ -184,10 +192,12 @@ function normalizeResearchJson(raw: unknown, topic: string, audience: string): R
 
   // p18-F05：researchType 决定报告用哪套模板字段。模型输出非法/缺失时按关键词兜底判定，
   // 而不是直接报错——报告模板选择不应该因为模型少输出一个字段就让整个研究失败。
+  // p18-F14：用户显式选择的类型（explicitType）优先于模型输出与关键词推断。
   const researchType: ResearchType =
-    reportRaw.researchType === "market" || reportRaw.researchType === "user-research"
+    explicitType ??
+    (reportRaw.researchType === "market" || reportRaw.researchType === "user-research"
       ? reportRaw.researchType
-      : inferResearchType(topic);
+      : inferResearchType(topic));
 
   const report: ResearchReport = {
     researchType,
@@ -230,6 +240,10 @@ export async function generateResearch(input: {
   audience: string;
   modelId: string;
   gateway: { streamChat(input: StreamChatInput): AsyncGenerator<string, void, void> };
+  /** p18-F14：用户在研究类型选单里显式选中的类型。给定时 prompt 会锁定该类型，
+   *  且归一化阶段无条件以它为准（模型输出/关键词推断都不能覆盖显式选择）；
+   *  缺省时保持 F05 行为：模型自选 + inferResearchType 关键词兜底（兼容历史会话）。 */
+  researchType?: ResearchType;
 }): Promise<ResearchPayload> {
   if (input.topic.includes(RESEARCH_FORCE_FAIL_MARKER)) {
     throw new Error("研究内容生成失败（测试触发）");
@@ -238,6 +252,14 @@ export async function generateResearch(input: {
   const userPrompt = [
     `Research topic: ${input.topic}`,
     `Target audience: ${input.audience}`,
+    // p18-F14：显式类型随提示词下发。真实 provider 按指令锁定该类型；stub provider
+    // （gateway.ts buildStubResearchJson）解析这一行，优先于 topic 关键词嗅探。
+    ...(input.researchType
+      ? [
+          `Research type: ${input.researchType}`,
+          `The user explicitly selected the research type. "researchType" in your JSON MUST be exactly "${input.researchType}" — do not infer it from the topic.`,
+        ]
+      : []),
   ].join("\n");
 
   let full = "";
@@ -252,5 +274,5 @@ export async function generateResearch(input: {
   }
 
   const parsed = extractJson(full);
-  return normalizeResearchJson(parsed, input.topic, input.audience);
+  return normalizeResearchJson(parsed, input.topic, input.audience, input.researchType);
 }

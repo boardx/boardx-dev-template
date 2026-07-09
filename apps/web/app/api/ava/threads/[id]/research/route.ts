@@ -38,6 +38,14 @@ interface ResearchBody {
   topic?: unknown;
   audience?: unknown;
   modelId?: unknown;
+  researchType?: unknown;
+}
+
+// p18-F14：用户在 composer 研究类型选单里显式选中的类型（深度研究 → market /
+// 用户研究 → user-research）。合法值之外（含缺省——历史会话/老客户端）一律按
+// undefined 处理，走 F05 的关键词兜底推断，不因为一个非法枚举值让研究失败。
+function parseResearchType(value: unknown): "market" | "user-research" | undefined {
+  return value === "market" || value === "user-research" ? value : undefined;
 }
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
@@ -92,6 +100,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       audience,
       modelId: settings.modelId,
       gateway: defaultGateway,
+      // p18-F14：显式类型贯穿生成管线，最终落进 research.report.researchType 并随
+      // research_payload 一起持久化到 ava_research_sessions（刷新恢复时原样回流，
+      // 不需要新增列/迁移）。
+      researchType: parseResearchType(body.researchType),
     });
   } catch (err) {
     // 真实生成失败（provider 报错 / 模型输出无法解析为预期结构）：服务端记录原始错误，

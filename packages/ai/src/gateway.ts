@@ -97,9 +97,13 @@ function buildStubResearchJson(userPrompt: string): string {
   // user-research，market 模板永远测不到——与 researchGenerator.ts 的 inferResearchType
   // 同一个坑、同一个修法。
   const haystack = topic.toLowerCase();
-  const researchType = STUB_USER_RESEARCH_HINTS.some((hint) => haystack.includes(hint))
-    ? "user-research"
-    : "market";
+  // p18-F14：用户显式选择的研究类型随提示词下发（researchGenerator.ts 在 userPrompt 里
+  // 附加 "Research type: market|user-research" 行）。stub 模拟"听话的真实模型"，优先
+  // 服从显式类型；只有没有显式类型时（历史会话/老客户端请求）才回退到 topic 关键词嗅探。
+  const explicitTypeMatch = userPrompt.match(/^Research type:\s*(market|user-research)\s*$/m);
+  const researchType =
+    explicitTypeMatch?.[1] ??
+    (STUB_USER_RESEARCH_HINTS.some((hint) => haystack.includes(hint)) ? "user-research" : "market");
 
   const sections =
     researchType === "market"
