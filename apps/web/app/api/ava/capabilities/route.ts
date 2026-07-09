@@ -1,7 +1,6 @@
 // apps/web/app/api/ava/capabilities/route.ts — AVA 可选 AI 能力（P9 F07）
 import { NextResponse } from "next/server";
 import {
-  AVA_AGENT_OPTIONS,
   AVA_MODEL_OPTIONS,
   AVA_TOOL_OPTIONS,
   DEFAULT_AVA_AGENT_ID,
@@ -10,6 +9,7 @@ import {
 } from "@repo/ai";
 import { getMembership } from "@repo/data";
 import { currentTeamId, currentUser } from "@/lib/session";
+import { listAvaAgentOptions } from "@/lib/ava-agents";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,7 +37,8 @@ export async function GET() {
           ? "Team owners and admins can select this model."
           : "",
     })),
-    agents: AVA_AGENT_OPTIONS,
+    // p18-F09：内置默认 Agent + 当前用户/团队已订阅的 AI Store Agent（真实订阅数据）。
+    agents: await listAvaAgentOptions(user.id, teamId),
     tools: AVA_TOOL_OPTIONS,
     defaults: {
       modelId: DEFAULT_AVA_MODEL_ID,

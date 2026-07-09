@@ -1,38 +1,32 @@
-# 会话交接 — Sprint p18/02
+# session-handoff — p18 / sprint-02
 
-## 当前已验证
-- F11（消息「发送到 Board」「发送邮件」接通，owner wrk-ava-p18-3）：`passing`。
-  验证：`pnpm --filter @repo/web exec playwright test e2e/ava-message-send-actions.spec.ts`
-  （5 passed）+ `pnpm -w run verify:base`（45/45）。证据：
-  `phases/phase-p18-ava-ai-realization/sprints/sprint-02/evidence/F11.verify.log`。
-- 其余 feature（F02/F03/F06/F07/F08/F09 等）状态以 `active-features.json` / `feature_list.json`
-  为准，本次会话未改动，不重复列举。
+> 最后更新：2026-07-09（wrk-ava-p18-3，F09）
 
-## 本轮改动（F11）
-- `packages/data/src/board.ts`：新增 `listEditableBoardsForUser`。
-- `packages/data/src/mailbox.ts`：新增 `countRecentOutboundEmails`（邮件频控查询，复用既有
-  `outbound_emails` 表，不引入新基础设施）。
-- `apps/web/lib/mailer.ts`：新增 `sendAvaMessageEmail` + `RateLimitedError`（1 分钟内最多 1 封）。
-- `apps/web/app/api/boards/route.ts`：新增 `GET ?scope=editable`。
-- 新增路由：
-  - `apps/web/app/api/ava/threads/[id]/messages/[messageId]/send-to-board/route.ts`
-  - `apps/web/app/api/ava/threads/[id]/messages/[messageId]/send-email/route.ts`
-- `apps/web/app/(app)/ava/page.tsx`：`MessageActionsBar` 两按钮从禁用占位改为真实动作，新增
-  最小可用白板选择器（popover）。
-- `apps/web/e2e/ava-message-actions.spec.ts`：占位断言（disabled）改为「默认可点击」。
-- 新增 `apps/web/e2e/ava-message-send-actions.spec.ts`（5 用例）。
+## 本轮做了什么
+- F09「Agent 选择器接入 AI Store 真实订阅数据」完成并经 `pnpm harness verify
+  --sprint p18/02 --feature F09` 门控转 passing（硬依赖 p11:F03 已就绪）。
+- agent-select 选项来源改为真实数据：内置默认 Agent + 当前用户/团队在 AI Store
+  已订阅的 type="agent" 项目（`store-<itemId>`），无订阅时仍是内置默认；
+  发消息路由的 agentId 合法集合与选择器同源，订阅 Agent 端到端生效。
+
+## 改了哪些文件
+- 新增 `apps/web/lib/ava-agents.ts`（listAvaAgentOptions，复用 p11-F03 数据层）。
+- `apps/web/app/api/ava/capabilities/route.ts`：agents 改为真实数据。
+- `packages/ai/src/avaSettings.ts`：normalizeAvaAiSettings 可选 agentOptions 参数
+  （默认行为不变）。
+- `apps/web/app/api/ava/threads/[id]/messages/route.ts`：归一化时传入订阅集合。
+- 新增 `apps/web/e2e/ava-agent-real-data.spec.ts`（3 用例）。
 
 ## 仍损坏或未验证
-- 无新增已知损坏。已知边界（非 bug，按 notes 要求记录）：写入 Board 的内容是「便利贴文本」
-  最小可用形态，不含 widget 级富投放（依赖 p6 未交付部分）；放置坐标固定 (40,40)，因触发
-  来源是 AVA 侧栏而非打开的画布。
+- 无新增已知损坏。已知口径（沿用 p11-F03，非本轮改动）：团队订阅列表以
+  `listSubscribedAiStoreItemIds` 为准（按 subscriber+当前团队匹配），与 Store
+  「已订阅」视图完全一致。
 
 ## 下一步最佳动作
-- F11 已收口，PR 待 coord-ava 复核后转 coord-main 合并。
-- sprint-02 剩余 feature 按各自 owner 并行推进；`04-close-out-placeholders.md` 四项占位中
-  F11 已完成，F04/F07/F08 状态见其各自 owner 的记录。
+- F09 PR 待 coord-ava 初审后转 coord-main 合并。
+- sprint-02 剩余 feature 按各自 owner 并行推进。
 
 ## 命令
 - 启动：`pnpm -w run dev`
-- 验证：`pnpm harness verify --sprint p18/02 --feature F11`
-- 调试：`pnpm --filter @repo/web exec playwright test e2e/ava-message-send-actions.spec.ts --reporter=list`
+- 验证：`pnpm harness verify --sprint p18/02 --feature F09`
+- 调试：`pnpm --filter @repo/web exec playwright test e2e/ava-agent-real-data.spec.ts --reporter=list`

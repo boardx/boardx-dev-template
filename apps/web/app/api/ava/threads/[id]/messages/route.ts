@@ -34,6 +34,7 @@ import {
 } from "@repo/ai";
 import { currentTeamId, currentUser } from "@/lib/session";
 import { isThreadInCurrentContext } from "@/lib/ava-thread-auth";
+import { listAvaAgentOptions } from "@/lib/ava-agents";
 import { createAvaReplyStreamResponse } from "./reply-stream";
 
 export const runtime = "nodejs";
@@ -78,7 +79,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         ? body.toolIds.filter((id): id is string => typeof id === "string")
         : DEFAULT_AVA_TOOL_IDS,
     },
-    role === "owner" || role === "admin"
+    role === "owner" || role === "admin",
+    // p18-F09：agentId 的合法集合 = 内置默认 + 已订阅的 AI Store Agent（store-<id>），
+    // 与 /api/ava/capabilities 下发给 agent-select 的选项同一来源；不在集合内则归一化为默认。
+    await listAvaAgentOptions(user.id, teamId)
   );
 
   // 用户消息先落库：即使下面生成失败，用户输入也不会丢失。

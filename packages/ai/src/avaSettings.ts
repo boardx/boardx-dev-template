@@ -94,13 +94,17 @@ export function isModelSelectable(modelId: string, canUseTeamRestrictedModels: b
 
 export function normalizeAvaAiSettings(
   input: Partial<AvaAiSettings>,
-  canUseTeamRestrictedModels: boolean
+  canUseTeamRestrictedModels: boolean,
+  // p18-F09：agent 选项不再只有内置常量——调用方（如消息路由）可传入
+  // 「内置 + 当前用户/团队已订阅的 AI Store Agent」的完整可选集；
+  // 不传时退化为内置常量（与历史行为一致）。
+  agentOptions: ReadonlyArray<Pick<AvaAgentOption, "id">> = AVA_AGENT_OPTIONS
 ): AvaAiSettings {
   const modelId = isModelSelectable(input.modelId ?? "", canUseTeamRestrictedModels)
     ? input.modelId!
     : DEFAULT_AVA_MODEL_ID;
 
-  const agentId = AVA_AGENT_OPTIONS.some((a) => a.id === input.agentId)
+  const agentId = agentOptions.some((a) => a.id === input.agentId)
     ? input.agentId!
     : DEFAULT_AVA_AGENT_ID;
 
