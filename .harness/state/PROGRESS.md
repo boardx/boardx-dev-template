@@ -28,6 +28,6 @@
 | p20 | Room Realignment (P20) | not_started | 1 | 0 | 0 | 10 |
 | p21 | platform-accounts-hardening | not_started | 0 | 0 | 0 | 6 |
 | p22 | Room IA Realignment | not_started | 0 | 0 | 0 | 4 |
-| p23 | developer-portal | not_started | 4 | 3 | 1 | 2 |
+| p23 | developer-portal | not_started | 0 | 0 | 1 | 9 |
 
-_最近聚合:2026-07-09T15:38:37.991Z_
+_最近聚合:2026-07-09T23:31:10.443Z_
