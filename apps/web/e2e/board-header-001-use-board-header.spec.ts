@@ -54,11 +54,12 @@ test("owner 通过 Board Header 理解状态并进入授权操作", async ({ pag
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("shortcuts-help-panel")).toBeHidden();
 
-  // More 菜单的点外关闭遮罩会拦截 header 其余按钮，先点空白处收起菜单。
+  // More 菜单开着时其遮罩会拦截 header 其余按钮——用 Esc 收起（issue #488：
+  // More 面板支持 Esc 关闭，替代此前脆弱的硬编码坐标点空白）。
   if (await page.getByTestId("board-more-panel").isVisible()) {
-    await page.mouse.click(720, 500);
-    await expect(page.getByTestId("board-more-panel")).toBeHidden();
+    await page.keyboard.press("Escape");
   }
+  await expect(page.getByTestId("board-more-panel")).toBeHidden();
 
   await page.getByTestId("timer-duration").selectOption("1");
   await page.getByTestId("timer-start").click();
