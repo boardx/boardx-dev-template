@@ -16,6 +16,8 @@ async function openOwnBoard(page: import("@playwright/test").Page) {
 test("编辑者使用 Local Workspace：Board Chat 结果可保存为 Board Memory", async ({ page }) => {
   await openOwnBoard(page);
 
+  // reskin(issue #468): 该入口收进 Header ⋯More 菜单，先确保面板展开。
+  if (!(await page.getByTestId("board-more-panel").isVisible())) await page.getByTestId("board-more-menu").click();
   await page.getByTestId("local-workspace-open").click();
   await expect(page.getByTestId("local-workspace-panel")).toBeVisible();
   await expect(page.getByTestId("local-chat-panel")).toBeVisible();
@@ -28,6 +30,8 @@ test("编辑者使用 Local Workspace：Board Chat 结果可保存为 Board Memo
   await expect(page.getByTestId("local-chat-status")).toContainText("尚未保存为 Board Memory");
 
   await page.getByTestId("local-workspace-close").click();
+  // reskin(issue #468): 该入口收进 Header ⋯More 菜单，先确保面板展开。
+  if (!(await page.getByTestId("board-more-panel").isVisible())) await page.getByTestId("board-more-menu").click();
   await page.getByTestId("local-workspace-open").click();
   await expect(page.getByTestId("local-chat-assistant")).toContainText("总结这块白板");
 
@@ -50,6 +54,8 @@ test("编辑者使用 Local Workspace：Board Chat 结果可保存为 Board Memo
   await expect(page.getByTestId("local-memory-empty")).toBeVisible();
 
   await page.reload();
+  // reskin(issue #468): 该入口收进 Header ⋯More 菜单，先确保面板展开。
+  if (!(await page.getByTestId("board-more-panel").isVisible())) await page.getByTestId("board-more-menu").click();
   await page.getByTestId("local-workspace-open").click();
   await expect(page.getByTestId("local-chat-empty")).toBeVisible();
   await page.getByTestId("local-workspace-memory-tab").click();

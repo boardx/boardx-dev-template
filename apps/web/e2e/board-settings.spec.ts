@@ -48,9 +48,13 @@ test("UI：属主在板页打开网格并刷新保持", async ({ page }) => {
   const board = (await (await page.request.post(`/api/rooms/${room.id}/boards`, { data: { name: "SUI" } })).json()).board;
 
   await page.goto(`/boards/${board.id}`);
+  // reskin(issue #468): 该入口收进 Header ⋯More 菜单，先确保面板展开。
+  if (!(await page.getByTestId("board-more-panel").isVisible())) await page.getByTestId("board-more-menu").click();
   await page.getByTestId("board-meta-edit").click();
   await page.getByTestId("setting-grid").selectOption("on");
   await page.reload();
+  // reskin(issue #468): 该入口收进 Header ⋯More 菜单，先确保面板展开。
+  if (!(await page.getByTestId("board-more-panel").isVisible())) await page.getByTestId("board-more-menu").click();
   await page.getByTestId("board-meta-edit").click();
   await expect(page.getByTestId("setting-grid")).toHaveValue("on");
 });

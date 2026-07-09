@@ -94,6 +94,8 @@ export default function BoardPage() {
   // 删除白板两步确认（More 菜单内，独立于 meta 面板的 confirmingDelete——设计评审 P0-3：
   // 危险操作与常规项隔离，误触不可逆）。
   const [moreDeleteArmed, setMoreDeleteArmed] = useState(false);
+  // 欢迎引导重开信号：More 菜单的 welcome-reopen 菜单项递增，BoardHelpGuide 监听后重展卡片。
+  const [welcomeTick, setWelcomeTick] = useState(0);
   const [showQr, setShowQr] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
@@ -352,7 +354,7 @@ export default function BoardPage() {
 
   return (
     <div className="relative flex h-screen flex-col overflow-hidden">
-      <BoardHelpGuide />
+      <BoardHelpGuide reopenTick={welcomeTick} />
       <header
         data-testid="board-header"
         className="flex items-center justify-between border-b bg-card px-4 py-2.5"
@@ -514,6 +516,18 @@ export default function BoardPage() {
                   {/* 组1 · 白板功能（自包含组件原样渲染，按钮即菜单项） */}
                   <BoardStatistics boardId={String(boardId)} />
                   <BoardShortcutsHelp />
+                  <Button
+                    data-testid="welcome-reopen"
+                    size="sm"
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => {
+                      setWelcomeTick((t) => t + 1);
+                      setMoreOpen(false);
+                    }}
+                  >
+                    欢迎引导
+                  </Button>
                   <LocalWorkspace boardId={String(boardId)} canEdit={canEdit} />
                   {canManage && (
                     <Button

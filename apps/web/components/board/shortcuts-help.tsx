@@ -82,6 +82,7 @@ export function BoardShortcutsHelp() {
         data-testid="board-shortcuts-open"
         size="sm"
         variant="ghost"
+        className="justify-start"
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen(true)}

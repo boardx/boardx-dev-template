@@ -46,10 +46,10 @@ test("点选 / Shift 多选 / 点空白清除 / Esc 清除", async ({ page }) =>
   await expect(page.getByTestId("selection-count")).toHaveText("已选 2");
 
   await clickCanvasBlank(page);
-  await expect(page.getByTestId("selection-count")).toHaveText("已选 0");
+  await expect(page.getByTestId("selection-count")).toHaveCount(0);
 
   await page.keyboard.press("Escape");
-  await expect(page.getByTestId("selection-count")).toHaveText("已选 0");
+  await expect(page.getByTestId("selection-count")).toHaveCount(0);
 });
 
 test("Ctrl/Cmd+A 全选 + Delete 删除选中", async ({ page }) => {

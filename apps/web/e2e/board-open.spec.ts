@@ -23,7 +23,7 @@ test("属主打开白板：标题 + owner 角色 + 画布/缩放占位 + 编辑�
   await expect(page.getByTestId("board-role")).toHaveText("owner");
   await expect(page.getByTestId("canvas-viewport")).toBeVisible();
   await expect(page.getByTestId("zoom-control")).toBeVisible();
-  await expect(page.getByTestId("board-edit-entry")).toBeVisible();
+  await expect(page.getByTestId("board-bottom-dock")).toBeVisible();
 });
 
 test("非房间成员打开白板 → API 403", async ({ playwright }) => {

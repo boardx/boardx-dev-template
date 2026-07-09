@@ -117,7 +117,7 @@ test("跟随协作者视角可暂停、恢复、停止，主动操作会暂停",
     await expect(editorPage.getByTestId("following-banner")).toBeHidden();
     await expect(editorPage.getByTestId("canvas-surface")).toHaveAttribute("data-following", "false");
 
-    await expect(viewerPage.getByTestId("board-menu")).toBeHidden();
+    await expect(viewerPage.getByTestId("board-bottom-dock")).toBeHidden();
     await viewerPage.getByTestId(`follow-${ownerId}`).click();
     await expect(viewerPage.getByTestId("following-banner")).toHaveAttribute("data-follow-state", "active");
     const write = await viewerCtx.request.post(`/api/boards/${board.id}/items`, {

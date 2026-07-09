@@ -14,6 +14,8 @@ test("板统计：header 入口打开面板，显示组件总数/便签/文本",
 
   await page.goto(`/boards/${board.id}`);
   await expect(page.getByTestId("board-header")).toBeVisible();
+  // reskin(issue #468): 该入口收进 Header ⋯More 菜单，先确保面板展开。
+  if (!(await page.getByTestId("board-more-panel").isVisible())) await page.getByTestId("board-more-menu").click();
   await page.getByTestId("board-stats-open").click();
   await expect(page.getByTestId("board-stats-panel")).toBeVisible();
   await expect(page.getByTestId("stat-total")).toHaveText("2");

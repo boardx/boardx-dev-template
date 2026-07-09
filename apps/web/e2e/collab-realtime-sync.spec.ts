@@ -92,7 +92,7 @@ test("只读访问者可观察最新组件状态但不能编辑", async ({ brows
     await ownerPage.goto(`/boards/${board.id}`);
     await viewerPage.goto(`/boards/${board.id}`);
 
-    await expect(viewerPage.getByTestId("board-menu")).toBeHidden();
+    await expect(viewerPage.getByTestId("board-bottom-dock")).toBeHidden();
     await ownerPage.getByTestId("add-note").click();
     await expectItemCount(viewerPage, 1);
 

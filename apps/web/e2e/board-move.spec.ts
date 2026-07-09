@@ -69,6 +69,8 @@ test("UI：属主选目标房间移动，目标房间列表出现该板", async 
   const board = (await (await page.request.post(`/api/rooms/${a.id}/boards`, { data: { name: "UIMove" } })).json()).board;
 
   await page.goto(`/boards/${board.id}`);
+  // reskin(issue #468): 该入口收进 Header ⋯More 菜单，先确保面板展开。
+  if (!(await page.getByTestId("board-more-panel").isVisible())) await page.getByTestId("board-more-menu").click();
   await page.getByTestId("board-meta-edit").click();
   await page.getByTestId("move-room").selectOption(String(b.id));
   await page.getByTestId("move-btn").click();

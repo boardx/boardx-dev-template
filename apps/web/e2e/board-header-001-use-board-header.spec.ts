@@ -25,23 +25,40 @@ test("owner 通过 Board Header 理解状态并进入授权操作", async ({ pag
   await expect(header.getByTestId("board-role")).toHaveText("owner");
   await expect(header.getByTestId("board-sync-status")).toHaveAttribute("data-sync-state", "synced");
   await expect(header.getByTestId("board-sync-label")).toHaveText("已同步");
+  // reskin(issue #468): 该入口收进 Header ⋯More 菜单，先确保面板展开。
+  if (!(await page.getByTestId("board-more-panel").isVisible())) await page.getByTestId("board-more-menu").click();
   await expect(header.getByTestId("board-stats-open")).toBeVisible();
   await expect(header.getByTestId("board-shortcuts-open")).toBeVisible();
   await expect(header.getByTestId("board-timer")).toBeVisible();
   await expect(header.getByTestId("board-share")).toBeVisible();
+  // reskin(issue #468): 该入口收进 Header ⋯More 菜单，先确保面板展开。
+  if (!(await page.getByTestId("board-more-panel").isVisible())) await page.getByTestId("board-more-menu").click();
   await expect(header.getByTestId("board-meta-edit")).toBeVisible();
-  await expect(header.getByTestId("board-edit-entry")).toBeVisible();
+  await expect(page.getByTestId("board-bottom-dock")).toBeVisible();
   await expect(page.getByTestId("canvas-viewport")).toBeVisible();
 
+  // reskin(issue #468): 该入口收进 Header ⋯More 菜单，先确保面板展开。
+  if (!(await page.getByTestId("board-more-panel").isVisible())) await page.getByTestId("board-more-menu").click();
   await page.getByTestId("board-stats-open").click();
   await expect(page.getByTestId("board-stats-panel")).toBeVisible();
   await expect(page.getByTestId("stat-total")).toHaveText("1");
+  // 统计面板悬浮在 More 菜单之上，会拦截后续菜单点击——先 toggle 关掉。
+  await page.getByTestId("board-stats-open").click();
+  await expect(page.getByTestId("board-stats-panel")).toBeHidden();
 
+  // reskin(issue #468): 该入口收进 Header ⋯More 菜单，先确保面板展开。
+  if (!(await page.getByTestId("board-more-panel").isVisible())) await page.getByTestId("board-more-menu").click();
   await page.getByTestId("board-shortcuts-open").click();
   await expect(page.getByTestId("shortcuts-help-panel")).toBeVisible();
   await expect(page.getByTestId("shortcuts-help-panel")).toContainText("撤销");
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("shortcuts-help-panel")).toBeHidden();
+
+  // More 菜单的点外关闭遮罩会拦截 header 其余按钮，先点空白处收起菜单。
+  if (await page.getByTestId("board-more-panel").isVisible()) {
+    await page.mouse.click(720, 500);
+    await expect(page.getByTestId("board-more-panel")).toBeHidden();
+  }
 
   await page.getByTestId("timer-duration").selectOption("1");
   await page.getByTestId("timer-start").click();
@@ -49,6 +66,8 @@ test("owner 通过 Board Header 理解状态并进入授权操作", async ({ pag
   await page.getByTestId("timer-stop").click();
   await expect(page.getByTestId("timer-status")).toHaveText("未开始");
 
+  // reskin(issue #468): 该入口收进 Header ⋯More 菜单，先确保面板展开。
+  if (!(await page.getByTestId("board-more-panel").isVisible())) await page.getByTestId("board-more-menu").click();
   await page.getByTestId("board-meta-edit").click();
   await expect(page.getByTestId("board-meta-form")).toBeVisible();
   await expect(page.getByTestId("board-settings")).toBeVisible();
@@ -82,12 +101,12 @@ test("viewer 在 Header 中只看到授权入口，加入后获得编辑入口",
   await expect(header.getByTestId("board-role")).toHaveText("viewer");
   await expect(header.getByTestId("board-share")).toBeVisible();
   await expect(header.getByTestId("join-collab")).toBeVisible();
-  await expect(header.getByTestId("board-edit-entry")).toHaveCount(0);
+  await expect(page.getByTestId("board-bottom-dock")).toHaveCount(0);
   await expect(header.getByTestId("board-meta-edit")).toHaveCount(0);
 
   await header.getByTestId("join-collab").click();
   await expect(header.getByTestId("board-role")).toHaveText("editor");
-  await expect(header.getByTestId("board-edit-entry")).toBeVisible();
+  await expect(page.getByTestId("board-bottom-dock")).toBeVisible();
   await expect(header.getByTestId("join-collab")).toHaveCount(0);
 
   await owner.dispose();
