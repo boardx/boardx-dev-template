@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ChevronRight, LayoutGrid, List, Plus, Presentation } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -236,10 +237,10 @@ export default function RoomBoardsPage() {
           <Button
             data-testid="show-create-board"
             size="sm"
-            onClick={() => setShowForm((v) => !v)}
+            onClick={() => setShowForm(true)}
             className="transition-all duration-200 active:scale-[0.98]"
           >
-            {showForm ? "取消" : "新建白板"}
+            新建白板
           </Button>
         </div>
       </div>
@@ -250,14 +251,22 @@ export default function RoomBoardsPage() {
         </p>
       )}
 
-      {showForm && (
-        <form onSubmit={create} className="flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm">
+      {/* issue #469（用户反馈）：创建白板从页面内联表单改为居中 Dialog 弹窗。 */}
+      <Dialog
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title="新建白板"
+        testId="board-create-modal"
+        closeTestId="board-create-close"
+      >
+        <form onSubmit={create} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="board-name">白板名称</Label>
             <Input
               id="board-name"
               data-testid="board-name"
               placeholder="未命名白板"
+              autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -267,11 +276,22 @@ export default function RoomBoardsPage() {
               {createError}
             </p>
           )}
-          <Button data-testid="create-board" type="submit" size="sm" className="self-start">
-            创建
-          </Button>
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              data-testid="board-create-cancel"
+              onClick={() => setShowForm(false)}
+            >
+              取消
+            </Button>
+            <Button data-testid="create-board" type="submit" size="sm">
+              创建
+            </Button>
+          </div>
         </form>
-      )}
+      </Dialog>
 
       {/* 搜索栏 */}
       <div className="flex gap-2">
