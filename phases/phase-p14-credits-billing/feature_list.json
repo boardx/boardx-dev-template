@@ -75,7 +75,7 @@
       "title": "升级/管理个人计划（订阅弹窗 + credits 模式路由 + 静态额度提示横幅）",
       "user_visible_behavior": "用户从个人菜单打开计划弹窗，或在 AVA 页面点击常驻展示的「AI credits」提示横幅（data-testid=ai-low-credits-prompt）上的 Upgrade 按钮打开计划弹窗：subscription 模式展示 Free/Pro 权益对比与「升级到 Pro / 管理订阅」（走支付/管理流程）；credits 模式改为进入购买 Credit 流程（F02 弹窗）；升级成功后账号计划/权益更新；关闭弹窗不改变计划/余额。据实说明：AVA 页面的「AI credits」提示横幅是无条件常驻展示的静态 UI，不由服务端返回的 402（额度不足）响应触发、也不随实际额度余额变化——402 响应目前只会通过 setSendError 展示错误文字；用户可以随时手动点击横幅按钮进入升级流程，与当前额度状态无关。",
       "design_ref": "mockup:phases/requirements/mockups/upgrade-plan.html（本轮补：Free/Pro 类型 + 权益对比 + Upgrade to Pro / Manage Subscription 按钮）+ prototype:<!-- buy credits modal -->（credits 模式复用）；DESIGN.md tokens",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "04",
       "owner": "wrk-payment-1",
       "capability": "CAP-PAYMENT",
@@ -88,7 +88,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/billing-001-upgrade-plan.spec.ts"
       ],
-      "evidence": "sprints/sprint-04/evidence/f04-validation-notes.md (implementation complete; e2e 6/7 passed)",
+      "evidence": "2026-07-09T01:44:18.758Z",
       "notes": "uc-billing-001。subscription 升级弹窗设计稿本轮补齐（原 design-needed 已解除，见 design_ref）。【2026-07-02 解锁：F05 支付引擎已 passing，blocked→in_progress，实现已完成，见 evidence】credits 模式路径复用 F02。不含 Team 订阅计划升级。依赖 F02/F05。【2026-07-05 p21-F05 如实改写】此前「是 p9/p12 等 AI 阶段额度不足引导的落点」的表述不准确并已删除——AVA 页面的额度提示横幅是无条件常驻展示的静态 UI，与真实额度状态无因果关系，402 额度不足响应目前只走 setSendError 文字提示，不会调用 setBillingOpen 打开弹窗；如需真正的「额度不足→自动弹窗」联动，需要单独立项实现（本次未做，属于明确排除范围）。范围收窄声明：当前仅支持单一货币（USD），不支持退款，不支持自动续费管理（订阅/取消续费等生命周期管理能力）——这是相对 oldcode 双轨计费（Stripe 订阅 + 微信积分）主动收窄的范围，不是遗漏。【2026-07-07 coord-platform 复核】owner 从 wrk-codex-billing-1（2026-07-01 认领后 6 天无对应 issue/PR 追踪，判定僵尸认领，回收）改派 wrk-payment-1（本仓库注册的 Claude worker，对齐 areas:[billing] 与 coord-platform 只用 Claude worker 的规则）。此前 evidence 里「final harness verify blocked by local Docker Postgres recovery flapping」的说法已过时：本机资源本轮空闲，实测 `pnpm --filter @repo/web exec playwright test e2e/billing-001-upgrade-plan.spec.ts` 6/7 通过，唯一失败是 `credit-pack-list`（buy-credits-dialog 里 credits 模式购买面板缺失 testid，与 F04 本身无关），这是此前 p21-F05 审计已发现、已 spawn_task 登记（task_8bfb199b）的既存 bug，用户已另开会话在修——待该 bug 修复后重跑本条 verification 即可门控转 passing，无需本 feature 重新实现任何代码。"
     },
     {
