@@ -1,0 +1,230 @@
+{
+  "phase": "p23",
+  "goal": "develop.boardx.us 升级为统一开发者门户：脉搏与进度/实时协调/讨论流/加入开发/性能 五板块（呈现层，不造新权威）",
+  "features": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "area": "portal",
+      "title": "门户骨架：五 tab 导航 + 待人类拍板全局通知 + 访客分流带",
+      "user_visible_behavior": "打开 /portal 看到五个板块 tab（窄屏横滚）；存在待拍板事项时顶栏出现常驻通知条（含数量与'去处理'跳转）、讨论流 tab 带红点计数、浏览器标题前缀 (N)；顶部有未登录访客分流带（3 分钟了解 / 开始 onboarding）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "grep -q 'data-testid=\"decide-banner\"' apps/web/app/portal/page.tsx",
+        "grep -q 'data-testid=\"visitor-band\"' apps/web/app/portal/page.tsx",
+        "pnpm --filter @repo/web exec playwright test e2e/portal-001-shell-decide-banner.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "以 #497 v2 原型为界面契约；待拍板数据源=讨论聚合中 tier=decide 的条目数。",
+      "depends_on": [],
+      "wave": 0,
+      "parallel_safe": null
+    },
+    {
+      "id": "F02",
+      "priority": 1,
+      "area": "portal",
+      "title": "数据接入层：门户聚合 API + 全卡片三态与互不拖垮降级",
+      "user_visible_behavior": "门户各卡片有 loading 骨架 / 空态 / 数据源不可达降级横幅三态；coord-service 挂时 GitHub 类卡片照常，反之亦然（互不拖垮）；页面标注数据更新时间。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "ls apps/web/app/api/portal/pulse/route.ts apps/web/app/api/portal/discussions/route.ts",
+        "pnpm --filter @repo/web test -- app/api/portal",
+        "grep -q 'data-testid=\"card-degraded\"' -r apps/web/components/portal/"
+      ],
+      "evidence": "",
+      "notes": "聚合源：phases/*/feature_list.json、gh pr/issue、coord-service /status（复用现有代理模式与 60s 缓存思路）。",
+      "depends_on": [],
+      "wave": 0,
+      "parallel_safe": null
+    },
+    {
+      "id": "F03",
+      "priority": 1,
+      "area": "portal",
+      "title": "脉搏与进度板块：整体进度+周变化、flow-time 趋势、phase 下钻",
+      "user_visible_behavior": "总进度 N/M 旁显示本周增量；每 phase 进度条带 ↑n；点击 phase 展开下钻（通过/进行中/受阻徽章 + feature 明细，语义色 token）；flow-time 卡显示当前中位值、与基线对比、近 7 天趋势线。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "grep -q 'data-testid=\"phase-drill\"' -r apps/web/components/portal/",
+        "pnpm --filter @repo/web exec playwright test e2e/portal-002-pulse-drill.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "UC-01/02/03；flow-time 算法与 cycle-report 同源。",
+      "depends_on": [
+        "F01",
+        "F02"
+      ],
+      "wave": 1,
+      "parallel_safe": true
+    },
+    {
+      "id": "F04",
+      "priority": 1,
+      "area": "portal",
+      "title": "谁在干活 + PR 队列（堵点高亮与行动按钮）",
+      "user_visible_behavior": "'现在谁在干活'每行显示 agent、正在做什么（当前 claim/cycle-plan）、🟢🟡🔴 心跳状态点（时间在悬停）；PR 队列超 1 个周期（3h）未动的行红框高亮并提供 催办/认领 review/去 GitHub 行动按钮。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "grep -q 'data-testid=\"pr-actions\"' -r apps/web/components/portal/",
+        "pnpm --filter @repo/web exec playwright test e2e/portal-003-pr-queue-actions.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "UC-08 + review Top4/次优先；催办=预填评论跳 GitHub，认领 review=预填 self-assign 跳转。",
+      "depends_on": [
+        "F01",
+        "F02"
+      ],
+      "wave": 1,
+      "parallel_safe": true
+    },
+    {
+      "id": "F05",
+      "priority": 2,
+      "area": "portal",
+      "title": "实时协调板块迁入门户（状态点语义化）",
+      "user_visible_behavior": "活跃租约/协调事件两卡迁入门户（中文标题+术语括注），租约行用 🟢🟡🔴 状态点表达心跳新鲜度（阈值同 admin/coordination 现有逻辑），expire 类事件红色徽章。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/portal-004-coordination.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "UC-04/05/06；复用 /api/admin/coordination/status 代理与现有卡片组件抽取。",
+      "depends_on": [
+        "F01"
+      ],
+      "wave": 1,
+      "parallel_safe": true
+    },
+    {
+      "id": "F06",
+      "priority": 1,
+      "area": "portal",
+      "title": "讨论流：人类/AI 分流 + 分级降噪 + 待拍板卡强化",
+      "user_visible_behavior": "聚合协调叙述 issue 与活跃 feature issue 评论；👤/🤖/待拍板过滤；排序 拍板>andon>站会>巡检（巡检默认折叠可展开）；待拍板卡把问题本身加粗放大并提供'快捷回应'（预填 GitHub 评论跳转）；权威在 GitHub，门户不发评论。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "grep -q 'data-testid=\"decide-question\"' -r apps/web/components/portal/",
+        "pnpm --filter @repo/web exec playwright test e2e/portal-005-discussions.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "UC-10/11/12 + review 次优先；作者分类=匹配身份表（🤖）否则 👤；needs_human 识别规则见 use-cases UC-11。",
+      "depends_on": [
+        "F01",
+        "F02"
+      ],
+      "wave": 1,
+      "parallel_safe": true
+    },
+    {
+      "id": "F07",
+      "priority": 2,
+      "area": "portal",
+      "title": "加入开发：onboarding 向导（现实版）+ 学习页",
+      "user_visible_behavior": "5 步 stepper（每步标预计耗时+所需条件，任意步可预览）；第 4 步显示审批 SLA；第 5 步如实呈现人工发放三步流程+命令自取（注明自动发放待 ADR-011 P2/P3）；提交申请自动创建预填 onboarding issue；学习页渲染 human-developer-onboarding.md 并随 main 更新。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "grep -q 'data-testid=\"credential-step\"' -r apps/web/components/portal/",
+        "pnpm --filter @repo/web exec playwright test e2e/portal-006-onboarding.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "UC-13~16 + review Top2；本 feature 不做 OAuth 与自动发 token（那是 ADR-011 P2/P3，落地后升级第 1/5 步）。",
+      "depends_on": [
+        "F01"
+      ],
+      "wave": 1,
+      "parallel_safe": true
+    },
+    {
+      "id": "F08",
+      "priority": 2,
+      "area": "portal",
+      "title": "性能板块：per-agent 表（归属树）+ C-cycle 周期报告",
+      "user_visible_behavior": "per-agent 表显示 流动时长/周期承诺达成/近 7 天合并/当前租约，sub-agent 按 parent 缩进成树；周期报告表=cycle-report 的 Web 版（计划数/完成/流动时长/超 SLA）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/portal-007-performance.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "UC-18/19/20；per-agent flow-time 归因是 ADR-010 已记录的差距，本 feature 一并实现（cycle-report 按 agent 细分）。",
+      "depends_on": [
+        "F01",
+        "F02"
+      ],
+      "wave": 1,
+      "parallel_safe": true
+    },
+    {
+      "id": "F09",
+      "priority": 2,
+      "area": "portal",
+      "title": "门禁与路由收口：/portal 正式路由 + 登录门禁 + 原型退役",
+      "user_visible_behavior": "门户挂在 /portal（develop.boardx.us 首页跳转到它）；板块页登录可见（先复用现有会话/SysAdmin 门禁，OAuth 随 ADR-011 P2 升级），未登录见分流带+学习页只读；/portal-prototype 原型路由移除。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "test ! -e apps/web/app/portal-prototype",
+        "pnpm --filter @repo/web exec playwright test e2e/portal-008-gate.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "非功能 N1/N3；收尾 feature，等 F03-F08 全绿后做。",
+      "depends_on": [
+        "F03",
+        "F04",
+        "F05",
+        "F06",
+        "F07",
+        "F08"
+      ],
+      "wave": 2,
+      "parallel_safe": null
+    },
+    {
+      "id": "F10",
+      "priority": 3,
+      "area": "portal",
+      "title": "【Phase F 后置】登录后'我'视角首页",
+      "user_visible_behavior": "登录后首页=我的 agent 队伍、@我的待拍板、我卡住的 PR、我的 flow-time，全局脉搏第二屏——10 秒内知道'我现在该干什么'。",
+      "status": "blocked",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "false  # Phase F 后置：依赖 ADR-011 OAuth 身份绑定，暂不排期"
+      ],
+      "evidence": "",
+      "notes": "coord-main review 战略方向；blocked-on ADR-011 P2 落地，不进本阶段 sprint。",
+      "depends_on": [
+        "F09"
+      ],
+      "wave": 3,
+      "parallel_safe": null
+    }
+  ]
+}
