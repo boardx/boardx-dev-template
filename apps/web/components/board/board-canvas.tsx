@@ -2248,7 +2248,7 @@ export const BoardCanvas = forwardRef<
       {canEdit && openPanel === "shape" && (
         <div
           data-testid="board-shape-panel"
-          className="absolute bottom-[76px] left-1/2 z-20 w-56 -translate-x-1/2 rounded-[12px] border bg-popover p-[6px] shadow-[0_8px_26px_rgba(0,0,0,.14)]"
+          className="absolute bottom-20 left-1/2 z-20 w-56 -translate-x-1/2 rounded-xl border bg-popover p-1.5 shadow-xl"
         >
           <div className="grid grid-cols-3 gap-1.5">
             {SHAPE_TYPES.map((s) => (
@@ -2259,7 +2259,7 @@ export const BoardCanvas = forwardRef<
                 aria-label={SHAPE_LABELS[s]}
                 title={SHAPE_LABELS[s]}
                 onClick={() => void addShape(s)}
-                className="flex flex-col items-center gap-1 rounded-[9px] border border-transparent p-2 text-10 text-muted-foreground transition-colors duration-200 hover:border-input hover:bg-accent"
+                className="flex flex-col items-center gap-1 rounded-lg border border-transparent p-2 text-10 text-muted-foreground transition-colors duration-200 hover:border-input hover:bg-accent"
               >
                 <ShapeGlyph type={s} className="h-5 w-5" />
                 {SHAPE_LABELS[s]}
@@ -2274,7 +2274,7 @@ export const BoardCanvas = forwardRef<
       {canEdit && openPanel === "link" && (
         <div
           data-testid="board-link-panel"
-          className="absolute bottom-[76px] left-1/2 z-20 w-72 -translate-x-1/2 rounded-[12px] border bg-popover p-3 shadow-[0_8px_26px_rgba(0,0,0,.14)]"
+          className="absolute bottom-20 left-1/2 z-20 w-72 -translate-x-1/2 rounded-xl border bg-popover p-3 shadow-xl"
         >
           <form
             onSubmit={(e) => {

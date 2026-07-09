@@ -5,5 +5,5 @@ import type { ReactNode } from "react";
 // (app)/layout.tsx 里除 Sidebar 外只有为 Sidebar/FeedbackLauncher 服务的 session 取用，
 // board 页自身全部走客户端 fetch，无需在此保留任何 provider 包裹。
 export default function BoardLayout({ children }: { children: ReactNode }) {
-  return <div className="h-screen overflow-hidden bg-[#f8f8f8]">{children}</div>;
+  return <div className="h-screen overflow-hidden bg-surface-1">{children}</div>;
 }

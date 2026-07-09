@@ -99,11 +99,11 @@ export function BoardBottomDock({
     <div
       data-testid="board-bottom-dock"
       aria-label="Board 工具 dock"
-      className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-[3px] rounded-[14px] border border-[#e0e0e0] bg-white p-[6px] shadow-[0_8px_26px_rgba(0,0,0,.14)]"
+      className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-border bg-card p-1.5 shadow-xl"
     >
       {DOCK_GROUPS.map((group, gi) => (
         <div key={gi} className="contents">
-          {gi > 0 && <div aria-hidden className="mx-[3px] h-[22px] w-px bg-[#e0e0e0]" />}
+          {gi > 0 && <div aria-hidden className="mx-1 h-5 w-px bg-border" />}
           {group.map((tool) => {
             const expanded = tool.key === "shape" || tool.key === "link" ? activePanel === tool.key : undefined;
             const active = activeTool === tool.key || expanded === true;
@@ -119,11 +119,11 @@ export function BoardBottomDock({
                   disabled={tool.disabled}
                   onClick={() => onSelectTool(tool.key)}
                   className={cn(
-                    "flex h-[38px] w-[38px] items-center justify-center rounded-[9px] transition-colors duration-200",
-                    "hover:bg-[#f0f0f0] hover:text-black",
+                    "flex h-9 w-9 items-center justify-center rounded-lg transition-colors duration-200",
+                    "hover:bg-muted hover:text-foreground",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent",
-                    active ? "bg-[#f0f0f0] text-black" : "text-[#707070]"
+                    active ? "bg-muted text-foreground" : "text-muted-foreground"
                   )}
                 >
                   {tool.icon}
@@ -136,8 +136,8 @@ export function BoardBottomDock({
                     aria-expanded={activePanel === "shape"}
                     onClick={onShapeMenu}
                     className={cn(
-                      "flex h-[38px] w-4 items-center justify-center rounded-[9px] text-[#707070] transition-colors duration-200",
-                      "hover:bg-[#f0f0f0] hover:text-black",
+                      "flex h-9 w-4 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-200",
+                      "hover:bg-muted hover:text-foreground",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     )}
                   >
@@ -150,7 +150,7 @@ export function BoardBottomDock({
         </div>
       ))}
 
-      <div aria-hidden className="mx-[3px] h-[22px] w-px bg-[#e0e0e0]" />
+      <div aria-hidden className="mx-1 h-5 w-px bg-border" />
 
       {/* Ask AI：原型为 38×38 黑底方块（非长胶囊） */}
       <button
@@ -161,8 +161,8 @@ export function BoardBottomDock({
         aria-pressed={aiOpen}
         onClick={onToggleAi}
         className={cn(
-          "flex h-[38px] w-[38px] items-center justify-center rounded-[9px] bg-black text-[11px] font-bold text-white",
-          "transition-all duration-200 hover:bg-[#282828] active:scale-95",
+          "flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-11 font-bold text-primary-foreground",
+          "transition-all duration-200 hover:bg-surface-dark active:scale-95",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         )}
       >

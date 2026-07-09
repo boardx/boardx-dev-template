@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import QRCode from "qrcode";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MoreHorizontal, Redo2, Undo2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { BoardShortcutsHelp } from "@/components/board/shortcuts-help";
 import { BoardPresence } from "@/components/board/presence";
 import { BoardStatistics } from "@/components/board/board-statistics";
 import { SlidesPanel } from "@/components/board/slides-panel";
-import { BoardCanvas } from "@/components/board/board-canvas";
+import { BoardCanvas, type BoardCanvasHandle } from "@/components/board/board-canvas";
 import { LocalWorkspace } from "@/components/board/local-workspace";
 
 interface Board {
@@ -84,6 +84,16 @@ export default function BoardPage() {
 
   // 分享面板
   const [sharing, setSharing] = useState(false);
+
+  // board-shell reskin（issue #468）：header 的撤销/重做经 BoardCanvas 的 ref 句柄调用，
+  // 可用态由 onHistoryChange 回传；⋯ More 菜单收纳次要功能（统计/快捷键/Local Workspace/
+  // 编辑信息/备份 + Home/Rooms 逃生口 + 危险区删除白板，UI 设计评审 P0-3 最终清单）。
+  const canvasRef = useRef<BoardCanvasHandle>(null);
+  const [hist, setHist] = useState({ canUndo: false, canRedo: false });
+  const [moreOpen, setMoreOpen] = useState(false);
+  // 删除白板两步确认（More 菜单内，独立于 meta 面板的 confirmingDelete——设计评审 P0-3：
+  // 危险操作与常规项隔离，误触不可逆）。
+  const [moreDeleteArmed, setMoreDeleteArmed] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
@@ -398,34 +408,50 @@ export default function BoardPage() {
               {titleError}
             </span>
           )}
+          {/* BETA 徽标（prototype header：10px/600 灰字 1px 边框圆角 5） */}
+          <span className="rounded border border-border px-1.5 py-px text-10 font-semibold text-muted-foreground">
+            BETA
+          </span>
           <Badge variant="muted" data-testid="board-role">
             {role}
           </Badge>
+          {/* 竖分隔线（prototype：1×22 #e0e0e0） */}
+          <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
+          {/* 撤销/重做（reskin：从画布顶部工具条迁到 header，经 ref 句柄调 BoardCanvas；
+              testid 保活，键盘 mod+Z 仍在画布组件内） */}
+          {canEdit && (
+            <>
+              <Button
+                data-testid="undo"
+                size="icon"
+                variant="ghost"
+                title="撤销"
+                aria-label="撤销"
+                disabled={!hist.canUndo}
+                onClick={() => canvasRef.current?.undo()}
+                className="h-7.5 w-7.5 rounded-md text-muted-foreground"
+              >
+                <Undo2 className="h-4 w-4" />
+              </Button>
+              <Button
+                data-testid="redo"
+                size="icon"
+                variant="ghost"
+                title="重做"
+                aria-label="重做"
+                disabled={!hist.canRedo}
+                onClick={() => canvasRef.current?.redo()}
+                className="h-7.5 w-7.5 rounded-md text-muted-foreground"
+              >
+                <Redo2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
           {/* 实时协作（uc-canvas-005）：在线成员头像 + 真实同步状态。
               内含 BoardSyncStatus（受控），并每 ~1.5s 心跳/拉取在线成员。 */}
           <BoardPresence boardId={String(boardId)} />
         </div>
         <div className="flex items-center gap-2">
-          {/* 板统计（uc-board-header-014）：只读组件计数面板 */}
-          <BoardStatistics boardId={String(boardId)} />
-          {/* 快捷键帮助（所有可访问者可见，只读不改权限） */}
-          <BoardShortcutsHelp />
-          {/* 协作计时器（所有协作者可用） */}
-          <BoardTimer />
-          {/* 幻灯片管理（uc-board-header-005）：侧栏创建/排序/展示/导出 */}
-          <SlidesPanel boardId={String(boardId)} />
-          <LocalWorkspace boardId={String(boardId)} canEdit={canEdit} />
-          {/* 分享（所有可访问者可见：复制链接 + 可见性说明 + 二维码占位） */}
-          <Button
-            data-testid="board-share"
-            size="sm"
-            variant="secondary"
-            aria-expanded={sharing}
-            onClick={() => setSharing((v) => !v)}
-            className="relative z-40"
-          >
-            {sharing ? "关闭分享" : "分享"}
-          </Button>
           {/* 匿名公开访问：提示登录加入 */}
           {anonymous && (
             <Button
@@ -443,35 +469,132 @@ export default function BoardPage() {
               加入协作
             </Button>
           )}
-          {/* p7:F08（uc-board-header-007）：备份入口，仅管理者可见（权限与恢复 API 一致） */}
-          {canManage && (
+          {/* 分享（prototype：黑底白字 Share，hover #282828） */}
+          <Button
+            data-testid="board-share"
+            size="sm"
+            variant="default"
+            aria-expanded={sharing}
+            onClick={() => setSharing((v) => !v)}
+            className="relative z-40 rounded-lg px-3.5"
+          >
+            分享
+          </Button>
+          {/* 协作计时器 / 幻灯片：prototype 保留为一级图标入口 */}
+          <BoardTimer />
+          <SlidesPanel boardId={String(boardId)} />
+          {/* ⋯ More（reskin，设计评审 P0-3 最终清单）：次要功能收纳 + 全局导航逃生口 +
+              危险操作隔离。面板内直接渲染既有自包含组件（触发按钮成为菜单项，testid 全保活，
+              相关 spec 打开路径只需加"先点 board-more-menu"一步）。 */}
+          <div className="relative">
             <Button
-              data-testid="board-backup"
-              size="sm"
-              variant="secondary"
-              aria-expanded={backupOpen}
-              onClick={toggleBackupPanel}
+              data-testid="board-more-menu"
+              size="icon"
+              variant="ghost"
+              title="更多"
+              aria-label="更多"
+              aria-expanded={moreOpen}
+              onClick={() => {
+                setMoreOpen((v) => !v);
+                setMoreDeleteArmed(false);
+              }}
+              className="h-8 w-8 rounded-lg text-muted-foreground"
             >
-              {backupOpen ? "关闭备份" : "备份"}
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
-          )}
-          {/* 管理者可改元信息 */}
-          {canManage && (
-            <Button
-              data-testid="board-meta-edit"
-              size="sm"
-              variant="secondary"
-              onClick={() => setEditing((v) => !v)}
-            >
-              {editing ? "取消" : "编辑信息"}
-            </Button>
-          )}
-          {/* 只读角色隐藏编辑入口 */}
-          {canEdit && (
-            <Button data-testid="board-edit-entry" size="sm" variant="secondary">
-              编辑
-            </Button>
-          )}
+            {moreOpen && (
+              <>
+                {/* 点击外部关闭（仿右键菜单遮罩模式） */}
+                <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
+                <div
+                  data-testid="board-more-panel"
+                  role="menu"
+                  className="absolute right-0 top-10 z-50 flex w-56 flex-col gap-0.5 rounded-xl border bg-popover p-1.5 shadow-xl"
+                >
+                  {/* 组1 · 白板功能（自包含组件原样渲染，按钮即菜单项） */}
+                  <BoardStatistics boardId={String(boardId)} />
+                  <BoardShortcutsHelp />
+                  <LocalWorkspace boardId={String(boardId)} canEdit={canEdit} />
+                  {canManage && (
+                    <Button
+                      data-testid="board-meta-edit"
+                      size="sm"
+                      variant="ghost"
+                      className="justify-start"
+                      onClick={() => {
+                        setEditing((v) => !v);
+                        setMoreOpen(false);
+                      }}
+                    >
+                      {editing ? "关闭信息编辑" : "Board settings"}
+                    </Button>
+                  )}
+                  {canManage && (
+                    <Button
+                      data-testid="board-backup"
+                      size="sm"
+                      variant="ghost"
+                      className="justify-start"
+                      aria-expanded={backupOpen}
+                      onClick={() => {
+                        toggleBackupPanel();
+                        setMoreOpen(false);
+                      }}
+                    >
+                      {backupOpen ? "关闭备份" : "Backup & restore"}
+                    </Button>
+                  )}
+                  <div aria-hidden className="mx-1.5 my-1 h-px bg-border" />
+                  {/* 组2 · 全局导航逃生口（设计评审 P0-1：全屏无 rail 后不能只有单向返回） */}
+                  <Button
+                    data-testid="more-nav-home"
+                    size="sm"
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => router.push("/")}
+                  >
+                    Home
+                  </Button>
+                  <Button
+                    data-testid="more-nav-rooms"
+                    size="sm"
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => router.push("/rooms")}
+                  >
+                    Rooms
+                  </Button>
+                  {/* 组3 · 危险操作（隔离 + 两步确认，误触不可逆） */}
+                  {canManage && (
+                    <>
+                      <div aria-hidden className="mx-1.5 my-1 h-px bg-border" />
+                      {!moreDeleteArmed ? (
+                        <Button
+                          data-testid="more-delete-board"
+                          size="sm"
+                          variant="ghost"
+                          className="justify-start text-destructive hover:text-destructive"
+                          onClick={() => setMoreDeleteArmed(true)}
+                        >
+                          Delete board
+                        </Button>
+                      ) : (
+                        <Button
+                          data-testid="more-delete-board-confirm"
+                          size="sm"
+                          variant="ghost"
+                          className="justify-start font-semibold text-destructive hover:text-destructive"
+                          onClick={() => void remove()}
+                        >
+                          确认删除？不可恢复
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -831,7 +954,7 @@ export default function BoardPage() {
       )}
 
       {/* 画布（P6：F05 视口 + F06 board-keyed items 渲染/选择/键盘） */}
-      <BoardCanvas boardId={String(boardId)} canEdit={canEdit} />
+      <BoardCanvas ref={canvasRef} boardId={String(boardId)} canEdit={canEdit} onHistoryChange={setHist} />
     </div>
   );
 }
