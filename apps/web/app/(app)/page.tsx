@@ -1,9 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogoutButton } from "@/components/logout-button";
+import { HomeWorkbench } from "@/components/home/home-workbench";
 import { currentUser, toPublicUser } from "@/lib/session";
-import { Users, DoorOpen, User } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -34,50 +33,25 @@ export default async function Home() {
     );
   }
 
-  const NAV = [
-    { href: "/teams", icon: Users, title: "Teams", desc: "Manage members and permissions", fill: "bg-tag-purple" },
-    { href: "/rooms", icon: DoorOpen, title: "Rooms", desc: "Enter collaborative rooms and boards", fill: "bg-tag-blue" },
-    { href: "/account", icon: User, title: "Account", desc: "Profile, password and preferences", fill: "bg-tag-green" },
-  ];
-
   return (
-    <div className="mx-auto max-w-content px-9 pb-14 pt-10">
-      {/* Header */}
-      <div className="mb-7 flex flex-col gap-1">
-        <h1 className="text-26 font-bold tracking-tight text-foreground">
-          Welcome back, {pub.displayName}
-        </h1>
-        <p className="text-sm text-muted-foreground">{pub.email}</p>
-      </div>
-
-      {/* User info card (preserves e2e testids) */}
+    <div>
+      {/* 精简身份条：sidebar 账号菜单已是主入口，这里保留可见的最小形态，
+          避免和 Quick chat 等工作台内容抢视觉焦点，同时不破坏既有 e2e 对这些 testid 的断言。 */}
       <div
         data-testid="user-menu"
-        className="mb-7 flex flex-col gap-3 rounded-12 border border-border bg-surface-1 p-5"
+        className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-border px-9 py-2.5 text-13"
       >
-        <p data-testid="current-user" className="text-13 text-muted-foreground">
+        <span data-testid="menu-avatar" className="font-mono text-xs text-muted-foreground">
+          {pub.avatar ?? "(默认头像)"}
+        </span>
+        <span data-testid="menu-displayname" className="font-semibold text-foreground">
+          {pub.displayName}
+        </span>
+        <p data-testid="current-user" className="text-muted-foreground">
           Signed in as {pub.email}
         </p>
-        <div className="flex items-center gap-3">
-          <span
-            data-testid="menu-avatar"
-            className="inline-flex h-9 items-center rounded-full bg-secondary px-3 font-mono text-xs text-secondary-foreground"
-          >
-            {pub.avatar ?? "(默认头像)"}
-          </span>
-          <span
-            data-testid="menu-displayname"
-            className="text-sm font-semibold text-foreground"
-          >
-            {pub.displayName}
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <a
-            href="/account"
-            data-testid="link-profile"
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
+        <div className="ml-auto flex items-center gap-2">
+          <a href="/account" data-testid="link-profile" className={buttonVariants({ variant: "outline", size: "sm" })}>
             Profile
           </a>
           <a
@@ -91,24 +65,7 @@ export default async function Home() {
         </div>
       </div>
 
-      {/* Quick nav cards */}
-      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-        {NAV.map(({ href, icon: Icon, title, desc, fill }) => (
-          <a
-            key={href}
-            href={href}
-            className="group rounded-12 border border-border p-5 transition-all duration-200 hover:border-border-strong hover:shadow-[0_2px_10px_rgba(0,0,0,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <div className="mb-2.5 flex items-center gap-2.5">
-              <div className={`flex h-8.5 w-8.5 items-center justify-center rounded-9 text-foreground ${fill}`}>
-                <Icon className="h-4 w-4" />
-              </div>
-              <CardTitle className="text-sm">{title}</CardTitle>
-            </div>
-            <p className="text-13 leading-relaxed text-muted-foreground">{desc}</p>
-          </a>
-        ))}
-      </div>
+      <HomeWorkbench />
     </div>
   );
 }
