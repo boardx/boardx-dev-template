@@ -144,3 +144,26 @@
   画布原点附近（(40,40)），因触发来源是 AVA 侧栏而非打开的画布，没有可参考的视口/鼠标位置。
 - 下一步最佳动作：sprint-02 剩余 feature 按各自 owner 继续推进；F11 完成后 04 号需求文档
   四项占位（F04/F07/F08/F11）中 F11 已收口。
+
+## 2026-07-09 — F09 Agent 选择器接入 AI Store 真实订阅数据（wrk-ava-p18-3）
+
+- `pnpm harness verify --sprint p18/02 --feature F09` 门控通过，F09 转 passing。
+- 实现（最小改动，客户端零改动——/ava 本就从 `/api/ava/capabilities` 取 agents）：
+  - 新增 `apps/web/lib/ava-agents.ts`：`listAvaAgentOptions(userId, teamId)` =
+    内置 `AVA_AGENT_OPTIONS` + 当前用户/团队已订阅、type="agent" 的 AI Store 项目
+    （选项 id 为 `store-<itemId>`）。订阅口径完全复用 p11-F03 数据层
+    `listSubscribedAiStoreItemIds` + `getAiStoreItem`，与 Store「已订阅」列表同一套判定。
+  - `apps/web/app/api/ava/capabilities/route.ts`：`agents` 从硬编码常量改为
+    `await listAvaAgentOptions(...)`。
+  - `packages/ai/src/avaSettings.ts`：`normalizeAvaAiSettings` 增加可选第三参
+    `agentOptions`（默认仍为内置常量，历史行为不变）；
+    `apps/web/app/api/ava/threads/[id]/messages/route.ts` 发消息时传入同一份
+    「内置+订阅」集合，选中订阅 Agent 发送不再被归一化回 default。
+  - 新增 `apps/web/e2e/ava-agent-real-data.spec.ts`（3 用例，全过）：
+    无订阅只有内置默认；订阅 agent+template 后刷新只有 agent 进选择器、选中发送 stub
+    回显 `Agent：store-<id>`、线程有消息后 agent-locked 禁用态保持；取消订阅后刷新移除。
+- 回归（全过）：`ava-ai-settings`（3）+ `ava-ui-parity`（4，F13 composer-agent-pill 结构
+  不受影响）+ `ava-chat-basic`（5）+ `ai-store-003-subscribe-use-item`（5）+
+  `share-view-chat-states`（5，含 agent-select 禁用态用例）。
+- `pnpm -w run verify:base` 通过（由 harness verify 的 require_base_pass 一并执行）。
+- 证据：`evidence/F09.verify.log`。提交见 PR（Closes #259）。

@@ -177,9 +177,9 @@
       "title": "Agent 选择器接入 AI Store 真实订阅数据",
       "user_visible_behavior": "agent-select 的选项来自当前用户/团队在 AI Store 的真实订阅 Agent（替换硬编码 AVA_AGENT_OPTIONS）；订阅新 Agent 后刷新 /ava 可在选择器中看到；无订阅时仍提供内置默认 Agent；已有消息线程保持 agent-locked 禁用态。",
       "design_ref": "现有 agent-select / agent-locked；requirements/04-close-out-placeholders.md",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "wrk-ava-p18-3",
       "capability": "CAP-AI",
       "depends_on": [
         "p11:F03"
@@ -190,7 +190,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/ava-agent-real-data.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F09.verify.log @ 2026-07-09T09:34:51.550Z",
       "notes": "requirements/04。硬依赖 p11:F03（订阅/使用→带入 AVA）转 passing；若排期时 p11:F03 未就绪，本 feature 保持等待，不得以硬编码数据虚报。"
     },
     {
