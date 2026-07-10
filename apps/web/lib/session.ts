@@ -55,6 +55,7 @@ export async function startSession(userId: number): Promise<void> {
     sameSite: "lax",
     path: "/",
     maxAge: Math.floor(SESSION_TTL_MS / 1000),
+    secure: process.env.NODE_ENV === "production",
   });
 }
 

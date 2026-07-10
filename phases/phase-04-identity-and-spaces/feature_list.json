@@ -16,8 +16,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/auth-register.spec.ts"
       ],
-      "evidence": "evidence/F01.verify.log @ 2026-06-29T08:02:53.443Z",
-      "notes": "uc-auth-001。密码≥6，邮箱小写，未勾选条款 400。",
+      "evidence": "phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F03.verify.log @ 2026-07-10",
+      "notes": "uc-auth-001。密码≥6，邮箱小写，未勾选条款 400。 p21 F03 重新验证并补真实证据。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-001-email-register.md"
       ]
@@ -37,8 +37,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/auth-login.spec.ts"
       ],
-      "evidence": "evidence/F02.verify.log @ 2026-06-29T08:02:59.877Z",
-      "notes": "uc-auth-002。会话 7 天；不存在/错误密码统一报「邮箱或密码无效」。",
+      "evidence": "phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F03.verify.log @ 2026-07-10",
+      "notes": "uc-auth-002。会话 7 天；不存在/错误密码统一报「邮箱或密码无效」。 p21 F03 重新验证并补真实证据。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-002-email-login.md"
       ]
@@ -58,8 +58,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/auth-change-password.spec.ts"
       ],
-      "evidence": "evidence/F03.verify.log @ 2026-06-29T08:03:06.108Z",
-      "notes": "uc-auth-006。改密后 deleteUserSessions。",
+      "evidence": "phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F03.verify.log @ 2026-07-10",
+      "notes": "uc-auth-006。改密后 deleteUserSessions。 p21 F03 重新验证并补真实证据。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-006-change-password.md"
       ]
@@ -79,8 +79,8 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/auth-reset-password.spec.ts"
       ],
-      "evidence": "evidence/F04.verify.log @ 2026-06-29T08:03:11.646Z",
-      "notes": "uc-auth-004。响应绝不返回 token；令牌一次性、30 分钟过期。真 SMTP deferred。",
+      "evidence": "phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F03.verify.log @ 2026-07-10",
+      "notes": "uc-auth-004。响应绝不返回 token；令牌一次性、30 分钟过期。真 SMTP deferred。 p21 F03 重新验证并补真实证据。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-004-forgot-reset-password.md"
       ]
@@ -296,6 +296,27 @@
         "phases/phase-04-identity-and-spaces/requirements/room/uc-room-005-manage-room-files.md",
         "phases/phase-04-identity-and-spaces/requirements/room/uc-room-006-use-room-studio.md",
         "phases/phase-04-identity-and-spaces/requirements/room/uc-room-007-view-room-surveys.md"
+      ]
+    },
+    {
+      "id": "F18",
+      "priority": 25,
+      "area": "auth",
+      "title": "确认邮箱（DB 一次性令牌）",
+      "user_visible_behavior": "注册后系统生成 confirm_email 类型的一次性 email_tokens 令牌；用户打开 /confirm-email?token=... 后，POST /api/auth/confirm-email 校验未过期且未消费的 DB 令牌，成功后消费令牌；无效、缺失或已消费令牌返回 400。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/auth-005-confirm-email.spec.ts"
+      ],
+      "evidence": "phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F03.verify.log @ 2026-07-10",
+      "notes": "uc-auth-005。p21 F03 新增追踪条目；实现复用 email_tokens 表与 getValidEmailToken/consumeEmailToken，dev/test 通过 /api/dev/reset-token?type=confirm_email 取测试令牌，生产环境不暴露令牌。",
+      "source_use_cases": [
+        "phases/phase-04-identity-and-spaces/requirements/auth/uc-auth-005-confirm-email.md"
       ]
     }
   ]

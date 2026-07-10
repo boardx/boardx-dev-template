@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { validateRegister, normalizeEmail, hashPassword } from "@repo/auth";
+import { validateRegister, normalizeEmail, hashPassword, generateToken, expiresAt, RESET_TOKEN_TTL_MS } from "@repo/auth";
 import {
+  createEmailToken,
   createUser,
   findUserByEmail,
   getRoomInviteByToken,
@@ -75,6 +76,7 @@ export async function POST(req: Request) {
     // "注册必成功登录"是本路由的主不变量：先建立会话，再处理房间邀请这个次要副作用
     // （rev-code major 2）。startSession 之后即便邀请处理出错，用户也已能正常登录。
     await startSession(user.id);
+    await createEmailToken(generateToken(), user.id, "confirm_email", expiresAt(RESET_TOKEN_TTL_MS));
 
     // 邀请处理整体包一层 try/catch，任何异常只记日志、绝不让整个注册请求 500
     // （rev-code major 1：此前若这段抛错，会导致"账号已建但未登录、邮箱被占用"的坏状态）。

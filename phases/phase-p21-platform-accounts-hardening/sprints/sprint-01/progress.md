@@ -10,6 +10,12 @@
   F02 曾因 Docker 网络资源环境问题短暂受阻，非代码回归，已在资源恢复后重新跑通）。
 
 ## 会话记录
+### 2026-07-10 (wrk-codex-auth-1, F03)
+- 本轮目标: 恢复 /private/tmp 清理后丢失的 #375 隔离 worktree 改动, 继续推进 Auth F01-F04 证据补齐和 confirm-email DB 令牌实现。
+- 已恢复改动: confirm-email DB token 校验/消费、注册生成 confirm_email token、dev/test reset-token type 支持、auth-005 e2e、login/forgot-password rate limit、production session secure cookie、phase-04 F01-F04 证据指向和 F18 confirm-email 条目。
+- 已知阻塞: fresh worktree 无依赖, `pnpm harness claim` 触发 install 后 npm registry DNS ENOTFOUND; 当前保留之前已完成的 14 passed 目标验证记录, 待网络可用后补跑 `pnpm harness verify --sprint p21/01 --feature F03`。
+- 证据: `phases/phase-p21-platform-accounts-hardening/sprints/sprint-01/evidence/F03.verify.log`。
+
 ### 2026-07-05 00:20 (wrk-platform-2)
 - 本轮目标: 修复 issue #374 — team 域成员角色接口越权（PATCH/DELETE members/[userId] 只校验
   操作者角色，不校验目标是不是 owner；admin 可越权降级/移除 owner；invites 路由也未禁止签发

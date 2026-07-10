@@ -1,0 +1,46 @@
+# F03 verify log - Auth F01-F04 evidence + confirm-email DB token
+
+Owner: wrk-codex-auth-1
+Issue: #375
+Worktree: /private/tmp/boardx-worktrees/issue-375-p21-auth-f03
+Branch: worker/wrk-codex-auth-1-p21-f03-confirm-email
+
+## Environment
+
+- Worktree was restored after /private/tmp cleanup on 2026-07-10.
+- Previous isolated run allocated project `worker-wrk-codex-auth-1-p21-f03-confirm-` and passed docker compose up.
+
+## Targeted verification run already completed before /private/tmp cleanup
+
+Command:
+
+```bash
+pnpm --filter @repo/data run migrate
+pnpm --filter @repo/web exec tsc --noEmit
+pnpm --filter @repo/web exec playwright test e2e/auth-register.spec.ts e2e/auth-login.spec.ts e2e/auth-change-password.spec.ts e2e/auth-reset-password.spec.ts e2e/auth-005-confirm-email.spec.ts
+```
+
+Result:
+
+- data migrations completed successfully.
+- TypeScript check completed successfully.
+- Playwright completed successfully: 14 passed.
+  - `auth-register.spec.ts`: 3 passed.
+  - `auth-login.spec.ts`: 3 passed.
+  - `auth-change-password.spec.ts`: 2 passed.
+  - `auth-reset-password.spec.ts`: 2 passed.
+  - `auth-005-confirm-email.spec.ts`: 4 passed.
+
+## Behavior covered
+
+- Existing phase-04 auth features F01-F04 were re-run with real logs rather than stale evidence.
+- Register now creates a `confirm_email` email token using the existing `email_tokens` table.
+- `/api/auth/confirm-email` validates an unexpired DB token and consumes it on success.
+- Missing, invalid, expired, or already-consumed confirm-email tokens return 400.
+- `/api/dev/reset-token` remains production-404 and can fetch `confirm_email` tokens only in dev/test.
+- Login and forgot-password endpoints now have basic in-memory rate limiting.
+- Session cookie is marked secure in production.
+
+## Current blocker
+
+On 2026-07-10, the restored fresh worktree has no installed dependencies. `pnpm harness claim` attempted to install dependencies and hit DNS failures for npm registry (ENOTFOUND). Re-run `CI=true pnpm install` or `pnpm harness verify --sprint p21/01 --feature F03` once registry/network is available.

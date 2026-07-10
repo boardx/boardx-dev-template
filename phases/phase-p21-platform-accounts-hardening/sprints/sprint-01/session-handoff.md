@@ -1,5 +1,12 @@
 # 会话交接 — Sprint p21/01
 
+## 本轮新增: F03 (wrk-codex-auth-1)
+- Issue #375 使用隔离 worktree `/private/tmp/boardx-worktrees/issue-375-p21-auth-f03`, 分支 `worker/wrk-codex-auth-1-p21-f03-confirm-email`。
+- 已恢复并保留 confirm-email DB token 实现和 auth-005 e2e 覆盖。
+- 之前同一 worktree 已通过: docker compose up、data migrate、web `tsc --noEmit`、auth register/login/change-password/reset-password/confirm-email 五组 Playwright, 共 14 passed。
+- 当前阻塞: /private/tmp 被清理后重建 worktree, fresh dependency install 遇到 npm registry DNS ENOTFOUND; 尚未能在恢复后的 worktree 补跑 `pnpm harness verify --sprint p21/01 --feature F03`。
+- 下一步: 网络可用后先安装依赖/补跑 harness verify, 由 harness 自动推进 F03 到 passing, 再提交/push/开 PR。
+
 ## 当前已验证
 - F01、F02 均已由 coord-main 补跑真实 `pnpm harness verify` 转 passing（F02 的 Docker 网络
   环境阻塞已在资源恢复后解除，非代码回归）。以下是两个 owner 各自留下的详细记录：
