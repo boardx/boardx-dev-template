@@ -95,7 +95,7 @@ export function BoardShortcutsHelp() {
           {/* 点击弹窗外部关闭（UC 主流程第 7 步） */}
           <div
             data-testid="shortcuts-help-overlay"
-            className="fixed inset-0 z-40 bg-foreground/20 transition-opacity duration-200"
+            className="fixed inset-0 z-[55] bg-foreground/20 transition-opacity duration-200"
             onClick={() => setOpen(false)}
             aria-hidden="true"
           />
@@ -104,7 +104,7 @@ export function BoardShortcutsHelp() {
             role="dialog"
             aria-modal="true"
             aria-label="键盘快捷键"
-            className="fixed left-1/2 top-1/2 z-50 max-h-[80vh] w-[min(92vw,28rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border bg-popover p-5 text-popover-foreground shadow-xl"
+            className="fixed left-1/2 top-1/2 z-[60] max-h-[80vh] w-[min(92vw,28rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border bg-popover p-5 text-popover-foreground shadow-xl"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex flex-col gap-1">

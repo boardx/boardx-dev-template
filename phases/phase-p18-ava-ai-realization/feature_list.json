@@ -279,6 +279,31 @@
       ],
       "evidence": "evidence/F13.verify.log @ 2026-07-08T23:35:01.368Z",
       "notes": "issue #465。p17-F02 reskin 纠偏重做（人类 2026-07-09 截图比对指示）：以 prototype + oldcode 为迁移源做视觉与信息架构迁移，复用现有 fetch + Next.js API routes 数据层，不做功能重写。既有 15 个 ava spec 是回归面，data-testid 全部保留在等价控件上。"
+    },
+    {
+      "id": "F14",
+      "priority": 1,
+      "area": "deep-research",
+      "title": "研究类型显式选单（Deep Research / User Research，oldcode ResearchTypeSelector 迁移）",
+      "user_visible_behavior": "对齐 oldcode 的 ResearchTypeSelector 交互（人类 2026-07-10 指示）：composer 的「✦ Deep Research」pill 从单一开关升级为弹出式研究类型选单，提供两个显式选项：深度研究（Deep Research）与用户研究（User Research）（oldcode 形态：名称 + 描述 + 选中勾）。用户选中的类型：1) 显式驱动研究管线：research session 记录用户选择的 researchType（deep_research → market 模板 / user_research → user-research 模板），报告面板按所选类型渲染 F05 已建好的对应模板——不再靠主题关键词推断（inferResearchType 降级为无显式类型时的兜底，兼容历史会话）。2) pill 上显示当前激活的研究类型（如「✦ 用户研究」），可切换类型或退出研究模式回普通聊天。3) 刷新恢复（F03 持久化）后类型保持。顺带修复：composer textarea 聚焦时出现浏览器默认橙色 outline，改为设计系统的 focus 样式。",
+      "design_ref": "phases/requirements/oldcode/boardx-web-develop/src/components/ava/ChatUIComponent/MessageEditor/ResearchTypeSelector.tsx（选单交互与状态机）；src/redux/features/deepResearch.slice.ts 的 ResearchType 枚举（deep_research/user_research，web_research/deep_agent 不在本 feature 范围）",
+      "status": "passing",
+      "sprint": "03",
+      "owner": "wrk-ava-p18-1",
+      "capability": "CAP-AI",
+      "depends_on": [
+        "F05",
+        "F13"
+      ],
+      "wave": 0,
+      "verification": [
+        "docker compose -f infra/docker-compose.yml up -d",
+        "pnpm --filter @repo/data run migrate",
+        "pnpm --filter @repo/web exec playwright test e2e/ava-research-type-selector.spec.ts",
+        "pnpm --filter @repo/web exec playwright test e2e/ava-deep-research.spec.ts e2e/ava-research-persistence.spec.ts e2e/ava-research-real-generation.spec.ts e2e/ava-research-report-templates.spec.ts e2e/ava-ui-parity.spec.ts"
+      ],
+      "evidence": "evidence/F14.verify.log @ 2026-07-09T17:03:28.774Z",
+      "notes": "issue #514。显式类型贯穿 API→session→generator→模板：POST /api/ava/threads/[id]/research 接受 researchType，research_payload 的 report.researchType 落库回流（无需新迁移）；gateway.ts buildStubResearchJson 优先读显式 Research type 行，researchGenerator 的 inferResearchType 仅作无显式类型时兜底。"
     }
   ]
 }

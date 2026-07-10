@@ -33,6 +33,7 @@ import {
   Pencil,
   Trash2,
   Check,
+  Users,
   X,
   CheckCircle2,
   Loader2,
@@ -177,6 +178,30 @@ const EMPTY_SUGGESTED_ACTIONS: SuggestedAction[] = [
 
 const RESEARCH_AUDIENCE = "Product leaders and user research stakeholders";
 
+// p18-F14：研究类型显式选单（oldcode ResearchTypeSelector 迁移；本 feature 只迁
+// deep_research/user_research 两项，web_research/deep_agent 不在范围内）。value 直接
+// 复用 F05 报告模板的判别值（深度研究 → market / 用户研究 → user-research），UI 层
+// 不再做一次枚举映射；选中的类型随 POST /research 显式下发，驱动对应报告模板。
+const RESEARCH_TYPE_OPTIONS: Array<{
+  value: ResearchType;
+  label: string;
+  description: string;
+  icon: typeof Search;
+}> = [
+  {
+    value: "market",
+    label: "深度研究",
+    description: "深入的市场与主题研究：Executive summary、Key findings、Recommendation。",
+    icon: Search,
+  },
+  {
+    value: "user-research",
+    label: "用户研究",
+    description: "以用户为中心的研究：Summary、Personas、Top pain points、Opportunities。",
+    icon: Users,
+  },
+];
+
 const FOLLOW_UP_SUGGESTED_ACTIONS: SuggestedAction[] = [
   { id: "make-tasks", label: "拆成任务", prompt: "把上面的建议拆成可执行任务，并按优先级排序。" },
   { id: "find-risks", label: "识别风险", prompt: "基于上面的回复，列出主要风险和缓解措施。" },
@@ -202,6 +227,11 @@ export default function AvaPage() {
   const [actionError, setActionError] = useState("");
   const [sendError, setSendError] = useState("");
   const [composerMode, setComposerMode] = useState<ComposerMode>("chat");
+  // p18-F14：当前研究类型 + 类型选单开合。类型跨线程保持（对齐 oldcode 的
+  // pendingResearchType 语义：用户选过 用户研究 后新开的研究默认沿用），
+  // 打开历史线程时由该线程最近一次研究会话的 researchType 覆盖（刷新恢复保持类型）。
+  const [researchType, setResearchType] = useState<ResearchType>("market");
+  const [researchTypeMenuOpen, setResearchTypeMenuOpen] = useState(false);
   const [researchRun, setResearchRun] = useState<ResearchRun | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [billingOpen, setBillingOpen] = useState(false);
@@ -424,6 +454,7 @@ export default function AvaPage() {
     setMenuThreadId(null);
     setEditingThreadId(null);
     setSkillMenuOpen(false);
+    setResearchTypeMenuOpen(false);
     setMessages([]);
     setResearchRun(null);
     setReportOpen(false);
@@ -458,6 +489,13 @@ export default function AvaPage() {
               timeline: session.timeline ?? [],
               sessionId: session.id,
             });
+            // p18-F14：刷新恢复后类型保持——research_payload 的 report.researchType
+            // 随 F03 持久化回流（不需要新增列），用它恢复研究类型 pill 的选中态；
+            // 历史会话（F04 时期、无此字段）不覆盖当前选择。
+            const restoredType = session.research_payload?.report?.researchType;
+            if (restoredType === "market" || restoredType === "user-research") {
+              setResearchType(restoredType);
+            }
           }
         }
       } catch {
@@ -484,6 +522,7 @@ export default function AvaPage() {
     setMenuThreadId(null);
     setEditingThreadId(null);
     setSkillMenuOpen(false);
+    setResearchTypeMenuOpen(false);
     setDraft("");
     setResearchRun(null);
     setReportOpen(false);
@@ -689,7 +728,9 @@ export default function AvaPage() {
         headers: { "content-type": "application/json" },
         // p18-F04：带上当前选中的 modelId，研究生成与聊天走同一套模型设置
         // （真实 provider 或 stub），不再是与模型选择无关的固定文案。
-        body: JSON.stringify({ topic, audience: RESEARCH_AUDIENCE, modelId }),
+        // p18-F14：显式带上用户选中的研究类型（深度研究 → market / 用户研究 →
+        // user-research），报告模板由用户选择驱动，不再靠主题关键词推断。
+        body: JSON.stringify({ topic, audience: RESEARCH_AUDIENCE, modelId, researchType }),
       });
       if (guard(res.status)) return;
       const data = await res.json().catch(() => ({}));
@@ -1863,10 +1904,19 @@ export default function AvaPage() {
                   data-testid="composer"
                   rows={1}
                   value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
+                  onChange={(e) => {
+                    setDraft(e.target.value);
+                    // p18-F14：开始输入主题即收起研究类型选单（选单不该挡住正在输入的
+                    // 上下文；同值 setState 由 React 去重，不产生多余渲染）。
+                    setResearchTypeMenuOpen(false);
+                  }}
                   onKeyDown={onComposerKey}
                   placeholder={composerPlaceholder}
-                  className="min-h-10 max-h-40 resize-none border-0 bg-transparent px-0 py-0 text-sm shadow-none transition-colors placeholder:text-placeholder focus-visible:ring-2 focus-visible:ring-ring"
+                  // p18-F14 顺带修复：此前只有 focus ring、没关默认 outline，聚焦时浏览器
+                  // 默认轮廓（Chrome 下为橙色 auto ring）叠在设计系统样式之上；对齐
+                  // components/ui/textarea.tsx 的口径显式关掉默认轮廓，焦点高亮保留
+                  // focus-visible:ring（外层 composer 容器另有 focus-within 边框反馈）。
+                  className="min-h-10 max-h-40 resize-none border-0 bg-transparent px-0 py-0 text-sm shadow-none transition-colors placeholder:text-placeholder focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
                 {sendError && (
                   <p role="alert" data-testid="send-error" className="mt-2 text-xs text-destructive">
@@ -1981,19 +2031,77 @@ export default function AvaPage() {
                   ) : (
                     <div data-testid="loading" className="h-8 w-40 animate-pulse rounded-full bg-muted" />
                   )}
-                  <span data-testid="composer-deep-research-pill" className="flex items-center gap-1">
+                  {/* p18-F14：Deep Research pill 从单一开关升级为研究类型选单（oldcode
+                      ResearchTypeSelector 迁移，形态同 F13 skill menu：名称 + 描述 + 选中勾）。
+                      未进入研究模式时点击 pill 直接以当前类型进入（mode-research testid 保持
+                      「一次点击进入研究模式」的既有契约，既有 spec 不需要二次点击）；已在
+                      研究模式时点击 pill 打开/收起类型选单以切换 深度研究/用户研究；✕
+                      （mode-chat）退出回普通聊天。pill 文案显示当前激活的研究类型。 */}
+                  <span data-testid="composer-deep-research-pill" className="relative flex items-center gap-1">
                     <Button
                       type="button"
                       size="sm"
                       variant={isResearchMode ? "default" : "outline"}
                       data-testid="mode-research"
                       aria-pressed={isResearchMode}
-                      onClick={() => setComposerMode(isResearchMode ? "chat" : "research")}
+                      aria-haspopup="menu"
+                      aria-expanded={researchTypeMenuOpen}
+                      onClick={() => {
+                        if (isResearchMode) {
+                          setResearchTypeMenuOpen((open) => !open);
+                        } else {
+                          setComposerMode("research");
+                          setResearchTypeMenuOpen(true);
+                        }
+                      }}
                       className="h-8 gap-1 rounded-full px-3 text-12 font-medium transition-colors"
                     >
                       <Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />
-                      Deep Research
+                      {isResearchMode
+                        ? RESEARCH_TYPE_OPTIONS.find((o) => o.value === researchType)?.label ??
+                          "Deep Research"
+                        : "Deep Research"}
                     </Button>
+                    {researchTypeMenuOpen && (
+                      <div
+                        data-testid="research-type-menu"
+                        className="absolute bottom-10 left-0 z-20 w-72 rounded-12 border border-border bg-background p-1.5 shadow-lg"
+                      >
+                        <p className="px-2 py-1 text-10 font-semibold uppercase tracking-wide text-muted-foreground">
+                          Research type
+                        </p>
+                        {RESEARCH_TYPE_OPTIONS.map((option) => {
+                          const selected = researchType === option.value;
+                          const OptionIcon = option.icon;
+                          return (
+                            <Button
+                              key={option.value}
+                              type="button"
+                              variant="ghost"
+                              data-testid={`research-type-${option.value}`}
+                              aria-pressed={selected}
+                              className="h-auto w-full flex-col items-start gap-0.5 px-2 py-1.5 text-left transition-colors"
+                              onClick={() => {
+                                setResearchType(option.value);
+                                setComposerMode("research");
+                                setResearchTypeMenuOpen(false);
+                              }}
+                            >
+                              <span className="flex w-full items-center gap-1.5 text-12 font-medium text-foreground">
+                                <OptionIcon className="h-3.5 w-3.5" strokeWidth={1.5} />
+                                {option.label}
+                                {selected && (
+                                  <Check className="ml-auto h-3.5 w-3.5" strokeWidth={1.5} />
+                                )}
+                              </span>
+                              <span className="whitespace-normal text-11 font-normal text-muted-foreground">
+                                {option.description}
+                              </span>
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    )}
                     {isResearchMode && (
                       <Button
                         type="button"
@@ -2001,7 +2109,10 @@ export default function AvaPage() {
                         variant="ghost"
                         data-testid="mode-chat"
                         aria-label="Back to chat"
-                        onClick={() => setComposerMode("chat")}
+                        onClick={() => {
+                          setComposerMode("chat");
+                          setResearchTypeMenuOpen(false);
+                        }}
                         className="h-7 w-7 rounded-full transition-colors"
                       >
                         <X className="h-3.5 w-3.5" strokeWidth={1.5} />

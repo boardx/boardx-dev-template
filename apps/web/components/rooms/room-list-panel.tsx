@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -149,16 +150,6 @@ export function RoomListPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // 新建房间弹窗：ESC 关闭（标准弹窗体验）。
-  useEffect(() => {
-    if (!showForm) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setShowForm(false);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [showForm]);
-
   // uc-rr-004（p20/F05）：星标即时切换（乐观更新 + 网络失败回滚）。
   async function toggleFav(id: Room["id"]) {
     const key = String(id);
@@ -262,39 +253,18 @@ export function RoomListPanel() {
         </div>
       )}
 
-      {/* p22：新建房间用居中弹窗（对齐 RoomDangerZoneSection 的弹窗风格），
-          不再是左栏内联折叠表单。点遮罩/X/取消关闭；testid 沿用 p20 命名（show-create
-          打开，room-name、room-create-visibility、create 均在弹窗内），room-rr-002 契约不破。 */}
-      {showForm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-surface-dark-2/40 p-6"
-          onClick={() => setShowForm(false)}
-        >
-          <form
-            onSubmit={create}
-            role="dialog"
-            aria-modal="true"
-            aria-label="New room"
-            data-testid="room-create-modal"
-            className="flex w-full max-w-md flex-col gap-4 rounded-16 border border-border bg-card p-6 shadow-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-15 font-semibold text-foreground">New room</h2>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="关闭"
-                data-testid="room-create-close"
-                className="h-7 w-7"
-                onClick={() => setShowForm(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
+      {/* p22：新建房间用居中弹窗；issue #469 起改走 ui/dialog 基座（Esc/遮罩/焦点圈定
+          统一在基座实现）。testid 沿用 p20 命名（show-create 打开，room-name、
+          room-create-visibility、create 均在弹窗内），room-rr-002 契约不破。 */}
+      <Dialog
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title="New room"
+        testId="room-create-modal"
+        closeTestId="room-create-close"
+      >
+        <form onSubmit={create} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
               <Label htmlFor="room-list-name">Room name</Label>
               <Input
                 id="room-list-name"
@@ -362,9 +332,8 @@ export function RoomListPanel() {
                 Create
               </Button>
             </div>
-          </form>
-        </div>
-      )}
+        </form>
+      </Dialog>
 
       <div className="mt-3 px-4">
         <div className="relative">

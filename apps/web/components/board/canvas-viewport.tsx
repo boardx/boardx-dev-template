@@ -69,8 +69,13 @@ export function CanvasViewport({
     pan.current = { x: e.clientX, y: e.clientY, tx: vp.tx, ty: vp.ty };
   }
   function onMove(e: React.MouseEvent) {
-    if (!pan.current) return;
-    setVp((v) => ({ ...v, tx: pan.current!.tx + (e.clientX - pan.current!.x), ty: pan.current!.ty + (e.clientY - pan.current!.y) }));
+    // 快照到局部变量：setVp 的 updater 是异步执行的，若在这中间 onUp/onMouseLeave
+    // 把 pan.current 置 null，updater 里再解引用 pan.current!.tx 会抛
+    // "Cannot read properties of null (reading 'tx')" 并整页崩溃（preview 实测抓到，
+    // ErrorBoundary 反复重建还会引发 presence 请求风暴）。
+    const p = pan.current;
+    if (!p) return;
+    setVp((v) => ({ ...v, tx: p.tx + (e.clientX - p.x), ty: p.ty + (e.clientY - p.y) }));
   }
   function onUp() {
     pan.current = null;

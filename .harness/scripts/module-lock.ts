@@ -86,6 +86,19 @@ export async function moduleLockAcquire(args: Args): Promise<void> {
         `过期租约由服务端 sweeper 自动回收——等它过期，或与持有者协调交接。`
     );
   }
+  if (outcome.kind === "held") {
+    // acquire-or-renew（2026-07-08 租约语义定稿）：自己仍持有且新鲜 → 转为续约，
+    // 而不是撞 uq_active_claim 得到一个吓人的 409。协议规范是"每个 tick
+    // acquire-or-renew"——tick 间隔撑不过 ttl 时租约正常过期、下个 tick 重新
+    // 认领即自愈，席位间歇性空缺是诚实信号不是故障。
+    const renew = await client.heartbeat(outcome.claim.id);
+    if (renew.ok) {
+      writeModuleRemoteClaimId(moduleName, outcome.claim.id);
+      log.ok(`已续约 ${rid}：session=${sessionId}，claim id=${outcome.claim.id}（本来就由你持有）`);
+      return;
+    }
+    log.info(`[coord-service] 续约未成功（HTTP ${renew.status}），按新认领处理`);
+  }
 
   const result = await client.claim(rid, RESOURCE_TYPE);
   if (!result.ok) {
