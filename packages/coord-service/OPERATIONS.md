@@ -126,31 +126,25 @@ curl -s -X POST .../events -H "Authorization: Bearer $COORD_SERVICE_TOKEN" \
 
 ## 2. 凭据（token）管理
 
-### token 怎么发到 agent 会话（标准：中央凭据文件，2026-07-10 起）
+### token 怎么发到 agent 会话
 
-标准凭据文件是 **`.harness/state/.cache/coord-credentials.json`**（mode 600、
-gitignored；与 `agent-bootstrap.md` / #520 一致），结构：
-
-```json
-{
-  "COORD_SERVICE_URL": "https://coord-service-staging.boardx.workers.dev",
-  "tokens": { "coord-room": "<token>", "wrk-ava-1": "<token>", "...": "..." }
-}
-```
-
-agent 会话激活自己的身份（每次跑 lock 命令前）：
+**中央凭据文件 = `.harness/state/.cache/coord-credentials.json`**（gitignored、
+mode 600；#520 起为全部 onboarding/bootstrap 文档的标准机制）。`seed-agents.ts`
+在 mint 新身份时**自动把 token 合并写入该文件**（不覆盖已有身份），并同时打印
+一行可复制的取用命令。agent 会话取用：
 
 ```bash
-export COORD_SERVICE_URL="https://coord-service-staging.boardx.workers.dev"
+export COORD_SERVICE_URL=$(jq -r '.COORD_SERVICE_URL' .harness/state/.cache/coord-credentials.json)
 export COORD_SERVICE_TOKEN=$(jq -r '.tokens["<你的身份id>"]' .harness/state/.cache/coord-credentials.json)
 ```
 
-分发时只把**文件路径**贴到总线，**token 值绝不贴**（贴了明文 = 已泄露，须轮换）。
+分发时只把**文件路径**贴到总线，**token 值绝不贴**进 issue/PR/聊天记录。
+跨机器分发（如给另一台开发机上的会话）仍是人工动作：安全拷贝该文件或对应
+条目，同样只走文件、不走聊天明文。
 
-> 注意 `seed-agents.ts` **目前不写这个 json**——它只在生成那一刻把新 token
-> 打印到 stdout 一次（见下）。谁跑 seed/轮换，谁负责把 token 合并进中央 json 的
-> `.tokens` map（**合并写入**，别覆盖已有条目）。让 seed/轮换脚本直接写 json 是
-> 待办改进（issue #493）。
+> 历史注记：2026-07-10（#493）之前 seed 只打印不落盘、由人工抄进 per-session
+> 文件——那套 `<coord-id>.env` 文件仍然有效（本质是同一 token 的另一种存放），
+> 但新 mint 一律进中央文件，文档以本节为准。
 
 ### 给新身份发 token（registry.yaml 加了新 agent 之后）
 
@@ -159,8 +153,7 @@ cd packages/coord-service
 npx tsx scripts/seed-agents.ts        # 幂等：只给 D1 里还没有的 id 生成新行+新 token
 ```
 
-**token 只在生成那一刻打印一次**（stdout），立刻合并进上面的中央 json，
-别贴进 issue/PR/聊天记录。
+新 token 自动写入中央凭据文件（见上节）；stdout 只打印取用命令、不打印 token 值。
 
 ### 轮换（token 疑似泄漏 / 丢失时）
 
@@ -215,7 +208,6 @@ in_progress 租约标记为 expired 并写一条 expire 事件——不需要人
 
 - token/API key **只**存在于：D1 的 hash 列、本地 gitignored 文件、Cloudflare secret。
   任何时候不进 git、不进 issue/PR/评论（总线全球可读）。
-- `.env.cloudflare` 与中央凭据文件 `coord-credentials.json`（及任何遗留的
-  per-session `<coord-id>.env`）都必须 gitignored
+- `.env.cloudflare` 与各 per-session 的 `<coord-id>.env` 凭据文件都必须 gitignored
   或放在仓库树外——不要为了"备份"把它们复制到仓库内会被 git 追踪的路径。
 - 发现泄漏：立即按 §2 轮换受影响身份 + 在总线留一条（不含新 token）说明轮换原因。
