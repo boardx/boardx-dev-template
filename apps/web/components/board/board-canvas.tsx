@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { CanvasViewport } from "@/components/board/canvas-viewport";
 import {
   FabricCanvas,
+  resolveConnectorEndpoints,
   type ItemMove,
   type ItemResize,
   type RenderItem,
@@ -588,9 +589,12 @@ export const BoardCanvas = forwardRef<
   const [wmDragActive, setWmDragActive] = useState(false);
   const widgetMenuRef = useRef<HTMLDivElement | null>(null);
 
-  // 选区包围盒（画布/场景坐标）：所有选中 item 的 x/y/w/h 取并集。connector 的 x/y/w/h
-  // 本就是其落库的包围盒（同 getItemScreenRect 对非 connector 类型的处理一致），无需
-  // 特判——这一点与 e2e 使用的测试锚点坐标口径一致。
+  // 选区包围盒（画布/场景坐标）：所有选中 item 的 x/y/w/h 取并集。
+  // connector 特判（issue #470 PR #525 review 修复，见 coord-main 评论）：connector 的
+  // 落库 x/y/w/h 是创建时的初始包围盒，端点绑定到别的组件后，组件一移动，这个落库值就
+  // 陈旧了——本文件里 getItemScreenRect 对 connector 从不用它，而是 resolveConnectorEndpoints
+  // 按当前绑定组件的实时位置重算最近锚点。这里必须用同一套口径，否则端点跟随组件移动后，
+  // 浮动工具条会锚定在与视觉连线不一致的旧位置。
   const selectionBBox = useMemo(() => {
     if (selected.size === 0) return null;
     const sel = items.filter((it) => selected.has(it.id));
@@ -599,11 +603,27 @@ export const BoardCanvas = forwardRef<
     let minY = Infinity;
     let maxX = -Infinity;
     let maxY = -Infinity;
+    const consume = (x: number, y: number) => {
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    };
     for (const it of sel) {
-      minX = Math.min(minX, it.x);
-      minY = Math.min(minY, it.y);
-      maxX = Math.max(maxX, it.x + it.w);
-      maxY = Math.max(maxY, it.y + it.h);
+      if (isConnector(it)) {
+        const conn = {
+          fromId: getConnectorFromId(it),
+          toId: getConnectorToId(it),
+          fromPoint: getConnectorFreePoint(it, "from") ?? { x: it.x, y: it.y },
+          toPoint: getConnectorFreePoint(it, "to") ?? { x: it.x + it.w, y: it.y + it.h },
+        };
+        const { from, to } = resolveConnectorEndpoints(conn, items);
+        consume(from.x, from.y);
+        consume(to.x, to.y);
+      } else {
+        consume(it.x, it.y);
+        consume(it.x + it.w, it.y + it.h);
+      }
     }
     return { minX, minY, maxX, maxY };
   }, [items, selected]);
