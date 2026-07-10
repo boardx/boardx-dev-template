@@ -5,6 +5,8 @@
 // 诚实原则：本 feature 不做 OAuth 与自动发 token（ADR-011 P2/P3）——提交申请按钮 disabled
 // 并注明原因，不伪造"已提交成功"；凭据步骤如实描述人工发放现状。
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,15 +22,23 @@ const ONBOARD_STEPS = [
   { t: "领凭据", cost: "1 分钟", need: "审批通过通知" },
 ];
 
-// 学习页条目（文案照原型；内容源为仓库 human-developer-onboarding.md，自动渲染待接线）
-const TUTORIALS = [
-  "开发模式一分钟图解（人类 → 三级 coordinator → 全员登记）",
-  "module coordinator 的职责与派子 agent",
-  "3 小时工作周期与流动时长（flow time）度量",
-  "防断链三原则（每 tick 续约 / 全员登记 / 状态不留会话）",
+// 学习页条目：点击在页内渲染仓库真实文档（/api/portal/doc 白名单，内容随 main 更新）
+const TUTORIALS: Array<{ label: string; doc: string }> = [
+  { label: "开发模式一分钟图解（人类 → 三级 coordinator → 全员登记）", doc: "human-onboarding" },
+  { label: "module coordinator 的职责与派子 agent", doc: "human-onboarding" },
+  { label: "3 小时工作周期与流动时长（flow time）度量", doc: "work-cycle" },
+  { label: "防断链三原则（每 tick 续约 / 全员登记 / 状态不留会话）", doc: "human-onboarding" },
+  { label: "给你的 agent 的接入执行书（第一条消息就发它）", doc: "agent-bootstrap" },
+  { label: "Agent 接入规则清单（哪些线不能踩）", doc: "agent-checklist" },
 ];
 
-const MODULES = ["room", "board", "collab", "ava", "store-admin", "survey", "platform", "studio"];
+// 模块清单 = 产品真实领域面（roadmap phases + registry areas 提炼，2026-07-10 对齐）
+const MODULES = [
+  "room", "board", "canvas", "collab", "ava", "knowledge-base", "ai-store",
+  "studio", "survey", "credits-billing", "admin", "auth-identity", "platform", "harness",
+];
+
+const REPO = "boardx/boardx-dev-template";
 
 const CREDENTIAL_EXPORT_TEMPLATE = [
   "export COORD_SERVICE_URL=https://coord-service-staging.boardx.workers.dev",
@@ -38,8 +48,47 @@ const CREDENTIAL_EXPORT_TEMPLATE = [
 export function JoinTab() {
   const [step, setStep] = useState(1);
   const [module, setModule] = useState<string | null>(null);
+  const [resp, setResp] = useState("");
   const [copied, setCopied] = useState(false);
+  const [doc, setDoc] = useState<{ name: string; title: string; markdown: string } | null>(null);
+  const [docLoading, setDocLoading] = useState<string | null>(null);
   const cur = ONBOARD_STEPS[step - 1]!;
+
+  // 提交申请 = 生成预填 onboarding issue 跳 GitHub（权威在 GitHub，门户不代写）。
+  // 全自动创建（免跳转）待 ADR-011 P3；预填链接是当下真实可用的最短路径。
+  function submitApplication() {
+    if (!module) return;
+    const title = `[onboarding] module-coordinator 申请：coord-${module}`;
+    const body = [
+      "## 自助 onboarding 申请（由 Developer Portal 预填）",
+      "",
+      `- 申请角色：module-coordinator`,
+      `- 目标模块：${module}`,
+      `- 身份 id 建议：coord-${module}`,
+      `- 一句话职责：${resp || "（待补充）"}`,
+      "",
+      "### 审批后动作（审批人照 OPERATIONS.md §2）",
+      "1. registry.yaml 增加该身份（PR）；",
+      "2. seed-agents.ts mint token → 写入中央凭据文件；",
+      "3. 在本 issue 回复凭据文件路径（只贴路径，绝不贴 token 值）。",
+      "",
+      "审批 SLA：通常 < 1 个工作周期（3h）。参考：ADR-010 / ADR-011 / human-developer-onboarding.md",
+    ].join("\n");
+    const url = `https://github.com/${REPO}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
+    window.open(url, "_blank", "noopener");
+  }
+
+  async function openDoc(name: string) {
+    setDocLoading(name);
+    try {
+      const res = await fetch(`/api/portal/doc?name=${encodeURIComponent(name)}`);
+      if (!res.ok) return;
+      const body = (await res.json()) as { title: string; markdown: string };
+      setDoc({ name, title: body.title, markdown: body.markdown });
+    } finally {
+      setDocLoading(null);
+    }
+  }
 
   async function copyCommands() {
     try {
@@ -99,12 +148,13 @@ export function JoinTab() {
               ))}
             </div>
             <Label htmlFor="portal-join-resp">一句话职责</Label>
-            <Input id="portal-join-resp" placeholder="如：负责 Studio 域的分派与首轮 review" />
-            {/* 诚实占位：真实提交（自动创建预填 onboarding issue）在 ADR-011 P3 落地后开放 */}
-            <Button disabled data-testid="submit-application">提交申请</Button>
+            <Input id="portal-join-resp" placeholder="如：负责 Studio 域的分派与首轮 review" value={resp} onChange={(e) => setResp(e.target.value)} />
+            <Button data-testid="submit-application" disabled={!module} onClick={submitApplication}>
+              提交申请（生成预填 issue 跳 GitHub）
+            </Button>
             <p className="text-11 text-muted-foreground" data-testid="submit-disabled-reason">
-              网页内提交申请（自动创建预填审批 issue）将在自助身份系统（ADR-011 P3）落地后开放——
-              当前请在 GitHub 手动开 onboarding issue（模板见学习页教程）。可继续点击上方步骤预览后续流程。
+              提交 = 打开预填好的 onboarding issue（选模块后可用；需要你有本仓 GitHub 访问权）。
+              审批与凭据发放在 issue 上完成——权威在 GitHub；免跳转的全自动创建待自助身份系统（ADR-011 P3）。
             </p>
           </div>
         )}
@@ -139,15 +189,33 @@ export function JoinTab() {
       </PortalCard>
 
       <PortalCard state="ready" title="学习如何参与">
-        <ul className="space-y-2 text-13" data-testid="tutorial-list">
-          {TUTORIALS.map((t) => (
-            <li key={t} className="flex items-center justify-between rounded-8 px-2 py-1.5 transition-colors duration-200 hover:bg-muted">
-              <span className="text-foreground">{t}</span>
-              <span className="text-11 text-muted-foreground">阅读 →</span>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-3 text-11 text-muted-foreground">内容渲染自仓库 human-developer-onboarding.md（当前为静态清单，自动同步随 main 更新待接线）</p>
+        {doc ? (
+          <div data-testid="doc-reader">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-13 font-medium text-foreground">{doc.title}</span>
+              <Button size="sm" variant="outline" onClick={() => setDoc(null)}>← 返回列表</Button>
+            </div>
+            <div className="prose-portal max-h-[32rem] overflow-y-auto rounded-8 border border-border bg-surface-2 p-4 text-13 leading-relaxed text-foreground [&_a]:underline [&_code]:rounded-4 [&_code]:bg-muted [&_code]:px-1 [&_code]:text-11 [&_h1]:text-17 [&_h1]:font-bold [&_h2]:mt-4 [&_h2]:text-15 [&_h2]:font-semibold [&_h3]:mt-3 [&_h3]:font-medium [&_li]:my-0.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-8 [&_pre]:bg-muted [&_pre]:p-3 [&_table]:text-11 [&_ul]:list-disc [&_ul]:pl-5">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{doc.markdown}</ReactMarkdown>
+            </div>
+          </div>
+        ) : (
+          <ul className="space-y-2 text-13" data-testid="tutorial-list">
+            {TUTORIALS.map((t) => (
+              <li key={t.label}>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-8 px-2 py-1.5 text-left transition-colors duration-200 hover:bg-muted"
+                  onClick={() => void openDoc(t.doc)}
+                >
+                  <span className="text-foreground">{t.label}</span>
+                  <span className="shrink-0 text-11 text-muted-foreground">{docLoading === t.doc ? "加载中…" : "阅读 →"}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-3 text-11 text-muted-foreground">内容渲染自仓库文档（Contents API 读 main，随合并自动更新，5 分钟缓存）</p>
       </PortalCard>
     </div>
   );
