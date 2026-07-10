@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* BoardX 设计系统 token（继承自 oldcode boardx-web 的「黑白灰」统一主题，HSL 语义变量）。
+   单一事实来源：改主题改这里，不在组件里硬编码颜色。见 .harness/instructions/uiux-standards.md */
+@layer base {
+  :root {
+    /* ── 中性灰（对齐 BoardX Prototype 设计 hex）─────────────── */
+    --background: 0 0% 100%;          /* #fff   */
+    --foreground: 0 0% 9.4%;          /* #181818 正文 */
+    --card: 0 0% 98%;                 /* #fafafa */
+    --card-foreground: 0 0% 9.4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9.4%;
+    --primary: 0 0% 0%;               /* #000 强调/主按钮 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 96.1%;          /* #f5f5f5 */
+    --secondary-foreground: 0 0% 9.4%;
+    --muted: 0 0% 94.1%;              /* #f0f0f0 */
+    --muted-foreground: 0 0% 40%;     /* #666 次要文字（对比度复盘：43.9% 在 bg-muted 上只有 4.34:1，不过 4.5 线）*/
+    --accent: 0 0% 94.1%;             /* #f0f0f0 hover 面 */
+    --accent-foreground: 0 0% 9.4%;
+    --destructive: 358 75% 59%;       /* #e5484d 真红 */
+    --destructive-foreground: 0 0% 100%;
+    --success: 157 42% 40%;           /* 绿（实心，与 tag-green 同色相） */
+    --success-foreground: 0 0% 100%;
+    --border: 0 0% 87.8%;             /* #e0e0e0 默认边框 */
+    --input: 0 0% 87.8%;
+    --ring: 0 0% 0%;
+    --radius: 0.5rem;                 /* 8px */
+
+    /* ── 扩展中性档（设计常用，pixel-faithful 需要）────────── */
+    --surface-1: 0 0% 98%;            /* #fafafa 极浅面 */
+    --surface-2: 0 0% 96.1%;          /* #f5f5f5 */
+    --surface-3: 0 0% 94.1%;          /* #f0f0f0 */
+    --border-strong: 0 0% 83.1%;      /* #d4d4d4 强边框/分隔 */
+    --placeholder: 0 0% 56.5%;        /* #909090 占位/弱文字 */
+    --surface-darkest: 0 0% 3.9%;     /* #0a0a0a 全屏深панel(auth侧栏/移动底) */
+    --surface-dark: 0 0% 15.7%;       /* #282828 深色面(rail/dock/tooltip) */
+    --surface-dark-2: 0 0% 22%;       /* #383838 */
+    --surface-dark-foreground: 0 0% 100%;
+
+    /* ── 语义柔彩（标签/状态-soft 底色）──────────────────── */
+    --tag-green: 157 42% 89.2%;       /* #d8efe6 */
+    --tag-blue: 212 64% 91.4%;        /* #dbe8f7 */
+    --tag-purple: 257 51% 92%;        /* #e6e0f5 */
+    --tag-pink: 9 89% 92.9%;          /* #fde2dd */
+    --tag-yellow: 51 100% 90%;        /* #fff7cc */
+
+    /* ── 禁用态 token 对（2026-07-09 对比度复盘）─────────────
+       禁用态一律用这对 token，禁止 disabled:opacity-*——统一透明度作用在
+       实心深色按钮上会把黑底白字整体压成灰底灰字（Rooms Create 按钮事故）。
+       #5c5c5c on #f0f0f0 = 5.9:1，禁用但依然可读。lint-design.sh 机械把关。*/
+    --disabled: 0 0% 94.1%;           /* #f0f0f0 */
+    --disabled-foreground: 0 0% 36%;  /* #5c5c5c */
+  }
+
+  .dark {
+    --background: 0 0% 7%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 64%;
+    --accent: 0 0% 20%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 358 65% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 157 42% 50%;
+    --success-foreground: 0 0% 0%;
+    --border: 0 0% 26%;
+    --input: 0 0% 26%;
+    --ring: 0 0% 100%;
+
+    --surface-1: 0 0% 12%;
+    --surface-2: 0 0% 16%;
+    --surface-3: 0 0% 20%;
+    --border-strong: 0 0% 34%;
+    --placeholder: 0 0% 52%;
+    --surface-darkest: 0 0% 0%;
+    --surface-dark: 0 0% 10%;
+    --surface-dark-2: 0 0% 16%;
+    --surface-dark-foreground: 0 0% 100%;
+
+    --tag-green: 157 30% 24%;
+    --tag-blue: 212 40% 26%;
+    --tag-purple: 257 30% 28%;
+    --tag-pink: 9 45% 28%;
+    --tag-yellow: 51 50% 24%;
+
+    --disabled: 0 0% 16%;
+    --disabled-foreground: 0 0% 62%;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}

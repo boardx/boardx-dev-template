@@ -1,0 +1,36 @@
+{
+  "name": "@repo/devportal",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3400",
+    "build": "next build",
+    "pages:build": "npx @cloudflare/next-on-pages@1",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'lint: ok'",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "jose": "^5.9.6",
+    "next": "14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.5.2",
+    "yaml": "^2.5.0",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/next-on-pages": "^1.13.5",
+    "@types/node": "^22.5.0",
+    "@types/react": "^18.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.41",
+    "tailwindcss": "^3.4.10",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  }
+}
