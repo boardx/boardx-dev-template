@@ -138,6 +138,12 @@ export async function getAiStoreItem(id: number): Promise<AiStoreItem | undefine
   return rows[0];
 }
 
+/** 批量取项目详情（单条 WHERE id = ANY($1)，避免调用方逐条 SELECT 的 N+1）。不做可见性过滤。 */
+export async function getAiStoreItems(ids: number[]): Promise<AiStoreItem[]> {
+  if (ids.length === 0) return [];
+  return query<AiStoreItem>(`SELECT ${ITEM_COLS} FROM ai_store_items WHERE id = ANY($1)`, [ids]);
+}
+
 /** 拥有者管理列表：用于 Create/Authorized 视图展示自己的草稿、已发布和审核中项目。 */
 export async function listOwnedAiStoreItems(ownerUserId: number): Promise<AiStoreItem[]> {
   return query<AiStoreItem>(

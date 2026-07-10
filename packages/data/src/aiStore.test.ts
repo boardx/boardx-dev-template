@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { isAiStoreItemVisible, canAccessAiStoreItem } from "./aiStore";
+import { isAiStoreItemVisible, canAccessAiStoreItem, getAiStoreItems } from "./aiStore";
 import { query } from "./index";
 
 vi.mock("./index", () => ({ query: vi.fn() }));
@@ -109,5 +109,27 @@ describe("canAccessAiStoreItem", () => {
     const ok = await canAccessAiStoreItem(teamItem, 6, 8);
     expect(ok).toBe(false);
     expect(mockQuery).not.toHaveBeenCalled();
+  });
+});
+
+// getAiStoreItems：批量详情查询（issue #491 附带优化——单条 WHERE id = ANY($1)，
+// 替代 ava-agents.ts 原先逐个 id 调 getAiStoreItem 的 N+1）。
+describe("getAiStoreItems", () => {
+  beforeEach(() => {
+    mockQuery.mockReset();
+  });
+
+  it("空数组不发 SQL 查询，直接返回空数组", async () => {
+    const items = await getAiStoreItems([]);
+    expect(items).toEqual([]);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("单条 WHERE id = ANY($1) 查询，一次性取回多个 id", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 1 }, { id: 2 }]);
+    const items = await getAiStoreItems([1, 2]);
+    expect(items).toEqual([{ id: 1 }, { id: 2 }]);
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("= ANY($1)"), [[1, 2]]);
   });
 });
