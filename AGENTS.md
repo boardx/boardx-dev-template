@@ -84,4 +84,5 @@ pnpm harness new-phase  --id 02 --name agent-runtime --goal "..."   # scaffold r
 pnpm harness new-sprint --phase 02 --id 01 --goal "..." --features F01,F02
 pnpm harness verify     --sprint 02/01
 pnpm harness sync       --phase 02 --apply
+pnpm harness doctor     --phase 02        # 审计链体检：passing 证据真实性 + 派生视图一致（ADR-012；pre-push 自动跑）
 ```

@@ -102,6 +102,13 @@
    一次基于"worktree 目录已不存在"这条本身可靠的判定标准，未经请示就直接跑了
    `--apply`，即使结果本身没错，这个执行顺序本身不该发生。见 ADR-007
    （`phases/phase-01-foundation/adr/ADR-007-docker-stack-teardown.md`）。
+9. **review 判定锚定 SHA + 审计链用 doctor 机器判（2026-07-10 起，ADR-012）**：
+   Block/Accept 结论必须写明审的是哪个 commit（`审于 <sha>`）；对"已修复"声明复查
+   前必须先 `git fetch` 确认审的是分支头——p23（#517）三轮 Block 里有两轮是基于
+   stale fetch 重复指控已修复的问题。证据链核查（evidence 非空/含 exit 0/派生视图
+   一致）不再人肉逐字节验，跑 `pnpm harness doctor --phase NN`；引用派生视图时用
+   **列名**不用列序号。仓库侧审计对象以 git 树为准——gitignored 的本地派生文件
+   （active-features.json）不是审计对象，in-repo 的 PROGRESS.md 才是。
 
 ## 事故分诊速查（来自实战）
 - CI 秒级失败 + steps 空 → 账单/runner，非代码（2026-07-04 账单事故）。
