@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import {
-  canViewRoom,
-  canManageRoom,
-  getRoomRole,
-  getRoom,
-  listRoomMembers,
   addRoomMember,
+  canManageRoom,
+  canViewRoom,
   findUserByEmail,
-  upsertRoomInvite,
+  getRoom,
+  getRoomRole,
   listPendingRoomInvites,
+  listRoomMembers,
+  resolveRoomId,
+  upsertRoomInvite,
 } from "@repo/data";
 import { isValidEmail, normalizeEmail, generateToken, expiresAt, ROOM_INVITE_TTL_MS } from "@repo/auth";
 import { currentUser } from "@/lib/session";
@@ -20,7 +21,7 @@ export const dynamic = "force-dynamic";
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-  const roomId = Number(params.id);
+  const roomId = await resolveRoomId(params.id);
   if (!(await canViewRoom(roomId, user.id))) {
     return NextResponse.json({ error: "无权限" }, { status: 403 });
   }
@@ -59,7 +60,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   try {
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-    const roomId = Number(params.id);
+    const roomId = await resolveRoomId(params.id);
     if (!(await canManageRoom(roomId, user.id))) {
       return NextResponse.json({ error: "无权限邀请" }, { status: 403 });
     }

@@ -1,5 +1,6 @@
 // packages/data/src/rooms.ts — CAP-COLLAB 房间仓储
 import { query } from "./index";
+import { isValidPublicId } from "./ids";
 
 export type RoomVisibility = "private" | "team";
 
@@ -39,6 +40,18 @@ export async function getRoom(roomId: number): Promise<Room | undefined> {
     [roomId]
   );
   return rows[0];
+}
+
+// issue #471/#529 阶段2（路由层）：同 board.ts 的 resolveBoardId，见那边的完整注释——
+// 查无此 public_id、或数字分支解析出 NaN，都统一落到哨兵 id（-1），让既有的
+// `if (!room) return 404` 分支照旧接管，不让 NaN 传进 pg 查询参数炸掉请求。
+export async function resolveRoomId(idParam: string): Promise<number> {
+  if (isValidPublicId(idParam, "rm")) {
+    const rows = await query<{ id: number }>("SELECT id FROM rooms WHERE public_id = $1", [idParam]);
+    return rows[0]?.id ?? -1;
+  }
+  const n = Number(idParam);
+  return Number.isFinite(n) ? n : -1;
 }
 
 /** 房间的 ai_instruction（聊天发消息注入系统提示时用；同房间全部线程共享同一指令）。 */

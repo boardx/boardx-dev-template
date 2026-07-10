@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRoom, canViewRoom, canManageRoom, getReadyRoomFile, softDeleteRoomFile } from "@repo/data";
+import { canManageRoom, canViewRoom, getReadyRoomFile, getRoom, resolveRoomId, softDeleteRoomFile } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -13,7 +13,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string; 
   try {
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-    const roomId = Number(params.id);
+    const roomId = await resolveRoomId(params.id);
     const room = await getRoom(roomId);
     if (!room) return NextResponse.json({ error: "not found" }, { status: 404 });
     if (!(await canViewRoom(roomId, user.id))) {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getBoard, getBoardAccessRole, addRoomMember } from "@repo/data";
+import { addRoomMember, getBoard, getBoardAccessRole, resolveBoardId } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -11,7 +11,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   try {
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-    const boardId = Number(params.id);
+    const boardId = await resolveBoardId(params.id);
     const board = await getBoard(boardId);
     if (!board) return NextResponse.json({ error: "not found" }, { status: 404 });
     const role = await getBoardAccessRole(boardId, user.id);

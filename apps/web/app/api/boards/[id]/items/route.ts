@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { getBoard, getBoardAccessRole, listBoardItems, insertItem, type BoardItemRow } from "@repo/data";
+import { getBoard, getBoardAccessRole, insertItem, listBoardItems, resolveBoardId, type BoardItemRow } from "@repo/data";
 import { DEFAULT_SIZE, validateNewItem, isItemType } from "@repo/canvas";
 import { currentUser } from "@/lib/session";
 
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-  const boardId = Number(params.id);
+  const boardId = await resolveBoardId(params.id);
   const role = await getBoardAccessRole(boardId, user.id);
   if (!role) return NextResponse.json({ error: "无权限" }, { status: 403 });
   return NextResponse.json({ items: await listBoardItems(boardId) });
@@ -22,7 +22,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   try {
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-    const boardId = Number(params.id);
+    const boardId = await resolveBoardId(params.id);
     const board = await getBoard(boardId);
     if (!board) return NextResponse.json({ error: "not found" }, { status: 404 });
     const role = await getBoardAccessRole(boardId, user.id);

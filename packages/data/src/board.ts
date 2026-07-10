@@ -1,6 +1,7 @@
 // packages/data/src/board.ts — CAP-DATA 白板容器仓储（P5）
 // Board = 房间内的白板容器（生命周期）。画布内容（items）属 P6，不在此层。
 import { query } from "./index";
+import { isValidPublicId } from "./ids";
 import { canViewRoom, isRoomOwner } from "./rooms";
 import { getMembership } from "./teams";
 
@@ -54,6 +55,27 @@ export async function createBoard(
 export async function getBoard(boardId: number): Promise<Board | undefined> {
   const rows = await query<Board>(`SELECT ${BOARD_COLS} FROM boards WHERE id = $1`, [boardId]);
   return rows[0];
+}
+
+// issue #471/#529 阶段2（路由层）：把路由参数（可能是旧的内部数字 id 字符串，也可能是
+// #471 阶段1 新增的 public_id）解析成内部数字 id，供既有的 getBoard(numericId) 等函数
+// 继续使用——不改任何下游权限校验逻辑，只在路由入口这一层加一次查找。
+// 刻意不做「查无此 public_id 就 404」：返回一个必然查不到 board 的哨兵 id（-1），让
+// 调用方紧随其后的既有 `if (!board) return 404` 分支照旧接管，不引入新的错误处理路径、
+// 也不需要改动任何一处 route 的错误处理代码——只替换 `Number(params.id)` 这一行本身。
+// 数字分支同样统一落到 -1 哨兵（而不是放行 NaN）：`getBoard(NaN)` 会把 NaN 传进
+// pg 查询参数，驱动层直接抛异常（41 个 route 里原本就是 `Number(params.id)` 直传，
+// main 上今天对任何非数字 id 段就已经是这个隐患——这不是本次改动引入的新问题）。
+// 这里顺手收口是因为往后 public_id 链接一旦上线，「格式对不上」会比以前更容易被真实
+// 触发（用户手输/拼错 public_id 也会落进这条分支），值得在这个新函数自己的边界内堵掉；
+// 不去动其余 41 个文件的错误处理代码，范围不外溢。
+export async function resolveBoardId(idParam: string): Promise<number> {
+  if (isValidPublicId(idParam, "brd")) {
+    const rows = await query<{ id: number }>("SELECT id FROM boards WHERE public_id = $1", [idParam]);
+    return rows[0]?.id ?? -1;
+  }
+  const n = Number(idParam);
+  return Number.isFinite(n) ? n : -1;
 }
 
 /** 房间内白板，最新在前；可选按名称（ILIKE）过滤。 */

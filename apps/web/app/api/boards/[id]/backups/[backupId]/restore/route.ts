@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getBoard, canManageBoard, getBackup, restoreBackup } from "@repo/data";
+import { canManageBoard, getBackup, getBoard, resolveBoardId, restoreBackup } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -15,7 +15,7 @@ export async function POST(
   try {
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-    const boardId = Number(params.id);
+    const boardId = await resolveBoardId(params.id);
     const board = await getBoard(boardId);
     if (!board) return NextResponse.json({ error: "not found" }, { status: 404 });
     if (!(await canManageBoard(boardId, user.id))) {

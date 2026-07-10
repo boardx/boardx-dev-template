@@ -11,7 +11,7 @@
 // 每次请求都是无状态单轮生成（面板侧自行维护本地消息列表），与 F01 notes
 // 「Board AI 面板当前无跨会话持久化」的既有边界一致。
 import { NextResponse } from "next/server";
-import { getBoard, getBoardAccessRole, listBoardItems } from "@repo/data";
+import { getBoard, getBoardAccessRole, listBoardItems, resolveBoardId } from "@repo/data";
 import { defaultGateway, DEFAULT_MODEL_ID, FORCE_FAIL_MARKER } from "@repo/ai";
 import { currentUser } from "@/lib/session";
 
@@ -62,7 +62,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
 
-  const boardId = Number(params.id);
+  const boardId = await resolveBoardId(params.id);
   if (!Number.isFinite(boardId)) {
     return NextResponse.json({ error: "无效的 board id" }, { status: 400 });
   }

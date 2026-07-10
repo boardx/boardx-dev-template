@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { canViewBoard, addFavorite, removeFavorite } from "@repo/data";
+import { addFavorite, canViewBoard, removeFavorite, resolveBoardId } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function POST(_req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-  const boardId = Number(params.id);
+  const boardId = await resolveBoardId(params.id);
   if (!(await canViewBoard(boardId, user.id))) {
     return NextResponse.json({ error: "无权限" }, { status: 403 });
   }
@@ -21,7 +21,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-  const boardId = Number(params.id);
+  const boardId = await resolveBoardId(params.id);
   await removeFavorite(boardId, user.id);
   return NextResponse.json({ ok: true, favorited: false });
 }
