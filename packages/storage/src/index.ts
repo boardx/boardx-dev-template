@@ -106,7 +106,19 @@ export function buildRoomFileObjectKey(params: {
   return `rooms/${params.roomId}/files/${params.fileId}/${safeName}`;
 }
 
-/** 类型 + 大小校验，前后端共用同一规则（服务端二次校验用，防绕过）。 */
+// ─── 白板封面对象 key：board-covers/{boardId}/{时间戳}.{ext}（p24 board-mgmt）──
+// 上传的封面把 objectKey 存进 boards.cover；展示时经服务端签发临时 GET URL。
+// 时间戳做唯一后缀，避免同板多次上传的缓存串（无 Math.random 依赖，毫秒足够）。
+
+export const BOARD_COVER_ALLOWED_EXT = ["png", "jpg", "jpeg", "webp", "gif"];
+export const BOARD_COVER_MAX_BYTES = 5 * 1024 * 1024; // 5MB
+
+export function buildBoardCoverObjectKey(params: { boardId: number; fileName: string }): string {
+  const ext = extOf(params.fileName) || "png";
+  return `board-covers/${params.boardId}/${Date.now()}.${ext}`;
+}
+
+/** 类型 + 大小校验，前后端共用同一规则（服务端二次校验用,防绕过）。 */
 export function validateRoomFileUpload(fileName: string, sizeBytes: number): KbUploadValidation {
   const ext = extOf(fileName);
   if (!ROOM_FILE_ALLOWED_EXT.includes(ext)) {

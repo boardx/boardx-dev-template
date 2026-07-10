@@ -14,6 +14,7 @@ export interface Board {
   name: string;
   cover: string | null;
   category: string | null;
+  tags: string[];
   description: string | null;
   visibility: BoardVisibility;
   owner_user_id: number;
@@ -31,20 +32,21 @@ export function boardTitleOrDefault(name: string | null | undefined): string {
 }
 
 const BOARD_COLS =
-  "id, room_id, team_id, name, cover, category, description, visibility, owner_user_id, settings, created_at, updated_at";
+  "id, room_id, team_id, name, cover, category, description, visibility, owner_user_id, settings, created_at, updated_at, tags";
 
 export async function createBoard(
   roomId: number,
   ownerId: number,
   name?: string,
   teamId: number | null = null,
-  visibility: BoardVisibility = "room"
+  visibility: BoardVisibility = "room",
+  tags: string[] = []
 ): Promise<Board> {
   const rows = await query<Board>(
-    `INSERT INTO boards (room_id, team_id, name, owner_user_id, visibility)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO boards (room_id, team_id, name, owner_user_id, visibility, tags)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING ${BOARD_COLS}`,
-    [roomId, teamId, boardTitleOrDefault(name), ownerId, visibility]
+    [roomId, teamId, boardTitleOrDefault(name), ownerId, visibility, tags]
   );
   return rows[0]!;
 }
@@ -55,15 +57,20 @@ export async function getBoard(boardId: number): Promise<Board | undefined> {
 }
 
 /** 房间内白板，最新在前；可选按名称（ILIKE）过滤。 */
-export async function listBoardsInRoom(roomId: number, q?: string): Promise<Board[]> {
+export async function listBoardsInRoom(roomId: number, q?: string, tags?: string[]): Promise<Board[]> {
   const params: unknown[] = [roomId];
   let nameClause = "";
   if (q && q.trim()) {
     params.push(`%${q.trim()}%`);
     nameClause = ` AND name ILIKE $${params.length}`;
   }
+  let tagClause = "";
+  if (tags?.length) {
+    params.push(tags);
+    tagClause = ` AND tags && $${params.length}::text[]`;
+  }
   return query<Board>(
-    `SELECT ${BOARD_COLS} FROM boards WHERE room_id = $1${nameClause} ORDER BY id DESC`,
+    `SELECT ${BOARD_COLS} FROM boards WHERE room_id = $1${nameClause}${tagClause} ORDER BY id DESC`,
     params
   );
 }
@@ -94,7 +101,7 @@ export async function listRecentBoards(userId: number, q?: string): Promise<Boar
     nameClause = ` AND b.name ILIKE $${params.length}`;
   }
   return query<Board>(
-    `SELECT b.id, b.room_id, b.team_id, b.name, b.cover, b.category, b.description,
+    `SELECT b.id, b.room_id, b.team_id, b.name, b.cover, b.category, b.tags, b.description,
             b.visibility, b.owner_user_id, b.settings, b.created_at, b.updated_at
      FROM board_visits v
      JOIN boards b ON b.id = v.board_id
@@ -186,7 +193,7 @@ export async function listFavoriteBoards(userId: number, q?: string): Promise<Bo
     nameClause = ` AND b.name ILIKE $${params.length}`;
   }
   return query<Board>(
-    `SELECT b.id, b.room_id, b.team_id, b.name, b.cover, b.category, b.description,
+    `SELECT b.id, b.room_id, b.team_id, b.name, b.cover, b.category, b.tags, b.description,
             b.visibility, b.owner_user_id, b.settings, b.created_at, b.updated_at
      FROM board_favorites f
      JOIN boards b ON b.id = f.board_id
@@ -215,7 +222,7 @@ export async function listEditableBoardsForUser(userId: number, q?: string): Pro
     nameClause = ` AND b.name ILIKE $${params.length}`;
   }
   return query<Board>(
-    `SELECT DISTINCT b.id, b.room_id, b.team_id, b.name, b.cover, b.category, b.description,
+    `SELECT DISTINCT b.id, b.room_id, b.team_id, b.name, b.cover, b.category, b.tags, b.description,
             b.visibility, b.owner_user_id, b.settings, b.created_at, b.updated_at
      FROM boards b
      JOIN rooms r ON r.id = b.room_id
@@ -289,6 +296,7 @@ export interface BoardMetaFields {
   category?: string | null;
   description?: string | null;
   cover?: string | null;
+  tags?: string[];
 }
 
 const META_COLS = ["name", "category", "description", "cover"] as const;
@@ -303,6 +311,10 @@ export async function updateBoard(boardId: number, fields: BoardMetaFields): Pro
       params.push(v);
       sets.push(`${col} = $${params.length}`);
     }
+  }
+  if (fields.tags !== undefined) {
+    params.push(fields.tags);
+    sets.push(`tags = $${params.length}::text[]`);
   }
   if (sets.length) {
     sets.push("updated_at = now()");

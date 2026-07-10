@@ -70,6 +70,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (body.description !== undefined)
       fields.description = body.description === null ? null : String(body.description);
     if (body.cover !== undefined) fields.cover = body.cover === null ? null : String(body.cover);
+    if (Array.isArray(body.tags))
+      fields.tags = body.tags.filter((t): t is string => typeof t === "string").map((s) => s.trim()).filter(Boolean);
 
     const updated = await updateBoard(boardId, fields);
     return NextResponse.json({ board: updated });
