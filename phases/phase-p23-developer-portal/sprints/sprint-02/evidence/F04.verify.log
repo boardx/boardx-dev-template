@@ -1,0 +1,14 @@
+$ grep -q 'data-testid="pr-actions"' -r apps/web/components/portal/
+[exit 0]
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/portal-003-pr-queue-actions.spec.ts
+[exit 0]
+
+Running 3 tests using 1 worker
+
+  ✓  1 [chromium] › portal-003-pr-queue-actions.spec.ts:63:5 › 谁在干活：每行 agent + 正在做什么（resource_id）+ 心跳状态点（时间在 title 悬停） (2.0s)
+  ✓  2 [chromium] › portal-003-pr-queue-actions.spec.ts:86:5 › PR 队列：按状态分组；超 3h 未动的行红框高亮并给出 催办/认领 review/去 GitHub 行动按钮 (651ms)
+  ✓  3 [chromium] › portal-003-pr-queue-actions.spec.ts:114:5 › 诚实降级：coord/github 未配置 → 谁在干活 与 PR 队列 两卡都走 unconfigured 态 (933ms)
+
+  3 passed (7.2s)

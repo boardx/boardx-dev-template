@@ -43,13 +43,21 @@ export function verify(args: Args): void {
   if (only) targets = targets.filter((f) => f.id === only);
   if (!targets.length) die("没有匹配的 feature 可验证");
 
+  // --backfill-evidence：仅补写已 passing feature 的真实证据日志（重跑 verification 命令），
+  // 绝不改动 status —— 用于修复"verify 曾在非 --sprint 模式下运行、从未落盘证据"的历史缺口。
+  // 只在 --sprint 模式下开放，因为只有这条路径才会真的落盘日志文件；--phase 裸时间戳模式
+  // 正是被修复的 bug 本身，不应继续被用来产出"证据"。
+  const backfillEvidence = args.flags["backfill-evidence"] === true;
+  if (backfillEvidence && !sprintId) die("--backfill-evidence 仅支持 --sprint 模式（需要落盘证据目录）");
+
   let promoted = 0, failed = 0;
   for (const f of targets) {
-    if (f.status === "passing") {
+    if (f.status === "passing" && !backfillEvidence) {
       log.info(`${f.id} 已 passing，跳过（不可逆）`);
       continue;
     }
-    log.step(`验证 ${f.id} — ${f.title}`);
+    const isBackfill = f.status === "passing" && backfillEvidence;
+    log.step(`${isBackfill ? "补写证据" : "验证"} ${f.id} — ${f.title}`);
     const logs: string[] = [];
     let ok = true;
 
@@ -64,6 +72,18 @@ export function verify(args: Args): void {
       } else {
         log.ok(`通过: ${cmd}`);
       }
+    }
+
+    if (isBackfill) {
+      // 补写模式：不判 base verify，不动 status；只落真实日志 + 更新 evidence 指针。
+      // 若重跑发现命令实际失败，如实记录，绝不悄悄抹平——status 仍保持 passing 不动，
+      // 留给人工核实这条 passing 判定当初是否有效。
+      const ev = join(sprintDir(phaseId, sprintId!), "evidence", `${f.id}.verify.log`);
+      writeFileSync(ev, logs.join("\n\n"), "utf8");
+      f.evidence = `evidence/${f.id}.verify.log @ ${new Date().toISOString()}${ok ? "" : " [BACKFILL: 重跑未通过，请人工核实]"}`;
+      if (ok) log.ok(`${f.id} 补写证据完成，重跑通过`);
+      else log.err(`${f.id} 补写时重跑未通过——status 不变，已在 evidence 中标注，需人工核实`);
+      continue;
     }
 
     // 2) 如果 feature verification 全部通过，且 config 要求 base verify，额外运行基础验证
@@ -103,6 +123,10 @@ export function verify(args: Args): void {
   saveFeatureList(phaseId, fl);
   if (sprintId) writeActiveFeatures(phaseId, sprintId, fl);
   refreshProgress();
-  log.info(`完成：${promoted} 个升级为 passing，${failed} 个未通过。`);
+  if (backfillEvidence) {
+    log.info(`补写证据完成：共处理 ${targets.filter((f) => f.status === "passing").length} 个已 passing feature。`);
+  } else {
+    log.info(`完成：${promoted} 个升级为 passing，${failed} 个未通过。`);
+  }
   if (failed) process.exitCode = 1;
 }

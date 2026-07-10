@@ -1,0 +1,14 @@
+$ grep -q 'data-testid="perf-dev-groups"' -r apps/web/components/portal/
+[exit 0]
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/portal-007-performance.spec.ts
+[exit 0]
+
+Running 3 tests using 1 worker
+
+  ✓  1 [chromium] › portal-007-performance.spec.ts:22:5 › 三层结构：👤 开发者分组头 → 🤖 agents 行 → sub-agent 按 parent 缩进（└） (4.0s)
+  ✓  2 [chromium] › portal-007-performance.spec.ts:41:5 › 开发者绝不作为 agent 行出现：分组头只有 👤，agent 行只有 🤖 (797ms)
+  ✓  3 [chromium] › portal-007-performance.spec.ts:62:5 › 诚实降级：flow-time/周期承诺显示'数据积累中'；coord 未配置省略租约列；C-cycle 卡未接线 (722ms)
+
+  3 passed (11.0s)

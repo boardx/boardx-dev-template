@@ -1,0 +1,10 @@
+$ pnpm --filter @repo/web exec playwright test e2e/portal-004-coordination.spec.ts
+[exit 0]
+
+Running 3 tests using 1 worker
+
+  ✓  1 [chromium] › portal-004-coordination.spec.ts:21:5 › 未配置 COORD_SERVICE_URL：两卡都显示 unconfigured 态而非报错（合法部署中间态） (2.2s)
+  ✓  2 [chromium] › portal-004-coordination.spec.ts:30:5 › 配置后（mock 代理响应）：租约行心跳状态点 + title 悬停含心跳/ttl；事件徽章语义分级 (705ms)
+  ✓  3 [chromium] › portal-004-coordination.spec.ts:84:5 › 上游不可达（代理 502）：两卡显示 degraded 降级横幅，页面其余板块不受影响 (619ms)
+
+  3 passed (6.9s)

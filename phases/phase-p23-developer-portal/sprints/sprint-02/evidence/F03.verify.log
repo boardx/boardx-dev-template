@@ -1,0 +1,14 @@
+$ grep -q 'data-testid="phase-drill"' -r apps/web/components/portal/
+[exit 0]
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/portal-002-pulse-drill.spec.ts
+[exit 0]
+
+Running 3 tests using 1 worker
+
+  ✓  1 [chromium] › portal-002-pulse-drill.spec.ts:17:5 › 真实 pulse 数据：总进度 + phase 进度条可见，点击 phase 展开下钻（通过/未通过 状态计数） (4.1s)
+  ✓  2 [chromium] › portal-002-pulse-drill.spec.ts:38:5 › 诚实降级：e2e 环境 GITHUB_TOKEN 未配置 → flow-time 卡走 unconfigured 态而非虚构数据 (1.9s)
+  ✓  3 [chromium] › portal-002-pulse-drill.spec.ts:46:5 › github 已配置（mock pulse API）：flow-time 卡显示中位值与基线 1.8h 对比 (878ms)
+
+  3 passed (12.3s)
