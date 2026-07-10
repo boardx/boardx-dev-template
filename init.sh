@@ -72,9 +72,11 @@ echo "==> [harness] pre-push: 受影响模块 typecheck/lint/test（turbo --affe
 # 拿不到 base（首次 clone 未 fetch 等）→ 回退全量 verify:base。
 BASE_SHA="$(git merge-base origin/main HEAD 2>/dev/null || true)"
 if [ -n "${BASE_SHA}" ]; then
-  # 审计链体检（ADR-012）：只体检本次 push 触碰的 phase——新的假 passing / 断证据 /
-  # 派生视图矛盾进不了 origin；历史欠债不阻塞无关 push（存量修复见 ADR-012 remediation）。
-  CHANGED_PHASES="$(git diff --name-only "${BASE_SHA}"..HEAD -- phases/ 2>/dev/null | awk -F/ '{print $2}' | sed -n 's/^phase-\([^-]*\)-.*/\1/p' | sort -u)"
+  # 审计链体检（ADR-012）：只体检本次 push 触碰了 feature_list.json / sprints/** 的
+  # phase（只有这些文件能引入假 passing / 断证据 / 派生视图矛盾；改 adr/、requirements/
+  # 不触发，否则 phase-01 的历史欠债会卡死所有 ADR 提交）。历史欠债不阻塞无关 push，
+  # 谁触碰谁先还（存量修复见 ADR-012 remediation）。
+  CHANGED_PHASES="$(git diff --name-only "${BASE_SHA}"..HEAD -- 'phases/*/feature_list.json' 'phases/*/sprints/' 2>/dev/null | awk -F/ '{print $2}' | sed -n 's/^phase-\([^-]*\)-.*/\1/p' | sort -u)"
   for PHASE_ID in ${CHANGED_PHASES}; do
     if ! pnpm harness doctor --phase "${PHASE_ID}"; then
       echo "✗ [harness] phase ${PHASE_ID} 审计链体检失败（假 passing / 断证据 / 派生视图矛盾），push 中止。"
