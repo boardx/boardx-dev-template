@@ -189,7 +189,7 @@ export function RoomFilesPanel({ roomId, chatId }: { roomId: string; chatId: str
 
       {selected.size > 0 && (
         <p data-testid="room-files-panel-selected-count" className="text-xs text-muted-foreground">
-          已勾选 {selected.size} 个文件作为 AI 上下文
+          {selected.size} sources selected as context
         </p>
       )}
 
@@ -219,7 +219,9 @@ export function RoomFilesPanel({ roomId, chatId }: { roomId: string; chatId: str
             >
               <input
                 type="checkbox"
-                data-testid={`room-files-panel-checkbox-${f.id}`}
+                data-testid="room-files-source-toggle"
+                data-file-id={f.id}
+                data-checkbox-id={`room-files-panel-checkbox-${f.id}`}
                 aria-label={`勾选 ${f.file_name} 作为 AI 上下文`}
                 checked={selected.has(f.id)}
                 onChange={() => toggleSelected(f.id)}
