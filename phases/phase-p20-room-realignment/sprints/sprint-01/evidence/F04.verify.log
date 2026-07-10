@@ -1,0 +1,19 @@
+# p20/F04 聊天工作区左栏接通房间文件库（sources 勾选）— verification 证据
+# 生成时间: 2026-07-10T01:19:59Z
+# 分支: feat/p20-F04-chat-files-panel
+
+## [1] docker compose -f infra/docker-compose.yml up -d  => EXIT 0
+## [2] pnpm --filter @repo/data run migrate               => EXIT 0（迁移完成，含 032_board_tags.sql）
+## [3] pnpm --filter @repo/web exec playwright test e2e/room-rr-004-chat-files-panel.spec.ts --retries=2 => EXIT 0
+## [4] pnpm --filter @repo/web lint => EXIT 0（仅 LABEL-LANG-MIX 警告，可忽略；无 error）
+
+===== playwright 输出 =====
+
+Running 2 tests using 1 worker
+
+  ✓  1 [chromium] › room-rr-004-chat-files-panel.spec.ts:44:5 › 聊天左栏：上传文件到房间库（标注线程来源）→ 勾选为 sources → 显示 N sources selected as context (11.7s)
+  ✓  2 [chromium] › room-rr-004-chat-files-panel.spec.ts:85:5 › 同一房间文件在所有聊天线程左栏可见（跨线程可见） (3.8s)
+
+  Slow test file: [chromium] › room-rr-004-chat-files-panel.spec.ts (15.5s)
+  Consider splitting slow test files to speed up parallel execution
+  2 passed (19.3s)
