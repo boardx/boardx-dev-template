@@ -175,6 +175,6 @@ phases:
     slug: developer-portal
     name: developer-portal
     goal: "develop.boardx.us 升级为统一开发者门户：项目脉搏/实时协调/讨论流/加入开发/性能五板块"
-    status: not_started
+    status: in_progress
     depends_on: []
     has_ui: true
