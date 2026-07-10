@@ -13,14 +13,18 @@ import { PortalShell } from "@/components/portal/portal-shell";
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
-async function countAgentsOwnedBy(email: string): Promise<number> {
+/** 从 registry 解析开发者身份：Access JWT 只有邮箱，没有 GitHub 用户名——registry 的
+ *  owner 字段（值 = GitHub login，ADR-011）是仓库侧的权威用户名来源。匹配到的 owner
+ *  同时用作显示名（usamshen）与 agent 计数，两者天然一致。 */
+async function developerFromRegistry(email: string): Promise<{ login: string | null; agentCount: number }> {
   const raw = await readRepoFile(".harness/agents/registry.yaml");
-  if (!raw) return 0;
+  if (!raw) return { login: null, agentCount: 0 };
   try {
     const doc = parse(raw) as { agents?: Array<{ owner?: string; active?: boolean }> };
-    return (doc.agents ?? []).filter((a) => ownerMatches(a.owner, email) && a.active !== false).length;
+    const mine = (doc.agents ?? []).filter((a) => ownerMatches(a.owner, email) && a.active !== false);
+    return { login: mine[0]?.owner ?? null, agentCount: mine.length };
   } catch {
-    return 0;
+    return { login: null, agentCount: 0 };
   }
 }
 
@@ -40,8 +44,9 @@ export default async function PortalPage() {
     );
   }
 
-  const displayName = user.email.split("@")[0] ?? user.email;
-  const agentCount = await countAgentsOwnedBy(user.email);
+  const { login, agentCount } = await developerFromRegistry(user.email);
+  // registry 匹配到 = 已登记开发者，显示 GitHub login；未登记 = 退回邮箱前缀
+  const displayName = login ?? user.email.split("@")[0] ?? user.email;
 
   return <PortalShell developer={{ name: displayName, email: user.email, agentCount }} />;
 }
