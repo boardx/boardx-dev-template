@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import {
   canViewRoom,
-  getRoomChat,
   getRoomAiInstruction,
+  getRoomChat,
   listRoomChatMessages,
+  resolveRoomId,
   sendRoomChatMessage,
 } from "@repo/data";
 import { currentUser } from "@/lib/session";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 export async function GET(_req: Request, { params }: { params: { id: string; chatId: string } }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-  const roomId = Number(params.id);
+  const roomId = await resolveRoomId(params.id);
   if (!(await canViewRoom(roomId, user.id))) {
     return NextResponse.json({ error: "无权限" }, { status: 403 });
   }
@@ -33,7 +34,7 @@ export async function POST(req: Request, { params }: { params: { id: string; cha
   try {
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-    const roomId = Number(params.id);
+    const roomId = await resolveRoomId(params.id);
     if (!(await canViewRoom(roomId, user.id))) {
       return NextResponse.json({ error: "无权限" }, { status: 403 });
     }
