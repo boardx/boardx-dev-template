@@ -76,7 +76,16 @@ if [ -n "${BASE_SHA}" ]; then
   # phase（只有这些文件能引入假 passing / 断证据 / 派生视图矛盾；改 adr/、requirements/
   # 不触发，否则 phase-01 的历史欠债会卡死所有 ADR 提交）。历史欠债不阻塞无关 push，
   # 谁触碰谁先还（存量修复见 ADR-012 remediation）。
-  CHANGED_PHASES="$(git diff --name-only "${BASE_SHA}"..HEAD -- 'phases/*/feature_list.json' 'phases/*/sprints/' 2>/dev/null | awk -F/ '{print $2}' | sed -n 's/^phase-\([^-]*\)-.*/\1/p' | sort -u)"
+  # 注意 pathspec 必须用 '**' 递归匹配：'phases/*/sprints/' 对嵌套文件（如
+  # sprints/sprint-01/evidence/F01.verify.log）返回空，会漏拦 sprint 目录内的
+  # 全部改动（coord-main 实测：非递归 → 0 文件，'**' → 命中；见 PR #521 review）。
+  CHANGED_PHASES="$(git diff --name-only "${BASE_SHA}"..HEAD -- 'phases/*/feature_list.json' 'phases/*/sprints/**' 2>/dev/null | awk -F/ '{print $2}' | sed -n 's/^phase-\([^-]*\)-.*/\1/p' | sort -u)"
+  if [ -n "${CHANGED_PHASES}" ] && ! pnpm exec tsx --version >/dev/null 2>&1; then
+    # fresh worktree 依赖未装时 tsx 不可用——doctor 跑不了就 warn 跳过（与下方
+    # verify:base 回退同精神），不能让"环境没装好"伪装成"审计失败"卡死 push。
+    echo "  ! tsx 不可用（依赖未安装？），跳过审计链体检（doctor）——先 ./init.sh 装依赖后重推可恢复体检"
+    CHANGED_PHASES=""
+  fi
   for PHASE_ID in ${CHANGED_PHASES}; do
     if ! pnpm harness doctor --phase "${PHASE_ID}"; then
       echo "✗ [harness] phase ${PHASE_ID} 审计链体检失败（假 passing / 断证据 / 派生视图矛盾），push 中止。"
