@@ -50,6 +50,8 @@ export * from "./mailbox";
 export * from "./roomFiles";
 // CAP-DATA 白板备份仓储（board_backups / p7 F08，uc-board-header-007）
 export * from "./backups";
+// 全局唯一 id 生成统一入口（issue #471 阶段 1）
+export * from "./ids";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 
