@@ -51,7 +51,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ board: updated });
   } catch (err) {
     console.error("[boards/:id/cover POST] 操作失败:", err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "服务器错误" }, { status: 500 }); // #519:不回传 String(err)
   }
 }
 
@@ -72,6 +72,6 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     return NextResponse.redirect(url, 302);
   } catch (err) {
     console.error("[boards/:id/cover GET] 操作失败:", err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "服务器错误" }, { status: 500 }); // #519:不回传 String(err)
   }
 }
