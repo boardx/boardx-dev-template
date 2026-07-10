@@ -126,26 +126,31 @@ curl -s -X POST .../events -H "Authorization: Bearer $COORD_SERVICE_TOKEN" \
 
 ## 2. 凭据（token）管理
 
-### token 怎么发到 agent 会话（实际现状，非自动）
+### token 怎么发到 agent 会话（标准：中央凭据文件，2026-07-10 起）
 
-**没有一个自动生成的中央凭据文件。** `seed-agents.ts` 只在生成那一刻把新 token
-**打印到 stdout 一次**（`console.log`，见下），不落任何文件。分发是人工的：谁跑的
-seed，谁负责把每个 token 写进对应 agent 会话能读到的本地文件，再让会话 source。
+标准凭据文件是 **`.harness/state/.cache/coord-credentials.json`**（mode 600、
+gitignored；与 `agent-bootstrap.md` / #520 一致），结构：
 
-2026-07-08 的 8 身份分发实际就是这么做的：每个身份一个独立文件（mode 600、
-放在 git worktree 之外），文件内容两行——
-
-```bash
-# <coord-id>.env（gitignored 或放在仓库树外，绝不进 git）
-export COORD_SERVICE_URL="https://coord-service-staging.boardx.workers.dev"
-export COORD_SERVICE_TOKEN="<该身份的 token>"
+```json
+{
+  "COORD_SERVICE_URL": "https://coord-service-staging.boardx.workers.dev",
+  "tokens": { "coord-room": "<token>", "wrk-ava-1": "<token>", "...": "..." }
+}
 ```
 
-agent 会话每次跑 lock 命令前 `source` 它即可。分发时只把**文件路径**贴到总线
-（如各自 lease issue / #323），**token 值绝不贴**。
+agent 会话激活自己的身份（每次跑 lock 命令前）：
 
-> 一个自动写中央 `coord-credentials.json` 的便利脚本尚未实现——现状是"seed 打印
-> → 人工分发到 per-session 文件"。要做成自动的话是独立改进，别假设那个 json 已存在。
+```bash
+export COORD_SERVICE_URL="https://coord-service-staging.boardx.workers.dev"
+export COORD_SERVICE_TOKEN=$(jq -r '.tokens["<你的身份id>"]' .harness/state/.cache/coord-credentials.json)
+```
+
+分发时只把**文件路径**贴到总线，**token 值绝不贴**（贴了明文 = 已泄露，须轮换）。
+
+> 注意 `seed-agents.ts` **目前不写这个 json**——它只在生成那一刻把新 token
+> 打印到 stdout 一次（见下）。谁跑 seed/轮换，谁负责把 token 合并进中央 json 的
+> `.tokens` map（**合并写入**，别覆盖已有条目）。让 seed/轮换脚本直接写 json 是
+> 待办改进（issue #493）。
 
 ### 给新身份发 token（registry.yaml 加了新 agent 之后）
 
@@ -154,8 +159,8 @@ cd packages/coord-service
 npx tsx scripts/seed-agents.ts        # 幂等：只给 D1 里还没有的 id 生成新行+新 token
 ```
 
-**token 只在生成那一刻打印一次**（stdout），立刻按上面的方式分发进 per-session
-文件，别贴进 issue/PR/聊天记录。
+**token 只在生成那一刻打印一次**（stdout），立刻合并进上面的中央 json，
+别贴进 issue/PR/聊天记录。
 
 ### 轮换（token 疑似泄漏 / 丢失时）
 
@@ -210,6 +215,7 @@ in_progress 租约标记为 expired 并写一条 expire 事件——不需要人
 
 - token/API key **只**存在于：D1 的 hash 列、本地 gitignored 文件、Cloudflare secret。
   任何时候不进 git、不进 issue/PR/评论（总线全球可读）。
-- `.env.cloudflare` 与各 per-session 的 `<coord-id>.env` 凭据文件都必须 gitignored
+- `.env.cloudflare` 与中央凭据文件 `coord-credentials.json`（及任何遗留的
+  per-session `<coord-id>.env`）都必须 gitignored
   或放在仓库树外——不要为了"备份"把它们复制到仓库内会被 git 追踪的路径。
 - 发现泄漏：立即按 §2 轮换受影响身份 + 在总线留一条（不含新 token）说明轮换原因。
