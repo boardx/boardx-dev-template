@@ -12,6 +12,7 @@ import { sweepWorktrees } from "./sweep-worktrees";
 import { sweepDocker } from "./sweep-docker";
 import { cycleReport } from "./cycle-report";
 import { depGraph } from "./dep-graph";
+import { doctor } from "./doctor";
 import { lockStatus, lockAcquire, lockHeartbeat, lockRelease } from "./coordinator-lock";
 import { moduleLockStatus, moduleLockAcquire, moduleLockHeartbeat, moduleLockRelease } from "./module-lock";
 
@@ -35,6 +36,7 @@ async function main(): Promise<void> {
     case "sweep-worktrees": sweepWorktrees(args); break;
     case "sweep-docker":    sweepDocker(args); break;
     case "dep-graph":      depGraph(args); break;
+    case "doctor":         doctor(args); break;
     case "cycle-report":   await cycleReport(args); break;
     case "lock-status":    await lockStatus(args); break;
     case "lock-acquire":   await lockAcquire(args); break;
@@ -58,6 +60,7 @@ async function main(): Promise<void> {
       log.info("  pnpm harness sweep-worktrees [--threshold-minutes N]   # 巡检未提交改动的 worker worktree（默认阈值 60）");
       log.info("  pnpm harness sweep-docker [--apply]                    # 巡检孤儿 docker compose 栈（ADR-007）；--apply 实际清理");
       log.info("  pnpm harness dep-graph                                 # 生成 .harness/state/dep-graph.md 依赖图快照");
+      log.info("  pnpm harness doctor [--phase NN]                       # 审计链体检：passing 证据真实性 + 派生视图一致性（ADR-012）");
       log.info("  pnpm harness cycle-report                              # C-cycle 周期健康表（只读，见 work-cycle-proposal.md）");
       log.info("  pnpm harness lock-status");
       log.info("  pnpm harness lock-acquire   --session <id> [--force] [--note <text>]");

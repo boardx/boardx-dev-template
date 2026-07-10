@@ -72,6 +72,16 @@ echo "==> [harness] pre-push: 受影响模块 typecheck/lint/test（turbo --affe
 # 拿不到 base（首次 clone 未 fetch 等）→ 回退全量 verify:base。
 BASE_SHA="$(git merge-base origin/main HEAD 2>/dev/null || true)"
 if [ -n "${BASE_SHA}" ]; then
+  # 审计链体检（ADR-012）：只体检本次 push 触碰的 phase——新的假 passing / 断证据 /
+  # 派生视图矛盾进不了 origin；历史欠债不阻塞无关 push（存量修复见 ADR-012 remediation）。
+  CHANGED_PHASES="$(git diff --name-only "${BASE_SHA}"..HEAD -- phases/ 2>/dev/null | awk -F/ '{print $2}' | sed -n 's/^phase-\([^-]*\)-.*/\1/p' | sort -u)"
+  for PHASE_ID in ${CHANGED_PHASES}; do
+    if ! pnpm harness doctor --phase "${PHASE_ID}"; then
+      echo "✗ [harness] phase ${PHASE_ID} 审计链体检失败（假 passing / 断证据 / 派生视图矛盾），push 中止。"
+      echo "  按 doctor 输出修复（通常是 pnpm harness verify --sprint ${PHASE_ID}/<MM> [--backfill-evidence]）；跳过（不推荐）：git push --no-verify"
+      exit 1
+    fi
+  done
   export TURBO_SCM_BASE="${BASE_SHA}"
   if ! pnpm turbo run typecheck lint test --affected; then
     echo "✗ [harness] 受影响模块验证失败，push 中止。修复后再推，或 git push --no-verify 临时跳过。"
