@@ -71,12 +71,18 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       fields.description = body.description === null ? null : String(body.description);
     if (body.cover !== undefined) fields.cover = body.cover === null ? null : String(body.cover);
     if (Array.isArray(body.tags))
-      fields.tags = body.tags.filter((t): t is string => typeof t === "string").map((s) => s.trim()).filter(Boolean);
+      // #519:单标签 ≤48 字符、最多 20 个——GIN 索引下防超长/海量标签膨胀(服务端硬限,UI 无上限)。
+      fields.tags = body.tags
+        .filter((t): t is string => typeof t === "string")
+        .map((s) => s.trim())
+        .filter((t) => t.length > 0 && t.length <= 48)
+        .slice(0, 20);
 
     const updated = await updateBoard(boardId, fields);
     return NextResponse.json({ board: updated });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("[boards/:id PATCH] 操作失败:", err);
+    return NextResponse.json({ error: "服务器错误" }, { status: 500 }); // #519
   }
 }
 
@@ -94,6 +100,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     await deleteBoard(boardId);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("[boards/:id DELETE] 操作失败:", err);
+    return NextResponse.json({ error: "服务器错误" }, { status: 500 }); // #519
   }
 }
