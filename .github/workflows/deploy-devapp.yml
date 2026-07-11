@@ -1,0 +1,66 @@
+# deploy-devapp.yml — 产品平面 CD：main 有新代码 → 自动部署 devapp.boardx.us（#523 Track B）
+# 部署形态见 infra/DEPLOYMENT.md：rsync 到 /opt/boardx → 服务器侧 scripts/deploy/
+# devapp-update.sh（依赖/迁移/构建/重启/健康检查）→ 公网冒烟。
+# 凭据：DEVAPP_SSH_KEY（CI 专用密钥，可单独吊销）/ DEVAPP_HOST / DEVAPP_SSH_PORT。
+name: deploy-devapp
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "apps/orchestrator/**"
+      - "apps/workflow-worker/**"
+      - "packages/**"
+      - "infra/**"
+      - "scripts/deploy/**"
+      - "pnpm-lock.yaml"
+      - "package.json"
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-devapp
+  cancel-in-progress: false # 部署不允许中途取消（迁移/重启非原子），排队执行
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEVAPP_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "${{ secrets.DEVAPP_SSH_PORT }}" "${{ secrets.DEVAPP_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Rsync code to server
+        # 排除清单与 infra/DEPLOYMENT.md §3 一致；--exclude 的文件不会被 --delete 删掉
+        # （保护服务器上的 .env.local / compose.prod.yml / node_modules 缓存）。
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.DEVAPP_SSH_PORT }}" \
+            --exclude node_modules --exclude '.next*' --exclude .git \
+            --exclude '.claude/worktrees' --exclude '.harness/state/.cache' \
+            --exclude '.env.local' --exclude '.env' --exclude '*.log' \
+            --exclude 'infra/compose.prod.yml' \
+            ./ "root@${{ secrets.DEVAPP_HOST }}:/opt/boardx/"
+
+      - name: Run server-side update (deps/migrate/build/restart/health)
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "${{ secrets.DEVAPP_SSH_PORT }}" "root@${{ secrets.DEVAPP_HOST }}" \
+            "bash /opt/boardx/scripts/deploy/devapp-update.sh"
+
+      - name: Public smoke check
+        run: |
+          for path in /api/health /portal; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -m 20 "https://devapp.boardx.us$path")
+            echo "$path -> $code"
+            case "$path:$code" in
+              /api/health:200|/portal:200) ;;
+              *) echo "::error::smoke failed on $path ($code)"; exit 1 ;;
+            esac
+          done
