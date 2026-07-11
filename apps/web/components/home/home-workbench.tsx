@@ -141,7 +141,7 @@ export function HomeWorkbench() {
       {/* 欢迎区 */}
       <section data-testid="home-welcome" className="flex flex-col gap-1">
         <h1 className="text-26 font-bold tracking-tight text-foreground">
-          Good to see you, <span data-testid="home-username">{user?.displayName}</span>
+          Hello, <span data-testid="home-username">{user?.displayName}</span>
         </h1>
         {teamName && (
           <p className="text-sm text-muted-foreground">
