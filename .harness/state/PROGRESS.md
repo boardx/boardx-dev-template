@@ -25,9 +25,10 @@
 | p17 | UI Reskin Round 2 | not_started | 0 | 3 | 0 | 3 |
 | p18 | AVA AI 落地 (P18) | not_started | 0 | 0 | 0 | 14 |
 | p19 | AVA 画布/记忆扩展 (P19，待决策) | not_started | 1 | 0 | 0 | 0 |
-| p20 | Room Realignment (P20) | not_started | 1 | 0 | 0 | 10 |
+| p20 | Room Realignment (P20) | not_started | 0 | 0 | 0 | 11 |
 | p21 | platform-accounts-hardening | not_started | 0 | 0 | 0 | 6 |
 | p22 | Room IA Realignment | not_started | 0 | 0 | 0 | 4 |
 | p23 | developer-portal | in_progress | 0 | 0 | 1 | 9 |
+| p24 | room-board-management | not_started | 0 | 0 | 0 | 0 |
 
-_最近聚合:2026-07-10T00:23:49.263Z_
+_最近聚合:2026-07-11T01:32:38.234Z_
