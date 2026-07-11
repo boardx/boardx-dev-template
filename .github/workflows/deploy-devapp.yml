@@ -56,11 +56,16 @@ jobs:
 
       - name: Public smoke check
         run: |
-          for path in /api/health /portal; do
+          # /portal 自 #544 起是跳转页（→ develop.boardx.us），产品面内容页改用 /login 冒烟
+          for path in /api/health /login; do
             code=$(curl -s -o /dev/null -w '%{http_code}' -m 20 "https://devapp.boardx.us$path")
             echo "$path -> $code"
             case "$path:$code" in
-              /api/health:200|/portal:200) ;;
+              /api/health:200|/login:200) ;;
               *) echo "::error::smoke failed on $path ($code)"; exit 1 ;;
             esac
           done
+          # /portal 跳转契约（#544）：30x 且指向协作平面
+          loc=$(curl -s -o /dev/null -w '%{redirect_url}' -m 20 "https://devapp.boardx.us/portal")
+          echo "/portal redirect -> $loc"
+          case "$loc" in *develop.boardx.us*) ;; *) echo "::error::/portal 未跳转到 develop.boardx.us"; exit 1 ;; esac
