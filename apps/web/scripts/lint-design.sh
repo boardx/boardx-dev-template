@@ -29,6 +29,17 @@ dis_op=$(grep -rn "disabled:opacity-" app components --include="*.tsx" 2>/dev/nu
 # (b) 主题 token 对的 WCAG 对比度机械计算（明暗两套；中性对 ≥4.5:1，状态色对 ≥3:1）
 node scripts/check-token-contrast.mjs || viol=1
 
+# ── 1.6 字号档位单一事实源（ADR-013；2026-07-10 text-12 吞配色事故）─────────
+# 代码里用到的每个 text-<数字> 都必须在 lib/font-scale.ts 登记——表外档位意味着
+# ① 类不生效（字号回落继承）② tailwind-merge 把它当文字颜色、吞掉同串配色类。
+scale_keys=$(grep -oE '"[0-9]+"' lib/font-scale.ts | tr -d '"' | sort -u)
+used_keys=$(grep -rhoE '\btext-[0-9]+\b' app components --include="*.tsx" 2>/dev/null | sed 's/text-//' | sort -u)
+unknown=$(comm -23 <(echo "$used_keys") <(echo "$scale_keys"))
+if [ -n "$unknown" ]; then
+  err "使用了字号表（lib/font-scale.ts）之外的 text-<N> 档位：$(echo $unknown | tr '\n' ' ')——先在单一事实源登记（类生效与 merge 识别自动同步），再使用"
+  for k in $unknown; do grep -rn "\btext-$k\b" app components --include="*.tsx" | head -3; done
+fi
+
 # ── 2. 原生表单元素（必须用 shadcn 封装）────────────────────────────────────
 # 允许 shadcn 组件本身内部使用（components/ui/ 路径排除）；只扫 app/ 页面层
 raw_select=$(grep -rn "<select" app --include="*.tsx" 2>/dev/null || true)

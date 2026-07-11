@@ -38,3 +38,21 @@ describe("cn — 自定义字号不吞文字颜色", () => {
     expect(cn("text-foreground text-primary-foreground")).toBe("text-primary-foreground");
   });
 });
+
+// ADR-013 全档位守卫（2026-07-10 第二起事故：text-12 漏登记再次吞配色）：
+// 逐一断言字号表的**每个**档位与文字颜色类共存——新档位只要进了 font-scale.ts
+// 单一事实源就自动被本测试覆盖，不可能再出现"登记了类但 merge 不认识"的缝。
+import { FONT_SIZE_KEYS } from "./font-scale";
+
+describe("cn() × 字号表全档位（ADR-013 单一事实源守卫）", () => {
+  for (const key of FONT_SIZE_KEYS) {
+    it(`text-primary-foreground 与 text-${key} 共存`, () => {
+      const out = cn(`text-primary-foreground text-${key}`);
+      expect(out).toContain("text-primary-foreground");
+      expect(out).toContain(`text-${key}`);
+    });
+  }
+  it("同为字号档位时后者正确覆盖前者（merge 语义仍在）", () => {
+    expect(cn("text-13 text-15")).toBe("text-15");
+  });
+});

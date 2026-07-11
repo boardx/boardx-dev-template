@@ -153,6 +153,24 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
 4. **组件层不许用 opacity/覆盖类"修"对比度**：对比度问题一律回到 globals.css 改
    token 值——这是"单一事实来源"原则在对比度上的延伸。
 
+### 1.2 字号档位单一事实源（2026-07-10 二次复盘，ADR-013，机械门禁）
+
+**事故**：AVA 研究类型按钮黑底黑字——07-09 修复把字号清单手抄进 tailwind-merge
+后，`text-12`（表外档位，实际用了 64 处）仍被 merge 当成文字颜色、吞掉
+`text-primary-foreground`。根因：字号表存在三份副本（tailwind fontSize / merge
+登记 / 代码实际用法）靠人肉对齐，手抄清单必然漂移。
+
+**架构规则（违规 lint exit 1，另有全档位单测守卫）**：
+1. **字号档位只在 `lib/font-scale.ts` 定义**（单一事实源）：`tailwind.config.ts`
+   与 `lib/utils.ts` 一律 import 它，**任何地方不得手写第二份档位清单**。
+2. **新增字号 = 只改 font-scale.ts 一处**：类生效、merge 识别、单测覆盖自动同步；
+   `lint-design.sh` §1.6 扫描代码里全部 `text-<数字>`，表外档位直接红。
+3. **语义配色永远来自 variant 封装**：需要 `bg-primary` 用 `<Button variant>`
+   /`<Badge>`（内部 bg+fg 成对），页面层 className 只追加布局/间距/字号，
+   不手拼落单的语义色 bg-*。
+4. **修字号/配色相关 bug 时的必答题**："这个清单还有没有别的副本？"——07-09
+   的教训是对齐了两份副本中的一份，第三份 24 小时后复发。
+
 ---
 
 ## 2. 间距与网格 (Tailwind Spacing Scale)
