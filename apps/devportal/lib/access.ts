@@ -25,9 +25,14 @@ export async function accessUser(headers: Headers): Promise<AccessUser | null> {
   const assertion = headers.get("cf-access-jwt-assertion");
   if (!assertion) return null;
   try {
-    const { payload } = await jwtVerify(assertion, getJwks(), { issuer: TEAM_DOMAIN });
-    // AUD 校验需要 Access 应用的 aud tag（当前 API token 无 Access 读权限拿不到）。
-    // issuer + 签名已锁定"本团队 Access 签发"；单应用域下足够，拿到 aud 后再收紧。
+    // aud 校验（#543）：CF_ACCESS_AUD 配置后启用严格 audience 匹配——防团队域下
+    // 新增第二个 Access 应用时 JWT 互通。未配置时仅 issuer+签名（单应用域下已锁定
+    // "本团队 Access 签发"）；aud tag 入 wrangler.toml 即生效，无需改代码。
+    const aud = process.env["CF_ACCESS_AUD"];
+    const { payload } = await jwtVerify(assertion, getJwks(), {
+      issuer: TEAM_DOMAIN,
+      ...(aud ? { audience: aud } : {}),
+    });
     const email = typeof payload["email"] === "string" ? payload["email"] : null;
     if (!email) return null;
     return { email };
