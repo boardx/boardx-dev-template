@@ -11,8 +11,10 @@
 -- NOT NULL 收紧——阶段 1 范围明确只搭地基，不做强约束收口（见 #471 阶段划分）。
 -- 路由/内部链接切换到用 public_id 是阶段 2，本迁移不影响任何现有查询路径。
 
+-- （#530）唯一索引已移至 034（CREATE UNIQUE INDEX CONCURRENTLY，非事务迁移）：
+-- 生产大表上在事务内建索引会阻塞写。本迁移只留加列（瞬时元数据操作）。
+-- 已按旧版应用过本迁移的环境不受影响（_migrations 按文件名记账不重跑，
+-- 其索引已存在，034 的 IF NOT EXISTS 会跳过）。
 ALTER TABLE boards ADD COLUMN IF NOT EXISTS public_id text;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_boards_public_id ON boards(public_id);
 
 ALTER TABLE rooms ADD COLUMN IF NOT EXISTS public_id text;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_rooms_public_id ON rooms(public_id);
