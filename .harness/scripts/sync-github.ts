@@ -118,18 +118,23 @@ function buildIssueBody(
   ].join("\n");
 }
 
-/** 通过 title 搜索 issue number（apply 模式下执行；dry-run 只打印意图） */
-function findIssueNumber(repo: string, title: string, apply: boolean): number | null {
+/** 通过 title 搜索 issue（apply 模式下执行；dry-run 只打印意图）。
+ *  返回 state 供 close 幂等判断（已 CLOSED 不重复关，也绝不重开——#526）。 */
+function findIssue(
+  repo: string,
+  title: string,
+  apply: boolean
+): { number: number; state: string } | null {
   if (!apply) return null; // dry-run 不实际查询
   // --state all：含已关闭 issue，否则幂等检查会漏掉 closed issue 而重复创建
   const r = sh(
-    `gh issue list --repo ${JSON.stringify(repo)} --state all --search ${JSON.stringify(title)} --json number,title --limit 10`
+    `gh issue list --repo ${JSON.stringify(repo)} --state all --search ${JSON.stringify(title)} --json number,title,state --limit 10`
   );
   if (r.code !== 0) return null;
   try {
-    const items = JSON.parse(r.stdout) as Array<{ number: number; title: string }>;
+    const items = JSON.parse(r.stdout) as Array<{ number: number; title: string; state: string }>;
     const match = items.find((i) => i.title === title);
-    return match?.number ?? null;
+    return match ?? null;
   } catch {
     return null;
   }
@@ -217,36 +222,81 @@ export function syncGithub(args: Args): void {
 
       // 幂等 + 收敛：不存在则创建；已存在则更新 body（文件是权威，投影必须跟着文件走——
       // 否则改了模版/notes/verification，存量 issue 永远停在旧信息上）。
-      const existing = findIssueNumber(cfg.repo, title, apply);
+      const existing = findIssue(cfg.repo, title, apply);
+      let issueNum: number | null = existing?.number ?? null;
+      let issueState: string | null = existing?.state ?? null;
       if (apply && existing !== null) {
         run(
-          `gh issue edit --repo ${cfg.repo} ${existing} --body-file ${JSON.stringify(bodyFile)}`,
-          `更新 Issue #${existing} body: ${title}`
+          `gh issue edit --repo ${cfg.repo} ${existing.number} --body-file ${JSON.stringify(bodyFile)}`,
+          `更新 Issue #${existing.number} body: ${title}`
         );
+        // #526：存量 issue 的 label 也要 reconcile——此前 edit 只更新 body，状态 label
+        // 永远停在创建时刻（p23 的 #506-511 就是这样漏掉 status:merged 的）。
+        // 做法：加当前 status 的 label，移除 status_actions 里其它状态的 label
+        //（gh 对"移除不存在的 label"静默容忍，天然幂等）。
+        const allStatusLabels = [
+          ...new Set(
+            Object.values(cfg.status_actions ?? {})
+              .map((a) => a?.add_label)
+              .filter((l): l is string => !!l)
+          ),
+        ];
+        const stale = allStatusLabels.filter((l) => l !== statusAction.add_label);
+        const addArg = statusAction.add_label ? ` --add-label ${JSON.stringify(statusAction.add_label)}` : "";
+        const rmArg = stale.map((l) => ` --remove-label ${JSON.stringify(l)}`).join("");
+        if (addArg || rmArg) {
+          run(
+            `gh issue edit --repo ${cfg.repo} ${existing.number}${addArg}${rmArg}`,
+            `label reconcile #${existing.number} → [${f.status}]`
+          );
+        }
       } else {
-        run(
+        const createCmd =
           `gh issue create --repo ${cfg.repo} --title ${JSON.stringify(title)} ` +
-            `--body-file ${JSON.stringify(bodyFile)} --label ${JSON.stringify(labels.join(","))} --milestone ${JSON.stringify(milestone)}${assigneeArg}`,
-          `创建 Issue: ${title} [${f.status}]${f.owner ? ` @${f.owner}` : ""}`
-        );
+          `--body-file ${JSON.stringify(bodyFile)} --label ${JSON.stringify(labels.join(","))} --milestone ${JSON.stringify(milestone)}${assigneeArg}`;
+        if (apply) {
+          // #526：创建后从 stdout 的 issue URL 直取 number——不能靠 findIssue 回查，
+          // GitHub 搜索索引有延迟，"创建即 passing"的 close 会因搜不到而被跳过
+          //（p23 的 #504/#505 事故根因）。
+          plan.push(`# 创建 Issue: ${title} [${f.status}]${f.owner ? ` @${f.owner}` : ""}\n${createCmd}`);
+          let r = sh(createCmd);
+          if (r.code !== 0 && assigneeArg) {
+            // owner 是 harness 身份(如 coord-architecture)而非 GitHub 用户时 assignee 会被
+            // gh 拒绝——退化为不带 assignee 重试,投影不该因归因字段整条失败(#526)。
+            log.warn(`assignee 失败,退化为无 assignee 重试: ${title}`);
+            r = sh(createCmd.replace(assigneeArg, ""));
+          }
+          if (r.code !== 0) {
+            log.err(`gh 命令失败(${r.code}): ${createCmd}\n${r.stderr}`);
+          } else {
+            log.ok(createCmd);
+            const m = r.stdout.match(/\/issues\/(\d+)/);
+            if (m) {
+              issueNum = Number(m[1]);
+              issueState = "OPEN";
+            }
+          }
+        } else {
+          run(createCmd, `创建 Issue: ${title} [${f.status}]${f.owner ? ` @${f.owner}` : ""}`);
+        }
       }
 
-      // 修复：gh issue close 使用 issue number，不是 title 字符串
       if (statusAction.close_issue) {
-        const issueNum = findIssueNumber(cfg.repo, title, apply);
-        if (apply && issueNum !== null) {
-          run(
-            `gh issue close --repo ${cfg.repo} ${issueNum}`,
-            `关闭 Issue #${issueNum}: ${title}`
-          );
-        } else if (!apply) {
+        if (!apply) {
           // dry-run 时打印意图（无法预知 issue number）
           run(
             `gh issue close --repo ${cfg.repo} <issue-number-for: ${JSON.stringify(title)}>`,
             `关闭已 passing 的 Issue: ${title}`
           );
-        } else {
+        } else if (issueNum === null) {
           log.warn(`找不到 Issue number for "${title}"，跳过关闭`);
+        } else if (issueState === "CLOSED") {
+          // 幂等：已关的不重复关；反向（issue 被误关但 feature 未 passing）不自动重开（#526）
+        } else {
+          run(
+            `gh issue close --repo ${cfg.repo} ${issueNum} --reason completed`,
+            `关闭 Issue #${issueNum}: ${title}`
+          );
         }
       }
     }
