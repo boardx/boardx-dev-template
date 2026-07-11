@@ -4,8 +4,21 @@
     {
       "name": "web",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd apps/web && npx next dev -p $PORT"],
+      "runtimeArgs": [
+        "-c",
+        "cd apps/web && npx next dev -p $PORT"
+      ],
       "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "web-portal-proto",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/a705b119-1958-4f6e-b4a5-510044dbd688/scratchpad/portal-proto/apps/web && npx next dev -p $PORT"
+      ],
+      "port": 3300,
       "autoPort": true
     }
   ]

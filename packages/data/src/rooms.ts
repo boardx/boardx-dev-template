@@ -1,6 +1,6 @@
 // packages/data/src/rooms.ts — CAP-COLLAB 房间仓储
 import { query } from "./index";
-import { isValidPublicId } from "./ids";
+import { generateId, isValidPublicId } from "./ids";
 
 export type RoomVisibility = "private" | "team";
 
@@ -25,9 +25,9 @@ export async function createRoom(
   teamId: number | null = null
 ): Promise<Room> {
   const rows = await query<Room>(
-    `INSERT INTO rooms (name, owner_user_id, team_id, visibility) VALUES ($1, $2, $3, $4)
+    `INSERT INTO rooms (name, owner_user_id, team_id, visibility, public_id) VALUES ($1, $2, $3, $4, $5)
      RETURNING id, name, owner_user_id, team_id, visibility, created_at, description, ai_instruction`,
-    [name, ownerId, teamId, visibility]
+    [name, ownerId, teamId, visibility, generateId("rm")]
   );
   const room = rows[0]!;
   await query("INSERT INTO room_members (room_id, user_id, role) VALUES ($1, $2, 'owner')", [room.id, ownerId]);

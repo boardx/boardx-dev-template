@@ -1,7 +1,7 @@
 // packages/data/src/board.ts — CAP-DATA 白板容器仓储（P5）
 // Board = 房间内的白板容器（生命周期）。画布内容（items）属 P6，不在此层。
 import { query } from "./index";
-import { isValidPublicId } from "./ids";
+import { generateId, isValidPublicId } from "./ids";
 import { canViewRoom, isRoomOwner } from "./rooms";
 import { getMembership } from "./teams";
 
@@ -44,10 +44,10 @@ export async function createBoard(
   tags: string[] = []
 ): Promise<Board> {
   const rows = await query<Board>(
-    `INSERT INTO boards (room_id, team_id, name, owner_user_id, visibility, tags)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO boards (room_id, team_id, name, owner_user_id, visibility, tags, public_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING ${BOARD_COLS}`,
-    [roomId, teamId, boardTitleOrDefault(name), ownerId, visibility, tags]
+    [roomId, teamId, boardTitleOrDefault(name), ownerId, visibility, tags, generateId("brd")]
   );
   return rows[0]!;
 }
@@ -176,10 +176,10 @@ export async function duplicateBoard(boardId: number, userId: number): Promise<B
   const src = await getBoard(boardId);
   if (!src) return undefined;
   const rows = await query<Board>(
-    `INSERT INTO boards (room_id, team_id, name, cover, category, description, visibility, owner_user_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO boards (room_id, team_id, name, cover, category, description, visibility, owner_user_id, public_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING ${BOARD_COLS}`,
-    [src.room_id, src.team_id, `${src.name}（副本）`, src.cover, src.category, src.description, src.visibility, userId]
+    [src.room_id, src.team_id, `${src.name}（副本）`, src.cover, src.category, src.description, src.visibility, userId, generateId("brd")]
   );
   return rows[0];
 }
