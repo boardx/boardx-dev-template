@@ -57,7 +57,7 @@ export function PortalShell({ developer }: { developer: { name: string; email: s
     <div className="mx-auto max-w-content px-9 pb-14 pt-7">
       <div data-testid="visitor-band" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-12 border border-border bg-surface-2 px-4 py-2.5">
         <span className="text-13 text-foreground">
-          第一次来到这里？<Button variant="link" size="sm" className="px-1" onClick={() => setTab("join")}>3 分钟了解这个项目 →</Button>
+          第一次来到这里吗？<Button variant="link" size="sm" className="px-1" onClick={() => setTab("join")}>3 分钟了解这个项目 →</Button>
         </span>
         <span className="text-13 text-foreground">
           想加入开发？<Button variant="link" size="sm" className="px-1" onClick={() => setTab("join")}>开始 onboarding →</Button>
