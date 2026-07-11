@@ -1,0 +1,63 @@
+# sync-projection.yml — feature_list 变更进 main 后自动刷新 GitHub 投影（#526）。
+# 此前 sync 是人工命令：feature 翻 passing 合入 main 后没人跑 sync，跟踪 issue
+# 永远停在旧状态（p23 的 #504-511 靠 coord-main 手动扫关）。本工作流补上这最后
+# 一环：main 上任何 feature_list.json / roadmap.yaml 变更 → 对受影响 phase 跑
+# `harness sync --apply`（幂等；只投影派生 issue：开/更新 body/label reconcile/
+# passing 关闭；绝不重开、绝不碰人类手开的 issue——匹配靠精确 title `[Fxx] …`）。
+name: sync-projection
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "phases/*/feature_list.json"
+      - ".harness/state/roadmap.yaml"
+      - ".harness/config/github-sync.yaml"
+      - ".harness/scripts/sync-github.ts"
+  workflow_dispatch: {}
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: sync-projection
+  cancel-in-progress: false # 投影按序执行，避免交错写同一批 issue
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout（带上一个 commit，diff 定位受影响 phase）
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node (read .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install (workspace root only)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Sync affected phases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 从本次 push 的 diff 找受影响 phase id；workflow_dispatch 或找不到时全量
+          CHANGED="$(git diff --name-only HEAD~1..HEAD -- 'phases/*/feature_list.json' 2>/dev/null \
+            | awk -F/ '{print $2}' | sed -n 's/^phase-\([^-]*\)-.*/\1/p' | sort -u)"
+          if [ -z "${CHANGED}" ]; then
+            CHANGED="$(ls -d phases/phase-*/ | sed -n 's|^phases/phase-\([^-]*\)-.*|\1|p' | sort -u)"
+            echo "无法从 diff 定位（或手动触发），全量投影：${CHANGED}" | tr '\n' ' '
+          fi
+          for PHASE in ${CHANGED}; do
+            echo "==> sync --phase ${PHASE} --apply"
+            pnpm harness sync --phase "${PHASE}" --apply || echo "::warning::phase ${PHASE} 投影失败（不阻塞其它 phase）"
+          done
