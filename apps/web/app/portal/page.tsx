@@ -34,7 +34,7 @@ export default async function PortalPage() {
       <div className="mx-auto max-w-content px-9 pb-14 pt-7">
         <div data-testid="visitor-band" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-12 border border-border bg-surface-2 px-4 py-2.5">
           <span className="text-13 text-foreground">
-            第一次来？<Link href="/portal" className={cn(buttonVariants({ variant: "link", size: "sm" }), "px-1")}>3 分钟了解这个项目 →</Link>
+            第一次来到这里？<Link href="/portal" className={cn(buttonVariants({ variant: "link", size: "sm" }), "px-1")}>3 分钟了解这个项目 →</Link>
           </span>
           <span className="text-13 text-foreground">
             想加入开发？<Link href="/login" className={cn(buttonVariants({ variant: "link", size: "sm" }), "px-1")}>登录后开始 onboarding →</Link>
