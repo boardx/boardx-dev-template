@@ -1,19 +1,654 @@
-# p20/F04 聊天工作区左栏接通房间文件库（sources 勾选）— verification 证据
-# 生成时间: 2026-07-10T01:19:59Z
-# 分支: feat/p20-F04-chat-files-panel
+$ docker compose -f infra/docker-compose.yml up -d
+[exit 0]
+ Container worktree-room-ia-realignment-minio-1 Running 
+ Container worktree-room-ia-realignment-postgres-1 Running 
+ Container worktree-room-ia-realignment-redis-1 Running 
 
-## [1] docker compose -f infra/docker-compose.yml up -d  => EXIT 0
-## [2] pnpm --filter @repo/data run migrate               => EXIT 0（迁移完成，含 032_board_tags.sql）
-## [3] pnpm --filter @repo/web exec playwright test e2e/room-rr-004-chat-files-panel.spec.ts --retries=2 => EXIT 0
-## [4] pnpm --filter @repo/web lint => EXIT 0（仅 LABEL-LANG-MIX 警告，可忽略；无 error）
 
-===== playwright 输出 =====
+$ pnpm --filter @repo/data run migrate
+[exit 0]
+
+> @repo/data@0.1.0 migrate /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/data
+> sh -c 'set -a; [ -f ../../apps/web/.env.local ] && . ../../apps/web/.env.local; set +a; tsx src/migrate.ts'
+
+✓ 已应用，跳过：001_init.sql
+✓ 已应用，跳过：002_auth.sql
+✓ 已应用，跳过：003_team.sql
+✓ 已应用，跳过：004_room.sql
+✓ 已应用，跳过：005_canvas.sql
+✓ 已应用，跳过：006_profile.sql
+✓ 已应用，跳过：007_board.sql
+✓ 已应用，跳过：008_board_visits.sql
+✓ 已应用，跳过：009_board_favorites.sql
+✓ 已应用，跳过：010_room_chat.sql
+✓ 已应用，跳过：011_board_settings.sql
+✓ 已应用，跳过：012_board_items_board_id.sql
+✓ 已应用，跳过：013_board_items_color.sql
+✓ 已应用，跳过：014_feedback.sql
+✓ 已应用，跳过：014_room_chat_messages.sql
+✓ 已应用，跳过：015_team_general.sql
+✓ 已应用，跳过：016_admin_role.sql
+✓ 已应用，跳过：016_ai_store.sql
+✓ 已应用，跳过：016_ava_chat.sql
+✓ 已应用，跳过：016_credits.sql
+✓ 已应用，跳过：016_kb_files.sql
+✓ 已应用，跳过：016_survey.sql
+✓ 已应用，跳过：017_ai_store_item_config.sql
+✓ 已应用，跳过：017_payment_orders.sql
+✓ 已应用，跳过：017_studio_artifacts.sql
+✓ 已应用，跳过：017_survey_templates.sql
+✓ 已应用，跳过：018_ai_store_favorites.sql
+✓ 已应用，跳过：018_ava_message_attachments.sql
+✓ 已应用，跳过：018_ava_thread_share.sql
+✓ 已应用，跳过：018_user_plan.sql
+✓ 已应用，跳过：019_ai_store_subscriptions.sql
+✓ 已应用，跳过：019_credit_transaction_idempotency.sql
+✓ 已应用，跳过：019_presentation_artifacts.sql
+✓ 已应用，跳过：020_ava_message_feedback.sql
+✓ 已应用，跳过：021_ai_store_share.sql
+✓ 已应用，跳过：021_presentation_revisions.sql
+✓ 已应用，跳过：022_retire_room_canvas.sql
+✓ 已应用，跳过：023_outbound_emails.sql
+✓ 已应用，跳过：024_room_favorites.sql
+✓ 已应用，跳过：025_room_invites.sql
+✓ 已应用，跳过：026_room_files.sql
+✓ 已应用，跳过：026_survey_room_scope.sql
+✓ 已应用，跳过：027_ava_research_sessions.sql
+✓ 已应用，跳过：028_ava_research_clarify_stage.sql
+✓ 已应用，跳过：029_email_confirmation.sql
+✓ 已应用，跳过：030_room_ai_context.sql
+✓ 已应用，跳过：031_board_backups.sql
+✓ 已应用，跳过：032_board_tags.sql
+✓ 已应用，跳过：033_board_room_public_id.sql
+迁移完成。
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/room-rr-004-chat-files-panel.spec.ts
+[exit 0]
 
 Running 2 tests using 1 worker
 
-  ✓  1 [chromium] › room-rr-004-chat-files-panel.spec.ts:44:5 › 聊天左栏：上传文件到房间库（标注线程来源）→ 勾选为 sources → 显示 N sources selected as context (11.7s)
-  ✓  2 [chromium] › room-rr-004-chat-files-panel.spec.ts:85:5 › 同一房间文件在所有聊天线程左栏可见（跨线程可见） (3.8s)
+  ✓  1 [chromium] › room-rr-004-chat-files-panel.spec.ts:44:5 › 聊天左栏：上传文件到房间库（标注线程来源）→ 勾选为 sources → 显示 N sources selected as context (4.0s)
+  ✓  2 [chromium] › room-rr-004-chat-files-panel.spec.ts:85:5 › 同一房间文件在所有聊天线程左栏可见（跨线程可见） (1.4s)
 
-  Slow test file: [chromium] › room-rr-004-chat-files-panel.spec.ts (15.5s)
-  Consider splitting slow test files to speed up parallel execution
-  2 passed (19.3s)
+  2 passed (9.2s)
+
+
+
+[BASE VERIFY] $ pnpm -w run verify:base
+[exit 0]
+
+> boardx-dev-template@ verify:base /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment
+> turbo run typecheck lint test
+
+• Packages in scope: @repo/agent-core, @repo/ai, @repo/auth, @repo/canvas, @repo/collab, @repo/coord-dashboard, @repo/coord-service, @repo/data, @repo/devportal, @repo/memory, @repo/orchestrator, @repo/queue, @repo/storage, @repo/tools, @repo/web, @repo/workflow-worker
+• Running typecheck, lint, test in 16 packages
+• Remote caching disabled
+@repo/data:typecheck: cache miss, executing 29e3d79723f2f0f1
+@repo/ai:typecheck: cache hit, replaying logs f0c5dd1909fc0ecd
+@repo/queue:lint: cache hit, replaying logs 425c213ae7a4d825
+@repo/ai:typecheck: 
+@repo/ai:typecheck: > @repo/ai@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/ai
+@repo/ai:typecheck: > tsc --noEmit
+@repo/ai:typecheck: 
+@repo/queue:lint: 
+@repo/queue:lint: > @repo/queue@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/queue
+@repo/queue:lint: > echo 'lint: ok'
+@repo/queue:lint: 
+@repo/queue:lint: lint: ok
+@repo/data:test: cache hit, replaying logs ea9b5da885a1b6a8
+@repo/data:test: 
+@repo/data:test: > @repo/data@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/data
+@repo/data:test: > vitest run
+@repo/data:test: 
+@repo/data:test: 
+@repo/data:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/data
+@repo/data:test: 
+@repo/data:test:  ✓ src/aiStore.test.ts  (17 tests) 14ms
+@repo/data:test:  ✓ src/ids.test.ts  (8 tests) 115ms
+@repo/data:test:  ✓ src/rooms.test.ts  (2 tests) 1ms
+@repo/data:test:  ✓ src/survey.test.ts  (4 tests) 1ms
+@repo/data:test:  ✓ src/board.test.ts  (11 tests) 2ms
+@repo/data:test:  ✓ src/avaChat.test.ts  (5 tests) 4ms
+@repo/data:test:  ✓ src/roomChat.test.ts  (4 tests) 44ms
+@repo/data:test:  ✓ src/index.test.ts  (3 tests) 1ms
+@repo/data:test: 
+@repo/data:test:  Test Files  8 passed (8)
+@repo/data:test:       Tests  54 passed (54)
+@repo/data:test:    Start at  09:30:39
+@repo/data:test:    Duration  1.58s (transform 1.15s, setup 1ms, collect 3.72s, tests 182ms, environment 2ms, prepare 2.72s)
+@repo/data:test: 
+@repo/queue:test: cache hit, replaying logs 3c058d96464ae590
+@repo/queue:test: 
+@repo/queue:test: > @repo/queue@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/queue
+@repo/queue:test: > vitest run
+@repo/queue:test: 
+@repo/queue:test: 
+@repo/queue:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/queue
+@repo/queue:test: 
+@repo/queue:test:  ✓ src/index.test.ts  (4 tests) 2ms
+@repo/queue:test: 
+@repo/queue:test:  Test Files  1 passed (1)
+@repo/queue:test:       Tests  4 passed (4)
+@repo/queue:test:    Start at  09:29:49
+@repo/queue:test:    Duration  1.30s (transform 153ms, setup 0ms, collect 395ms, tests 2ms, environment 0ms, prepare 368ms)
+@repo/queue:test: 
+@repo/storage:test: cache hit, replaying logs d88ca4c46c0d5ad5
+@repo/storage:test: 
+@repo/storage:test: > @repo/storage@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/storage
+@repo/storage:test: > vitest run
+@repo/storage:test: 
+@repo/storage:test: 
+@repo/storage:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/storage
+@repo/storage:test: 
+@repo/storage:test:  ✓ src/index.test.ts  (19 tests) 17ms
+@repo/storage:test: 
+@repo/storage:test:  Test Files  1 passed (1)
+@repo/storage:test:       Tests  19 passed (19)
+@repo/storage:test:    Start at  09:29:52
+@repo/storage:test:    Duration  812ms (transform 89ms, setup 0ms, collect 395ms, tests 17ms, environment 0ms, prepare 84ms)
+@repo/storage:test: 
+@repo/agent-core:typecheck: cache hit, replaying logs 8e8adb6926e9c7a5
+@repo/agent-core:typecheck: 
+@repo/agent-core:typecheck: > @repo/agent-core@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/agent-core
+@repo/agent-core:typecheck: > tsc --noEmit
+@repo/agent-core:typecheck: 
+@repo/agent-core:lint: cache hit, replaying logs 52cdf44013591afb
+@repo/agent-core:lint: 
+@repo/agent-core:lint: > @repo/agent-core@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/agent-core
+@repo/agent-core:lint: > echo 'lint: ok'
+@repo/agent-core:lint: 
+@repo/agent-core:lint: lint: ok
+@repo/queue:build: cache hit, replaying logs 6df8f897dd0499f4
+@repo/queue:build: 
+@repo/queue:build: > @repo/queue@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/queue
+@repo/queue:build: > tsc --noEmit
+@repo/queue:build: 
+@repo/agent-core:test: cache hit, replaying logs 96ee23859b2c26f2
+@repo/agent-core:test: 
+@repo/agent-core:test: > @repo/agent-core@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/agent-core
+@repo/agent-core:test: > vitest run
+@repo/agent-core:test: 
+@repo/agent-core:test: 
+@repo/agent-core:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/agent-core
+@repo/agent-core:test: 
+@repo/agent-core:test:  ✓ src/index.test.ts  (3 tests) 7ms
+@repo/agent-core:test: 
+@repo/agent-core:test:  Test Files  1 passed (1)
+@repo/agent-core:test:       Tests  3 passed (3)
+@repo/agent-core:test:    Start at  09:30:39
+@repo/agent-core:test:    Duration  1.29s (transform 127ms, setup 0ms, collect 200ms, tests 7ms, environment 0ms, prepare 152ms)
+@repo/agent-core:test: 
+@repo/auth:test: cache hit, replaying logs 2dfadb7d38eb12f2
+@repo/auth:test: 
+@repo/auth:test: > @repo/auth@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/auth
+@repo/auth:test: > vitest run
+@repo/auth:test: 
+@repo/auth:test: 
+@repo/auth:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/auth
+@repo/auth:test: 
+@repo/auth:test:  ✓ src/index.test.ts  (15 tests) 753ms
+@repo/auth:test: 
+@repo/auth:test:  Test Files  1 passed (1)
+@repo/auth:test:       Tests  15 passed (15)
+@repo/auth:test:    Start at  09:29:52
+@repo/auth:test:    Duration  1.27s (transform 54ms, setup 0ms, collect 123ms, tests 753ms, environment 0ms, prepare 70ms)
+@repo/auth:test: 
+@repo/collab:build: cache hit, replaying logs 6518de443c730427
+@repo/collab:build: 
+@repo/collab:build: > @repo/collab@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/collab
+@repo/collab:build: > tsc --noEmit
+@repo/collab:build: 
+@repo/canvas:test: cache hit, replaying logs 14796fd2dfa59526
+@repo/canvas:test: 
+@repo/canvas:test: > @repo/canvas@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/canvas
+@repo/canvas:test: > vitest run
+@repo/canvas:test: 
+@repo/canvas:test: 
+@repo/canvas:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/canvas
+@repo/canvas:test: 
+@repo/canvas:test:  ✓ src/index.test.ts  (25 tests) 8ms
+@repo/canvas:test: 
+@repo/canvas:test:  Test Files  1 passed (1)
+@repo/canvas:test:       Tests  25 passed (25)
+@repo/canvas:test:    Start at  09:29:54
+@repo/canvas:test:    Duration  621ms (transform 45ms, setup 0ms, collect 51ms, tests 8ms, environment 0ms, prepare 138ms)
+@repo/canvas:test: 
+@repo/ai:lint: cache hit, replaying logs 2cd9407a55c074a3
+@repo/ai:lint: 
+@repo/ai:lint: > @repo/ai@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/ai
+@repo/ai:lint: > echo 'lint: ok'
+@repo/ai:lint: 
+@repo/ai:lint: lint: ok
+@repo/data:build: cache hit, replaying logs 4695341481ab6c31
+@repo/data:build: 
+@repo/data:build: > @repo/data@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/data
+@repo/data:build: > tsc --noEmit
+@repo/data:build: 
+@repo/memory:build: cache miss, executing fe945e6a9ed2f0fe
+@repo/tools:typecheck: cache hit, replaying logs 6642059751d1af19
+@repo/tools:typecheck: 
+@repo/tools:typecheck: > @repo/tools@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/tools
+@repo/tools:typecheck: > tsc --noEmit
+@repo/tools:typecheck: 
+@repo/ai:test: cache hit, replaying logs aa6a2a42f4719b95
+@repo/ai:test: 
+@repo/ai:test: > @repo/ai@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/ai
+@repo/ai:test: > vitest run
+@repo/ai:test: 
+@repo/ai:test: 
+@repo/ai:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/ai
+@repo/ai:test: 
+@repo/ai:test:  ✓ src/index.test.ts  (12 tests) 6ms
+@repo/ai:test:  ✓ src/studioGenerator.test.ts  (4 tests) 3ms
+@repo/ai:test:  ✓ src/anthropicProvider.test.ts  (13 tests) 77ms
+@repo/ai:test:  ✓ src/sttProvider.test.ts  (6 tests) 66ms
+@repo/ai:test: 
+@repo/ai:test:  Test Files  4 passed (4)
+@repo/ai:test:       Tests  35 passed (35)
+@repo/ai:test:    Start at  09:29:49
+@repo/ai:test:    Duration  1.23s (transform 147ms, setup 0ms, collect 335ms, tests 152ms, environment 1ms, prepare 682ms)
+@repo/ai:test: 
+@repo/storage:build: cache hit, replaying logs 8a66ac8e54b3b38b
+@repo/storage:build: 
+@repo/storage:build: > @repo/storage@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/storage
+@repo/storage:build: > tsc --noEmit
+@repo/storage:build: 
+@repo/agent-core:build: cache miss, executing 229eff6fc891e76c
+@repo/workflow-worker:lint: cache miss, executing 2ec34efef624d452
+@repo/orchestrator:lint: cache hit, replaying logs cfc578116feadf62
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: > @repo/orchestrator@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/orchestrator
+@repo/orchestrator:lint: > echo 'lint: ok'
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: lint: ok
+@repo/auth:typecheck: cache miss, executing 10bf00340d49c51a
+@repo/auth:lint: cache hit, replaying logs 9ad54b6ffc408d5b
+@repo/auth:lint: 
+@repo/auth:lint: > @repo/auth@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/auth
+@repo/auth:lint: > echo 'lint: ok'
+@repo/auth:lint: 
+@repo/auth:lint: lint: ok
+@repo/canvas:typecheck: cache miss, executing 15a9d26cc93d6b3f
+@repo/ai:build: cache hit, replaying logs bb62852a548c5170
+@repo/ai:build: 
+@repo/ai:build: > @repo/ai@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/ai
+@repo/ai:build: > tsc --noEmit
+@repo/ai:build: 
+@repo/data:lint: cache hit, replaying logs f2ef7735cb5abe36
+@repo/data:lint: 
+@repo/data:lint: > @repo/data@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/data
+@repo/data:lint: > echo 'lint: ok'
+@repo/data:lint: 
+@repo/data:lint: lint: ok
+@repo/collab:test: cache miss, executing 619e54995daeee44
+@repo/canvas:build: cache hit, replaying logs fb2a877de59f3ccb
+@repo/canvas:build: 
+@repo/canvas:build: > @repo/canvas@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/canvas
+@repo/canvas:build: > tsc --noEmit
+@repo/canvas:build: 
+@repo/auth:build: cache hit, replaying logs 67dc34f2d6a00c1d
+@repo/auth:build: 
+@repo/auth:build: > @repo/auth@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/auth
+@repo/auth:build: > tsc --noEmit
+@repo/auth:build: 
+@repo/memory:test: cache hit, replaying logs 4b3fd2897d8186db
+@repo/memory:test: 
+@repo/memory:test: > @repo/memory@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/memory
+@repo/memory:test: > vitest run
+@repo/memory:test: 
+@repo/memory:test: 
+@repo/memory:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/memory
+@repo/memory:test: 
+@repo/memory:test:  ✓ src/index.test.ts  (13 tests) 29ms
+@repo/memory:test: 
+@repo/memory:test:  Test Files  1 passed (1)
+@repo/memory:test:       Tests  13 passed (13)
+@repo/memory:test:    Start at  09:30:39
+@repo/memory:test:    Duration  1.13s (transform 146ms, setup 0ms, collect 265ms, tests 29ms, environment 0ms, prepare 174ms)
+@repo/memory:test: 
+@repo/queue:typecheck: cache miss, executing 6e1445712ecc6aed
+@repo/devportal:test: cache hit, replaying logs eb3b850617201254
+@repo/devportal:test: 
+@repo/devportal:test: > @repo/devportal@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/devportal
+@repo/devportal:test: > vitest run --passWithNoTests
+@repo/devportal:test: 
+@repo/devportal:test: 
+@repo/devportal:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/devportal
+@repo/devportal:test: 
+@repo/devportal:test: include: **/*.{test,spec}.?(c|m)[jt]s?(x)
+@repo/devportal:test: exclude:  **/node_modules/**, **/dist/**, **/cypress/**, **/.{idea,git,cache,output,temp}/**, **/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*
+@repo/devportal:test: No test files found, exiting with code 0
+@repo/devportal:test: 
+@repo/web:lint: cache hit, replaying logs 563d5145e15fce16
+@repo/web:lint: 
+@repo/web:lint: > @repo/web@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/web
+@repo/web:lint: > bash scripts/lint-design.sh
+@repo/web:lint: 
+@repo/web:lint: · 扫描范围：app/ + components/（含 ava/ai-store/surveys/admin/studio/presentations 等模块）
+@repo/web:lint: ✓ token 对比度：全部色面/文字对过线（中性 ≥4.5:1，状态色 ≥3:1，明暗两套）
+@repo/web:lint: ⚠ LABEL-LANG-MIX(同文件内中英混用，警告，不拦截；修复归属 phase-p17 reskin)：
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:173:  { id: "understand-file", label: "理解文件", prompt: "帮我理解这份材料，并总结关键结论。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:174:  { id: "draft-email", label: "起草邮件", prompt: "帮我起草一封项目进展同步邮件。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:175:  { id: "summarize-trends", label: "总结趋势", prompt: "帮我总结最近用户反馈中的主要趋势。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:176:  { id: "brainstorm", label: "头脑风暴", prompt: "围绕这个目标帮我头脑风暴 5 个可执行方案。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:193:    label: "深度研究",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:199:    label: "用户研究",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:206:  { id: "make-tasks", label: "拆成任务", prompt: "把上面的建议拆成可执行任务，并按优先级排序。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:207:  { id: "find-risks", label: "识别风险", prompt: "基于上面的回复，列出主要风险和缓解措施。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:208:  { id: "shorten", label: "压缩摘要", prompt: "把上面的回复压缩成 5 条要点。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2787:  if (diffDays === 0) return { key: "today", label: "Today" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2788:  if (diffDays === 1) return { key: "yesterday", label: "Yesterday" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2789:  if (diffDays < 7) return { key: "last-7-days", label: "Last 7 days" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2790:  return { key: "older", label: "Older" };
+@repo/web:lint: ⚠ LABEL-LANG-MIX(跨文件中英混用，警告，不拦截；修复归属 phase-p17 reskin)：以下文件整体用中文 label，而以下文件整体用英文 label，同一层级 UI 组件的文案语言应统一：
+@repo/web:lint:     LABEL-LANG-MIX: app/portal-prototype/page.tsx:92:  { key: "pulse", label: "脉搏与进度" },
+@repo/web:lint:     LABEL-LANG-MIX: components/board/board-canvas.tsx:190:  { value: "sans-serif", label: "无衬线" },
+@repo/web:lint:     LABEL-LANG-MIX: components/board/sync-status.tsx:14:  synced: { label: "已同步", dot: "bg-tag-green", text: "text-success" },
+@repo/web:lint:     LABEL-LANG-MIX: components/portal/portal-shell.tsx:16:  { key: "pulse", label: "脉搏与进度" },
+@repo/web:lint:     LABEL-LANG-MIX: components/portal/pr-queue-card.tsx:105:    { label: "评审中", prs: items.filter((p) => !p.draft) },
+@repo/web:lint:     LABEL-LANG-MIX: components/studio/studio-panel.tsx:29:  { type: "audio", label: "音频概览", icon: AudioLines },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/account/page.tsx:15:  { key: "personal", label: "Personal info", icon: User },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/admin-home.tsx:113:        { testKey: "users", label: "Total users", stat: stats.users },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/admin-tabs.tsx:8:  { key: "overview", label: "Overview", href: "/admin" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/ai-store/featured/page.tsx:33:  { key: "", label: "All approved" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/ai-store/review/page.tsx:36:  { key: "", label: "All" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/credits/page.tsx:237:              <SummaryCard value={fmt(wallet.balance)} label="Current balance" />
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/rooms/[id]/layout.tsx:26:  { key: "boards", label: "Boards", segment: "boards" },
+@repo/web:lint:     LABEL-LANG-MIX: components/app-shell/sidebar.tsx:44:  { label: "Home", icon: Home, href: "/" },
+@repo/web:lint:   示例（Board 工具条 vs Sidebar 导航）：见 components/board/board-canvas.tsx 与 components/app-shell/sidebar.tsx
+@repo/web:lint: ✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性/文案语言一致性）
+@repo/collab:typecheck: cache hit, replaying logs 49ba60e683a8af48
+@repo/collab:typecheck: 
+@repo/collab:typecheck: > @repo/collab@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/collab
+@repo/collab:typecheck: > tsc --noEmit
+@repo/collab:typecheck: 
+@repo/canvas:lint: cache miss, executing 6dcb49807b7b8128
+@repo/memory:lint: cache hit, replaying logs a5ab3894a64277fc
+@repo/memory:lint: 
+@repo/memory:lint: > @repo/memory@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/memory
+@repo/memory:lint: > echo 'lint: ok'
+@repo/memory:lint: 
+@repo/memory:lint: lint: ok
+@repo/collab:lint: cache hit, replaying logs db70c76a4af4b2a7
+@repo/collab:lint: 
+@repo/collab:lint: > @repo/collab@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/collab
+@repo/collab:lint: > echo 'lint: ok'
+@repo/collab:lint: 
+@repo/collab:lint: lint: ok
+@repo/coord-service:typecheck: cache miss, executing 36f4cb29dff26900
+@repo/agent-core:build: 
+@repo/agent-core:build: > @repo/agent-core@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/agent-core
+@repo/agent-core:build: > tsc --noEmit
+@repo/agent-core:build: 
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: > @repo/workflow-worker@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/workflow-worker
+@repo/workflow-worker:lint: > echo 'lint: ok'
+@repo/workflow-worker:lint: 
+@repo/collab:test: 
+@repo/collab:test: > @repo/collab@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/collab
+@repo/collab:test: > vitest run
+@repo/collab:test: 
+@repo/data:typecheck: 
+@repo/data:typecheck: > @repo/data@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/data
+@repo/data:typecheck: > tsc --noEmit
+@repo/data:typecheck: 
+@repo/workflow-worker:lint: lint: ok
+@repo/canvas:typecheck: 
+@repo/canvas:typecheck: > @repo/canvas@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/canvas
+@repo/canvas:typecheck: > tsc --noEmit
+@repo/canvas:typecheck: 
+@repo/memory:build: 
+@repo/memory:build: > @repo/memory@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/memory
+@repo/memory:build: > tsc --noEmit
+@repo/memory:build: 
+@repo/auth:typecheck: 
+@repo/auth:typecheck: > @repo/auth@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/auth
+@repo/auth:typecheck: > tsc --noEmit
+@repo/auth:typecheck: 
+@repo/coord-service:lint: cache hit, replaying logs 87efa467bbd9a1ca
+@repo/coord-service:lint: 
+@repo/coord-service:lint: > @repo/coord-service@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/coord-service
+@repo/coord-service:lint: > echo 'lint: ok'
+@repo/coord-service:lint: 
+@repo/coord-service:lint: lint: ok
+@repo/devportal:typecheck: cache miss, executing a7b7faa58b722ddb
+@repo/coord-service:typecheck: 
+@repo/coord-service:typecheck: > @repo/coord-service@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/coord-service
+@repo/coord-service:typecheck: > tsc --noEmit
+@repo/coord-service:typecheck: 
+@repo/queue:typecheck: 
+@repo/queue:typecheck: > @repo/queue@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/queue
+@repo/queue:typecheck: > tsc --noEmit
+@repo/queue:typecheck: 
+@repo/canvas:lint: 
+@repo/canvas:lint: > @repo/canvas@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/canvas
+@repo/canvas:lint: > echo 'lint: ok'
+@repo/canvas:lint: 
+@repo/canvas:lint: lint: ok
+@repo/coord-service:test: cache miss, executing ee731dd1ac276692
+@repo/devportal:typecheck: 
+@repo/devportal:typecheck: > @repo/devportal@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/devportal
+@repo/devportal:typecheck: > tsc --noEmit
+@repo/devportal:typecheck: 
+@repo/coord-service:test: 
+@repo/coord-service:test: > @repo/coord-service@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/coord-service
+@repo/coord-service:test: > vitest run
+@repo/coord-service:test: 
+@repo/tools:test: cache miss, executing e552ee9dcb6ff5a1
+@repo/tools:test: 
+@repo/tools:test: > @repo/tools@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/tools
+@repo/tools:test: > vitest run
+@repo/tools:test: 
+@repo/storage:lint: cache hit, replaying logs e7d74461aea3056d
+@repo/storage:lint: 
+@repo/storage:lint: > @repo/storage@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/storage
+@repo/storage:lint: > echo 'lint: ok'
+@repo/storage:lint: 
+@repo/storage:lint: lint: ok
+@repo/devportal:lint: cache hit, replaying logs 765d970ebc0256e5
+@repo/devportal:lint: 
+@repo/devportal:lint: > @repo/devportal@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/devportal
+@repo/devportal:lint: > echo 'lint: ok'
+@repo/devportal:lint: 
+@repo/devportal:lint: lint: ok
+@repo/tools:lint: cache hit, replaying logs a404e79ee6b4a6ce
+@repo/tools:lint: 
+@repo/tools:lint: > @repo/tools@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/tools
+@repo/tools:lint: > echo 'lint: ok'
+@repo/tools:lint: 
+@repo/tools:lint: lint: ok
+@repo/tools:build: cache miss, executing e7b15f42cf09c306
+@repo/tools:build: 
+@repo/tools:build: > @repo/tools@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/tools
+@repo/tools:build: > tsc --noEmit
+@repo/tools:build: 
+@repo/collab:test: 
+@repo/collab:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/collab
+@repo/collab:test: 
+@repo/collab:test:  ✓ src/index.test.ts  (14 tests) 27ms
+@repo/collab:test: 
+@repo/collab:test:  Test Files  1 passed (1)
+@repo/collab:test:       Tests  14 passed (14)
+@repo/collab:test:    Start at  09:32:28
+@repo/collab:test:    Duration  623ms (transform 115ms, setup 0ms, collect 142ms, tests 27ms, environment 0ms, prepare 100ms)
+@repo/collab:test: 
+@repo/memory:typecheck: cache hit, replaying logs 12bfb1c3b6874a3a
+@repo/memory:typecheck: 
+@repo/memory:typecheck: > @repo/memory@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/memory
+@repo/memory:typecheck: > tsc --noEmit
+@repo/memory:typecheck: 
+@repo/storage:typecheck: cache hit, replaying logs 54dfe163a8bc512b
+@repo/storage:typecheck: 
+@repo/storage:typecheck: > @repo/storage@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/storage
+@repo/storage:typecheck: > tsc --noEmit
+@repo/storage:typecheck: 
+@repo/workflow-worker:typecheck: cache miss, executing 19dbdb0566fc4ab5
+@repo/tools:test: 
+@repo/tools:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/tools
+@repo/tools:test: 
+@repo/workflow-worker:typecheck: 
+@repo/workflow-worker:typecheck: > @repo/workflow-worker@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/workflow-worker
+@repo/workflow-worker:typecheck: > tsc --noEmit
+@repo/workflow-worker:typecheck: 
+@repo/tools:test:  ✓ src/index.test.ts  (12 tests) 122ms
+@repo/tools:test: 
+@repo/tools:test:  Test Files  1 passed (1)
+@repo/tools:test:       Tests  12 passed (12)
+@repo/tools:test:    Start at  09:32:29
+@repo/tools:test:    Duration  594ms (transform 35ms, setup 0ms, collect 62ms, tests 122ms, environment 0ms, prepare 117ms)
+@repo/tools:test: 
+@repo/workflow-worker:test: cache miss, executing 5512a9dc1297b2b0
+@repo/web:typecheck: cache miss, executing 3fb6b71cc1c2c697
+@repo/web:test: cache miss, executing 402b5da6dfbe22e2
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test: > @repo/workflow-worker@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/workflow-worker
+@repo/workflow-worker:test: > vitest run
+@repo/workflow-worker:test: 
+@repo/web:test: 
+@repo/web:test: > @repo/web@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/web
+@repo/web:test: > vitest run
+@repo/web:test: 
+@repo/web:typecheck: 
+@repo/web:typecheck: > @repo/web@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/web
+@repo/web:typecheck: > tsc --noEmit
+@repo/web:typecheck: 
+@repo/orchestrator:typecheck: cache miss, executing 2241237c4de59559
+@repo/orchestrator:test: cache miss, executing b4b3d9c4797bd407
+@repo/coord-service:test: 
+@repo/coord-service:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/packages/coord-service
+@repo/coord-service:test: 
+@repo/orchestrator:typecheck: 
+@repo/orchestrator:typecheck: > @repo/orchestrator@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/orchestrator
+@repo/orchestrator:typecheck: > tsc --noEmit
+@repo/orchestrator:typecheck: 
+@repo/orchestrator:test: 
+@repo/orchestrator:test: > @repo/orchestrator@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/orchestrator
+@repo/orchestrator:test: > vitest run
+@repo/orchestrator:test: 
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_tty_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_fs_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_http_modules` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_perf_hooks_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:info] Starting isolated runtimes for vitest.config.ts...
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/workflow-worker
+@repo/workflow-worker:test: 
+@repo/web:test: [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+@repo/web:test: 
+@repo/web:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/web
+@repo/web:test: 
+@repo/workflow-worker:test:  ✓ src/kbFileJob.test.ts  (2 tests) 6ms
+@repo/workflow-worker:test:  ✓ src/job.test.ts  (3 tests) 2ms
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  RUN  v2.0.0 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/orchestrator
+@repo/orchestrator:test: 
+@repo/workflow-worker:test:  ✓ src/studioJob.test.ts  (2 tests) 3ms
+@repo/workflow-worker:test:  ✓ src/presentationRevisionJob.test.ts  (4 tests) 9ms
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  Test Files  4 passed (4)
+@repo/workflow-worker:test:       Tests  11 passed (11)
+@repo/workflow-worker:test:    Start at  09:32:31
+@repo/workflow-worker:test:    Duration  673ms (transform 234ms, setup 0ms, collect 630ms, tests 20ms, environment 2ms, prepare 568ms)
+@repo/workflow-worker:test: 
+@repo/orchestrator:test:  ✓ src/orchestrator.test.ts  (3 tests) 41ms
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  Test Files  1 passed (1)
+@repo/orchestrator:test:       Tests  3 passed (3)
+@repo/orchestrator:test:    Start at  09:32:31
+@repo/orchestrator:test:    Duration  560ms (transform 98ms, setup 0ms, collect 153ms, tests 41ms, environment 0ms, prepare 137ms)
+@repo/orchestrator:test: 
+@repo/web:test:  ✓ lib/collab-bus.test.ts  (4 tests) 2ms
+@repo/web:test:  ✓ app/api/portal/prs/route.test.ts  (5 tests) 4ms
+@repo/web:test:  ✓ lib/canvas-snap.test.ts  (14 tests) 6ms
+@repo/web:test: stderr | app/api/admin/coordination/status/route.test.ts > GET /api/admin/coordination/status > 502 when upstream fetch throws (network failure / timeout)
+@repo/web:test: [admin/coordination/status] coord-service fetch failed Error: fetch failed
+@repo/web:test:     at /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/web/app/api/admin/coordination/status/route.test.ts:75:15
+@repo/web:test:     at mockCall (file:///Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/node_modules/.pnpm/@vitest+spy@2.0.0/node_modules/@vitest/spy/dist/index.js:61:17)
+@repo/web:test:     at spy (file:///Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/node_modules/.pnpm/tinyspy@3.0.2/node_modules/tinyspy/dist/index.js:45:80)
+@repo/web:test:     at Module.GET (/Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/web/app/api/admin/coordination/status/route.ts:31:23)
+@repo/web:test:     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+@repo/web:test:     at /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/web/app/api/admin/coordination/status/route.test.ts:78:17
+@repo/web:test:     at runTest (file:///Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:939:11)
+@repo/web:test:     at runSuite (file:///Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runSuite (file:///Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runFiles (file:///Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1152:5)
+@repo/web:test: 
+@repo/web:test:  ✓ app/api/admin/coordination/status/route.test.ts  (6 tests) 11ms
+@repo/web:test:  ✓ app/api/ava/threads/[id]/share/route.test.ts  (5 tests) 9ms
+@repo/web:test:  ✓ app/api/portal/discussions/route.test.ts  (4 tests) 23ms
+@repo/web:test:  ✓ app/api/portal/agents/route.test.ts  (4 tests) 16ms
+@repo/web:test:  ✓ app/api/ava/threads/[id]/route.test.ts  (4 tests) 7ms
+@repo/web:test:  ✓ app/api/boards/[id]/ai-chat/route.test.ts  (3 tests) 5ms
+@repo/web:test: stderr | app/api/portal/coordination/route.test.ts > GET /api/portal/coordination > 上游网络失败 → 502（不抛未捕获异常）
+@repo/web:test: [portal/coordination] coord-service fetch failed Error: net down
+@repo/web:test:     at /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/web/app/api/portal/coordination/route.test.ts:61:54
+@repo/web:test:     at mockCall (file:///Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/node_modules/.pnpm/@vitest+spy@2.0.0/node_modules/@vitest/spy/dist/index.js:61:17)
+@repo/web:test:     at spy (file:///Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/node_modules/.pnpm/tinyspy@3.0.2/node_modules/tinyspy/dist/index.js:45:80)
+@repo/web:test:     at Module.GET (/Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/web/app/api/portal/coordination/route.ts:25:23)
+@repo/web:test:     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+@repo/web:test:     at /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/apps/web/app/api/portal/coordination/route.test.ts:62:17
+@repo/web:test:     at runTest (file:///Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:939:11)
+@repo/web:test:     at runSuite (file:///Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runSuite (file:///Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runFiles (file:///Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/room-ia-realignment/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1152:5)
+@repo/web:test: 
+@repo/web:test:  ✓ app/api/portal/coordination/route.test.ts  (5 tests) 9ms
+@repo/web:test:  ✓ app/api/portal/pulse/route.test.ts  (3 tests) 7ms
+@repo/web:test:  ✓ lib/ava-agents.test.ts  (3 tests) 3ms
+@repo/web:test:  ✓ app/api/ai-store/items/[id]/route.test.ts  (2 tests) 6ms
+@repo/web:test:  ✓ lib/utils.test.ts  (14 tests) 5ms
+@repo/web:test:  ✓ app/api/collab/config/route.test.ts  (3 tests) 6ms
+@repo/web:test:  ✓ lib/feedback.test.ts  (2 tests) 2ms
+@repo/web:test:  ✓ lib/agents.test.ts  (5 tests) 2ms
+@repo/web:test:  ✓ lib/health.test.ts  (1 test) 2ms
+@repo/web:test:  ✓ lib/viewport.test.ts  (4 tests) 2ms
+@repo/web:test: 
+@repo/web:test:  Test Files  19 passed (19)
+@repo/web:test:       Tests  91 passed (91)
+@repo/web:test:    Start at  09:32:31
+@repo/web:test:    Duration  1.72s (transform 785ms, setup 0ms, collect 2.17s, tests 127ms, environment 2ms, prepare 2.36s)
+@repo/web:test: 
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's suite "POST /events (narrative events — ADR-009 GitHub 协调面退役后的站会/andon 信道)"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x50\x4f\x53\x54\x20\x2f\x65\x76\x65\x6e\x74\x73\x20\x28\x6e\x61\x72\x72\x61\x74\x69\x76\x65\x20\x65\x76\x65\x6e\x74\x73\x20\xe2\x80\x94\x20\x41\x44\x52\x2d\x30\x30\x39\x20\x47\x69\x74\x48\x75\x62\x20\xe5\x8d\x8f\xe8\xb0\x83\xe9\x9d\xa2\xe9\x80\x80\xe5\xbd\xb9\xe5\x90\x8e\xe7\x9a\x84\xe7\xab\x99\xe4\xbc\x9a\x2f\x61\x6e\x64\x6f\x6e\x20\xe4\xbf\xa1\xe9\x81\x93\x29\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "no bearer token → 401"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x6e\x6f\x20\x62\x65\x61\x72\x65\x72\x20\x74\x6f\x6b\x65\x6e\x20\xe2\x86\x92\x20\x34\x30\x31\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "no bearer token → 401"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x6e\x6f\x20\x62\x65\x61\x72\x65\x72\x20\x74\x6f\x6b\x65\x6e\x20\xe2\x86\x92\x20\x34\x30\x31\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "cycle-plan 写入成功并可在 /status 的 recent_events 里看到"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xe5\xb9\xb6\xe5\x8f\xaf\xe5\x9c\xa8\x20\x2f\x73\x74\x61\x74\x75\x73\x20\xe7\x9a\x84\x20\x72\x65\x63\x65\x6e\x74\x5f\x65\x76\x65\x6e\x74\x73\x20\xe9\x87\x8c\xe7\x9c\x8b\xe5\x88\xb0\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "cycle-plan 写入成功并可在 /status 的 recent_events 里看到"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xe5\xb9\xb6\xe5\x8f\xaf\xe5\x9c\xa8\x20\x2f\x73\x74\x61\x74\x75\x73\x20\xe7\x9a\x84\x20\x72\x65\x63\x65\x6e\x74\x5f\x65\x76\x65\x6e\x74\x73\x20\xe9\x87\x8c\xe7\x9c\x8b\xe5\x88\xb0\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "andon stop 信号写入成功，payload 原样保留"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x61\x6e\x64\x6f\x6e\x20\x73\x74\x6f\x70\x20\xe4\xbf\xa1\xe5\x8f\xb7\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x8c\x70\x61\x79\x6c\x6f\x61\x64\x20\xe5\x8e\x9f\xe6\xa0\xb7\xe4\xbf\x9d\xe7\x95\x99\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "andon stop 信号写入成功，payload 原样保留"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x61\x6e\x64\x6f\x6e\x20\x73\x74\x6f\x70\x20\xe4\xbf\xa1\xe5\x8f\xb7\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x8c\x70\x61\x79\x6c\x6f\x61\x64\x20\xe5\x8e\x9f\xe6\xa0\xb7\xe4\xbf\x9d\xe7\x95\x99\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/sweeper.test.ts  (2 tests) 60ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "claim 生命周期类型（如 claim）不接受手写 → 400，防止伪造审计历史"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x6c\x61\x69\x6d\x20\xe7\x94\x9f\xe5\x91\xbd\xe5\x91\xa8\xe6\x9c\x9f\xe7\xb1\xbb\xe5\x9e\x8b\xef\xbc\x88\xe5\xa6\x82\x20\x63\x6c\x61\x69\x6d\xef\xbc\x89\xe4\xb8\x8d\xe6\x8e\xa5\xe5\x8f\x97\xe6\x89\x8b\xe5\x86\x99\x20\xe2\x86\x92\x20\x34\x30\x30\xef\xbc\x8c\xe9\x98\xb2\xe6\xad\xa2\xe4\xbc\xaa\xe9\x80\xa0\xe5\xae\xa1\xe8\xae\xa1\xe5\x8e\x86\xe5\x8f\xb2\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "claim 生命周期类型（如 claim）不接受手写 → 400，防止伪造审计历史"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x6c\x61\x69\x6d\x20\xe7\x94\x9f\xe5\x91\xbd\xe5\x91\xa8\xe6\x9c\x9f\xe7\xb1\xbb\xe5\x9e\x8b\xef\xbc\x88\xe5\xa6\x82\x20\x63\x6c\x61\x69\x6d\xef\xbc\x89\xe4\xb8\x8d\xe6\x8e\xa5\xe5\x8f\x97\xe6\x89\x8b\xe5\x86\x99\x20\xe2\x86\x92\x20\x34\x30\x30\xef\xbc\x8c\xe9\x98\xb2\xe6\xad\xa2\xe4\xbc\xaa\xe9\x80\xa0\xe5\xae\xa1\xe8\xae\xa1\xe5\x8e\x86\xe5\x8f\xb2\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/unit/time.test.ts  (3 tests) 76ms
+@repo/coord-service:test:  ✓ test/integration/status.test.ts  (2 tests) 79ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "缺 resource_id → 400"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe7\xbc\xba\x20\x72\x65\x73\x6f\x75\x72\x63\x65\x5f\x69\x64\x20\xe2\x86\x92\x20\x34\x30\x30\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "缺 resource_id → 400"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe7\xbc\xba\x20\x72\x65\x73\x6f\x75\x72\x63\x65\x5f\x69\x64\x20\xe2\x86\x92\x20\x34\x30\x30\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/claims.auth.test.ts  (4 tests) 98ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 andon → 403（停线信号是 coordinator 层专属，防伪造拉停 fleet）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x61\x6e\x64\x6f\x6e\x20\xe2\x86\x92\x20\x34\x30\x33\xef\xbc\x88\xe5\x81\x9c\xe7\xba\xbf\xe4\xbf\xa1\xe5\x8f\xb7\xe6\x98\xaf\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe5\xb1\x82\xe4\xb8\x93\xe5\xb1\x9e\xef\xbc\x8c\xe9\x98\xb2\xe4\xbc\xaa\xe9\x80\xa0\xe6\x8b\x89\xe5\x81\x9c\x20\x66\x6c\x65\x65\x74\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 andon → 403（停线信号是 coordinator 层专属，防伪造拉停 fleet）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x61\x6e\x64\x6f\x6e\x20\xe2\x86\x92\x20\x34\x30\x33\xef\xbc\x88\xe5\x81\x9c\xe7\xba\xbf\xe4\xbf\xa1\xe5\x8f\xb7\xe6\x98\xaf\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe5\xb1\x82\xe4\xb8\x93\xe5\xb1\x9e\xef\xbc\x8c\xe9\x98\xb2\xe4\xbc\xaa\xe9\x80\xa0\xe6\x8b\x89\xe5\x81\x9c\x20\x66\x6c\x65\x65\x74\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 cycle-plan → 201（叙述站会不限 coordinator）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe2\x86\x92\x20\x32\x30\x31\xef\xbc\x88\xe5\x8f\x99\xe8\xbf\xb0\xe7\xab\x99\xe4\xbc\x9a\xe4\xb8\x8d\xe9\x99\x90\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/claims.lifecycle.test.ts  (4 tests) 114ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 cycle-plan → 201（叙述站会不限 coordinator）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe2\x86\x92\x20\x32\x30\x31\xef\xbc\x88\xe5\x8f\x99\xe8\xbf\xb0\xe7\xab\x99\xe4\xbc\x9a\xe4\xb8\x8d\xe9\x99\x90\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's suite "POST /events (narrative events — ADR-009 GitHub 协调面退役后的站会/andon 信道)"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x50\x4f\x53\x54\x20\x2f\x65\x76\x65\x6e\x74\x73\x20\x28\x6e\x61\x72\x72\x61\x74\x69\x76\x65\x20\x65\x76\x65\x6e\x74\x73\x20\xe2\x80\x94\x20\x41\x44\x52\x2d\x30\x30\x39\x20\x47\x69\x74\x48\x75\x62\x20\xe5\x8d\x8f\xe8\xb0\x83\xe9\x9d\xa2\xe9\x80\x80\xe5\xbd\xb9\xe5\x90\x8e\xe7\x9a\x84\xe7\xab\x99\xe4\xbc\x9a\x2f\x61\x6e\x64\x6f\x6e\x20\xe4\xbf\xa1\xe9\x81\x93\x29\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/unit/auth.test.ts  (7 tests) 117ms
+@repo/coord-service:test:  ✓ test/integration/events.test.ts  (7 tests) 137ms
+@repo/coord-service:test:  ✓ test/unit/projector.test.ts  (8 tests) 135ms
+@repo/coord-service:test:  ✓ test/integration/claims.concurrency.test.ts  (5 tests) 170ms
+@repo/coord-service:test: 
+@repo/coord-service:test:  Test Files  9 passed (9)
+@repo/coord-service:test:       Tests  42 passed (42)
+@repo/coord-service:test:    Start at  09:32:30
+@repo/coord-service:test:    Duration  2.80s (transform 172ms, setup 1.38s, collect 211ms, tests 986ms, environment 1ms, prepare 1.55s)
+@repo/coord-service:test: 
+@repo/coord-service:test: [vpw:debug] Shutting down runtimes...
+@repo/coord-service:test: [vpw:debug] Disposing remote proxy sessions...
+
+ Tasks:    55 successful, 55 total
+Cached:    35 cached, 55 total
+  Time:    14.848s 
+
+turbo 2.5.0
+
+ WARNING  no output files found for task @repo/agent-core#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/memory#build. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @repo/tools#build. Please check your `outputs` key in `turbo.json`
