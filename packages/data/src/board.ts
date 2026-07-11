@@ -1,7 +1,7 @@
 // packages/data/src/board.ts — CAP-DATA 白板容器仓储（P5）
 // Board = 房间内的白板容器（生命周期）。画布内容（items）属 P6，不在此层。
 import { query } from "./index";
-import { isValidPublicId } from "./ids";
+import { generateId, isValidPublicId } from "./ids";
 import { canViewRoom, isRoomOwner } from "./rooms";
 import { getMembership } from "./teams";
 
@@ -43,11 +43,15 @@ export async function createBoard(
   visibility: BoardVisibility = "room",
   tags: string[] = []
 ): Promise<Board> {
+  // 热修（issue #530 收紧 public_id NOT NULL 后暴露：这条 INSERT 一直没写这一列，
+  // 每次新建白板都撞约束报 500——见 #471/#530 讨论）：新建时必须显式生成 public_id，
+  // 不能指望 DB 端有默认值（没有，也不该有——生成逻辑统一收在 generateId()，SQL 层
+  // 自己拼会和 ids.ts 的格式产生第二套实现）。
   const rows = await query<Board>(
-    `INSERT INTO boards (room_id, team_id, name, owner_user_id, visibility, tags)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO boards (room_id, team_id, name, owner_user_id, visibility, tags, public_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING ${BOARD_COLS}`,
-    [roomId, teamId, boardTitleOrDefault(name), ownerId, visibility, tags]
+    [roomId, teamId, boardTitleOrDefault(name), ownerId, visibility, tags, generateId("brd")]
   );
   return rows[0]!;
 }
@@ -175,11 +179,22 @@ export async function moveBoard(
 export async function duplicateBoard(boardId: number, userId: number): Promise<Board | undefined> {
   const src = await getBoard(boardId);
   if (!src) return undefined;
+  // 同 createBoard 的热修理由：复制白板也是一次新 INSERT，同样需要显式 public_id。
   const rows = await query<Board>(
-    `INSERT INTO boards (room_id, team_id, name, cover, category, description, visibility, owner_user_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO boards (room_id, team_id, name, cover, category, description, visibility, owner_user_id, public_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING ${BOARD_COLS}`,
-    [src.room_id, src.team_id, `${src.name}（副本）`, src.cover, src.category, src.description, src.visibility, userId]
+    [
+      src.room_id,
+      src.team_id,
+      `${src.name}（副本）`,
+      src.cover,
+      src.category,
+      src.description,
+      src.visibility,
+      userId,
+      generateId("brd"),
+    ]
   );
   return rows[0];
 }
