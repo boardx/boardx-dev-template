@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 
 interface Board {
   id: number | string;
+  public_id: string;
   name: string;
   visibility: string;
   updated_at?: string;
@@ -640,8 +641,8 @@ export default function RoomBoardsPage() {
               data-testid={`board-${b.id}`}
               role="link"
               tabIndex={0}
-              onClick={() => router.push(`/boards/${b.id}`)}
-              onKeyDown={(e) => e.key === "Enter" && router.push(`/boards/${b.id}`)}
+              onClick={() => router.push(`/boards/${b.public_id}`)}
+              onKeyDown={(e) => e.key === "Enter" && router.push(`/boards/${b.public_id}`)}
               className={cn(
                 "group relative cursor-pointer rounded-xl border bg-card text-card-foreground",
                 "shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-border/70 hover:shadow-md",
@@ -671,7 +672,7 @@ export default function RoomBoardsPage() {
 
               <div className="flex flex-col gap-1 p-3">
                 <a
-                  href={`/boards/${b.id}`}
+                  href={`/boards/${b.public_id}`}
                   onClick={(e) => e.stopPropagation()}
                   className="truncate text-sm font-semibold text-foreground"
                 >
@@ -711,8 +712,8 @@ export default function RoomBoardsPage() {
               data-testid={`board-${b.id}`}
               role="link"
               tabIndex={0}
-              onClick={() => router.push(`/boards/${b.id}`)}
-              onKeyDown={(e) => e.key === "Enter" && router.push(`/boards/${b.id}`)}
+              onClick={() => router.push(`/boards/${b.public_id}`)}
+              onKeyDown={(e) => e.key === "Enter" && router.push(`/boards/${b.public_id}`)}
               className={cn(
                 "flex cursor-pointer items-center gap-3 bg-card px-4 py-3 transition-colors duration-200 hover:bg-muted/50",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -732,7 +733,7 @@ export default function RoomBoardsPage() {
                 </span>
               )}
               <a
-                href={`/boards/${b.id}`}
+                href={`/boards/${b.public_id}`}
                 onClick={(e) => e.stopPropagation()}
                 className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground"
               >

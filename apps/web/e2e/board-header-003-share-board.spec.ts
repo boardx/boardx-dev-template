@@ -31,15 +31,14 @@ test("板页 Header 打开分享面板：复制链接 + 可见性 + 二维码占
   // 可见性说明（默认 room → 房间成员可访问）
   await expect(page.getByTestId("share-visibility")).toContainText("房间成员可访问");
 
-  // 分享链接 = origin + /boards/<id>
-  const expectedUrl = `${new URL(page.url()).origin}/boards/${board.id}`;
-  await expect(page.getByTestId("share-url")).toHaveValue(expectedUrl);
+  // 分享链接 = 当前地址栏（issue #584：地址栏此时已规范化到 public_id 形式）
+  await expect(page.getByTestId("share-url")).toHaveValue(page.url());
 
   // 复制链接：写入剪贴板 + 成功提示
   await page.getByTestId("share-copy").click();
   await expect(page.getByTestId("share-copy-status")).toContainText("已复制");
   const clip = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clip).toBe(expectedUrl);
+  expect(clip).toBe(page.url());
 
   // 二维码占位：默认收起，点击展开
   await expect(page.getByTestId("share-qr")).toHaveCount(0);

@@ -2,13 +2,14 @@
 // p20/F01 房间详情壳：面包屑 + 房间名 + 可见性 pill + 成员头像 + Invite + 五 tab 常驻导航（uc-rr-001）
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface RoomInfo {
   id: number | string;
+  public_id: string;
   name: string;
   visibility: "private" | "team";
   description?: string | null;
@@ -38,6 +39,7 @@ function initials(email: string): string {
 export default function RoomShellLayout({ children }: { children: React.ReactNode }) {
   const params = useParams<{ id: string }>();
   const pathname = usePathname();
+  const router = useRouter();
   const roomId = params.id;
 
   const [room, setRoom] = useState<RoomInfo | null>(null);
@@ -56,6 +58,13 @@ export default function RoomShellLayout({ children }: { children: React.ReactNod
         return;
       }
       const d = await res.json();
+      // issue #584：旧数字 URL 落地后规范化到 public_id 形式，路径里除房间 id 段外的
+      // 其余部分（当前 tab，如 /members、/boards）原样保留。这个 layout 包住全部房间子
+      // 页面，收口在这一处，下游各 tab 内部拼的 `/rooms/${roomId}/...` 链接（都是拿这同一个
+      // useParams() 的 roomId 回填）落地后自然跟着变成 public_id 形式，不用逐个改。
+      if (d.room?.public_id && d.room.public_id !== roomId) {
+        router.replace(pathname.replace(`/rooms/${roomId}`, `/rooms/${d.room.public_id}`));
+      }
       setRoom(d.room);
       setIsFavorite(Boolean(d.isFavorite));
       const mres = await fetch(`/api/rooms/${roomId}/members`);

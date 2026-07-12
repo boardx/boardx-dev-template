@@ -19,6 +19,7 @@ import { LocalWorkspace } from "@/components/board/local-workspace";
 
 interface Board {
   id: number | string;
+  public_id: string;
   name: string;
   visibility: string;
   room_id?: number | string;
@@ -45,6 +46,13 @@ export default function BoardPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const boardId = params.id;
+  // issue #584：BoardCanvas 内部的协作 WebSocket 连接 effect 依赖 boardId prop——地址栏
+  // 从数字规范化到 public_id 后 boardId（route param）会跟着变一次，若直接把它传给
+  // BoardCanvas，会被当成"切换到另一块白板"触发一次多余的连接重建（真实回归：widget-shape
+  // 等好几个 e2e 在 goto 数字 URL 后立刻操作画布，撞上这个重连窗口导致
+  // window.__canvasTestApi 短暂不可用）。用 useState 的惰性初始值只捕获首次渲染时的
+  // boardId，之后地址栏怎么变都不再更新——同一块白板全程只传一个稳定标识给 BoardCanvas。
+  const [canvasBoardId] = useState(() => boardId);
   const [board, setBoard] = useState<Board | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [canManage, setCanManage] = useState(false);
@@ -120,6 +128,17 @@ export default function BoardPage() {
     if (res.status === 403) return setError("你无权访问该白板"), setLoading(false);
     if (res.status === 404) return setError("白板不存在"), setLoading(false);
     const d = await res.json();
+    // issue #584：旧数字 URL 落地后，把地址栏规范化到 public_id 形式（真正的 HTTP 301/308
+    // 需要把这个页面从 client component 改成 server component 才能在响应头层面做，那是更大
+    // 的结构改动）。故意用 window.history.replaceState 而不是 router.replace：后者会让
+    // Next 路由感知到 params.id 变化并重新渲染整棵树——下游一堆子组件（尤其 BoardCanvas 的
+    // 协作 WebSocket）都拿 boardId 当 effect 依赖，被当成"切换到另一块白板"重连/重置，
+    // 真实回归见 widget-shape 等 e2e 在 goto 数字 URL 后立刻操作画布时的时序竞态。
+    // replaceState 只改浏览器地址栏这一个可见效果，不触发任何 React/Next 的重新渲染——
+    // 用户看到的 URL 立刻变、旧书签不断链，画布内部状态完全不受影响。
+    if (d.board?.public_id && d.board.public_id !== boardId && typeof window !== "undefined") {
+      window.history.replaceState(null, "", `/boards/${d.board.public_id}`);
+    }
     setBoard(d.board);
     setRole(d.role);
     setCanManage(!!d.canManage);
@@ -251,12 +270,14 @@ export default function BoardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId]);
 
-  // 分享链接：客户端按当前 origin 计算
+  // 分享链接：客户端按当前 origin 计算。issue #584：分享出去的链接必须是 public_id 形式
+  // （而不是会暴露自增整数、也终将被规范化跳转掉的旧数字 URL），所以等 board 数据到位、
+  // 拿到 public_id 后再生成；board 未加载完之前 shareUrl 留空，不展示一个马上要变的临时值。
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setShareUrl(`${window.location.origin}/boards/${boardId}`);
+    if (typeof window !== "undefined" && board?.public_id) {
+      setShareUrl(`${window.location.origin}/boards/${board.public_id}`);
     }
-  }, [boardId]);
+  }, [board?.public_id]);
 
   // p7:F03（uc-board-header-003 主流程 6）：展开二维码区域时才真正绘制，收起后不必
   // 保留（下次展开重新生成即可，shareUrl 稳定不变，重复生成成本可忽略）。
@@ -464,7 +485,7 @@ export default function BoardPage() {
           )}
           {/* 实时协作（uc-canvas-005）：在线成员头像 + 真实同步状态。
               内含 BoardSyncStatus（受控），并每 ~1.5s 心跳/拉取在线成员。 */}
-          <BoardPresence boardId={String(boardId)} />
+          <BoardPresence boardId={String(canvasBoardId)} />
         </div>
         <div className="flex items-center gap-2">
           {/* 匿名公开访问：提示登录加入 */}
@@ -497,7 +518,7 @@ export default function BoardPage() {
           </Button>
           {/* 协作计时器 / 幻灯片：prototype 保留为一级图标入口 */}
           <BoardTimer />
-          <SlidesPanel boardId={String(boardId)} />
+          <SlidesPanel boardId={String(canvasBoardId)} />
           {/* ⋯ More（reskin，设计评审 P0-3 最终清单）：次要功能收纳 + 全局导航逃生口 +
               危险操作隔离。面板内直接渲染既有自包含组件（触发按钮成为菜单项，testid 全保活，
               相关 spec 打开路径只需加"先点 board-more-menu"一步）。 */}
@@ -529,7 +550,7 @@ export default function BoardPage() {
                   className="absolute right-0 top-10 z-50 flex w-56 flex-col gap-0.5 rounded-xl border bg-popover p-1.5 shadow-xl"
                 >
                   {/* 组1 · 白板功能（自包含组件原样渲染，按钮即菜单项） */}
-                  <BoardStatistics boardId={String(boardId)} />
+                  <BoardStatistics boardId={String(canvasBoardId)} />
                   <BoardShortcutsHelp />
                   <Button
                     data-testid="welcome-reopen"
@@ -543,7 +564,7 @@ export default function BoardPage() {
                   >
                     欢迎引导
                   </Button>
-                  <LocalWorkspace boardId={String(boardId)} canEdit={canEdit} />
+                  <LocalWorkspace boardId={String(canvasBoardId)} canEdit={canEdit} />
                   {canManage && (
                     <Button
                       data-testid="board-meta-edit"
@@ -983,7 +1004,7 @@ export default function BoardPage() {
       )}
 
       {/* 画布（P6：F05 视口 + F06 board-keyed items 渲染/选择/键盘） */}
-      <BoardCanvas ref={canvasRef} boardId={String(boardId)} canEdit={canEdit} onHistoryChange={setHist} />
+      <BoardCanvas ref={canvasRef} boardId={String(canvasBoardId)} canEdit={canEdit} onHistoryChange={setHist} />
     </div>
   );
 }

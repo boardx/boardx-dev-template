@@ -45,6 +45,7 @@ export async function GET(req: Request) {
     );
     const boards = boardLists.flat().map((b: Board) => ({
       id: b.id,
+      public_id: b.public_id,
       name: b.name,
       room_id: b.room_id,
       room_name: roomNameById.get(b.room_id) ?? null,
@@ -63,6 +64,7 @@ export async function GET(req: Request) {
       boards,
       rooms: rooms.map((r) => ({
         id: r.id,
+        public_id: r.public_id,
         name: r.name,
         visibility: r.visibility,
         team_id: r.team_id,

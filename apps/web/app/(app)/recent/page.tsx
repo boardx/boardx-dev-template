@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 // uc-home-004：最近访问/编辑过的资源（白板）列表，可点击回到内容。
 // 复用既有 /api/boards?scope=recent（已按权限过滤，仅返回当前用户可见白板）。
 // 覆盖 loading / empty / error 三态（对齐 UC A1 空状态、E1 加载失败重试）。
-type RecentBoard = { id: number | string; name: string };
+type RecentBoard = { id: number | string; public_id: string; name: string };
 
 export default function RecentPage() {
   const router = useRouter();
@@ -107,7 +107,7 @@ export default function RecentPage() {
           {boards.map((b) => (
             <li key={String(b.id)} data-testid={`recent-item-${b.id}`}>
               <a
-                href={`/boards/${b.id}`}
+                href={`/boards/${b.public_id}`}
                 className="flex items-center gap-3 rounded-11 border border-border px-4 py-3 transition-all hover:border-border-strong hover:bg-surface-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <div className="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">

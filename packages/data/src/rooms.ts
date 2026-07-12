@@ -6,6 +6,7 @@ export type RoomVisibility = "private" | "team";
 
 export interface Room {
   id: number;
+  public_id: string;
   name: string;
   owner_user_id: number;
   team_id: number | null;
@@ -28,7 +29,7 @@ export async function createRoom(
   // 新建房间必须显式生成 public_id，DB 端没有默认值。
   const rows = await query<Room>(
     `INSERT INTO rooms (name, owner_user_id, team_id, visibility, public_id) VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, name, owner_user_id, team_id, visibility, created_at, description, ai_instruction`,
+     RETURNING id, public_id, name, owner_user_id, team_id, visibility, created_at, description, ai_instruction`,
     [name, ownerId, teamId, visibility, generateId("rm")]
   );
   const room = rows[0]!;
@@ -38,7 +39,7 @@ export async function createRoom(
 
 export async function getRoom(roomId: number): Promise<Room | undefined> {
   const rows = await query<Room>(
-    "SELECT id, name, owner_user_id, team_id, visibility, created_at, description, ai_instruction FROM rooms WHERE id = $1",
+    "SELECT id, public_id, name, owner_user_id, team_id, visibility, created_at, description, ai_instruction FROM rooms WHERE id = $1",
     [roomId]
   );
   return rows[0];
@@ -79,7 +80,7 @@ export async function listVisibleRooms(userId: number, q?: string): Promise<Visi
     nameClause = ` AND r.name ILIKE $${params.length}`;
   }
   return query<VisibleRoom>(
-    `SELECT DISTINCT r.id, r.name, r.owner_user_id, r.team_id, r.visibility, r.created_at,
+    `SELECT DISTINCT r.id, r.public_id, r.name, r.owner_user_id, r.team_id, r.visibility, r.created_at,
             (r.owner_user_id = $1 OR rm.user_id IS NOT NULL) AS is_member
      FROM rooms r
      LEFT JOIN room_members rm ON rm.room_id = r.id AND rm.user_id = $1
