@@ -5,6 +5,7 @@
 //  - 周增量（本周 +N / ↑n）与近 7 天趋势线需要历史快照数据源，pulse API 暂无 → 显示"数据积累中"空态；
 //  - phase 下钻的 进行中/受阻 细分与 feature 明细同理，先展示 API 已有的 通过/未通过 状态计数；
 //  - github 未配置（configured:false）→ 流动时长卡走 PortalCard unconfigured 态（部署中间态非故障）。
+import { portalFetch } from "@/lib/portal-fetch";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,7 +54,8 @@ export function PulseTab() {
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch("/api/portal/pulse");
+        const res = await portalFetch("/api/portal/pulse");
+        if (!res) return; // 401 → 正在整页重新认证（portal-fetch.ts）
         if (!res.ok) throw new Error(`status ${res.status}`);
         const body = (await res.json()) as PulsePayload;
         if (!cancelled) {

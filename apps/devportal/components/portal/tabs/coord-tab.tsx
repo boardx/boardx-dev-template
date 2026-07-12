@@ -4,6 +4,7 @@
 // CoordTab：中文标题 + 术语括注；租约行 🟢🟡🔴 心跳状态点（时间与 ttl 放 title 悬停）；
 // expire 事件 destructive 徽章，cycle-plan/cycle-result/andon 叙述层事件 secondary 徽章。
 // 三态诚实降级：未配置（unconfigured）≠ 不可达（degraded），语义沿用 PortalCard。
+import { portalFetch } from "@/lib/portal-fetch";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { PortalCard, type PortalCardState } from "@/components/portal/portal-card";
@@ -73,7 +74,8 @@ export function CoordTab() {
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch("/api/portal/coordination");
+        const res = await portalFetch("/api/portal/coordination");
+        if (!res) return; // 401 → 正在整页重新认证（portal-fetch.ts）
         if (cancelled) return;
         if (!res.ok) {
           setState("degraded");

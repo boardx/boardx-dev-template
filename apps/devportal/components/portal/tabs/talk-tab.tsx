@@ -4,6 +4,7 @@
 // 👤/🤖/⚡待拍板 过滤按钮；排序待拍板优先；巡检类（【coord-* 巡检】开头）默认折叠可展开；
 // 待拍板卡红框高亮 + 问题首行加粗放大（data-testid="decide-question"）+ 快捷回应跳评论；
 // 其它条目"去 GitHub 回复 →"。configured:false → PortalCard unconfigured 态（诚实降级）。
+import { portalFetch } from "@/lib/portal-fetch";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -57,7 +58,8 @@ export function TalkTab() {
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch("/api/portal/discussions");
+        const res = await portalFetch("/api/portal/discussions");
+        if (!res) return; // 401 → 正在整页重新认证（portal-fetch.ts）
         if (cancelled) return;
         if (!res.ok) {
           setState("degraded");
