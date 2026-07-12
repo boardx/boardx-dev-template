@@ -79,7 +79,7 @@ export function HomeWorkbench() {
   const [teamName, setTeamName] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [groups] = useState<AgentGroups>(EMPTY_AGENT_GROUPS);
-  const [recentBoards, setRecentBoards] = useState<{ id: number | string; name: string }[]>([]);
+  const [recentBoards, setRecentBoards] = useState<{ id: number | string; public_id: string; name: string }[]>([]);
   const [guideDismissed, setGuideDismissed] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -185,7 +185,7 @@ export function HomeWorkbench() {
             {recentBoards.map((b) => (
               <li key={String(b.id)} data-testid={`recent-board-${b.id}`}>
                 <a
-                  href={`/boards/${b.id}`}
+                  href={`/boards/${b.public_id}`}
                   className="flex items-center gap-3 rounded-11 border border-border px-4 py-3 transition-all hover:border-border-strong hover:bg-surface-1"
                 >
                   <div className="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">

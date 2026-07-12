@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 interface Board {
   id: number | string;
+  public_id: string;
   name: string;
   visibility: string;
 }
@@ -92,7 +93,7 @@ export default function RecentBoardsPage() {
           {boards.map((b) => (
             <li key={String(b.id)} data-testid={`board-${b.id}`}>
               <a
-                href={`/boards/${b.id}`}
+                href={`/boards/${b.public_id}`}
                 className={cn(
                   "flex items-center justify-between rounded-lg border bg-card px-4 py-3",
                   "text-card-foreground shadow-sm",

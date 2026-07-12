@@ -10,6 +10,7 @@ export type BoardRole = "owner" | "editor" | "viewer";
 
 export interface Board {
   id: number;
+  public_id: string;
   room_id: number;
   team_id: number | null;
   name: string;
@@ -33,7 +34,7 @@ export function boardTitleOrDefault(name: string | null | undefined): string {
 }
 
 const BOARD_COLS =
-  "id, room_id, team_id, name, cover, category, description, visibility, owner_user_id, settings, created_at, updated_at, tags";
+  "id, public_id, room_id, team_id, name, cover, category, description, visibility, owner_user_id, settings, created_at, updated_at, tags";
 
 export async function createBoard(
   roomId: number,
@@ -127,7 +128,7 @@ export async function listRecentBoards(userId: number, q?: string): Promise<Boar
     nameClause = ` AND b.name ILIKE $${params.length}`;
   }
   return query<Board>(
-    `SELECT b.id, b.room_id, b.team_id, b.name, b.cover, b.category, b.tags, b.description,
+    `SELECT b.id, b.public_id, b.room_id, b.team_id, b.name, b.cover, b.category, b.tags, b.description,
             b.visibility, b.owner_user_id, b.settings, b.created_at, b.updated_at
      FROM board_visits v
      JOIN boards b ON b.id = v.board_id
@@ -230,7 +231,7 @@ export async function listFavoriteBoards(userId: number, q?: string): Promise<Bo
     nameClause = ` AND b.name ILIKE $${params.length}`;
   }
   return query<Board>(
-    `SELECT b.id, b.room_id, b.team_id, b.name, b.cover, b.category, b.tags, b.description,
+    `SELECT b.id, b.public_id, b.room_id, b.team_id, b.name, b.cover, b.category, b.tags, b.description,
             b.visibility, b.owner_user_id, b.settings, b.created_at, b.updated_at
      FROM board_favorites f
      JOIN boards b ON b.id = f.board_id
@@ -259,7 +260,7 @@ export async function listEditableBoardsForUser(userId: number, q?: string): Pro
     nameClause = ` AND b.name ILIKE $${params.length}`;
   }
   return query<Board>(
-    `SELECT DISTINCT b.id, b.room_id, b.team_id, b.name, b.cover, b.category, b.tags, b.description,
+    `SELECT DISTINCT b.id, b.public_id, b.room_id, b.team_id, b.name, b.cover, b.category, b.tags, b.description,
             b.visibility, b.owner_user_id, b.settings, b.created_at, b.updated_at
      FROM boards b
      JOIN rooms r ON r.id = b.room_id

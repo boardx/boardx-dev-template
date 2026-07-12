@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface RoomHit {
   id: number;
+  public_id: string;
   name: string;
   visibility: string;
   team_id: number | null;
@@ -15,6 +16,7 @@ interface RoomHit {
 }
 interface BoardHit {
   id: number;
+  public_id: string;
   name: string;
   room_id: number;
   room_name: string | null;
@@ -221,7 +223,7 @@ function SearchInner() {
                     <ResultRow
                       key={`b-${b.id}`}
                       testid={`board-${b.id}`}
-                      href={`/boards/${b.id}`}
+                      href={`/boards/${b.public_id}`}
                       title={b.name}
                       meta={[b.room_name, fmtDate(b.created_at)].filter(Boolean).join(" · ")}
                       badge="Board"
@@ -241,7 +243,7 @@ function SearchInner() {
                     <ResultRow
                       key={`r-${r.id}`}
                       testid={`room-${r.id}`}
-                      href={`/rooms/${r.id}/boards`}
+                      href={`/rooms/${r.public_id}/boards`}
                       title={r.name}
                       meta={fmtDate(r.created_at)}
                       badge={r.visibility}

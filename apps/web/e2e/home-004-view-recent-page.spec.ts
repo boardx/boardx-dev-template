@@ -25,7 +25,7 @@ test("登录后 Recent 展示最近白板列表并可点击回到内容", async 
   await expect(page.getByTestId("recent-list")).toContainText("Recent Doc");
 
   await page.getByTestId(`recent-item-${board.id}`).click();
-  await expect(page).toHaveURL(new RegExp(`/boards/${board.id}`));
+  await expect(page).toHaveURL(new RegExp(`/boards/${board.public_id}`));
   await expect(page.getByTestId("board-title")).toHaveText("Recent Doc");
 });
 
