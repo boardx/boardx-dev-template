@@ -79,6 +79,17 @@ export default function RoomShellLayout({ children }: { children: React.ReactNod
     };
   }, [roomId]);
 
+  // issue #587：Settings 页改名后实时同步页头房间名（无需整页刷新）。
+  useEffect(() => {
+    function onRenamed(e: Event) {
+      const detail = (e as CustomEvent<{ roomId: string; name: string }>).detail;
+      if (!detail || String(detail.roomId) !== String(roomId)) return;
+      setRoom((prev) => (prev ? { ...prev, name: detail.name } : prev));
+    }
+    window.addEventListener("room:renamed", onRenamed);
+    return () => window.removeEventListener("room:renamed", onRenamed);
+  }, [roomId]);
+
   // uc-rr-004：页头星标，乐观切换 + 失败回滚
   async function toggleFavorite() {
     const prev = isFavorite;
@@ -125,6 +136,10 @@ export default function RoomShellLayout({ children }: { children: React.ReactNod
   }
 
   const canManage = myRole === "owner" || myRole === "admin";
+  // issue #587：Settings tab 仅 owner/admin 可见（放末尾，Studio 之后）。
+  const visibleTabs = canManage
+    ? [...TABS, { key: "settings", label: "Settings", segment: "settings" }]
+    : TABS;
   const shownMembers = members.slice(0, 4);
   const extra = members.length - shownMembers.length;
 
@@ -198,7 +213,7 @@ export default function RoomShellLayout({ children }: { children: React.ReactNod
           </p>
         )}
         <div className="flex gap-1 rounded-t-xl" role="tablist">
-          {TABS.map((t) => {
+          {visibleTabs.map((t) => {
             const active = activeSegment === t.segment;
             return (
               <Link
