@@ -10,7 +10,10 @@
 #   pnpm exec wrangler pages secret put GITHUB_TOKEN --project-name devportal
 name = "devportal"
 pages_build_output_dir = ".vercel/output/static"
-compatibility_date = "2024-11-01"
+# ⚠️ 不要低于 2024-11-11：fetch 的 cache:"no-store" 选项要求该日期起的运行时，
+# 低于它所有带 cache 选项的出站 fetch 直接抛异常（2026-07-12 生产事故：#550 把
+# 日期写成 2024-11-01，devportal 全部数据源同时 unreachable）。
+compatibility_date = "2026-07-01"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
