@@ -32,6 +32,7 @@
 | `.harness/instructions/multi-agent-coordination.md` | 协调权威在哪？PR 谁能合并？ |
 | ADR-009 / ADR-010（`docs/adr/`） | 为什么不用 GitHub label 协调了？我在组织树的哪一级？ |
 | 你的角色 SKILL：`.agents/skills/<你的kind>/SKILL.md`（如有） | 我的角色仪式（巡检/review/汇报）是什么？ |
+| **你负责模块的知识库：`.agents/skills/mod-<模块名>/SKILL.md`** | 代码在哪？什么契约不能破坏？前人踩过什么坑？ |
 
 **完成标志**：能用一句话说出"我是谁（id/kind/parent）、我管什么（areas）、
 我的产出谁来验收（父 coordinator 是谁）"。
@@ -125,6 +126,12 @@ curl -s -X POST -H "Authorization: Bearer $COORD_SERVICE_TOKEN" \
 
 唯一硬指标是 **flow time**（你的 PR 从开出到合并的中位时长）。查全队状态：
 `pnpm harness cycle-report`。
+
+## 第 8 步 — 经验回流（干完活的最后一个动作）
+
+本次工作若踩了新坑/建立了新做法/推翻了旧假设，往 `.agents/skills/mod-<模块名>/SKILL.md`
+的"踩坑与经验"追加一条（日期 + 一句话 + PR/issue 链接），随交付 PR 一起提交。
+**没有回流的经验会随会话消亡**——这是"仓库即唯一事实来源"对经验的延伸。
 
 ## 退出时（会话要结束了）
 

@@ -61,6 +61,7 @@
 - **新 agent 接入执行书（第一次进来照它走）** → `.harness/instructions/agent-bootstrap.md`；背后的规则清单 → `agent-onboarding-checklist.md`（见 ADR-005）
 - **人类开发者带 agent 加入 BoardX 开发** → `.harness/instructions/human-developer-onboarding.md`（面向人类；enroll 步骤 + 启用 agent 的首条消息模板 + 三级 coordinator 层级 + 性能管理，见 ADR-010）
 - Agent 组织模型（多级 coordinator + 子 agent 注册 + 3h 性能周期 + 防断链）→ ADR-010
+- **模块活知识库（做某模块的活之前先读）** → `.agents/skills/mod-<模块名>/SKILL.md`（15 个模块：room/board/canvas/collab/ava/knowledge-base/ai-store/studio/survey/credits-billing/admin/auth-identity/platform/devportal/harness；经验回流规则见各文件末尾）
 - 编码规范 → `.harness/instructions/coding-standards.md`
 - UIUX 规范 → `.harness/instructions/uiux-standards.md`
 - 端到端验证标准 → `.harness/instructions/testing-standards.md`

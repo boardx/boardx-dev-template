@@ -23,6 +23,10 @@ description: >
 ## 启动仪式
 
 ### Step 1 — 确认身份与领域
+**先读你模块的活知识库 `.agents/skills/mod-<模块名>/SKILL.md`**（代码地图/契约/前人踩坑），
+并承担它的 C-cycle 复盘义务：每周期检查本模块合并的 PR，有经验没回流的补写进去
+（ADR-010 "SOP 持续迭代"的落点）。
+
 读 `.harness/agents/registry.yaml` 里 `kind: module-coordinator` 的对应条目，确认自己的
 `id`（如 `coord-collab`）和 `areas`（如 `[collaboration]`）。只处理这些 area 的 issue/PR，
 不越界碰其他模块的文件——跨模块热点（如 `apps/web/app/(app)/rooms/[id]/members/page.tsx`
