@@ -16,12 +16,20 @@ description: >
 问卷的创建/作答/结果统计，room 作用域（026_survey_room_scope）。
 
 ## 代码地图
-- 页面：`apps/web/app/(app)/surveys/`、`apps/web/app/survey/[id]/answer/`
-- 组件/数据：packages/data survey 表 + room scope 迁移
+- 页面：`apps/web/app/(app)/surveys/`（创建器/列表/结果页）、`apps/web/app/survey/[id]/answer/`（公开作答页）、
+  `apps/web/app/(app)/rooms/[id]/surveys/`（room 作用域入口，p20 F08）。
+- API：`apps/web/app/api/surveys/[id]/{answer,responses,results,results/export,results/ai-summary}`、
+  `apps/web/app/api/survey-templates/`、`apps/web/app/api/rooms/[id]/surveys/`。
+- 组件/数据：`packages/data/src/survey.ts`（surveys/survey_questions/survey_responses 表 + room scope 迁移
+  `026_survey_room_scope.sql`）；`packages/ai/src/reportSummaryGenerator.ts`（结果报告 AI 摘要生成器）。
 
 ## 关键契约与不变量（改代码前必读）
 - 作答页是**未登录可达**的公开面——任何改动过一遍未授权视角。
 - 结果统计聚合在服务端算，不把原始答卷全量发给客户端。
+- 新增结果相关端点（如 `results/ai-summary`）应**逐行复用** `results/route.ts`/`results/export/route.ts`
+  已有的鉴权顺序（`currentUser()`→401，`canViewSurvey(surveyId, userId, teamId)`→403），不要另起一套权限判断。
+- CAP-AI 接入走 `packages/ai` 已合入 main 的 `gateway.ts`（`defaultGateway`/`stubProvider`/`FORCE_FAIL_MARKER`）
+  或 `studioGenerator.ts` 的 sanctioned-stub 先例——e2e 必须能在无真实 Anthropic API key 时确定性通过。
 
 ## 关联阶段 / ADR / 文档
 phases/phase-p13-survey
@@ -33,7 +41,26 @@ phases/phase-p13-survey
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
-- （待第一条回流）
+- 2026-07-08：`pnpm harness sync` 的 `near_term_window` 切片按字典序取**最早**的 N 个 sprint，
+  不是最近的——新 feature 挂到新 sprint 后永远不会被 sync 自动开 issue。发现于 F07 排到
+  sprint-07 却只投影 sprint-01/02。绕过：手工按 `buildIssueBody` 模板开 issue；根因待修（已开独立
+  维护任务，非本模块范围）。
+- 2026-07-07：诊断"PR 为什么没合并"只查 `state`/`mergedAt` 不够，会把真实 merge conflict 误判成
+  "对方拖延"——F07 门控 PR #422 曾经历这个误判，连续多轮巡检+两次总线升级才发现问题其实是
+  `mergeable: CONFLICTING`（main 推进导致，非 review 拖延）。必须同时查
+  `mergeable`/`mergeStateStatus`；冲突面若只是 `.harness/state/PROGRESS.md` 等自动聚合文件，
+  直接 `git merge origin/main` 取 main 版本即可，无需人工排查内容语义。
+- 2026-07-07：宿主机多 worktree 并行时 docker 默认地址池会耗尽
+  （`all predefined address pools have been fully subnetted`），F07 harness verify 曾因此卡住。
+  非本模块代码缺陷，不要用 `docker network prune` 等破坏性手段解决（会误杀其他 agent 的容器/网络）；
+  根因已由 `scripts/init-worktree-env.sh` 给每个 worktree 分配显式独立子网修复。
+- 2026-07-04：给已有 feature（如 F04）补充新增强前，先核实文档里引用的"先例文件"当前是否真的在
+  `main` 上——git 状态快照与并发合并存在时序竞态，容易把"某分支正在开发中的文件"误当成已有先例
+  （F07 需求文档初版误引用了当时尚未合并的 `researchGenerator.ts`，后来该文件才真正合入 main，
+  两次勘误才理顺）。
+- 2026-07-04：给模块找"有据可查的新工作"，优先翻前一个 feature 的 `notes` 字段里显式写的排除项
+  （如 F04 notes 明确写"AI 摘要为可选增强"），而不是凭空发明范围——F07 就是这样源生的，避免了
+  "为了有活干而制造低价值任务"。
 
 ## 知识回流规则（本文件怎么迭代——这是这个 skill 存在的意义）
 
