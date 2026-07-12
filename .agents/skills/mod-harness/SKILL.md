@@ -17,7 +17,7 @@ description: >
 
 ## 代码地图
 - CLI：`.harness/scripts/`（verify/doctor/claim/lock/module-lock/sync…）
-- 协议文档：`.harness/instructions/`；ADR：`phases/phase-01-foundation/adr/`
+- 协议文档：`.harness/instructions/`；ADR：`docs/adr/`（#596 起全局目录,含索引）
 - 协调服务：`packages/coord-service`（Workers+D1）+ `packages/coord-dashboard`
 
 ## 关键契约与不变量（改代码前必读）
