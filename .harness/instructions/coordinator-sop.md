@@ -81,7 +81,7 @@
 5. **共享主 checkout 隔离**：任何要落地写文件/提交的会话（含 coordinator 自己）一律
    `git worktree add` 开独立工作区，不在共享主 checkout 上 `commit`/`stash`/`reset`/
    `branch -f`/`checkout <branch>`；分支建好立即 push。见 ADR-005
-   （`phases/phase-01-foundation/adr/ADR-005-shared-checkout-isolation.md`），本地另有
+   （`docs/adr/ADR-005-shared-checkout-isolation.md`），本地另有
    `reference-transaction` git hook 兜底拦截非快进更新。
 6. **不可静默等待**：发现 lease/PR 停滞（见上方 Deadline 表）时，必须在总线上贴出带
    明确时限的通牒，再据此回收/升级——不能只是内部判断"再等等"或"已经提醒过了"就不再
@@ -91,7 +91,7 @@
    `module-lock-*` 必须配置 `COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN` 才能使用，
    未配置直接报错——不存在降级回 GitHub 的路径（GitHub 协调面已整体退役）。
    权威（D1）联系不上时 acquire fail-closed 拒绝执行，`--force` 仅限人类授权的
-   抢占仪式。见 ADR-009（`phases/phase-01-foundation/adr/
+   抢占仪式。见 ADR-009（`docs/adr/
    ADR-009-github-coordination-plane-retirement.md`）；本条 2026-07-08 之前的
    opt-in 版本见 ADR-006（保留为历史决策记录）。
 8. **破坏性清理操作需要显式人类/coord-main 授权，任何会话都不能仅凭自己判断"逻辑
@@ -101,7 +101,7 @@
    registry.yaml 的 schema 变更同一个审批级别。这条是 2026-07-07 的真实教训：
    一次基于"worktree 目录已不存在"这条本身可靠的判定标准，未经请示就直接跑了
    `--apply`，即使结果本身没错，这个执行顺序本身不该发生。见 ADR-007
-   （`phases/phase-01-foundation/adr/ADR-007-docker-stack-teardown.md`）。
+   （`docs/adr/ADR-007-docker-stack-teardown.md`）。
 9. **review 判定锚定 SHA + 审计链用 doctor 机器判（2026-07-10 起，ADR-012）**：
    Block/Accept 结论必须写明审的是哪个 commit（`审于 <sha>`）；对"已修复"声明复查
    前必须先 `git fetch` 确认审的是分支头——p23（#517）三轮 Block 里有两轮是基于

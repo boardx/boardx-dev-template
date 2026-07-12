@@ -29,7 +29,7 @@
    任何"消息"渠道都只是通知，不算数）。
 3. **`.harness/agents/registry.yaml`**——找到/确认自己的身份条目（`id`/`kind`/`areas`）。
    没有条目 → 见下方"新增身份"一节，不要自行编号硬凑。
-4. **`phases/phase-01-foundation/adr/ADR-004-issues-as-coordination-bus.md`** +
+4. **`docs/adr/ADR-004-issues-as-coordination-bus.md`** +
    **`ADR-005-shared-checkout-isolation.md`** +
    **`ADR-006-coord-service-d1-gating.md`**——三条决定"你能怎么碰 git/GitHub"的
    硬约束：状态机权威在哪、共享工作目录的隔离规则、认领动作的可选原子性增强

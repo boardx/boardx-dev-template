@@ -72,7 +72,7 @@ gh pr list --state open --json number,headRefName,baseRefName,statusCheckRollup
 > 分派/初审只涉及 `gh` 命令 + 只读 git 查阅，不需要 worktree；但一旦要自己落地改代码
 > （如 coord-collab 处理 stale 认领时直接代劳修复），必须先 `git worktree add` 开
 > 独立工作区，不得在共享主 checkout 上 commit/reset/stash——见 ADR-005
-> （`phases/phase-01-foundation/adr/ADR-005-shared-checkout-isolation.md`）。
+> （`docs/adr/ADR-005-shared-checkout-isolation.md`）。
 
 ### Step 6 — 心跳与巡检
 沿用顶层 coordinator 的 L0(60s 事件)/L2(15min 巡检+心跳)节奏，范围限于自己 areas。

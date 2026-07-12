@@ -141,7 +141,7 @@ while read -r old new ref; do
   if ! git merge-base --is-ancestor "${old}" "${new}" 2>/dev/null; then
     echo "✗ [harness] 共享主 checkout 检测到非快进更新: ${ref} ${old:0:8} -> ${new:0:8}" >&2
     echo "  reset --hard / branch -f / 强制 rebase 等操作会让其他并发使用这个目录" >&2
-    echo "  的会话看到分支 commit 无声消失（见 ADR-005，phases/phase-01-foundation/adr）。" >&2
+    echo "  的会话看到分支 commit 无声消失（见 ADR-005，docs/adr）。" >&2
     echo "  请改用独立 worktree：git worktree add <path> -b <branch>。" >&2
     echo "  确认这个目录当前只有你在用、且就是要这么做：ALLOW_HISTORY_REWRITE=1 <原命令>" >&2
     exit 1

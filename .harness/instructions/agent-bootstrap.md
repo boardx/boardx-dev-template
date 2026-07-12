@@ -30,7 +30,7 @@
 |---|---|
 | `AGENTS.md`（仓库根） | 完成定义是什么？哪些事是硬约束？ |
 | `.harness/instructions/multi-agent-coordination.md` | 协调权威在哪？PR 谁能合并？ |
-| ADR-009 / ADR-010（`phases/phase-01-foundation/adr/`） | 为什么不用 GitHub label 协调了？我在组织树的哪一级？ |
+| ADR-009 / ADR-010（`docs/adr/`） | 为什么不用 GitHub label 协调了？我在组织树的哪一级？ |
 | 你的角色 SKILL：`.agents/skills/<你的kind>/SKILL.md`（如有） | 我的角色仪式（巡检/review/汇报）是什么？ |
 
 **完成标志**：能用一句话说出"我是谁（id/kind/parent）、我管什么（areas）、

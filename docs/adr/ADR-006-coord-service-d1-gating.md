@@ -12,7 +12,7 @@ ADR-004 把协调权威钉在 GitHub issue+label 上，理由是"issue/label 经
 并发安全的"。这句话经不起推敲：`gh issue edit --add-label` 没有 compare-and-swap，
 两个 agent 抢同一个 issue 完全可能都"成功"——这正是本仓库里已经发生过的问题
 （共享 checkout 被并发踩踏、一次并发认领导致提交被静默替换，见
-`phases/phase-01-foundation/adr/ADR-005-shared-checkout-isolation.md` 背景段）。
+`docs/adr/ADR-005-shared-checkout-isolation.md` 背景段）。
 
 同时，`.harness/scripts/lib/lock.ts` 的顶层 coordinator 文件锁只解决单机场景
 （防同一台机器上多个 `/loop` 会话互踩），module-coordinator 的租约干脆没有任何

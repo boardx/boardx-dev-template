@@ -4,7 +4,7 @@
 > 的开发，这份文档告诉你：这个项目是怎么用 agent 协作的、有几级协调者、你的 agent
 > 该是哪一级、怎么登记接入、怎么被统一管理和度量。
 >
-> 权威规格见 **ADR-010**（`phases/phase-01-foundation/adr/ADR-010-agent-org-model.md`）；
+> 权威规格见 **ADR-010**（`docs/adr/ADR-010-agent-org-model.md`）；
 > 本文是它的可读操作版。**交给你 agent 的接入执行书是 `agent-bootstrap.md`**
 > （见 §3.5）；`agent-onboarding-checklist.md` 是平台无关的规则清单，两份都面向
 > agent，不是给你读的。
