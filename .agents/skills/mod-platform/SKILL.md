@@ -36,7 +36,11 @@ infra/DEPLOYMENT.md；#530/#583/#586；ADR-007（docker 清理治理）
 
 ## 踩坑与经验（append-only，最新在上）
 - 2026-07-11：收紧 NOT NULL 前没扫全 INSERT 路径 → 新建 room 500（#586）。迁移加固三件套之外，还要有"写路径普查"这一步。
+- 2026-07-10：共享开发机的主 checkout 上跑大套 e2e 结果不可信——kb+credits 全套 19 败，同环境单文件隔离跑 7/8 过，失败模式是无关 testid 超时/余额翻倍这类状态串扰；门控级验证一律进隔离 worktree + 独立 compose project（出处：p17-F06 重验证对照实验，issue #352 2026-07-10 记录）。
+- 2026-07-10：kb-001 要求 workflow-worker 必须在跑（上传轮询到 ready），kb-004「processing 不参与检索」用例要求文件停在 processing——同一真实 worker 下互斥，全套 kb e2e 必有一败，是测试设计矛盾不是回归（出处：phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F06-README.md，task_7bd99360 跟踪）。
+- 2026-07-10：workflow-worker 不自读 .env——裸跑 `pnpm run dev` 连默认 6379 无限重试刷屏；须显式传 DATABASE_URL/REDIS_URL/S3_ENDPOINT 或先 source apps/web/.env.local（出处：p17-F06 重验证记录）。
 - 2026-07-10：部署侧网络封出站 22 + sshd socket 激活只绑 IPv6 两个坑，都写进了 DEPLOYMENT.md §1。
+- 2026-07-09：`scripts/init-worktree-env.sh` 按 `BASH_SOURCE` 解析 repo root——在 worktree 里误跑**主 checkout** 的这份脚本，会把主 checkout 的 apps/web/.env.local、.env、infra/.env 整套改写成 worktree 端口，共享机上其它会话的 dev server 全部断库；必须 cd 进 worktree 后跑它**自己的** scripts/init-worktree-env.sh（出处：issue #352 2026-07-09T01:48Z 事故记录）。
 
 ## 知识回流规则（本文件怎么迭代——这是这个 skill 存在的意义）
 

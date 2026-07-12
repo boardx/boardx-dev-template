@@ -35,6 +35,7 @@ phases/phase-p14-credits-billing；.env.example WEBHOOK_SECRET 注释
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-09：billing-001 的 credits 模式用例断言了组件里从未存在的 testid（credit-pack-list/create-credit-order/buy-credits-qr；真实契约是 credit-packs/pack-${sku}/generate-qr/payment-qr，credits-002 用的就是真契约）——p14-F04 因此假卡数周，还曾被误诊为 Docker 资源问题；写 e2e 先 grep 组件真实 data-testid，别对着想象中的 UI 写断言（出处：PR #483 / PR #426）。
 - 2026-07（历史）：迁移回填用 name 匹配差点混入用户数据（#312）——回填只认不可变主键。
 
 ## 知识回流规则（本文件怎么迭代——这是这个 skill 存在的意义）
