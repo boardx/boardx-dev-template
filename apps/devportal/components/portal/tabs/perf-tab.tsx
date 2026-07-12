@@ -5,6 +5,7 @@
 // 数据源：/api/portal/agents（registry.yaml 按 owner 分组 + coord-service 租约标注）。
 // 诚实降级：per-agent flow-time / 周期承诺当前无数据源 → 列显示"数据积累中"（不造假）；
 // coord_configured:false → 整列省略"当前租约"；C-cycle 周期报告无 Web 数据源 → unconfigured 态。
+import { portalFetch } from "@/lib/portal-fetch";
 import { Fragment, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { PortalCard, type PortalCardState } from "@/components/portal/portal-card";
@@ -55,7 +56,8 @@ export function PerfTab() {
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch("/api/portal/agents");
+        const res = await portalFetch("/api/portal/agents");
+        if (!res) return; // 401 → 正在整页重新认证（portal-fetch.ts）
         if (!res.ok) {
           if (!cancelled) setState("degraded");
           return;

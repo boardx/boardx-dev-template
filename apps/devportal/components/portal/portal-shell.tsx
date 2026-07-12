@@ -3,6 +3,7 @@
 // 界面契约 = p23 ui-signoff confirmed 的 v3 原型；wave 1（F03-F08）逐板块把占位换成真内容。
 // 待拍板数据源：/api/portal/discussions 的 needs_human_count（F02）；未配置（configured:false）
 // 时通知条与红点整体隐藏——不虚构数据。
+import { portalFetch } from "@/lib/portal-fetch";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,8 @@ export function PortalShell({ developer }: { developer: { name: string; email: s
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch("/api/portal/discussions");
+        const res = await portalFetch("/api/portal/discussions");
+        if (!res) return; // 401 → 正在整页重新认证（portal-fetch.ts）
         if (!res.ok) return;
         const body = (await res.json()) as { configured: boolean; needs_human_count?: number };
         if (!cancelled && body.configured) setDecideCount(body.needs_human_count ?? 0);

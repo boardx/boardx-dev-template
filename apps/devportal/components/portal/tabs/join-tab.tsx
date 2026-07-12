@@ -4,6 +4,7 @@
 // 任意步可点击预览；第 4 步显示审批 SLA；第 5 步如实呈现人工发放三步流程 + 命令自取）。
 // 诚实原则：本 feature 不做 OAuth 与自动发 token（ADR-011 P2/P3）——提交申请按钮 disabled
 // 并注明原因，不伪造"已提交成功"；凭据步骤如实描述人工发放现状。
+import { portalFetch } from "@/lib/portal-fetch";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -81,7 +82,8 @@ export function JoinTab() {
   async function openDoc(name: string) {
     setDocLoading(name);
     try {
-      const res = await fetch(`/api/portal/doc?name=${encodeURIComponent(name)}`);
+      const res = await portalFetch(`/api/portal/doc?name=${encodeURIComponent(name)}`);
+      if (!res) return; // 401 → 正在整页重新认证（portal-fetch.ts）
       if (!res.ok) return;
       const body = (await res.json()) as { title: string; markdown: string };
       setDoc({ name, title: body.title, markdown: body.markdown });
