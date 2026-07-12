@@ -21,6 +21,7 @@ import {
   Store,
 } from "lucide-react";
 import { FeedbackLauncher } from "@/components/feedback/feedback-launcher";
+import { TeamSwitcher } from "@/components/app-shell/team-switcher";
 import { CreditRecordsDialog } from "@/components/credits/credit-records-dialog";
 import { BillingPlanDialog } from "@/components/billing/billing-plan-dialog";
 import { BuyCreditsDialog } from "@/components/credits/buy-credits-dialog";
@@ -123,6 +124,9 @@ export function Sidebar({ user }: { user: SidebarUser | null }) {
       >
         <img src="/logo-icon.png" alt="BoardX Logo" className="h-8.5 w-8.5 object-contain" />
       </Link>
+
+      {/* 团队切换菜单（uc-team-002「左侧团队头像菜单」，issue #589）：登录后可见。 */}
+      {user && <TeamSwitcher />}
 
       {/* Rail nav */}
       {RAIL_ITEMS.map(({ label, icon: Icon, href }) => {
