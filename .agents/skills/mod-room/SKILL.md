@@ -24,7 +24,8 @@ description: >
 ## 关键契约与不变量（改代码前必读）
 - 房间列表左栏 + 详情右栏是**主从双栏**，不是互相跳转的两个整页（p20 核心修复，别退回去）。
 - Files 在 Files-tab 与 Chat 内面板职责有边界约定（p20 需求文档）。
-- rooms.public_id：对外 URL 用 public_id，内部 id 不外露；新建/复制必须补写（#586 的教训）。
+- rooms.public_id：对外 URL 用 public_id，内部 id 不外露；新建/复制必须补写（#586 的教训）。路由层用 `resolveRoomId(idParam)` 把 public_id 或旧数字 id 解析成内部 id（查无落 `-1` 哨兵，让既有 `if(!room) return 404` 接管，别让 `NaN` 直传 pg），不要在 route 里裸写 `Number(params.id)`。
+- 房间元信息（name/description/ai_instruction/visibility）写路径统一走 `packages/data` 的 `updateRoom()`；删除走 `deleteRoom()`（FK 级联清 members/favorites/boards…）。
 
 ## 关联阶段 / ADR / 文档
 phases/phase-p20-room-realignment、p22-room-ia-realignment、p24-room-board-management；ADR-001
@@ -36,6 +37,12 @@ phases/phase-p20-room-realignment、p22-room-ia-realignment、p24-room-board-man
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-11：Room 设置别塞进 Members tab——改名/描述/AI instruction/删除拆到独立 `/rooms/[id]/settings`（tab 仅 owner/admin 可见），Members tab 只留成员/邀请/角色管理（人类反馈，issue #587）。房间元信息写路径统一走 `updateRoom(name/description/ai_instruction)`，rename 直接复用不必新建端点。
+- 2026-07-11：`verify --sprint` 翻 passing 前查两坑——① feature 的 `sprint` 字段必须非 null（漏填会让 `--sprint` 匹配不到、只能走已被 #534 禁的 `--phase`，产出裸时间戳 evidence 被 doctor 判 FAIL）；② worktree 缺依赖（rebase 带进新包如 @repo/devportal）会让 `verify:base` 报 `Cannot find module`，先 `pnpm install`（出处：#541 F04 收尾）。
+- 2026-07-10：做「现状差距/勘探」判断前先 `git fetch origin main` + `git rev-list --count HEAD..origin/main`——worktree 落后会把现状误报（p24 读了落后 17 commit 的旧 boards 页，把已是卡片版的现状误报成"纯文本行"，被人类真机截图纠正，#518）。用户真机跑的是 main。
+- 2026-07-10：Room 内 Board 列表管理契约——卡片三点更多菜单（删/重命名/编辑标签/上传·移除封面/移动）+ 多标签（`boards.tags text[]`，migration 032，tag 过滤客户端做、allTags 从全量算）+ 封面直传（服务端 `putObject`→`cover` 存 objectKey→展示端点 `presignGetUrl` 302）；main 已有卡片化/Grid-List/创建弹窗，**扩展现有页别重造**（#518）。
+- 2026-07-09：Room 的 Studio tab 是沉浸式全屏三栏工作台（脱房间壳：不渲染左侧房间列表 `room-list-panel`、不渲染六 tab，仅留最左 app 导航），不是落地页（人类 2026-07-09 拍板，#487 / p22 F03）。脱壳判断在 `rooms/layout.tsx` + `rooms/[id]/layout.tsx` 对 studio 路由做。
+- 2026-07-09：前端泛文案「创建失败」= `res.json().catch(()=>({}))` 的兜底，只在**响应非 JSON**（服务端/DB 崩、返回 HTML 错误页）时出现；真 500 会显示具体 error 文本。多个不相关接口同时挂 → 优先查环境/DB（docker/资源耗尽），别当代码 bug 逐行找（team room「创建失败」排障结论）。
 - 2026-07-11：#530 收紧 NOT NULL 后新建/复制 room 500——写路径没补 public_id（#586 修复）。凡加列收紧约束，先 grep 全部 INSERT 路径。
 
 ## 知识回流规则（本文件怎么迭代——这是这个 skill 存在的意义）
