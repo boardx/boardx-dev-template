@@ -90,6 +90,10 @@ agents:
     model: opus-4.8
     areas: [survey]
     reports_to: coord-main
+    responsibilities:
+      - 统筹问卷创建、模板、发布、公开答题、答卷与报告等 Survey 全生命周期功能
+      - 在 survey area 内分派 worker 并按 Harness 验证证据完成首轮 review
+      - 将跨模块冲突升级给 coord-main，并在 PR 全绿后转交最终合并
   - id: coord-platform
     active: true
     owner: usamshen
