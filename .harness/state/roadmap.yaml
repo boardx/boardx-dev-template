@@ -178,3 +178,10 @@ phases:
     status: not_started
     depends_on: []
     has_ui: true
+  - id: "p25"
+    slug: platform-accounts-gap2
+    name: platform-accounts-gap2
+    goal: "Platform/Accounts 五维差距审计(2026-07-14)红行修复：邀请闭环、成员管理UI、returnTo、错误反馈、孤岛路由入口、证据补救"
+    status: not_started
+    depends_on: []
+    has_ui: true
