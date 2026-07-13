@@ -144,13 +144,6 @@ phases:
     status: not_started
     depends_on: ["p9", "p11"]
     has_ui: true
-  - id: "p19"
-    slug: ava-canvas-memory-expansion
-    name: AVA 画布/记忆扩展 (P19，待决策)
-    goal: "待人类对产品范围拍板：是否迁移老代码的 AI 直接操作白板 widget（digitize/translateWidgets/生成海报音频PPT故事板字幕）、Memories 记忆管理、演示文稿预览卡片；本阶段目前只记录范围，不进入实现"
-    status: not_started
-    depends_on: ["p9", "p12"]
-    has_ui: true
   - id: "p20"
     slug: room-realignment
     name: Room Realignment (P20)
