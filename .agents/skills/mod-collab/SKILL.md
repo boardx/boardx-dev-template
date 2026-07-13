@@ -35,7 +35,11 @@ phases/phase-p8-collaboration；infra/DEPLOYMENT.md §4（Caddy WS 路由）
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-13：`board-canvas.tsx` 的 `docRef = useRef(createBoardDoc())` 只在组件挂载时初始化一次，但 WS 连接/`load()`/`poll()` 三个 effect 都显式依赖 `[boardId]` 会在 boardId 变化时重跑而不重新挂载组件——`docRef`、`patchQueue`、`undoStack`、`writeGenRef`、`pendingJoinEditsRef` 等一次性 `useRef` 字段都不会随之重置。若未来出现"同一路由组件复用、只切 boardId"的跳转（当前仓库内没有，但没有任何代码层防护），会把新 board 的 items `seedItems` 进旧 board 的 doc（只增不删），造成跨 board 数据串线并广播给对方协作者。已核查现有全部 `/boards/:id` 入口都来自不同路由树、必然触发整体重挂载，故目前不可达，是潜伏缺陷。建议修复：`apps/web/app/(board)/boards/[id]/page.tsx` 给 `<BoardCanvas>` 加 `key={boardId}`，强制 boardId 变化时整体重挂载（复盘产出，尚未开 PR，board 侧评估是否现在修）。
 - 2026-07-10：硬编码 `ws://host:3001` 在 HTTPS 生产被混合内容策略拦死（#537 修复）——凡下发 URL 的端点都要想"经过反代/TLS 后还成立吗"。
+- 2026-07-08：`reconcileLocalEdits`（join-sync 完成时把本地编辑补写进 doc）必须传"调用方已确认真的编辑过"的字段级 patch（`{id, fields}`），不能传整条 item 快照——即使某 id 确实有过本地编辑，若把它未曾触碰、可能落后于对等端的其它字段也一起覆盖，会把对等端刚经 `applyEncodedUpdate` CRDT 合并进来的更新覆盖回旧值，等价于把 #432 的病灶从 REST-poll 轴换到 join-sync 轴复现（首轮 review 抓到，出处：PR #464，issue #463）。
+- 2026-07-08：item **创建**走 `upsertItem` 直写 doc 会立即把 `_rev` 顶到 >0；但样式**编辑**若只走常规 `[items]` effect 落 doc（被 `joinSyncedRef` 门禁挡住，join-sync 完成前不能写 doc），会在 join-sync 完成时被 `seedItems` 的"`_rev>0` 就跳过"规则误伤，把 join 前的本地编辑回滚——`_rev` 门禁的设计前提是"doc 比 REST 快照新"，套到"本地未落 doc 的编辑 vs doc"这组关系上恰好反了（出处：PR #462，issue #414，e2e 复现见 `widget-text.spec.ts:40`）。
+- 2026-07-08：`seedItems` 对已存在条目按 `_rev` 门禁裁决覆盖权——`_rev===0` 才允许 REST 快照覆盖，`_rev>0` 视为"有过有意编辑"跳过；这是 #432 竞态（创建后立即 PATCH、被过期 poll 快照卡死）的根治点。后续任何往 doc 里写"可能滞后"数据的新代码路径，动手前先想清楚该走 `seedItems`（保守，只补新条目/未编辑字段）还是 `upsertItem`/`reconcileLocalEdits`（明确本地已知更新，无条件写）（出处：PR #442，issue #432）。
 
 ## 知识回流规则（本文件怎么迭代——这是这个 skill 存在的意义）
 
