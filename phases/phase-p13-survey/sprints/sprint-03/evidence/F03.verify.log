@@ -1,8 +1,8 @@
 $ docker compose -f infra/docker-compose.yml up -d
 [exit 0]
+ Container codex-revert-survey-merge-harness-redis-1 Running
  Container codex-revert-survey-merge-harness-postgres-1 Running
  Container codex-revert-survey-merge-harness-minio-1 Running
- Container codex-revert-survey-merge-harness-redis-1 Running
 
 
 $ pnpm --filter @repo/data run migrate
@@ -65,31 +65,35 @@ $ pnpm --filter @repo/data run migrate
 迁移完成。
 
 
-$ pnpm --filter @repo/web exec playwright test e2e/survey-002-list-manage-surveys.spec.ts
+$ pnpm --filter @repo/web exec playwright test e2e/survey-003-answer-survey.spec.ts
 [exit 0]
 
 Running 3 tests using 1 worker
 
-  ✓  1 [chromium] › survey-002-list-manage-surveys.spec.ts:34:5 › 空态：新用户进入 /surveys 后可创建第一个问卷 (10.1s)
-  ✓  2 [chromium] › survey-002-list-manage-surveys.spec.ts:41:5 › My surveys 卡片展示字段，并支持 View/Edit/Preview/Share/Activate/Pause/Delete (4.7s)
-  ✓  3 [chromium] › survey-002-list-manage-surveys.spec.ts:82:5 › Team surveys 只显示当前团队上下文内且有权限的问卷 (2.2s)
+  ✓  1 [chromium] › survey-003-answer-survey.spec.ts:40:5 › 访客打开公开答题页，完成必填校验并提交落库 (12.7s)
+  ✓  2 [chromium] › survey-003-answer-survey.spec.ts:71:5 › 未发布问卷公开链接展示不可答题态 (1.1s)
+  ✓  3 [chromium] › survey-003-answer-survey.spec.ts:82:5 › 安全回归：未发布问卷的公开答题 API 不泄露题目/选项内容（#181） (500ms)
 
-  Slow test file: [chromium] › survey-002-list-manage-surveys.spec.ts (17.0s)
-  Consider splitting slow test files to speed up parallel execution
-  3 passed (24.3s)
-[2m[WebServer] [22m(node:2320) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+  3 passed (21.2s)
+[2m[WebServer] [22m(node:2659) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
-[2m[WebServer] [22m(node:2326) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(node:2666) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
-[2m[WebServer] [22m(node:2338) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(node:2676) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
-(node:2339) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:2682) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:2339) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:2682) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-[2m[WebServer] [22m(node:2393) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(node:2708) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
-[2m[WebServer] [22m(node:2394) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(node:2717) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
-[2m[WebServer] [22m(node:2396) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(node:2718) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:2725) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:2731) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:2735) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
