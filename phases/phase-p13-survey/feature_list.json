@@ -169,9 +169,9 @@
       "title": "从 main 历史移除 9cc1c25 并按 Harness 恢复 Survey 基线",
       "user_visible_behavior": "访问 Survey 列表、创建器、公开答题页、结果与报告时，仅保留 phase p13 F01-F07 已验证能力；未经 Harness 交付的 Survey 工作台扩展被移除，页面样式和既有交互保持正常，既有 Survey 端到端回归不退化。",
       "design_ref": "phase-p13 F01-F07 已验证 UI 与 DESIGN.md tokens；本 feature 只恢复既有确认基线，不新增 UI。",
-      "status": "not_started",
+      "status": "in_progress",
       "sprint": "08",
-      "owner": null,
+      "owner": "codex-survey-clean-history",
       "capability": "CAP-WEB",
       "depends_on": [
         "F01",
