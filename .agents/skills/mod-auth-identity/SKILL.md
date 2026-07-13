@@ -35,7 +35,8 @@ phases/phase-04-identity-and-spaces、p1-profile-common；ADR-011
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
-- （待第一条回流）
+- 2026-07-10：uc-team-002 明确指定的「左侧团队头像菜单」入口在 F07 标 passing 时整行被丢，只交付了 /teams 整页 Switch 按钮——feature 级验收不够，要做需求**行级**映射（主流程/前端入口每行都有 e2e 锚点）；oldcode 的 TeamSelector.tsx 是该入口的设计参照（出处：issue #589 / PR #590）。
+- 2026-07-09：p2 Home 工作台全部 passing 却建在从未接入导航的 /home，登录落地页一直是旧占位页——「建成」不等于「可达」，交付时要验证入口接线真的指到新页面（出处：issue #481 / PR #482）。
 
 ## 知识回流规则（本文件怎么迭代——这是这个 skill 存在的意义）
 
