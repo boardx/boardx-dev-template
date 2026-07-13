@@ -234,6 +234,18 @@ agents:
     model: sonnet-5
     areas: [design]
     max_concurrent: 1
+  - id: wrk-survey-syj-1
+    active: true
+    kind: worker
+    owner: usersyj  # 开发者 usersyj(#617 onboarding 批准,2026-07-13):survey 域 worker
+    areas: [survey]
+    max_concurrent: 1
+  - id: wrk-ava-syj-1
+    active: true
+    kind: worker
+    owner: usersyj  # 开发者 usersyj(#619 onboarding 批准,2026-07-13):ava 域 worker
+    areas: [ai-core, deep-research, ai-settings]
+    max_concurrent: 1
   - id: wrk-ava-p18-1
     active: true
     kind: worker
