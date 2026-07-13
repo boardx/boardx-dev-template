@@ -16,17 +16,31 @@ description: >
 AVA 对话：线程/消息/Deep Research（双模板报告）/建议动作/语音；AI 网关与订阅能力位于 packages/ai。
 
 ## 代码地图
-- 页面：`apps/web/app/(app)/ava/page.tsx`（大文件，研究类型选单等都在这）
-- API：`apps/web/app/api/ava/`（threads/research 等）
-- 包：`packages/ai`（gateway.ts、researchGenerator.ts）；研究会话表 027/028 迁移
+- 页面：`apps/web/app/(app)/ava/page.tsx`（大文件，线程/消息/Deep Research/研究类型选单/建议动作都在这）
+- 侧车组件：`apps/web/app/(app)/ava/voice-input.tsx`（真实 MediaRecorder+AnalyserNode 录音）、
+  `attachments.tsx`（RichAttachmentPreview 富渲染，签名直链接口）
+- API：`apps/web/app/api/ava/`（threads/messages/research/capabilities/share 等）；
+  `apps/web/lib/ava-agents.ts`（Agent 选项真实数据源，内置+订阅合并，见下方 #531 教训）、
+  `apps/web/lib/mailer.ts`（分享邮件/消息邮件共用同一 dev transport + 频控）
+- 包：`packages/ai`（gateway.ts 网关+stub、researchGenerator.ts 真实生成、avaSettings.ts 归一化）；
+  研究会话表 027/028 迁移
 
 ## 关键契约与不变量（改代码前必读）
-- ANTHROPIC_API_KEY 缺失 = 诚实降级（capabilities 端点不 500，#531）。
-- researchType 贯穿：composer 选择 → research_payload.report.researchType → 刷新恢复（p18-F14）。
+- ANTHROPIC_API_KEY 缺失 = 诚实降级（capabilities 端点不 500，#531）；任何外部依赖查询
+  （AI Store 订阅、模型 provider）失败都要 try/catch 降级到内置默认，不能让异常冒泡打垮
+  整个端点。
+- researchType 贯穿：composer 显式选择 **优先于**模型输出与主题关键词推断（`explicitType ?? …`）
+  → 落 `research_payload.report.researchType` → 刷新恢复（p18-F14，PR #516）。
 - 调模型只经 packages/ai 网关，页面层不直连 Anthropic。
+- 邮件类动作（分享邮件、消息发邮件）复用同一张 `outbound_emails` 表 + 共享
+  `RateLimitedError`/`countRecentOutboundEmails`，新邮件动作接真实 provider 前必须先加频控，
+  不新建基础设施（PR #321/#359 教训）。
+- API 层任何 catch 块只 `console.error` 原始错误，绝不把 `String(err)` 回给客户端（F02/F07/F11
+  review 反复揪出的同类问题）。
 
 ## 关联阶段 / ADR / 文档
-phases/phase-p9-ava-chat、p18-ava-ai-realization、p21-ava-canvas-memory-expansion
+phases/phase-p9-ava-chat、p18-ava-ai-realization、p19-ava-canvas-memory-expansion（注意不是
+p21——p21 是 platform-accounts-hardening，与 AVA 无关，此前文档误写过）
 
 ## 模块 SOP
 1. 动手前：读本文件 + 对应 feature 的 `user_visible_behavior`/`verification`；跑 `pnpm harness doctor --phase <相关 phase>` 确认没接手一个带审计债的现场。
@@ -37,6 +51,27 @@ phases/phase-p9-ava-chat、p18-ava-ai-realization、p21-ava-canvas-memory-expans
 ## 踩坑与经验（append-only，最新在上）
 - 2026-07-12：研究类型按钮黑底黑字——`variant="default"` + 表外字号 text-12 被 tailwind-merge 吞配色（ADR-013 根治）。UI 改动记得跑 lint-design。
 - 2026-07-11：订阅查询失败曾拖垮 capabilities 端点（#531）——外部依赖失败一律降级到内置默认。
+- 2026-07-10：F14 研究类型选单上线前，主题分类曾对**每一次**研究请求都误判成
+  user-research——根因是前端固定发送同一句 audience 文案（含"user research"四个字），
+  把 audience 一起纳入关键词判定就必现同一个坑；判定只能看 topic，不能看 audience
+  （`researchGenerator.ts` 的 `inferResearchType` 与 `gateway.ts` 的 stub 判定同一口径，
+  出处：PR #516）。
+- 2026-07-09：F13 界面按 prototype/oldcode 重排版时，只迁移了交互结构（JSX 布局/组件切换
+  形态），**没有**照搬 oldcode 的 Redux 状态管理——数据层继续用现有 fetch+API routes；
+  同时刻意把全部既有 `data-testid` 保留在等价的新控件上，才没有连带打掉 15 个既有
+  e2e spec（出处：PR #477）。
+- 2026-07-08：`confirmResearchPlan()` 早期实现"乐观更新"——先切前端状态再发 PATCH 持久化，
+  Playwright 的 `.click()` 不会等待事件处理函数里的 promise，测试里立刻刷新页面就会读到
+  持久化前的旧状态，看起来像"确认后又跳回草稿"。凡是"切状态"和"持久化"两件事，务必
+  先 `await` 持久化成功再 `setState`（出处：p18-F03 交付过程）。
+- 2026-07-04：迁移文件编号在并发分支下会撞车——多个 worker 同时在各自分支上新建迁移，
+  编号只有在**合并那一刻**对照 origin/main 当前最新编号重新排列才是准的，不能在分支存活
+  期内一次编定就不再检查（024→027 的 rename 教训，出处：PR #350 review）。
+- 2026-07-04：这个仓库是共享工作目录、多会话并发，`git checkout -b` 前一定要显式
+  `git fetch origin main && ... origin/main` 指定基底——曾经因为"从当前 checkout 分支
+  新建"而误把还没合并的兄弟分支内容、甚至另一个会话直接提交在共享 checkout 上的无关
+  commit，一起带进了 PR（出处：PR #366 review，同一模式在 canvas/collab 域也各出现过
+  一次，属于系统性风险不只是 ava 特有，但 ava 域连续踩中两次）。
 
 ## 知识回流规则（本文件怎么迭代——这是这个 skill 存在的意义）
 
