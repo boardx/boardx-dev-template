@@ -146,7 +146,15 @@ export COORD_SERVICE_TOKEN=$(jq -r '.tokens["<你的身份id>"]' .harness/state/
 > 文件——那套 `<coord-id>.env` 文件仍然有效（本质是同一 token 的另一种存放），
 > 但新 mint 一律进中央文件，文档以本节为准。
 
-### 给新身份发 token（registry.yaml 加了新 agent 之后）
+### 自助领取（开发者身份的主路径，ADR-011 P2，2026-07-14 起）
+
+registry.yaml 合并（owner=你的 GitHub login）后，开发者在 **develop.boardx.us →
+加入开发 → 第 5 步**直接领取/轮换自己身份的 token——门户验 Access 身份 + registry
+归属，经 portal-broker（kind=token-broker，仅有 mint 权力）代调
+`POST /agents/:id/mint-token`。明文只显示一次；轮换使旧 token 立即失效（丢失/泄露
+自救通道）。coordinator/token-broker 身份**不可自助**，走下面的人工流程。
+
+### 人工发放（coordinator 级身份 / 自助通道不可用时）
 
 ```bash
 cd packages/coord-service

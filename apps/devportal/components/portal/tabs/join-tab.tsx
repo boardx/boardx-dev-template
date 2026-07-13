@@ -50,7 +50,6 @@ export function JoinTab() {
   const [step, setStep] = useState(1);
   const [module, setModule] = useState<string | null>(null);
   const [resp, setResp] = useState("");
-  const [copied, setCopied] = useState(false);
   const [doc, setDoc] = useState<{ name: string; title: string; markdown: string } | null>(null);
   const [docLoading, setDocLoading] = useState<string | null>(null);
   const cur = ONBOARD_STEPS[step - 1]!;
@@ -79,6 +78,56 @@ export function JoinTab() {
     window.open(url, "_blank", "noopener");
   }
 
+  // ADR-011 P2 自助领取：第 5 步进入时拉"我的身份"清单；mint 后明文只显示一次
+  const [myAgents, setMyAgents] = useState<Array<{ id: string; kind: string }> | null>(null);
+  const [brokerReady, setBrokerReady] = useState(true);
+  const [minted, setMinted] = useState<{ agentId: string; token: string } | null>(null);
+  const [minting, setMinting] = useState<string | null>(null);
+  const [tokenCopied, setTokenCopied] = useState(false);
+
+  async function loadMyAgents() {
+    try {
+      const res = await portalFetch("/api/portal/my-tokens");
+      if (!res || !res.ok) return;
+      const body = (await res.json()) as { broker_configured: boolean; agents: Array<{ id: string; kind: string }> };
+      setBrokerReady(body.broker_configured);
+      setMyAgents(body.agents);
+    } catch {
+      /* 保持 null → 显示引导而非报错 */
+    }
+  }
+
+  async function mintToken(agentId: string) {
+    setMinting(agentId);
+    try {
+      const res = await portalFetch("/api/portal/my-tokens");
+      if (!res) return; // 401 重新认证中
+      const post = await fetch("/api/portal/my-tokens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agent_id: agentId }),
+      });
+      if (!post.ok) return;
+      const body = (await post.json()) as { agent_id: string; token: string };
+      setMinted({ agentId: body.agent_id, token: body.token });
+    } finally {
+      setMinting(null);
+    }
+  }
+
+  async function copyMinted() {
+    if (!minted) return;
+    const lines = [
+      `export COORD_SERVICE_URL=https://coord-service-staging.boardx.workers.dev`,
+      `export COORD_SERVICE_TOKEN=${minted.token}`,
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(lines);
+      setTokenCopied(true);
+      setTimeout(() => setTokenCopied(false), 2000);
+    } catch { /* 页面上可手动选取 */ }
+  }
+
   async function openDoc(name: string) {
     setDocLoading(name);
     try {
@@ -89,16 +138,6 @@ export function JoinTab() {
       setDoc({ name, title: body.title, markdown: body.markdown });
     } finally {
       setDocLoading(null);
-    }
-  }
-
-  async function copyCommands() {
-    try {
-      await navigator.clipboard.writeText(CREDENTIAL_EXPORT_TEMPLATE.join("\n"));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // 剪贴板不可用（如无权限）时静默——命令文本本身就在页面上可手动选取
     }
   }
 
@@ -171,21 +210,50 @@ export function JoinTab() {
 
         {step === 5 && (
           <div className="space-y-3" data-testid="credential-step">
-            <p className="text-13 text-foreground">批准后领取凭据（当前为人工发放）：</p>
-            <ol className="list-decimal space-y-1 pl-5 text-13 text-foreground">
-              <li>仓库所有者按审批 issue 里的预填模板为你的身份 mint token；</li>
-              <li>
-                token 写入本机凭据文件 <code className="rounded-8 bg-muted px-1 text-11">.harness/state/.cache/coord-credentials.json</code>；
-              </li>
-              <li>你的会话按下方命令自取。</li>
-            </ol>
-            <div className="rounded-8 border border-border bg-surface-2 p-3 font-mono text-11 text-muted-foreground" data-testid="credential-export-template">
-              {CREDENTIAL_EXPORT_TEMPLATE.map((line) => (
-                <div key={line} className="break-all">{line}</div>
-              ))}
-            </div>
-            <Button size="sm" variant="secondary" onClick={() => void copyCommands()}>{copied ? "已复制 ✓" : "复制命令"}</Button>
-            <p className="text-11 text-muted-foreground">网页内一键发放将在自助身份系统（ADR-011 P2/P3）落地后上线——此处如实反映现状。</p>
+            <p className="text-13 text-foreground">
+              审批通过（registry.yaml 合并且 owner 是你）后，在这里直接领取 token（ADR-011 P2 自助发放）：
+            </p>
+            {myAgents === null ? (
+              <Button size="sm" onClick={() => void loadMyAgents()} data-testid="load-my-agents">
+                查看我的身份
+              </Button>
+            ) : myAgents.length === 0 ? (
+              <p className="text-13 text-muted-foreground">
+                registry 里还没有归属于你的身份——先完成第 3 步提交申请，审批合并后回到这里。
+              </p>
+            ) : (
+              <ul className="space-y-2" data-testid="my-agents-list">
+                {myAgents.map((a) => (
+                  <li key={a.id} className="flex items-center justify-between gap-2 rounded-8 border border-border bg-surface-2 px-3 py-2">
+                    <span className="text-13 text-foreground">🤖 {a.id}<span className="ml-2 text-11 text-muted-foreground">{a.kind}</span></span>
+                    <Button size="sm" variant="secondary" disabled={!brokerReady || minting === a.id} onClick={() => void mintToken(a.id)} data-testid={`mint-${a.id}`}>
+                      {minting === a.id ? "生成中…" : "领取 / 轮换 token"}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {!brokerReady && myAgents !== null && (
+              <p className="text-11 text-muted-foreground">发放通道未配置（COORD_BROKER_TOKEN）——找仓库所有者接通后即可自助领取。</p>
+            )}
+            {minted && (
+              <div className="space-y-2 rounded-8 border border-destructive/40 bg-destructive/5 p-3" data-testid="minted-token">
+                <p className="text-13 font-medium text-foreground">
+                  ⚠️ {minted.agentId} 的新 token——**只显示这一次**，立即保存到本机凭据文件；旧 token 已失效。
+                </p>
+                <div className="break-all rounded-8 bg-muted p-2 font-mono text-11 text-foreground">
+                  export COORD_SERVICE_URL=https://coord-service-staging.boardx.workers.dev<br />
+                  export COORD_SERVICE_TOKEN={minted.token}
+                </div>
+                <Button size="sm" onClick={() => void copyMinted()}>{tokenCopied ? "已复制 ✓" : "复制两行命令"}</Button>
+                <p className="text-11 text-muted-foreground">
+                  纪律不变：token 值绝不贴进 issue/PR/聊天——保存到 gitignored 文件（如 .harness/state/.cache/ 下），给 agent 只递文件路径。
+                </p>
+              </div>
+            )}
+            <p className="text-11 text-muted-foreground">
+              轮换（再次点击领取）会使该身份的旧 token 立即失效——token 丢失/疑似泄露时的自救通道。coordinator 级身份不在此列（走人类运维流程）。
+            </p>
           </div>
         )}
       </PortalCard>
