@@ -1,18 +1,18 @@
 # 进度日志 — Sprint p13/08
 
 ## 当前已验证状态(唯一真相)
-- 仓库根目录: `/private/tmp/boardx-survey-remediation`
+- 仓库根目录: `/private/tmp/boardx-survey-clean-history`
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F08 / 回退非规范 Survey 集成并恢复已验证基线
-- 当前 blocker: 无；进入实现前的 `init.sh` 基线验证被 F08 目标提交引入的 Survey 字号 lint 失败拦截。
+- 当前最高优先级未完成功能: 无；F08 已 passing
+- 当前 blocker: p13 历史 F01-F03 evidence 待补齐
 
 ## 会话记录
-### 2026-07-13 07:53:07
-- 本轮目标: 按 Harness 流程回退三笔绕过 feature/sprint/verify 的 Survey 提交。
-- 已完成: 新增原始需求与 F08，生成 sprint-08，并由 `codex-survey-remediation` 认领为唯一 `in_progress`。
-- 运行过的验证: `./init.sh`（失败前证据：`@repo/web#lint` 命中新增 Survey 页面未登记字号）。
-- 已记录证据: init 输出保留在当前任务记录；F08 正式 verify 后由 Harness 写入 evidence。
-- 提交记录: 待提交控制面与后续 revert。
-- 已知风险或未解决问题: 仓库基线 lockfile 合并损坏已用独立提交修复；F08 尚未执行 revert。
-- 下一步最佳动作: 提交控制面后依次 revert `cb09e92`、`47a3dc6`、`c43a8fb`，再运行 F08 验证。
+### 2026-07-13 17:03:00
+- 本轮目标: 从 `61e5ec1` 重建历史，使 `9cc1c25` 不再属于 main 祖先链。
+- 已完成: F08 控制面、claim 与 Harness verify；F08 已 passing。
+- 运行过的验证: 标准 `./init.sh`；`pnpm harness verify --sprint p13/08 --feature F08`。
+- 已记录证据: `evidence/F08.verify.log`。
+- 提交记录: `d930a32`、`953fb1c`；passing 状态提交待完成。
+- 已知风险或未解决问题: p13 历史 F01-F03 evidence 待 backfill。
+- 下一步最佳动作: 补证据、doctor、更新 main 并 force-with-lease 推送。
