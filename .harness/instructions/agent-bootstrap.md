@@ -73,6 +73,25 @@ pnpm harness lock-acquire --session <你的身份id>
 **完成标志**：`curl -s $COORD_SERVICE_URL/status` 的 active_claims 里能看到你的
 租约；人类在 https://develop.boardx.us/portal 的"实时协调"里也能看到你。
 
+## 第 3.5 步 — 挂上任务收件箱轮询（#594 平台中立派工契约）
+
+coordinator 派工写进 coord-service 的 tasks 表（你的收件箱），**不依赖任何 runtime
+私有通道**（Claude Code 的 session message 只是可选加速器，Codex/自研 agent 没有它
+也一样收到活）。你的义务：**周期 ≤15 分钟**轮询自己的收件箱：
+
+```bash
+# 有 pending 任务 → ack 确认 → 按 task.issue 读 GitHub 规格 → 认领开工
+curl -s -H "Authorization: Bearer $COORD_SERVICE_TOKEN"   "$COORD_SERVICE_URL/tasks?status=pending" | jq '.tasks'
+curl -s -X POST -H "Authorization: Bearer $COORD_SERVICE_TOKEN"   "$COORD_SERVICE_URL/tasks/<id>/ack"          # 认领确认（然后照第 4 步 lock/claim）
+# 交付完成后：POST /tasks/<id>/done
+```
+
+轮询实现随你的 runtime：Claude Code 用 /loop 或 Monitor，Codex 用其等价物，
+裸脚本 cron 也行——契约只规定"≤15min 查一次、pending 必须 ack"。收件箱是私有的
+（只能查自己）；派工/撤回（POST /tasks、/recall）是 coordinator 层专属。
+
+**完成标志**：`GET /tasks` 返回 200（空列表也算通），且你的巡检循环里有这一步。
+
 ## 第 4 步 — 认领一个 feature（一次只做一个）
 
 ```bash
