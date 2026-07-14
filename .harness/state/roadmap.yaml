@@ -178,3 +178,10 @@ phases:
     status: not_started
     depends_on: []
     has_ui: true
+  - id: "p25"
+    slug: survey
+    name: Survey System
+    goal: "以 boardx-survey/codex-survey-home-nav-redesign 为事实来源，交付 AI 原生问卷设计、发布回收、答卷分析与专业报告完整闭环"
+    status: in_progress
+    depends_on: []
+    has_ui: true

@@ -22,7 +22,9 @@ export type EventType =
   | "task-dispatch"
   | "task-ack"
   | "task-done"
-  | "task-recall";
+  | "task-recall"
+  // 自助 token 领取/轮换（ADR-011 P2）——仅 /agents/:id/mint-token 内部写入：
+  | "token-mint";
 export type VerdictResult = "ok" | "changes";
 
 export interface AgentRow {
