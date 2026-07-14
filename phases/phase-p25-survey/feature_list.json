@@ -168,6 +168,179 @@
       ],
       "evidence": "evidence/F07.verify.log @ 2026-07-14T08:37:14.545Z",
       "notes": "源分支 UI 已调用 sessions API，但源数据实现缺失；本 feature 在 review 中补齐悬空契约。"
+    },
+    {
+      "id": "F08",
+      "priority": 1,
+      "area": "survey",
+      "title": "同步 Survey 未提交首页与模板导航设计",
+      "user_visible_behavior": "用户进入 /surveys 时看到与 boardx-survey 未提交源状态一致的 BoardX Survey 工作台、首页/我的问卷/问卷模版导航；直接访问 /surveys?view=templates 可恢复模板管理页并查看模板统计、分类、标签和管理操作。",
+      "design_ref": "requirements/01-source-stash-ui-fidelity.md；boardx-survey codex-survey-home-nav-redesign stash@{0}",
+      "status": "passing",
+      "sprint": "08",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F02",
+        "F07"
+      ],
+      "wave": 7,
+      "verification": [
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-008-source-stash-ui.spec.ts"
+      ],
+      "evidence": "evidence/F08.verify.log @ 2026-07-14T10:01:59.039Z",
+      "notes": "仅同步 stash 中的 Survey UI/交互；保留主仓 Room/Team 权限、千问 provider 和已验证 API。"
+    },
+    {
+      "id": "F09",
+      "priority": 1,
+      "area": "survey",
+      "title": "重建题目分类、模板标签与报告规划数据契约",
+      "user_visible_behavior": "用户保存问卷或模板后，题目分类、模板标签、报告模板和分类报告规划可跨刷新恢复；owner、team 和 room 边界由服务端执行，未授权用户无法读取或修改这些配置。",
+      "design_ref": "requirements/08-dynamic-report-engine-design.md、09-category-report-composer-design.md、10-template-editor-redesign.md、11-source-capability-matrix.md",
+      "status": "passing",
+      "sprint": "09",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-DATA",
+      "depends_on": [
+        "F01"
+      ],
+      "wave": 8,
+      "verification": [
+        "pnpm --filter @repo/data run typecheck",
+        "pnpm --filter @repo/data run test -- survey-source-contract",
+        "pnpm --filter @repo/web run typecheck",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-009-source-data-contract.spec.ts"
+      ],
+      "evidence": "evidence/F09.verify.log @ 2026-07-14T13:14:38.716Z",
+      "notes": "共享热点：packages/data/src/survey.ts、surveyAi.ts、增量 migration、report-template/report-categories/template API；必须保留 026 room scope，不覆盖历史 migration。"
+    },
+    {
+      "id": "F10",
+      "priority": 1,
+      "area": "survey",
+      "title": "按源快照重建完整 Survey 工作台与五步流程",
+      "user_visible_behavior": "用户在 BoardX Survey 工作台中可进入我的问卷、问卷模板、设计问卷、设计模块、发布回收、查看答题和分析报告；URL 刷新恢复当前视图，模板编辑和全部题型设置连接真实数据，桌面与移动端不重叠。",
+      "design_ref": "ui-signoff stash tree 1eb9d7b；requirements/03-professional-survey-system.md、10-template-editor-redesign.md",
+      "status": "passing",
+      "sprint": "10",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F08",
+        "F09"
+      ],
+      "wave": 9,
+      "verification": [
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-010-source-workspace.spec.ts"
+      ],
+      "evidence": "evidence/F10.verify.log @ 2026-07-14T13:39:04.146Z",
+      "notes": "共享热点：apps/web/app/(app)/surveys/page.tsx；以源 stash 用户行为重构为可维护组件，不能只复制导航外观。"
+    },
+    {
+      "id": "F11",
+      "priority": 1,
+      "area": "survey",
+      "title": "重建千问 AI 创建、优化与可观察会话",
+      "user_visible_behavior": "用户从目标或参考内容创建问卷时，千问返回意图画布、分类题目和报告规划；优化已有问卷会产生逐项可确认的变更集；会话事件、失败、重试和确定性回退均可恢复且不跨用户泄漏。",
+      "design_ref": "requirements/04-ai-guided-survey-creation.md、05-ai-report-agent.md、06-ai-model-switching.md",
+      "status": "in_progress",
+      "sprint": "11",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-AI",
+      "depends_on": [
+        "F09",
+        "F10"
+      ],
+      "wave": 10,
+      "verification": [
+        "pnpm --filter @repo/ai run typecheck",
+        "pnpm --filter @repo/data run test -- surveyAi",
+        "pnpm --filter @repo/web run typecheck",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-011-qwen-ai-workflow.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "生产 provider 仅允许千问；测试使用确定性 stub。共享热点：packages/ai、survey AI routes、sessions/events、surveys/page.tsx。"
+    },
+    {
+      "id": "F12",
+      "priority": 1,
+      "area": "survey",
+      "title": "重建动态报告规划与分类报告编排器",
+      "user_visible_behavior": "问卷管理者可按题目分类配置报告章节、输入模块、图表类型、提示词和顺序，保存后刷新可恢复；系统只基于真实答卷生成结构化报告，零样本和低样本明确展示限制，任务进度和失败可重试。",
+      "design_ref": "requirements/05-ai-report-agent.md、08-dynamic-report-engine-design.md、09-category-report-composer-design.md",
+      "status": "pending",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AI",
+      "depends_on": [
+        "F09",
+        "F11"
+      ],
+      "wave": 11,
+      "verification": [
+        "pnpm --filter @repo/web run test -- survey-report",
+        "pnpm --filter @repo/web run typecheck",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-012-report-composer.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "共享热点：survey-report-planner/category-plan、results page、ai-report/report-template/report-categories routes；原始答卷不得全量发给客户端。"
+    },
+    {
+      "id": "F13",
+      "priority": 2,
+      "area": "survey",
+      "title": "重建专业图表、图片与多格式报告导出",
+      "user_visible_behavior": "用户在网页报告中看到与题型匹配的专业图表，可导出内容一致的 Word、真实 PDF 和 PNG；图片生成失败时报告保留文本/图表并显示可重试状态，所有下载都经过权限校验且不伪装文件格式。",
+      "design_ref": "requirements/08-dynamic-report-engine-design.md、09-category-report-composer-design.md、11-source-capability-matrix.md",
+      "status": "pending",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F12"
+      ],
+      "wave": 12,
+      "verification": [
+        "pnpm --filter @repo/web run test -- report-export",
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-013-report-export.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "需要评审源仓 echarts/docx/html2canvas 等依赖后再引入；不得恢复纯文本 application/pdf。"
+    },
+    {
+      "id": "F14",
+      "priority": 1,
+      "area": "survey",
+      "title": "完成源快照全旅程对账与安全回归",
+      "user_visible_behavior": "创建者可连续完成模板或千问创建、人工编辑、报告规划、发布、匿名或实名回收、结果分析和多格式导出；公开答题、owner/team/room 权限、零样本、模型失败和导出失败场景均有明确且可恢复的结果。",
+      "design_ref": "requirements/00 至 11；源 stash survey-001 至 survey-015 测试行为",
+      "status": "pending",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F10",
+        "F11",
+        "F12",
+        "F13"
+      ],
+      "wave": 13,
+      "verification": [
+        "pnpm --filter @repo/data run test",
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-009-source-data-contract.spec.ts e2e/survey-p25-010-source-workspace.spec.ts e2e/survey-p25-011-qwen-ai-workflow.spec.ts e2e/survey-p25-012-report-composer.spec.ts e2e/survey-p25-013-report-export.spec.ts e2e/room-rr-008-room-survey.spec.ts",
+        "pnpm harness doctor --phase p25"
+      ],
+      "evidence": "",
+      "notes": "最终对账 feature，不新增范围；任何前置 feature 未 passing 时不得认领。"
     }
   ]
 }

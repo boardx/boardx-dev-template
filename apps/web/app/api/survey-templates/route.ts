@@ -315,6 +315,11 @@ function parseQuestions(raw: unknown): TemplateQuestionInput[] {
   });
 }
 
+function parseTags(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return Array.from(new Set(raw.map((item) => String(item ?? "").trim()).filter(Boolean))).slice(0, 12);
+}
+
 export async function GET() {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
@@ -330,6 +335,7 @@ export async function GET() {
         category: "user_information",
         title: template.title,
         description: template.description,
+        tags: template.tags,
         estimatedMinutes: Math.max(1, Math.ceil(template.questions.length / 4)),
         questions: template.questions,
         reportTemplate: defaultReportTemplate(template.title),
@@ -346,6 +352,7 @@ export async function POST(req: Request) {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const title = String(body.title ?? "").trim();
     const questions = parseQuestions(body.questions);
+    const tags = parseTags(body.tags);
     if (isBlank(title)) return NextResponse.json({ errors: { title: "模板标题不能为空" } }, { status: 400 });
     if (questions.length === 0) return NextResponse.json({ errors: { questions: "模板至少需要一道题" } }, { status: 400 });
 
@@ -358,6 +365,7 @@ export async function POST(req: Request) {
       teamId,
       title,
       description: String(body.description ?? "").trim(),
+      tags,
       questions,
     });
 
@@ -369,6 +377,7 @@ export async function POST(req: Request) {
         category: "user_information",
         title: template.title,
         description: template.description,
+        tags: template.tags,
         estimatedMinutes: Math.max(1, Math.ceil(template.questions.length / 4)),
         questions: template.questions,
         reportTemplate: defaultReportTemplate(template.title),
