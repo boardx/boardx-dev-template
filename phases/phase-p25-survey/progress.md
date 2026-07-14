@@ -4,7 +4,7 @@
 - 仓库根目录: `/private/tmp/boardx-p25-survey-system`
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F02 / AI 原生 Survey 工作台、模板与编辑器
+- 当前最高优先级未完成功能: 无，F01-F06 全部 passing
 - 当前 blocker: 无
 
 ## 会话记录
@@ -16,3 +16,12 @@
 - 提交记录: 待本轮 checkpoint commit。
 - 已知风险或未解决问题: 源分支 AI 路由引用未实现的数据会话函数，不能直接复制；F02 需按仓库 AI gateway 契约实现。
 - 下一步最佳动作: 创建 Sprint 02，认领 F02，接通模板库、千问 AI 草稿和编辑器保存闭环。
+
+### 2026-07-14 16:21:00
+- 本轮目标: 完成 Survey 全功能同步并按 Harness 交付。
+- 已完成: F01-F06 全部 passing；同步专业工作台/模板/编辑器/公开答题/结果报告；接入千问兼容接口；持久化 AI session、trace 与报告产物；修正伪 PDF 为浏览器 Print/PDF。
+- 运行过的验证: 61 个 data tests；web lint/typecheck；10 个 p25 Playwright；`verify:base`；`harness doctor --phase p25`。
+- 已记录证据: `sprints/sprint-01` 至 `sprint-06/evidence/F*.verify.log`。
+- 提交记录: `07469d4`、`9329374`，最终收尾提交待生成。
+- 已知风险或未解决问题: 真实千问调用需部署环境配置 `DASHSCOPE_API_KEY` 或 `QWEN_API_KEY`；DOCX/长图/单图不在源分支当前实现中，未标记完成。
+- 下一步最佳动作: review 后推送 `codex/p25-survey-system`，创建关联 #617 的 PR 到 main。

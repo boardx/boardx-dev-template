@@ -124,7 +124,7 @@
       "title": "Survey 全生命周期验收与降级保护",
       "user_visible_behavior": "从创建、AI 生成、编辑、发布、公开回收、结果分析到报告下载可连续完成；未授权访问被拒绝，模型、数据库或产物生成失败时页面提供明确可恢复状态，既有 Room 与 Survey 能力不退化。",
       "design_ref": "requirements E2E-1 至 E2E-8、NFR、错误与降级规范",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "06",
       "owner": "wrk-survey-1",
       "capability": "CAP-WEB",
@@ -143,7 +143,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/survey-p25-001-source-baseline.spec.ts e2e/survey-p25-002-professional-ui.spec.ts e2e/survey-p25-005-export-artifacts.spec.ts",
         "pnpm harness doctor --phase p25"
       ],
-      "evidence": "",
+      "evidence": "evidence/F06.verify.log @ 2026-07-14T08:20:34.379Z",
       "notes": "最终 feature 只做跨能力验收、回归和错误恢复，不掩盖前置 feature 未完成状态。"
     }
   ]
