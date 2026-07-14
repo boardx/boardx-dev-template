@@ -25,7 +25,15 @@ function fillFor(id: string | number) {
   return TAG_FILLS[h % TAG_FILLS.length];
 }
 
-function AgentCard({ agent }: { agent: Agent }) {
+function AgentCard({
+  agent,
+  onQuickChat,
+  launching,
+}: {
+  agent: Agent;
+  onQuickChat: (agent: Agent) => void;
+  launching: boolean;
+}) {
   return (
     <div
       data-testid={`agent-${agent.id}`}
@@ -45,9 +53,12 @@ function AgentCard({ agent }: { agent: Agent }) {
         <Button
           variant="outline"
           size="sm"
+          data-testid={`quick-chat-${agent.id}`}
+          disabled={launching}
+          onClick={() => onQuickChat(agent)}
           className="h-auto whitespace-nowrap rounded-7 border-foreground px-2.75 py-1.25 text-xs hover:bg-primary hover:text-primary-foreground"
         >
-          Quick chat
+          {launching ? "Starting…" : "Quick chat"}
         </Button>
       </div>
     </div>
@@ -82,6 +93,38 @@ export function HomeWorkbench() {
   const [recentBoards, setRecentBoards] = useState<{ id: number | string; public_id: string; name: string }[]>([]);
   const [guideDismissed, setGuideDismissed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [lastThread, setLastThread] = useState<{ id: number; title: string } | null>(null);
+  // p2-F06：快捷入口启动态——launching 记录当前正在创建线程的入口 key（agent-<id> /
+  // launch-<kind>），防重复点击；失败停留 Home 并给出可重试的错误条。
+  const [launching, setLaunching] = useState<string | null>(null);
+  const [launchError, setLaunchError] = useState("");
+
+  async function launchThread(key: string, title: string, buildUrl: (threadId: number) => string) {
+    if (launching) return;
+    setLaunching(key);
+    setLaunchError("");
+    try {
+      const res = await fetch("/api/ava/threads", { method: "POST" });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const threadId: number = data.thread?.id;
+      if (!threadId) throw new Error();
+      // 线程名写入失败不阻塞跳转（AVA 内可随时重命名）。
+      await fetch(`/api/ava/threads/${threadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      }).catch(() => undefined);
+      router.push(buildUrl(threadId));
+    } catch {
+      setLaunchError("Failed to start the conversation — please try again.");
+      setLaunching(null);
+    }
+  }
+
+  function quickChat(agent: Agent) {
+    void launchThread(`agent-${agent.id}`, `Chat with ${agent.name}`, (tid) => `/ava?threadId=${tid}&agentItemId=${agent.id}`);
+  }
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.localStorage.getItem("home_guide_dismissed") === "1") {
@@ -128,10 +171,16 @@ export function HomeWorkbench() {
         tags: it.tags ?? [],
         source: it.scope,
       });
-      const [subRes, recRes] = await Promise.all([
+      const [subRes, recRes, thRes] = await Promise.all([
         fetch("/api/ai-store/items?subscribed=me"),
         fetch("/api/ai-store/items?type=agent&pageSize=50"),
+        fetch("/api/ava/threads?limit=1"),
       ]);
+      if (thRes.ok) {
+        const th = await thRes.json();
+        const t = (th.threads ?? [])[0];
+        if (alive && t) setLastThread({ id: t.id, title: t.title });
+      }
       const sub = subRes.ok ? await subRes.json() : { items: [] };
       const rec = recRes.ok ? await recRes.json() : { items: [] };
       const subscribed: Agent[] = (sub.items ?? []).filter((it: StoreItem) => it.type === "agent").map(toAgent);
@@ -172,7 +221,54 @@ export function HomeWorkbench() {
             Team · <span data-testid="home-team">{teamName}</span>
           </p>
         )}
+        {lastThread && (
+          <Button
+            size="sm"
+            variant="secondary"
+            data-testid="continue-last-thread"
+            className="mt-2 self-start"
+            onClick={() => router.push(`/ava?threadId=${lastThread.id}`)}
+          >
+            Continue last conversation · {lastThread.title}
+          </Button>
+        )}
       </section>
+
+      {/* p2-F06：推荐功能启动器——一键建线程并跳 AVA 对应模式 */}
+      <div className="mt-4 flex flex-wrap gap-2" data-testid="feature-launchers">
+        <Button
+          size="sm"
+          variant="outline"
+          data-testid="launch-user-research"
+          disabled={launching !== null}
+          onClick={() => void launchThread("launch-user-research", "用户研究", (tid) => `/ava?threadId=${tid}&mode=research&researchType=user-research`)}
+        >
+          用户研究
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          data-testid="launch-deep-research"
+          disabled={launching !== null}
+          onClick={() => void launchThread("launch-deep-research", "深度研究", (tid) => `/ava?threadId=${tid}&mode=research&researchType=market`)}
+        >
+          深度研究
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          data-testid="launch-transcription"
+          disabled={launching !== null}
+          onClick={() => void launchThread("launch-transcription", "实时转录", (tid) => `/ava?threadId=${tid}`)}
+        >
+          实时转录
+        </Button>
+      </div>
+      {launchError && (
+        <p data-testid="launch-error" className="mt-2 text-13 text-destructive">
+          {launchError}
+        </p>
+      )}
 
       {/* 搜索框 */}
       <div className="relative mt-5.5">
@@ -288,7 +384,12 @@ export function HomeWorkbench() {
               ) : (
                 <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
                   {items.map((a) => (
-                    <AgentCard key={String(a.id)} agent={a} />
+                    <AgentCard
+                      key={String(a.id)}
+                      agent={a}
+                      onQuickChat={quickChat}
+                      launching={launching === `agent-${a.id}`}
+                    />
                   ))}
                 </div>
               )}

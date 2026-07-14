@@ -95,14 +95,14 @@
       "area": "home-page",
       "title": "Agent 快捷对话 / 继续上次对话 / 推荐功能启动",
       "user_visible_behavior": "点击 Agent 卡片「快捷对话」按其配置创建/转换 AVA 线程（写线程名、Agent、模型、研究类型）并跳转 AVA 聊天；欢迎区「继续上次对话」在有当前线程时出现并跳回该线程；推荐功能区「用户研究/深度研究/实时转录」分别创建对应 research_type 的 AVA 线程并跳转；创建中防重复点击、失败停留 Home 可重试。",
-      "status": "blocked",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "03",
+      "owner": "coord-platform",
       "capability": "CAP-AI",
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/home-quick-chat.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F06.verify.log @ 2026-07-14T09:07:20.129Z",
       "notes": "uc-home-006/007/008。blocked_on p11:F03（AI Store「订阅并使用项目」，负责把 Agent 带入 AVA 会话的使用入口，当前 in_progress）。【2026-07-05 p21-F06 修正】此前笼统写「blocked-on p9（AVA 线程创建/聊天页）」，核实后 p9:F01 已 passing，AVA 线程创建/聊天页本身已具备条件，真正卡住的是 p11:F03 尚未把 Agent 使用入口接通到 AVA 会话。本期仅渲染按钮与禁用态占位；接通在 p11:F03 转 passing 后。"
     },
     {

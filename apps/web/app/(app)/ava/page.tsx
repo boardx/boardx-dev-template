@@ -395,6 +395,21 @@ export default function AvaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // p2-F06：Home 快捷入口深链——?threadId=N 直接打开该线程；?mode=research（可带
+  // researchType=market|user-research）把 composer 预置到对应研究类型。只在挂载时读一次。
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tid = Number(params.get("threadId"));
+    if (Number.isFinite(tid) && tid > 0) void openThread(tid);
+    const rt = params.get("researchType");
+    if (params.get("mode") === "research") {
+      setComposerMode("research");
+      if (rt === "market" || rt === "user-research") setResearchType(rt);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // uc-ai-store-003：AI Store「使用 Agent / 使用 AI Tool」入口——带 agentItemId/toolItemId
   // 查询参数进入 /ava 时，把该 Store 项目的名称/描述预填进 composer 草稿，用户确认后发送即
   // 带着该资源上下文开启新会话（新建线程 + 首条消息里显式带入资源信息）。
