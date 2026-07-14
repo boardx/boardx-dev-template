@@ -49,6 +49,7 @@ export interface SurveyQuestion {
   type: QuestionType;
   required: boolean;
   options: string[];
+  category: string;
 }
 
 export interface SurveyWithQuestions extends Survey {
@@ -70,6 +71,7 @@ export interface SurveyTemplate {
   builtin: boolean;
   title: string;
   description: string;
+  tags: string[];
   questions: NewQuestionInput[];
   created_at: string;
   updated_at: string;
@@ -96,16 +98,62 @@ export interface SurveyReportTemplate extends SurveyReportTemplateInput {
   updated_at: string;
 }
 
+export type ReportInputMode = "text" | "chat" | "chart" | "image";
+export type SurveyReportChartType =
+  | "bar" | "grouped_bar" | "stacked_bar" | "line" | "area" | "pie" | "doughnut" | "rose"
+  | "scatter" | "radar" | "heatmap" | "treemap" | "funnel" | "gauge" | "waterfall"
+  | "histogram" | "boxplot" | "matrix" | "kpi" | "text";
+export type SurveyReportChartStyle = "auto" | "business" | "minimal" | "editorial" | "presentation" | "dark";
+
+export interface SurveyReportChartConfig {
+  primaryColor: string;
+  maxDimensions: number;
+  sort: "none" | "asc" | "desc";
+  showLabels: boolean;
+  showLegend: boolean;
+  orientation: "vertical" | "horizontal";
+}
+
+export interface SurveyReportCategoryInput {
+  id: string;
+  name: string;
+  description: string;
+  questionIds: number[];
+  inputModes: ReportInputMode[];
+  chartType?: SurveyReportChartType;
+  chartStyle?: SurveyReportChartStyle;
+  chartConfig?: SurveyReportChartConfig;
+  dataPrompt?: string;
+  modulePrompts?: Partial<Record<ReportInputMode, string>>;
+  prompt: string;
+  order: number;
+  isCustom: boolean;
+}
+
+export interface SurveyReportCategoryPlanInput {
+  title: string;
+  description: string;
+  categories: SurveyReportCategoryInput[];
+}
+
+export interface SurveyReportCategoryPlan extends SurveyReportCategoryPlanInput {
+  id: number;
+  survey_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
 const SURVEY_COLS =
   "id, team_id, room_id, scope, title, description, is_active, response_mode, publish_start_at, publish_end_at, response_limit, one_response_per_user, confirmation_message, owner_user_id, created_at, updated_at";
-const QUESTION_COLS = "id, survey_id, position, title, type, required, options";
-const TEMPLATE_COLS = "id, team_id, owner_user_id, builtin, title, description, questions, created_at, updated_at";
+const QUESTION_COLS = "id, survey_id, position, title, type, required, options, category";
+const TEMPLATE_COLS = "id, team_id, owner_user_id, builtin, title, description, tags, questions, created_at, updated_at";
 
 export interface NewQuestionInput {
   title: string;
   type: QuestionType;
   required: boolean;
   options: string[];
+  category?: string;
 }
 
 /** 标题去首尾空白后是否非空（纯函数，可单测）。 */
@@ -115,6 +163,144 @@ export function isBlank(title: string | null | undefined): boolean {
 
 const REPORT_TEMPLATE_COLS =
   'id, survey_id, title, sections, metrics, chart_slots AS "chartSlots", caveats, created_at, updated_at';
+const REPORT_CATEGORY_PLAN_COLS =
+  'id, survey_id, category_plan AS "categoryPlan", created_at, updated_at';
+
+const REPORT_INPUT_MODES = new Set<ReportInputMode>(["text", "chat", "chart", "image"]);
+const REPORT_CHART_TYPES = new Set<SurveyReportChartType>([
+  "bar", "grouped_bar", "stacked_bar", "line", "area", "pie", "doughnut", "rose", "scatter", "radar",
+  "heatmap", "treemap", "funnel", "gauge", "waterfall", "histogram", "boxplot", "matrix", "kpi", "text",
+]);
+const REPORT_CHART_STYLES = new Set<SurveyReportChartStyle>(["auto", "business", "minimal", "editorial", "presentation", "dark"]);
+
+function cleanReportInputModes(raw: unknown): ReportInputMode[] {
+  if (!Array.isArray(raw)) return ["text"];
+  const modes = raw.filter((item): item is ReportInputMode => REPORT_INPUT_MODES.has(item as ReportInputMode));
+  return Array.from(new Set(modes)).slice(0, 4).length ? Array.from(new Set(modes)).slice(0, 4) : ["text"];
+}
+
+function cleanReportChartConfig(raw: unknown): SurveyReportChartConfig {
+  const source = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+  const color = String(source.primaryColor ?? "#4f6edb").trim().toLowerCase();
+  const sort = ["none", "asc", "desc"].includes(String(source.sort)) ? source.sort as SurveyReportChartConfig["sort"] : "none";
+  return {
+    primaryColor: /^#[0-9a-f]{6}$/.test(color) ? color : "#4f6edb",
+    maxDimensions: Math.min(12, Math.max(1, Number(source.maxDimensions) || 6)),
+    sort,
+    showLabels: source.showLabels !== false,
+    showLegend: source.showLegend === true,
+    orientation: source.orientation === "horizontal" ? "horizontal" : "vertical",
+  };
+}
+
+function stableCategoryId(name: string, index: number): string {
+  const slug = name.trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-").replace(/^-|-$/g, "");
+  return slug ? `cat-${index + 1}-${slug.slice(0, 32)}` : `cat-${index + 1}`;
+}
+
+function inferReportInputModes(questions: SurveyQuestion[]): ReportInputMode[] {
+  const types = new Set(questions.map((question) => question.type));
+  const modes = new Set<ReportInputMode>();
+  if ([...types].some((type) => ["single", "multiple", "dropdown", "rating", "linear_scale", "nps", "number"].includes(type))) modes.add("chart");
+  if ([...types].some((type) => ["text", "short_text"].includes(type))) modes.add("text");
+  if (types.has("file")) modes.add("image");
+  modes.add("text");
+  return (["image", "chart", "text"] as ReportInputMode[]).filter((mode) => modes.has(mode));
+}
+
+export function defaultSurveyReportCategoryPlan(title: string, questions: SurveyQuestion[] = []): SurveyReportCategoryPlanInput {
+  const buckets = new Map<string, SurveyQuestion[]>();
+  questions.forEach((question, index) => {
+    const name = question.category.trim() || question.title.trim() || `问题 ${index + 1}`;
+    buckets.set(name, [...(buckets.get(name) ?? []), question]);
+  });
+  return {
+    title: `${title.trim() || "未命名问卷"} 专业报告`,
+    description: "按问卷问题分类生成报告结构，可为每类选择图片、报表和文本输入方式。",
+    categories: [...buckets.entries()].map(([name, items], index) => ({
+      id: stableCategoryId(name, index),
+      name: name.slice(0, 48),
+      description: `围绕「${name}」下的 ${items.length} 个问题生成报告内容。`,
+      questionIds: items.map((question) => question.id),
+      inputModes: inferReportInputModes(items),
+      chartType: items.some((question) => ["single", "multiple", "dropdown", "rating", "linear_scale", "nps", "number"].includes(question.type)) ? "bar" : undefined,
+      prompt: `基于「${name}」分类下的题目和答卷数据生成专业分析。`,
+      order: index + 1,
+      isCustom: false,
+    })),
+  };
+}
+
+export function cleanSurveyReportCategoryPlan(input: unknown, surveyTitle: string, questions: SurveyQuestion[] = []): SurveyReportCategoryPlanInput {
+  const body = input && typeof input === "object" ? input as Record<string, unknown> : {};
+  const fallback = defaultSurveyReportCategoryPlan(surveyTitle, questions);
+  const validIds = new Set(questions.map((question) => question.id));
+  const raw = Array.isArray(body.categories) ? body.categories : fallback.categories;
+  const categories = raw.map((value, index) => {
+    const item = value && typeof value === "object" ? value as Record<string, unknown> : {};
+    const name = String(item.name ?? `报告分类 ${index + 1}`).trim().slice(0, 48) || `报告分类 ${index + 1}`;
+    const questionIds = Array.isArray(item.questionIds)
+      ? Array.from(new Set(item.questionIds.map(Number).map((id) => validIds.has(id) ? id : questions.find((question) => question.position + 1 === id)?.id).filter((id): id is number => id != null)))
+      : [];
+    const modulePrompts = Object.fromEntries((["text", "chat", "chart", "image"] as ReportInputMode[])
+      .map((mode) => [mode, String((item.modulePrompts as Record<string, unknown> | undefined)?.[mode] ?? "").trim().slice(0, 1000)])
+      .filter(([, value]) => value));
+    return {
+      id: String(item.id ?? stableCategoryId(name, index)).trim().slice(0, 80),
+      name,
+      description: String(item.description ?? "").trim().slice(0, 240),
+      questionIds,
+      inputModes: cleanReportInputModes(item.inputModes),
+      chartType: REPORT_CHART_TYPES.has(item.chartType as SurveyReportChartType) ? item.chartType as SurveyReportChartType : undefined,
+      chartStyle: REPORT_CHART_STYLES.has(item.chartStyle as SurveyReportChartStyle) ? item.chartStyle as SurveyReportChartStyle : "auto",
+      chartConfig: cleanReportChartConfig(item.chartConfig),
+      dataPrompt: String(item.dataPrompt ?? "").trim().slice(0, 1000),
+      modulePrompts,
+      prompt: String(item.prompt ?? `围绕「${name}」生成专业报告内容。`).trim().slice(0, 1000),
+      order: Number.isFinite(Number(item.order)) ? Number(item.order) : index + 1,
+      isCustom: item.isCustom === true,
+    };
+  }).sort((a, b) => a.order - b.order).map((category, index) => ({ ...category, order: index + 1 }));
+  const assigned = new Set(categories.flatMap((category) => category.questionIds));
+  for (const question of questions) {
+    if (assigned.has(question.id) || categories.length === 0) continue;
+    const matching = categories.find((category) => question.category && category.name.includes(question.category)) ?? categories[0];
+    matching?.questionIds.push(question.id);
+  }
+  return {
+    title: String(body.title ?? fallback.title).trim().slice(0, 120) || fallback.title,
+    description: String(body.description ?? fallback.description).trim().slice(0, 300) || fallback.description,
+    categories,
+  };
+}
+
+type SurveyReportCategoryPlanRow = Omit<SurveyReportCategoryPlan, "title" | "description" | "categories"> & {
+  categoryPlan: SurveyReportCategoryPlanInput;
+};
+
+export async function upsertSurveyReportCategoryPlan(surveyId: number, input: SurveyReportCategoryPlanInput): Promise<SurveyReportCategoryPlan> {
+  const rows = await query<SurveyReportCategoryPlanRow>(
+    `INSERT INTO survey_report_templates (survey_id, title, sections, metrics, chart_slots, caveats, category_plan)
+     VALUES ($1, $2, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, $3::jsonb)
+     ON CONFLICT (survey_id) DO UPDATE SET category_plan = EXCLUDED.category_plan, updated_at = now()
+     RETURNING ${REPORT_CATEGORY_PLAN_COLS}`,
+    [surveyId, input.title.trim() || "问卷专业报告", JSON.stringify(input)]
+  );
+  const row = rows[0]!;
+  return { id: row.id, survey_id: row.survey_id, ...row.categoryPlan, created_at: row.created_at, updated_at: row.updated_at };
+}
+
+export async function getSurveyReportCategoryPlan(surveyId: number): Promise<SurveyReportCategoryPlan | undefined> {
+  const rows = await query<SurveyReportCategoryPlanRow>(`SELECT ${REPORT_CATEGORY_PLAN_COLS} FROM survey_report_templates WHERE survey_id = $1`, [surveyId]);
+  const row = rows[0];
+  return row ? { id: row.id, survey_id: row.survey_id, ...row.categoryPlan, created_at: row.created_at, updated_at: row.updated_at } : undefined;
+}
+
+export async function ensureSurveyReportCategoryPlan(surveyId: number, surveyTitle: string, questions: SurveyQuestion[] = []): Promise<SurveyReportCategoryPlan> {
+  const existing = await getSurveyReportCategoryPlan(surveyId);
+  if (existing?.categories.length) return existing;
+  return upsertSurveyReportCategoryPlan(surveyId, defaultSurveyReportCategoryPlan(surveyTitle, questions));
+}
 
 export function defaultSurveyReportTemplate(title: string): SurveyReportTemplateInput {
   const cleanTitle = title.trim() || "未命名问卷";
@@ -186,10 +372,10 @@ export async function createSurvey(
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i]!;
       const rows = await client.query<SurveyQuestion>(
-        `INSERT INTO survey_questions (survey_id, position, title, type, required, options)
-         VALUES ($1, $2, $3, $4, $5, $6::jsonb)
+        `INSERT INTO survey_questions (survey_id, position, title, type, required, options, category)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
          RETURNING ${QUESTION_COLS}`,
-        [survey.id, i, q.title, q.type, q.required, JSON.stringify(q.options)]
+        [survey.id, i, q.title, q.type, q.required, JSON.stringify(q.options), q.category ?? ""]
       );
       savedQuestions.push(rows.rows[0]!);
     }
@@ -452,9 +638,9 @@ export async function replaceSurveyQuestions(
     for (let position = 0; position < questions.length; position += 1) {
       const question = questions[position]!;
       const result = await client.query<SurveyQuestion>(
-        `INSERT INTO survey_questions (survey_id, position, title, type, required, options)
-         VALUES ($1, $2, $3, $4, $5, $6::jsonb) RETURNING ${QUESTION_COLS}`,
-        [surveyId, position, question.title, question.type, question.required, JSON.stringify(question.options)]
+        `INSERT INTO survey_questions (survey_id, position, title, type, required, options, category)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7) RETURNING ${QUESTION_COLS}`,
+        [surveyId, position, question.title, question.type, question.required, JSON.stringify(question.options), question.category ?? ""]
       );
       saved.push(result.rows[0]!);
     }
@@ -516,13 +702,14 @@ export async function createSurveyTemplate(input: {
   teamId: number;
   title: string;
   description: string;
+  tags?: string[];
   questions: NewQuestionInput[];
 }): Promise<SurveyTemplate> {
   const rows = await query<SurveyTemplate>(
-    `INSERT INTO survey_templates (team_id, owner_user_id, builtin, title, description, questions)
-     VALUES ($1, $2, false, $3, $4, $5::jsonb)
+    `INSERT INTO survey_templates (team_id, owner_user_id, builtin, title, description, tags, questions)
+     VALUES ($1, $2, false, $3, $4, $5::text[], $6::jsonb)
      RETURNING ${TEMPLATE_COLS}`,
-    [input.teamId, input.ownerId, input.title, input.description, JSON.stringify(input.questions)]
+    [input.teamId, input.ownerId, input.title, input.description, input.tags ?? [], JSON.stringify(input.questions)]
   );
   return rows[0]!;
 }

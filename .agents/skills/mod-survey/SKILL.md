@@ -41,6 +41,9 @@ phases/phase-p13-survey
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-14：移植独立 Survey 源仓的数据契约时，`survey_templates` 的个人模板模型不能直接覆盖主仓团队模板模型；
+  应增量加入 `tags`/`category_plan`，并继续用 `canViewSurvey` + `canManageSurveyScope` 执行 team/room 边界
+  （出处：phase-p25 F09 / PR #637）。
 - 2026-07-14：用户要求同步“包括未提交内容”时，源事实必须核对 `git status` 和 `git stash list/show`；
   只读取分支 HEAD 会漏掉 stash 中已完成但未提交的首页/导航设计。同步前应记录源 commit、stash 标识和目标文件哈希
   （出处：phase-p25 F08）。

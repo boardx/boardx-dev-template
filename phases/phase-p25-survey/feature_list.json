@@ -200,11 +200,13 @@
       "title": "重建题目分类、模板标签与报告规划数据契约",
       "user_visible_behavior": "用户保存问卷或模板后，题目分类、模板标签、报告模板和分类报告规划可跨刷新恢复；owner、team 和 room 边界由服务端执行，未授权用户无法读取或修改这些配置。",
       "design_ref": "requirements/08-dynamic-report-engine-design.md、09-category-report-composer-design.md、10-template-editor-redesign.md、11-source-capability-matrix.md",
-      "status": "pending",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "09",
+      "owner": "wrk-survey-1",
       "capability": "CAP-DATA",
-      "depends_on": ["F01"],
+      "depends_on": [
+        "F01"
+      ],
       "wave": 8,
       "verification": [
         "pnpm --filter @repo/data run typecheck",
@@ -212,7 +214,7 @@
         "pnpm --filter @repo/web run typecheck",
         "pnpm --filter @repo/web exec playwright test e2e/survey-p25-009-source-data-contract.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F09.verify.log @ 2026-07-14T13:14:38.716Z",
       "notes": "共享热点：packages/data/src/survey.ts、surveyAi.ts、增量 migration、report-template/report-categories/template API；必须保留 026 room scope，不覆盖历史 migration。"
     },
     {
@@ -226,7 +228,10 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-WEB",
-      "depends_on": ["F08", "F09"],
+      "depends_on": [
+        "F08",
+        "F09"
+      ],
       "wave": 9,
       "verification": [
         "pnpm --filter @repo/web run lint",
@@ -247,7 +252,10 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-AI",
-      "depends_on": ["F09", "F10"],
+      "depends_on": [
+        "F09",
+        "F10"
+      ],
       "wave": 10,
       "verification": [
         "pnpm --filter @repo/ai run typecheck",
@@ -269,7 +277,10 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-AI",
-      "depends_on": ["F09", "F11"],
+      "depends_on": [
+        "F09",
+        "F11"
+      ],
       "wave": 11,
       "verification": [
         "pnpm --filter @repo/web run test -- survey-report",
@@ -290,7 +301,9 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-WEB",
-      "depends_on": ["F12"],
+      "depends_on": [
+        "F12"
+      ],
       "wave": 12,
       "verification": [
         "pnpm --filter @repo/web run test -- report-export",
@@ -312,7 +325,12 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-WEB",
-      "depends_on": ["F10", "F11", "F12", "F13"],
+      "depends_on": [
+        "F10",
+        "F11",
+        "F12",
+        "F13"
+      ],
       "wave": 13,
       "verification": [
         "pnpm --filter @repo/data run test",

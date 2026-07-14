@@ -41,7 +41,8 @@ function parseQuestions(raw: unknown): NewQuestionInput[] | undefined {
     const options = Array.isArray(value.options)
       ? value.options.map((option) => String(option ?? "").trim()).filter(Boolean)
       : [];
-    return [{ title, type, required: value.required === true, options }];
+    const category = String(value.category ?? "").trim().replace(/\s+/g, " ").slice(0, 24);
+    return [{ title, type, required: value.required === true, options, ...(category ? { category } : {}) }];
   });
 }
 

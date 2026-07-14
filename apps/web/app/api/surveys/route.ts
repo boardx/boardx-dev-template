@@ -52,7 +52,8 @@ function parseQuestions(raw: unknown): NewQuestionInput[] {
     const options = Array.isArray(obj.options)
       ? obj.options.map((o) => String(o ?? "").trim()).filter(Boolean)
       : [];
-    out.push({ title, type, required: obj.required === true, options });
+    const category = String(obj.category ?? "").trim().replace(/\s+/g, " ").slice(0, 24);
+    out.push({ title, type, required: obj.required === true, options, ...(category ? { category } : {}) });
   }
   return out;
 }
