@@ -248,9 +248,9 @@
       "title": "重建千问 AI 创建、优化与可观察会话",
       "user_visible_behavior": "用户从目标或参考内容创建问卷时，千问返回意图画布、分类题目和报告规划；优化已有问卷会产生逐项可确认的变更集；会话事件、失败、重试和确定性回退均可恢复且不跨用户泄漏。",
       "design_ref": "requirements/04-ai-guided-survey-creation.md、05-ai-report-agent.md、06-ai-model-switching.md",
-      "status": "pending",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "11",
+      "owner": "wrk-survey-1",
       "capability": "CAP-AI",
       "depends_on": [
         "F09",
