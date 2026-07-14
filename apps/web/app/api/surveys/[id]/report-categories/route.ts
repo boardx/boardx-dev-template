@@ -144,6 +144,9 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   }
 
   const cleaned = cleanSurveyReportCategoryPlan(classified, loaded.survey.title, loaded.survey.questions);
-  const reportCategoryPlan = await upsertSurveyReportCategoryPlan(surveyId, cleaned);
+  const plan = cleaned.categories.length
+    ? cleaned
+    : defaultSurveyReportCategoryPlan(loaded.survey.title, loaded.survey.questions);
+  const reportCategoryPlan = await upsertSurveyReportCategoryPlan(surveyId, plan);
   return NextResponse.json({ reportCategoryPlan, model, generatedBy: "llm" });
 }
