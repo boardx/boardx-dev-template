@@ -207,3 +207,4 @@ export async function getJob(id: string): Promise<Job | undefined> {
 export async function setJobStatus(id: string, status: JobStatus): Promise<void> {
   await query("UPDATE jobs SET status = $2, updated_at = now() WHERE id = $1", [id, status]);
 }
+export * from "./teamMemories";

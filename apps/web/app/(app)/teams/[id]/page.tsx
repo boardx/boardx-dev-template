@@ -144,6 +144,7 @@ export default function TeamHomePage() {
           <EntryCard testid="entry-general" title="Team General" description="Rename, description and team lifecycle." href="/teams" />
           <EntryCard testid="entry-members" title="Team Members" description="Invite, roles and membership." href="/teams" />
           <EntryCard testid="entry-credits" title="Team Credits" description="Wallet, usage and transactions." href="/credits" />
+          <EntryCard testid="entry-memory" title="Team Memory" description="Reusable AI collaboration context." href={`/teams/${teamId}/memory`} />
           <EntryCard testid="entry-knowledge" title="Knowledge Base" description="Team knowledge and files." href="/knowledge-base" />
           <EntryCard testid="entry-surveys" title="Team Surveys" description="Create and analyze surveys." href="/surveys" />
         </div>

@@ -259,17 +259,17 @@
       "id": "F13",
       "priority": 20,
       "area": "team",
-      "title": "[DEFERRED] 团队 Memory",
+      "title": "团队 Memory",
       "user_visible_behavior": "团队级 Memory 列表：搜索/新增/删除团队可复用的 AI 协作上下文信息。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "06",
+      "owner": "coord-platform",
       "capability": "CAP-AI",
       "verification": [
-        "echo 'DEFERRED：team_memories 数据模型不存在，packages/memory 是 harness 自身会话记忆基础设施，apps/web 无任何引用，与团队级 Memory 无关，本阶段不实现' && false"
+        "pnpm --filter @repo/web exec playwright test e2e/team-013-memory.spec.ts"
       ],
-      "evidence": "",
-      "notes": "uc-team-009。phase-p21 F04 复核 2026-07-05：原 F13 覆盖 uc-team-007/008/009/010 四条用例，007 已在 commit f603f45 实现却从未回填（拆分为 F15，已 passing）；008/010 依赖的 AI/AI Store 平面已具备条件（拆分为 F16，改列 not_started）；只有 009（团队 Memory）仍因 team_memories 表缺失继续 DEFERRED，本记录范围收窄为仅 uc-team-009。",
+      "evidence": "evidence/F13.verify.log @ 2026-07-14T09:45:10.613Z",
+      "notes": "uc-team-009。phase-p21 F04 复核 2026-07-05：原 F13 覆盖 uc-team-007/008/009/010 四条用例，007 已在 commit f603f45 实现却从未回填（拆分为 F15，已 passing）；008/010 依赖的 AI/AI Store 平面已具备条件（拆分为 F16，改列 not_started）；只有 009（团队 Memory）仍因 team_memories 表缺失继续 DEFERRED，本记录范围收窄为仅 uc-team-009。 2026-07-14（#600 第5项）：评估结论——packages/memory 是 agent 运行时的文件级三层记忆抽象（node fs），不适配多用户团队场景，不直接复用；按 uc-team-009 落地 team_memories 表（036 迁移）+ /api/teams/[id]/memories + /teams/[id]/memory 页面。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/team/uc-team-009-manage-team-memory.md"
       ]
