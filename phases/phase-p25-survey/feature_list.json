@@ -145,6 +145,29 @@
       ],
       "evidence": "evidence/F06.verify.log @ 2026-07-14T08:20:34.379Z",
       "notes": "最终 feature 只做跨能力验收、回归和错误恢复，不掩盖前置 feature 未完成状态。"
+    },
+    {
+      "id": "F07",
+      "priority": 1,
+      "area": "survey",
+      "title": "AI 问卷草稿跨刷新恢复",
+      "user_visible_behavior": "用户用 AI 生成问卷草稿后刷新或重新进入 AI 创建页，系统恢复最近一条未应用草稿；发布或应用后会话关闭，不再重复恢复；其他用户无法读取该会话。",
+      "design_ref": "已确认 AI 创建工作台的 resumeLatestAiCreateSession 交互",
+      "status": "passing",
+      "sprint": "07",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-AI",
+      "depends_on": [
+        "F02"
+      ],
+      "wave": 6,
+      "verification": [
+        "pnpm --filter @repo/data run typecheck",
+        "pnpm --filter @repo/web run typecheck",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-007-ai-session-resume.spec.ts"
+      ],
+      "evidence": "evidence/F07.verify.log @ 2026-07-14T08:37:14.545Z",
+      "notes": "源分支 UI 已调用 sessions API，但源数据实现缺失；本 feature 在 review 中补齐悬空契约。"
     }
   ]
 }

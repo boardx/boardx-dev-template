@@ -41,6 +41,8 @@ phases/phase-p13-survey
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-14：UI 对 session 恢复接口的 404 如果被 `catch` 静默吞掉，常规 happy-path E2E 不会暴露功能缺失；
+  同步原型时要搜索全部 `fetch` URL 并逐一确认 route 存在，草稿恢复需单独做刷新 E2E（出处：phase-p25 F07）。
 - 2026-07-14：从独立 Survey 原型仓同步时不能直接覆盖 `packages/data/src/survey.ts`：原型分支缺少主仓的
   Room scope 权限，且 AI 路由曾引用未实现的 session 数据函数。正确做法是保留主仓权限边界，用向后兼容
   migration 增量扩展发布设置/报告产物，并先跑 typecheck 暴露悬空契约（出处：phase-p25 F01-F06）。

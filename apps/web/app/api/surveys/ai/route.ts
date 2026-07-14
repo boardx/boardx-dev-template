@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { currentUser } from "@/lib/session";
 import { callQwenJson } from "@/lib/qwen";
+import { normalizeJsonObject, saveSurveyAiDraftSession } from "@repo/data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -76,16 +77,24 @@ export async function POST(req: Request) {
   if (!command) return NextResponse.json({ error: "请输入调研目标或修改要求" }, { status: 400 });
   const model = String(body.model ?? "qwen3.7-max");
   const sessionId = typeof body.sessionId === "string" ? body.sessionId : randomUUID();
-  if (model.startsWith("mock-")) return NextResponse.json({ sessionId, draft: mockDraft(command), model });
+  if (model.startsWith("mock-")) {
+    const draft = mockDraft(command);
+    await saveSurveyAiDraftSession({ id: sessionId, actorUserId: user.id, modelId: model, draft: normalizeJsonObject(draft), goal: command });
+    return NextResponse.json({ sessionId, draft, model });
+  }
   if (model === "qwen-force-fail") {
-    return NextResponse.json({ sessionId, draft: mockDraft(command), model: "mock-survey-fallback", fallback: { from: model, to: "mock-survey-fallback" } });
+    const draft = mockDraft(command);
+    await saveSurveyAiDraftSession({ id: sessionId, actorUserId: user.id, modelId: "mock-survey-fallback", draft: normalizeJsonObject(draft), goal: command });
+    return NextResponse.json({ sessionId, draft, model: "mock-survey-fallback", fallback: { from: model, to: "mock-survey-fallback" } });
   }
   try {
     const draft = await callQwenJson<Partial<SurveyDraft>>({ model, messages: [
       { role: "system", content: "你是专业问卷研究员。仅输出 JSON，包含 reply,summary,title,description,questions,clarifyingQuestions,assumptions,reportOutline,reportTemplate,intentCanvas。" },
       { role: "user", content: JSON.stringify({ command, mode: body.mode, currentDraft: body.draft ?? null, history: body.history ?? [] }) },
     ] });
-    return NextResponse.json({ sessionId, draft: cleanDraft(draft, command), model });
+    const cleaned = cleanDraft(draft, command);
+    await saveSurveyAiDraftSession({ id: sessionId, actorUserId: user.id, modelId: model, draft: normalizeJsonObject(cleaned), goal: command });
+    return NextResponse.json({ sessionId, draft: cleaned, model });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "千问生成失败" }, { status: 502 });
   }
