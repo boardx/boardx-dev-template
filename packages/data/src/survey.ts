@@ -6,7 +6,21 @@ import { getMembership } from "./teams";
 import { getRoomRole } from "./rooms";
 
 export type SurveyScope = "private" | "team" | "room";
-export type QuestionType = "text" | "single" | "multiple" | "rating";
+export type QuestionType =
+  | "short_text"
+  | "text"
+  | "email"
+  | "number"
+  | "phone"
+  | "single"
+  | "multiple"
+  | "dropdown"
+  | "rating"
+  | "linear_scale"
+  | "nps"
+  | "date"
+  | "time"
+  | "file";
 
 export interface Survey {
   id: number;
@@ -16,6 +30,12 @@ export interface Survey {
   title: string;
   description: string;
   is_active: boolean;
+  response_mode: "anonymous" | "identified";
+  publish_start_at: string | null;
+  publish_end_at: string | null;
+  response_limit: number | null;
+  one_response_per_user: boolean;
+  confirmation_message: string;
   owner_user_id: number;
   created_at: string;
   updated_at: string;
@@ -61,8 +81,23 @@ export interface SurveyListItem extends Survey {
   room_name?: string | null;
 }
 
+export interface SurveyReportTemplateInput {
+  title: string;
+  sections: string[];
+  metrics: string[];
+  chartSlots: string[];
+  caveats: string[];
+}
+
+export interface SurveyReportTemplate extends SurveyReportTemplateInput {
+  id: number;
+  survey_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
 const SURVEY_COLS =
-  "id, team_id, room_id, scope, title, description, is_active, owner_user_id, created_at, updated_at";
+  "id, team_id, room_id, scope, title, description, is_active, response_mode, publish_start_at, publish_end_at, response_limit, one_response_per_user, confirmation_message, owner_user_id, created_at, updated_at";
 const QUESTION_COLS = "id, survey_id, position, title, type, required, options";
 const TEMPLATE_COLS = "id, team_id, owner_user_id, builtin, title, description, questions, created_at, updated_at";
 
@@ -76,6 +111,53 @@ export interface NewQuestionInput {
 /** 标题去首尾空白后是否非空（纯函数，可单测）。 */
 export function isBlank(title: string | null | undefined): boolean {
   return !(title ?? "").trim();
+}
+
+const REPORT_TEMPLATE_COLS =
+  'id, survey_id, title, sections, metrics, chart_slots AS "chartSlots", caveats, created_at, updated_at';
+
+export function defaultSurveyReportTemplate(title: string): SurveyReportTemplateInput {
+  const cleanTitle = title.trim() || "未命名问卷";
+  return {
+    title: `${cleanTitle} 分析报告`,
+    sections: ["样本概览", "关键指标", "维度分析", "开放反馈", "风险与建议"],
+    metrics: ["response_count"],
+    chartSlots: ["题目回答分布", "评分分布", "开放反馈主题"],
+    caveats: ["样本量低于30时仅输出方向性判断。"],
+  };
+}
+
+export async function getSurveyReportTemplate(surveyId: number): Promise<SurveyReportTemplate | undefined> {
+  const rows = await query<SurveyReportTemplate>(
+    `SELECT ${REPORT_TEMPLATE_COLS} FROM survey_report_templates WHERE survey_id = $1`,
+    [surveyId]
+  );
+  return rows[0];
+}
+
+export async function upsertSurveyReportTemplate(
+  surveyId: number,
+  input: SurveyReportTemplateInput
+): Promise<SurveyReportTemplate> {
+  const rows = await query<SurveyReportTemplate>(
+    `INSERT INTO survey_report_templates (survey_id, title, sections, metrics, chart_slots, caveats)
+     VALUES ($1, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb)
+     ON CONFLICT (survey_id) DO UPDATE SET title = EXCLUDED.title, sections = EXCLUDED.sections,
+       metrics = EXCLUDED.metrics, chart_slots = EXCLUDED.chart_slots, caveats = EXCLUDED.caveats, updated_at = now()
+     RETURNING ${REPORT_TEMPLATE_COLS}`,
+    [surveyId, input.title.trim() || "问卷分析报告", JSON.stringify(input.sections),
+      JSON.stringify(input.metrics), JSON.stringify(input.chartSlots), JSON.stringify(input.caveats)]
+  );
+  return rows[0]!;
+}
+
+export async function ensureSurveyReportTemplate(
+  surveyId: number,
+  surveyTitle: string,
+  input?: SurveyReportTemplateInput
+): Promise<SurveyReportTemplate> {
+  return (await getSurveyReportTemplate(surveyId)) ??
+    upsertSurveyReportTemplate(surveyId, input ?? defaultSurveyReportTemplate(surveyTitle));
 }
 
 /** 创建问卷 + 题目（同一事务）。至少需要 1 道有效题目，由路由层校验后传入。
@@ -163,6 +245,8 @@ export async function getPublicSurveyForAnswer(surveyId: number): Promise<Survey
 export async function listVisibleSurveys(userId: number, currentTeamId: number | null = null): Promise<SurveyListItem[]> {
   return query<SurveyListItem>(
     `SELECT DISTINCT s.id, s.team_id, s.room_id, s.scope, s.title, s.description, s.is_active,
+            s.response_mode, s.publish_start_at, s.publish_end_at, s.response_limit,
+            s.one_response_per_user, s.confirmation_message,
             s.owner_user_id, s.created_at, s.updated_at,
             count(sr.id)::text AS response_count,
             r.name AS room_name
@@ -182,6 +266,8 @@ export async function listVisibleSurveys(userId: number, currentTeamId: number |
           AND rm.user_id IS NOT NULL
         )
      GROUP BY s.id, s.team_id, s.room_id, s.scope, s.title, s.description, s.is_active,
+              s.response_mode, s.publish_start_at, s.publish_end_at, s.response_limit,
+              s.one_response_per_user, s.confirmation_message,
               s.owner_user_id, s.created_at, s.updated_at, r.name
      ORDER BY s.updated_at DESC`,
     [userId, currentTeamId]
@@ -192,12 +278,16 @@ export async function listVisibleSurveys(userId: number, currentTeamId: number |
 export async function listRoomSurveys(roomId: number): Promise<SurveyListItem[]> {
   return query<SurveyListItem>(
     `SELECT s.id, s.team_id, s.room_id, s.scope, s.title, s.description, s.is_active,
+            s.response_mode, s.publish_start_at, s.publish_end_at, s.response_limit,
+            s.one_response_per_user, s.confirmation_message,
             s.owner_user_id, s.created_at, s.updated_at,
             count(sr.id)::text AS response_count
      FROM surveys s
      LEFT JOIN survey_responses sr ON sr.survey_id = s.id
      WHERE s.scope = 'room' AND s.room_id = $1
      GROUP BY s.id, s.team_id, s.room_id, s.scope, s.title, s.description, s.is_active,
+              s.response_mode, s.publish_start_at, s.publish_end_at, s.response_limit,
+              s.one_response_per_user, s.confirmation_message,
               s.owner_user_id, s.created_at, s.updated_at
      ORDER BY s.updated_at DESC`,
     [roomId]
@@ -253,36 +343,68 @@ export async function canManageSurveyScope(surveyId: number, userId: number): Pr
 export async function updateSurvey(
   surveyId: number,
   ownerId: number,
-  fields: { title?: string; description?: string; isActive?: boolean }
+  fields: SurveyUpdateFields
 ): Promise<Survey | undefined> {
   const rows = await query<Survey>(
     `UPDATE surveys
      SET title = COALESCE($3, title),
          description = COALESCE($4, description),
          is_active = COALESCE($5, is_active),
+         response_mode = COALESCE($6, response_mode),
+         publish_start_at = CASE WHEN $7::boolean THEN $8::timestamptz ELSE publish_start_at END,
+         publish_end_at = CASE WHEN $9::boolean THEN $10::timestamptz ELSE publish_end_at END,
+         response_limit = CASE WHEN $11::boolean THEN $12::integer ELSE response_limit END,
+         one_response_per_user = COALESCE($13, one_response_per_user),
+         confirmation_message = COALESCE($14, confirmation_message),
          updated_at = now()
      WHERE id = $1 AND owner_user_id = $2
      RETURNING ${SURVEY_COLS}`,
-    [surveyId, ownerId, fields.title ?? null, fields.description ?? null, fields.isActive ?? null]
+    surveyUpdateParams(surveyId, ownerId, fields)
   );
   return rows[0];
 }
 
 /** 房间问卷版本的更新：按 surveyId 直接生效（管理权已由 canManageSurveyScope 校验），
  * 不要求 caller 是问卷的 owner_user_id——房间 admin 管理房间问卷时通常不是创建者本人。 */
+export interface SurveyUpdateFields {
+  title?: string;
+  description?: string;
+  isActive?: boolean;
+  responseMode?: "anonymous" | "identified";
+  publishStartAt?: string | null;
+  publishEndAt?: string | null;
+  responseLimit?: number | null;
+  oneResponsePerUser?: boolean;
+  confirmationMessage?: string;
+}
+
+function surveyUpdateParams(surveyId: number, ownerId: number | null, fields: SurveyUpdateFields): unknown[] {
+  return [surveyId, ownerId, fields.title ?? null, fields.description ?? null, fields.isActive ?? null,
+    fields.responseMode ?? null, Object.hasOwn(fields, "publishStartAt"), fields.publishStartAt ?? null,
+    Object.hasOwn(fields, "publishEndAt"), fields.publishEndAt ?? null,
+    Object.hasOwn(fields, "responseLimit"), fields.responseLimit ?? null,
+    fields.oneResponsePerUser ?? null, fields.confirmationMessage ?? null];
+}
+
 export async function updateSurveyById(
   surveyId: number,
-  fields: { title?: string; description?: string; isActive?: boolean }
+  fields: SurveyUpdateFields
 ): Promise<Survey | undefined> {
   const rows = await query<Survey>(
     `UPDATE surveys
      SET title = COALESCE($2, title),
          description = COALESCE($3, description),
          is_active = COALESCE($4, is_active),
+         response_mode = COALESCE($5, response_mode),
+         publish_start_at = CASE WHEN $6::boolean THEN $7::timestamptz ELSE publish_start_at END,
+         publish_end_at = CASE WHEN $8::boolean THEN $9::timestamptz ELSE publish_end_at END,
+         response_limit = CASE WHEN $10::boolean THEN $11::integer ELSE response_limit END,
+         one_response_per_user = COALESCE($12, one_response_per_user),
+         confirmation_message = COALESCE($13, confirmation_message),
          updated_at = now()
      WHERE id = $1
      RETURNING ${SURVEY_COLS}`,
-    [surveyId, fields.title ?? null, fields.description ?? null, fields.isActive ?? null]
+    surveyUpdateParams(surveyId, null, fields).filter((_, index) => index !== 1)
   );
   return rows[0];
 }
@@ -308,6 +430,42 @@ export async function countResponses(surveyId: number): Promise<number> {
     [surveyId]
   );
   return Number(rows[0]?.count ?? 0);
+}
+
+export async function countResponsesByUser(surveyId: number, userId: number): Promise<number> {
+  const rows = await query<{ count: string }>(
+    "SELECT count(*)::text AS count FROM survey_responses WHERE survey_id = $1 AND respondent_user_id = $2",
+    [surveyId, userId]
+  );
+  return Number(rows[0]?.count ?? 0);
+}
+
+export async function replaceSurveyQuestions(
+  surveyId: number,
+  questions: NewQuestionInput[]
+): Promise<SurveyQuestion[]> {
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("DELETE FROM survey_questions WHERE survey_id = $1", [surveyId]);
+    const saved: SurveyQuestion[] = [];
+    for (let position = 0; position < questions.length; position += 1) {
+      const question = questions[position]!;
+      const result = await client.query<SurveyQuestion>(
+        `INSERT INTO survey_questions (survey_id, position, title, type, required, options)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb) RETURNING ${QUESTION_COLS}`,
+        [surveyId, position, question.title, question.type, question.required, JSON.stringify(question.options)]
+      );
+      saved.push(result.rows[0]!);
+    }
+    await client.query("COMMIT");
+    return saved;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 /** 某问卷的全部答卷，按提交时间倒序（供 F04 报告/汇总使用；调用方需先用 canViewSurvey 校验权限）。 */
