@@ -43,6 +43,8 @@ confirmed_at: 2026-07-14T00:00:00+08:00
 <!-- 确认人填写：通过 / 需修改（列出修改点）。改完再确认。 -->
 - 通过。用户于 2026-07-14 明确指定 `boardx-survey` 的 `codex-survey-home-nav-redesign` 分支为 Survey 全部需求、UI 与交互的事实来源，并要求按 Harness 流程完整同步。
 - 本阶段 UI 直接复用该分支真实组件，不另行重绘；后续实现只接入真实数据、权限、AI、导出与错误处理，不改变已确认信息架构。
+- 2026-07-14 再确认：事实来源包含未提交工作状态，固定为分支 HEAD `0ae3af90c989843025fb2a60aacf90de6ed8df11`
+  与 stash tree `1eb9d7ba78cdda3d1a66fecb7d9fc2b7678cc64c`；实现验收以该快照为准。
 
 ---
 **确认动作**：核对无误后，把顶部 frontmatter 的 `status` 改为 `confirmed`，填 `confirmed_by` / `confirmed_at`，提交。之后才可调 requirement-author 生成 feature_list、跑 new-sprint。

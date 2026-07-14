@@ -4,7 +4,7 @@
 - 仓库根目录: `/private/tmp/boardx-p25-survey-system`
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: 无，F01-F08 全部 passing
+- 当前最高优先级未完成功能: F09 重建题目分类、模板标签与报告规划数据契约
 - 当前 blocker: 无
 
 ## 会话记录
@@ -34,3 +34,12 @@
 - 提交记录: 待本轮提交。
 - 已知风险或未解决问题: stash 的非 Survey/构建产物未同步；主仓权限和千问 provider 保持不变。
 - 下一步最佳动作: 提交 `codex/p25-survey-source-fidelity` 并发起关联 #617 的 PR。
+
+### 2026-07-14 18:35:00
+- 本轮目标: 以 `boardx-survey/codex-survey-home-nav-redesign` 的 HEAD + stash 为事实源重新建立 p25 需求和执行清单。
+- 已完成: 同步 9 份源需求/设计输入；固定源 commit、stash tree 和关键文件哈希；完成源能力差距矩阵；生成 F09-F14 可验证 feature。
+- 运行过的验证: `jq empty phases/phase-p25-survey/feature_list.json`、源文档抽样哈希、`pnpm harness doctor --phase p25`（0 FAIL / 0 WARN）。
+- 已记录证据: 本轮是需求 checkpoint，未认领实现 feature，不生成 passing evidence。
+- 提交记录: 待需求 checkpoint 提交。
+- 已知风险或未解决问题: 源 stash 是整仓 WIP，必须排除 `.next` 和非 Survey 脚手架；报告导出依赖需在 F13 单独评审。
+- 下一步最佳动作: 提交需求 checkpoint；创建 sprint-09 并只认领 F09。
