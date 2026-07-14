@@ -31,9 +31,10 @@ function parseReportTemplate(raw: unknown, surveyTitle: string): SurveyReportTem
   const list = (value: unknown, defaultValue: string[]) => Array.isArray(value)
     ? value.map((entry) => String(entry ?? "").trim()).filter(Boolean)
     : defaultValue;
+  const sections = list(item.sections, fallback.sections);
   return {
     title: String(item.title ?? fallback.title).trim() || fallback.title,
-    sections: list(item.sections, fallback.sections),
+    sections: Array.from(new Set(["样本概览", "关键指标", ...sections])),
     metrics: list(item.metrics, fallback.metrics),
     chartSlots: list(item.chartSlots, fallback.chartSlots),
     caveats: list(item.caveats, fallback.caveats),

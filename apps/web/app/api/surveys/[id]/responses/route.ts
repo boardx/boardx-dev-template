@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import {
+  canViewSurvey,
   countResponses,
   countResponsesByUser,
   createSurveyResponse,
   getPublicSurveyForAnswer,
   type SurveyWithQuestions,
+  ensureSurveyReportTemplate,
+  getSurveyWithQuestions,
+  listSurveyResponses,
 } from "@repo/data";
-import { currentUser } from "@/lib/session";
+import { currentTeamId, currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -109,4 +113,25 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   } catch {
     return NextResponse.json({ error: "提交失败，请稍后重试" }, { status: 500 });
   }
+}
+
+export async function GET(_req: Request, { params }: { params: { id: string } }) {
+  const user = await currentUser();
+  if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
+  const surveyId = parseSurveyId(params.id);
+  if (!surveyId) return NextResponse.json({ error: "问卷不存在" }, { status: 404 });
+  if (!(await canViewSurvey(surveyId, user.id, currentTeamId()))) {
+    return NextResponse.json({ error: "无权限" }, { status: 403 });
+  }
+  const survey = await getSurveyWithQuestions(surveyId);
+  if (!survey) return NextResponse.json({ error: "问卷不存在" }, { status: 404 });
+  const [responses, reportTemplate] = await Promise.all([
+    listSurveyResponses(surveyId),
+    ensureSurveyReportTemplate(surveyId, survey.title),
+  ]);
+  return NextResponse.json({
+    survey: { id: survey.id, title: survey.title, description: survey.description,
+      status: survey.is_active ? "active" : "paused", questions: survey.questions, reportTemplate },
+    responses: responses.map((response) => ({ id: response.id, answers: response.answers, submittedAt: response.submitted_at })),
+  });
 }

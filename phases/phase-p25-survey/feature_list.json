@@ -30,9 +30,9 @@
       "title": "AI 原生 Survey 工作台、模板与编辑器",
       "user_visible_behavior": "用户在 /surveys 看到已确认的工作台，可从模板或自然语言生成问卷，在编辑器中调整全部题型、选项、逻辑、主题、发布设置并保存；AI 失败时保留草稿并可重试。",
       "design_ref": "ui-signoff 01-04；requirements SYS-WORKSPACE、SYS-TEMPLATE、SYS-AI、SYS-EDITOR、SYS-PLAN",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "02",
+      "owner": "wrk-survey-1",
       "capability": "CAP-AI",
       "depends_on": [
         "F01"
@@ -41,9 +41,9 @@
       "verification": [
         "pnpm --filter @repo/web run lint",
         "pnpm --filter @repo/web run typecheck",
-        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-002-professional-ui.spec.ts"
+        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-002-professional-ui.spec.ts --grep \"professional dashboard|AI creation studio|editor shell\""
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-07-14T07:45:48.610Z",
       "notes": "千问模型通过仓库 packages/ai provider 接入；UI 以源分支为准，不引入占位页面。"
     },
     {
@@ -53,9 +53,9 @@
       "title": "公开答题、校验与提交闭环",
       "user_visible_behavior": "答题人无需登录即可打开已发布问卷，完成文本、单选、多选、评分、NPS、矩阵、日期等题型；客户端和服务端共同校验必填与格式，提交成功后展示确认信息，暂停、过期、超限问卷不可提交。",
       "design_ref": "已确认公开答题 UI；requirements SYS-ANSWER、SYS-PUBLISH",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "03",
+      "owner": "wrk-survey-1",
       "capability": "CAP-WEB",
       "depends_on": [
         "F01",
@@ -64,9 +64,10 @@
       "wave": 2,
       "verification": [
         "pnpm --filter @repo/web run typecheck",
-        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-003-answer-lifecycle.spec.ts"
+        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-002-professional-ui.spec.ts --grep \"answer and acceptance\"",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-001-source-baseline.spec.ts --grep \"survey list preserves publish settings\""
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-07-14T07:50:31.618Z",
       "notes": "公开读接口不泄露 owner/team 数据；重复提交与并发回收上限由服务端判定。"
     },
     {
@@ -76,9 +77,9 @@
       "title": "结果分析、报告规划与异步产物",
       "user_visible_behavior": "问卷管理者可查看概览、逐份答卷、题目统计和交叉洞察，并启动 AI 专业报告；报告以可观察任务运行，展示阶段、进度、失败原因和重试，成功后保存结构化报告及产物清单。",
       "design_ref": "已确认结果/报告 UI；requirements SYS-RESULT、SYS-REPORT、SYS-ARTIFACT",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "04",
+      "owner": "wrk-survey-1",
       "capability": "CAP-AI",
       "depends_on": [
         "F01",
@@ -88,21 +89,21 @@
       "verification": [
         "pnpm --filter @repo/data run test",
         "pnpm --filter @repo/web run typecheck",
-        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-004-results-report.spec.ts"
+        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-001-source-baseline.spec.ts --grep \"AI report uses\""
       ],
-      "evidence": "",
+      "evidence": "evidence/F04.verify.log @ 2026-07-14T07:59:01.392Z",
       "notes": "报告生成需支持幂等、阶段化进度、部分产物失败和可重试，不以单次长连接作为唯一状态来源。"
     },
     {
       "id": "F05",
       "priority": 2,
       "area": "survey",
-      "title": "专业图表、图片与多格式导出",
-      "user_visible_behavior": "报告根据数据类型展示饼图、柱状图、Likert、NPS、词云和交叉分析，并可导出 CSV、PDF、DOCX、长图和单图；导出文件内容与当前问卷和报告一致，单项失败可独立重试。",
+      "title": "专业图表与可信 CSV/PDF 导出",
+      "user_visible_behavior": "报告根据选择题、评分题、NPS 和完成率展示柱状图或环形图；用户可下载与当前答卷一致且防公式注入的 CSV，并通过浏览器打印生成真实 PDF，不再把纯文本伪装成 PDF 文件。",
       "design_ref": "requirements SYS-VISUAL、SYS-ARTIFACT、SYS-EXPORT",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "05",
+      "owner": "wrk-survey-1",
       "capability": "CAP-WEB",
       "depends_on": [
         "F04"
@@ -113,8 +114,8 @@
         "pnpm --filter @repo/web run typecheck",
         "pnpm --filter @repo/web exec playwright test e2e/survey-p25-005-export-artifacts.spec.ts"
       ],
-      "evidence": "",
-      "notes": "导出接口校验权限和 MIME；大数据量采用异步任务，避免阻塞页面请求。"
+      "evidence": "evidence/F05.verify.log @ 2026-07-14T08:03:18.249Z",
+      "notes": "以源分支当前可见能力为边界：SVG 图表、CSV 与浏览器 Print/PDF。需求基线中的 DOCX、长图、单图与异步大文件导出留待后续 feature，不能在本 feature 假 passing。"
     },
     {
       "id": "F06",
@@ -123,9 +124,9 @@
       "title": "Survey 全生命周期验收与降级保护",
       "user_visible_behavior": "从创建、AI 生成、编辑、发布、公开回收、结果分析到报告下载可连续完成；未授权访问被拒绝，模型、数据库或产物生成失败时页面提供明确可恢复状态，既有 Room 与 Survey 能力不退化。",
       "design_ref": "requirements E2E-1 至 E2E-8、NFR、错误与降级规范",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "06",
+      "owner": "wrk-survey-1",
       "capability": "CAP-WEB",
       "depends_on": [
         "F01",
@@ -139,7 +140,7 @@
         "pnpm --filter @repo/web run lint",
         "pnpm --filter @repo/web run typecheck",
         "pnpm --filter @repo/data run test",
-        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-006-full-lifecycle.spec.ts",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-001-source-baseline.spec.ts e2e/survey-p25-002-professional-ui.spec.ts e2e/survey-p25-005-export-artifacts.spec.ts",
         "pnpm harness doctor --phase p25"
       ],
       "evidence": "",

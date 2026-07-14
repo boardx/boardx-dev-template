@@ -197,16 +197,11 @@ const STATUS_LABEL: Record<Survey["status"], string> = {
   active: "Active",
   paused: "Paused",
 };
-const MINIMAX_MODEL_ID = ["minimax", "text", "01"].join("-");
-
 const MODEL_INFO: Record<string, { provider: string; quality: string; speed: string; cost: string; fallback?: string }> = {
   "qwen3.7-max": { provider: "Qwen", quality: "高质量", speed: "标准", cost: "中" },
   "mock-survey-fast": { provider: "Mock", quality: "稳定", speed: "快", cost: "低" },
   "mock-survey-quality": { provider: "Mock", quality: "高质量", speed: "标准", cost: "低" },
   "qwen-force-fail": { provider: "Qwen", quality: "故障演练", speed: "失败后切换", cost: "测试", fallback: "mock-survey-fallback" },
-  "openai-gpt-4.1": { provider: "OpenAI", quality: "高质量", speed: "标准", cost: "高" },
-  "gemini-2.5-pro": { provider: "Gemini", quality: "高质量", speed: "标准", cost: "中" },
-  [MINIMAX_MODEL_ID]: { provider: "MiniMax", quality: "标准", speed: "快", cost: "中" },
 };
 
 const surveyThemeStyle = {
@@ -1115,9 +1110,6 @@ export default function SurveysPage() {
               <option value="mock-survey-fast">Mock Survey Fast</option>
               <option value="mock-survey-quality">Mock Survey Quality</option>
               <option value="qwen-force-fail">Qwen failure drill</option>
-              <option value="openai-gpt-4.1">OpenAI GPT-4.1</option>
-              <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-              <option value={MINIMAX_MODEL_ID}>MiniMax Text-01</option>
             </Select>
           </div>
         </div>
@@ -1995,9 +1987,6 @@ export default function SurveysPage() {
                     <option value="mock-survey-fast">Mock Survey Fast</option>
                     <option value="mock-survey-quality">Mock Survey Quality</option>
                     <option value="qwen-force-fail">Qwen failure drill</option>
-                    <option value="openai-gpt-4.1">OpenAI GPT-4.1</option>
-                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                    <option value={MINIMAX_MODEL_ID}>MiniMax Text-01</option>
                   </Select>
                   <div data-testid="ai-model-capabilities" className="mt-2 flex flex-wrap gap-1.5 text-11 text-muted-foreground">
                     <Badge variant="muted">{MODEL_INFO[aiModel]?.provider ?? "Custom"}</Badge>

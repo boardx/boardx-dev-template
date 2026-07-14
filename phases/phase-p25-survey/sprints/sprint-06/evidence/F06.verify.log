@@ -1,0 +1,127 @@
+$ pnpm --filter @repo/web run lint
+[exit 0]
+
+> @repo/web@0.1.0 lint /private/tmp/boardx-p25-survey-system/apps/web
+> bash scripts/lint-design.sh
+
+· 扫描范围：app/ + components/（含 ava/ai-store/surveys/admin/studio/presentations 等模块）
+✓ token 对比度：全部色面/文字对过线（中性 ≥4.5:1，状态色 ≥3:1，明暗两套）
+⚠ LABEL-LANG-MIX(同文件内中英混用，警告，不拦截；修复归属 phase-p17 reskin)：
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:173:  { id: "understand-file", label: "理解文件", prompt: "帮我理解这份材料，并总结关键结论。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:174:  { id: "draft-email", label: "起草邮件", prompt: "帮我起草一封项目进展同步邮件。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:175:  { id: "summarize-trends", label: "总结趋势", prompt: "帮我总结最近用户反馈中的主要趋势。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:176:  { id: "brainstorm", label: "头脑风暴", prompt: "围绕这个目标帮我头脑风暴 5 个可执行方案。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:193:    label: "深度研究",
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:199:    label: "用户研究",
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:206:  { id: "make-tasks", label: "拆成任务", prompt: "把上面的建议拆成可执行任务，并按优先级排序。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:207:  { id: "find-risks", label: "识别风险", prompt: "基于上面的回复，列出主要风险和缓解措施。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:208:  { id: "shorten", label: "压缩摘要", prompt: "把上面的回复压缩成 5 条要点。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2787:  if (diffDays === 0) return { key: "today", label: "Today" };
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2788:  if (diffDays === 1) return { key: "yesterday", label: "Yesterday" };
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2789:  if (diffDays < 7) return { key: "last-7-days", label: "Last 7 days" };
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2790:  return { key: "older", label: "Older" };
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:189:  { label: "文本", types: ["short_text", "text", "email", "number", "phone"] },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:190:  { label: "选择", types: ["single", "multiple", "dropdown"] },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:191:  { label: "量表", types: ["rating", "linear_scale", "nps"] },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:192:  { label: "时间与文件", types: ["date", "time", "file"] },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:335:      label: "Purpose",
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:342:      label: "Audience",
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:349:      label: "Decision",
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:356:      label: "Information",
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:363:      label: "Constraints",
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1382:              { id: "questions", label: "问题", testId: "survey-questions-tab" },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1383:              { id: "responses", label: "回答", testId: "survey-responses-tab" },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1384:              { id: "settings", label: "设置", testId: "survey-settings-tab" },
+⚠ LABEL-LANG-MIX(跨文件中英混用，警告，不拦截；修复归属 phase-p17 reskin)：以下文件整体用中文 label，而以下文件整体用英文 label，同一层级 UI 组件的文案语言应统一：
+    LABEL-LANG-MIX: app/(app)/surveys/[id]/results/page.tsx:648:                      { label: "平均", value: reportMetrics.avgCompletion },
+    LABEL-LANG-MIX: components/board/board-canvas.tsx:190:  { value: "sans-serif", label: "无衬线" },
+    LABEL-LANG-MIX: components/board/sync-status.tsx:14:  synced: { label: "已同步", dot: "bg-tag-green", text: "text-success" },
+    LABEL-LANG-MIX: components/studio/studio-panel.tsx:29:  { type: "audio", label: "音频概览", icon: AudioLines },
+    LABEL-LANG-MIX: app/(app)/account/page.tsx:15:  { key: "personal", label: "Personal info", icon: User },
+    LABEL-LANG-MIX: app/(app)/admin/admin-home.tsx:113:        { testKey: "users", label: "Total users", stat: stats.users },
+    LABEL-LANG-MIX: app/(app)/admin/admin-tabs.tsx:8:  { key: "overview", label: "Overview", href: "/admin" },
+    LABEL-LANG-MIX: app/(app)/admin/ai-store/featured/page.tsx:33:  { key: "", label: "All approved" },
+    LABEL-LANG-MIX: app/(app)/admin/ai-store/review/page.tsx:36:  { key: "", label: "All" },
+    LABEL-LANG-MIX: app/(app)/credits/page.tsx:237:              <SummaryCard value={fmt(wallet.balance)} label="Current balance" />
+    LABEL-LANG-MIX: app/(app)/rooms/[id]/layout.tsx:27:  { key: "boards", label: "Boards", segment: "boards" },
+    LABEL-LANG-MIX: components/app-shell/sidebar.tsx:45:  { label: "Home", icon: Home, href: "/" },
+  示例（Board 工具条 vs Sidebar 导航）：见 components/board/board-canvas.tsx 与 components/app-shell/sidebar.tsx
+✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性/文案语言一致性）
+
+
+$ pnpm --filter @repo/web run typecheck
+[exit 0]
+
+> @repo/web@0.1.0 typecheck /private/tmp/boardx-p25-survey-system/apps/web
+> tsc --noEmit
+
+
+
+$ pnpm --filter @repo/data run test
+[exit 0]
+
+> @repo/data@0.1.0 test /private/tmp/boardx-p25-survey-system/packages/data
+> vitest run
+
+
+ RUN  v2.0.0 /private/tmp/boardx-p25-survey-system/packages/data
+
+ ✓ src/migrateHelpers.test.ts  (6 tests) 166ms
+ ✓ src/aiStore.test.ts  (17 tests) 66ms
+ ✓ src/ids.test.ts  (8 tests) 353ms
+ ✓ src/index.test.ts  (3 tests) 37ms
+ ✓ src/avaChat.test.ts  (5 tests) 53ms
+ ✓ src/rooms.test.ts  (2 tests) 13ms
+ ✓ src/survey.test.ts  (5 tests) 34ms
+ ✓ src/roomChat.test.ts  (4 tests) 15ms
+ ✓ src/board.test.ts  (11 tests) 103ms
+
+ Test Files  9 passed (9)
+      Tests  61 passed (61)
+   Start at  16:14:27
+   Duration  2.99s (transform 2.68s, setup 1ms, collect 10.16s, tests 840ms, environment 2ms, prepare 2.94s)
+
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/survey-p25-001-source-baseline.spec.ts e2e/survey-p25-002-professional-ui.spec.ts e2e/survey-p25-005-export-artifacts.spec.ts
+[exit 0]
+
+Running 10 tests using 1 worker
+
+  ✓  1 [chromium] › survey-p25-001-source-baseline.spec.ts:12:5 › user creates a categorized survey from a built-in template (7.1s)
+  ✓  2 [chromium] › survey-p25-001-source-baseline.spec.ts:25:5 › AI creates a categorized draft from pasted reference content with report template (31.0s)
+  ✓  3 [chromium] › survey-p25-001-source-baseline.spec.ts:44:5 › Survey workbench separates personal, team, template, and AI entry points (8.7s)
+  ✓  4 [chromium] › survey-p25-001-source-baseline.spec.ts:64:5 › AI report uses report template and handles zero responses (11.3s)
+  ✓  5 [chromium] › survey-p25-001-source-baseline.spec.ts:103:5 › survey list preserves publish settings and identified one-response gate (3.6s)
+  ✓  6 [chromium] › survey-p25-002-professional-ui.spec.ts:32:5 › professional dashboard exposes unified entry points and workbench interactions (6.7s)
+  ✓  7 [chromium] › survey-p25-002-professional-ui.spec.ts:50:5 › AI creation studio validates empty send and shows draft actions (6.8s)
+  ✓  8 [chromium] › survey-p25-002-professional-ui.spec.ts:69:5 › editor shell groups command buttons, question builder, inspector, and action feedback (5.5s)
+  ✓  9 [chromium] › survey-p25-002-professional-ui.spec.ts:89:5 › answer and acceptance small surfaces share the professional shell (7.1s)
+  ✓  10 [chromium] › survey-p25-005-export-artifacts.spec.ts:3:5 › results render charts and export a protected CSV (8.4s)
+
+  Slow test file: [chromium] › survey-p25-001-source-baseline.spec.ts (1.0m)
+  Slow test file: [chromium] › survey-p25-002-professional-ui.spec.ts (26.0s)
+  Consider splitting slow test files to speed up parallel execution
+  10 passed (1.7m)
+[2m[WebServer] [22m(node:26306) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+(node:26308) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:26308) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+$ pnpm harness doctor --phase p25
+[exit 1]
+
+> boardx-dev-template@ harness /private/tmp/boardx-p25-survey-system
+> tsx .harness/scripts/cli.ts "doctor" "--phase" "p25"
+
+⚠ [p25] roadmap 标 not_started 但已有 5 个 passing——阶段状态漂移，对齐一下（惯例见 fb9307d）
+doctor：体检 1 个 phase — 4 FAIL / 1 WARN
+ ELIFECYCLE  Command failed with exit code 1.
+✗ [p25] F02 的 evidence 日志只在本地磁盘、未提交进 git（phases/phase-p25-survey/sprints/sprint-02/evidence/F02.verify.log）——git add 它，否则 origin 上证据链是断的
+✗ [p25] F03 的 evidence 日志只在本地磁盘、未提交进 git（phases/phase-p25-survey/sprints/sprint-03/evidence/F03.verify.log）——git add 它，否则 origin 上证据链是断的
+✗ [p25] F04 的 evidence 日志只在本地磁盘、未提交进 git（phases/phase-p25-survey/sprints/sprint-04/evidence/F04.verify.log）——git add 它，否则 origin 上证据链是断的
+✗ [p25] F05 的 evidence 日志只在本地磁盘、未提交进 git（phases/phase-p25-survey/sprints/sprint-05/evidence/F05.verify.log）——git add 它，否则 origin 上证据链是断的
+✗ 审计链存在断裂。FAIL 项修复前不要开 PR / 交 review——reviewer 会用同样的标准 Block。

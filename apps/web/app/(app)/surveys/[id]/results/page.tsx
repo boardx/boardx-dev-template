@@ -181,44 +181,8 @@ function buildCsv(data: ResultsData) {
   return [header, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\n");
 }
 
-function buildReportText(data: ResultsData, aiReport: AiReportEnvelope | null) {
-  if (!aiReport) return "Survey Report\n\n" + data.survey.title;
-  const r = aiReport.report;
-  return [
-    r.title,
-    "",
-    `问卷：${data.survey.title}`,
-    `模型：${aiReport.model}`,
-    `生成时间：${aiReport.generatedAt}`,
-    `样本量：${aiReport.sampleSize}`,
-    "",
-    "管理层摘要",
-    r.executiveSummary,
-    "",
-    "指标解读",
-    ...r.metricHighlights.map((item) => `- ${item}`),
-    "",
-    "细分洞察",
-    ...r.segmentInsights.map((item) => `- ${item}`),
-    "",
-    "机会点",
-    ...r.opportunityAreas.map((item) => `- ${item}`),
-    "",
-    "关键发现",
-    ...r.keyFindings.map((item) => `- ${item}`),
-    "",
-    "风险信号",
-    ...r.risks.map((item) => `- ${item}`),
-    "",
-    "行动建议",
-    ...r.recommendations.map((item) => `- ${item}`),
-    "",
-    "建议追问",
-    ...r.followUpQuestions.map((item) => `- ${item}`),
-    "",
-    "方法与边界",
-    r.methodology,
-  ].join("\n");
+function printReport() {
+  window.print();
 }
 
 function EChartPanel({
@@ -606,11 +570,11 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
             data-testid="export-pdf"
             size="sm"
             variant="outline"
-            onClick={() => downloadText(`survey-report-${data.survey.id}.pdf`, buildReportText(data, aiReport), "application/pdf")}
+            onClick={printReport}
             className="gap-1.5"
           >
             <FileText className="h-4 w-4" strokeWidth={1.5} />
-            Export PDF
+            Print / PDF
           </Button>
         </div>
       </div>
