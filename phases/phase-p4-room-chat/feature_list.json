@@ -79,7 +79,7 @@
       "area": "room-chat",
       "title": "在房间聊天向 AVA 发送消息",
       "user_visible_behavior": "在三栏工作区中间聊天输入区发送消息：当前线程追加用户消息，系统以 room chat 类型 + 当前 roomId 处理对话使回复与房间关联，可在同线程连续发送；点返回房间清除当前选择并回到 Chat 列表。",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "02",
       "owner": "wrk-ava-p18-2",
       "capability": "CAP-AI",
@@ -89,7 +89,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/room-chat-003-send-message.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F05.verify.log @ 2026-07-14T18:19:38.546Z",
       "notes": "uc-room-chat-003。此前 blocked-on p9（AVA 对话运行时）——已过时，p9 全部 passing、p18 更进一步把 AVA 运行时的 AI 层从 stub 换成真实网关。本轮把占位回复（roomChat.ts 的 avaReply 固定字符串）换成真实调用 packages/ai 的网关（复用 /ava 消息路由同款 runChatGraph + makeGenerateNode 调用方式），保留 ai_instruction 系统提示注入（p20/F11）。verification 命令原写的 e2e/room-chat-send.spec.ts 文件不存在，订正为实际文件名 room-chat-003-send-message.spec.ts。验证时曾撞上一个独立的平台级 bug（resolveRoomId/resolveBoardId 缺 Number() 归一化，导致 public_id 链接访问房间聊天一律 404）——已在 PR #630 修复并合并，与本 feature 无关，顺手发现顺手修。"
     }
   ]

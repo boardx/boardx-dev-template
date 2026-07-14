@@ -9,7 +9,7 @@
 | 04 | Auth/Team/Room 核心打包体（横跨 P1auth + P3team + P4room） | in_progress | 3 | 0 | 0 | 14 |
 | p1 | Profile/Common（P1 补全，配合 04 的 auth） | done | 0 | 0 | 0 | 3 |
 | p2 | Home 工作台 (P2) | in_progress | 0 | 0 | 1 | 6 |
-| p4 | Room-Chat (P4 补全) | in_progress | 0 | 0 | 1 | 4 |
+| p4 | Room-Chat (P4 补全) | in_progress | 0 | 0 | 0 | 5 |
 | p5 | Board 基础 (P5) | done | 0 | 0 | 0 | 10 |
 | p6 | Canvas & 组件 (P6) | in_progress | 0 | 0 | 3 | 21 |
 | p7 | Board 壳 (P7) | in_progress | 0 | 0 | 5 | 11 |
@@ -31,4 +31,4 @@
 | p24 | room-board-management | not_started | 0 | 0 | 0 | 0 |
 | p25 | Survey System | in_progress | 0 | 1 | 0 | 10 |
 
-_最近聚合:2026-07-14T13:46:21.627Z_
+_最近聚合:2026-07-14T18:19:38.566Z_
