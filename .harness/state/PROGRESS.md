@@ -29,6 +29,6 @@
 | p22 | Room IA Realignment | not_started | 0 | 0 | 0 | 4 |
 | p23 | developer-portal | in_progress | 0 | 0 | 1 | 9 |
 | p24 | room-board-management | not_started | 0 | 0 | 0 | 0 |
-| p25 | Survey System | in_progress | 0 | 0 | 0 | 6 |
+| p25 | Survey System | in_progress | 0 | 0 | 0 | 7 |
 
-_最近聚合:2026-07-14T08:20:34.403Z_
+_最近聚合:2026-07-14T08:37:14.610Z_
