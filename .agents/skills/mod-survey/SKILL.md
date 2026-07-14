@@ -41,6 +41,15 @@ phases/phase-p13-survey
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-14：UI 对 session 恢复接口的 404 如果被 `catch` 静默吞掉，常规 happy-path E2E 不会暴露功能缺失；
+  同步原型时要搜索全部 `fetch` URL 并逐一确认 route 存在，草稿恢复需单独做刷新 E2E（出处：phase-p25 F07）。
+- 2026-07-14：从独立 Survey 原型仓同步时不能直接覆盖 `packages/data/src/survey.ts`：原型分支缺少主仓的
+  Room scope 权限，且 AI 路由曾引用未实现的 session 数据函数。正确做法是保留主仓权限边界，用向后兼容
+  migration 增量扩展发布设置/报告产物，并先跑 typecheck 暴露悬空契约（出处：phase-p25 F01-F06）。
+- 2026-07-14：禁止把纯文本 Blob 以 `application/pdf` 和 `.pdf` 名称下载；浏览器端无 PDF 生成器时应使用
+  `window.print()` 走系统 Print/PDF，CSV 则继续由鉴权服务端生成并防公式注入（出处：phase-p25 F05）。
+- 2026-07-14：Playwright 串行跑完整 Survey 套件时，Next.js 首次冷编译可超过默认 10 秒；只对等待服务端
+  生成结果的断言设置 20 秒超时，不提高全局超时，避免掩盖真实卡死（出处：phase-p25 F02/F06）。
 - 2026-07-08：`pnpm harness sync` 的 `near_term_window` 切片按字典序取**最早**的 N 个 sprint，
   不是最近的——新 feature 挂到新 sprint 后永远不会被 sync 自动开 issue。发现于 F07 排到
   sprint-07 却只投影 sprint-01/02。绕过：手工按 `buildIssueBody` 模板开 issue；根因待修（已开独立

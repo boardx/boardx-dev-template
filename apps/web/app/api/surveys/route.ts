@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import {
   createSurvey,
+  defaultSurveyReportTemplate,
+  ensureSurveyReportTemplate,
   listVisibleSurveys,
   getMembership,
   getRoomRole,
   isBlank,
   type NewQuestionInput,
   type QuestionType,
+  type SurveyReportTemplateInput,
   type SurveyScope,
 } from "@repo/data";
 import { currentTeamId, currentUser } from "@/lib/session";
@@ -17,7 +20,26 @@ export const dynamic = "force-dynamic";
 // uc-survey-001-create-survey — 问卷创建地基（P13 F01）。
 // surveys / survey_questions / survey_responses 落库（team 作用域），供后续 F02-F06 复用。
 
-const QUESTION_TYPES: QuestionType[] = ["text", "single", "multiple", "rating"];
+const QUESTION_TYPES: QuestionType[] = [
+  "short_text", "text", "email", "number", "phone", "single", "multiple", "dropdown",
+  "rating", "linear_scale", "nps", "date", "time", "file",
+];
+
+function parseReportTemplate(raw: unknown, surveyTitle: string): SurveyReportTemplateInput {
+  const item = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+  const fallback = defaultSurveyReportTemplate(surveyTitle);
+  const list = (value: unknown, defaultValue: string[]) => Array.isArray(value)
+    ? value.map((entry) => String(entry ?? "").trim()).filter(Boolean)
+    : defaultValue;
+  const sections = list(item.sections, fallback.sections);
+  return {
+    title: String(item.title ?? fallback.title).trim() || fallback.title,
+    sections: Array.from(new Set(["样本概览", "关键指标", ...sections])),
+    metrics: list(item.metrics, fallback.metrics),
+    chartSlots: list(item.chartSlots, fallback.chartSlots),
+    caveats: list(item.caveats, fallback.caveats),
+  };
+}
 
 function parseQuestions(raw: unknown): NewQuestionInput[] {
   if (!Array.isArray(raw)) return [];
@@ -50,6 +72,12 @@ export async function GET() {
     roomId: s.room_id,
     roomName: s.room_name ?? null,
     status: s.is_active ? "active" : "paused",
+    responseMode: s.response_mode,
+    publishStartAt: s.publish_start_at,
+    publishEndAt: s.publish_end_at,
+    responseLimit: s.response_limit,
+    oneResponsePerUser: s.one_response_per_user,
+    confirmationMessage: s.confirmation_message,
     responses: Number(s.response_count ?? 0),
     updatedAt: s.updated_at,
     isOwner: Number(s.owner_user_id) === Number(user.id),
@@ -70,6 +98,7 @@ export async function POST(req: Request) {
       teamId?: unknown;
       roomId?: unknown;
       questions?: unknown;
+      reportTemplate?: unknown;
     };
 
     const title = String(body.title ?? "").trim();
@@ -108,6 +137,11 @@ export async function POST(req: Request) {
 
     const description = String(body.description ?? "").trim();
     const survey = await createSurvey(user.id, title, description, scope, teamId, questions, roomId);
+    const reportTemplate = await ensureSurveyReportTemplate(
+      survey.id,
+      survey.title,
+      parseReportTemplate(body.reportTemplate, survey.title)
+    );
 
     return NextResponse.json(
       {
@@ -119,9 +153,16 @@ export async function POST(req: Request) {
           teamId: survey.team_id,
           roomId: survey.room_id,
           status: survey.is_active ? "active" : "paused",
+          responseMode: survey.response_mode,
+          publishStartAt: survey.publish_start_at,
+          publishEndAt: survey.publish_end_at,
+          responseLimit: survey.response_limit,
+          oneResponsePerUser: survey.one_response_per_user,
+          confirmationMessage: survey.confirmation_message,
           responses: 0,
           questions: survey.questions,
           shareUrl: `/survey/${survey.id}/answer`,
+          reportTemplate,
         },
       },
       { status: 201 }

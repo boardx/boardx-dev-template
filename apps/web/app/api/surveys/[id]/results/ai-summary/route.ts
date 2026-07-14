@@ -34,12 +34,18 @@ function buildSummaryInput(
   const base: ReportSummaryQuestionInput = {
     id: question.id,
     title: question.title,
-    type: question.type,
+    type: question.type === "single" || question.type === "dropdown"
+      ? "single"
+      : question.type === "multiple"
+        ? "multiple"
+        : question.type === "rating" || question.type === "linear_scale" || question.type === "nps"
+          ? "rating"
+          : "text",
     answeredCount: answered.length,
     skippedCount: skipped,
   };
 
-  if (question.type === "single" || question.type === "multiple") {
+  if (question.type === "single" || question.type === "dropdown" || question.type === "multiple") {
     const counts = new Map<string, number>();
     for (const opt of question.options) counts.set(opt, 0);
     for (const v of answered) {
