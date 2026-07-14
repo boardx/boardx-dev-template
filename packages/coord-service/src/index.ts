@@ -3,6 +3,7 @@ import { claimResource, heartbeatRoute, queryClaims, releaseRoute } from "./rout
 import { submitVerdict } from "./routes/verdicts";
 import { submitEvent } from "./routes/events";
 import { dispatchTask, listTasks, ackTask, doneTask, recallTask } from "./routes/tasks";
+import { mintAgentToken } from "./routes/mint";
 import { publicStatus } from "./routes/status";
 import { sweepStaleClaims } from "./cron/sweeper";
 import { runProjector } from "./cron/projector";
@@ -30,6 +31,7 @@ router.get("/", async () =>
       "POST /tasks/:id/ack": "acknowledge a pending task (assignee token)",
       "POST /tasks/:id/done": "mark own task done (assignee token)",
       "POST /tasks/:id/recall": "recall a task (coordinator token)",
+      "POST /agents/:id/mint-token": "self-service token mint/rotate (token-broker only; ADR-011 P2)",
     },
   })
 );
@@ -44,6 +46,7 @@ router.get("/tasks", listTasks);
 router.post("/tasks/:id/ack", ackTask);
 router.post("/tasks/:id/done", doneTask);
 router.post("/tasks/:id/recall", recallTask);
+router.post("/agents/:id/mint-token", mintAgentToken);
 router.get("/status", publicStatus);
 
 export default {
