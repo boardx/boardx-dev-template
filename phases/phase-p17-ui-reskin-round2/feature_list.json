@@ -127,7 +127,7 @@
       "title": "Knowledge Base + Credits 页面收尾 reskin",
       "user_visible_behavior": "知识库文件列表/上传弹窗、Credits 钱包/购买/账单页面的视觉打磨对齐设计系统，不改变 p10/p14 已 passing 的功能行为。这是收尾优先级，不涉及新组件设计。",
       "design_ref": "已确认的 P0-P4 token 基座（globals.css/tailwind.config.ts）；phase-p16:F02 审计报告（如有覆盖 KB/Credits 的部分）。",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "wrk-credits-1",
       "capability": "CAP-WEB",
@@ -138,10 +138,10 @@
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web exec playwright test e2e/kb-*.spec.ts e2e/credits-*.spec.ts",
+        "pnpm --filter @repo/web exec playwright test \"kb-\" \"credits-\"",
         "cd apps/web && bash scripts/lint-design.sh"
       ],
-      "evidence": "",
+      "evidence": "evidence/F06.verify.log @ 2026-07-14T10:21:09.816Z",
       "notes": "uc-kb-credits-reskin-001（新增）。优先级最低，收尾性质。blocked-on 同 F01。Mobile Shell 明确不做（沿用 boardx-prototype-mapping.md §4 已确认的决定），本阶段不建对应 feature。"
     }
   ]

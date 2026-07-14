@@ -62,3 +62,15 @@
     会话/跨用户持久化协作对话，需要新的 feature + 后端契约。
 - 下一步最佳动作: 等待 reviewer 走 `pnpm harness verify --sprint p17/01 --feature F01` 门控翻 passing；
   不要在 F01 状态翻 passing 前顺手改动 board-canvas.tsx 其它区域。
+
+### 2026-07-14 · coord-platform（issue #602 收口）
+- 对账结论：F06 的 reskin 本体已达标（design lint 全绿），卡在验证链两处环境/回归问题：
+  1) verification 里 `e2e/kb-*.spec.ts` glob 不被 playwright 展开（No tests found）→
+     改为正则模式 `"kb-" "credits-"`；
+  2) kb-004 的 enableFileReaderTool 还在直接点 `tool-file-reader`，但 p18-F13 起工具开关
+     收进 composer Skill 菜单 → helper 先点 composer-skill-trigger 展开再点（main 上既有断裂）。
+- 环境备忘：KB 文件 processing→ready 依赖 `apps/workflow-worker` 常驻进程（bullmq），
+  e2e 前需手动起（playwright webServer 不含它）。
+- `pnpm harness verify --sprint p17/01 --feature F06` 门控通过 → F06 passing（43/43 e2e +
+  design lint + verify:base），证据 `evidence/F06.verify.log`。
+- owner 仍登记为 wrk-credits-1（claim 防抢占，未改）；实际收口人 coord-platform，见本记录。

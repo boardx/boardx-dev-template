@@ -59,8 +59,11 @@ async function uploadFile(
 async function enableFileReaderTool(page: Page) {
   await page.goto("/ava");
   await expect(page.getByTestId("ai-settings")).toBeVisible();
-  const toggle = page.getByTestId("tool-file-reader");
-  await toggle.click();
+  // p18-F13 起工具开关收进 composer 的 Skill 菜单，需先展开再点。
+  await page.getByTestId("composer-skill-trigger").click();
+  await expect(page.getByTestId("composer-skill-menu")).toBeVisible();
+  await page.getByTestId("tool-file-reader").click();
+  await page.keyboard.press("Escape");
   await expect(page.getByTestId("current-tools")).toContainText("File Reader");
 }
 
