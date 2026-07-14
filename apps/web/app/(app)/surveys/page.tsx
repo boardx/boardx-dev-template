@@ -100,6 +100,19 @@ interface ReportTemplateDraft {
   caveats: string[];
 }
 
+type WorkspaceStep = "design" | "template" | "collect" | "answer" | "report";
+const WORKSPACE_STEPS: Array<{ id: WorkspaceStep; label: string; description: string }> = [
+  { id: "design", label: "设计问卷", description: "题目与元数据" },
+  { id: "template", label: "设计模块", description: "分类与报告组件" },
+  { id: "collect", label: "发布回收", description: "链接与回收规则" },
+  { id: "answer", label: "查看答题", description: "答题页与样本" },
+  { id: "report", label: "分析报告", description: "洞察与导出" },
+];
+
+function workspaceStep(value: string | null): WorkspaceStep {
+  return WORKSPACE_STEPS.some((step) => step.id === value) ? value as WorkspaceStep : "design";
+}
+
 interface SurveyTemplate {
   id: string;
   source: "built_in" | "saved";
@@ -371,6 +384,7 @@ function SurveyIntentCanvas({ draft }: { draft: AiDraft }) {
       meta: [canvas.constraints?.platform, canvas.constraints?.delivery, ...(canvas.constraints?.analysis ?? [])].filter(Boolean).join(" / ") || "平台和分析方式待补充",
     },
   ];
+
   return (
     <div data-testid="survey-intent-canvas" className="mt-4 rounded-lg border border-border bg-card p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -416,6 +430,11 @@ export default function SurveysPage() {
   const [workbenchTab, setWorkbenchTab] = useState<"my" | "team" | "templates" | "ai">(
     searchParams.get("view") === "templates" ? "templates" : "my",
   );
+  const [workflowSurveyId, setWorkflowSurveyId] = useState<number | null>(() => {
+    const value = Number(searchParams.get("survey"));
+    return Number.isFinite(value) && value > 0 ? value : null;
+  });
+  const [workflowStep, setWorkflowStep] = useState<WorkspaceStep>(() => workspaceStep(searchParams.get("step")));
 
   // editor state
   const [editingSurveyId, setEditingSurveyId] = useState<number | null>(null);
@@ -479,6 +498,13 @@ export default function SurveysPage() {
     void loadTemplates();
     try {
       const params = new URLSearchParams(window.location.search);
+      const workflowId = Number(params.get("survey"));
+      if (Number.isFinite(workflowId) && workflowId > 0) {
+        setWorkflowSurveyId(workflowId);
+        setWorkflowStep(workspaceStep(params.get("step")));
+        void loadSurveyForEditor(workflowId, "edit").then(() => setMode("list"));
+        return;
+      }
       const editId = Number(params.get("edit"));
       if (Number.isFinite(editId) && editId > 0) {
         window.history.replaceState(null, "", "/surveys");
@@ -492,6 +518,21 @@ export default function SurveysPage() {
       // Ignore local recovery hints when storage is unavailable.
     }
   }, []);
+
+  function navigateWorkflow(surveyId: number, step: WorkspaceStep) {
+    setWorkflowSurveyId(surveyId);
+    setWorkflowStep(step);
+    window.history.pushState(null, "", `/surveys?survey=${surveyId}&step=${step}`);
+    if (editingSurveyId !== surveyId) {
+      void loadSurveyForEditor(surveyId, "edit").then(() => setMode("list"));
+    }
+  }
+
+  function closeWorkflow() {
+    setWorkflowSurveyId(null);
+    setEditingSurveyId(null);
+    window.history.pushState(null, "", "/surveys");
+  }
 
   async function loadTeams() {
     try {
@@ -2139,6 +2180,71 @@ export default function SurveysPage() {
     );
   }
 
+  if (workflowSurveyId != null) {
+    const workflowSurvey = surveys.find((survey) => survey.id === workflowSurveyId);
+    const categoryNames = Array.from(new Set(questions.map((question) => question.category?.trim()).filter((value): value is string => Boolean(value))));
+    return (
+      <div data-testid="survey-workflow-shell" className="min-h-screen max-w-full overflow-x-hidden bg-secondary text-foreground" style={surveyThemeStyle}>
+        <header className="border-b border-border bg-background px-4 py-3">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <Button type="button" variant="ghost" size="sm" className="mb-1 gap-1 px-0" onClick={closeWorkflow}><ChevronLeft className="h-4 w-4" />我的问卷</Button>
+              <h1 className="truncate text-20 font-bold">{title || workflowSurvey?.title || "Survey 工作台"}</h1>
+              <p className="text-12 text-muted-foreground">BoardX Survey · 专业问卷流程</p>
+            </div>
+            <Badge variant={workflowSurvey?.status === "active" ? "success" : "muted"}>{workflowSurvey?.status === "active" ? "回收中" : "草稿"}</Badge>
+          </div>
+        </header>
+        <nav className="border-b border-border bg-background px-3 py-3" aria-label="Survey workflow">
+          <div className="mx-auto grid max-w-7xl grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            {WORKSPACE_STEPS.map((step, index) => (
+              <Button key={step.id} data-testid={`workflow-${step.id}`} type="button" variant={workflowStep === step.id ? "default" : "outline"} aria-current={workflowStep === step.id ? "step" : undefined} className="h-auto min-w-0 justify-start gap-2 px-3 py-2 text-left" onClick={() => navigateWorkflow(workflowSurveyId, step.id)}>
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-current text-11">{index + 1}</span>
+                <span className="min-w-0"><span className="block truncate text-12 font-semibold">{step.label}</span><span className="hidden truncate text-10 opacity-70 sm:block">{step.description}</span></span>
+              </Button>
+            ))}
+          </div>
+        </nav>
+        <main className="mx-auto max-w-7xl p-4">
+          {workflowStep === "design" && (
+            <section data-testid="workspace-design-workbench" className="grid gap-4 rounded-lg border border-border bg-background p-4">
+              <div><Badge variant="outline">Step 1</Badge><h2 className="mt-2 text-18 font-bold">设计问卷</h2><p className="text-13 text-muted-foreground">维护问卷元数据、题型、必填项、选项和业务分类。</p></div>
+              <div className="grid gap-3 md:grid-cols-2"><div><Label htmlFor="workflow-title">问卷标题</Label><Input id="workflow-title" value={title} onChange={(event) => setTitle(event.target.value)} /></div><div><Label htmlFor="workflow-description">说明</Label><Input id="workflow-description" value={description} onChange={(event) => setDescription(event.target.value)} /></div></div>
+              <div className="grid gap-3">
+                {questions.map((question, index) => (
+                  <article key={question.id} className="grid gap-3 rounded-lg border border-border p-3 md:grid-cols-[minmax(0,1fr)_180px_180px]">
+                    <div><Label htmlFor={`workflow-question-${index}`}>问题 {index + 1}</Label><Input id={`workflow-question-${index}`} value={question.title} onChange={(event) => patchQuestion(question.id, { title: event.target.value })} /></div>
+                    <div><Label htmlFor={`workflow-type-${index}`}>题型</Label><Select id={`workflow-type-${index}`} value={question.type} onChange={(event) => changeQuestionType(question.id, event.target.value as QType)}>{Object.entries(TYPE_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Select></div>
+                    <div><Label htmlFor={`workflow-category-${index}`}>分类</Label><Input id={`workflow-category-${index}`} value={question.category ?? ""} onChange={(event) => patchQuestion(question.id, { category: event.target.value })} /></div>
+                  </article>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-2"><Button onClick={() => void save()} disabled={saving}>{saving ? "保存中..." : "保存设计"}</Button>{saveError && <span className="text-12 text-destructive">{saveError}</span>}</div>
+            </section>
+          )}
+          {workflowStep === "template" && (
+            <section data-testid="workspace-template-workbench" className="grid gap-4 rounded-lg border border-border bg-background p-4">
+              <div><Badge variant="outline">Step 2</Badge><h2 className="mt-2 text-18 font-bold">设计模块</h2><p className="text-13 text-muted-foreground">按题目分类组织报告章节，后续由报告编排器选择文本、图表和图片模块。</p></div>
+              <div className="grid gap-3 md:grid-cols-2">{(categoryNames.length ? categoryNames : ["综合分析"]).map((category) => <article key={category} className="rounded-lg border border-border p-4"><FileText className="h-5 w-5" /><h3 className="mt-3 text-15 font-semibold">{category}</h3><p className="mt-1 text-12 text-muted-foreground">{questions.filter((question) => !categoryNames.length || question.category === category).length} 个问题 · 文本 / 图表</p></article>)}</div>
+              <Button className="w-fit" onClick={() => navigateWorkflow(workflowSurveyId, "collect")}>下一步：发布回收</Button>
+            </section>
+          )}
+          {workflowStep === "collect" && (
+            <section data-testid="workspace-collect-workbench" className="grid gap-4 rounded-lg border border-border bg-background p-4">
+              <div><Badge variant="outline">Step 3</Badge><h2 className="mt-2 text-18 font-bold">发布与回收</h2><p className="text-13 text-muted-foreground">配置答题身份、回收上限和提交确认文案。</p></div>
+              <div className="grid gap-3 md:grid-cols-2"><div><Label htmlFor="workflow-response-mode">答题身份</Label><Select id="workflow-response-mode" value={responseMode} onChange={(event) => setResponseMode(event.target.value as "anonymous" | "identified")}><option value="anonymous">匿名</option><option value="identified">实名</option></Select></div><div><Label htmlFor="workflow-response-limit">答卷上限</Label><Input id="workflow-response-limit" type="number" min="1" value={responseLimit} onChange={(event) => setResponseLimit(event.target.value)} /></div></div>
+              <div><Label htmlFor="workflow-confirmation">提交确认文案</Label><Textarea id="workflow-confirmation" value={confirmationMessage} onChange={(event) => setConfirmationMessage(event.target.value)} /></div>
+              <div className="flex flex-wrap gap-2"><Button onClick={() => void savePublishSettings()}>保存发布配置</Button><Button variant="outline" onClick={() => navigateWorkflow(workflowSurveyId, "answer")}>查看答题</Button></div>
+              {publishSettingsMessage && <p className="text-12 text-muted-foreground">{publishSettingsMessage}</p>}
+            </section>
+          )}
+          {workflowStep === "answer" && <section data-testid="workspace-answer-workbench" className="grid gap-4 rounded-lg border border-border bg-background p-4"><div><Badge variant="outline">Step 4</Badge><h2 className="mt-2 text-18 font-bold">查看答题</h2><p className="text-13 text-muted-foreground">以受访者视角检查真实答题页和样本来源。</p></div><a data-testid="workspace-answer-link" className="inline-flex w-fit items-center gap-2 font-semibold underline" href={`/survey/${workflowSurveyId}/answer`}><Eye className="h-4 w-4" />打开答题页</a></section>}
+          {workflowStep === "report" && <section data-testid="workspace-report-workbench" className="grid gap-4 rounded-lg border border-border bg-background p-4"><div><Badge variant="outline">Step 5</Badge><h2 className="mt-2 text-18 font-bold">分析报告</h2><p className="text-13 text-muted-foreground">查看真实答卷统计、AI 洞察和导出结果。</p></div><a data-testid="workspace-report-link" className="inline-flex w-fit items-center gap-2 font-semibold underline" href={`/surveys/${workflowSurveyId}/results`}><BarChart3 className="h-4 w-4" />打开分析报告</a></section>}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div data-testid="survey-professional-dashboard" className="min-h-full bg-secondary text-foreground" style={surveyThemeStyle}>
       <div className="grid min-h-screen lg:grid-cols-[244px_minmax(0,1fr)]">
@@ -2409,6 +2515,9 @@ export default function SurveysPage() {
                     <p className="mt-4 border-t border-border pt-3 text-12 text-muted-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
                       双击卡片进入编辑
                     </p>
+                    <Button data-testid={`open-workspace-${s.id}`} type="button" size="sm" variant="outline" className="mt-3 w-full" onClick={() => navigateWorkflow(s.id, "design")}>
+                      打开五步工作台
+                    </Button>
                   </div>
                 </article>
               ))}

@@ -41,6 +41,8 @@ phases/phase-p13-survey
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-14：源 Survey 五步工作台仅用 React state 切换时刷新会回首页；主仓同步应把 survey id 和 step 投影到
+  URL，并用 Playwright 对每一步执行 reload，才能满足恢复契约（出处：phase-p25 F10 / PR #637）。
 - 2026-07-14：移植独立 Survey 源仓的数据契约时，`survey_templates` 的个人模板模型不能直接覆盖主仓团队模板模型；
   应增量加入 `tags`/`category_plan`，并继续用 `canViewSurvey` + `canManageSurveyScope` 执行 team/room 边界
   （出处：phase-p25 F09 / PR #637）。

@@ -224,9 +224,9 @@
       "title": "按源快照重建完整 Survey 工作台与五步流程",
       "user_visible_behavior": "用户在 BoardX Survey 工作台中可进入我的问卷、问卷模板、设计问卷、设计模块、发布回收、查看答题和分析报告；URL 刷新恢复当前视图，模板编辑和全部题型设置连接真实数据，桌面与移动端不重叠。",
       "design_ref": "ui-signoff stash tree 1eb9d7b；requirements/03-professional-survey-system.md、10-template-editor-redesign.md",
-      "status": "pending",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "10",
+      "owner": "wrk-survey-1",
       "capability": "CAP-WEB",
       "depends_on": [
         "F08",
@@ -238,7 +238,7 @@
         "pnpm --filter @repo/web run typecheck",
         "pnpm --filter @repo/web exec playwright test e2e/survey-p25-010-source-workspace.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F10.verify.log @ 2026-07-14T13:39:04.146Z",
       "notes": "共享热点：apps/web/app/(app)/surveys/page.tsx；以源 stash 用户行为重构为可维护组件，不能只复制导航外观。"
     },
     {
