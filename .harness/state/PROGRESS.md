@@ -14,11 +14,11 @@
 | p6 | Canvas & 组件 (P6) | in_progress | 0 | 0 | 3 | 21 |
 | p7 | Board 壳 (P7) | in_progress | 0 | 0 | 5 | 11 |
 | p8 | 实时协作 (P8) | not_started | 0 | 0 | 0 | 5 |
-| p9 | AVA / Chat (P9) | in_progress | 0 | 0 | 1 | 10 |
+| p9 | AVA / Chat (P9) | passing | 0 | 0 | 0 | 11 |
 | p10 | 知识库 (P10) | in_progress | 0 | 1 | 0 | 3 |
 | p11 | AI Store (P11) | in_progress | 0 | 0 | 0 | 6 |
 | p12 | Studio & 演示 (P12) | in_progress | 0 | 0 | 0 | 3 |
-| p13 | 问卷 (P13) | in_progress | 0 | 0 | 0 | 8 |
+| p13 | 问卷 (P13) | in_progress | 0 | 0 | 0 | 7 |
 | p14 | 积分 & 计费 (P14) | in_progress | 0 | 0 | 0 | 5 |
 | p15 | Admin 后台 (P15) | in_progress | 0 | 0 | 0 | 5 |
 | p16 | UI 导航接线与差距审计 | not_started | 0 | 0 | 0 | 3 |
@@ -32,3 +32,4 @@
 | p25 | Survey System | in_progress | 0 | 0 | 0 | 7 |
 
 _最近聚合:2026-07-14T08:37:14.610Z_
+

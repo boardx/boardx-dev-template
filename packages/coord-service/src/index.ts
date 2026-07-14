@@ -2,6 +2,8 @@ import { Router } from "./router";
 import { claimResource, heartbeatRoute, queryClaims, releaseRoute } from "./routes/claims";
 import { submitVerdict } from "./routes/verdicts";
 import { submitEvent } from "./routes/events";
+import { dispatchTask, listTasks, ackTask, doneTask, recallTask } from "./routes/tasks";
+import { mintAgentToken } from "./routes/mint";
 import { publicStatus } from "./routes/status";
 import { sweepStaleClaims } from "./cron/sweeper";
 import { runProjector } from "./cron/projector";
@@ -24,6 +26,12 @@ router.get("/", async () =>
       "POST /claims/:id/release": "release lease (Bearer token)",
       "POST /verdicts": "record review verdict (Bearer token)",
       "POST /events": "record a narrative event: cycle-plan | cycle-result | andon (Bearer token)",
+      "POST /tasks": "dispatch a task to an agent inbox (coordinator token) — #594",
+      "GET /tasks?assignee=&status=": "agent inbox (own token; coordinators may query anyone)",
+      "POST /tasks/:id/ack": "acknowledge a pending task (assignee token)",
+      "POST /tasks/:id/done": "mark own task done (assignee token)",
+      "POST /tasks/:id/recall": "recall a task (coordinator token)",
+      "POST /agents/:id/mint-token": "self-service token mint/rotate (token-broker only; ADR-011 P2)",
     },
   })
 );
@@ -33,6 +41,12 @@ router.post("/claims/:id/heartbeat", heartbeatRoute);
 router.post("/claims/:id/release", releaseRoute);
 router.post("/verdicts", submitVerdict);
 router.post("/events", submitEvent);
+router.post("/tasks", dispatchTask);
+router.get("/tasks", listTasks);
+router.post("/tasks/:id/ack", ackTask);
+router.post("/tasks/:id/done", doneTask);
+router.post("/tasks/:id/recall", recallTask);
+router.post("/agents/:id/mint-token", mintAgentToken);
 router.get("/status", publicStatus);
 
 export default {

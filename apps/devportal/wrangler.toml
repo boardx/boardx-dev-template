@@ -6,7 +6,11 @@
 #   pnpm build && pnpm exec next-on-pages
 #   pnpm exec wrangler pages deploy .vercel/output/static --branch main
 #
-# 敏感值不在此文件：GITHUB_TOKEN（细粒度只读 PAT）是 Pages 加密 secret——
+# 敏感值不在此文件（Pages 加密 secret，wrangler pages secret put 写入）：
+#   GITHUB_TOKEN        细粒度只读 PAT（数据源）
+#   COORD_BROKER_TOKEN  token-broker 身份（portal-broker）的 bearer——自助领 token
+#                       的服务端凭据（ADR-011 P2），永不下发浏览器
+# GITHUB_TOKEN（细粒度只读 PAT）是 Pages 加密 secret——
 #   pnpm exec wrangler pages secret put GITHUB_TOKEN --project-name devportal
 name = "devportal"
 pages_build_output_dir = ".vercel/output/static"

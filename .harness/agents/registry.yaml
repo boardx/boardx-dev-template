@@ -18,6 +18,16 @@
 version: 1
 
 agents:
+  # 门户自助发 token 的 broker（ADR-011 P2）：kind=token-broker 只有一个权力——
+  # 调 coord-service 的 mint 端点；不 claim、不派工、不 andon。它的 bearer 是
+  # devportal 的 Pages secret（COORD_BROKER_TOKEN），不属于任何人类会话。
+  - id: portal-broker
+    active: true
+    kind: token-broker
+    model: service
+    areas: [portal]
+    responsibilities:
+      - devportal 自助 token 领取/轮换的唯一服务端入口（mint 经它代调）
   # ── 主 Agent：编排者（唯一）────────────────────────────────────────────────
   - id: coord-main
     active: true
@@ -233,6 +243,18 @@ agents:
     kind: worker
     model: sonnet-5
     areas: [design]
+    max_concurrent: 1
+  - id: wrk-survey-syj-1
+    active: true
+    kind: worker
+    owner: usersyj  # 开发者 usersyj(#617 onboarding 批准,2026-07-13):survey 域 worker
+    areas: [survey]
+    max_concurrent: 1
+  - id: wrk-ava-syj-1
+    active: true
+    kind: worker
+    owner: usersyj  # 开发者 usersyj(#619 onboarding 批准,2026-07-13):ava 域 worker
+    areas: [ai-core, deep-research, ai-settings]
     max_concurrent: 1
   - id: wrk-ava-p18-1
     active: true

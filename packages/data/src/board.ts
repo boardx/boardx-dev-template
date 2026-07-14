@@ -77,7 +77,11 @@ export async function getBoard(boardId: number): Promise<Board | undefined> {
 export async function resolveBoardId(idParam: string): Promise<number> {
   if (isValidPublicId(idParam, "brd")) {
     const rows = await query<{ id: number }>("SELECT id FROM boards WHERE public_id = $1", [idParam]);
-    return rows[0]?.id ?? -1;
+    // pg 的 bigint 主键运行时按字符串返回（{ id: number } 只是编译期类型断言，不改变
+    // 运行时值）——不显式 Number() 归一化，调用方任何 `Number(x) === boardId` 之类的
+    // 比较都会因「数字 vs 数字字符串」永远为 false（同 rooms.ts resolveRoomId 的真实
+    // 回归，见 room-chat 详情接口 404 排查；两处同一函数模式、同一根因，一并修）。
+    return rows[0] ? Number(rows[0].id) : -1;
   }
   const n = Number(idParam);
   return Number.isFinite(n) ? n : -1;
