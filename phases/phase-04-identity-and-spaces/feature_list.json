@@ -320,17 +320,17 @@
       "id": "F14",
       "priority": 21,
       "area": "room",
-      "title": "[DEFERRED] 房间文件/Studio/问卷",
+      "title": "房间文件/Studio/问卷（团队视角链接）",
       "user_visible_behavior": "Room 内文件管理、Studio（画布）、问卷查看。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "05",
+      "owner": "coord-platform",
       "capability": "CAP-FILE",
       "verification": [
-        "echo 'DEFERRED：依赖 CAP-FILE/CAP-CANVAS 平面，本阶段不实现' && false"
+        "pnpm --filter @repo/web exec playwright test e2e/team-014-room-files-studio-survey.spec.ts"
       ],
-      "evidence": "",
-      "notes": "uc-room-005/006/007。DEFERRED：依赖 File/Canvas 平面。",
+      "evidence": "evidence/F14.verify.log @ 2026-07-14T09:35:32.546Z",
+      "notes": "uc-room-005/006/007。DEFERRED：依赖 File/Canvas 平面。 2026-07-14 复核（#600 第4项）：DEFERRED 理由已过时——p10/p12/p13/p22 已交付 Room 内 Files/Survey/Studio 平面，本 feature 收口为团队房间三链路端到端锚定。",
       "source_use_cases": [
         "phases/phase-04-identity-and-spaces/requirements/room/uc-room-005-manage-room-files.md",
         "phases/phase-04-identity-and-spaces/requirements/room/uc-room-006-use-room-studio.md",

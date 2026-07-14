@@ -6,7 +6,7 @@
 |-------|------|------|-------------|-------------|---------|---------|
 | 01 | Foundation（harness 元层） | in_progress | 0 | 0 | 0 | 2 |
 | p0 | 基础设施 (P0) | done | 0 | 0 | 0 | 3 |
-| 04 | Auth/Team/Room 核心打包体（横跨 P1auth + P3team + P4room） | in_progress | 2 | 0 | 0 | 15 |
+| 04 | Auth/Team/Room 核心打包体（横跨 P1auth + P3team + P4room） | in_progress | 1 | 0 | 0 | 16 |
 | p1 | Profile/Common（P1 补全，配合 04 的 auth） | done | 0 | 0 | 0 | 3 |
 | p2 | Home 工作台 (P2) | in_progress | 0 | 0 | 0 | 7 |
 | p4 | Room-Chat (P4 补全) | in_progress | 0 | 0 | 1 | 4 |
@@ -30,4 +30,4 @@
 | p23 | developer-portal | in_progress | 0 | 0 | 1 | 9 |
 | p24 | room-board-management | not_started | 0 | 0 | 0 | 0 |
 
-_最近聚合:2026-07-14T09:25:20.808Z_
+_最近聚合:2026-07-14T09:35:32.565Z_
