@@ -41,6 +41,9 @@ phases/phase-p13-survey
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-14：用户要求同步“包括未提交内容”时，源事实必须核对 `git status` 和 `git stash list/show`；
+  只读取分支 HEAD 会漏掉 stash 中已完成但未提交的首页/导航设计。同步前应记录源 commit、stash 标识和目标文件哈希
+  （出处：phase-p25 F08）。
 - 2026-07-14：UI 对 session 恢复接口的 404 如果被 `catch` 静默吞掉，常规 happy-path E2E 不会暴露功能缺失；
   同步原型时要搜索全部 `fetch` URL 并逐一确认 route 存在，草稿恢复需单独做刷新 E2E（出处：phase-p25 F07）。
 - 2026-07-14：从独立 Survey 原型仓同步时不能直接覆盖 `packages/data/src/survey.ts`：原型分支缺少主仓的

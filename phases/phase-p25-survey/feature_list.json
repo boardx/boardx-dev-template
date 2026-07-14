@@ -168,6 +168,30 @@
       ],
       "evidence": "evidence/F07.verify.log @ 2026-07-14T08:37:14.545Z",
       "notes": "源分支 UI 已调用 sessions API，但源数据实现缺失；本 feature 在 review 中补齐悬空契约。"
+    },
+    {
+      "id": "F08",
+      "priority": 1,
+      "area": "survey",
+      "title": "同步 Survey 未提交首页与模板导航设计",
+      "user_visible_behavior": "用户进入 /surveys 时看到与 boardx-survey 未提交源状态一致的 BoardX Survey 工作台、首页/我的问卷/问卷模版导航；直接访问 /surveys?view=templates 可恢复模板管理页并查看模板统计、分类、标签和管理操作。",
+      "design_ref": "requirements/01-source-stash-ui-fidelity.md；boardx-survey codex-survey-home-nav-redesign stash@{0}",
+      "status": "passing",
+      "sprint": "08",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F02",
+        "F07"
+      ],
+      "wave": 7,
+      "verification": [
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-008-source-stash-ui.spec.ts"
+      ],
+      "evidence": "evidence/F08.verify.log @ 2026-07-14T10:01:59.039Z",
+      "notes": "仅同步 stash 中的 Survey UI/交互；保留主仓 Room/Team 权限、千问 provider 和已验证 API。"
     }
   ]
 }
