@@ -338,6 +338,17 @@ export default function TeamsPage() {
                 </div>
                 <span className="text-11 capitalize text-placeholder">{t.role}</span>
               </div>
+              {/* 04-F16：owner/admin 进团队 Home（Dashboard 统计 + 管理入口） */}
+              {(t.role === "owner" || t.role === "admin") && (
+                <Button
+                  data-testid={`manage-${t.id}`}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push(`/teams/${t.id}`)}
+                >
+                  Manage
+                </Button>
+              )}
               <Button
                 data-testid={`switch-${t.id}`}
                 variant="outline"

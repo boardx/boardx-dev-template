@@ -313,6 +313,8 @@ export function StoreBrowser() {
     const params = new URLSearchParams(window.location.search);
     const navParam = params.get("nav");
     if (navParam === "authorized") setNav("authorized");
+    // 04-F16：团队 Home 的 Store Subscribe 入口带 ?nav=subscribe 直达订阅视图。
+    if (navParam === "subscribe") setNav("subscribe");
     if (params.get("shareError") === "invalid") {
       setShareRedeemNotice("分享链接无效、已关闭或项目不存在");
     } else if (params.get("shared")) {
