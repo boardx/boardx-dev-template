@@ -13,7 +13,7 @@
 // 立即失效——这是 owner 对自己 agent 的合法权力（token 丢失/泄露自救），UI 侧要
 // 提示"轮换会使旧 token 失效"。明文 token 只在响应里出现一次，服务端只存 hash。
 // 全程写 token-mint 事件（含 requested_by），审计链完整。
-import { requireAgent } from "../auth";
+import { requireAgent, COORDINATOR_KINDS } from "../auth";
 import { HttpError } from "../lib/errors";
 import { nowIso } from "../lib/time";
 import { sha256Hex } from "../lib/crypto";
@@ -38,9 +38,13 @@ export const mintAgentToken: Handler = async (request, env: Env, params) => {
     .bind(agentId)
     .first<{ id: string; kind: string; active: number }>();
   if (!target || !target.active) throw new HttpError(404, "agent_unknown_or_inactive");
-  // broker 自身与协调层身份不允许经自助通道轮换——这些是共享基础设施的钥匙，
-  // 轮换走人类授权的运维流程（OPERATIONS.md §2），不走开发者自助面。
-  if (target.kind === "token-broker" || target.kind === "coordinator") {
+  // broker 自身与**全部**协调层身份（coordinator / module-coordinator /
+  // architecture-coordinator，见 auth.ts COORDINATOR_KINDS）不允许经自助通道轮换
+  // ——这些是共享基础设施的钥匙且持 andon 停线权，轮换走人类授权的运维流程
+  // （OPERATIONS.md §2），不走开发者自助面。安全审查 #629：此处曾只挡
+  // "coordinator" 字面量，漏了 module-/architecture-coordinator，构成协调层身份
+  // 自助 mint 的提权洞——改用 COORDINATOR_KINDS 全集。
+  if (target.kind === "token-broker" || COORDINATOR_KINDS.has(target.kind)) {
     throw new HttpError(403, "identity_not_self_serviceable");
   }
 

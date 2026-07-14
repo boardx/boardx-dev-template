@@ -14,7 +14,15 @@ import { readRepoFile } from "@/lib/repo-files";
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
-const NOT_SELF_SERVICEABLE = new Set(["coordinator", "token-broker"]);
+// UX 前置过滤：不把不可自助的身份列为可领取。真正的拒绝以 coord-service 的 mint
+// 端点为权威门（COORDINATOR_KINDS 全集）。安全审查 #629：此处曾漏
+// module-/architecture-coordinator，与服务端同缺 → 端到端洞开，两处必须一致。
+const NOT_SELF_SERVICEABLE = new Set([
+  "coordinator",
+  "module-coordinator",
+  "architecture-coordinator",
+  "token-broker",
+]);
 
 interface RegistryAgent {
   id: string;

@@ -25,6 +25,8 @@ describe("POST /agents/:id/mint-token（ADR-011 P2 自助领取）", () => {
     await seedAgent("portal-broker", "broker-token", "token-broker");
     await seedAgent("wrk-dev-1", "old-worker-token", "worker");
     await seedAgent("coord-x", "coord-token", "coordinator");
+    await seedAgent("coord-mod-x", "modcoord-token", "module-coordinator");
+    await seedAgent("coord-arch-x", "archcoord-token", "architecture-coordinator");
   });
 
   it("非 broker 一律 403（worker 不能给自己 mint，coordinator 也不行——入口唯一）", async () => {
@@ -52,9 +54,12 @@ describe("POST /agents/:id/mint-token（ADR-011 P2 自助领取）", () => {
     expect((await probe(body.token)).status).toBe(201);         // 新 token 立即可用
   });
 
-  it("broker/coordinator 身份不可经自助通道轮换（共享设施钥匙走人类运维流程）", async () => {
+  it("broker/全部协调层身份不可经自助通道轮换（共享设施钥匙走人类运维流程）", async () => {
     expect((await SELF.fetch(mint("coord-x", "broker-token"))).status).toBe(403);
     expect((await SELF.fetch(mint("portal-broker", "broker-token"))).status).toBe(403);
+    // 安全审查 #629：module-/architecture-coordinator 同持 andon 停线权，同样不可自助 mint
+    expect((await SELF.fetch(mint("coord-mod-x", "broker-token"))).status).toBe(403);
+    expect((await SELF.fetch(mint("coord-arch-x", "broker-token"))).status).toBe(403);
   });
 
   it("未注册身份 404；缺 requested_by 400；mint 写 token-mint 审计事件", async () => {
