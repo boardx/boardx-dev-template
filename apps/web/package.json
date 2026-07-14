@@ -31,7 +31,8 @@
     "remark-gfm": "^4.0.0",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
-    "yaml": "^2.5.0"
+    "yaml": "^2.5.0",
+    "@repo/export": "workspace:*"
   },
   "devDependencies": {
     "@playwright/test": "^1.47.0",
