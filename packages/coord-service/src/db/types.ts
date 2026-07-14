@@ -16,7 +16,13 @@ export type EventType =
   // cycle-plan/cycle-result = C-cycle 周期站会；andon = main 打挂的停线/恢复信号。
   | "cycle-plan"
   | "cycle-result"
-  | "andon";
+  | "andon"
+  // 派工原语生命周期（#594 平台中立任务收件箱）——由 /tasks 路由内部写入，
+  // 不在 POST /events 的手写白名单里：
+  | "task-dispatch"
+  | "task-ack"
+  | "task-done"
+  | "task-recall";
 export type VerdictResult = "ok" | "changes";
 
 export interface AgentRow {
@@ -47,6 +53,22 @@ export interface EventRow {
   agent_id: string;
   payload: string | null;
   at: string;
+}
+
+export type TaskStatus = "pending" | "acked" | "done" | "recalled";
+
+export interface TaskRow {
+  id: number;
+  issue: number;
+  assignee: string;
+  priority: string;
+  deadline: string | null;
+  note: string | null;
+  status: TaskStatus;
+  created_by: string;
+  created_at: string;
+  acked_at: string | null;
+  updated_at: string;
 }
 
 export interface VerdictRow {

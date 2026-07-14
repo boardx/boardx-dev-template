@@ -161,6 +161,38 @@
       ],
       "evidence": "evidence/F07.verify.log @ 2026-07-07T07:07:09.372Z",
       "notes": "uc-survey-007。源于 F04 notes 明确排除项(\"分析报告的 AI 摘要为可选增强\")的后续补齐，非凭空新增。复用 packages/ai 已合入 main 的 gateway.ts（defaultGateway/ChatGateway，anthropic:/stub: 前缀路由 + FORCE_FAIL_MARKER 确定性失败触发）与 studioGenerator.ts 的 sanctioned-stub 先例实现，不依赖 researchGenerator.ts（后者虽也已合入 main，但本 feature 未用到它）。e2e 走 stub provider，不依赖真实 Anthropic API key。摘要不持久化落库（每次即时生成），历史版本管理/多语言/PDF·CSV 嵌入摘要均明确不做，留给后续 feature。依赖 F04（结果聚合与权限边界）。实现已交付（PR #379，含 review 修复 commit 2d10abe），首轮 review（code-reviewer + feature-evaluator）均通过；转 passing 待 host docker 负载较低时补跑 harness verify（本机曾遇 all predefined address pools have been fully subnetted，参见 #362-364 同类先例）。"
+    },
+    {
+      "id": "F08",
+      "priority": 1,
+      "area": "survey",
+      "title": "从 main 历史移除 9cc1c25 并按 Harness 恢复 Survey 基线",
+      "user_visible_behavior": "访问 Survey 列表、创建器、公开答题页、结果与报告时，仅保留 phase p13 F01-F07 已验证能力；未经 Harness 交付的 Survey 工作台扩展被移除，页面样式和既有交互保持正常，既有 Survey 端到端回归不退化。",
+      "design_ref": "phase-p13 F01-F07 已验证 UI 与 DESIGN.md tokens；本 feature 只恢复既有确认基线，不新增 UI。",
+      "status": "passing",
+      "sprint": "08",
+      "owner": "codex-survey-clean-history",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05",
+        "F06",
+        "F07"
+      ],
+      "wave": 4,
+      "verification": [
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "pnpm --filter @repo/data run typecheck",
+        "pnpm --filter @repo/data run test",
+        "! git merge-base --is-ancestor 9cc1c25 HEAD",
+        "git diff --quiet 61e5ec1 HEAD -- apps/web packages/ai packages/data pnpm-lock.yaml docs/superpowers"
+      ],
+      "evidence": "evidence/F08.verify.log @ 2026-07-13T09:04:16.615Z",
+      "notes": "需求见 requirements/08-harness-remediation.md。从 61e5ec1 重建 main 后续历史并用 force-with-lease 发布，使 9cc1c25 不再是祖先；后续完整 Survey 功能按新 feature 分批重新交付。"
     }
   ]
 }
