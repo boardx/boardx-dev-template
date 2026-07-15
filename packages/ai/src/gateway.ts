@@ -236,11 +236,15 @@ export const stubProvider: ChatProvider = {
       return;
     }
 
-    const reply = buildStubReply(text, {
-      modelId,
-      agentId: settings?.agentId ?? "default",
-      toolIds: settings?.toolIds ?? [],
-    });
+    const reply = buildStubReply(
+      text,
+      {
+        modelId,
+        agentId: settings?.agentId ?? "default",
+        toolIds: settings?.toolIds ?? [],
+      },
+      systemMessage?.content
+    );
     // 按小块切分模拟逐 token 流式（真实 provider 由底层 SDK 决定切分粒度）。
     const chunks = reply.match(/.{1,4}/gs) ?? [reply];
     for (const chunk of chunks) {
@@ -269,10 +273,16 @@ const BOARD_CONTEXT_MARKER_RE = /\n\n\[画布内容: ([\s\S]+)\]$/;
  *  若携带知识库引用标记，回复里显式列出引用来源，供 F04 验证 RAG 检索结果被使用且可追溯。
  *  若携带画布内容标记，回复里显式引用画布上的具体文字，供 p17-F01 验证 Board AI 真实基于
  *  画布内容生成（而非仅报组件数量）。
- *  settings 携带当前生效的模型/Agent/工具，供 F07 验证发送前设置在回复中确实生效。 */
+ *  settings 携带当前生效的模型/Agent/工具，供 F07 验证发送前设置在回复中确实生效。
+ *  systemMessageContent（p18 room-ava F05）：调用方若传了 system 角色消息（如房间级
+ *  ai_instruction 注入），回复里显式引用其内容，供 e2e 验证系统提示真的被"看到"——
+ *  与附件/kb/画布同一个道理：不是把它嵌进 userText 里再用正则抠出来（那三个是历史上
+ *  route.ts 拼字符串留下的口径），而是作为独立的 messages[] system 条目真实传入，
+ *  这里直接读参数即可，不需要正则匹配。 */
 export function buildStubReply(
   userText: string,
-  settings: { modelId?: string; agentId?: string; toolIds?: string[] } = {}
+  settings: { modelId?: string; agentId?: string; toolIds?: string[] } = {},
+  systemMessageContent?: string
 ): string {
   const boardMatch = userText.match(BOARD_CONTEXT_MARKER_RE);
   const afterBoard = boardMatch ? userText.replace(BOARD_CONTEXT_MARKER_RE, "") : userText;
@@ -288,13 +298,16 @@ export function buildStubReply(
   const boardLine = boardMatch
     ? `\n\n**画布内容参考**：\n${boardMatch[1]}\n\n以上是我在当前画布上看到的内容，已结合它来回答你的问题。`
     : "";
+  const systemLine = systemMessageContent?.trim()
+    ? `\n\n**系统提示**：${systemMessageContent.trim()}`
+    : "";
   const modelId = settings.modelId ?? DEFAULT_MODEL_ID;
   const agentId = settings.agentId ?? "default";
   const tools = settings.toolIds && settings.toolIds.length > 0 ? settings.toolIds.join(", ") : "none";
   return [
     `## 收到`,
     ``,
-    `这是 AVA 的 stub 回复（未接入真实模型）。你说：「${quoted}」。${attachmentLine}${kbLine}${boardLine}`,
+    `这是 AVA 的 stub 回复（未接入真实模型）。你说：「${quoted}」。${attachmentLine}${kbLine}${boardLine}${systemLine}`,
     ``,
     `模型：${modelId}`,
     `Agent：${agentId}`,
