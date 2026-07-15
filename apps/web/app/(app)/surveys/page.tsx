@@ -36,6 +36,7 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ReportLayoutCanvas } from "@/components/survey/report-layout-canvas";
+import { ProfessionalReportDocument } from "@/components/survey/professional-report-document";
 import { SurveyAiPanel } from "@/components/survey/survey-ai-panel";
 import { SurveyOutlinePanel } from "@/components/survey/survey-outline-panel";
 import {
@@ -55,6 +56,7 @@ import {
   type ReportComposerPreview,
 } from "@/lib/survey-report-category-plan";
 import type { PlannedReportBlock } from "@/lib/survey-report-planner";
+import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
 
 echarts.use([
   BarChart,
@@ -3868,6 +3870,7 @@ function WorkspaceReportWorkbench({
   template,
   categoryPlan,
   generatedReport,
+  professionalReport,
   generating,
   status,
   error,
@@ -3880,6 +3883,7 @@ function WorkspaceReportWorkbench({
   template?: ReportTemplateDraft;
   categoryPlan?: ReportCategoryPlanDraft;
   generatedReport?: unknown;
+  professionalReport?: ProfessionalSurveyReportDocument;
   generating: boolean;
   status: string;
   error: string;
@@ -3992,7 +3996,7 @@ function WorkspaceReportWorkbench({
     ["35-44", "21%"],
     ["45+", "11%"],
   ];
-  const reportDocumentRef = useRef<HTMLElement | null>(null);
+  const reportDocumentRef = useRef<HTMLDivElement | null>(null);
   const [, setExportStatus] = useState("");
   const reportStyleOptions: Array<{
     id: AdvisoryReportStyle;
@@ -4258,7 +4262,13 @@ function WorkspaceReportWorkbench({
         onToggle={() => setReportOutlineCollapsed((collapsed) => !collapsed)}
         onSelect={setSelectedReportSection}
       />
-      <article ref={reportDocumentRef} className="overflow-hidden border-y border-border bg-background shadow-sm xl:border-x-0">
+      <div ref={reportDocumentRef} className="min-w-0">
+      {professionalReport ? (
+        <div className="overflow-hidden border-y border-border bg-background shadow-sm xl:border-x-0">
+          <ProfessionalReportDocument report={professionalReport} />
+        </div>
+      ) : (
+      <article className="overflow-hidden border-y border-border bg-background shadow-sm xl:border-x-0">
         <section className="border-b border-border bg-foreground px-8 py-8 text-background">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div className="max-w-4xl">
@@ -4396,6 +4406,8 @@ function WorkspaceReportWorkbench({
           ))}
         </section>
       </article>
+      )}
+      </div>
       <SurveyAiPanel
         title="报告 AI"
         placeholder="例如：将当前章节改写得更适合学校管理层阅读"
@@ -4868,6 +4880,7 @@ export default function SurveysPage() {
   const [reportTemplatesBySurveyId, setReportTemplatesBySurveyId] = useState<Record<number, ReportTemplateDraft>>({});
   const [reportCategoryPlansBySurveyId, setReportCategoryPlansBySurveyId] = useState<Record<number, ReportCategoryPlanDraft>>({});
   const [generatedReportsBySurveyId, setGeneratedReportsBySurveyId] = useState<Record<number, unknown>>({});
+  const [professionalReportsBySurveyId, setProfessionalReportsBySurveyId] = useState<Record<number, ProfessionalSurveyReportDocument>>({});
   const [workspaceReportClassifying, setWorkspaceReportClassifying] = useState(false);
   const [aiSessionId, setAiSessionId] = useState<string | null>(null);
   const [pendingAiDraft, setPendingAiDraft] = useState<AiDraft | null>(null);
@@ -5856,6 +5869,21 @@ export default function SurveysPage() {
       cancelled = true;
     };
   }, [currentSurveyId, generatedReportsBySurveyId]);
+
+  useEffect(() => {
+    if (!currentSurveyId || professionalReportsBySurveyId[currentSurveyId]) return;
+    let cancelled = false;
+    void fetch(`/api/surveys/${currentSurveyId}/professional-report`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        if (cancelled || !payload?.report) return;
+        setProfessionalReportsBySurveyId((items) => ({ ...items, [currentSurveyId]: payload.report as ProfessionalSurveyReportDocument }));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [currentSurveyId, professionalReportsBySurveyId]);
 
   async function navigateWorkspace(target: WorkspaceTarget) {
     if (target === "workspace") {
@@ -7733,6 +7761,7 @@ export default function SurveysPage() {
                   template={reportTemplatesBySurveyId[currentSurveyForNavigation.id]}
                   categoryPlan={reportCategoryPlansBySurveyId[currentSurveyForNavigation.id]}
                   generatedReport={generatedReportsBySurveyId[currentSurveyForNavigation.id]}
+                  professionalReport={professionalReportsBySurveyId[currentSurveyForNavigation.id]}
                   generating={workspaceReportGenerating}
                   status={workspaceTemplateStatus}
                   error={workspaceTemplateError}

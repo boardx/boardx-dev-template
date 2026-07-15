@@ -69,3 +69,30 @@ test("report template exposes chart image text layout and independent prompts", 
   await expect(page.getByTestId("report-layout-prompt-chart")).toBeVisible();
   await expect(page.getByTestId("report-module-resize-larger")).toBeVisible();
 });
+
+test("professional report never invents evidence for an empty survey", async ({ page }) => {
+  await register(page, "p25_f12_professional");
+  const created = await page.request.post("/api/surveys", {
+    data: {
+      title: "零样本专业报告",
+      questions: [
+        { title: "你的性别？", type: "single", required: true, options: ["男", "女"] },
+        { title: "你的年级？", type: "single", required: true, options: ["一年级", "二年级"] },
+      ],
+    },
+  });
+  expect(created.status()).toBe(201);
+  const survey = (await created.json()).survey as { id: number };
+
+  const reportResponse = await page.request.get(`/api/surveys/${survey.id}/professional-report`);
+  expect(reportResponse.status()).toBe(200);
+  const report = (await reportResponse.json()).report;
+  expect(report.emptyState).toBe("尚无真实答卷，无法生成分析结论。");
+  expect(report.executiveSummary.claims).toEqual([]);
+  expect(report.chapters.every((chapter: { chart?: unknown }) => chapter.chart === undefined)).toBe(true);
+
+  await page.goto(`/surveys?survey=${survey.id}&step=report`);
+  await expect(page.getByTestId("professional-report-document")).toContainText("尚无真实答卷", { timeout: 20_000 });
+  await expect(page.getByTestId("professional-report-document")).not.toContainText("模拟数据");
+  await expect(page.getByTestId("professional-report-document")).not.toContainText("预览维度");
+});
