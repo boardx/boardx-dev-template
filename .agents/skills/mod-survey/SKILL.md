@@ -41,6 +41,15 @@ phases/phase-p13-survey
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-15：报告编排器的章节名称、问题数、模块数和实时状态不能在导航、画布、设置三栏重复展示；
+  每栏只承担一种职责（章节切换 / 结果预览 / 参数编辑），全局操作只保留一个入口，动态约束反馈压缩成摘要
+  （出处：phase-p25 F12 / Product Design audit）。
+- 2026-07-15：同步 Survey 工作台不能只核对 API 路径是否存在，还要逐项核对页面实际调用的 HTTP method；
+  `report-categories` 仅有 GET/PATCH 时，UI 的 POST AI 分类会稳定返回 405。供应商降级必须继续经过主仓
+  `canManageSurveyScope` 权限并持久化默认结果（出处：phase-p25 F12 / issue #648）。
+- 2026-07-14：源仓最新版创建器不能按截图在简化页上补壳；应先比较源/目标主页面行数和直接依赖，
+  完整同步 UI 后再适配主仓 lint、Room 权限与已 passing 的 URL 恢复契约。详情接口和列表接口并发时，
+  工作流应保留独立详情状态，避免后写列表覆盖当前问卷（出处：phase-p25 F11 / PR #637）。
 - 2026-07-14：源 Survey 五步工作台仅用 React state 切换时刷新会回首页；主仓同步应把 survey id 和 step 投影到
   URL，并用 Playwright 对每一步执行 reload，才能满足恢复契约（出处：phase-p25 F10 / PR #637）。
 - 2026-07-14：移植独立 Survey 源仓的数据契约时，`survey_templates` 的个人模板模型不能直接覆盖主仓团队模板模型；
