@@ -18,6 +18,7 @@ export async function callQwenJson<T>(input: {
       model: input.model,
       messages: input.messages,
       temperature: input.temperature ?? 0.3,
+      enable_thinking: false,
       response_format: { type: "json_object" },
     }),
     signal: AbortSignal.timeout(45_000),
