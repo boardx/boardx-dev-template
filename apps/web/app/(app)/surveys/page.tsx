@@ -18,6 +18,7 @@ import {
   LayoutTemplate,
   ListChecks,
   PauseCircle,
+  PanelRightOpen,
   Pencil,
   PlayCircle,
   Plus,
@@ -34,6 +35,9 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { ReportLayoutCanvas } from "@/components/survey/report-layout-canvas";
+import { SurveyAiPanel } from "@/components/survey/survey-ai-panel";
+import { SurveyOutlinePanel } from "@/components/survey/survey-outline-panel";
 import {
   downloadVisualPngReport,
   downloadVisualWordReport,
@@ -666,7 +670,7 @@ function WorkspaceShell({
     icon: LucideIcon;
   }> = [
     { id: "design", label: "设计问卷", desc: "题目与元数据", icon: ClipboardList },
-    { id: "template", label: "设计模块", desc: "分类与报告组件", icon: FileText },
+    { id: "template", label: "报告模板", desc: "分类与模块组件", icon: FileText },
     { id: "collect", label: "发布回收", desc: "链接与回收规则", icon: Send },
     { id: "answer", label: "查看答题", desc: "答题页与样本", icon: Eye },
     { id: "report", label: "分析报告", desc: "洞察与导出", icon: BarChart3 },
@@ -895,6 +899,8 @@ function WorkspaceModulePanel({
   onOpenResponses: () => void;
   onBack: () => void;
 }) {
+  const [answerViewsCollapsed, setAnswerViewsCollapsed] = useState(false);
+  const [selectedAnswerView, setSelectedAnswerView] = useState("all");
   const reportPlan = survey ? inferReportPlan(survey) : null;
   const config: Record<Exclude<WorkspaceTarget, "workspace">, { label: string; title: string; copy: string; icon: typeof ClipboardList }> = {
     design: {
@@ -905,7 +911,7 @@ function WorkspaceModulePanel({
     },
     template: {
       label: "Report Blocks",
-      title: "设计模块",
+      title: "报告模板",
       copy: "根据问卷目标设计分类、输入方式、图表槽位和 Report Blocks，形成后续 AI 报告的结构基础。",
       icon: FileText,
     },
@@ -1047,7 +1053,21 @@ function WorkspaceModulePanel({
       </div>
 
       {view === "answer" && (
-        <section data-testid="user-responses-workbench" className="grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
+        <section data-testid="user-responses-workbench" className={answerViewsCollapsed ? "grid min-w-0 gap-3 xl:grid-cols-[56px_minmax(0,1fr)_300px]" : "grid min-w-0 gap-3 xl:grid-cols-[200px_minmax(0,1fr)_300px]"}>
+          <SurveyOutlinePanel
+            title="答卷视图"
+            items={[
+              { id: "all", label: "全部答卷", meta: `${survey.responses} 份` },
+              { id: "today", label: "今日提交", meta: `${Math.min(18, survey.responses)} 份` },
+              { id: "review", label: "需复核", meta: survey.responses ? "待检查" : "0 份" },
+              { id: "flagged", label: "已标记", meta: "0 份" },
+              { id: "invalid", label: "无效答卷", meta: "0 份" },
+            ]}
+            selectedId={selectedAnswerView}
+            collapsed={answerViewsCollapsed}
+            onToggle={() => setAnswerViewsCollapsed((collapsed) => !collapsed)}
+            onSelect={setSelectedAnswerView}
+          />
           <div className="overflow-hidden rounded-lg border border-border bg-background">
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3">
               <div>
@@ -1100,6 +1120,15 @@ function WorkspaceModulePanel({
           </div>
 
           <div className="grid gap-3">
+            <SurveyAiPanel
+              title="答卷质量 AI"
+              placeholder="找出可能无效的答卷并说明原因"
+              resultLabel="AI 已完成答卷检查"
+              changeCount={Math.min(6, survey.responses)}
+              onSubmit={onOpenResponses}
+              onPreview={onOpenResponses}
+              onApply={onOpenResponses}
+            />
             <Button
               type="button"
               variant="ghost"
@@ -1213,16 +1242,28 @@ function WorkspaceDesignWorkbench({
   onOpenAnswer: () => void;
   onOpenTemplate: () => void;
 }) {
-  const [assistantInput, setAssistantInput] = useState("");
-  const quickPrompts = [
-    "帮我优化题目表达",
-    "补充 3 个选择题",
-    "按基本信息和学习情况重新分类",
-    "检查是否适合手机答题",
-  ];
+  const [outlineCollapsed, setOutlineCollapsed] = useState(false);
+  const [aiCollapsed, setAiCollapsed] = useState(false);
+  const [selectedQuestionId, setSelectedQuestionId] = useState(questions[0]?.id ?? "");
+
+  useEffect(() => {
+    if (!questions.some((question) => question.id === selectedQuestionId)) {
+      setSelectedQuestionId(questions[0]?.id ?? "");
+    }
+  }, [questions, selectedQuestionId]);
+
   return (
     <div data-testid="workspace-design-workbench" className="grid gap-3">
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.05fr)_400px]">
+      <div className={aiCollapsed ? "grid min-w-0 xl:grid-cols-[auto_minmax(0,1fr)_auto]" : "grid min-w-0 xl:grid-cols-[auto_minmax(0,1fr)_320px]"}>
+        <SurveyOutlinePanel
+          title="题目大纲"
+          items={questions.map((question) => ({ id: question.id, label: question.title || "未命名问题", meta: TYPE_LABEL[question.type] }))}
+          selectedId={selectedQuestionId}
+          collapsed={outlineCollapsed}
+          onToggle={() => setOutlineCollapsed((collapsed) => !collapsed)}
+          onSelect={setSelectedQuestionId}
+          footer={<Button type="button" size="sm" variant="outline" className="mt-2 w-full border-dashed" onClick={addQuestion}><Plus className="h-4 w-4" />添加问题</Button>}
+        />
         <section className="grid gap-2.5">
           <div className="rounded-lg border border-border bg-background p-3">
             <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
@@ -1271,7 +1312,9 @@ function WorkspaceDesignWorkbench({
           </div>
 
           <div className="grid gap-2.5">
-            {questions.map((question, index) => (
+            {questions.filter((question) => question.id === selectedQuestionId).map((question) => {
+              const index = questions.findIndex((item) => item.id === question.id);
+              return (
               <section key={question.id} data-testid={`workspace-question-${index}`} className="rounded-lg border border-border bg-background p-3">
                 <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
                   <Badge variant="muted">Q{index + 1}</Badge>
@@ -1360,7 +1403,8 @@ function WorkspaceDesignWorkbench({
                   </div>
                 )}
               </section>
-            ))}
+              );
+            })}
           </div>
 
           <Button type="button" variant="outline" onClick={addQuestion} className="w-full border-dashed border-border-strong bg-background">
@@ -1371,62 +1415,30 @@ function WorkspaceDesignWorkbench({
           {actionMessage && <p className="text-13 text-muted-foreground">{actionMessage}</p>}
         </section>
 
-        <aside className="grid h-fit gap-2.5 xl:sticky xl:top-20">
-          <section className="rounded-lg border border-border bg-background p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <Badge variant="outline">AI Assistant</Badge>
-                <h3 className="mt-1.5 text-17 font-bold text-foreground">AI 助手</h3>
-                <p className="text-12 text-muted-foreground">默认打开，用对话方式编辑问卷题目、分类和说明。</p>
-              </div>
-              <Sparkles className="h-5 w-5 text-muted-foreground" strokeWidth={1.7} />
-            </div>
-
-            <div className="mt-3 grid max-h-72 gap-2 overflow-auto rounded-lg border border-border bg-card p-2.5">
-              <div className="max-w-[88%] rounded-lg border border-border bg-background px-3 py-2 text-12 leading-5 text-foreground">
-                我可以帮你改写题目、补充选项、调整题型、按主题分类，也可以检查这份问卷是否适合用户填写。
-              </div>
-              <div className="ml-auto max-w-[88%] rounded-lg bg-foreground px-3 py-2 text-12 leading-5 text-background">
-                当前问卷：{title || survey.title}
-              </div>
-              <div className="max-w-[88%] rounded-lg border border-border bg-background px-3 py-2 text-12 leading-5 text-foreground">
-                你可以直接描述要改什么，例如“把问题改得更适合小学生家长”或“增加学习习惯相关题目”。
-              </div>
-            </div>
-
-            <div className="mt-3 grid gap-1.5">
-              {quickPrompts.map((prompt) => (
-                <Button
-                  key={prompt}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-auto justify-start whitespace-normal rounded-lg px-3 py-1.5 text-left text-12"
-                  onClick={() => setAssistantInput(prompt)}
-                >
-                  {prompt}
-                </Button>
-              ))}
-            </div>
-
-            <div className="mt-3 grid gap-2">
-              <Textarea
-                value={assistantInput}
-                onChange={(event) => setAssistantInput(event.target.value)}
-                placeholder="输入你想如何修改问卷..."
-                className="min-h-20"
-              />
-              <Button
-                type="button"
-                className="w-full gap-1.5"
-                onClick={onOpenAi}
-              >
-                <Sparkles className="h-4 w-4" strokeWidth={1.6} />
-                用 AI 对话编辑问卷
-              </Button>
-            </div>
-          </section>
-        </aside>
+        {aiCollapsed ? (
+          <div className="hidden border-l border-border bg-background xl:flex xl:items-start xl:justify-center xl:px-1 xl:py-3">
+            <Button
+              data-testid="survey-ai-expand"
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label="展开 AI 助手"
+              title="展开 AI 助手"
+              onClick={() => setAiCollapsed(false)}
+            >
+              <PanelRightOpen className="h-4 w-4" strokeWidth={1.7} />
+            </Button>
+          </div>
+        ) : (
+          <SurveyAiPanel
+            placeholder="例如：把题目改得更适合家长填写，并补充心理健康相关问题"
+            resultLabel="AI 优化建议已生成"
+            onSubmit={() => onOpenAi()}
+            onPreview={onOpenAi}
+            onApply={onOpenAi}
+            onCollapse={() => setAiCollapsed(true)}
+          />
+        )}
       </div>
     </div>
   );
@@ -1616,6 +1628,7 @@ function WorkspaceReportComposer({
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [chartPickerOpen, setChartPickerOpen] = useState(false);
   const [previewSyncToken, setPreviewSyncToken] = useState(0);
+  const [outlineCollapsed, setOutlineCollapsed] = useState(false);
   const previewSectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const composerQuestions = workspaceQuestionsForComposer(questions);
   useEffect(() => {
@@ -1903,7 +1916,7 @@ function WorkspaceReportComposer({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-18 font-bold leading-tight text-foreground">报告设计</h2>
+              <h2 className="text-18 font-bold leading-tight text-foreground">报告模板</h2>
               <span className="text-12 text-muted-foreground">{completedCategoryCount}/{categories.length} 个章节已配置</span>
             </div>
           </div>
@@ -1945,12 +1958,25 @@ function WorkspaceReportComposer({
         </div>
       )}
 
-      <section className="grid min-w-0 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_430px]">
+      <section className={outlineCollapsed ? "grid min-w-0 gap-4 xl:grid-cols-[56px_minmax(0,1fr)_430px]" : "grid min-w-0 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_430px]"}>
+        {outlineCollapsed ? (
+          <aside data-testid="report-outline-panel" className="flex min-h-96 flex-col items-center gap-3 border border-border bg-background py-3">
+            <Button data-testid="report-outline-toggle" type="button" size="icon" variant="ghost" aria-label="展开报告章节" title="展开报告章节" onClick={() => setOutlineCollapsed(false)}>
+              <ChevronLeft className="h-4 w-4 rotate-180" />
+            </Button>
+            <Badge variant="muted">{categories.length}</Badge>
+          </aside>
+        ) : (
         <aside data-testid="report-outline-panel" className="min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
           <div className="border-b border-border px-4 py-3">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-14 font-bold text-foreground">章节</h3>
-              <Badge variant="outline">{categories.length}</Badge>
+              <div className="flex items-center gap-1">
+                <Badge variant="outline">{categories.length}</Badge>
+                <Button data-testid="report-outline-toggle" type="button" size="icon" variant="ghost" aria-label="收起报告章节" title="收起报告章节" onClick={() => setOutlineCollapsed(true)}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
           <div className="grid gap-1 p-2">
@@ -2009,6 +2035,7 @@ function WorkspaceReportComposer({
           </Button>
           </div>
         </aside>
+        )}
 
         <main data-testid="report-preview-panel" className="min-w-0 overflow-hidden rounded-lg border border-border bg-background">
           {!canExport ? (
@@ -2016,8 +2043,23 @@ function WorkspaceReportComposer({
               请先完成报告分类和输入方式设置，再预览或导出报告。
             </div>
           ) : (
-            <article data-testid="selected-report-section" className="bg-card">
-              {preview.sections.filter((section) => section.id === selectedCategory?.id).map((section) => renderCategorySection(section))}
+            <article data-testid="selected-report-section" className="grid gap-3 bg-card p-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+                <div>
+                  <p className="text-12 text-muted-foreground">当前章节</p>
+                  <h3 className="mt-1 text-18 font-bold text-foreground">{selectedCategory?.name}</h3>
+                </div>
+                <Badge variant="outline">{selectedQuestions.length} 个问题 · {visibleInputModes(selectedCategory?.inputModes ?? []).length} 个模块</Badge>
+              </div>
+              <ReportLayoutCanvas
+                chartPreview={selectedPreviewChart ? <EChartsReportPreview chart={selectedPreviewChart} /> : undefined}
+                prompts={{
+                  chart: selectedCategory?.modulePrompts?.chart,
+                  image: selectedCategory?.modulePrompts?.image,
+                  text: selectedCategory?.modulePrompts?.text,
+                }}
+                onPromptChange={(type, value) => patchModulePrompt(type, value)}
+              />
             </article>
           )}
         </main>
@@ -3527,10 +3569,8 @@ function WorkspaceCollectWorkbench({
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-background p-4">
         <div>
           <Badge variant="outline">Collect</Badge>
-          <h2 className="mt-2 text-18 font-bold text-foreground">发布与回收</h2>
-          <p className="text-13 text-muted-foreground">
-            配置答题入口、回收规则、提交确认和分享渠道；发布后进入分析报告。
-          </p>
+          <h2 className="mt-2 text-18 font-bold text-foreground">发布回收</h2>
+          <p className="text-13 text-muted-foreground">设置链接、回收范围和提交规则。</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" variant="outline" onClick={onBackToTemplate}>
@@ -3739,6 +3779,15 @@ function WorkspaceCollectWorkbench({
         </div>
 
         <aside className="grid h-fit gap-4">
+          <SurveyAiPanel
+            title="发布 AI"
+            placeholder="例如：设置为团队实名问卷，回收 200 份并在周五截止"
+            resultLabel="AI 已生成发布方案"
+            changeCount={5}
+            onSubmit={onSave}
+            onPreview={() => undefined}
+            onApply={onSave}
+          />
           <section className="rounded-lg border border-border bg-card p-4">
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-15 font-bold text-foreground">回收监控</h3>
@@ -3840,6 +3889,8 @@ function WorkspaceReportWorkbench({
 }) {
   type AdvisoryReportStyle = "consulting" | "board" | "research";
   const [reportStyle, setReportStyle] = useState<AdvisoryReportStyle>("consulting");
+  const [reportOutlineCollapsed, setReportOutlineCollapsed] = useState(false);
+  const [selectedReportSection, setSelectedReportSection] = useState("");
   const reportPlan = inferReportPlan(survey);
   const composerQuestions = workspaceQuestionsForComposer(questions);
   const effectiveCategoryPlan = categoryPlan?.categories.length ? categoryPlan : fallbackReportCategoryPlan(survey, questions);
@@ -4198,7 +4249,16 @@ function WorkspaceReportWorkbench({
         </p>
       )}
 
-      <article ref={reportDocumentRef} className="overflow-hidden rounded-lg border border-border bg-background shadow-sm">
+      <div className={reportOutlineCollapsed ? "grid min-w-0 xl:grid-cols-[56px_minmax(0,1fr)_320px]" : "grid min-w-0 xl:grid-cols-[220px_minmax(0,1fr)_320px]"}>
+      <SurveyOutlinePanel
+        title="报告目录"
+        items={generatedSections.map((section) => ({ id: section.id, label: section.title, meta: "已生成" }))}
+        selectedId={selectedReportSection || generatedSections[0]?.id}
+        collapsed={reportOutlineCollapsed}
+        onToggle={() => setReportOutlineCollapsed((collapsed) => !collapsed)}
+        onSelect={setSelectedReportSection}
+      />
+      <article ref={reportDocumentRef} className="overflow-hidden border-y border-border bg-background shadow-sm xl:border-x-0">
         <section className="border-b border-border bg-foreground px-8 py-8 text-background">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div className="max-w-4xl">
@@ -4336,6 +4396,15 @@ function WorkspaceReportWorkbench({
           ))}
         </section>
       </article>
+      <SurveyAiPanel
+        title="报告 AI"
+        placeholder="例如：将当前章节改写得更适合学校管理层阅读"
+        resultLabel="AI 已生成报告修订"
+        onSubmit={(prompt) => onGenerateReport(prompt, effectiveCategoryPlan)}
+        onPreview={() => undefined}
+        onApply={() => onGenerateReport(undefined, effectiveCategoryPlan)}
+      />
+      </div>
 
       {false && hasGeneratedReport ? (
       <article className="overflow-hidden rounded-lg border border-border bg-background">

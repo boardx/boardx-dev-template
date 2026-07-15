@@ -46,3 +46,26 @@ test("report categories fall back deterministically and remain owner-only", asyn
   await register(page, "p25_f12_outsider");
   expect((await page.request.post(`/api/surveys/${survey.id}/report-categories`)).status()).toBe(403);
 });
+
+test("report template exposes chart image text layout and independent prompts", async ({ page }) => {
+  await register(page, "p25_f12_layout");
+  const created = await page.request.post("/api/surveys", {
+    data: {
+      title: "学生成长调研",
+      questions: [
+        { title: "你的年级？", type: "single", required: true, options: ["一年级", "二年级"], category: "基础信息" },
+        { title: "你的性别？", type: "single", required: true, options: ["男", "女"], category: "基础信息" },
+      ],
+    },
+  });
+  expect(created.status()).toBe(201);
+  const survey = (await created.json()).survey as { id: number };
+
+  await page.goto(`/surveys?survey=${survey.id}&step=template`);
+  await expect(page.getByTestId("report-layout-canvas")).toBeVisible();
+  await expect(page.getByTestId("report-layout-module-chart")).toBeVisible();
+  await expect(page.getByTestId("report-layout-module-image")).toBeVisible();
+  await expect(page.getByTestId("report-layout-module-text")).toBeVisible();
+  await expect(page.getByTestId("report-layout-prompt-chart")).toBeVisible();
+  await expect(page.getByTestId("report-module-resize-larger")).toBeVisible();
+});

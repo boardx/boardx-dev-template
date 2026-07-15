@@ -3,8 +3,13 @@
 ## 当前已验证
 - F12 仍为 `in_progress`，没有提前标记 passing。
 - 报告分类 API 修复已通过 Web typecheck、86 个 Vitest 测试和 1 个聚焦 Playwright E2E。
+- Survey AI 工作台第一版已通过布局单测、Web typecheck、design lint，以及 4 条聚焦 Playwright 路径。
 
 ## 本轮改动
+- 五步工作流保留原有功能，将第二步命名为“报告模板”。
+- 设计页采用可折叠题目目录、单题编辑区和精简 AI 助手；AI 结果可预览或直接应用。
+- 报告模板支持图表、图片、文本模块，具备预览、移动、缩放和独立提示词入口。
+- 发布、查看答题、分析报告三个工作流同步采用目录 + 主工作区 + AI 助手结构。
 - `POST /api/surveys/:id/report-categories` 接入千问 JSON 分类，并沿用主仓 Survey scope 管理权限。
 - 千问缺少配置、超时或供应商失败时生成并保存确定性默认分类，页面可继续编辑。
 - E2E 验证真实问题 ID 被持久化，且非管理者返回 403。
@@ -12,9 +17,10 @@
 ## 仍损坏或未验证
 - 尚未运行整个 Harness verify，因为 F12 的真实答卷生成、零/低样本限制和失败重试尚未全部形成可执行验收。
 - 尚未以真实 `DASHSCOPE_API_KEY` 验证供应商成功分支；无密钥降级分支已验证。
+- 聚焦组合 E2E 中 AI fallback 用例被本地数据库约束阻塞：代码写入 `status=open`，`survey_ai_sessions_status_check` 拒绝该值；本轮没有扩大 UI 任务范围修改数据契约。
 
 ## 下一步最佳动作
-- 继续同一 F12，补齐真实答卷报告、零/低样本和任务失败重试测试；不要手改 `active-features.json` 或把 F12 直接改为 passing。
+- 先由人类检查 `http://localhost:3010/surveys` 的五个工作流界面并反馈，再继续同一 F12 的真实答卷、零/低样本和失败重试测试；不要手改 `active-features.json` 或把 F12 直接改为 passing。
 
 ## 命令
 - 启动:`pnpm -w run dev`
