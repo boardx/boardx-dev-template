@@ -2025,7 +2025,9 @@ function WorkspaceReportComposer({
         <aside data-testid="report-settings-panel" className="min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
           <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
             <h3 className="text-14 font-bold text-foreground">设置</h3>
-            <span className="text-12 text-muted-foreground">章节 {selectedCategoryIndex + 1}/{categories.length}</span>
+            <span className="text-12 text-muted-foreground">
+              {categories.length ? `章节 ${selectedCategoryIndex + 1}/${categories.length}` : "暂无章节"}
+            </span>
           </div>
           {selectedCategory ? (
             <div className="grid gap-4 p-4">
