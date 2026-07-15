@@ -248,7 +248,7 @@
       "title": "重建千问 AI 创建、优化与可观察会话",
       "user_visible_behavior": "用户从目标或参考内容创建问卷时，千问返回意图画布、分类题目和报告规划；优化已有问卷会产生逐项可确认的变更集；会话事件、失败、重试和确定性回退均可恢复且不跨用户泄漏。",
       "design_ref": "requirements/04-ai-guided-survey-creation.md、05-ai-report-agent.md、06-ai-model-switching.md",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "11",
       "owner": "wrk-survey-1",
       "capability": "CAP-AI",
@@ -263,7 +263,7 @@
         "pnpm --filter @repo/web run typecheck",
         "pnpm --filter @repo/web exec playwright test e2e/survey-p25-011-qwen-ai-workflow.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F11.verify.log @ 2026-07-14T14:49:49.356Z",
       "notes": "生产 provider 仅允许千问；测试使用确定性 stub。共享热点：packages/ai、survey AI routes、sessions/events、surveys/page.tsx。"
     },
     {
@@ -273,9 +273,9 @@
       "title": "重建动态报告规划与分类报告编排器",
       "user_visible_behavior": "问卷管理者可按题目分类配置报告章节、输入模块、图表类型、提示词和顺序，保存后刷新可恢复；系统只基于真实答卷生成结构化报告，零样本和低样本明确展示限制，任务进度和失败可重试。",
       "design_ref": "requirements/05-ai-report-agent.md、08-dynamic-report-engine-design.md、09-category-report-composer-design.md",
-      "status": "pending",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "12",
+      "owner": "wrk-survey-1",
       "capability": "CAP-AI",
       "depends_on": [
         "F09",
