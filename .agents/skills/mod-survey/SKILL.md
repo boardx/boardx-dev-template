@@ -41,6 +41,9 @@ phases/phase-p13-survey
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-15：报告编排器的章节名称、问题数、模块数和实时状态不能在导航、画布、设置三栏重复展示；
+  每栏只承担一种职责（章节切换 / 结果预览 / 参数编辑），全局操作只保留一个入口，动态约束反馈压缩成摘要
+  （出处：phase-p25 F12 / Product Design audit）。
 - 2026-07-15：同步 Survey 工作台不能只核对 API 路径是否存在，还要逐项核对页面实际调用的 HTTP method；
   `report-categories` 仅有 GET/PATCH 时，UI 的 POST AI 分类会稳定返回 405。供应商降级必须继续经过主仓
   `canManageSurveyScope` 权限并持久化默认结果（出处：phase-p25 F12 / issue #648）。

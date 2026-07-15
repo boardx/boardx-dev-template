@@ -1867,23 +1867,12 @@ function WorkspaceReportComposer({
             <div className="rounded-lg border border-border bg-background p-4">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-13 font-bold text-foreground">{section.chart.title}</p>
-                <div className="flex flex-wrap justify-end gap-1.5">
-                  <Badge variant="muted">{section.chart.type ? chartTypeOptions.find((option) => option.type === section.chart?.type)?.title ?? "Chart" : "Chart"}</Badge>
-                  {section.chart.style && section.chart.style !== "auto" ? <Badge variant="outline">{chartStyleOptions.find((option) => option.value === section.chart?.style)?.label}</Badge> : null}
-                </div>
+                <Badge variant="muted">{section.chart.type ? chartTypeOptions.find((option) => option.type === section.chart?.type)?.title ?? "图表" : "图表"}</Badge>
               </div>
-              {section.chart.prompt ? <p className="mt-2 text-11 leading-5 text-muted-foreground">图表要求：{section.chart.prompt}</p> : null}
-              {section.chart.dataPrompt ? <p className="mt-2 rounded-md bg-muted px-2.5 py-2 text-11 leading-5 text-muted-foreground">数据要求：{section.chart.dataPrompt}</p> : null}
-              <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                <Badge variant="outline">模拟数据</Badge>
-                <Badge variant="muted">n = {section.chart.sampleSize}</Badge>
-                {section.chart.appliedConstraints.map((constraint) => <Badge key={constraint} variant="muted">{constraint}</Badge>)}
-              </div>
+              <p className="mt-1 text-11 text-muted-foreground">模拟预览 · n = {section.chart.sampleSize}</p>
               <div className="mt-3 overflow-hidden rounded-lg border border-border bg-background p-2">
                 <EChartsReportPreview chart={section.chart} />
-                <p data-testid="simulated-chart-labels" className="border-t border-border px-2 pt-2 text-11 text-muted-foreground">
-                  预览维度：{section.chart.rows.map((row) => row.label).join(" · ")}
-                </p>
+                <span data-testid="simulated-chart-labels" className="sr-only">{section.chart.rows.map((row) => row.label).join(" · ")}</span>
               </div>
             </div>
           ) : null}
@@ -1911,31 +1900,14 @@ function WorkspaceReportComposer({
   return (
     <div data-testid="workspace-report-composer" className="grid gap-4">
       <section className="rounded-lg border border-border bg-background p-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline">Report Builder</Badge>
-              <Badge variant="muted">{completedCategoryCount}/{categories.length} 已配置</Badge>
-            </div>
-            <h2 className="mt-2 text-20 font-bold leading-tight text-foreground">报告设计</h2>
-            <p className="mt-1 text-13 text-muted-foreground">按章节组织报告内容，先选问题来源，再决定输出图片、报表或文本模块。</p>
-          </div>
-          <div className="grid min-w-52 gap-2 rounded-lg border border-border bg-card p-3">
-            <div className="flex items-center justify-between text-12">
-              <span className="text-muted-foreground">配置进度</span>
-              <span className="font-semibold text-foreground">{completedCategoryCount}/{categories.length}</span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full rounded-full bg-foreground"
-                style={{ width: `${categories.length ? Math.round((completedCategoryCount / categories.length) * 100) : 0}%` }}
-              />
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-18 font-bold leading-tight text-foreground">报告设计</h2>
+              <span className="text-12 text-muted-foreground">{completedCategoryCount}/{categories.length} 个章节已配置</span>
             </div>
           </div>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
-          <span className="text-12 text-muted-foreground">{status || "更改会实时预览，保存后用于正式报告与导出。"}</span>
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end">
             <Button type="button" size="sm" variant="ghost" onClick={onBackToDesign}>
               返回问卷
             </Button>
@@ -1976,26 +1948,10 @@ function WorkspaceReportComposer({
       <section className="grid min-w-0 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_430px]">
         <aside data-testid="report-outline-panel" className="min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
           <div className="border-b border-border px-4 py-3">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-14 font-bold text-foreground">章节导航</h3>
-                <Badge variant="outline">{categories.length}</Badge>
-              </div>
-              <p className="mt-1 text-11 text-muted-foreground">按正式报告顺序组织章节。</p>
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-14 font-bold text-foreground">章节</h3>
+              <Badge variant="outline">{categories.length}</Badge>
             </div>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            className="mt-3 h-9 w-full justify-center"
-            disabled={classifying}
-            onClick={onClassify}
-          >
-            <Sparkles className="h-4 w-4" strokeWidth={1.6} />
-            {classifying ? "正在重新分类…" : "AI 重新分类"}
-          </Button>
           </div>
           <div className="grid gap-1 p-2">
             {categories.length ? categories.map((category, index) => {
@@ -2055,20 +2011,6 @@ function WorkspaceReportComposer({
         </aside>
 
         <main data-testid="report-preview-panel" className="min-w-0 overflow-hidden rounded-lg border border-border bg-background">
-          <div className="border-b border-border px-5 py-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <Badge variant="outline">Report canvas</Badge>
-              <h3 className="mt-2 text-15 font-bold text-foreground">报告画布</h3>
-              <p className="mt-1 text-12 text-muted-foreground">按最终分析报告样式渲染当前章节。</p>
-            </div>
-            <div className="rounded-md border border-border bg-card px-3 py-2 text-right">
-              <p className="text-11 text-muted-foreground">当前章节</p>
-              <p className="mt-0.5 text-13 font-bold text-foreground">{Math.max(0, categories.findIndex((category) => category.id === selectedCategory?.id) + 1)} / {categories.length}</p>
-            </div>
-          </div>
-          </div>
-
           {!canExport ? (
             <div className="m-5 rounded-lg border border-dashed border-border bg-card p-10 text-center text-13 text-muted-foreground">
               请先完成报告分类和输入方式设置，再预览或导出报告。
@@ -2082,35 +2024,15 @@ function WorkspaceReportComposer({
 
         <aside data-testid="report-settings-panel" className="min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
           <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-            <div>
-              <h3 className="text-14 font-bold text-foreground">配置面板</h3>
-              <p className="mt-1 text-11 text-muted-foreground">基础信息、题目来源和输出模块。</p>
-            </div>
-            <Badge variant="muted">Live</Badge>
+            <h3 className="text-14 font-bold text-foreground">设置</h3>
+            <span className="text-12 text-muted-foreground">
+              {categories.length ? `章节 ${selectedCategoryIndex + 1}/${categories.length}` : "暂无章节"}
+            </span>
           </div>
           {selectedCategory ? (
             <div className="grid gap-4 p-4">
-              <section className="rounded-lg border border-border bg-card p-3">
-                <div className="flex items-start gap-3">
-                  <span className="grid h-9 w-9 place-items-center rounded-md bg-foreground text-14 font-bold text-background">
-                    {selectedCategoryIndex + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-11 font-semibold uppercase text-muted-foreground">Current section</p>
-                    <p className="mt-1 truncate text-15 font-bold text-foreground">{selectedCategory.name}</p>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      <Badge variant={selectedCategory.questionIds.length ? "success" : "muted"}>{selectedCategory.questionIds.length} 个问题</Badge>
-                      <Badge variant={visibleInputModes(selectedCategory.inputModes).length ? "success" : "muted"}>{visibleInputModes(selectedCategory.inputModes).length} 个模块</Badge>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
               <section className="grid gap-3 rounded-lg border border-border bg-background p-3">
-                <div>
-                  <p className="text-13 font-bold text-foreground">基础信息</p>
-                  <p className="mt-1 text-11 text-muted-foreground">控制报告目录标题和章节说明。</p>
-                </div>
+                <p className="text-13 font-bold text-foreground">章节信息</p>
                 <div className="grid gap-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="report-category-name">分类标题</Label>
@@ -2129,7 +2051,6 @@ function WorkspaceReportComposer({
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-13 font-bold text-foreground">问题来源</p>
-                    <p className="mt-1 text-11 text-muted-foreground">选择该章节用于分析的题目。</p>
                   </div>
                   <Badge variant="outline">{selectedQuestions.length}/{composerQuestions.length}</Badge>
                 </div>
@@ -2182,7 +2103,6 @@ function WorkspaceReportComposer({
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <p className="text-13 font-bold text-foreground">输出模块</p>
-                    <p className="mt-1 text-11 text-muted-foreground">选择报告里要生成的内容块。</p>
                   </div>
                   <span className="text-11 text-muted-foreground">至少 1 项</span>
                 </div>
@@ -2250,7 +2170,6 @@ function WorkspaceReportComposer({
                 <div data-testid="report-chart-design-controls" className="grid gap-4 rounded-lg border border-border bg-background p-3">
                   <div>
                     <p className="text-13 font-bold text-foreground">图表设计</p>
-                    <p className="mt-1 text-11 text-muted-foreground">修改后立即同步到预览，并随当前分类保存。</p>
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="report-chart-style">视觉风格</Label>
@@ -2331,10 +2250,7 @@ function WorkspaceReportComposer({
               ) : null}
 
               <section className="grid gap-3 rounded-lg border border-border bg-background p-3">
-                <div>
-                  <p className="text-13 font-bold text-foreground">生成要求</p>
-                  <p className="mt-1 text-11 text-muted-foreground">把口径和写作要求集中放在这里。</p>
-                </div>
+                <p className="text-13 font-bold text-foreground">生成要求</p>
                 <div className="grid gap-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="report-category-prompt">分析提示</Label>
@@ -2364,25 +2280,10 @@ function WorkspaceReportComposer({
                     </Button>
                   ))}
                 </div>
-                <div data-testid="simulated-preview-live-status" className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-11 text-emerald-800">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  提示词和约束会实时应用到中间的模拟数据预览
-                </div>
                 {selectedPreviewChart ? (
-                  <div data-testid="recognized-chart-constraints" className="grid gap-2 rounded-md border border-border bg-card p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-12 font-bold text-foreground">已识别并实时应用</p>
-                      <Badge variant="outline">{selectedPreviewChart.rows.length} 个维度</Badge>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedPreviewChart.appliedConstraints.map((constraint) => (
-                        <Badge key={constraint} variant="muted">{constraint}</Badge>
-                      ))}
-                    </div>
-                    <p className="text-11 leading-5 text-muted-foreground">
-                      X 轴：{selectedPreviewChart.rows.map((row) => row.label).join(" / ")}
-                    </p>
-                  </div>
+                  <p data-testid="recognized-chart-constraints" className="text-11 text-muted-foreground">
+                    已应用 {selectedPreviewChart.appliedConstraints.length} 条约束 · {selectedPreviewChart.rows.length} 个维度
+                  </p>
                 ) : null}
               </section>
 
@@ -2391,7 +2292,6 @@ function WorkspaceReportComposer({
                   当前分类需要至少 1 个问题和 1 种输入方式。
                 </p>
               )}
-              <p className="border-t border-border pt-3 text-11 text-muted-foreground">更改会立即反映在中间的章节预览中，保存后用于正式报告与导出。</p>
             </div>
           ) : (
             <p className="mt-3 text-13 text-muted-foreground">选择左侧分类后编辑设置。</p>
