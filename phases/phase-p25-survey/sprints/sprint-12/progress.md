@@ -9,6 +9,14 @@
 
 ## 会话记录
 ### 2026-07-15
+- 本轮目标: 修复报告使用模拟数值、跨题混轴、固定管理话术和工作台截图式导出的问题。
+- 已完成: 新增真实答卷证据聚合、证据引用校验和专业报告文档模型；报告页面按题独立展示计数/占比/分母；零样本不生成数字或结论；生成按钮改为千问证据输入；PDF/Word 改用独立 A4 文档。
+- 运行过的验证: 3 个 Vitest 文件共 9 tests passed；Web typecheck；design lint；`survey-p25-012-report-composer.spec.ts` 3 tests passed；`git diff --check`。
+- 已记录证据: `evidence/2026-07-15-survey-professional-report.md`；F12 保持 `in_progress`。
+- 已知风险或未解决问题: 真实千问成功分支仍依赖本地 `DASHSCOPE_API_KEY`；模型失败时已验证会保留真实统计，但尚未完成 F12 的异步任务/重试全部验收。
+- 下一步最佳动作: 用含真实答卷的业务问卷人工检查 PDF/Word 分页与措辞，再继续 F12 的异步产物验收。
+
+### 2026-07-15（AI 工作台 UI）
 - 本轮目标: 按已确认 UI 方案重构 Survey 五步工作流，突出 AI 创建、修改、报告模板和报告生成。
 - 已完成: 五步导航将“设计模块”改为“报告模板”；设计、发布、答卷、报告页接入可折叠目录和精简 AI 助手；报告模板新增图表/图片/文本 12 列画布、位置大小调整及模块级提示词。
 - 运行过的验证: `pnpm exec vitest run lib/survey-report-layout.test.ts`（3 passed）；`pnpm --filter @repo/web run typecheck`；`pnpm --filter @repo/web run lint`；聚焦 Playwright（4 passed，1 个既有数据库约束失败）。

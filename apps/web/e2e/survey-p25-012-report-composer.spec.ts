@@ -91,6 +91,12 @@ test("professional report never invents evidence for an empty survey", async ({ 
   expect(report.executiveSummary.claims).toEqual([]);
   expect(report.chapters.every((chapter: { chart?: unknown }) => chapter.chart === undefined)).toBe(true);
 
+  const generatedResponse = await page.request.post(`/api/surveys/${survey.id}/professional-report`, {
+    data: { instruction: "生成管理层报告" },
+  });
+  expect(generatedResponse.status()).toBe(200);
+  expect((await generatedResponse.json()).report.executiveSummary.claims).toEqual([]);
+
   await page.goto(`/surveys?survey=${survey.id}&step=report`);
   await expect(page.getByTestId("professional-report-document")).toContainText("尚无真实答卷", { timeout: 20_000 });
   await expect(page.getByTestId("professional-report-document")).not.toContainText("模拟数据");

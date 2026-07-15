@@ -2,10 +2,16 @@
 
 ## 当前已验证
 - F12 仍为 `in_progress`，没有提前标记 passing。
+- 专业报告链已通过 9 个 Vitest、typecheck、design lint 和 3 个聚焦 Playwright E2E。
 - 报告分类 API 修复已通过 Web typecheck、86 个 Vitest 测试和 1 个聚焦 Playwright E2E。
 - Survey AI 工作台第一版已通过布局单测、Web typecheck、design lint，以及 4 条聚焦 Playwright 路径。
 
 ## 本轮改动
+- 报告不再使用模板模拟数字；服务端按真实答卷生成 `SurveyReportEvidenceBundle`。
+- 不同题目独立聚合并保留有效回答分母；多选使用有效答题人数计算选择率。
+- 千问只接收结构化证据，返回结论必须匹配 evidence ID、value 和 denominator；失败时保留真实统计。
+- 页面使用专业报告文档组件；零样本明确为空，不生成管理结论。
+- PDF/Word 使用独立 A4 文档 HTML，包含封面、样本口径、章节、来源和限制，不再复制工作台 DOM。
 - 五步工作流保留原有功能，将第二步命名为“报告模板”。
 - 设计页采用可折叠题目目录、单题编辑区和精简 AI 助手；AI 结果可预览或直接应用。
 - 报告模板支持图表、图片、文本模块，具备预览、移动、缩放和独立提示词入口。
@@ -18,6 +24,7 @@
 - 尚未运行整个 Harness verify，因为 F12 的真实答卷生成、零/低样本限制和失败重试尚未全部形成可执行验收。
 - 尚未以真实 `DASHSCOPE_API_KEY` 验证供应商成功分支；无密钥降级分支已验证。
 - 聚焦组合 E2E 中 AI fallback 用例被本地数据库约束阻塞：代码写入 `status=open`，`survey_ai_sessions_status_check` 拒绝该值；本轮没有扩大 UI 任务范围修改数据契约。
+- 尚未使用真实千问密钥验收 AI 成功措辞，也未完成不同打印机/PDF 驱动的分页视觉复核。
 
 ## 下一步最佳动作
 - 先由人类检查 `http://localhost:3010/surveys` 的五个工作流界面并反馈，再继续同一 F12 的真实答卷、零/低样本和失败重试测试；不要手改 `active-features.json` 或把 F12 直接改为 passing。

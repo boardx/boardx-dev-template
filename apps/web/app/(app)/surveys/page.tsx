@@ -40,11 +40,8 @@ import { ProfessionalReportDocument } from "@/components/survey/professional-rep
 import { SurveyAiPanel } from "@/components/survey/survey-ai-panel";
 import { SurveyOutlinePanel } from "@/components/survey/survey-outline-panel";
 import {
-  downloadVisualPngReport,
-  downloadVisualWordReport,
-  downloadWordReport,
-  openPdfExportWindow,
-  openVisualPdfExportWindow,
+  downloadProfessionalWordReport,
+  openProfessionalPdfExportWindow,
   type ReportExportPayload,
 } from "@/lib/report-export";
 import {
@@ -4180,31 +4177,30 @@ function WorkspaceReportWorkbench({
   }
 
   function exportPdf() {
-    const title = `${survey.title} 分析报告`;
-    const opened = reportDocumentRef.current
-      ? openVisualPdfExportWindow(reportDocumentRef.current, title)
-      : openPdfExportWindow(buildExportPayload());
-    setExportStatus(opened ? "已按当前预览打开 PDF 导出窗口，可在打印对话框中保存。" : "浏览器拦截了 PDF 导出窗口，请允许弹窗后重试。");
+    if (!professionalReport) {
+      setExportStatus("专业报告数据仍在加载，请稍后重试。");
+      return;
+    }
+    const opened = openProfessionalPdfExportWindow(professionalReport);
+    setExportStatus(opened ? "已打开 A4 PDF 导出窗口，可在打印对话框中保存。" : "浏览器拦截了 PDF 导出窗口，请允许弹窗后重试。");
   }
 
   function exportWord() {
-    if (reportDocumentRef.current) {
-      downloadVisualWordReport(reportDocumentRef.current, `${survey.title} 分析报告`, `${survey.title}-分析报告`);
-      setExportStatus("Word 已按当前预览开始下载。");
+    if (!professionalReport) {
+      setExportStatus("专业报告数据仍在加载，请稍后重试。");
       return;
     }
-    downloadWordReport(buildExportPayload());
-    setExportStatus("Word 报告已开始下载。");
+    downloadProfessionalWordReport(professionalReport);
+    setExportStatus("Word 专业报告已开始下载。");
   }
 
-  async function exportImage() {
-    if (!reportDocumentRef.current) {
-      setExportStatus("当前没有可导出的报告预览。");
-      return;
-    }
-    setExportStatus("正在按当前预览生成图片...");
-    const ok = await downloadVisualPngReport(reportDocumentRef.current, `${survey.title}-分析报告`);
-    setExportStatus(ok ? "图片已按当前预览开始下载。" : "图片导出失败，请改用 PDF 导出。");
+  if (!professionalReport) {
+    return (
+      <section data-testid="professional-report-loading" className="border border-border bg-background px-8 py-16 text-center">
+        <h2 className="text-18 font-bold text-foreground">正在汇总真实答卷</h2>
+        <p className="mt-2 text-13 text-muted-foreground">报告只会使用已提交答卷，不会用模拟数据填充图表或结论。</p>
+      </section>
+    );
   }
 
   return (
@@ -4234,10 +4230,6 @@ function WorkspaceReportWorkbench({
               <Button type="button" variant="ghost" disabled={generating} onClick={exportWord} className="h-8 gap-1.5 px-2.5 text-12">
                 <FileText className="h-3.5 w-3.5" strokeWidth={1.6} />
                 Word
-              </Button>
-              <Button type="button" variant="ghost" disabled={generating} onClick={() => void exportImage()} className="h-8 gap-1.5 px-2.5 text-12">
-                <Eye className="h-3.5 w-3.5" strokeWidth={1.6} />
-                图片
               </Button>
             </div>
           </div>
@@ -6059,96 +6051,21 @@ export default function SurveysPage() {
     setWorkspaceTemplateStatus("");
     setWorkspaceTemplateError("");
     try {
-      const res = await fetch(`/api/surveys/${surveyId}/ai-report`, {
+      const categoryContext = reportCategoryPlan?.categories.map((category) => category.name).join("、");
+      const res = await fetch(`/api/surveys/${surveyId}/professional-report`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ instruction, reportCategoryPlan, stream: true }),
+        body: JSON.stringify({ instruction: categoryContext ? `${instruction}\n报告章节：${categoryContext}` : instruction }),
       });
+      const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const payload = await res.json().catch(() => ({}));
         setWorkspaceTemplateError(payload?.error ?? "正式报告生成失败");
         return;
       }
-      if (!res.body) {
-        setWorkspaceTemplateError("正式报告生成失败：浏览器未收到流式响应。");
-        return;
+      if (payload.report) {
+        setProfessionalReportsBySurveyId((items) => ({ ...items, [surveyId]: payload.report as ProfessionalSurveyReportDocument }));
       }
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let finalMessage = "";
-      let streamHadError = false;
-      let streamReportCategoryPlan = reportCategoryPlan;
-      type StreamEvent = {
-        type?: string;
-        report?: unknown;
-        reportCategoryPlan?: ReportCategoryPlanDraft;
-        reportTemplate?: ReportTemplateDraft;
-        categoryReport?: { name?: string; status?: string };
-        categoryGeneration?: { categoryCount?: number; generatedCount?: number; fallbackCount?: number };
-        name?: string;
-        order?: number;
-        warning?: string;
-        error?: string;
-      };
-      const handleStreamEvent = (event: StreamEvent) => {
-        if (event.type === "error") {
-          streamHadError = true;
-          setWorkspaceTemplateError(event.error ?? "正式报告生成失败");
-          return;
-        }
-        if (event.reportCategoryPlan) {
-          streamReportCategoryPlan = event.reportCategoryPlan as ReportCategoryPlanDraft;
-          setReportCategoryPlansBySurveyId((items) => ({ ...items, [surveyId]: streamReportCategoryPlan as ReportCategoryPlanDraft }));
-        }
-        if (event.report) {
-          const reportWithPlan =
-            event.report && typeof event.report === "object"
-              ? { ...(event.report as Record<string, unknown>), reportCategoryPlan: streamReportCategoryPlan }
-              : event.report;
-          setGeneratedReportsBySurveyId((items) => ({ ...items, [surveyId]: reportWithPlan }));
-        }
-        if (event.reportTemplate) {
-          setReportTemplatesBySurveyId((items) => ({ ...items, [surveyId]: event.reportTemplate as ReportTemplateDraft }));
-        }
-        if (event.type === "start") {
-          const count = event.categoryGeneration?.categoryCount ?? reportCategoryPlan?.categories.length ?? 0;
-          setWorkspaceTemplateStatus(`后端已读取 ${count} 个报告分类，开始按分类流式生成。`);
-        } else if (event.type === "category_start") {
-          setWorkspaceTemplateStatus(`正在生成第 ${event.order ?? ""} 个分类：${event.name ?? "未命名分类"}。`);
-        } else if (event.type === "category") {
-          const generation = event.categoryGeneration;
-          const done = generation?.generatedCount ?? 0;
-          const fallback = generation?.fallbackCount ?? 0;
-          const count = generation?.categoryCount ?? 0;
-          setWorkspaceTemplateStatus(`已返回分类「${event.categoryReport?.name ?? "未命名分类"}」预览，进度 ${done + fallback}/${count}。`);
-        } else if (event.type === "done") {
-          const generation = event.categoryGeneration;
-          const fallbackText = generation?.fallbackCount ? `其中 ${generation.fallbackCount} 个分类使用本地规则兜底。` : "";
-          finalMessage = `正式报告已按 ${generation?.categoryCount ?? 0} 个分类流式生成。${fallbackText}`;
-          setWorkspaceTemplateStatus(finalMessage);
-        } else if (event.type === "warning") {
-          finalMessage = `报告已生成，但有提示：${event.warning ?? "部分分类使用兜底结果"}`;
-          setWorkspaceTemplateStatus(finalMessage);
-        }
-      };
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const chunks = buffer.split("\n\n");
-        buffer = chunks.pop() ?? "";
-        for (const chunk of chunks) {
-          const dataLine = chunk.split("\n").find((line) => line.startsWith("data: "));
-          if (!dataLine) continue;
-          handleStreamEvent(JSON.parse(dataLine.slice(6)) as StreamEvent);
-        }
-      }
-      if (buffer.trim()) {
-        const dataLine = buffer.split("\n").find((line) => line.startsWith("data: "));
-        if (dataLine) handleStreamEvent(JSON.parse(dataLine.slice(6)) as StreamEvent);
-      }
-      if (!finalMessage && !streamHadError) setWorkspaceTemplateStatus("正式报告流式生成完成，可到分析报告查看。");
+      setWorkspaceTemplateStatus(payload.warning ?? "专业报告已基于真实答卷生成。");
     } catch {
       setWorkspaceTemplateError("正式报告生成失败，请稍后重试。");
     } finally {
