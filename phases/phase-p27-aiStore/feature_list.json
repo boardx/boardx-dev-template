@@ -47,9 +47,9 @@
       "area": "ai-store-web",
       "title": "Complete Explore, navigation, and detail",
       "user_visible_behavior": "已登录用户可从导航进入 Explore/Subscribe/Create/Authorized/Shared，在 Explore 搜索、筛选、分页并打开 Agent、Skills、Template 详情；所有人都能看到 BoardX approved 资源及来源 Team，当前 Team 自有内容正确隔离，不可见资源返回 404，切换 Team 后旧列表和选择立即清空。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "codex-p27-ai-store-control-plane",
       "capability": "CAP-WEB",
       "depends_on": [
         "F01",
@@ -59,7 +59,7 @@
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/ai-store-007-explore-complete.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-07-16T09:09:42.610Z",
       "notes": "覆盖 All/Agent/Skills/Template、关键词、标签、Featured、来源 Team、版本、loading/empty/error/pagination 终态。"
     },
     {

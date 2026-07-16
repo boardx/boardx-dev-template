@@ -1,18 +1,18 @@
 # 会话交接 - Sprint p27/02
 
-## 首个工作
+## 当前已验证
 
 - Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
-- 首个 Feature: F03 Complete Explore, navigation, and detail。
-- Claim: `pnpm harness claim --phase p27 --feature F03 --owner <agent-id>`。
-- 首个失败测试: `apps/web/e2e/ai-store-007-explore-complete.spec.ts`。
-- F03 门控: `pnpm harness verify --sprint p27/02 --feature F03`。
+- F03 已通过完整 Explore Playwright 和全仓基础验证。
+- Evidence: `evidence/F03.verify.log`。
+- Team 切换隔离、Skills Tab、分页、详情来源/版本、错误重试均已覆盖。
 
-## 依赖门禁
+## 下一步
 
-- F01、F02 未 passing 时不得开始 F03 或 F04。
-- F04 可与 F03 在不同 owner 下并行，但仍必须先满足 F01/F02。
-- F04 首个测试为 `apps/web/e2e/ai-store-008-authoring-archive.spec.ts`，门控为 `pnpm harness verify --sprint p27/02 --feature F04`。
+- 首个 Feature: F04 Create, edit, preview, and archive。
+- Claim: `pnpm harness claim --phase p27 --feature F04 --owner <agent-id>`。
+- 首个失败测试: `apps/web/e2e/ai-store-008-authoring-archive.spec.ts`。
+- F04 门控: `pnpm harness verify --sprint p27/02 --feature F04`。
 
 ## 已知实现边界
 

@@ -9,7 +9,8 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-type StoreType = "agent" | "ai-tool" | "image-tool" | "template";
+type StoreType = "agent" | "skill" | "template";
+type SkillKind = "text" | "image";
 type StoreScope = "personal" | "team" | "platform";
 type StoreStatus = "draft" | "published" | "pending" | "approved" | "rejected";
 type SubmitAction = "draft" | "publish" | "submit_review";
@@ -17,6 +18,7 @@ type SubmitAction = "draft" | "publish" | "submit_review";
 interface StoreItem {
   id: number;
   version: number;
+  origin_team_id: number;
   name: string;
   description: string;
   type: StoreType;
@@ -90,15 +92,13 @@ const NAV_GROUPS: NavGroup[] = [
 const TYPE_TABS: { key: "all" | StoreType; name: string }[] = [
   { key: "all", name: "All" },
   { key: "agent", name: "Agent" },
-  { key: "ai-tool", name: "AI Tool" },
-  { key: "image-tool", name: "Image Tool" },
+  { key: "skill", name: "Skills" },
   { key: "template", name: "Template" },
 ];
 
 const CREATOR_TYPES: { key: StoreType; name: string; help: string }[] = [
   { key: "agent", name: "Agent", help: "Reusable AI teammate for AVA and board workflows." },
-  { key: "ai-tool", name: "AI Tool", help: "Focused text or workflow utility." },
-  { key: "image-tool", name: "Image Tool", help: "Image generation, editing, or enhancement tool." },
+  { key: "skill", name: "Skill", help: "Focused text, workflow, or image capability." },
   { key: "template", name: "Template", help: "Reusable board, room, or work canvas template." },
 ];
 
@@ -106,6 +106,7 @@ const EMPTY_FORM = {
   id: null as number | null,
   expectedVersion: undefined as number | undefined,
   type: "agent" as StoreType,
+  skillKind: "text" as SkillKind,
   name: "",
   description: "",
   config: "",
@@ -171,6 +172,8 @@ export function StoreBrowser() {
   const [detailId, setDetailId] = useState<number | null>(null);
   const [detailItem, setDetailItem] = useState<StoreItem | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState(false);
+  const [detailRequestVersion, setDetailRequestVersion] = useState(0);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formMessage, setFormMessage] = useState("");
@@ -339,13 +342,17 @@ export function StoreBrowser() {
     }
     let cancelled = false;
     setDetailLoading(true);
+    setDetailError(false);
     fetch(`/api/ai-store/items/${detailId}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data: { item: StoreItem }) => {
         if (!cancelled) setDetailItem(data.item);
       })
       .catch(() => {
-        if (!cancelled) setDetailItem(null);
+        if (!cancelled) {
+          setDetailItem(null);
+          setDetailError(true);
+        }
       })
       .finally(() => {
         if (!cancelled) setDetailLoading(false);
@@ -353,7 +360,7 @@ export function StoreBrowser() {
     return () => {
       cancelled = true;
     };
-  }, [detailId]);
+  }, [detailId, detailRequestVersion]);
 
   // uc-ai-store-004：喜欢/收藏切换，乐观更新 + 失败回滚。心形与计数在卡片和详情弹窗间保持同步。
   async function toggleFavorite(id: number) {
@@ -537,6 +544,10 @@ export function StoreBrowser() {
       id: item.id,
       expectedVersion: item.version,
       type: item.type,
+      skillKind:
+        item.config?.skillKind === "image" || item.config?.skillKind === "text"
+          ? item.config.skillKind
+          : "text",
       name: item.name,
       description: item.description,
       config: configText(item),
@@ -634,7 +645,7 @@ export function StoreBrowser() {
       router.push(`/ava?agentItemId=${item.id}`);
       return;
     }
-    if (item.type === "ai-tool" || item.type === "image-tool") {
+    if (item.type === "skill") {
       router.push(`/ava?toolItemId=${item.id}`);
       return;
     }
@@ -954,6 +965,12 @@ export function StoreBrowser() {
                               {it.name}
                             </div>
                             <div className="truncate text-11 text-placeholder">{it.author}</div>
+                            <div
+                              data-testid={`item-source-team-${it.id}`}
+                              className="truncate text-10 text-placeholder"
+                            >
+                              Team #{it.origin_team_id} · v{it.version}
+                            </div>
                           </div>
                         </div>
                         <p className="mt-2.75 min-h-9 text-13 leading-relaxed text-muted-foreground">
@@ -1490,9 +1507,23 @@ export function StoreBrowser() {
               {detailItem ? detailItem.name.charAt(0).toUpperCase() : ""}
             </div>
 
-            {detailLoading || !detailItem ? (
+            {detailLoading ? (
               <div className="p-6 text-13 text-placeholder" data-testid="detail-loading">
                 Loading…
+              </div>
+            ) : detailError || !detailItem ? (
+              <div className="p-6" data-testid="detail-error" role="alert">
+                <p className="text-13 text-destructive">Failed to load this resource.</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="mt-3"
+                  data-testid="detail-retry"
+                  onClick={() => setDetailRequestVersion((value) => value + 1)}
+                >
+                  Retry
+                </Button>
               </div>
             ) : (
               <div className="p-5.5">
@@ -1511,6 +1542,10 @@ export function StoreBrowser() {
                 </div>
                 <div className="mt-1 text-11 text-placeholder">
                   {detailItem.type} · by {detailItem.author}
+                </div>
+                <div className="mt-1 flex items-center gap-3 text-11 text-placeholder">
+                  <span data-testid="detail-source-team">Team #{detailItem.origin_team_id}</span>
+                  <span data-testid="detail-version">Version {detailItem.version}</span>
                 </div>
                 <p
                   data-testid="detail-description"

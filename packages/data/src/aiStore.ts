@@ -110,13 +110,17 @@ export async function listAiStoreItems(opts: ListAiStoreItemsOptions = {}): Prom
 
   // 可见性：published 或 approved 的 platform 项目 + 命中团队的 team 项目 + 属于当前用户的 personal 项目。
   const visClauses: string[] = ["(status IN ('published', 'approved') AND scope = 'platform')"];
+  let teamParamIndex: number | undefined;
   if (opts.teamId != null) {
     params.push(opts.teamId);
-    visClauses.push(`(status = 'published' AND scope = 'team' AND origin_team_id = $${params.length})`);
+    teamParamIndex = params.length;
+    visClauses.push(`(status = 'published' AND scope = 'team' AND origin_team_id = $${teamParamIndex})`);
   }
-  if (opts.userId != null) {
+  if (opts.userId != null && teamParamIndex != null) {
     params.push(opts.userId);
-    visClauses.push(`(scope = 'personal' AND owner_user_id = $${params.length})`);
+    visClauses.push(
+      `(scope = 'personal' AND owner_user_id = $${params.length} AND origin_team_id = $${teamParamIndex})`,
+    );
   }
   conds.push("migration_quarantined_at IS NULL");
   conds.push(`(${visClauses.join(" OR ")})`);
@@ -287,8 +291,23 @@ export function isAiStoreItemVisible(
   teamId: number | null | undefined
 ): boolean {
   if (item.scope === "platform") return item.status === "published" || item.status === "approved";
-  if (item.scope === "team") return item.status === "published" && teamId != null && item.team_id === teamId;
-  if (item.scope === "personal") return userId != null && item.owner_user_id === userId;
+  if (item.scope === "team") {
+    return (
+      item.status === "published" &&
+      teamId != null &&
+      item.team_id != null &&
+      String(item.team_id) === String(teamId)
+    );
+  }
+  if (item.scope === "personal") {
+    return (
+      userId != null &&
+      teamId != null &&
+      item.owner_user_id === userId &&
+      item.team_id != null &&
+      String(item.team_id) === String(teamId)
+    );
+  }
   return false;
 }
 
