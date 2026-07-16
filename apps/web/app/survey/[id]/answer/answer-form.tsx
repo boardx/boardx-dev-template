@@ -143,19 +143,21 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
             {survey.description && <p className="mt-2 text-14 leading-6 text-muted-foreground">{survey.description}</p>}
           </header>
 
-          <div data-testid="answer-question-list" className="space-y-2">
+          <div data-testid="answer-question-list" className="space-y-0">
             {survey.questions.map((question, idx) => {
               const key = String(question.id);
               const value = answers[key];
               return (
-                <section key={question.id} data-testid={`answer-question-${idx}`} className="py-5">
+                <section key={question.id} data-testid={`answer-question-${idx}`} className="py-3">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <div className="flex flex-wrap items-baseline gap-x-1.5">
                     <p className="text-15 font-semibold text-foreground">
                       {idx + 1}. {question.title}
                       {question.required && <span className="ml-1 text-destructive">*</span>}
                     </p>
-                    <p className="mt-1 text-12 text-muted-foreground">{questionTypeLabel(question.type)}</p>
+                    <span data-testid={`answer-question-type-${idx}`} className="text-12 text-muted-foreground">
+                      （{questionTypeLabel(question.type)}）
+                    </span>
                   </div>
                 </div>
 

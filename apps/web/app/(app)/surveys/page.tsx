@@ -6714,15 +6714,19 @@ export default function SurveysPage() {
                   <h2 className="mt-8 text-30 font-bold tracking-tight text-foreground">{title.trim() || "未命名问卷"}</h2>
                   {description.trim() && <p className="mt-2 text-14 leading-6 text-muted-foreground">{description}</p>}
                 </header>
-                <div data-testid="preview-question-list" className="space-y-2">
+                <div data-testid="preview-question-list" className="space-y-0">
                   {questions.map((q, idx) => (
-                    <section key={q.id} data-testid={`preview-question-${idx}`} className="py-5">
-                      <p className="text-15 font-semibold text-foreground">
-                        {idx + 1}. {q.title.trim() || `问题 ${idx + 1}`}
-                        {q.required && <span className="ml-1 text-destructive">*</span>}
-                      </p>
-                      <p className="mt-1 text-12 text-muted-foreground">{TYPE_LABEL[q.type]}</p>
-                      <div className="mt-3"><QuestionPreviewAnswer question={q} questionIndex={idx} /></div>
+                    <section key={q.id} data-testid={`preview-question-${idx}`} className="py-3">
+                      <div className="flex flex-wrap items-baseline gap-x-1.5">
+                        <p className="text-15 font-semibold text-foreground">
+                          {idx + 1}. {q.title.trim() || `问题 ${idx + 1}`}
+                          {q.required && <span className="ml-1 text-destructive">*</span>}
+                        </p>
+                        <span data-testid={`preview-question-type-${idx}`} className="text-12 text-muted-foreground">
+                          （{TYPE_LABEL[q.type]}）
+                        </span>
+                      </div>
+                      <div className="mt-2"><QuestionPreviewAnswer question={q} questionIndex={idx} /></div>
                     </section>
                   ))}
                 </div>

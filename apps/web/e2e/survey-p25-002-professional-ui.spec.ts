@@ -85,7 +85,10 @@ test("editor shell groups the question builder, inspector, and unified paper pre
   await expect(page.getByTestId("survey-preview-sheet")).toHaveClass(/border-0/);
   await expect(page.getByTestId("survey-preview-sheet")).toHaveClass(/shadow-sm/);
   await expect(page.getByTestId("preview-question-list")).not.toHaveClass(/divide-y/);
+  await expect(page.getByTestId("preview-question-list")).toHaveClass(/space-y-0/);
   await expect(page.getByTestId("preview-question-0")).not.toHaveClass(/rounded/);
+  await expect(page.getByTestId("preview-question-0")).toHaveClass(/py-3/);
+  await expect(page.getByTestId("preview-question-type-0")).toHaveText("（单选）");
   await expect(page.getByTestId("preview-option-0-0")).toHaveClass(/border-0/);
   await expect(page.getByTestId("preview-option-0-0")).toHaveClass(/bg-muted/);
   await page.getByTestId("edit-survey").click();
@@ -103,7 +106,10 @@ test("answer and acceptance small surfaces share the professional shell", async 
   await expect(page.getByTestId("answer-professional-shell")).toHaveClass(/border-0/);
   await expect(page.getByTestId("answer-professional-shell")).toHaveClass(/shadow-sm/);
   await expect(page.getByTestId("answer-question-list")).not.toHaveClass(/divide-y/);
+  await expect(page.getByTestId("answer-question-list")).toHaveClass(/space-y-0/);
   await expect(page.getByTestId("answer-question-0")).not.toHaveClass(/rounded/);
+  await expect(page.getByTestId("answer-question-0")).toHaveClass(/py-3/);
+  await expect(page.getByTestId("answer-question-type-1")).toHaveText("（单选）");
   await expect(page.getByTestId("answer-option-1-0")).toHaveClass(/border-0/);
   await expect(page.getByTestId("answer-option-1-0")).toHaveClass(/bg-muted/);
   await page.getByTestId("submit-answer").click();

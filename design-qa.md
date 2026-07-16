@@ -34,6 +34,12 @@ Focused review covered the banner, progress and title region, question typograph
 - Fixes: Added the local `survey-accent` semantic token, styled the native progress element, applied violet selected/action states, and widened the outer shell from `max-w-5xl` to `max-w-6xl`.
 - Post-fix evidence: `fluent-answer-implementation.png`.
 
+### Iteration 2
+
+- Earlier P2: Question type labels occupied a separate line and question sections retained more vertical whitespace than the approved compact reading rhythm.
+- Fixes: Moved type labels inline after each title as quiet parenthetical text, reduced question list spacing to zero, and reduced section padding from `py-5` to `py-3`.
+- Post-fix evidence: Updated `fluent-answer-implementation.png`.
+
 ## Primary Interactions Tested
 
 - Required-field validation.
