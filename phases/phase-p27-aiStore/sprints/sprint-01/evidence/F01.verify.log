@@ -1,0 +1,17 @@
+$ pnpm --filter @repo/data test -- src/aiStore.skills.test.ts
+[exit 1]
+
+> @repo/data@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/packages/data
+> vitest run "src/aiStore.skills.test.ts"
+
+
+ RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/packages/data
+
+/Users/shenyangjun/boardx/boardx-dev-template/packages/data:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @repo/data@0.1.0 test: `vitest run "src/aiStore.skills.test.ts"`
+Exit status 1
+filter:  src/aiStore.skills.test.ts
+include: **/*.{test,spec}.?(c|m)[jt]s?(x)
+exclude:  **/node_modules/**, **/dist/**, **/cypress/**, **/.{idea,git,cache,output,temp}/**, **/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*
+
+No test files found, exiting with code 1

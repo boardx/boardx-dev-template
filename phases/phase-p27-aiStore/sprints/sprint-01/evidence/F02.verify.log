@@ -1,0 +1,18 @@
+$ pnpm --filter @repo/web test -- app/api/ai-store/items/skills.route.test.ts
+[exit 1]
+
+> @repo/web@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/apps/web
+> vitest run "app/api/ai-store/items/skills.route.test.ts"
+
+
+ RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/apps/web
+
+/Users/shenyangjun/boardx/boardx-dev-template/apps/web:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @repo/web@0.1.0 test: `vitest run "app/api/ai-store/items/skills.route.test.ts"`
+Exit status 1
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+filter:  app/api/ai-store/items/skills.route.test.ts
+include: lib/**/*.test.ts, app/**/*.test.ts
+exclude:  e2e/**, node_modules/**, .next/**
+
+No test files found, exiting with code 1
