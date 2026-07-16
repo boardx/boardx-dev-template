@@ -420,6 +420,118 @@ function buildReportHtml(payload: ReportExportPayload) {
 </html>`;
 }
 
+export function buildProfessionalReportHtml(report: ProfessionalSurveyReportDocument) {
+  const claims = report.executiveSummary.claims.map((claim) => `
+    <article class="claim">
+      <p>${escapeHtml(claim.statement)}</p>
+      <small>证据：${claim.value}/${claim.denominator}${claim.directional ? " · 方向性结论" : ""}</small>
+    </article>
+  `).join("");
+  const chapters = report.chapters.map((chapter, index) => {
+    const chartRows = chapter.chart?.rows.map((row) => `
+      <div class="bar-row">
+        <span>${escapeHtml(row.label)}</span>
+        <i><b style="width:${Math.max(0, Math.min(100, row.percentage))}%"></b></i>
+        <strong>${row.count} · ${row.percentage}%</strong>
+      </div>
+    `).join("") ?? "";
+    const quotes = chapter.textResponses?.map((text) => `<blockquote>“${escapeHtml(text)}”</blockquote>`).join("") ?? "";
+    return `
+      <section class="chapter">
+        <p class="eyebrow">${String(index + 1).padStart(2, "0")} / 分题分析</p>
+        <div class="chapter-title"><h2>${escapeHtml(chapter.title)}</h2><span>有效回答 n=${chapter.validResponseCount}</span></div>
+        ${chartRows ? `<div class="chart">${chartRows}<footer>数据来源：真实问卷答卷 · ${escapeHtml(chapter.chart!.denominatorLabel)} n=${chapter.chart!.denominator}</footer></div>` : ""}
+        ${quotes ? `<div class="quotes">${quotes}</div>` : ""}
+        ${chapter.limitations.length ? `<p class="limitation">限制：${escapeHtml(chapter.limitations.join(" "))}</p>` : ""}
+      </section>
+    `;
+  }).join("");
+  const limitations = report.limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  const generatedAt = new Date(report.generatedAt).toLocaleString("zh-CN", { hour12: false });
+  return `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(report.title)}</title>
+  <style>
+    @page { size: A4 portrait; margin: 16mm 14mm 18mm; @bottom-left { content: "BoardX Survey · 保密"; color: #737373; font-size: 9px; } @bottom-right { content: "第 " counter(page) " 页"; color: #737373; font-size: 9px; } }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { margin: 0; color: #171717; background: #fff; font: 13px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    main { max-width: 180mm; margin: 0 auto; }
+    .cover { min-height: 245mm; display: flex; flex-direction: column; justify-content: space-between; padding: 18mm 12mm; color: #fff; background: #171717; break-after: page; }
+    .cover .kicker, .eyebrow { margin: 0; color: #737373; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    .cover .kicker { color: #d4d4d4; }
+    h1 { max-width: 145mm; margin: 22mm 0 0; font-size: 34px; line-height: 1.25; }
+    .cover-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #525252; }
+    .cover-meta div { padding: 12px; background: #262626; }
+    .cover-meta span { display: block; color: #a3a3a3; font-size: 10px; }
+    .cover-meta strong { display: block; margin-top: 4px; font-size: 15px; }
+    section { padding: 12mm 0; }
+    .summary { break-after: page; }
+    h2 { margin: 4px 0 0; font-size: 22px; line-height: 1.35; }
+    .claim { display: grid; grid-template-columns: 1fr 45mm; gap: 10mm; padding: 12px 0; border-bottom: 1px solid #e5e5e5; }
+    .claim p { margin: 0; font-size: 15px; font-weight: 650; }
+    .claim small { color: #737373; }
+    .chapter { break-before: page; }
+    .chapter-title { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 8mm; }
+    .chapter-title span { color: #737373; font-size: 11px; }
+    .chart { padding: 6mm 0; border-top: 1px solid #d4d4d4; border-bottom: 1px solid #d4d4d4; }
+    .bar-row { display: grid; grid-template-columns: 38mm 1fr 28mm; align-items: center; gap: 4mm; margin: 3mm 0; }
+    .bar-row i { height: 4mm; overflow: hidden; background: #ededed; }
+    .bar-row b { display: block; height: 100%; background: #3157c8; }
+    .bar-row strong { text-align: right; font-size: 11px; }
+    .chart footer { margin-top: 5mm; padding-top: 3mm; border-top: 1px solid #ededed; color: #737373; font-size: 10px; }
+    blockquote { margin: 3mm 0; padding-left: 4mm; border-left: 2px solid #a3a3a3; color: #525252; }
+    .limitation { margin-top: 6mm; padding: 3mm 4mm; color: #525252; background: #f5f5f5; font-size: 11px; }
+    .methodology { break-before: page; }
+    .methodology dl { display: grid; grid-template-columns: 42mm 1fr; margin-top: 8mm; border-top: 1px solid #d4d4d4; }
+    .methodology dt, .methodology dd { margin: 0; padding: 3mm 0; border-bottom: 1px solid #e5e5e5; }
+    .methodology dt { color: #737373; }
+    ul { padding-left: 18px; }
+    @media screen { body { background: #ededed; } main { padding: 24px; background: #fff; } .cover { min-height: 900px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="cover">
+      <div><p class="kicker">BoardX Survey Research Report</p><h1>${escapeHtml(report.title)}</h1></div>
+      <div class="cover-meta">
+        <div><span>有效样本</span><strong>${report.methodology.sampleSize} 份</strong></div>
+        <div><span>问题数量</span><strong>${report.methodology.questionCount} 题</strong></div>
+        <div><span>生成时间</span><strong>${escapeHtml(generatedAt)}</strong></div>
+      </div>
+    </section>
+    <section class="summary"><p class="eyebrow">Executive Summary</p><h2>执行摘要</h2>${report.emptyState ? `<p>${escapeHtml(report.emptyState)}</p>` : claims}</section>
+    ${chapters}
+    <section class="methodology"><p class="eyebrow">Methodology & Limitations</p><h2>方法与限制</h2><dl><dt>样本量</dt><dd>${report.methodology.sampleSize} 份</dd><dt>统计口径</dt><dd>${escapeHtml(report.methodology.statement)}</dd><dt>数据来源</dt><dd>真实问卷答卷</dd></dl><ul>${limitations || "<li>未识别额外样本限制。</li>"}</ul></section>
+  </main>
+</body>
+</html>`;
+}
+
+export function openProfessionalPdfExportWindow(report: ProfessionalSurveyReportDocument) {
+  const win = window.open("", "_blank");
+  if (!win) return false;
+  win.document.open();
+  win.document.write(buildProfessionalReportHtml(report));
+  win.document.close();
+  win.focus();
+  win.setTimeout(() => win.print(), 400);
+  return true;
+}
+
+export function downloadProfessionalWordReport(report: ProfessionalSurveyReportDocument) {
+  const blob = new Blob(["\ufeff", buildProfessionalReportHtml(report)], { type: "application/msword;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${safeFilename(report.title)}.doc`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export function downloadWordReport(payload: ReportExportPayload) {
   const html = buildReportHtml(payload);
   const blob = new Blob(["\ufeff", html], { type: "application/msword;charset=utf-8" });
@@ -539,3 +651,4 @@ export async function downloadVisualPngReport(element: HTMLElement, filenameBase
     URL.revokeObjectURL(svgUrl);
   }
 }
+import type { ProfessionalSurveyReportDocument } from "./survey-professional-report";
