@@ -8,6 +8,13 @@
 - 当前 blocker: F12 仍需验证真实答卷报告、零/低样本限制和失败重试；组合 E2E 另发现本地 `survey_ai_sessions_status_check` 不接受代码既有的 `open` 状态
 
 ## 会话记录
+### 2026-07-17（首页导航精简）
+- 本轮目标: 统一左侧菜单图标，移除首页无效的组织/顾问社区信息，并闭合 WHY/HOW/THEN 三个入口。
+- 已完成: 四个菜单图标统一尺寸与描边；删除组织和顾问社区卡片；模板、AI 新建问卷、分析报告入口接入真实工作流，无可分析答卷时确定性回到“我的问卷”。
+- 运行过的验证: 聚焦 Playwright 2 tests passed；Web typecheck；design lint；`git diff --check`。
+- 已记录证据: `evidence/2026-07-17-survey-home-navigation.md`、`evidence/survey-reference-home.png`；F12 保持 `in_progress`。
+- 下一步最佳动作: 继续统一“我的问卷”、模板中心及五步工作流的视觉与交互边界。
+
 ### 2026-07-17（参考诊断平台首页）
 - 本轮目标: 修正 `/surveys` 仍显示旧问卷列表的问题，按 `AI 问卷诊断平台(1).html` 落实参考首页。
 - 已完成: 新增诊断工作台首页、四项指标、组织/社区信息、WHY/HOW/THEN 方法区、推荐模板和最近问卷；我的问卷移动到 `?view=my`，模板中心保留 `?view=templates`。

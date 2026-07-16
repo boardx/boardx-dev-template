@@ -722,6 +722,7 @@ function WorkspaceShell({
                 return (
                   <Button
                     key={item.id}
+                    data-testid={`survey-nav-${item.id}`}
                     type="button"
                     variant="ghost"
                     className={`justify-start gap-2 border-l-2 ${
@@ -749,7 +750,9 @@ function WorkspaceShell({
                       onNavigate("workspace");
                     }}
                   >
-                    <Icon className="h-4 w-4" strokeWidth={1.6} />
+                    <span className="grid h-5 w-5 shrink-0 place-items-center" aria-hidden="true">
+                      <Icon className="h-4 w-4" strokeWidth={1.8} />
+                    </span>
                     {item.label}
                   </Button>
                 );
@@ -7780,7 +7783,7 @@ export default function SurveysPage() {
               </div>
             </section>
 
-            <section className="grid gap-4 xl:grid-cols-[1.3fr_1fr_1fr]">
+            <section>
               <div data-testid="survey-home-metrics" className="rounded-lg border border-border bg-background p-6">
                 <p className="text-13 font-semibold text-muted-foreground">我的工作台</p>
                 <div className="mt-6 grid grid-cols-2 gap-5 sm:grid-cols-4">
@@ -7797,17 +7800,6 @@ export default function SurveysPage() {
                   ))}
                 </div>
               </div>
-              <div className="rounded-lg border border-border bg-background p-6">
-                <p className="text-13 font-semibold text-muted-foreground">组织</p>
-                <h2 className="mt-5 text-17 font-bold text-foreground">明道咨询</h2>
-                <p className="mt-2 text-13 leading-6 text-muted-foreground">8 名成员 · {savedTemplates.length} 个共享模板<br />{teamSurveys.length} 个协作中的诊断项目</p>
-                <Button type="button" variant="ghost" size="sm" className="mt-4 px-0 text-violet-600 hover:bg-transparent hover:text-violet-600 hover:underline">邀请成员 →</Button>
-              </div>
-              <div className="rounded-lg border border-border bg-background p-6">
-                <p className="text-13 font-semibold text-muted-foreground">顾问社区</p>
-                <p className="mt-5 text-14 font-semibold leading-7 text-foreground">本周热门模板：工作坊前期综合诊断，320 位顾问使用过。</p>
-                <Button type="button" variant="ghost" size="sm" onClick={() => { window.location.href = "/surveys?view=templates"; }} className="mt-3 px-0 text-violet-600 hover:bg-transparent hover:text-violet-600 hover:underline">去看看 →</Button>
-              </div>
             </section>
 
             <section data-testid="survey-home-method" className="rounded-lg border border-border bg-background p-6">
@@ -7817,16 +7809,40 @@ export default function SurveysPage() {
               </div>
               <div className="mt-5 grid gap-4 md:grid-cols-3">
                 {[
-                  ["WHY · 为什么", "诊断先行，带数据进场", "提前 1-2 周用问卷完成诊断，现场直接从「对齐事实」跳到「共创方案」。", "看诊断模板 →"],
-                  ["HOW · 怎么做", "结构化收集，可对比可聚合", "把访谈中不可比的信息变成统一维度的量表与分类，几百份回答也能直接比较。", "新建问卷 →"],
-                  ["THEN · 然后呢", "AI 直达洞察报告", "回收完成后按报告模板自动生成诊断报告：雷达图、优先级矩阵、关键引述。", "看示例报告 →"],
-                ].map(([eyebrow, title, copy, action]) => (
-                  <article key={title} className="rounded-lg border border-border bg-card p-5">
-                    <p className="text-12 font-bold text-violet-600">{eyebrow}</p>
-                    <h3 className="mt-3 text-15 font-bold text-foreground">{title}</h3>
-                    <p className="mt-3 text-13 leading-6 text-muted-foreground">{copy}</p>
-                    <p className="mt-4 text-13 font-semibold text-violet-600">{action}</p>
-                  </article>
+                  { id: "templates", eyebrow: "WHY · 为什么", title: "诊断先行，带数据进场", copy: "提前 1-2 周用问卷完成诊断，现场直接从「对齐事实」跳到「共创方案」。", action: "看诊断模板 →" },
+                  { id: "create", eyebrow: "HOW · 怎么做", title: "结构化收集，可对比可聚合", copy: "把访谈中不可比的信息变成统一维度的量表与分类，几百份回答也能直接比较。", action: "新建问卷 →" },
+                  { id: "report", eyebrow: "THEN · 然后呢", title: "AI 直达洞察报告", copy: "回收完成后按报告模板自动生成诊断报告：雷达图、优先级矩阵、关键引述。", action: "查看分析报告 →" },
+                ].map((method) => (
+                  <Button
+                    key={method.id}
+                    data-testid={`survey-method-${method.id}`}
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (method.id === "templates") {
+                        window.location.href = "/surveys?view=templates";
+                        return;
+                      }
+                      if (method.id === "create") {
+                        openEditor({ withAi: true });
+                        return;
+                      }
+                      const reportSurvey = visibleSurveys.find((item) => item.responses > 0);
+                      if (reportSurvey) {
+                        void selectSurveyForWorkspace(reportSurvey.id, "report");
+                        return;
+                      }
+                      window.location.href = "/surveys?view=my";
+                    }}
+                    className="h-auto min-h-48 items-start justify-start whitespace-normal rounded-lg bg-card p-5 text-left font-normal transition-colors hover:border-foreground/30 hover:bg-background"
+                  >
+                    <span className="block">
+                      <span className="block text-12 font-bold text-violet-600">{method.eyebrow}</span>
+                      <span className="mt-3 block text-15 font-bold text-foreground">{method.title}</span>
+                      <span className="mt-3 block text-13 leading-6 text-muted-foreground">{method.copy}</span>
+                      <span className="mt-4 block text-13 font-semibold text-violet-600">{method.action}</span>
+                    </span>
+                  </Button>
                 ))}
               </div>
             </section>

@@ -13,9 +13,14 @@ test("BoardX Survey home matches the diagnostic workspace reference", async ({ p
   await page.goto("/surveys");
 
   await expect(page.getByTestId("survey-source-sidebar")).toContainText("BoardX Survey");
-  await expect(page.getByRole("navigation", { name: "Survey navigation" })).toContainText("主页");
+  const navigation = page.getByRole("navigation", { name: "Survey navigation" });
+  await expect(navigation).toContainText("主页");
+  await expect(navigation.locator("button")).toHaveCount(4);
+  await expect(navigation.locator("button svg")).toHaveCount(4);
   await expect(page.getByRole("heading", { name: /下午好|上午好|晚上好/ })).toBeVisible();
   await expect(page.getByTestId("survey-home-metrics")).toBeVisible();
+  await expect(page.getByText("组织", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("顾问社区", { exact: true })).toHaveCount(0);
   await expect(page.getByTestId("survey-home-method")).toContainText("为什么在工作坊之前用 Survey");
   await expect(page.getByTestId("survey-home-templates")).toBeVisible();
   await expect(page.getByTestId("survey-home-recent")).toBeVisible();
@@ -24,6 +29,22 @@ test("BoardX Survey home matches the diagnostic workspace reference", async ({ p
     path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-reference-home.png",
     fullPage: true,
   });
+});
+
+test("home method cards navigate to real survey workflows", async ({ page }) => {
+  await register(page);
+  await page.goto("/surveys");
+
+  await page.getByTestId("survey-method-templates").click();
+  await expect(page).toHaveURL(/\/surveys\?view=templates/);
+
+  await page.goto("/surveys");
+  await page.getByTestId("survey-method-create").click();
+  await expect(page.getByTestId("editor-command-bar")).toBeVisible();
+
+  await page.goto("/surveys");
+  await page.getByTestId("survey-method-report").click();
+  await expect(page).toHaveURL(/\/surveys\?view=my/);
 });
 
 test("template URL restores the source stash template manager", async ({ page }) => {

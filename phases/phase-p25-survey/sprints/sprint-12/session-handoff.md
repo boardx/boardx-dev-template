@@ -1,6 +1,7 @@
 # 会话交接 — Sprint p25/12
 
 ## 当前已验证
+- Survey 首页导航精简已通过聚焦 E2E、typecheck、design lint 和补丁格式检查。
 - `/surveys` 参考诊断平台首页已通过聚焦 E2E、typecheck、design lint 和视觉截图对照。
 - F12 仍为 `in_progress`，没有提前标记 passing。
 - 专业报告链已通过 9 个 Vitest、typecheck、design lint 和 3 个聚焦 Playwright E2E。
@@ -9,6 +10,9 @@
 - 报告模板真实入口的三栏工作台契约已通过 F12 Playwright 3/3、Web typecheck 和 design lint。
 
 ## 本轮改动
+- Survey 左侧四个菜单项统一为固定尺寸和描边的 Lucide 图标。
+- 首页移除“组织”和“顾问社区”占位卡片，工作台指标改为完整横向区域。
+- WHY / HOW / THEN 三个方法卡分别连接模板中心、AI 新建问卷和分析报告；没有可分析答卷时回到“我的问卷”。
 - `/surveys` 改为诊断工作台首页；`?view=my` 为我的问卷；`?view=templates` 为模板中心。
 - 首页按参考稿实现工作台指标、组织/社区、WHY/HOW/THEN、推荐模板和最近问卷。
 - 报告不再使用模板模拟数字；服务端按真实答卷生成 `SurveyReportEvidenceBundle`。
