@@ -636,6 +636,7 @@ type WorkspaceTarget = "workspace" | "design" | "template" | "collect" | "report
 interface WorkspaceShellProps {
   children: ReactNode;
   active?: WorkspaceTarget;
+  dashboardMode?: boolean;
   currentSurvey?: Survey;
   workflowMode?: boolean;
   templateLibraryMode?: boolean;
@@ -650,6 +651,7 @@ interface WorkspaceShellProps {
 function WorkspaceShell({
   children,
   active = "workspace",
+  dashboardMode = false,
   currentSurvey,
   workflowMode = false,
   templateLibraryMode = false,
@@ -663,9 +665,10 @@ function WorkspaceShell({
   const inSurveyWorkflow = workflowMode || (active !== "workspace" && active !== "template");
   const focusedMode = inSurveyWorkflow || hideSidebar;
   const nav = [
-    { id: "home", label: "Home Page", icon: Home },
+    { id: "home", label: "主页", icon: Home },
     { id: "workspace", label: "我的问卷", icon: ClipboardList },
-    { id: "templates", label: "问卷模版", icon: LayoutTemplate },
+    { id: "templates", label: "问卷模板", icon: LayoutTemplate },
+    { id: "reports", label: "报告模板", icon: BarChart3 },
   ];
   const workflowSteps: Array<{
     id: Exclude<WorkspaceTarget, "workspace">;
@@ -698,24 +701,24 @@ function WorkspaceShell({
     <div data-testid={inSurveyWorkflow ? "survey-workflow-shell" : undefined} className="min-h-full bg-secondary text-foreground">
       <div className={focusedMode ? "grid min-h-screen" : "grid min-h-screen lg:grid-cols-[244px_minmax(0,1fr)]"}>
         {!focusedMode ? (
-          <aside className="border-r border-border bg-background px-4 py-5">
+          <aside data-testid="survey-source-sidebar" className="border-r border-border bg-background px-4 py-5">
             <div className="flex items-center gap-3 px-2">
               <div className="grid h-9 w-9 place-items-center rounded-lg bg-foreground text-background">
                 <ListChecks className="h-4 w-4" strokeWidth={1.8} />
               </div>
               <div>
                 <p className="text-14 font-bold">BoardX Survey</p>
-                <p className="text-12 text-muted-foreground">React prototype</p>
+                <p className="text-12 text-muted-foreground">咨询诊断工作台</p>
               </div>
             </div>
 
-            <nav className="mt-6 grid gap-1">
+            <nav aria-label="Survey navigation" className="mt-8 grid gap-1">
               {nav.map((item) => {
                 const Icon = item.icon;
                 const isActive =
-                  (item.id === "workspace" && active === "workspace")
+                  (item.id === "workspace" && active === "workspace" && !dashboardMode)
                   || (item.id === "templates" && active === "template")
-                  || (item.id === "home" && false);
+                  || (item.id === "home" && dashboardMode);
                 return (
                   <Button
                     key={item.id}
@@ -728,10 +731,18 @@ function WorkspaceShell({
                     }`}
                     onClick={() => {
                       if (item.id === "home") {
-                        window.location.href = "/";
+                        window.location.href = "/surveys";
+                        return;
+                      }
+                      if (item.id === "workspace") {
+                        window.location.href = "/surveys?view=my";
                         return;
                       }
                       if (item.id === "templates") {
+                        window.location.href = "/surveys?view=templates";
+                        return;
+                      }
+                      if (item.id === "reports") {
                         window.location.href = "/surveys?view=templates";
                         return;
                       }
@@ -4820,7 +4831,11 @@ function WorkspaceReportWorkbench({
 
 export default function SurveysPage() {
   const searchParams = useSearchParams();
-  const initialWorkbenchTab = searchParams.get("view") === "templates" ? "templates" : "my";
+  const initialWorkbenchTab = searchParams.get("view") === "templates"
+    ? "templates"
+    : searchParams.get("view") === "my"
+      ? "my"
+      : "home";
   const requestedSurveyId = Number(searchParams.get("survey"));
   const requestedStep = searchParams.get("step");
   const initialSurveyId = Number.isFinite(requestedSurveyId) && requestedSurveyId > 0 ? requestedSurveyId : null;
@@ -4834,7 +4849,7 @@ export default function SurveysPage() {
   const [view, setView] = useState<"edit" | "preview">("edit");
   const [editorTab, setEditorTab] = useState<"questions" | "responses" | "settings">("questions");
   const [filter, setFilter] = useState<"my" | "team">("my");
-  const [workbenchTab, setWorkbenchTab] = useState<"my" | "team" | "templates" | "ai">(initialWorkbenchTab);
+  const [workbenchTab, setWorkbenchTab] = useState<"home" | "my" | "team" | "templates" | "ai">(initialWorkbenchTab);
   const [workspaceView, setWorkspaceView] = useState<WorkspaceTarget>(initialWorkspaceView);
   const [workspaceSurvey, setWorkspaceSurvey] = useState<Survey | null>(null);
 
@@ -4970,7 +4985,13 @@ export default function SurveysPage() {
   }, []);
 
   useEffect(() => {
-    setWorkbenchTab(searchParams.get("view") === "templates" ? "templates" : "my");
+    setWorkbenchTab(
+      searchParams.get("view") === "templates"
+        ? "templates"
+        : searchParams.get("view") === "my"
+          ? "my"
+          : "home"
+    );
   }, [searchParams]);
 
   async function loadTeams() {
@@ -5860,6 +5881,10 @@ export default function SurveysPage() {
   const mySurveys = surveys.filter((s) => s.isOwner);
   const teamSurveys = surveys.filter((s) => s.scope === "team");
   const visibleSurveys = mySurveys;
+  const activeSurveyCount = visibleSurveys.filter((survey) => survey.status === "active").length;
+  const totalResponses = visibleSurveys.reduce((sum, survey) => sum + survey.responses, 0);
+  const generatedReportCount = Object.keys(generatedReportsBySurveyId).length + Object.keys(professionalReportsBySurveyId).length;
+  const greeting = new Date().getHours() < 12 ? "上午好" : new Date().getHours() < 18 ? "下午好" : "晚上好";
   const builtInTemplates = templates.filter((template) => template.source === "built_in");
   const savedTemplates = templates.filter((template) => template.source === "saved");
   const allTemplates = [...savedTemplates, ...builtInTemplates];
@@ -7612,9 +7637,11 @@ export default function SurveysPage() {
   return (
     <WorkspaceShell
       active={workbenchTab === "templates" ? "template" : workspaceView}
+      dashboardMode={workbenchTab === "home"}
       currentSurvey={currentSurveyForNavigation}
       workflowMode={workspaceView !== "workspace"}
       templateLibraryMode={workbenchTab === "templates"}
+      hideHeader={workbenchTab === "home"}
       onCreateWithAi={() => openEditor({ withAi: true })}
       onCreateFromScene={() => void navigateWorkspace("template")}
       onCreateBlank={() => (workbenchTab === "templates" ? openTemplateEditor() : openEditor())}
@@ -7732,8 +7759,124 @@ export default function SurveysPage() {
         />
       ) : (
       <div data-testid="survey-professional-dashboard" className="grid gap-4">
-        {workbenchTab === "templates" ? (
-          <section data-testid="template-library" className="grid gap-4">
+        {workbenchTab === "home" ? (
+          <div data-testid="survey-diagnostic-home" className="mx-auto grid w-full max-w-7xl gap-6 px-2 py-4 lg:px-6">
+            <section className="flex flex-wrap items-start justify-between gap-5">
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">{greeting}，Yiran</h1>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Badge variant="muted">独立咨询顾问</Badge>
+                  <Badge variant="muted">明道咨询 · 组织与 AI 转型</Badge>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button data-testid="create-with-ai" type="button" onClick={() => openEditor({ withAi: true })} className="gap-2 bg-foreground text-background hover:bg-foreground/90">
+                  <Plus className="h-4 w-4" />
+                  新建问卷
+                </Button>
+                <Button type="button" variant="outline" onClick={() => { window.location.href = "/surveys?view=templates"; }}>
+                  浏览模板
+                </Button>
+              </div>
+            </section>
+
+            <section className="grid gap-4 xl:grid-cols-[1.3fr_1fr_1fr]">
+              <div data-testid="survey-home-metrics" className="rounded-lg border border-border bg-background p-6">
+                <p className="text-13 font-semibold text-muted-foreground">我的工作台</p>
+                <div className="mt-6 grid grid-cols-2 gap-5 sm:grid-cols-4">
+                  {[
+                    [String(activeSurveyCount), "进行中问卷"],
+                    [String(totalResponses), "累计回收"],
+                    [String(generatedReportCount), "生成报告"],
+                    [totalResponses ? "78%" : "0%", "平均完成率"],
+                  ].map(([value, label], index) => (
+                    <div key={label}>
+                      <p className={index === 3 ? "text-3xl font-bold text-violet-600" : "text-3xl font-bold text-foreground"}>{value}</p>
+                      <p className="mt-1 text-12 text-muted-foreground">{label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-lg border border-border bg-background p-6">
+                <p className="text-13 font-semibold text-muted-foreground">组织</p>
+                <h2 className="mt-5 text-17 font-bold text-foreground">明道咨询</h2>
+                <p className="mt-2 text-13 leading-6 text-muted-foreground">8 名成员 · {savedTemplates.length} 个共享模板<br />{teamSurveys.length} 个协作中的诊断项目</p>
+                <Button type="button" variant="ghost" size="sm" className="mt-4 px-0 text-violet-600 hover:bg-transparent hover:text-violet-600 hover:underline">邀请成员 →</Button>
+              </div>
+              <div className="rounded-lg border border-border bg-background p-6">
+                <p className="text-13 font-semibold text-muted-foreground">顾问社区</p>
+                <p className="mt-5 text-14 font-semibold leading-7 text-foreground">本周热门模板：工作坊前期综合诊断，320 位顾问使用过。</p>
+                <Button type="button" variant="ghost" size="sm" onClick={() => { window.location.href = "/surveys?view=templates"; }} className="mt-3 px-0 text-violet-600 hover:bg-transparent hover:text-violet-600 hover:underline">去看看 →</Button>
+              </div>
+            </section>
+
+            <section data-testid="survey-home-method" className="rounded-lg border border-border bg-background p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-17 font-bold text-foreground">为什么在工作坊之前用 Survey?</h2>
+                <span className="text-12 text-muted-foreground">面向诊断的三步用法</span>
+              </div>
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                {[
+                  ["WHY · 为什么", "诊断先行，带数据进场", "提前 1-2 周用问卷完成诊断，现场直接从「对齐事实」跳到「共创方案」。", "看诊断模板 →"],
+                  ["HOW · 怎么做", "结构化收集，可对比可聚合", "把访谈中不可比的信息变成统一维度的量表与分类，几百份回答也能直接比较。", "新建问卷 →"],
+                  ["THEN · 然后呢", "AI 直达洞察报告", "回收完成后按报告模板自动生成诊断报告：雷达图、优先级矩阵、关键引述。", "看示例报告 →"],
+                ].map(([eyebrow, title, copy, action]) => (
+                  <article key={title} className="rounded-lg border border-border bg-card p-5">
+                    <p className="text-12 font-bold text-violet-600">{eyebrow}</p>
+                    <h3 className="mt-3 text-15 font-bold text-foreground">{title}</h3>
+                    <p className="mt-3 text-13 leading-6 text-muted-foreground">{copy}</p>
+                    <p className="mt-4 text-13 font-semibold text-violet-600">{action}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            <section data-testid="survey-home-templates">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-17 font-bold text-foreground">为你推荐的诊断模板</h2>
+                <Button type="button" variant="ghost" size="sm" onClick={() => { window.location.href = "/surveys?view=templates"; }} className="px-0 text-violet-600 hover:bg-transparent hover:text-violet-600 hover:underline">全部模板 →</Button>
+              </div>
+              <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {allTemplates.slice(0, 4).map((template) => (
+                  <Button key={template.id} type="button" variant="outline" onClick={() => openTemplateEditor(template)} className="h-auto min-h-40 items-start justify-start whitespace-normal rounded-lg p-5 text-left font-normal transition-colors hover:border-foreground/30 hover:bg-card">
+                    <span className="block w-full">
+                    <Badge variant="muted">{template.category ?? "诊断模板"}</Badge>
+                    <h3 className="mt-4 line-clamp-2 text-15 font-bold text-foreground">{template.name}</h3>
+                    <p className="mt-8 text-12 text-muted-foreground">{template.questions.length} 题 · {template.estimatedMinutes ?? 5} min</p>
+                    </span>
+                  </Button>
+                ))}
+              </div>
+            </section>
+
+            <section data-testid="survey-home-recent">
+              <h2 className="text-17 font-bold text-foreground">最近问卷</h2>
+              <div className="mt-4 overflow-hidden rounded-lg border border-border bg-background">
+                {visibleSurveys.slice(0, 4).length ? visibleSurveys.slice(0, 4).map((survey) => (
+                  <div key={survey.id} className="grid gap-4 border-b border-border px-5 py-4 last:border-b-0 md:grid-cols-[minmax(0,1fr)_120px_220px_auto] md:items-center">
+                    <div className="min-w-0">
+                      <h3 className="truncate text-14 font-bold text-foreground">{survey.title}</h3>
+                      <p className="mt-1 truncate text-12 text-muted-foreground">{survey.description || `诊断项目 · ${formatUpdated(survey.updatedAt)}`}</p>
+                    </div>
+                    <Badge variant="muted" className="w-fit">{STATUS_LABEL[survey.status]}</Badge>
+                    <div>
+                      <p className="text-12 text-muted-foreground">{survey.responses ? `${survey.responses} 份答卷` : "未发布"}</p>
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-violet-600" style={{ width: `${Math.min(100, survey.responses)}%` }} />
+                      </div>
+                    </div>
+                    <Button type="button" size="sm" variant="outline" onClick={() => void selectSurveyForWorkspace(survey.id, survey.responses ? "report" : "design")}>
+                      {survey.responses ? "查看报告" : "继续编辑"}
+                    </Button>
+                  </div>
+                )) : (
+                  <div className="p-8 text-center text-13 text-muted-foreground">还没有最近问卷，从新建问卷或模板开始。</div>
+                )}
+              </div>
+            </section>
+          </div>
+        ) : workbenchTab === "templates" ? (
+          <section data-testid="templates-workbench" className="grid gap-4">
             {loading ? (
               <div className="rounded-lg border border-border bg-background p-4">
                 <SurveySkeleton />
@@ -7752,7 +7895,7 @@ export default function SurveysPage() {
                         模版只作为可复用结构管理。进入编辑器可以调整题目、说明和分类；自定义模版可以删除。
                       </p>
                     </div>
-                    <div className="grid gap-2 rounded-lg border border-border bg-card p-3 sm:grid-cols-3">
+                    <div data-testid="template-summary" className="grid gap-2 rounded-lg border border-border bg-card p-3 sm:grid-cols-3">
                       <div>
                         <p className="text-12 text-muted-foreground">全部模版</p>
                         <p className="mt-1 text-20 font-bold text-foreground">{allTemplates.length}</p>
@@ -7768,7 +7911,7 @@ export default function SurveysPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
+                  <div data-testid="template-categories" className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
                     <span className="text-12 font-semibold text-muted-foreground">分类</span>
                     {templateCategories.map((category) => (
                       <Badge key={category} variant="muted">

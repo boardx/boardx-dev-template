@@ -8,14 +8,22 @@ async function register(page: Page) {
   expect(response.status()).toBe(201);
 }
 
-test("BoardX Survey workspace matches the source stash navigation", async ({ page }) => {
+test("BoardX Survey home matches the diagnostic workspace reference", async ({ page }) => {
   await register(page);
   await page.goto("/surveys");
 
   await expect(page.getByTestId("survey-source-sidebar")).toContainText("BoardX Survey");
-  await expect(page.getByRole("navigation", { name: "Survey navigation" })).toContainText("Home Page");
-  await expect(page.getByRole("heading", { name: "我的问卷" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Survey navigation" })).toContainText("主页");
+  await expect(page.getByRole("heading", { name: /下午好|上午好|晚上好/ })).toBeVisible();
+  await expect(page.getByTestId("survey-home-metrics")).toBeVisible();
+  await expect(page.getByTestId("survey-home-method")).toContainText("为什么在工作坊之前用 Survey");
+  await expect(page.getByTestId("survey-home-templates")).toBeVisible();
+  await expect(page.getByTestId("survey-home-recent")).toBeVisible();
   await expect(page.getByTestId("ai-survey-command-center")).toHaveCount(0);
+  await page.screenshot({
+    path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-reference-home.png",
+    fullPage: true,
+  });
 });
 
 test("template URL restores the source stash template manager", async ({ page }) => {

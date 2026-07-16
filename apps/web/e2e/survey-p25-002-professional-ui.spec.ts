@@ -33,7 +33,7 @@ test("professional dashboard exposes unified entry points and workbench interact
   await register(page);
   const survey = await createSurvey(page);
 
-  await page.goto("/surveys");
+  await page.goto("/surveys?view=my");
   await expect(page.getByTestId("survey-professional-dashboard")).toBeVisible();
   await expect(page.getByTestId("survey-source-sidebar")).toContainText("BoardX Survey");
   await expect(page.getByTestId("survey-operations-list")).toBeVisible();
@@ -42,8 +42,7 @@ test("professional dashboard exposes unified entry points and workbench interact
   await page.goto("/surveys?view=templates");
   await expect(page.getByTestId("templates-workbench")).toBeVisible();
   await page.goto("/surveys");
-  await page.getByTestId("tab-ai-create").click();
-  await expect(page.getByTestId("ai-create-workbench")).toBeVisible();
+  await expect(page.getByTestId("create-with-ai")).toBeVisible();
   await page.goto("/surveys/acceptance");
   await expect(page).toHaveURL(/\/surveys\/acceptance/);
 });

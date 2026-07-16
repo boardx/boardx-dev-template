@@ -13,7 +13,7 @@ test("user creates a categorized survey from a built-in template", async ({ page
   await register(page);
   await page.goto("/surveys");
   await page.getByTestId("empty-new-survey").click();
-  await expect(page.getByTestId("template-library")).toBeVisible();
+  await expect(page.getByTestId("templates-workbench")).toBeVisible();
   await page.getByTestId("template-tag-filter").selectOption("product_safety");
   await page.getByTestId("template-select").selectOption("built_in:product-safety-research");
   await expect(page.getByTestId("survey-title")).toHaveValue("商品安全市场调研问卷");

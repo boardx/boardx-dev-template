@@ -8,6 +8,13 @@
 - 当前 blocker: F12 仍需验证真实答卷报告、零/低样本限制和失败重试；组合 E2E 另发现本地 `survey_ai_sessions_status_check` 不接受代码既有的 `open` 状态
 
 ## 会话记录
+### 2026-07-17（参考诊断平台首页）
+- 本轮目标: 修正 `/surveys` 仍显示旧问卷列表的问题，按 `AI 问卷诊断平台(1).html` 落实参考首页。
+- 已完成: 新增诊断工作台首页、四项指标、组织/社区信息、WHY/HOW/THEN 方法区、推荐模板和最近问卷；我的问卷移动到 `?view=my`，模板中心保留 `?view=templates`。
+- 运行过的验证: 聚焦 Playwright 2 tests passed；Web typecheck；design lint；完整页面视觉截图人工对照通过。
+- 已记录证据: `evidence/2026-07-17-survey-reference-home.md`、`evidence/survey-reference-home.png`；F12 保持 `in_progress`。
+- 下一步最佳动作: 继续按同一参考视觉统一“我的问卷”和两个模板中心，再处理五步工作流的页面级一致性。
+
 ### 2026-07-16（报告模板工作台结构）
 - 本轮目标: 按 Survey 平台 UIUX 重构方案，先稳定 F12 报告模板编辑器的三栏工作台边界。
 - 已完成: 当前 `step=template` 真实入口统一为可折叠模块列表、实时报告预览、AI/配置助手三栏结构；保留图表、图片、文本、提示词和模块缩放能力。
