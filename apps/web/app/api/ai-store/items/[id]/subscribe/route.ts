@@ -30,6 +30,12 @@ async function loadContext(idParam: string) {
 
   const teamIdCookie = cookies().get(CURRENT_TEAM_COOKIE)?.value;
   const teamId = teamIdCookie ? Number(teamIdCookie) : null;
+  if (teamId == null || !Number.isFinite(teamId)) {
+    return { error: NextResponse.json({ error: "请先选择团队上下文" }, { status: 400 }) } as const;
+  }
+  if (!(await getMembership(teamId, user.id))) {
+    return { error: NextResponse.json({ error: "当前团队不可用" }, { status: 403 }) } as const;
+  }
 
   // 与详情路由（GET /api/ai-store/items/:id）用同一套可见性口径：canAccessAiStoreItem 在
   // isAiStoreItemVisible 之外还认 personal-scope 的已授权 grantee（F05 分享管理）。否则
@@ -55,9 +61,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const requestedScope = body.scope === "team" ? "team" : "personal";
 
     if (requestedScope === "team") {
-      if (teamId == null) {
-        return NextResponse.json({ error: "请先选择团队上下文" }, { status: 400 });
-      }
       const role = await getMembership(teamId, user.id);
       if (role !== "owner" && role !== "admin") {
         return NextResponse.json({ error: "只有团队管理员可以团队订阅" }, { status: 403 });
@@ -68,12 +71,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       itemId: item.id,
       subscriberUserId: user.id,
       scope: requestedScope,
-      teamId: requestedScope === "team" ? teamId : null,
+      consumerTeamId: teamId,
     });
 
     return NextResponse.json({ subscription }, { status: 201 });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("[ai-store/items/:id/subscribe] subscribe failed", err);
+    return NextResponse.json({ error: "订阅失败" }, { status: 500 });
   }
 }
 
@@ -86,13 +90,14 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     const removed = await unsubscribeAiStoreItem({
       itemId: item.id,
       subscriberUserId: user.id,
-      teamId,
+      consumerTeamId: teamId,
     });
     if (!removed) return NextResponse.json({ error: "未找到订阅" }, { status: 404 });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("[ai-store/items/:id/subscribe] unsubscribe failed", err);
+    return NextResponse.json({ error: "取消订阅失败" }, { status: 500 });
   }
 }
 
@@ -100,6 +105,10 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const ctx = await loadContext(params.id);
   if ("error" in ctx) return ctx.error;
   const { user, item, teamId } = ctx;
-  const subscription = await getAiStoreSubscription({ itemId: item.id, subscriberUserId: user.id, teamId });
+  const subscription = await getAiStoreSubscription({
+    itemId: item.id,
+    subscriberUserId: user.id,
+    consumerTeamId: teamId,
+  });
   return NextResponse.json({ subscribed: Boolean(subscription), subscription: subscription ?? null });
 }

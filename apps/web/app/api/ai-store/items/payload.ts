@@ -13,7 +13,7 @@ export interface ParsedAiStorePayload {
   type: AiStoreItemType;
   scope: AiStoreItemScope;
   status: AiStoreItemStatus;
-  teamId: number | null;
+  originTeamId: number;
   name: string;
   description: string;
   cover: string | null;
@@ -40,6 +40,7 @@ function splitList(value: unknown): string[] {
 
 export function parseAiStorePayload(body: Record<string, unknown>, currentTeamId: number | null): PayloadResult {
   const errors: Record<string, string> = {};
+  if (currentTeamId == null) errors.team = "请先选择团队";
 
   const typeRaw = String(body.type ?? "");
   const type = VALID_TYPES.includes(typeRaw as AiStoreItemType) ? (typeRaw as AiStoreItemType) : undefined;
@@ -66,7 +67,6 @@ export function parseAiStorePayload(body: Record<string, unknown>, currentTeamId
 
   let scope = requestedScope ?? "personal";
   let status: AiStoreItemStatus = "draft";
-  let teamId: number | null = null;
 
   if (action === "publish") {
     if (scope === "platform") errors.scope = "平台范围需要提交审核，不能直接发布";
@@ -83,17 +83,16 @@ export function parseAiStorePayload(body: Record<string, unknown>, currentTeamId
   }
   if (scope === "team") {
     if (currentTeamId == null) errors.scope = "发布到团队前请先选择团队";
-    teamId = currentTeamId;
   }
 
-  if (Object.keys(errors).length > 0 || !type || !action) return { errors };
+  if (Object.keys(errors).length > 0 || !type || !action || currentTeamId == null) return { errors };
 
   return {
     payload: {
       type,
       scope,
       status,
-      teamId,
+      originTeamId: currentTeamId,
       name,
       description,
       cover: String(body.cover ?? "").trim() || null,

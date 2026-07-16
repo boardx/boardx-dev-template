@@ -40,6 +40,13 @@ phases/phase-p11-ai-store
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-16：**隔离 worktree 不会自动带入被 gitignore 的 `.env` / `apps/web/.env.local`**。
+  `packages/data` 会从当前 workspace root 解析数据库配置；缺失时回退到默认
+  `postgresql://boardx:boardx@localhost:5432/boardx`，即使 Next.js 显示 Ready，页面仍会
+  在首个 DB 查询时报认证错误。开发 worktree 应使用被 ignore 的软链接复用主工作区本机
+  env，并以真实 HTTP 请求验证。AI Store Team 迁移还必须把无法由旧 `team_id` 或 owner
+  唯一 membership 证明来源的记录隔离并写审计；内置/平台 seed 也不能为了保留演示数据
+  随意归属。（出处：p27 F01 / Issue #662）
 - 2026-07-08：**新增顶层页面记得同步全局 sidebar 入口，光有内部子菜单不够**。
   AI Store 自己的左侧子菜单（探索/订阅/创建/已授权/已分享）一直做得很完整，但
   `components/app-shell/sidebar.tsx` 的全局 `RAIL_ITEMS` 里长期没有 Store 的入口——

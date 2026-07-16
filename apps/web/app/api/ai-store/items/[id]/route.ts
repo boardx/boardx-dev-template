@@ -48,7 +48,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
     const teamIdCookie = cookies().get(CURRENT_TEAM_COOKIE)?.value;
     const currentTeamId = teamIdCookie ? Number(teamIdCookie) : null;
-    if (currentTeamId != null && !(await getMembership(currentTeamId, user.id))) {
+    if (currentTeamId == null || !Number.isFinite(currentTeamId)) {
+      return NextResponse.json({ error: "请先选择团队" }, { status: 400 });
+    }
+    if (!(await getMembership(currentTeamId, user.id))) {
       return NextResponse.json({ error: "当前团队不可用" }, { status: 403 });
     }
 
@@ -56,7 +59,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const parsed = parseAiStorePayload(body, currentTeamId);
     if (parsed.errors) return NextResponse.json({ errors: parsed.errors }, { status: 400 });
 
-    const item = await updateAiStoreItem(id, user.id, {
+    const item = await updateAiStoreItem(id, user.id, currentTeamId, {
       ...parsed.payload!,
       ownerUserId: user.id,
       author: user.display_name || `${user.first_name} ${user.last_name}`.trim() || user.email,
@@ -65,6 +68,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
     return NextResponse.json({ item });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("[ai-store/items/:id] update failed", err);
+    return NextResponse.json({ error: "更新失败" }, { status: 500 });
   }
 }

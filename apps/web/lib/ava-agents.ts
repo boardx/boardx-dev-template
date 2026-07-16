@@ -24,9 +24,10 @@ export async function listAvaAgentOptions(
   teamId: number | null
 ): Promise<AvaAgentOption[]> {
   try {
+    if (teamId == null) return [...AVA_AGENT_OPTIONS];
     const subscribedIds = await listSubscribedAiStoreItemIds({
       subscriberUserId: userId,
-      teamId,
+      consumerTeamId: teamId,
     });
     // 批量取详情（WHERE id = ANY($1)），避免逐条 SELECT 的 N+1。
     const items = await getAiStoreItems(subscribedIds);

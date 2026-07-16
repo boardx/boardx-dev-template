@@ -13,7 +13,10 @@ export interface AiStoreItem {
   type: AiStoreItemType;
   scope: AiStoreItemScope;
   owner_user_id: number | null;
+  origin_team_id: number;
+  /** @deprecated Compatibility alias for existing Web consumers. */
   team_id: number | null;
+  migration_quarantined_at: string | null;
   status: AiStoreItemStatus;
   name: string;
   description: string;
@@ -30,7 +33,7 @@ export interface AiStoreItem {
 }
 
 const ITEM_COLS =
-  "id, type, scope, owner_user_id, team_id, status, name, description, cover, author, tags, examples, config, likes, views, featured, created_at, updated_at";
+  "id, type, scope, owner_user_id, origin_team_id, origin_team_id AS team_id, migration_quarantined_at, status, name, description, cover, author, tags, examples, config, likes, views, featured, created_at, updated_at";
 
 export interface ListAiStoreItemsOptions {
   /** 类型筛选；空/undefined = 不筛选。 */
@@ -61,7 +64,7 @@ export interface AiStoreItemDraftInput {
   scope: AiStoreItemScope;
   status: AiStoreItemStatus;
   ownerUserId: number;
-  teamId?: number | null;
+  originTeamId: number;
   name: string;
   description: string;
   cover?: string | null;
@@ -91,12 +94,13 @@ export async function listAiStoreItems(opts: ListAiStoreItemsOptions = {}): Prom
   const visClauses: string[] = ["(status IN ('published', 'approved') AND scope = 'platform')"];
   if (opts.teamId != null) {
     params.push(opts.teamId);
-    visClauses.push(`(status = 'published' AND scope = 'team' AND team_id = $${params.length})`);
+    visClauses.push(`(status = 'published' AND scope = 'team' AND origin_team_id = $${params.length})`);
   }
   if (opts.userId != null) {
     params.push(opts.userId);
     visClauses.push(`(scope = 'personal' AND owner_user_id = $${params.length})`);
   }
+  conds.push("migration_quarantined_at IS NULL");
   conds.push(`(${visClauses.join(" OR ")})`);
 
   if (opts.type) {
@@ -134,23 +138,32 @@ export async function listAiStoreItems(opts: ListAiStoreItemsOptions = {}): Prom
 
 /** 取单个项目详情（供详情弹窗）。不做可见性过滤，调用方按需自行校验。 */
 export async function getAiStoreItem(id: number): Promise<AiStoreItem | undefined> {
-  const rows = await query<AiStoreItem>(`SELECT ${ITEM_COLS} FROM ai_store_items WHERE id = $1`, [id]);
+  const rows = await query<AiStoreItem>(
+    `SELECT ${ITEM_COLS} FROM ai_store_items
+     WHERE id = $1 AND migration_quarantined_at IS NULL`,
+    [id]
+  );
   return rows[0];
 }
 
 /** 批量取项目详情（单条 WHERE id = ANY($1)，避免调用方逐条 SELECT 的 N+1）。不做可见性过滤。 */
 export async function getAiStoreItems(ids: number[]): Promise<AiStoreItem[]> {
   if (ids.length === 0) return [];
-  return query<AiStoreItem>(`SELECT ${ITEM_COLS} FROM ai_store_items WHERE id = ANY($1)`, [ids]);
+  return query<AiStoreItem>(
+    `SELECT ${ITEM_COLS} FROM ai_store_items
+     WHERE id = ANY($1) AND migration_quarantined_at IS NULL`,
+    [ids]
+  );
 }
 
 /** 拥有者管理列表：用于 Create/Authorized 视图展示自己的草稿、已发布和审核中项目。 */
-export async function listOwnedAiStoreItems(ownerUserId: number): Promise<AiStoreItem[]> {
+export async function listOwnedAiStoreItems(ownerUserId: number, originTeamId: number): Promise<AiStoreItem[]> {
   return query<AiStoreItem>(
     `SELECT ${ITEM_COLS} FROM ai_store_items
-     WHERE owner_user_id = $1
+     WHERE owner_user_id = $1 AND origin_team_id = $2
+       AND migration_quarantined_at IS NULL
      ORDER BY updated_at DESC, id DESC`,
-    [ownerUserId]
+    [ownerUserId, originTeamId]
   );
 }
 
@@ -158,7 +171,7 @@ export async function listOwnedAiStoreItems(ownerUserId: number): Promise<AiStor
 export async function createAiStoreItem(input: AiStoreItemDraftInput): Promise<AiStoreItem> {
   const rows = await query<AiStoreItem>(
     `INSERT INTO ai_store_items
-       (type, scope, owner_user_id, team_id, status, name, description, cover, author, tags, examples, config)
+       (type, scope, owner_user_id, origin_team_id, status, name, description, cover, author, tags, examples, config)
      VALUES
        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb)
      RETURNING ${ITEM_COLS}`,
@@ -166,7 +179,7 @@ export async function createAiStoreItem(input: AiStoreItemDraftInput): Promise<A
       input.type,
       input.scope,
       input.ownerUserId,
-      input.teamId ?? null,
+      input.originTeamId,
       input.status,
       input.name,
       input.description,
@@ -184,13 +197,13 @@ export async function createAiStoreItem(input: AiStoreItemDraftInput): Promise<A
 export async function updateAiStoreItem(
   id: number,
   ownerUserId: number,
+  originTeamId: number,
   input: AiStoreItemDraftInput
 ): Promise<AiStoreItem | undefined> {
   const rows = await query<AiStoreItem>(
     `UPDATE ai_store_items
-     SET type = $3,
-         scope = $4,
-         team_id = $5,
+     SET type = $4,
+         scope = $5,
          status = $6,
          name = $7,
          description = $8,
@@ -200,14 +213,15 @@ export async function updateAiStoreItem(
          examples = $12,
          config = $13::jsonb,
          updated_at = now()
-     WHERE id = $1 AND owner_user_id = $2
+     WHERE id = $1 AND owner_user_id = $2 AND origin_team_id = $3
+       AND migration_quarantined_at IS NULL
      RETURNING ${ITEM_COLS}`,
     [
       id,
       ownerUserId,
+      originTeamId,
       input.type,
       input.scope,
-      input.teamId ?? null,
       input.status,
       input.name,
       input.description,
@@ -268,7 +282,7 @@ export async function listPlatformReviewItems(
   const page = Math.max(1, opts.page ?? 1);
   const pageSize = Math.min(50, Math.max(1, opts.pageSize ?? 20));
 
-  const conds: string[] = ["scope = 'platform'"];
+  const conds: string[] = ["scope = 'platform'", "migration_quarantined_at IS NULL"];
   const params: unknown[] = [];
 
   if (opts.status === "pending" || opts.status === "approved") {
@@ -526,7 +540,8 @@ export function newAiStoreShareToken(): string {
 /** 取某项目当前分享状态；不存在返回 undefined。不做鉴权，调用方负责校验属主。 */
 export async function getAiStoreItemShare(itemId: number): Promise<AiStoreItemShare | undefined> {
   const rows = await query<AiStoreItemShare>(
-    `SELECT ${SHARE_COLS} FROM ai_store_items WHERE id = $1`,
+    `SELECT ${SHARE_COLS} FROM ai_store_items
+     WHERE id = $1 AND migration_quarantined_at IS NULL`,
     [itemId]
   );
   return rows[0];
@@ -648,6 +663,7 @@ export async function listAuthorizedAiStoreItems(userId: number): Promise<AiStor
      FROM ai_store_items it
      JOIN ai_store_item_grants g ON g.item_id = it.id
      WHERE g.user_id = $1 AND it.owner_user_id IS DISTINCT FROM $1
+       AND it.migration_quarantined_at IS NULL
      ORDER BY g.created_at DESC`,
     [userId]
   );
@@ -668,7 +684,8 @@ export type TeamAiStoreReviewAction = "approve" | "reject" | "withdraw";
 export async function listTeamPendingAiStoreItems(teamId: number): Promise<AiStoreItem[]> {
   return query<AiStoreItem>(
     `SELECT ${ITEM_COLS} FROM ai_store_items
-     WHERE scope = 'team' AND team_id = $1 AND status = 'pending'
+     WHERE scope = 'team' AND origin_team_id = $1 AND status = 'pending'
+       AND migration_quarantined_at IS NULL
      ORDER BY updated_at ASC, id ASC`,
     [teamId]
   );
@@ -678,7 +695,8 @@ export async function listTeamPendingAiStoreItems(teamId: number): Promise<AiSto
 export async function listTeamApprovedAiStoreItems(teamId: number): Promise<AiStoreItem[]> {
   return query<AiStoreItem>(
     `SELECT ${ITEM_COLS} FROM ai_store_items
-     WHERE scope = 'team' AND team_id = $1 AND status = 'published'
+     WHERE scope = 'team' AND origin_team_id = $1 AND status = 'published'
+       AND migration_quarantined_at IS NULL
      ORDER BY featured DESC, updated_at DESC, id DESC`,
     [teamId]
   );
@@ -713,7 +731,8 @@ export async function reviewTeamAiStoreItem(
   const rows = await query<AiStoreItem>(
     `UPDATE ai_store_items
      SET status = $4, updated_at = now()
-     WHERE id = $1 AND scope = 'team' AND team_id = $2 AND status = ANY($3)
+     WHERE id = $1 AND scope = 'team' AND origin_team_id = $2 AND status = ANY($3)
+       AND migration_quarantined_at IS NULL
      RETURNING ${ITEM_COLS}`,
     [itemId, teamId, fromStatuses, toStatus]
   );
@@ -733,7 +752,8 @@ export async function setTeamAiStoreItemFeatured(
   const rows = await query<AiStoreItem>(
     `UPDATE ai_store_items
      SET featured = $3, updated_at = now()
-     WHERE id = $1 AND scope = 'team' AND team_id = $2 AND status = 'published'
+     WHERE id = $1 AND scope = 'team' AND origin_team_id = $2 AND status = 'published'
+       AND migration_quarantined_at IS NULL
      RETURNING ${ITEM_COLS}`,
     [itemId, teamId, featured]
   );

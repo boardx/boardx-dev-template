@@ -1,5 +1,5 @@
 // packages/data/src/aiStoreSubscriptions.ts — CAP-DATA AI Store 订阅仓储（P11 F03）
-// ai_store_subscriptions：个人订阅（team_id=null）或团队订阅（team_id=当前团队）。
+// ai_store_subscriptions：所有订阅都属于 consumer_team_id 指定的当前 Team。
 // 独立文件（不改 aiStore.ts 既有代码），降低与同模块并行改动（收藏功能 F04）的冲突面。
 import { query } from "./index";
 import type { AiStoreItemScope } from "./aiStore";
@@ -10,61 +10,60 @@ export interface AiStoreSubscription {
   id: number;
   item_id: number;
   subscriber_user_id: number;
-  team_id: number | null;
+  consumer_team_id: number;
+  /** @deprecated Compatibility alias for existing Web consumers. */
+  team_id: number;
   scope: AiStoreSubscriptionScope;
+  migration_quarantined_at: string | null;
   created_at: string;
 }
 
-const SUB_COLS = "id, item_id, subscriber_user_id, team_id, scope, created_at";
+const SUB_COLS =
+  "id, item_id, subscriber_user_id, consumer_team_id, consumer_team_id AS team_id, scope, migration_quarantined_at, created_at";
 
 /**
- * 订阅一个项目：scope=personal 时 team_id 记为 NULL；scope=team 时 team_id 必须非空
- * （调用方——路由层——负责校验团队订阅权限，如 Team Admin）。
- * 同一 (item, user, team) 组合幂等：已订阅时返回既有记录（ON CONFLICT DO NOTHING + 回查）。
+ * 订阅一个项目：personal/team 都必须绑定当前 consumer Team。
+ * 同一 (item, user, consumer Team, scope) 组合幂等。
  */
 export async function subscribeAiStoreItem(params: {
   itemId: number;
   subscriberUserId: number;
   scope: AiStoreSubscriptionScope;
-  teamId?: number | null;
+  consumerTeamId: number;
 }): Promise<AiStoreSubscription> {
-  const teamId = params.scope === "team" ? params.teamId ?? null : null;
   const inserted = await query<AiStoreSubscription>(
-    `INSERT INTO ai_store_subscriptions (item_id, subscriber_user_id, team_id, scope)
+    `INSERT INTO ai_store_subscriptions (item_id, subscriber_user_id, consumer_team_id, scope)
      VALUES ($1, $2, $3, $4)
-     ON CONFLICT (item_id, subscriber_user_id, COALESCE(team_id, 0)) DO NOTHING
+     ON CONFLICT (item_id, subscriber_user_id, consumer_team_id, scope)
+       WHERE migration_quarantined_at IS NULL
+     DO NOTHING
      RETURNING ${SUB_COLS}`,
-    [params.itemId, params.subscriberUserId, teamId, params.scope]
+    [params.itemId, params.subscriberUserId, params.consumerTeamId, params.scope]
   );
   if (inserted[0]) return inserted[0];
 
   const existing = await query<AiStoreSubscription>(
     `SELECT ${SUB_COLS} FROM ai_store_subscriptions
-     WHERE item_id = $1 AND subscriber_user_id = $2 AND COALESCE(team_id, 0) = COALESCE($3, 0)`,
-    [params.itemId, params.subscriberUserId, teamId]
+     WHERE item_id = $1 AND subscriber_user_id = $2
+       AND consumer_team_id = $3 AND scope = $4
+       AND migration_quarantined_at IS NULL`,
+    [params.itemId, params.subscriberUserId, params.consumerTeamId, params.scope]
   );
   return existing[0]!;
 }
 
 /**
- * 取消订阅：与 getAiStoreSubscription 用同一套匹配口径 —— 先按 (item, user) +
- * "team_id IS NULL OR team_id = 当前 teamId" 的宽匹配查出命中的那一行，再按其真实 id 删除。
- *
- * 不能像早期实现那样直接用 COALESCE(team_id,0) = COALESCE($3,0) 做严格相等匹配：那样会与
- * getAiStoreSubscription 的判定口径不对称——用户在 teamId cookie 为 null 时个人订阅
- * （team_id=NULL 落库），之后切换进某个团队（cookie 变成非 null），GET 侧的 OR 匹配仍会命中
- * 该 NULL 行、报 subscribed:true，但 DELETE 若按严格相等去找 team_id=当前团队 id 的行则
- * 找不到、误报 404（"未找到订阅"），用户被卡住（UI 显示已订阅、点取消却失败）。
+ * 取消订阅：严格限定当前 consumer Team，避免切换 Team 后误删另一个 Team 的关系。
  */
 export async function unsubscribeAiStoreItem(params: {
   itemId: number;
   subscriberUserId: number;
-  teamId?: number | null;
+  consumerTeamId: number;
 }): Promise<boolean> {
   const existing = await getAiStoreSubscription({
     itemId: params.itemId,
     subscriberUserId: params.subscriberUserId,
-    teamId: params.teamId ?? null,
+    consumerTeamId: params.consumerTeamId,
   });
   if (!existing) return false;
 
@@ -79,15 +78,16 @@ export async function unsubscribeAiStoreItem(params: {
 export async function getAiStoreSubscription(params: {
   itemId: number;
   subscriberUserId: number;
-  teamId?: number | null;
+  consumerTeamId: number;
 }): Promise<AiStoreSubscription | undefined> {
   const rows = await query<AiStoreSubscription>(
     `SELECT ${SUB_COLS} FROM ai_store_subscriptions
      WHERE item_id = $1 AND subscriber_user_id = $2
-       AND (team_id IS NULL OR team_id = $3)
-     ORDER BY (team_id IS NOT NULL) DESC
+       AND consumer_team_id = $3
+       AND migration_quarantined_at IS NULL
+     ORDER BY (scope = 'team') DESC
      LIMIT 1`,
-    [params.itemId, params.subscriberUserId, params.teamId ?? null]
+    [params.itemId, params.subscriberUserId, params.consumerTeamId]
   );
   return rows[0];
 }
@@ -95,13 +95,14 @@ export async function getAiStoreSubscription(params: {
 /** 「已订阅」列表：当前用户的个人订阅 + 当前团队的团队订阅所命中的项目 id 集合。 */
 export async function listSubscribedAiStoreItemIds(params: {
   subscriberUserId: number;
-  teamId?: number | null;
+  consumerTeamId: number;
 }): Promise<number[]> {
   const rows = await query<{ item_id: number }>(
     `SELECT DISTINCT item_id FROM ai_store_subscriptions
      WHERE subscriber_user_id = $1
-       AND (team_id IS NULL OR team_id = $2)`,
-    [params.subscriberUserId, params.teamId ?? null]
+       AND consumer_team_id = $2
+       AND migration_quarantined_at IS NULL`,
+    [params.subscriberUserId, params.consumerTeamId]
   );
   return rows.map((r) => r.item_id);
 }

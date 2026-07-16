@@ -7,9 +7,9 @@
       "area": "ai-store-data",
       "title": "Team tenancy and migration audit",
       "user_visible_behavior": "用户在当前 Team 创建 Agent、Skill 或 Template 后，只能在该 Team 的管理视图看到并管理它；所有资源都有不可变的来源 Team，Team A 与 Team B 可拥有同名资源，跨 Team item id 管理请求返回 403/404，无法唯一归属的历史数据进入可审计隔离清单且不会出现在可订阅或可执行列表。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "codex-p27-ai-store-control-plane",
       "capability": "CAP-DATA",
       "depends_on": [],
       "wave": 0,
@@ -17,7 +17,7 @@
         "pnpm --filter @repo/data test -- src/aiStore.teamIsolation.test.ts",
         "pnpm --filter @repo/data test -- src/aiStore.migrationAudit.test.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-07-16T08:32:39.829Z",
       "notes": "建立 Resource.originTeamId 和 Subscription.consumerTeamId 的非空可信边界；迁移必须 dry-run 可审计、apply 幂等，不猜测来源 Team。"
     },
     {

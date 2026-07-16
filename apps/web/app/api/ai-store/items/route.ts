@@ -25,8 +25,17 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
 
   const url = new URL(req.url);
+  const teamIdCookie = cookies().get(CURRENT_TEAM_COOKIE)?.value;
+  const teamId = teamIdCookie ? Number(teamIdCookie) : null;
+  if (teamId == null || !Number.isFinite(teamId)) {
+    return NextResponse.json({ error: "请先选择团队" }, { status: 400 });
+  }
+  if (!(await getMembership(teamId, user.id))) {
+    return NextResponse.json({ error: "当前团队不可用" }, { status: 403 });
+  }
+
   if (url.searchParams.get("owner") === "me") {
-    return NextResponse.json({ items: await listOwnedAiStoreItems(user.id) });
+    return NextResponse.json({ items: await listOwnedAiStoreItems(user.id, teamId) });
   }
   // uc-ai-store-005：Authorized 视图——自己被授权管理、但非本人拥有的项目（授权视图只显示
   // 被授权范围内项目，不含拥有者自己的项目，避免和 owner=me 的 Create 视图重复）。
@@ -34,10 +43,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ items: await listAuthorizedAiStoreItems(user.id) });
   }
 
-  const teamIdCookieForSubscribed = cookies().get(CURRENT_TEAM_COOKIE)?.value;
   if (url.searchParams.get("subscribed") === "me") {
-    const teamId = teamIdCookieForSubscribed ? Number(teamIdCookieForSubscribed) : null;
-    const ids = await listSubscribedAiStoreItemIds({ subscriberUserId: user.id, teamId });
+    const ids = await listSubscribedAiStoreItemIds({
+      subscriberUserId: user.id,
+      consumerTeamId: teamId,
+    });
     const items = (await Promise.all(ids.map((id) => getAiStoreItem(id)))).filter(
       (it): it is NonNullable<typeof it> => Boolean(it)
     );
@@ -50,9 +60,6 @@ export async function GET(req: Request) {
   const tag = url.searchParams.get("tag") ?? "";
   const page = Number(url.searchParams.get("page") ?? "1") || 1;
   const pageSize = Number(url.searchParams.get("pageSize") ?? "9") || 9;
-
-  const teamIdCookie = cookies().get(CURRENT_TEAM_COOKIE)?.value;
-  const teamId = teamIdCookie ? Number(teamIdCookie) : null;
 
   const result = await listAiStoreItems({
     type,
@@ -84,7 +91,10 @@ export async function POST(req: Request) {
 
     const teamIdCookie = cookies().get(CURRENT_TEAM_COOKIE)?.value;
     const currentTeamId = teamIdCookie ? Number(teamIdCookie) : null;
-    if (currentTeamId != null && !(await getMembership(currentTeamId, user.id))) {
+    if (currentTeamId == null || !Number.isFinite(currentTeamId)) {
+      return NextResponse.json({ error: "请先选择团队" }, { status: 400 });
+    }
+    if (!(await getMembership(currentTeamId, user.id))) {
       return NextResponse.json({ error: "当前团队不可用" }, { status: 403 });
     }
 
@@ -100,6 +110,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ item }, { status: 201 });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("[ai-store/items] create failed", err);
+    return NextResponse.json({ error: "创建失败" }, { status: 500 });
   }
 }
