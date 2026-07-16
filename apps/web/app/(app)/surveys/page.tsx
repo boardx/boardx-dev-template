@@ -352,18 +352,22 @@ function getTemplateDraftSignature(input: {
   });
 }
 
-function QuestionPreviewAnswer({ question }: { question: Question }) {
+function QuestionPreviewAnswer({ question, questionIndex }: { question: Question; questionIndex?: number }) {
   if (["short_text", "email", "number", "phone"].includes(question.type)) {
-    return <Input disabled placeholder="短文本回答" className="bg-muted/30" />;
+    return <Input disabled placeholder="短文本回答" className="rounded-none border-x-0 border-t-0 bg-transparent px-0 shadow-none" />;
   }
   if (question.type === "text") {
-    return <Textarea disabled placeholder="段落回答" className="min-h-20 bg-muted/30" />;
+    return <Textarea disabled placeholder="段落回答" className="min-h-20 rounded-none border-x-0 border-t-0 bg-transparent px-0 shadow-none" />;
   }
   if (CHOICE_TYPES.includes(question.type) && question.type !== "dropdown") {
     return (
       <div className="grid gap-2">
         {(question.options.length ? question.options : ["选项 1"]).map((option, optionIndex) => (
-          <div key={`${question.id}-${optionIndex}`} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-14 text-foreground">
+          <div
+            key={`${question.id}-${optionIndex}`}
+            data-testid={questionIndex == null ? undefined : `preview-option-${questionIndex}-${optionIndex}`}
+            className="flex items-center gap-3 rounded-sm border-0 px-3 py-2 text-14 text-foreground"
+          >
             <span className={question.type === "multiple" ? "h-4 w-4 rounded border border-border-strong" : "h-4 w-4 rounded-full border border-border-strong"} />
             {option || `选项 ${optionIndex + 1}`}
           </div>
@@ -386,9 +390,9 @@ function QuestionPreviewAnswer({ question }: { question: Question }) {
   if (question.type === "rating") return <div className="text-22 text-border-strong">★ ★ ★ ★ ★</div>;
   if (question.type === "linear_scale") return <div className="text-14 text-muted-foreground">1&nbsp;&nbsp;2&nbsp;&nbsp;3&nbsp;&nbsp;4&nbsp;&nbsp;5</div>;
   if (question.type === "nps") return <div className="text-14 text-muted-foreground">0 1 2 3 4 5 6 7 8 9 10</div>;
-  if (question.type === "date") return <Input disabled type="date" className="max-w-xs bg-muted/30" />;
-  if (question.type === "time") return <Input disabled type="time" className="max-w-xs bg-muted/30" />;
-  return <Input disabled type="file" className="max-w-xs bg-muted/30" />;
+  if (question.type === "date") return <Input disabled type="date" className="max-w-xs rounded-none border-x-0 border-t-0 bg-transparent px-0 shadow-none" />;
+  if (question.type === "time") return <Input disabled type="time" className="max-w-xs rounded-none border-x-0 border-t-0 bg-transparent px-0 shadow-none" />;
+  return <Input disabled type="file" className="max-w-xs rounded-none border-x-0 border-t-0 bg-transparent px-0 shadow-none" />;
 }
 
 function questionsFromApi(raw: unknown): Question[] {
@@ -6688,24 +6692,26 @@ export default function SurveysPage() {
 
         {!created && view === "preview" && !isTemplateEditor && (
           <div className="mx-auto mt-4 max-w-2xl" data-testid="survey-preview">
-            <section data-testid="survey-preview-sheet" className="overflow-hidden rounded-lg border border-border bg-background shadow-sm">
-              <header className="border-t-4 border-primary p-7">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">BoardX Survey</Badge>
-                  <span className="text-12 text-muted-foreground">{questions.length} 题</span>
+            <section data-testid="survey-preview-sheet" className="overflow-hidden border-0 bg-background shadow-none">
+              <div className="h-1 bg-primary" />
+              <header className="px-7 pb-8 pt-10">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-12 text-muted-foreground">
+                  <span className="font-medium text-foreground">问卷预览</span>
+                  <span>{questions.length} 题</span>
                 </div>
-                <h2 className="mt-4 text-26 font-bold tracking-tight text-foreground">{title.trim() || "未命名问卷"}</h2>
+                <progress aria-label="问卷预览进度" className="mt-3 h-1 w-full accent-primary" value={0} max={Math.max(questions.length, 1)} />
+                <h2 className="mt-8 text-26 font-bold tracking-tight text-foreground">{title.trim() || "未命名问卷"}</h2>
                 {description.trim() && <p className="mt-2 text-14 text-muted-foreground">{description}</p>}
               </header>
-              <div data-testid="preview-question-list" className="divide-y divide-border border-t border-border">
+              <div data-testid="preview-question-list" className="space-y-1 px-7 pb-8">
                 {questions.map((q, idx) => (
-                  <section key={q.id} data-testid={`preview-question-${idx}`} className="px-7 py-5">
+                  <section key={q.id} data-testid={`preview-question-${idx}`} className="py-6">
                     <p className="text-14 font-semibold text-foreground">
                       {idx + 1}. {q.title.trim() || `问题 ${idx + 1}`}
                       {q.required && <span className="ml-1 text-destructive">*</span>}
                     </p>
                     <p className="mt-1 text-12 text-muted-foreground">{TYPE_LABEL[q.type]}</p>
-                    <div className="mt-3"><QuestionPreviewAnswer question={q} /></div>
+                    <div className="mt-3"><QuestionPreviewAnswer question={q} questionIndex={idx} /></div>
                   </section>
                 ))}
               </div>

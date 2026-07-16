@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { CheckCircle2, Send, Star } from "lucide-react";
 import type { SurveyWithQuestions } from "@repo/data";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -113,24 +112,31 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
 
   return (
     <main data-testid="answer-page" className="min-h-screen bg-secondary/20 px-4 py-10">
-      <section data-testid="answer-professional-shell" className="mx-auto max-w-2xl overflow-hidden rounded-lg border border-border bg-background shadow-sm">
-        <div className="border-t-4 border-primary p-7">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline">BoardX Survey</Badge>
+      <section data-testid="answer-professional-shell" className="mx-auto max-w-2xl overflow-hidden border-0 bg-background shadow-none">
+        <div className="h-1 bg-primary" />
+        <header className="px-7 pb-8 pt-10">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-12 font-medium text-foreground">问卷进度</span>
             <span data-testid="answer-progress" className="text-12 text-muted-foreground">
               {answeredCount} / {survey.questions.length}
             </span>
           </div>
-          <h1 className="mt-4 text-26 font-bold tracking-tight text-foreground">{survey.title}</h1>
+          <progress
+            aria-label="问卷完成进度"
+            className="mt-3 h-1 w-full accent-primary"
+            value={answeredCount}
+            max={Math.max(survey.questions.length, 1)}
+          />
+          <h1 className="mt-8 text-26 font-bold tracking-tight text-foreground">{survey.title}</h1>
           {survey.description && <p className="mt-2 text-14 text-muted-foreground">{survey.description}</p>}
-        </div>
+        </header>
 
-        <div data-testid="answer-question-list" className="divide-y divide-border border-t border-border">
+        <div data-testid="answer-question-list" className="space-y-1 px-7 pb-8">
           {survey.questions.map((question, idx) => {
             const key = String(question.id);
             const value = answers[key];
             return (
-              <section key={question.id} data-testid={`answer-question-${idx}`} className="px-7 py-5">
+              <section key={question.id} data-testid={`answer-question-${idx}`} className="py-6">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-14 font-semibold text-foreground">
@@ -165,6 +171,7 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
                       value={typeof value === "string" || typeof value === "number" ? String(value) : ""}
                       onChange={(e) => setAnswer(question.id, question.type === "number" ? (e.target.value === "" ? "" : Number(e.target.value)) : e.target.value)}
                       placeholder="请输入你的回答"
+                      className="rounded-none border-x-0 border-t-0 bg-transparent px-0 shadow-none"
                     />
                   </div>
                 )}
@@ -180,6 +187,7 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
                       value={typeof value === "string" ? value : ""}
                       onChange={(e) => setAnswer(question.id, e.target.value)}
                       placeholder="请输入你的回答"
+                      className="rounded-none border-x-0 border-t-0 bg-transparent px-0 shadow-none"
                     />
                   </div>
                 )}
@@ -242,9 +250,10 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
                     {question.options.map((option, optionIdx) => (
                       <label
                         key={option}
+                        data-testid={`answer-option-${idx}-${optionIdx}`}
                         className={cn(
-                          "flex cursor-pointer items-center gap-2 rounded-lg border border-border px-3 py-2 text-14 transition-colors hover:border-border-strong",
-                          value === option && "border-primary bg-primary/5"
+                          "flex cursor-pointer items-center gap-3 rounded-sm border-0 px-3 py-2 text-14 transition-colors hover:bg-muted/60 focus-within:bg-muted/60",
+                          value === option && "bg-primary/10"
                         )}
                       >
                         <Input
@@ -288,9 +297,10 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
                       return (
                         <label
                           key={option}
+                          data-testid={`answer-option-${idx}-${optionIdx}`}
                           className={cn(
-                            "flex cursor-pointer items-center gap-2 rounded-lg border border-border px-3 py-2 text-14 transition-colors hover:border-border-strong",
-                            selected && "border-primary bg-primary/5"
+                            "flex cursor-pointer items-center gap-3 rounded-sm border-0 px-3 py-2 text-14 transition-colors hover:bg-muted/60 focus-within:bg-muted/60",
+                            selected && "bg-primary/10"
                           )}
                         >
                           <Input
@@ -326,7 +336,7 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
           })}
         </div>
 
-        <div className="flex flex-col items-end gap-3 border-t border-border px-7 py-5">
+        <div className="flex flex-col items-start gap-3 px-7 pb-10 pt-2">
           {error && (
             <p role="alert" data-testid="err-answer" className="text-13 text-destructive">
               {error}
