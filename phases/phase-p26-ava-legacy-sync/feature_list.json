@@ -32,7 +32,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/ava-chat-basic.spec.ts e2e/ava-message-actions.spec.ts e2e/ava-message-send-actions.spec.ts e2e/ava-attach-files.spec.ts e2e/ava-voice-input.spec.ts"
       ],
       "evidence": "evidence/F02.verify.log @ 2026-07-16T11:00:07.480Z",
-      "notes": "来源：boardx-web/src/components/ava/ChatUIComponent/MessageEditor 与 ChatItem。会改 `apps/web/app/(app)/ava/page.tsx`、`voice-input.tsx`、`attachments.tsx`，必须串行在 F01 后。"
+      "notes": "来源：boardx-web/src/components/ava/ChatUIComponent/MessageEditor 与 ChatItem。会改 `apps/web/app/(app)/ava/page.tsx`、`voice-input.tsx`、`attachments.tsx`，必须串行在 F01 后。增量验收：普通本地 dev 必须通过 Next 转译 `@repo/ai` 读取当前 Qwen 默认模型，`/api/ava/capabilities` 返回 `qwen3.7-max`，composer textarea 不出现原生黑色内层边框。"
     },
     {
       "id": "F03",

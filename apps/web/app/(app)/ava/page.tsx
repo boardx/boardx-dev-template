@@ -2033,7 +2033,7 @@ export default function AvaPage() {
                   // 默认轮廓（Chrome 下为橙色 auto ring）叠在设计系统样式之上；对齐
                   // components/ui/textarea.tsx 的口径显式关掉默认轮廓，焦点高亮保留
                   // focus-visible:ring（外层 composer 容器另有 focus-within 边框反馈）。
-                  className="block w-full min-h-16 max-h-40 appearance-none resize-none border-0 bg-transparent px-0 py-1 text-sm leading-relaxed shadow-none outline-none ring-0 transition-colors placeholder:text-placeholder focus:border-0 focus:outline-none focus:ring-0 focus-visible:border-0 focus-visible:outline-none focus-visible:ring-0"
+                  className="block w-full min-h-16 max-h-40 appearance-none resize-none !border-0 bg-transparent px-0 py-1 text-sm leading-relaxed !shadow-none !outline-none !ring-0 transition-colors placeholder:text-placeholder focus:!border-0 focus:!outline-none focus:!ring-0 focus-visible:!border-0 focus-visible:!outline-none focus-visible:ring-1 focus-visible:ring-transparent"
                 />
                 {sendError && (
                   <p role="alert" data-testid="send-error" className="mt-2 text-xs text-destructive">

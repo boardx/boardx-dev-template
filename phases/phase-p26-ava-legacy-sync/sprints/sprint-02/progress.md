@@ -107,3 +107,20 @@
 - 当前状态:
   - F02 `passing`。
   - F03/F04 仍 `not_started`，不属于 sprint-02 当前 verified scope。
+
+### 2026-07-17 01:31:19
+- 本轮目标: 修正用户刷新 `/ava` 后仍显示 `Stub Default`、没有真正对接 Qwen 的问题，并继续按要求补录需求。
+- 根因:
+  - `apps/web` 的 Next 配置未把 `@repo/ai` 放进 `transpilePackages`；本地 dev server 对 workspace TS 包的运行时编译不完整，导致 `/api/ava/capabilities` 仍读到旧 stub 能力面。
+- 已完成:
+  - 将本次要求补入 `requirements/01-change-intake.md` 的「Next dev 必须编译 AVA AI 包」章节。
+  - `apps/web/next.config.mjs` 增加 `@repo/ai` 转译，确保 AVA API 读取当前分支的 Qwen provider / settings。
+  - composer textarea 继续加固为 `!border-0 !outline-none !ring-0`，避免组件默认样式或浏览器焦点样式覆盖后出现黑色内层边框。
+  - 重启 `localhost:3003` dev server，确认加载 `apps/web/.env.local`。
+- 运行过的验证:
+  - 已登录 smoke: GET `/api/ava/capabilities` — passed，返回 `defaults.modelId: "qwen3.7-max"`，模型列表前两项为 `Qwen 3.7 Max`、`Qwen 3.6 Plus`。
+  - Real Qwen smoke: 临时注册用户，创建 AVA thread `id=160`，POST `/api/ava/threads/160/messages`，body 使用 `modelId: "qwen3.7-max"` — passed，返回 `event: token` 流和 `event: done`；assistant 内容为 `AVA 已成功连接千问。`。
+  - `pnpm --filter @repo/web typecheck` — passed。
+- 当前状态:
+  - `localhost:3003` 已重新启动；刷新 `/ava` 后应看到默认模型为 `Qwen 3.7 Max`，普通发送会走 DashScope/Qwen。
+  - 本地密钥仍只在 `apps/web/.env.local`，不进入 git。

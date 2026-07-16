@@ -23,6 +23,8 @@
 - `apps/web/playwright.config.ts`
   - Playwright webServer 的 `DATABASE_URL` / `REDIS_URL` / `S3_ENDPOINT` 在 e2e 环境中规范为 `127.0.0.1`，减少 Docker Desktop 下 `localhost` IPv6/IPv4 抖动。
   - e2e 仍强制 `AVA_DEFAULT_MODEL_ID=stub:default`，不影响普通本地/生产默认 Qwen。
+- `apps/web/next.config.mjs`
+  - 已新增 `@repo/ai` 到 `transpilePackages`，避免 Next dev server 读取旧 stub 能力面；本地 capabilities 现在返回默认 `qwen3.7-max`。
 - `apps/web/e2e/ava-attach-files.spec.ts`
   - 上传完成断言等待窗口调整为 30s，仍要求最终 `data-status="uploaded"`。
   - reload 后按本次线程标题回到对应线程，不依赖历史列表第一项。
@@ -34,6 +36,8 @@
 - `pnpm --filter @repo/storage test` — 1 file / 19 tests passed。
 - `pnpm --filter @repo/web typecheck` — passed。
 - `pnpm harness verify --sprint p26/02` — passed，F02 -> passing。
+- 2026-07-17 smoke: GET `/api/ava/capabilities` with logged-in temp user — passed，`defaults.modelId: "qwen3.7-max"`。
+- 2026-07-17 smoke: POST `/api/ava/threads/160/messages` with `modelId: "qwen3.7-max"` — passed，SSE token/done 返回 `AVA 已成功连接千问。`。
 
 ## 环境说明
 - 本轮 Docker daemon 曾中途不可连接，导致 Postgres `ECONNREFUSED` 和附件/线程 e2e 假失败；已重新启动 Docker Desktop，并拉起当前 worktree compose 栈。
@@ -44,3 +48,4 @@
 - 若继续本 phase，按 harness 流程为 `F03 / 迁移旧 AVA Deep Research 细节视图` 创建/认领 sprint，不要复用 F02 的 passing scope。
 - 不要手改 `active-features.json`，不要手动改 feature status；继续通过 `pnpm harness verify` 升级。
 - 若要接真实 boardx-backend Deep Agent，浏览器本地需要旧 backend JWT：`auth-token-data.token` 或 `loginToken`，否则 backend proxy 会按预期返回 401。
+- 若 `/ava` 仍显示 `Stub Default`，先硬刷新浏览器；服务端 smoke 已确认 3003 capabilities 默认是 `qwen3.7-max`，不是 stub。
