@@ -4858,6 +4858,7 @@ export default function SurveysPage() {
   const [created, setCreated] = useState<{ id: number; shareUrl: string; reportReady: boolean } | null>(null);
   const [editorActionMessage, setEditorActionMessage] = useState("");
   const [templates, setTemplates] = useState<SurveyTemplate[]>([]);
+  const [templateListTag, setTemplateListTag] = useState("all");
   const [templateMessage, setTemplateMessage] = useState("");
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [templateTags, setTemplateTags] = useState<string[]>([]);
@@ -5085,6 +5086,7 @@ export default function SurveysPage() {
     setCreated(null);
     setEditorActionMessage("");
     setTemplateMessage("");
+    setTemplateListTag("all");
     setView("edit");
     setEditorTab("questions");
     setMode("editor");
@@ -5855,6 +5857,17 @@ export default function SurveysPage() {
   const savedTemplates = templates.filter((template) => template.source === "saved");
   const allTemplates = [...savedTemplates, ...builtInTemplates];
   const templateCategories = Array.from(new Set(allTemplates.map((template) => template.category ?? "通用")));
+  const templateListTags = Array.from(new Set(
+    allTemplates.flatMap((template) => [
+      template.category ?? "通用",
+      ...(template.tags ?? []),
+    ])
+  )).sort((a, b) => a.localeCompare(b));
+  const visibleTemplateList = templateListTag === "all"
+    ? allTemplates
+    : allTemplates.filter((template) => (
+        template.category === templateListTag || template.tags?.includes(templateListTag)
+      ));
   const editingSurvey = editingSurveyId == null ? undefined : surveys.find((s) => s.id === editingSurveyId);
   const editingSurveyShareUrl = editingSurveyId == null
     ? ""
@@ -6408,7 +6421,7 @@ export default function SurveysPage() {
     });
     return (
       <WorkspaceShell
-        active={isTemplateEditor ? "template" : editorTab === "responses" ? "report" : editorTab === "settings" ? "collect" : "design"}
+        active={isTemplateEditor ? "template" : "design"}
         currentSurvey={currentSurveyForNavigation}
         workflowMode={!isTemplateEditor}
         templateLibraryMode={isTemplateEditor}
@@ -6607,28 +6620,6 @@ export default function SurveysPage() {
               {templateMessage}
             </p>
           )}
-          {!isTemplateEditor && <div className="flex items-center justify-center gap-8 border-t border-border px-4">
-            {[
-              { id: "questions", label: "问题", testId: "survey-questions-tab" },
-              { id: "responses", label: "回答", testId: "survey-responses-tab" },
-              { id: "settings", label: "设置", testId: "survey-settings-tab" },
-            ].map((tab) => (
-              <Button
-                key={tab.id}
-                data-testid={tab.testId}
-                onClick={() => setEditorTab(tab.id as "questions" | "responses" | "settings")}
-                variant="ghost"
-                size="sm"
-                className={`border-b-2 px-4 py-3 text-14 font-semibold ${
-                  editorTab === tab.id
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {tab.label}
-              </Button>
-            ))}
-          </div>}
         </div>
 
         {created && (
@@ -7062,67 +7053,106 @@ export default function SurveysPage() {
 
               {!isTemplateEditor && editorTab === "questions" && editingSurveyId == null && (
                 <div className="mb-4 rounded-12 border border-border bg-card p-4 shadow-sm">
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
                       <p className="text-15 font-semibold text-foreground">模板库</p>
-                      <p className="text-12 text-muted-foreground">从空白开始，或套用已保存的问卷结构。</p>
+                      <p className="text-12 text-muted-foreground">按标签筛选并选择一套问卷结构。</p>
                     </div>
-                    <Button data-testid="save-template" variant="outline" size="sm" onClick={() => void saveAsTemplate()}>
-                      保存为模板
-                    </Button>
-                  </div>
-                  <div data-testid="template-library" className="mt-3 flex flex-wrap gap-2">
-                    <Button data-testid="template-blank" variant="outline" size="sm" onClick={applyBlankTemplate}>
-                      空白问卷
-                    </Button>
-                    {templates.filter((template) => template.source === "built_in").map((template) => (
-                      <Button
-                        key={template.id}
-                        data-testid={`template-${template.id}`}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => applyTemplate(template)}
-                        className="h-auto flex-col items-start gap-1 px-3 py-2 text-left"
-                      >
-                        <span className="text-13 font-semibold">{template.name}</span>
-                        <span className="flex items-center gap-1.5 text-11 text-muted-foreground">
-                          {template.category && (
-                            <Badge data-testid={`template-category-${template.id}`} variant="muted" className="text-11">
-                              {template.category}
-                            </Badge>
-                          )}
-                          <span>{template.estimatedMinutes ?? 3} min</span>
-                        </span>
+                    <div className="flex flex-wrap items-end gap-2">
+                      <div className="min-w-44">
+                        <Label htmlFor="template-list-tag" className="text-11 text-muted-foreground">标签</Label>
+                        <Select
+                          id="template-list-tag"
+                          data-testid="template-tag-filter"
+                          value={templateListTag}
+                          onChange={(event) => setTemplateListTag(event.target.value)}
+                          className="mt-1 h-8 text-12"
+                        >
+                          <option value="all">全部标签</option>
+                          {templateListTags.map((tag) => (
+                            <option key={tag} value={tag}>{tag}</option>
+                          ))}
+                        </Select>
+                      </div>
+                      <Button data-testid="save-template" variant="outline" size="sm" onClick={() => void saveAsTemplate()}>
+                        保存为模板
                       </Button>
-                    ))}
+                    </div>
                   </div>
-                  <div data-testid="saved-template-list" className="mt-3 flex flex-col gap-2">
-                    {templates.filter((template) => template.source === "saved").length === 0 ? (
-                      <p className="text-12 text-muted-foreground">还没有保存的团队模板</p>
-                    ) : (
-                      templates.filter((template) => template.source === "saved").map((template, idx) => (
-                        <div key={template.id} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+                  <div data-testid="template-library" className="mt-3">
+                    <div data-testid="template-list" className="overflow-hidden rounded-lg border border-border">
+                      {templateListTag === "all" && (
+                        <Button
+                          data-testid="template-blank"
+                          type="button"
+                          variant="ghost"
+                          onClick={applyBlankTemplate}
+                          className="h-auto w-full justify-between gap-4 rounded-none border-b border-border bg-background px-3 py-2.5 text-left hover:bg-accent"
+                        >
+                          <span>
+                            <span className="block text-13 font-semibold text-foreground">空白问卷</span>
+                            <span className="mt-0.5 block text-11 text-muted-foreground">从一个空白问题开始</span>
+                          </span>
+                          <Badge variant="outline">空白</Badge>
+                        </Button>
+                      )}
+                      {visibleTemplateList.map((template, index) => (
+                        <div
+                          key={`${template.source}-${template.id}`}
+                          className={`flex items-center gap-2 bg-background px-3 transition-colors hover:bg-accent ${
+                            index < visibleTemplateList.length - 1 ? "border-b border-border" : ""
+                          }`}
+                        >
                           <Button
-                            data-testid={`template-saved-${idx}`}
+                            data-testid={template.source === "saved"
+                              ? `template-saved-${savedTemplates.findIndex((item) => item.id === template.id)}`
+                              : `template-${template.id}`}
+                            type="button"
                             variant="ghost"
-                            size="sm"
                             onClick={() => applyTemplate(template)}
-                            className="min-w-0 flex-1 justify-start"
+                            className="h-auto min-w-0 flex-1 justify-between gap-4 rounded-none px-0 py-2.5 text-left hover:bg-transparent"
                           >
-                            {template.name}
+                            <span className="min-w-0">
+                              <span className="block truncate text-13 font-semibold text-foreground">{template.name}</span>
+                              <span className="mt-0.5 block truncate text-11 text-muted-foreground">
+                                {template.description}
+                              </span>
+                            </span>
+                            <span className="flex shrink-0 items-center gap-2 text-11 text-muted-foreground">
+                              <Badge
+                                data-testid={`template-category-${template.id}`}
+                                variant="muted"
+                                className="max-w-36 truncate text-11"
+                              >
+                                {template.category ?? template.tags?.[0] ?? "通用"}
+                              </Badge>
+                              <span>{template.questions.length} 题</span>
+                              <span>{template.estimatedMinutes ?? 3} min</span>
+                            </span>
                           </Button>
-                          <Button
-                            data-testid={`delete-template-${idx}`}
-                            variant="ghost"
-                            size="icon"
-                            aria-label="删除模板"
-                            onClick={() => void deleteTemplate(template)}
-                          >
-                            <Trash2 className="h-4 w-4" strokeWidth={1.5} />
-                          </Button>
+                          {template.source === "saved" && (
+                            <Button
+                              data-testid={`delete-template-${savedTemplates.findIndex((item) => item.id === template.id)}`}
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`删除模板 ${template.name}`}
+                              onClick={() => void deleteTemplate(template)}
+                              className="shrink-0"
+                            >
+                              <Trash2 className="h-4 w-4" strokeWidth={1.5} />
+                            </Button>
+                          )}
                         </div>
-                      ))
-                    )}
+                      ))}
+                      {visibleTemplateList.length === 0 && (
+                        <div className="px-3 py-6 text-center text-12 text-muted-foreground">
+                          当前标签下没有模板
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div data-testid="saved-template-list" className="sr-only">
+                    {savedTemplates.length === 0 && <span>还没有保存的团队模板</span>}
                   </div>
                   {templateMessage && (
                     <p data-testid="template-saved" className="mt-2 text-12 text-muted-foreground">

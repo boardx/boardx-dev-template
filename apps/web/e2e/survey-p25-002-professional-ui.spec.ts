@@ -69,6 +69,36 @@ test("AI creation studio validates empty send and shows draft actions", async ({
 
 test("editor shell groups the question builder, inspector, and unified paper preview", async ({ page }) => {
   await register(page);
+  await page.route("**/api/survey-templates", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        templates: [
+          {
+            id: "product-safety-research",
+            source: "built_in",
+            name: "商品安全市场调研",
+            category: "product_safety",
+            title: "商品安全市场调研问卷",
+            description: "商品安全、风险感知与购买顾虑。",
+            estimatedMinutes: 4,
+            questions: [{ title: "你的年龄段是？", type: "single", required: true, options: ["18岁以下", "18-24岁"] }],
+          },
+          {
+            id: "market-demand-research",
+            source: "built_in",
+            name: "市场需求调研",
+            category: "market_research",
+            title: "市场需求调研问卷",
+            description: "市场痛点、预算和购买触发因素。",
+            estimatedMinutes: 5,
+            questions: [{ title: "你目前如何解决这个问题？", type: "text", required: false, options: [] }],
+          },
+        ],
+      }),
+    });
+  });
 
   await page.goto("/surveys");
   await page.getByTestId("empty-new-survey").click();
@@ -76,6 +106,12 @@ test("editor shell groups the question builder, inspector, and unified paper pre
   await expect(page.getByTestId("editor-command-bar")).toBeVisible();
   await expect(page.getByTestId("question-builder-panel")).toBeVisible();
   await expect(page.getByTestId("editor-inspector-panel")).toBeVisible();
+  await expect(page.getByTestId("survey-responses-tab")).toHaveCount(0);
+  await expect(page.getByTestId("survey-settings-tab")).toHaveCount(0);
+  await expect(page.getByTestId("template-list")).toBeVisible();
+  await page.getByTestId("template-tag-filter").selectOption("product_safety");
+  await expect(page.getByTestId("template-product-safety-research")).toBeVisible();
+  await expect(page.getByTestId("template-market-demand-research")).toHaveCount(0);
   await page.getByTestId("question-type-0").selectOption("single");
   await page.getByTestId("question-add-option-0").click();
 
@@ -92,8 +128,7 @@ test("editor shell groups the question builder, inspector, and unified paper pre
   await expect(page.getByTestId("preview-option-0-0")).toHaveClass(/border-0/);
   await expect(page.getByTestId("preview-option-0-0")).toHaveClass(/bg-muted/);
   await page.getByTestId("edit-survey").click();
-  await page.getByTestId("survey-settings-tab").click();
-  await expect(page.getByTestId("publish-settings-panel")).toBeVisible();
+  await expect(page.getByTestId("question-builder-panel")).toBeVisible();
 });
 
 test("answer and acceptance small surfaces share the professional shell", async ({ page }) => {
