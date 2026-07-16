@@ -331,6 +331,7 @@ export default function AvaPage() {
     return "";
   }, [researchRun]);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const settingsInitializedRef = useRef(false);
   // P18 F02：停止生成用的 AbortController，跨真实/stub provider 通用。
   // 只在一次流式请求生命周期内存在；stop() 触发后 fetch 的底层 TCP 连接被真实中断
   // （服务端 request signal abort → reply-stream 的 for-await 循环停止 → 不再写入消息）。
@@ -369,9 +370,13 @@ export default function AvaPage() {
     if (!res.ok) throw new Error("加载能力失败");
     const data = (await res.json()) as AvaCapabilities;
     setCapabilities(data);
-    setModelId((prev) =>
-      data.models.some((m) => m.id === prev && !m.disabled) ? prev : data.defaults.modelId
-    );
+    setModelId((prev) => {
+      if (!settingsInitializedRef.current) {
+        settingsInitializedRef.current = true;
+        return data.defaults.modelId;
+      }
+      return data.models.some((m) => m.id === prev && !m.disabled) ? prev : data.defaults.modelId;
+    });
     setAgentId((prev) => (data.agents.some((a) => a.id === prev) ? prev : data.defaults.agentId));
     setToolIds((prev) => {
       const allowed = new Set(data.tools.map((tool) => tool.id));
@@ -555,6 +560,11 @@ export default function AvaPage() {
     setDraft("");
     setResearchRun(null);
     setReportOpen(false);
+    if (capabilities) {
+      setModelId(capabilities.defaults.modelId);
+      setAgentId(capabilities.defaults.agentId);
+      setToolIds(capabilities.defaults.toolIds);
+    }
     setMobileView("chat");
     setMsgCopiedId(null);
     setMsgCopyError(null);
@@ -2023,7 +2033,7 @@ export default function AvaPage() {
                   // 默认轮廓（Chrome 下为橙色 auto ring）叠在设计系统样式之上；对齐
                   // components/ui/textarea.tsx 的口径显式关掉默认轮廓，焦点高亮保留
                   // focus-visible:ring（外层 composer 容器另有 focus-within 边框反馈）。
-                  className="min-h-16 max-h-40 resize-none border-0 bg-transparent px-0 py-1 text-sm leading-relaxed shadow-none outline-none transition-colors placeholder:text-placeholder focus:border-0 focus:outline-none focus:ring-0 focus-visible:border-0 focus-visible:ring-0"
+                  className="block w-full min-h-16 max-h-40 appearance-none resize-none border-0 bg-transparent px-0 py-1 text-sm leading-relaxed shadow-none outline-none ring-0 transition-colors placeholder:text-placeholder focus:border-0 focus:outline-none focus:ring-0 focus-visible:border-0 focus-visible:outline-none focus-visible:ring-0"
                 />
                 {sendError && (
                   <p role="alert" data-testid="send-error" className="mt-2 text-xs text-destructive">
