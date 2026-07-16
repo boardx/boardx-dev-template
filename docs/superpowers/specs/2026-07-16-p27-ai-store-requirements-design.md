@@ -4,6 +4,17 @@
 - 状态: 已确认设计，待写入 p27 requirements 与 feature_list
 - 目标仓库: `boardx-dev-template`
 - 事实来源: `boardx-web`、`boardx-backend`、`phase-p11-ai-store`
+- GitHub 总追踪 Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
+
+## 0. GitHub 绑定规则
+
+- Issue #662 是 Phase p27 AI Store 的唯一总追踪 Issue，不为本阶段另外创建同用途的总 Issue。
+- `phases/phase-p27-aiStore/feature_list.json` 仍是功能状态的唯一权威来源，Issue #662 是外部协调与汇总视图。
+- 后续由 Harness 为各 Feature 创建或更新的 GitHub Issue，正文必须包含 `Parent: #662` 和 p27 权威文件链接。
+- 单个 Feature passing 只关闭对应 Feature Issue，不关闭 #662。
+- 只有 p27 全部 Feature passing、最终回归通过且交接完成后，coordinator 才能关闭 #662。
+- p27 的 `phase.md`、requirements README、progress 和 session handoff 都必须保留 #662 链接。
+- GitHub 上的状态或描述与仓库冲突时，以仓库为准，再由 `pnpm harness sync` 单向修正投影视图。
 
 ## 1. 目标
 
@@ -399,6 +410,14 @@ Phase p27 不只完成 AI Tool 与 Image Tool 的改名，而是把现有 AI Sto
 - Admin `admin-004-featured-ai-store`。
 - AVA AI settings / Skills 选择器相关回归。
 
+### 10.4 GitHub 绑定验证
+
+- p27 phase、requirements 和 handoff 可定位到 Issue #662。
+- 每个 p27 Feature Issue 都包含 `Parent: #662`。
+- Harness sync 不创建第二个 AI Store 总追踪 Issue。
+- 单个 Feature 完成不会提前关闭 #662。
+- p27 全部 Feature passing 后，#662 才进入可关闭状态。
+
 ## 11. 建议 Feature 拆分
 
 1. Team 资源归属、关系隔离与迁移审计。
@@ -412,6 +431,7 @@ Phase p27 不只完成 AI Tool 与 Image Tool 的改名，而是把现有 AI Sto
 9. `allowCopy` 与三类资源独立复制。
 10. AVA/Template 使用、Agent 创建助手和 Skill 后续推荐。
 11. 旧类型、旧关系、旧 URL 和全链路兼容回归。
+12. Harness/GitHub 投影绑定 #662，并让全部 Feature Issue 回链父 Issue。
 
 每个 Feature 必须有独立行为验证；不能再把浏览、创建、订阅、收藏、分享和审核全部压进一个回归 Feature。
 
