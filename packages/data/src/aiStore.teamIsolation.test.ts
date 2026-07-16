@@ -53,7 +53,7 @@ describe("AI Store Team isolation", () => {
   it("updates content only when item owner and origin Team both match", async () => {
     mockQuery.mockResolvedValueOnce([{ id: 1 }]);
 
-    await updateAiStoreItem(1, 11, 101, draft);
+    await updateAiStoreItem(1, 11, 101, 1, draft);
 
     const [sql, params] = mockQuery.mock.calls[0]!;
     expect(sql).toContain("WHERE id = $1 AND owner_user_id = $2 AND origin_team_id = $3");

@@ -1,11 +1,13 @@
-import type {
+import {
+  normalizeAiStoreItemType,
+  type AiStoreSkillKind,
   AiStoreItemScope,
   AiStoreItemStatus,
   AiStoreItemType,
   AiStoreSubmitAction,
 } from "@repo/data";
 
-export const VALID_TYPES: AiStoreItemType[] = ["agent", "ai-tool", "image-tool", "template"];
+export const VALID_TYPES: AiStoreItemType[] = ["agent", "skill", "template"];
 const VALID_SCOPES: AiStoreItemScope[] = ["personal", "team", "platform"];
 const VALID_ACTIONS: AiStoreSubmitAction[] = ["draft", "publish", "submit_review"];
 
@@ -20,6 +22,7 @@ export interface ParsedAiStorePayload {
   tags: string[];
   examples: string[];
   config: Record<string, unknown>;
+  expectedVersion?: number;
 }
 
 export interface PayloadResult {
@@ -43,8 +46,19 @@ export function parseAiStorePayload(body: Record<string, unknown>, currentTeamId
   if (currentTeamId == null) errors.team = "请先选择团队";
 
   const typeRaw = String(body.type ?? "");
-  const type = VALID_TYPES.includes(typeRaw as AiStoreItemType) ? (typeRaw as AiStoreItemType) : undefined;
-  if (!type) errors.type = "请选择创建类型";
+  const normalizedType = normalizeAiStoreItemType(typeRaw);
+  if (!normalizedType) errors.type = "请选择创建类型";
+  const type = normalizedType?.type;
+
+  let skillKind: AiStoreSkillKind | undefined = normalizedType?.skillKind;
+  if (type === "skill" && !skillKind) {
+    const requestedSkillKind = String(body.skillKind ?? "");
+    if (requestedSkillKind === "text" || requestedSkillKind === "image") {
+      skillKind = requestedSkillKind;
+    } else {
+      errors.skillKind = "请选择 Skill 类型";
+    }
+  }
 
   const actionRaw = String(body.action ?? "draft");
   const action = VALID_ACTIONS.includes(actionRaw as AiStoreSubmitAction)
@@ -61,9 +75,14 @@ export function parseAiStorePayload(body: Record<string, unknown>, currentTeamId
   const name = String(body.name ?? "").trim();
   const description = String(body.description ?? "").trim();
   const configText = String(body.config ?? "").trim();
+  const expectedVersionRaw = body.expectedVersion;
+  const expectedVersion = expectedVersionRaw == null ? undefined : Number(expectedVersionRaw);
   if (!name) errors.name = "名称不能为空";
   if (!description) errors.description = "描述不能为空";
   if (!configText) errors.config = "配置不能为空";
+  if (expectedVersionRaw != null && (!Number.isInteger(expectedVersion) || expectedVersion! < 1)) {
+    errors.expectedVersion = "版本号无效";
+  }
 
   let scope = requestedScope ?? "personal";
   let status: AiStoreItemStatus = "draft";
@@ -98,7 +117,11 @@ export function parseAiStorePayload(body: Record<string, unknown>, currentTeamId
       cover: String(body.cover ?? "").trim() || null,
       tags: splitList(body.tags),
       examples: splitList(body.examples),
-      config: { instructions: configText },
+      config: {
+        instructions: configText,
+        ...(type === "skill" ? { skillKind } : {}),
+      },
+      expectedVersion,
     },
   };
 }

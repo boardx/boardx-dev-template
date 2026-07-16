@@ -58,13 +58,37 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const body = (await req.json()) as Record<string, unknown>;
     const parsed = parseAiStorePayload(body, currentTeamId);
     if (parsed.errors) return NextResponse.json({ errors: parsed.errors }, { status: 400 });
+    const expectedVersion = parsed.payload?.expectedVersion;
+    if (expectedVersion == null) {
+      return NextResponse.json({ errors: { expectedVersion: "缺少版本号" } }, { status: 400 });
+    }
 
-    const item = await updateAiStoreItem(id, user.id, currentTeamId, {
+    const existing = await getAiStoreItem(id);
+    if (
+      !existing ||
+      existing.owner_user_id !== user.id ||
+      existing.origin_team_id !== currentTeamId
+    ) {
+      return NextResponse.json({ error: "未找到" }, { status: 404 });
+    }
+    if (existing.version !== expectedVersion) {
+      return NextResponse.json(
+        { error: "资源已被其他人更新，请刷新后重试", currentVersion: existing.version },
+        { status: 409 },
+      );
+    }
+
+    const item = await updateAiStoreItem(id, user.id, currentTeamId, expectedVersion, {
       ...parsed.payload!,
       ownerUserId: user.id,
       author: user.display_name || `${user.first_name} ${user.last_name}`.trim() || user.email,
     });
-    if (!item) return NextResponse.json({ error: "未找到" }, { status: 404 });
+    if (!item) {
+      return NextResponse.json(
+        { error: "资源已被其他人更新，请刷新后重试" },
+        { status: 409 },
+      );
+    }
 
     return NextResponse.json({ item });
   } catch (err) {

@@ -50,6 +50,7 @@ describe("listAvaAgentOptions", () => {
         origin_team_id: 7,
         team_id: 7,
         migration_quarantined_at: null,
+        version: 1,
         status: "published",
         name: "Store Agent",
         description: "a subscribed agent",

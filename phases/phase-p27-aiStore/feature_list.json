@@ -26,9 +26,9 @@
       "area": "ai-store-data",
       "title": "Skills model and live versioning",
       "user_visible_behavior": "用户只看到统一 Skills 分类，旧 AI Tool 与 Image Tool 原 item 迁移为 type=skill、skillKind=text|image；所有者或授权编辑者保存内容后 version 递增，已 published/approved 状态不重新审核，当前 Team 及其他订阅 Team 的用户下次读取或执行立即使用最新版，并发旧版本保存返回 409。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
-      "owner": null,
+      "owner": "codex-p27-ai-store-control-plane",
       "capability": "CAP-DATA",
       "depends_on": [
         "F01"
@@ -38,7 +38,7 @@
         "pnpm --filter @repo/data test -- src/aiStore.skillsVersioning.test.ts",
         "pnpm --filter @repo/web test -- app/api/ai-store/items/skills-versioning.route.test.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-07-16T08:54:27.694Z",
       "notes": "原位、幂等规范化旧类型；订阅只引用 itemId 并解析最新版本；内容编辑与 RevisionAudit 原子提交。"
     },
     {

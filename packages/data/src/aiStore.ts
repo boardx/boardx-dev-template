@@ -3,7 +3,9 @@
 import { randomBytes } from "node:crypto";
 import { query } from "./index";
 
-export type AiStoreItemType = "agent" | "ai-tool" | "image-tool" | "template";
+export type AiStoreItemType = "agent" | "skill" | "template";
+export type AiStoreLegacyItemType = "ai-tool" | "image-tool" | "AI_TOOL" | "AI_IMAGE_TOOL";
+export type AiStoreSkillKind = "text" | "image";
 export type AiStoreItemScope = "personal" | "team" | "platform";
 export type AiStoreItemStatus = "draft" | "published" | "pending" | "approved" | "rejected";
 export type AiStoreSubmitAction = "draft" | "publish" | "submit_review";
@@ -17,6 +19,7 @@ export interface AiStoreItem {
   /** @deprecated Compatibility alias for existing Web consumers. */
   team_id: number | null;
   migration_quarantined_at: string | null;
+  version: number;
   status: AiStoreItemStatus;
   name: string;
   description: string;
@@ -33,7 +36,22 @@ export interface AiStoreItem {
 }
 
 const ITEM_COLS =
-  "id, type, scope, owner_user_id, origin_team_id, origin_team_id AS team_id, migration_quarantined_at, status, name, description, cover, author, tags, examples, config, likes, views, featured, created_at, updated_at";
+  "id, type, scope, owner_user_id, origin_team_id, origin_team_id AS team_id, migration_quarantined_at, version, status, name, description, cover, author, tags, examples, config, likes, views, featured, created_at, updated_at";
+
+export function normalizeAiStoreItemType(
+  value: string,
+): { type: AiStoreItemType; skillKind?: AiStoreSkillKind } | undefined {
+  if (value === "agent" || value === "template" || value === "skill") {
+    return { type: value };
+  }
+  if (value === "ai-tool" || value === "AI_TOOL") {
+    return { type: "skill", skillKind: "text" };
+  }
+  if (value === "image-tool" || value === "AI_IMAGE_TOOL") {
+    return { type: "skill", skillKind: "image" };
+  }
+  return undefined;
+}
 
 export interface ListAiStoreItemsOptions {
   /** 类型筛选；空/undefined = 不筛选。 */
@@ -198,28 +216,50 @@ export async function updateAiStoreItem(
   id: number,
   ownerUserId: number,
   originTeamId: number,
+  expectedVersion: number,
   input: AiStoreItemDraftInput
 ): Promise<AiStoreItem | undefined> {
   const rows = await query<AiStoreItem>(
-    `UPDATE ai_store_items
-     SET type = $4,
-         scope = $5,
-         status = $6,
-         name = $7,
-         description = $8,
-         cover = $9,
-         author = $10,
-         tags = $11,
-         examples = $12,
-         config = $13::jsonb,
-         updated_at = now()
-     WHERE id = $1 AND owner_user_id = $2 AND origin_team_id = $3
-       AND migration_quarantined_at IS NULL
-     RETURNING ${ITEM_COLS}`,
+    `WITH updated AS (
+       UPDATE ai_store_items
+       SET type = $5,
+           scope = $6,
+           status = CASE
+             WHEN status IN ('approved', 'published') THEN status
+             ELSE $7
+           END,
+           name = $8,
+           description = $9,
+           cover = $10,
+           author = $11,
+           tags = $12,
+           examples = $13,
+           config = $14::jsonb,
+           version = version + 1,
+           updated_at = now()
+       WHERE id = $1 AND owner_user_id = $2 AND origin_team_id = $3
+         AND version = $4
+         AND migration_quarantined_at IS NULL
+       RETURNING *
+     ),
+     audited AS (
+       INSERT INTO ai_store_revision_audit
+         (item_id, version, action, actor_user_id, actor_team_id, changed_fields)
+       SELECT
+         id,
+         version,
+         'content_updated',
+         $2,
+         $3,
+         ARRAY['type', 'scope', 'status', 'name', 'description', 'cover', 'author', 'tags', 'examples', 'config']
+       FROM updated
+     )
+     SELECT ${ITEM_COLS} FROM updated`,
     [
       id,
       ownerUserId,
       originTeamId,
+      expectedVersion,
       input.type,
       input.scope,
       input.status,

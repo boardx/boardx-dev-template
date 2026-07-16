@@ -16,6 +16,7 @@ type SubmitAction = "draft" | "publish" | "submit_review";
 
 interface StoreItem {
   id: number;
+  version: number;
   name: string;
   description: string;
   type: StoreType;
@@ -103,6 +104,7 @@ const CREATOR_TYPES: { key: StoreType; name: string; help: string }[] = [
 
 const EMPTY_FORM = {
   id: null as number | null,
+  expectedVersion: undefined as number | undefined,
   type: "agent" as StoreType,
   name: "",
   description: "",
@@ -533,6 +535,7 @@ export function StoreBrowser() {
   function editItem(item: StoreItem) {
     setForm({
       id: item.id,
+      expectedVersion: item.version,
       type: item.type,
       name: item.name,
       description: item.description,
