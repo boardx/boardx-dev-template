@@ -40,6 +40,8 @@ export interface RoadmapPhase {
   depends_on: string[];
   /** true = 本阶段有用户界面，须先过 UI 先行确认关卡（ui-signoff.md confirmed）才能开 sprint。见 ADR-003。 */
   has_ui?: boolean;
+  /** Existing GitHub umbrella issue used for external phase coordination. */
+  tracking_issue?: number;
 }
 
 export interface Roadmap {
