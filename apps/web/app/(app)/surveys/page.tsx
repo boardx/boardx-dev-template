@@ -1962,16 +1962,19 @@ function WorkspaceReportComposer({
         </div>
       )}
 
-      <section className={outlineCollapsed ? "grid min-w-0 gap-4 xl:grid-cols-[56px_minmax(0,1fr)_430px]" : "grid min-w-0 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_430px]"}>
+      <section
+        data-testid="report-template-builder"
+        className={outlineCollapsed ? "grid min-w-0 gap-4 xl:grid-cols-[56px_minmax(0,1fr)_430px]" : "grid min-w-0 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_430px]"}
+      >
         {outlineCollapsed ? (
-          <aside data-testid="report-outline-panel" className="flex min-h-96 flex-col items-center gap-3 border border-border bg-background py-3">
+          <aside data-testid="report-module-list" className="flex min-h-96 flex-col items-center gap-3 border border-border bg-background py-3">
             <Button data-testid="report-outline-toggle" type="button" size="icon" variant="ghost" aria-label="展开报告章节" title="展开报告章节" onClick={() => setOutlineCollapsed(false)}>
               <ChevronLeft className="h-4 w-4 rotate-180" />
             </Button>
             <Badge variant="muted">{categories.length}</Badge>
           </aside>
         ) : (
-        <aside data-testid="report-outline-panel" className="min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
+        <aside data-testid="report-module-list" className="min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
           <div className="border-b border-border px-4 py-3">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-14 font-bold text-foreground">章节</h3>
@@ -2041,7 +2044,7 @@ function WorkspaceReportComposer({
         </aside>
         )}
 
-        <main data-testid="report-preview-panel" className="min-w-0 overflow-hidden rounded-lg border border-border bg-background">
+        <main data-testid="report-module-preview" className="min-w-0 overflow-hidden rounded-lg border border-border bg-background">
           {!canExport ? (
             <div className="m-5 rounded-lg border border-dashed border-border bg-card p-10 text-center text-13 text-muted-foreground">
               请先完成报告分类和输入方式设置，再预览或导出报告。
@@ -2068,7 +2071,7 @@ function WorkspaceReportComposer({
           )}
         </main>
 
-        <aside data-testid="report-settings-panel" className="min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
+        <aside data-testid="report-ai-assistant" className="min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
           <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
             <h3 className="text-14 font-bold text-foreground">设置</h3>
             <span className="text-12 text-muted-foreground">

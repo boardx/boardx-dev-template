@@ -5,6 +5,7 @@
 - 专业报告链已通过 9 个 Vitest、typecheck、design lint 和 3 个聚焦 Playwright E2E。
 - 报告分类 API 修复已通过 Web typecheck、86 个 Vitest 测试和 1 个聚焦 Playwright E2E。
 - Survey AI 工作台第一版已通过布局单测、Web typecheck、design lint，以及 4 条聚焦 Playwright 路径。
+- 报告模板真实入口的三栏工作台契约已通过 F12 Playwright 3/3、Web typecheck 和 design lint。
 
 ## 本轮改动
 - 报告不再使用模板模拟数字；服务端按真实答卷生成 `SurveyReportEvidenceBundle`。
@@ -19,6 +20,7 @@
 - `POST /api/surveys/:id/report-categories` 接入千问 JSON 分类，并沿用主仓 Survey scope 管理权限。
 - 千问缺少配置、超时或供应商失败时生成并保存确定性默认分类，页面可继续编辑。
 - E2E 验证真实问题 ID 被持久化，且非管理者返回 403。
+- `step=template` 当前入口已稳定为可折叠模块列表、实时报告预览和 AI/配置助手三栏结构，并新增可执行的 UI 契约断言。
 
 ## 仍损坏或未验证
 - 尚未运行整个 Harness verify，因为 F12 的真实答卷生成、零/低样本限制和失败重试尚未全部形成可执行验收。
@@ -27,7 +29,7 @@
 - 尚未使用真实千问密钥验收 AI 成功措辞，也未完成不同打印机/PDF 驱动的分页视觉复核。
 
 ## 下一步最佳动作
-- 先由人类检查 `http://localhost:3010/surveys` 的五个工作流界面并反馈，再继续同一 F12 的真实答卷、零/低样本和失败重试测试；不要手改 `active-features.json` 或把 F12 直接改为 passing。
+- 继续 F12 的模块选择、预览和 AI 应用交互，再检查 Survey 首页、问卷列表、模板中心和其他工作流的统一视觉 feature 边界；不要手改 `active-features.json` 或把 F12 直接改为 passing。
 
 ## 命令
 - 启动:`pnpm -w run dev`

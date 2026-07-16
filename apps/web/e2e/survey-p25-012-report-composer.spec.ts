@@ -62,6 +62,11 @@ test("report template exposes chart image text layout and independent prompts", 
   const survey = (await created.json()).survey as { id: number };
 
   await page.goto(`/surveys?survey=${survey.id}&step=template`);
+  await expect(page.getByTestId("report-template-builder")).toBeVisible();
+  await expect(page.getByTestId("report-module-list")).toBeVisible();
+  await expect(page.getByTestId("report-module-preview")).toBeVisible();
+  await expect(page.getByTestId("report-ai-assistant")).toBeVisible();
+  await expect(page.getByTestId("report-template-builder")).toHaveClass(/xl:grid-cols-/);
   await expect(page.getByTestId("report-layout-canvas")).toBeVisible();
   await expect(page.getByTestId("report-layout-module-chart")).toBeVisible();
   await expect(page.getByTestId("report-layout-module-image")).toBeVisible();
