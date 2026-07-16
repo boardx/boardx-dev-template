@@ -67,21 +67,21 @@ test("AI creation studio validates empty send and shows draft actions", async ({
   await expect(page.getByTestId("publish-ai-draft")).toBeVisible();
 });
 
-test("editor shell groups command buttons, question builder, inspector, and action feedback", async ({ page }) => {
+test("editor shell groups the question builder, inspector, and unified paper preview", async ({ page }) => {
   await register(page);
-  const survey = await createSurvey(page);
 
   await page.goto("/surveys");
-  await page.getByTestId(`survey-${survey.id}`).dblclick();
+  await page.getByTestId("empty-new-survey").click();
   await expect(page.getByTestId("survey-editor-shell")).toBeVisible();
   await expect(page.getByTestId("editor-command-bar")).toBeVisible();
   await expect(page.getByTestId("question-builder-panel")).toBeVisible();
   await expect(page.getByTestId("editor-inspector-panel")).toBeVisible();
 
-  await page.getByTestId("editor-share").click();
-  await expect(page.getByTestId("editor-action-message")).toContainText("链接");
   await page.getByTestId("preview-survey").click();
   await expect(page.getByTestId("survey-preview")).toBeVisible();
+  await expect(page.getByTestId("survey-preview-sheet")).toBeVisible();
+  await expect(page.getByTestId("preview-question-list")).toHaveClass(/divide-y/);
+  await expect(page.getByTestId("preview-question-0")).not.toHaveClass(/rounded/);
   await page.getByTestId("edit-survey").click();
   await page.getByTestId("survey-settings-tab").click();
   await expect(page.getByTestId("publish-settings-panel")).toBeVisible();
@@ -93,6 +93,8 @@ test("answer and acceptance small surfaces share the professional shell", async 
 
   await page.goto(survey.shareUrl);
   await expect(page.getByTestId("answer-professional-shell")).toBeVisible();
+  await expect(page.getByTestId("answer-question-list")).toHaveClass(/divide-y/);
+  await expect(page.getByTestId("answer-question-0")).not.toHaveClass(/rounded/);
   await page.getByTestId("submit-answer").click();
   await expect(page.getByTestId("err-answer")).toContainText("请完成必填题");
   await page.getByTestId("answer-rating-0-4").click();

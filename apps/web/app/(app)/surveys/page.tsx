@@ -363,8 +363,8 @@ function QuestionPreviewAnswer({ question }: { question: Question }) {
     return (
       <div className="grid gap-2">
         {(question.options.length ? question.options : ["选项 1"]).map((option, optionIndex) => (
-          <div key={`${question.id}-${optionIndex}`} className="flex items-center gap-2 text-13 text-muted-foreground">
-            <span className={question.type === "multiple" ? "h-3.5 w-3.5 rounded border border-border-strong" : "h-3.5 w-3.5 rounded-full border border-border-strong"} />
+          <div key={`${question.id}-${optionIndex}`} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-14 text-foreground">
+            <span className={question.type === "multiple" ? "h-4 w-4 rounded border border-border-strong" : "h-4 w-4 rounded-full border border-border-strong"} />
             {option || `选项 ${optionIndex + 1}`}
           </div>
         ))}
@@ -6687,25 +6687,29 @@ export default function SurveysPage() {
         )}
 
         {!created && view === "preview" && !isTemplateEditor && (
-          <div className="mx-auto mt-4 max-w-3xl" data-testid="survey-preview">
-            <div className="overflow-hidden rounded-12 border border-border bg-card shadow-sm">
-              <div className="h-2 bg-primary" />
-              <div className="p-6">
-                <h2 className="text-22 font-bold text-foreground">{title.trim() || "未命名问卷"}</h2>
-                {description.trim() && <p className="mt-2 text-14 text-muted-foreground">{description}</p>}
-              </div>
-            </div>
-            <div className="mt-4 flex flex-col gap-3">
-              {questions.map((q, idx) => (
-                <div key={q.id} data-testid={`preview-question-${idx}`} className="rounded-12 border border-border bg-card p-5 shadow-sm">
-                  <p className="text-15 font-semibold text-foreground">
-                    {q.title.trim() || `问题 ${idx + 1}`}
-                    {q.required && <span className="ml-1 text-destructive">*</span>}
-                  </p>
-                  <div className="mt-3"><QuestionPreviewAnswer question={q} /></div>
+          <div className="mx-auto mt-4 max-w-2xl" data-testid="survey-preview">
+            <section data-testid="survey-preview-sheet" className="overflow-hidden rounded-lg border border-border bg-background shadow-sm">
+              <header className="border-t-4 border-primary p-7">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline">BoardX Survey</Badge>
+                  <span className="text-12 text-muted-foreground">{questions.length} 题</span>
                 </div>
-              ))}
-            </div>
+                <h2 className="mt-4 text-26 font-bold tracking-tight text-foreground">{title.trim() || "未命名问卷"}</h2>
+                {description.trim() && <p className="mt-2 text-14 text-muted-foreground">{description}</p>}
+              </header>
+              <div data-testid="preview-question-list" className="divide-y divide-border border-t border-border">
+                {questions.map((q, idx) => (
+                  <section key={q.id} data-testid={`preview-question-${idx}`} className="px-7 py-5">
+                    <p className="text-14 font-semibold text-foreground">
+                      {idx + 1}. {q.title.trim() || `问题 ${idx + 1}`}
+                      {q.required && <span className="ml-1 text-destructive">*</span>}
+                    </p>
+                    <p className="mt-1 text-12 text-muted-foreground">{TYPE_LABEL[q.type]}</p>
+                    <div className="mt-3"><QuestionPreviewAnswer question={q} /></div>
+                  </section>
+                ))}
+              </div>
+            </section>
           </div>
         )}
 

@@ -125,12 +125,12 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
           {survey.description && <p className="mt-2 text-14 text-muted-foreground">{survey.description}</p>}
         </div>
 
-        <div className="flex flex-col gap-4 border-t border-border p-5">
+        <div data-testid="answer-question-list" className="divide-y divide-border border-t border-border">
           {survey.questions.map((question, idx) => {
             const key = String(question.id);
             const value = answers[key];
             return (
-              <div key={question.id} className="rounded-lg border border-border bg-card p-4">
+              <section key={question.id} data-testid={`answer-question-${idx}`} className="px-7 py-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-14 font-semibold text-foreground">
@@ -321,17 +321,19 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
                     <p className="mt-1 text-12 text-muted-foreground">当前原型保存文件名，正式接入对象存储后可上传附件。</p>
                   </div>
                 )}
-              </div>
+              </section>
             );
           })}
+        </div>
 
+        <div className="flex flex-col items-end gap-3 border-t border-border px-7 py-5">
           {error && (
             <p role="alert" data-testid="err-answer" className="text-13 text-destructive">
               {error}
             </p>
           )}
 
-          <Button data-testid="submit-answer" type="button" disabled={submitting} onClick={() => void submit()} className="self-end gap-1.5">
+          <Button data-testid="submit-answer" type="button" disabled={submitting} onClick={() => void submit()} className="gap-1.5">
             <Send className="h-4 w-4" strokeWidth={1.5} />
             {submitting ? "提交中..." : "提交"}
           </Button>
