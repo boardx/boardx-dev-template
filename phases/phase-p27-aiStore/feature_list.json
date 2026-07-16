@@ -68,9 +68,9 @@
       "area": "ai-store-authoring",
       "title": "Create, edit, preview, and archive",
       "user_visible_behavior": "当前 Team 成员可创建和预览 Agent、text/image Skill、Template 草稿；所有者或有效 Authorized editor 可编辑内容并立即更新所有订阅者看到的版本，伪造来源 Team 被忽略，非授权编辑返回 403，只有所有者可归档且归档后所有 Team 的已有订阅显示资源不可用。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
-      "owner": null,
+      "owner": "codex-p27-ai-store-control-plane",
       "capability": "CAP-WEB",
       "depends_on": [
         "F01",
@@ -80,7 +80,7 @@
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/ai-store-008-authoring-archive.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F04.verify.log @ 2026-07-16T09:53:24.687Z",
       "notes": "创建写入可信 current Team；update 使用 expectedVersion；archive 软删除且本阶段不提供恢复。"
     },
     {

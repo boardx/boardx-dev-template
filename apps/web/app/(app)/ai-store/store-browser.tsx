@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Compass, Bookmark, Plus, ShieldCheck, Share2, LayoutGrid, Pencil, Heart, Link2, X } from "lucide-react";
+import { Search, Compass, Bookmark, Plus, ShieldCheck, Share2, LayoutGrid, Pencil, Heart, Link2, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +33,7 @@ interface StoreItem {
   views: number;
   featured: boolean;
   liked?: boolean;
+  unavailable?: boolean;
 }
 
 interface FavoriteToggleResponse {
@@ -178,6 +179,7 @@ export function StoreBrowser() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formMessage, setFormMessage] = useState("");
   const [submitting, setSubmitting] = useState<SubmitAction | null>(null);
+  const [archiving, setArchiving] = useState<number | null>(null);
 
   // P11 F05：分享管理弹窗状态。shareItemId != null 时弹窗打开，对应 owned 项目的 id。
   const [shareItemId, setShareItemId] = useState<number | null>(null);
@@ -594,6 +596,28 @@ export function StoreBrowser() {
     }
   }
 
+  async function archiveItem(item: StoreItem) {
+    if (archiving != null || !window.confirm(`Archive "${item.name}"? Existing subscriptions will become unavailable.`)) {
+      return;
+    }
+    setArchiving(item.id);
+    setOwnedError("");
+    try {
+      const res = await fetch(`/api/ai-store/items/${item.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setOwnedError(data?.error ?? "Failed to archive. Please try again.");
+        return;
+      }
+      if (form.id === item.id) setForm(EMPTY_FORM);
+      await loadOwned();
+    } catch {
+      setOwnedError("Failed to archive. Please try again.");
+    } finally {
+      setArchiving(null);
+    }
+  }
+
   // uc-ai-store-003：订阅/取消订阅（个人订阅）。乐观更新按钮态，失败回滚。
   async function subscribeItem(item: StoreItem) {
     if (item.status !== "published" || subscribing != null) return;
@@ -728,6 +752,18 @@ export function StoreBrowser() {
                   >
                     <Pencil className="h-3.5 w-3.5" />
                     Edit
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`Archive ${it.name}`}
+                    title="Archive"
+                    disabled={archiving === it.id}
+                    data-testid={`archive-item-${it.id}`}
+                    onClick={() => void archiveItem(it)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                   {it.status !== "draft" && it.status !== "rejected" && (
                     <Button
@@ -1094,6 +1130,25 @@ export function StoreBrowser() {
                 ))}
               </div>
 
+              {form.type === "skill" && (
+                <div data-testid="skill-kind-selector" className="mt-4 flex w-fit rounded-8 border border-border p-1">
+                  {(["text", "image"] as const).map((kind) => (
+                    <Button
+                      key={kind}
+                      type="button"
+                      size="sm"
+                      variant={form.skillKind === kind ? "secondary" : "ghost"}
+                      data-testid={`skill-kind-${kind}`}
+                      aria-pressed={form.skillKind === kind}
+                      onClick={() => updateForm("skillKind", kind)}
+                      className="h-7"
+                    >
+                      {kind === "text" ? "Text Skill" : "Image Skill"}
+                    </Button>
+                  ))}
+                </div>
+              )}
+
               <form
                 data-testid="creator-form"
                 className="mt-5 rounded-12 border border-border p-5"
@@ -1234,6 +1289,37 @@ export function StoreBrowser() {
                   </div>
                 </div>
 
+                <div
+                  data-testid="creator-preview"
+                  className="mt-5 border-t border-border pt-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={cn(
+                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-8 text-15 font-bold text-foreground/50",
+                        fillFor(form.name || form.type),
+                      )}
+                    >
+                      {(form.cover || form.name.charAt(0) || form.type.charAt(0)).slice(0, 1).toUpperCase()}
+                    </span>
+                    <div className="min-w-0">
+                      <p data-testid="preview-name" className="truncate text-13 font-semibold text-foreground">
+                        {form.name || "Untitled resource"}
+                      </p>
+                      <p data-testid="preview-type" className="text-11 text-placeholder">
+                        {form.type === "skill"
+                          ? `${form.skillKind === "image" ? "Image" : "Text"} Skill`
+                          : form.type === "agent"
+                            ? "Agent"
+                            : "Template"}
+                      </p>
+                    </div>
+                  </div>
+                  <p data-testid="preview-description" className="mt-3 text-12 leading-relaxed text-muted-foreground">
+                    {form.description || "Add a description to preview how this resource will appear."}
+                  </p>
+                </div>
+
                 {formErrors.form && (
                   <p role="alert" data-testid="err-form" className="mt-4 text-13 text-destructive">
                     {formErrors.form}
@@ -1365,6 +1451,16 @@ export function StoreBrowser() {
                             {it.description}
                           </p>
                         </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          data-testid={`authorized-edit-item-${it.id}`}
+                          onClick={() => editItem(it)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </Button>
                       </div>
                     </article>
                   ))}
@@ -1424,7 +1520,9 @@ export function StoreBrowser() {
                       </span>
                       <div className="min-w-0">
                         <div className="truncate text-13 font-semibold text-foreground">{it.name}</div>
-                        <div className="truncate text-11 text-placeholder">{it.type}</div>
+                        <div className="truncate text-11 text-placeholder">
+                          {it.unavailable ? "Unavailable" : it.type}
+                        </div>
                       </div>
                     </div>
                     <p className="mt-2.75 min-h-9 text-13 leading-relaxed text-muted-foreground">
@@ -1435,6 +1533,7 @@ export function StoreBrowser() {
                         size="sm"
                         variant="secondary"
                         data-testid={`subscribed-use-${it.id}`}
+                        disabled={it.unavailable}
                         onClick={() => useItem(it)}
                         className="h-7 flex-1 text-11"
                       >

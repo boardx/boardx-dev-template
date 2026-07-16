@@ -4,6 +4,7 @@ import { CURRENT_TEAM_COOKIE } from "@repo/auth";
 import {
   createAiStoreItem,
   getAiStoreItem,
+  getAiStoreItemForSubscription,
   getMembership,
   listAiStoreItems,
   listAuthorizedAiStoreItems,
@@ -48,9 +49,9 @@ export async function GET(req: Request) {
       subscriberUserId: user.id,
       consumerTeamId: teamId,
     });
-    const items = (await Promise.all(ids.map((id) => getAiStoreItem(id)))).filter(
+    const items = (await Promise.all(ids.map((id) => getAiStoreItemForSubscription(id)))).filter(
       (it): it is NonNullable<typeof it> => Boolean(it)
-    );
+    ).map((it) => ({ ...it, unavailable: it.archived_at != null }));
     return NextResponse.json({ items });
   }
 

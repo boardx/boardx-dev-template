@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { CURRENT_TEAM_COOKIE } from "@repo/auth";
 import {
+  archiveAiStoreItem,
   canAccessAiStoreItem,
   getAiStoreItem,
   getMembership,
+  isAiStoreItemGrantee,
   isAiStoreItemFavorited,
   updateAiStoreItem,
 } from "@repo/data";
@@ -64,12 +66,15 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     }
 
     const existing = await getAiStoreItem(id);
-    if (
-      !existing ||
-      existing.owner_user_id !== user.id ||
-      existing.origin_team_id !== currentTeamId
-    ) {
-      return NextResponse.json({ error: "未找到" }, { status: 404 });
+    if (!existing) return NextResponse.json({ error: "未找到" }, { status: 404 });
+
+    const isOwner = existing.owner_user_id === user.id;
+    const isAuthorizedEditor = !isOwner && (await isAiStoreItemGrantee(id, user.id));
+    if (!isOwner && !isAuthorizedEditor) {
+      return NextResponse.json({ error: "无权编辑该资源" }, { status: 403 });
+    }
+    if (isOwner && String(existing.origin_team_id) !== String(currentTeamId)) {
+      return NextResponse.json({ error: "请切换到资源来源团队后再编辑" }, { status: 403 });
     }
     if (existing.version !== expectedVersion) {
       return NextResponse.json(
@@ -94,5 +99,40 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   } catch (err) {
     console.error("[ai-store/items/:id] update failed", err);
     return NextResponse.json({ error: "更新失败" }, { status: 500 });
+  }
+}
+
+export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+  try {
+    const user = await currentUser();
+    if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
+
+    const id = Number(params.id);
+    if (!Number.isFinite(id)) return NextResponse.json({ error: "无效 id" }, { status: 400 });
+
+    const teamIdCookie = cookies().get(CURRENT_TEAM_COOKIE)?.value;
+    const currentTeamId = teamIdCookie ? Number(teamIdCookie) : null;
+    if (currentTeamId == null || !Number.isFinite(currentTeamId)) {
+      return NextResponse.json({ error: "请先选择团队" }, { status: 400 });
+    }
+    if (!(await getMembership(currentTeamId, user.id))) {
+      return NextResponse.json({ error: "当前团队不可用" }, { status: 403 });
+    }
+
+    const existing = await getAiStoreItem(id);
+    if (!existing) return NextResponse.json({ error: "未找到" }, { status: 404 });
+    if (
+      existing.owner_user_id !== user.id ||
+      String(existing.origin_team_id) !== String(currentTeamId)
+    ) {
+      return NextResponse.json({ error: "只有来源团队中的所有者可以归档" }, { status: 403 });
+    }
+
+    const item = await archiveAiStoreItem(id, user.id, currentTeamId);
+    if (!item) return NextResponse.json({ error: "未找到" }, { status: 404 });
+    return NextResponse.json({ item });
+  } catch (err) {
+    console.error("[ai-store/items/:id] archive failed", err);
+    return NextResponse.json({ error: "归档失败" }, { status: 500 });
   }
 }

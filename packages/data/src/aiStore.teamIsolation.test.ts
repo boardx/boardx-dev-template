@@ -50,13 +50,14 @@ describe("AI Store Team isolation", () => {
     expect(mockQuery.mock.calls[0]![0]).toContain("migration_quarantined_at IS NULL");
   });
 
-  it("updates content only when item owner and origin Team both match", async () => {
+  it("updates content for the owner or a grant without rewriting the source Team", async () => {
     mockQuery.mockResolvedValueOnce([{ id: 1 }]);
 
     await updateAiStoreItem(1, 11, 101, 1, draft);
 
     const [sql, params] = mockQuery.mock.calls[0]!;
-    expect(sql).toContain("WHERE id = $1 AND owner_user_id = $2 AND origin_team_id = $3");
+    expect(sql).toContain("owner_user_id = $2 OR EXISTS");
+    expect(sql).toContain("g.item_id = ai_store_items.id AND g.user_id = $2");
     const updateClause = sql.slice(sql.indexOf("SET"), sql.indexOf("WHERE"));
     expect(updateClause).not.toContain("origin_team_id");
     expect(params?.slice(0, 3)).toEqual([1, 11, 101]);
@@ -68,6 +69,7 @@ describe("AI Store Team isolation", () => {
     await getAiStoreItem(1);
 
     expect(mockQuery.mock.calls[0]![0]).toContain("migration_quarantined_at IS NULL");
+    expect(mockQuery.mock.calls[0]![0]).toContain("archived_at IS NULL");
   });
 
   it("stores personal subscriptions inside a non-null consumer Team", async () => {
