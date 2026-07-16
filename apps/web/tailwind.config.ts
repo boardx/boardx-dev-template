@@ -44,6 +44,7 @@ const config: Config = {
           pink: "hsl(var(--tag-pink))",
           yellow: "hsl(var(--tag-yellow))",
         },
+        survey: "hsl(var(--survey-accent))",
       },
       borderRadius: {
         lg: "var(--radius)",

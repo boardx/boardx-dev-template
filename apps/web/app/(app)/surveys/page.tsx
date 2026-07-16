@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 import * as echarts from "echarts/core";
 import { BarChart, FunnelChart, GaugeChart, HeatmapChart, LineChart, PieChart, RadarChart, ScatterChart, TreemapChart } from "echarts/charts";
 import { GridComponent, LegendComponent, RadarComponent, TooltipComponent, VisualMapComponent } from "echarts/components";
@@ -366,7 +367,7 @@ function QuestionPreviewAnswer({ question, questionIndex }: { question: Question
           <div
             key={`${question.id}-${optionIndex}`}
             data-testid={questionIndex == null ? undefined : `preview-option-${questionIndex}-${optionIndex}`}
-            className="flex items-center gap-3 rounded-sm border-0 px-3 py-2 text-14 text-foreground"
+            className="flex min-h-11 items-center gap-3 rounded-md border-0 bg-muted/40 px-4 py-2.5 text-14 text-foreground"
           >
             <span className={question.type === "multiple" ? "h-4 w-4 rounded border border-border-strong" : "h-4 w-4 rounded-full border border-border-strong"} />
             {option || `选项 ${optionIndex + 1}`}
@@ -6691,29 +6692,40 @@ export default function SurveysPage() {
         )}
 
         {!created && view === "preview" && !isTemplateEditor && (
-          <div className="mx-auto mt-4 max-w-2xl" data-testid="survey-preview">
-            <section data-testid="survey-preview-sheet" className="overflow-hidden border-0 bg-background shadow-none">
-              <div className="h-1 bg-primary" />
-              <header className="px-7 pb-8 pt-10">
-                <div className="flex flex-wrap items-center justify-between gap-2 text-12 text-muted-foreground">
-                  <span className="font-medium text-foreground">问卷预览</span>
-                  <span>{questions.length} 题</span>
+          <div className="mx-auto mt-4 max-w-6xl px-4 pb-12" data-testid="survey-preview">
+            <section data-testid="survey-preview-sheet" className="overflow-hidden rounded-lg border-0 bg-background shadow-sm">
+              <div data-testid="preview-brand-banner" className="relative h-24 overflow-hidden">
+                <Image src="/survey/fluent-research-header.png" alt="" fill priority sizes="(max-width: 1024px) 100vw, 1024px" className="object-cover" />
+                <div className="relative flex h-full items-center justify-between px-7 text-white">
+                  <div className="flex items-center gap-3">
+                    <ListChecks className="h-6 w-6" strokeWidth={1.8} />
+                    <span className="text-15 font-bold">BoardX 调查</span>
+                  </div>
+                  <span className="rounded-md bg-white/15 px-3 py-1 text-12 font-medium">问卷预览</span>
                 </div>
-                <progress aria-label="问卷预览进度" className="mt-3 h-1 w-full accent-primary" value={0} max={Math.max(questions.length, 1)} />
-                <h2 className="mt-8 text-26 font-bold tracking-tight text-foreground">{title.trim() || "未命名问卷"}</h2>
-                {description.trim() && <p className="mt-2 text-14 text-muted-foreground">{description}</p>}
-              </header>
-              <div data-testid="preview-question-list" className="space-y-1 px-7 pb-8">
-                {questions.map((q, idx) => (
-                  <section key={q.id} data-testid={`preview-question-${idx}`} className="py-6">
-                    <p className="text-14 font-semibold text-foreground">
-                      {idx + 1}. {q.title.trim() || `问题 ${idx + 1}`}
-                      {q.required && <span className="ml-1 text-destructive">*</span>}
-                    </p>
-                    <p className="mt-1 text-12 text-muted-foreground">{TYPE_LABEL[q.type]}</p>
-                    <div className="mt-3"><QuestionPreviewAnswer question={q} questionIndex={idx} /></div>
-                  </section>
-                ))}
+              </div>
+              <div className="mx-auto max-w-4xl px-7 pb-10">
+                <header className="pb-8 pt-8">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-12 text-muted-foreground">
+                    <span className="font-semibold text-foreground">问卷进度</span>
+                    <span>0 / {questions.length}</span>
+                  </div>
+                  <progress aria-label="问卷预览进度" className="survey-progress mt-3 h-1 w-full" value={0} max={Math.max(questions.length, 1)} />
+                  <h2 className="mt-8 text-30 font-bold tracking-tight text-foreground">{title.trim() || "未命名问卷"}</h2>
+                  {description.trim() && <p className="mt-2 text-14 leading-6 text-muted-foreground">{description}</p>}
+                </header>
+                <div data-testid="preview-question-list" className="space-y-2">
+                  {questions.map((q, idx) => (
+                    <section key={q.id} data-testid={`preview-question-${idx}`} className="py-5">
+                      <p className="text-15 font-semibold text-foreground">
+                        {idx + 1}. {q.title.trim() || `问题 ${idx + 1}`}
+                        {q.required && <span className="ml-1 text-destructive">*</span>}
+                      </p>
+                      <p className="mt-1 text-12 text-muted-foreground">{TYPE_LABEL[q.type]}</p>
+                      <div className="mt-3"><QuestionPreviewAnswer question={q} questionIndex={idx} /></div>
+                    </section>
+                  ))}
+                </div>
               </div>
             </section>
           </div>

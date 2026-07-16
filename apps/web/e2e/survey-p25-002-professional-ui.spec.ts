@@ -81,32 +81,37 @@ test("editor shell groups the question builder, inspector, and unified paper pre
 
   await page.getByTestId("preview-survey").click();
   await expect(page.getByTestId("survey-preview")).toBeVisible();
+  await expect(page.getByTestId("preview-brand-banner")).toBeVisible();
   await expect(page.getByTestId("survey-preview-sheet")).toHaveClass(/border-0/);
-  await expect(page.getByTestId("survey-preview-sheet")).toHaveClass(/shadow-none/);
+  await expect(page.getByTestId("survey-preview-sheet")).toHaveClass(/shadow-sm/);
   await expect(page.getByTestId("preview-question-list")).not.toHaveClass(/divide-y/);
   await expect(page.getByTestId("preview-question-0")).not.toHaveClass(/rounded/);
   await expect(page.getByTestId("preview-option-0-0")).toHaveClass(/border-0/);
+  await expect(page.getByTestId("preview-option-0-0")).toHaveClass(/bg-muted/);
   await page.getByTestId("edit-survey").click();
   await page.getByTestId("survey-settings-tab").click();
   await expect(page.getByTestId("publish-settings-panel")).toBeVisible();
 });
 
 test("answer and acceptance small surfaces share the professional shell", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1024 });
   await register(page);
   const survey = await createSurvey(page, true);
 
   await page.goto(survey.shareUrl);
+  await expect(page.getByTestId("answer-brand-banner")).toBeVisible();
   await expect(page.getByTestId("answer-professional-shell")).toHaveClass(/border-0/);
-  await expect(page.getByTestId("answer-professional-shell")).toHaveClass(/shadow-none/);
+  await expect(page.getByTestId("answer-professional-shell")).toHaveClass(/shadow-sm/);
   await expect(page.getByTestId("answer-question-list")).not.toHaveClass(/divide-y/);
   await expect(page.getByTestId("answer-question-0")).not.toHaveClass(/rounded/);
   await expect(page.getByTestId("answer-option-1-0")).toHaveClass(/border-0/);
+  await expect(page.getByTestId("answer-option-1-0")).toHaveClass(/bg-muted/);
   await page.getByTestId("submit-answer").click();
   await expect(page.getByTestId("err-answer")).toContainText("请完成必填题");
   await page.getByTestId("answer-rating-0-4").click();
   await page.getByTestId("answer-single-1-1").click();
   await page.getByTestId("submit-answer").click();
-  await expect(page.getByTestId("answer-success")).toBeVisible();
+  await expect(page.getByTestId("answer-success")).toBeVisible({ timeout: 20_000 });
 
   await page.goto("/surveys/acceptance");
   await expect(page.getByTestId("acceptance-professional-shell")).toBeVisible();

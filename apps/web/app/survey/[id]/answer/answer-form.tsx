@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle2, Send, Star } from "lucide-react";
+import Image from "next/image";
+import { CheckCircle2, ClipboardList, Send, Star } from "lucide-react";
 import type { SurveyWithQuestions } from "@repo/data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -111,35 +112,46 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
   }
 
   return (
-    <main data-testid="answer-page" className="min-h-screen bg-secondary/20 px-4 py-10">
-      <section data-testid="answer-professional-shell" className="mx-auto max-w-2xl overflow-hidden border-0 bg-background shadow-none">
-        <div className="h-1 bg-primary" />
-        <header className="px-7 pb-8 pt-10">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-12 font-medium text-foreground">问卷进度</span>
-            <span data-testid="answer-progress" className="text-12 text-muted-foreground">
-              {answeredCount} / {survey.questions.length}
-            </span>
+    <main data-testid="answer-page" className="min-h-screen bg-secondary/30 px-4 py-8 sm:py-10">
+      <section data-testid="answer-professional-shell" className="mx-auto max-w-6xl overflow-hidden rounded-lg border-0 bg-background shadow-sm">
+        <div data-testid="answer-brand-banner" className="relative h-24 overflow-hidden">
+          <Image src="/survey/fluent-research-header.png" alt="" fill priority sizes="(max-width: 1024px) 100vw, 1024px" className="object-cover" />
+          <div className="relative flex h-full items-center justify-between px-6 text-white sm:px-8">
+            <div className="flex items-center gap-3">
+              <ClipboardList className="h-6 w-6" strokeWidth={1.8} />
+              <span className="text-15 font-bold">BoardX 调查</span>
+            </div>
+            <span className="rounded-md bg-white/15 px-3 py-1 text-12 font-medium">专业调研</span>
           </div>
-          <progress
-            aria-label="问卷完成进度"
-            className="mt-3 h-1 w-full accent-primary"
-            value={answeredCount}
-            max={Math.max(survey.questions.length, 1)}
-          />
-          <h1 className="mt-8 text-26 font-bold tracking-tight text-foreground">{survey.title}</h1>
-          {survey.description && <p className="mt-2 text-14 text-muted-foreground">{survey.description}</p>}
-        </header>
+        </div>
 
-        <div data-testid="answer-question-list" className="space-y-1 px-7 pb-8">
-          {survey.questions.map((question, idx) => {
-            const key = String(question.id);
-            const value = answers[key];
-            return (
-              <section key={question.id} data-testid={`answer-question-${idx}`} className="py-6">
+        <div className="mx-auto max-w-4xl px-6 pb-10 sm:px-8">
+          <header className="pb-8 pt-8">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-12 font-semibold text-foreground">问卷进度</span>
+              <span data-testid="answer-progress" className="text-12 text-muted-foreground">
+                {answeredCount} / {survey.questions.length}
+              </span>
+            </div>
+            <progress
+              aria-label="问卷完成进度"
+              className="survey-progress mt-3 h-1 w-full"
+              value={answeredCount}
+              max={Math.max(survey.questions.length, 1)}
+            />
+            <h1 className="mt-8 text-30 font-bold tracking-tight text-foreground">{survey.title}</h1>
+            {survey.description && <p className="mt-2 text-14 leading-6 text-muted-foreground">{survey.description}</p>}
+          </header>
+
+          <div data-testid="answer-question-list" className="space-y-2">
+            {survey.questions.map((question, idx) => {
+              const key = String(question.id);
+              const value = answers[key];
+              return (
+                <section key={question.id} data-testid={`answer-question-${idx}`} className="py-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-14 font-semibold text-foreground">
+                    <p className="text-15 font-semibold text-foreground">
                       {idx + 1}. {question.title}
                       {question.required && <span className="ml-1 text-destructive">*</span>}
                     </p>
@@ -252,8 +264,8 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
                         key={option}
                         data-testid={`answer-option-${idx}-${optionIdx}`}
                         className={cn(
-                          "flex cursor-pointer items-center gap-3 rounded-sm border-0 px-3 py-2 text-14 transition-colors hover:bg-muted/60 focus-within:bg-muted/60",
-                          value === option && "bg-primary/10"
+                          "flex min-h-11 cursor-pointer items-center gap-3 rounded-md border-0 bg-muted/40 px-4 py-2.5 text-14 transition-colors hover:bg-muted focus-within:bg-muted",
+                          value === option && "bg-tag-purple ring-1 ring-survey"
                         )}
                       >
                         <Input
@@ -299,8 +311,8 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
                           key={option}
                           data-testid={`answer-option-${idx}-${optionIdx}`}
                           className={cn(
-                            "flex cursor-pointer items-center gap-3 rounded-sm border-0 px-3 py-2 text-14 transition-colors hover:bg-muted/60 focus-within:bg-muted/60",
-                            selected && "bg-primary/10"
+                            "flex min-h-11 cursor-pointer items-center gap-3 rounded-md border-0 bg-muted/40 px-4 py-2.5 text-14 transition-colors hover:bg-muted focus-within:bg-muted",
+                            selected && "bg-tag-purple ring-1 ring-survey"
                           )}
                         >
                           <Input
@@ -331,22 +343,23 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
                     <p className="mt-1 text-12 text-muted-foreground">当前原型保存文件名，正式接入对象存储后可上传附件。</p>
                   </div>
                 )}
-              </section>
-            );
-          })}
-        </div>
+                </section>
+              );
+            })}
+          </div>
 
-        <div className="flex flex-col items-start gap-3 px-7 pb-10 pt-2">
-          {error && (
-            <p role="alert" data-testid="err-answer" className="text-13 text-destructive">
-              {error}
-            </p>
-          )}
+          <div className="flex flex-col items-start gap-3 pb-2 pt-4">
+            {error && (
+              <p role="alert" data-testid="err-answer" className="text-13 text-destructive">
+                {error}
+              </p>
+            )}
 
-          <Button data-testid="submit-answer" type="button" disabled={submitting} onClick={() => void submit()} className="gap-1.5">
-            <Send className="h-4 w-4" strokeWidth={1.5} />
-            {submitting ? "提交中..." : "提交"}
-          </Button>
+            <Button data-testid="submit-answer" type="button" disabled={submitting} onClick={() => void submit()} className="gap-1.5 bg-survey text-white hover:bg-survey/90">
+              <Send className="h-4 w-4" strokeWidth={1.5} />
+              {submitting ? "提交中..." : "提交"}
+            </Button>
+          </div>
         </div>
       </section>
     </main>

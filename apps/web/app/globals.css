@@ -47,6 +47,7 @@
     --tag-purple: 257 51% 92%;        /* #e6e0f5 */
     --tag-pink: 9 89% 92.9%;          /* #fde2dd */
     --tag-yellow: 51 100% 90%;        /* #fff7cc */
+    --survey-accent: 252 68% 56%;
 
     /* ── 禁用态 token 对（2026-07-09 对比度复盘）─────────────
        禁用态一律用这对 token，禁止 disabled:opacity-*——统一透明度作用在
@@ -94,6 +95,7 @@
     --tag-purple: 257 30% 28%;
     --tag-pink: 9 45% 28%;
     --tag-yellow: 51 50% 24%;
+    --survey-accent: 252 72% 68%;
 
     --disabled: 0 0% 16%;
     --disabled-foreground: 0 0% 62%;
@@ -104,5 +106,25 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+  }
+
+  progress.survey-progress {
+    appearance: none;
+    overflow: hidden;
+    border: 0;
+    border-radius: 9999px;
+    background: hsl(var(--muted));
+  }
+
+  progress.survey-progress::-webkit-progress-bar {
+    background: hsl(var(--muted));
+  }
+
+  progress.survey-progress::-webkit-progress-value {
+    background: hsl(var(--survey-accent));
+  }
+
+  progress.survey-progress::-moz-progress-bar {
+    background: hsl(var(--survey-accent));
   }
 }
