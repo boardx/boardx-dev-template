@@ -4876,6 +4876,8 @@ export default function SurveysPage() {
   const [workspaceReportClassifying, setWorkspaceReportClassifying] = useState(false);
   const [aiSessionId, setAiSessionId] = useState<string | null>(null);
   const [pendingAiDraft, setPendingAiDraft] = useState<AiDraft | null>(null);
+  const [pendingAiCommand, setPendingAiCommand] = useState("");
+  const [aiDraftApplied, setAiDraftApplied] = useState(false);
   const [pendingAiChangeSet, setPendingAiChangeSet] = useState<AiChangeSet | null>(null);
   const [confirmedAiOps, setConfirmedAiOps] = useState<string[]>([]);
   const [aiFallbackNotice, setAiFallbackNotice] = useState("");
@@ -5467,18 +5469,23 @@ export default function SurveysPage() {
     );
   }
 
-  function applyAiDraft(draft: AiDraft) {
-    setTitle(draft.title);
-    setDescription(draft.description);
-    const nextQuestions = draft.questions.length
-      ? draft.questions.map((q) => ({
+  function applyAiDraft(draft: AiDraft, options: { append?: boolean } = {}) {
+    if (!options.append || !title.trim()) setTitle(draft.title);
+    if (!options.append || !description.trim()) setDescription(draft.description);
+    const generatedQuestions = draft.questions.map((q) => ({
             ...newQuestion(),
             title: q.title,
             type: q.type,
             required: q.required,
             options: CHOICE_TYPES.includes(q.type) ? q.options : [],
             ...(cleanCategoryLabel(q.category ?? "") ? { category: cleanCategoryLabel(q.category ?? "") } : {}),
-          }))
+          }));
+    const existingTitles = new Set(questions.map((question) => question.title.trim().toLocaleLowerCase()).filter(Boolean));
+    const additions = generatedQuestions.filter((question) => !existingTitles.has(question.title.trim().toLocaleLowerCase()));
+    const nextQuestions = draft.questions.length
+      ? options.append
+        ? [...questions, ...additions]
+        : generatedQuestions
       : questions;
     setQuestions(nextQuestions);
     setCategories((items) => mergeCategoryLabels(items, nextQuestions.map((question) => question.category)));
@@ -5532,7 +5539,7 @@ export default function SurveysPage() {
     const cleanCommand = command.trim();
     if (!cleanCommand) return;
     const activeDraft =
-      editingSurveyId == null && pendingAiDraft
+      editingSurveyId == null && pendingAiDraft && !aiDraftApplied
         ? {
             title: pendingAiDraft.title,
             description: pendingAiDraft.description,
@@ -5542,6 +5549,8 @@ export default function SurveysPage() {
         : { title, description, questions };
     const nextMessages: AiMessage[] = [...aiMessages, { role: "user", content: cleanCommand }];
     setAiMessages(nextMessages);
+    setPendingAiCommand(cleanCommand);
+    setAiDraftApplied(false);
     setAiInput("");
     setAiBusy(true);
     try {
@@ -5634,11 +5643,12 @@ export default function SurveysPage() {
   }
 
   function applyPendingAiDraft() {
-    if (!pendingAiDraft) return;
-    applyAiDraft(pendingAiDraft);
+    if (!pendingAiDraft || aiDraftApplied) return;
+    const append = /添加|新增|补充|增加/.test(pendingAiCommand);
+    applyAiDraft(pendingAiDraft, { append });
+    setAiDraftApplied(true);
     setAiCreateFlow(false);
     setAiOpen(true);
-    setPendingAiDraft(null);
     setPendingAiChangeSet(null);
     rememberAiCreateFlow(false);
     setAiMessages((items) => [...items, {
@@ -7471,8 +7481,8 @@ export default function SurveysPage() {
                           报告大纲：{pendingAiDraft.reportOutline.join(" / ")}
                         </div>
                       ) : null}
-                      <Button data-testid="apply-ai-draft" type="button" size="sm" className="mt-3 w-full bg-primary text-primary-foreground hover:bg-primary/90" onClick={applyPendingAiDraft}>
-                        {isTemplateEditor ? "应用到左侧模板" : "应用到左侧问卷"}
+                      <Button data-testid="apply-ai-draft" type="button" size="sm" disabled={aiDraftApplied} className="mt-3 w-full bg-primary text-primary-foreground hover:bg-primary/90" onClick={applyPendingAiDraft}>
+                        {aiDraftApplied ? "已应用到左侧" : isTemplateEditor ? "应用到左侧模板" : "应用到左侧问卷"}
                       </Button>
                     </div>
                   )}

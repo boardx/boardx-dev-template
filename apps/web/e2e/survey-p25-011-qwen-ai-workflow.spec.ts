@@ -53,6 +53,51 @@ test("selected survey opens the simplified AI-first design workbench", async ({ 
   await expect(page.getByTestId("survey-ai-apply")).toBeVisible();
 });
 
+test("AI additions remain visible and append to the editable question list after apply", async ({ page }) => {
+  await register(page);
+  await page.route("**/api/surveys/ai", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        sessionId: "11111111-1111-4111-8111-111111111111",
+        model: "qwen3.7-max",
+        draft: {
+          reply: "已补充 2 个问题。",
+          summary: "补充商品安全使用场景和风险反馈。",
+          title: "商品安全调研",
+          description: "验证 AI 新增题目",
+          questions: [
+            { title: "你通常在哪些场景使用该商品？", type: "multiple", required: true, options: ["居家", "户外"], category: "使用场景" },
+            { title: "你遇到过哪些安全问题？", type: "text", required: false, options: [], category: "风险反馈" },
+          ],
+          clarifyingQuestions: [],
+          assumptions: [],
+          reportOutline: [],
+          reportTemplate: null,
+          intentCanvas: {},
+        },
+      }),
+    });
+  });
+
+  await page.goto("/surveys");
+  await page.getByTestId("header-create-blank").click();
+  await page.getByTestId("question-title-0").fill("你使用过该商品吗？");
+  if (!(await page.getByTestId("ai-input").isVisible())) await page.getByTestId("open-ai-assistant").click();
+  await page.getByTestId("ai-input").fill("添加 2 个商品安全问题");
+  await page.getByTestId("ai-send").click();
+
+  await expect(page.getByTestId("ai-draft-question-list")).toContainText("你通常在哪些场景使用该商品？");
+  await expect(page.getByTestId("ai-draft-question-list")).toContainText("你遇到过哪些安全问题？");
+  await page.getByTestId("apply-ai-draft").click();
+
+  await expect(page.getByTestId("question-title-0")).toHaveValue("你使用过该商品吗？");
+  await expect(page.getByTestId("question-title-1")).toHaveValue("你通常在哪些场景使用该商品？");
+  await expect(page.getByTestId("question-title-2")).toHaveValue("你遇到过哪些安全问题？");
+  await expect(page.getByTestId("ai-draft-question-list")).toBeVisible();
+});
+
 test("Qwen fallback session remains recoverable and private to its actor", async ({ page }) => {
   await register(page);
   const generated = await page.request.post("/api/surveys/ai", {
