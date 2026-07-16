@@ -69,6 +69,7 @@ Phase p27 不只完成 AI Tool 与 Image Tool 的改名，而是把现有 AI Sto
 ### 3.3 Team 归属与消费 Team
 
 - 每个资源都有不可为空且不可通过普通编辑改变的 `originTeamId`。
+- BoardX Admin 审核通过的资源对所有已登录 BoardX 用户可见，不要求查看者属于来源 Team。
 - BoardX 资源跨 Team 可见，但来源 Team 不变。
 - Team B 订阅 Team A 的 BoardX 资源时，订阅保存 `consumerTeamId=Team B`，资源仍保存 `originTeamId=Team A`。
 - Team B 可使用该资源，但不能因订阅而获得编辑、分享管理、发布管理或删除权限。
@@ -134,8 +135,9 @@ Phase p27 不只完成 AI Tool 与 Image Tool 的改名，而是把现有 AI Sto
 | `subscriberUserId` | USER 订阅时必填 |
 | `createdAt` | 订阅时间 |
 
-- USER 订阅只对该用户在当前 Team 生效。
-- TEAM 订阅对当前 Team 全体成员生效，只允许 Team owner/admin 操作。
+- USER 订阅只对该用户在当前 Team 生效；普通 Team 成员只能创建和取消自己的 USER 订阅。
+- TEAM 订阅对当前 Team 全体成员生效，只允许当前 Team 的 owner/admin 创建和取消。
+- Team owner/admin 也可以选择只为自己创建 USER 订阅；管理员身份不强制使用 TEAM 订阅。
 - 同一用户或 Team 对同一资源的订阅必须幂等。
 - 取消订阅只删除消费关系，不影响原资源。
 - 资源归档后不能新订阅或新执行；已有订阅显示资源不可用。
@@ -196,7 +198,8 @@ Phase p27 不只完成 AI Tool 与 Image Tool 的改名，而是把现有 AI Sto
 
 ### 5.2 Explore
 
-- 展示当前 Team 自有可见资源及审核通过的 BoardX 资源。
+- 展示当前 Team 自有可见资源及全部审核通过的 BoardX 资源。
+- BoardX approved 资源对所有已登录用户可见；查看不要求订阅，使用仍要求当前用户或当前 Team 已订阅。
 - 类型 Tab 为 All、Agent、Skills、Template。
 - Skills 不再拆成 AI Tool 和 Image Tool。
 - 支持关键词、标签、类型、精选筛选和分页。
@@ -237,6 +240,7 @@ Phase p27 不只完成 AI Tool 与 Image Tool 的改名，而是把现有 AI Sto
 - 只有来源 Team 的 owner/admin 或资源所有者可以提交 BoardX 审核。
 - BoardX Admin 可以批准、拒绝或撤回批准。
 - 只有 approved 且未归档的资源进入 BoardX Explore 和订阅入口。
+- approved 资源对所有已登录 BoardX 用户可见，无论其当前 Team 是否订阅。
 - BoardX Featured 只适用于 approved 资源。
 - 首次 approved 后，所有者或授权编辑者修改内容不重新审核，立即影响全部订阅者。
 - BoardX Admin 撤回批准后，其他 Team 不能新订阅或新执行；已有订阅显示资源不可用。
@@ -244,9 +248,11 @@ Phase p27 不只完成 AI Tool 与 Image Tool 的改名，而是把现有 AI Sto
 
 ### 5.7 Subscription 与 Use
 
-- 用户可对可订阅资源创建 USER 订阅。
-- Team owner/admin 可为当前 Team 创建 TEAM 订阅。
+- 任意当前 Team 成员可对可订阅资源创建自己的 USER 订阅。
+- 只有当前 Team owner/admin 可为当前 Team 创建或取消 TEAM 订阅。
+- 普通成员请求 TEAM 订阅时返回 403，不能通过客户端伪造角色或 Team id。
 - Team B 只有订阅 Team A 已 approved 的 BoardX 资源后，才可在 Team B 使用它。
+- 对普通成员，自己的 USER 订阅满足个人使用条件；对整个 Team，必须存在 TEAM 订阅。
 - USER 和 TEAM 订阅列表按当前 Team 隔离。
 - Agent 在当前 Team 的 AVA 中启用。
 - Skill 在当前 Team 的 AVA Skills 选择器中启用。
@@ -296,8 +302,8 @@ Phase p27 不只完成 AI Tool 与 Image Tool 的改名，而是把现有 AI Sto
 | 提交 Team/BoardX 审核 | 是 | 否 | 是 | 否 | 否 | 否 |
 | Team 审核/精选 | 否 | 否 | 是 | 否 | 否 | 否 |
 | BoardX 审核/精选 | 否 | 否 | 否 | 否 | 是 | 否 |
-| USER 订阅 | 是 | 是 | 是 | 是 | 是 | 是 |
-| TEAM 订阅 | 否 | 否 | 来源 Team 可操作 | 消费 Team 可操作 | 否 | 否 |
+| 创建自己的 USER 订阅 | 是 | 是 | 是 | 是 | 是 | 是 |
+| 为当前 Team 创建 TEAM 订阅 | 仅具 Team owner/admin 角色时 | 仅具 Team owner/admin 角色时 | 是 | 是 | 否 | 否 |
 | 复制允许复制的资源 | 是 | 是 | 是 | 是 | 是 | 是 |
 
 ## 7. API 行为原则
@@ -309,6 +315,8 @@ Phase p27 不只完成 AI Tool 与 Image Tool 的改名，而是把现有 AI Sto
 - 对无权访问的其他 Team 私有资源返回 404；对已识别但动作无权执行的资源返回 403。
 - 未知 `type` 或 `skillKind` 返回 400。
 - 重复订阅、重复接受授权和重复审核动作必须幂等。
+- TEAM 订阅接口必须服务端校验当前 Team owner/admin 角色；普通成员返回 403。
+- USER 订阅只能写入当前登录用户，不能代其他用户订阅。
 - 修改接口使用服务端字段白名单，授权编辑者提交生命周期字段时返回 403，而不是静默接受。
 - 编辑成功响应返回新 `version`；订阅消费接口不接受客户端指定旧版本。
 
@@ -359,6 +367,8 @@ Phase p27 不只完成 AI Tool 与 Image Tool 的改名，而是把现有 AI Sto
 - Team A/Team B 同名资源隔离。
 - origin Team 与 consumer Team 分离。
 - USER/TEAM 订阅幂等和 Team 隔离。
+- BoardX approved 资源对不同 Team 的普通成员均可浏览。
+- 普通成员只能 USER 订阅；Team owner/admin 可以创建 TEAM 订阅。
 - 首次 BoardX 审核后可跨 Team 订阅。
 - 审核后编辑版本递增且无需重审。
 - 订阅者读取新版本。
@@ -372,6 +382,8 @@ Phase p27 不只完成 AI Tool 与 Image Tool 的改名，而是把现有 AI Sto
 - 单一 Skills Tab 和 text/image 创建编辑。
 - Agent、Skill、Template 的 Team 内使用入口。
 - Team B 订阅 Team A approved BoardX 资源并使用。
+- 未订阅用户可以浏览 BoardX approved 资源，但不能使用。
+- 普通成员完成 USER 订阅后仅自己可使用；Team Admin 完成 TEAM 订阅后 Team 全员可使用。
 - Team A 编辑后 Team B 立即读取新版本。
 - 分享接受、跨 Team 编辑、撤销用户和关闭链接。
 - 开启复制、复制到目标 Team、独立编辑且不跟随原资源。
