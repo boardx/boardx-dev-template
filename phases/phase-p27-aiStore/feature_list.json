@@ -1,0 +1,261 @@
+{
+  "phase": "p27",
+  "features": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "area": "ai-store-data",
+      "title": "Team tenancy and migration audit",
+      "user_visible_behavior": "用户在当前 Team 创建 Agent、Skill 或 Template 后，只能在该 Team 的管理视图看到并管理它；所有资源都有不可变的来源 Team，Team A 与 Team B 可拥有同名资源，跨 Team item id 管理请求返回 403/404，无法唯一归属的历史数据进入可审计隔离清单且不会出现在可订阅或可执行列表。",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-DATA",
+      "depends_on": [],
+      "wave": 0,
+      "verification": [
+        "pnpm --filter @repo/data test -- src/aiStore.teamIsolation.test.ts",
+        "pnpm --filter @repo/data test -- src/aiStore.migrationAudit.test.ts"
+      ],
+      "evidence": "",
+      "notes": "建立 Resource.originTeamId 和 Subscription.consumerTeamId 的非空可信边界；迁移必须 dry-run 可审计、apply 幂等，不猜测来源 Team。"
+    },
+    {
+      "id": "F02",
+      "priority": 1,
+      "area": "ai-store-data",
+      "title": "Skills model and live versioning",
+      "user_visible_behavior": "用户只看到统一 Skills 分类，旧 AI Tool 与 Image Tool 原 item 迁移为 type=skill、skillKind=text|image；所有者或授权编辑者保存内容后 version 递增，已 published/approved 状态不重新审核，当前 Team 及其他订阅 Team 的用户下次读取或执行立即使用最新版，并发旧版本保存返回 409。",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-DATA",
+      "depends_on": [
+        "F01"
+      ],
+      "wave": 1,
+      "verification": [
+        "pnpm --filter @repo/data test -- src/aiStore.skillsVersioning.test.ts",
+        "pnpm --filter @repo/web test -- app/api/ai-store/items/skills-versioning.route.test.ts"
+      ],
+      "evidence": "",
+      "notes": "原位、幂等规范化旧类型；订阅只引用 itemId 并解析最新版本；内容编辑与 RevisionAudit 原子提交。"
+    },
+    {
+      "id": "F03",
+      "priority": 1,
+      "area": "ai-store-web",
+      "title": "Complete Explore, navigation, and detail",
+      "user_visible_behavior": "已登录用户可从导航进入 Explore/Subscribe/Create/Authorized/Shared，在 Explore 搜索、筛选、分页并打开 Agent、Skills、Template 详情；所有人都能看到 BoardX approved 资源及来源 Team，当前 Team 自有内容正确隔离，不可见资源返回 404，切换 Team 后旧列表和选择立即清空。",
+      "status": "not_started",
+      "sprint": "02",
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F01",
+        "F02"
+      ],
+      "wave": 2,
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ai-store-007-explore-complete.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "覆盖 All/Agent/Skills/Template、关键词、标签、Featured、来源 Team、版本、loading/empty/error/pagination 终态。"
+    },
+    {
+      "id": "F04",
+      "priority": 1,
+      "area": "ai-store-authoring",
+      "title": "Create, edit, preview, and archive",
+      "user_visible_behavior": "当前 Team 成员可创建和预览 Agent、text/image Skill、Template 草稿；所有者或有效 Authorized editor 可编辑内容并立即更新所有订阅者看到的版本，伪造来源 Team 被忽略，非授权编辑返回 403，只有所有者可归档且归档后所有 Team 的已有订阅显示资源不可用。",
+      "status": "not_started",
+      "sprint": "02",
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F01",
+        "F02"
+      ],
+      "wave": 2,
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ai-store-008-authoring-archive.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "创建写入可信 current Team；update 使用 expectedVersion；archive 软删除且本阶段不提供恢复。"
+    },
+    {
+      "id": "F05",
+      "priority": 1,
+      "area": "ai-store-team-review",
+      "title": "Team review and featured lifecycle",
+      "user_visible_behavior": "资源所有者可提交 Team 审核，来源 Team owner/admin 可批准、拒绝、撤回和设置 Team Featured；普通成员看不到管理动作且直接调用返回 403，其他 Team 管理员不能操作，published 内容后续编辑立即生效而不重新审核，非法状态转换返回 409。",
+      "status": "not_started",
+      "sprint": "03",
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F04"
+      ],
+      "wave": 3,
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ai-store-006-approval-featured.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "teamStatus=draft|pending|published|rejected；Team Featured 仅 published、未归档资源。"
+    },
+    {
+      "id": "F06",
+      "priority": 1,
+      "area": "ai-store-boardx-review",
+      "title": "BoardX review, featured, and live approved updates",
+      "user_visible_behavior": "所有者或来源 Team owner/admin 可提交 BoardX 审核，BoardX Admin 可批准、拒绝、撤回和设置 BoardX Featured；批准后所有认证用户可见，非管理员操作返回 403，approved 内容编辑不重新审核并立刻同步到之前所有 USER/TEAM 订阅，撤回后其他 Team 不能新订阅或新执行。",
+      "status": "not_started",
+      "sprint": "03",
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F04",
+        "F05"
+      ],
+      "wave": 4,
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/admin-003-ai-store-approval.spec.ts e2e/admin-004-featured-ai-store.spec.ts e2e/ai-store-009-live-approved-updates.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "boardxStatus=not_submitted|pending|approved|rejected；首次发布必须审核，内容版本更新不改变 approved。"
+    },
+    {
+      "id": "F07",
+      "priority": 1,
+      "area": "ai-store-subscription",
+      "title": "USER and TEAM subscriptions and use",
+      "user_visible_behavior": "普通成员可在当前 Team 为自己订阅 Team A 的 approved 资源并个人使用，当前 Team owner/admin 可为整个 Team 订阅或取消；普通成员请求 TEAM 订阅返回 403，Team B 的订阅不改变来源 Team或授予编辑权，Agent、Skill、Template 使用均解析最新版本并在取消订阅后立即从当前 Team 入口移除。",
+      "status": "not_started",
+      "sprint": "04",
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F03",
+        "F06"
+      ],
+      "wave": 5,
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ai-store-010-user-team-subscriptions.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "USER 唯一键含 user+consumerTeamId+itemId；TEAM 唯一键含 consumerTeamId+itemId；重复订阅/取消幂等。"
+    },
+    {
+      "id": "F08",
+      "priority": 2,
+      "area": "ai-store-engagement",
+      "title": "Favorites and view statistics",
+      "user_visible_behavior": "用户可在当前 Team 对可见资源收藏、取消收藏并查看真实喜欢数和浏览统计；同一用户在不同 Team 的收藏独立，不可见资源不能计数或收藏，乐观更新失败会回滚，切换 Team 后卡片和详情显示当前 Team 的正确状态。",
+      "status": "not_started",
+      "sprint": "04",
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F03"
+      ],
+      "wave": 3,
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ai-store-004-favorite-item.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "收藏关系键包含 user、consumer Team 和 item；重复操作幂等，聚合数以服务端为准。"
+    },
+    {
+      "id": "F09",
+      "priority": 1,
+      "area": "ai-store-sharing",
+      "title": "Cross-Team edit sharing and Authorized/Shared",
+      "user_visible_behavior": "资源所有者可创建编辑链接、查看授权列表、关闭链接或撤销用户；其他 Team 的接收者接受后在 Authorized 中看到来源 Team 并编辑原 item，保存立即影响所有订阅者，但不能改变 createdBy、originTeamId、审核/精选、allowCopy、分享或归档，越权返回 403，撤销后立即失效。",
+      "status": "not_started",
+      "sprint": "05",
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F04"
+      ],
+      "wave": 3,
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ai-store-011-cross-team-edit-share.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "management-share create/info/accept/access-list/revoke/revoke-user 完整闭环；接受授权不得改写所有权或伪造 Team membership。"
+    },
+    {
+      "id": "F10",
+      "priority": 1,
+      "area": "ai-store-copy",
+      "title": "allowCopy and independent resource copies",
+      "user_visible_behavior": "能查看资源的用户在 allowCopy=true 时可把 Agent、Skill 或 Template 复制到当前 Team，得到新 itemId、私有 draft 和独立所有权；allowCopy=false 返回 403，副本不继承订阅、收藏、统计、审核、精选或分享，原资源后续编辑不会同步到副本，Template 的 Board 被深拷贝到目标 Team。",
+      "status": "not_started",
+      "sprint": "05",
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F04",
+        "F09"
+      ],
+      "wave": 4,
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ai-store-012-copy-resources.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "记录 copiedFromItemId/copiedFromVersion；复制事务和 Template Board deep copy 原子化；支持 idempotency key。"
+    },
+    {
+      "id": "F11",
+      "priority": 2,
+      "area": "ai-store-integrations",
+      "title": "AVA, Template, Agent Builder, and recommendations",
+      "user_visible_behavior": "已订阅用户可在当前 Team 的 AVA 使用最新 Agent 和 text/image Skills，在当前 Team 打开或创建 Template 内容；Agent Builder 生成可编辑 Agent 草案并保存到当前 Team，Skill 完成后只推荐当前 Team 可用 Agent，无订阅或跨 Team 越权返回 403，切换 Team 清空旧会话选择。",
+      "status": "not_started",
+      "sprint": "06",
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F07"
+      ],
+      "wave": 6,
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ava-ai-store-skills.spec.ts e2e/ai-store-013-agent-builder-recommendations.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "保留真实 text/image 执行链；Template 内容写入 consumer Team；推荐空结果不影响 Skill 主流程。"
+    },
+    {
+      "id": "F12",
+      "priority": 1,
+      "area": "ai-store-compatibility",
+      "title": "Migration compatibility and complete regression",
+      "user_visible_behavior": "升级后旧 Agent、AI Tool、Image Tool、Template 及其订阅、收藏、分享、审核、精选和统计继续在正确 Team 可用，公共响应只暴露 Agent/Skills/Template；所有核心旅程、权限失败和 approved 实时更新通过完整回归，任何单项失败都保持 P27 未完成且不会关闭 Parent Issue #662。",
+      "status": "not_started",
+      "sprint": "06",
+      "owner": null,
+      "capability": "CAP-QUALITY",
+      "depends_on": [
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05",
+        "F06",
+        "F07",
+        "F08",
+        "F09",
+        "F10",
+        "F11"
+      ],
+      "wave": 7,
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ai-store-001-browse-items.spec.ts e2e/ai-store-002-create-update-item.spec.ts e2e/ai-store-003-subscribe-use-item.spec.ts e2e/ai-store-005-share-management.spec.ts e2e/ai-store-014-legacy-compat.spec.ts",
+        "pnpm -w run verify:base"
+      ],
+      "evidence": "",
+      "notes": "最终兼容和权限回归；不得通过复制 item、清空关系、隐藏 UI 或跳过真实执行来通过验证。"
+    }
+  ]
+}
