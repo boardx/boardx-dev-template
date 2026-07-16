@@ -40,6 +40,19 @@ if [ -n "$unknown" ]; then
   for k in $unknown; do grep -rn "\btext-$k\b" app components --include="*.tsx" | head -3; done
 fi
 
+# ── 1.7 API 错误泄漏门控（ADR-015；#539 String(err) 泄漏事故）─────────────
+# 内部错误细节（message/stack/SQL/endpoint）绝不回传客户端——只进服务端日志。
+# 一律用 lib/api/handler 的 withErrorBoundary/withAuth（意外错误统一 internal_error）
+# 或抛 ApiError（detail 只进日志）。
+# 只查"回给客户端的响应体"里的泄漏：NextResponse.json({... String(err) ...})。
+# 合法用途放行：写日志（console.error）、入库 trace（errorMessage: String(err)）——
+# 那些不出网。行尾注释（// #519:不回传 String(err)）也不算。
+leak=$(grep -rn "NextResponse.json(.*String(err)\|NextResponse.json(.*String(e)\|NextResponse.json(.*err\.message\|NextResponse.json(.*e\.message" app/api --include="route.ts" 2>/dev/null | sed 's|//.*||' | grep "String(err)\|String(e)\|\.message" || true)
+if [ -n "$leak" ]; then
+  err "API 路由把内部错误细节回传客户端（改用 lib/api/handler 的 withAuth/withErrorBoundary + ApiError，见 ADR-015）:"
+  echo "$leak"
+fi
+
 # ── 2. 原生表单元素（必须用 shadcn 封装）────────────────────────────────────
 # 允许 shadcn 组件本身内部使用（components/ui/ 路径排除）；只扫 app/ 页面层
 raw_select=$(grep -rn "<select" app --include="*.tsx" 2>/dev/null || true)

@@ -33,7 +33,8 @@
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
     "yaml": "^2.5.0",
-    "@repo/export": "workspace:*"
+    "@repo/export": "workspace:*",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@playwright/test": "^1.47.0",

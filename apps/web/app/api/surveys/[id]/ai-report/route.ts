@@ -230,6 +230,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       throw err;
     }
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 502 });
+    // 模型/上游细节只进日志与入库 trace，不回传客户端（ADR-015 / #539）
+    console.error("[api] ai-report upstream failed", err);
+    return NextResponse.json({ error: "ai_report_failed" }, { status: 502 });
   }
 }

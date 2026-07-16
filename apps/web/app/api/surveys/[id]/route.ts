@@ -167,7 +167,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       },
     });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    // 内部细节只进日志，响应给稳定错误码（ADR-015 / #539 教训）
+    console.error("[api] unhandled", err);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 }
 
@@ -189,6 +191,8 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     if (!deleted) return NextResponse.json({ error: "无管理权限" }, { status: 403 });
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    // 内部细节只进日志，响应给稳定错误码（ADR-015 / #539 教训）
+    console.error("[api] unhandled", err);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 }
