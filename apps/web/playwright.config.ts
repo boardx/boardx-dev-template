@@ -50,7 +50,8 @@ function loadWorktreeEnv() {
 
 loadWorktreeEnv();
 
-// e2e 配置：webServer 用 next dev（免 build，DATABASE_URL 从环境继承）。
+// e2e 配置：webServer 本地用 next dev（免 build，快速回环），**CI 上用生产构建**
+// （next build && next start，见下方 WEB_COMMAND）。
 // 已有该端口在跑则复用（reuseExistingServer）。
 // 端口可用 E2E_PORT 覆盖（默认 3000）——多个 worktree 并行跑 e2e 时，"复用已有 server"
 // 会复用到别的 worktree/分支的 server，测出来的是别人的代码；scripts/init-worktree-env.sh
@@ -62,6 +63,25 @@ const COLLAB_WS_PORT = process.env.COLLAB_WS_PORT || "3001";
 // e2e 里模拟支付网关回调需要带上这把密钥；没有真实网关时用一个仅测试用的默认值，
 // 生产环境必须通过环境变量覆盖成真实值（.env.example 里也标了同名变量）。
 export const E2E_WEBHOOK_SECRET = process.env.WEBHOOK_SECRET ?? "e2e-test-only-webhook-secret";
+
+// CI 上跑生产构建而不是 next dev（#665）。
+//
+// next dev 按需编译，并会为动态路由起 `static-paths-worker` 子进程去探静态路径；
+// 那个 worker 与主进程的 chunk 视图不一致，会 require 到尚未 emit 的
+// `.next/server/vendor-chunks/*.js`。实测 e2e-full：前 60 个用例全绿，第 8 分钟
+// 起 `Cannot find module './vendor-chunks/pg@8.12.0.js'`（单次运行 1541 次），
+// 此后每个碰 DB 的路由 500 返回 HTML 错误页 → 测试拿到 `<!DOCTYPE` 而非 JSON，
+// 584/731 用例雪崩、耗时 5.7h（绝大部分是对着死掉的 server 等超时），连红 12 次
+// 无人察觉。另一次运行同样模式挂在 `micromark-core-commonmark`——与具体包无关，
+// 是 dev 这条路径本身的问题。
+//
+// 生产构建从结构上消除该故障：`next build` 一次编译完所有路由，**根本不产生
+// vendor-chunks/ 目录**（那是 dev 专有产物），也不走 dev 的 static-paths-worker；
+// 顺带省掉按需编译的巨额耗时。本地仍用 next dev 保留快速回环。
+const IS_CI = !!process.env.CI;
+const WEB_COMMAND = IS_CI ? `next build && next start -p ${PORT}` : `next dev -p ${PORT}`;
+// 生产构建要先编译再起服务，120s 不够（实测构建本身约 1-3 分钟）。
+const WEB_TIMEOUT = IS_CI ? 600_000 : 120_000;
 export default defineConfig({
   testDir: "./e2e",
   timeout: 60_000,
@@ -92,10 +112,10 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `next dev -p ${PORT}`,
+      command: WEB_COMMAND,
       url: `http://localhost:${PORT}/api/health`,
       reuseExistingServer: true,
-      timeout: 120_000,
+      timeout: WEB_TIMEOUT,
       env: { ...process.env, WEBHOOK_SECRET: E2E_WEBHOOK_SECRET },
     },
     {

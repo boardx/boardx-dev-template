@@ -16,6 +16,14 @@ on:
     - cron: "0 * * * *"
     # 全量浏览器 e2e 每 3 小时跑一次。
     - cron: "30 */3 * * *"
+  # 手动触发 e2e-full（#665）：它此前只在 `30 */3` 那个 cron 跑，改动它的人要等最多
+  # 3 小时才知道结果，验证成本高到没人验证——这正是它连红 12 次无人察觉的一环。
+  workflow_dispatch:
+    inputs:
+      run_e2e_full:
+        description: "跑全量浏览器 e2e（e2e-full）"
+        type: boolean
+        default: true
 
 jobs:
   verify:
@@ -143,8 +151,16 @@ jobs:
   # 全量 Playwright e2e 回归（真浏览器，覆盖 auth/team/room/canvas/board 等全部模块）。
   # 较重，不随每个 PR/push 跑；每 3 小时定时执行一次（错开半小时，避开整点的烟测检查）。
   e2e-full:
-    if: github.event_name == 'schedule' && github.event.schedule == '30 */3 * * *'
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '30 */3 * * *') ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_e2e_full)
     runs-on: ubuntu-latest
+    # 失败时要开 issue 叫醒人类（见末尾步骤）——默认 GITHUB_TOKEN 只读，不显式声明
+    # 告警会静默失败，等于没有告警。对齐 sync-projection.yml 的既有惯例，按最小权限
+    # 只给这个 job。
+    permissions:
+      issues: write
+      contents: read
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -183,8 +199,35 @@ jobs:
         run: pnpm --filter @repo/web exec playwright install --with-deps chromium
       # kb/studio/presentation 的异步生成链路（入队→worker 消费→回写状态）依赖
       # workflow-worker 进程；不起它，相关 e2e（kb-001/presentations/studio）会稳定超时。
-      - name: Playwright e2e（全量：auth/team/room/canvas/profile/board + 各功能模块；webServer 自动起 next dev，先后台起 workflow-worker）
+      - name: Playwright e2e（全量：auth/team/room/canvas/profile/board + 各功能模块；CI 上 webServer 起生产构建 next build && next start，先后台起 workflow-worker）
         run: |
           set -euo pipefail
           pnpm --filter @repo/workflow-worker start &
           pnpm --filter @repo/web exec playwright test
+
+      # 拉停线绳（#665）：e2e-full 曾连红 12 次、每次烧 5.7h 而无人察觉——因为它只在
+      # 定时任务跑、PR 上永远 skipping，没有任何人被叫醒。红了就必须有人知道：开一个
+      # issue（同一根因只留一个，已存在则追加评论），而不是静静地红下去。
+      - name: 全量回归失败 → 开 issue 叫醒人类
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          TITLE="🚨 e2e-full 全量回归失败"
+          EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number -q '.[0].number' || true)
+          BODY=$(printf '%s\n' \
+            "全量浏览器 e2e 回归失败。**这是唯一跑完整浏览器套件的门禁，PR 上不跑，红了只有本告警会说话。**" \
+            "" \
+            "- 运行：$RUN_URL" \
+            "- commit：\`${{ github.sha }}\`" \
+            "- 触发：\`${{ github.event_name }}\`" \
+            "" \
+            "先分诊再退回：job steps 为空 + 秒级失败 + annotation 含 billing/runner 字样 = 基础设施问题，升级人类；否则读失败日志归因到代码。" \
+            "参见 #665（上一次连红 12 次的根因：next dev 的 static-paths-worker 读不到 vendor-chunks，已改为 CI 跑生产构建）。")
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY"
+          fi
