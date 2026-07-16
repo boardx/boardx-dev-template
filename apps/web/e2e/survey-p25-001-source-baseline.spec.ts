@@ -14,9 +14,8 @@ test("user creates a categorized survey from a built-in template", async ({ page
   await page.goto("/surveys");
   await page.getByTestId("empty-new-survey").click();
   await expect(page.getByTestId("template-library")).toBeVisible();
-  await expect(page.getByTestId("template-product-safety-research")).toBeVisible();
-  await expect(page.getByTestId("template-category-product-safety-research")).toContainText("product_safety");
-  await page.getByTestId("template-product-safety-research").click();
+  await page.getByTestId("template-tag-filter").selectOption("product_safety");
+  await page.getByTestId("template-select").selectOption("built_in:product-safety-research");
   await expect(page.getByTestId("survey-title")).toHaveValue("商品安全市场调研问卷");
   await expect(page.getByTestId("question-title-0")).toHaveValue("你的年龄段是？");
   await expect(page.getByTestId("question-category-0")).toContainText("demographics");

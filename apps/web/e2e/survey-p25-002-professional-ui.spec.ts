@@ -108,10 +108,11 @@ test("editor shell groups the question builder, inspector, and unified paper pre
   await expect(page.getByTestId("editor-inspector-panel")).toBeVisible();
   await expect(page.getByTestId("survey-responses-tab")).toHaveCount(0);
   await expect(page.getByTestId("survey-settings-tab")).toHaveCount(0);
-  await expect(page.getByTestId("template-list")).toBeVisible();
+  await expect(page.getByTestId("template-select")).toBeVisible();
   await page.getByTestId("template-tag-filter").selectOption("product_safety");
-  await expect(page.getByTestId("template-product-safety-research")).toBeVisible();
-  await expect(page.getByTestId("template-market-demand-research")).toHaveCount(0);
+  await expect(page.getByTestId("template-select").locator("option")).toHaveCount(2);
+  await page.getByTestId("template-select").selectOption("built_in:product-safety-research");
+  await expect(page.getByTestId("survey-title")).toHaveValue("商品安全市场调研问卷");
   await page.getByTestId("question-type-0").selectOption("single");
   await page.getByTestId("question-add-option-0").click();
 

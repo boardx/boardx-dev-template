@@ -4,9 +4,9 @@ Date: 2026-07-16
 
 ## User-visible behavior
 
-- The new-survey template library is rendered as a compact single-column list.
-- Templates can be filtered by their category or saved tags.
-- Built-in and saved templates remain selectable from the same list.
+- The new-survey template library is rendered as a compact dropdown instead of an expanded list.
+- Templates can be filtered by their category or saved tags before selection.
+- Built-in and saved templates remain selectable from the same dropdown.
 - The editor no longer renders the internal Responses and Settings tabs. Those workflows remain in the five-step Survey navigation.
 
 ## Verification
