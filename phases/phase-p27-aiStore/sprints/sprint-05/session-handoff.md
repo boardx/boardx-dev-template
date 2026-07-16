@@ -1,18 +1,21 @@
-# 会话交接 — Sprint p27/05
+# 会话交接 - Sprint p27/05
 
-## 当前已验证
-- <哪些 feature 确认 passing,各自跑过的验证命令>
+## 首个工作
 
-## 本轮改动
-- <改了哪些代码 / 基础设施>
+- Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
+- 首个 Feature: F09 Cross-Team edit sharing and Authorized/Shared。
+- Claim: `pnpm harness claim --phase p27 --feature F09 --owner <agent-id>`。
+- 首个失败测试: `apps/web/e2e/ai-store-011-cross-team-edit-share.spec.ts`。
+- F09 门控: `pnpm harness verify --sprint p27/05 --feature F09`。
 
-## 仍损坏或未验证
-- <已知问题、风险区、未跑的验证>
+## 依赖门禁
 
-## 下一步最佳动作
-- <下一轮从哪个 feature 开始;哪些东西不要动>
+- F04 未 passing 时不得开始 F09 或 F10。
+- F10 还依赖 F09，分享与所有权边界通过前不得实现复制。
+- F10 首个测试为 `apps/web/e2e/ai-store-012-copy-resources.spec.ts`，门控为 `pnpm harness verify --sprint p27/05 --feature F10`。
 
-## 命令
-- 启动:`pnpm -w run dev`
-- 验证:`pnpm harness verify --sprint p27/05`
-- 调试:<填你的调试命令>
+## 已知实现边界
+
+- Edit share 始终编辑原 item，不改 `createdBy`/`originTeamId`。
+- Authorized editor 不能管理生命周期、`allowCopy`、分享或 archive。
+- Copy 创建独立 draft；Template Board 必须深拷贝到目标 Team。

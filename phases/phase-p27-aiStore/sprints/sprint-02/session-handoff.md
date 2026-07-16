@@ -1,28 +1,21 @@
 # 会话交接 - Sprint p27/02
 
-## 当前已验证
+## 首个工作
 
-- F03、F04、F05 均为 `not_started`，没有 passing 声明或 evidence。
-- Sprint 工作集由 harness 生成，未手改 `active-features.json`。
+- Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
+- 首个 Feature: F03 Complete Explore, navigation, and detail。
+- Claim: `pnpm harness claim --phase p27 --feature F03 --owner <agent-id>`。
+- 首个失败测试: `apps/web/e2e/ai-store-007-explore-complete.spec.ts`。
+- F03 门控: `pnpm harness verify --sprint p27/02 --feature F03`。
 
-## 本轮改动
+## 依赖门禁
 
-- 建立 Team 隔离下的 AI Store Skills 统一 UI、AVA Skill 执行和全链路兼容回归三个 feature。
-- 验证目标锚定新增 Skills/Team 隔离 E2E 与现有 P11 六条 AI Store E2E。
+- F01、F02 未 passing 时不得开始 F03 或 F04。
+- F04 可与 F03 在不同 owner 下并行，但仍必须先满足 F01/F02。
+- F04 首个测试为 `apps/web/e2e/ai-store-008-authoring-archive.spec.ts`，门控为 `pnpm harness verify --sprint p27/02 --feature F04`。
 
-## 仍损坏或未验证
+## 已知实现边界
 
-- Sprint p27/01 尚未实现，F03-F05 的前置依赖均未满足。
-- `./init.sh` 基础状态未证实；新增 E2E 文件尚不存在，这是后续 feature 的预期交付物。
-
-## 下一步最佳动作
-
-1. 等待 `pnpm harness verify --sprint p27/01` 证明 F01、F02 passing。
-2. 只领取 F03，并先写 `apps/web/e2e/ai-store-007-skills-unified-ui.spec.ts`。
-3. 完成 F03 后再按依赖顺序领取 F04、F05。
-
-## 命令
-
-- 启动:`pnpm -w run dev`
-- 验证:`pnpm harness verify --sprint p27/02`
-- UI 验收:`pnpm --filter @repo/web exec playwright test e2e/ai-store-007-skills-unified-ui.spec.ts`
+- Explore 包含所有认证用户可见的 BoardX approved 资源，但使用仍需订阅。
+- Create/Update 忽略客户端伪造 Team；Authorized editor 只能改内容。
+- Archive 只允许所有者，已有订阅显示不可用。

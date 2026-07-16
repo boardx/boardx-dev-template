@@ -1,18 +1,21 @@
-# 会话交接 — Sprint p27/06
+# 会话交接 - Sprint p27/06
 
-## 当前已验证
-- <哪些 feature 确认 passing,各自跑过的验证命令>
+## 首个工作
 
-## 本轮改动
-- <改了哪些代码 / 基础设施>
+- Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
+- 首个 Feature: F11 AVA, Template, Agent Builder, and recommendations。
+- Claim: `pnpm harness claim --phase p27 --feature F11 --owner <agent-id>`。
+- 首个失败测试: `apps/web/e2e/ava-ai-store-skills.spec.ts`。
+- F11 门控: `pnpm harness verify --sprint p27/06 --feature F11`。
 
-## 仍损坏或未验证
-- <已知问题、风险区、未跑的验证>
+## 依赖门禁
 
-## 下一步最佳动作
-- <下一轮从哪个 feature 开始;哪些东西不要动>
+- F07 未 passing 时不得开始 F11。
+- F12 依赖 F01-F11；任何前置 Feature 未 passing 都不得领取 F12。
+- F12 首个新增测试为 `apps/web/e2e/ai-store-014-legacy-compat.spec.ts`，门控为 `pnpm harness verify --sprint p27/06 --feature F12`。
 
-## 命令
-- 启动:`pnpm -w run dev`
-- 验证:`pnpm harness verify --sprint p27/06`
-- 调试:<填你的调试命令>
+## 已知实现边界
+
+- AVA 按 `skillKind` 保留真实 text/image 执行链，切 Team 清空旧选择。
+- Agent Builder 和 Template 输出归当前消费 Team。
+- F12 是最终兼容和基础回归门禁；只有它及全部前置 passing 后 coordinator 才能关闭 #662。

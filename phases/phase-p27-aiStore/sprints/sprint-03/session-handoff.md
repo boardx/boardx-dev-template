@@ -1,18 +1,21 @@
-# 会话交接 — Sprint p27/03
+# 会话交接 - Sprint p27/03
 
-## 当前已验证
-- <哪些 feature 确认 passing,各自跑过的验证命令>
+## 首个工作
 
-## 本轮改动
-- <改了哪些代码 / 基础设施>
+- Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
+- 首个 Feature: F05 Team review and featured lifecycle。
+- Claim: `pnpm harness claim --phase p27 --feature F05 --owner <agent-id>`。
+- 首个失败测试: `apps/web/e2e/ai-store-006-approval-featured.spec.ts`。
+- F05 门控: `pnpm harness verify --sprint p27/03 --feature F05`。
 
-## 仍损坏或未验证
-- <已知问题、风险区、未跑的验证>
+## 依赖门禁
 
-## 下一步最佳动作
-- <下一轮从哪个 feature 开始;哪些东西不要动>
+- F04 未 passing 时不得开始 F05。
+- F06 依赖 F05，必须在 Team 生命周期通过后开始。
+- F06 首个新增测试为 `apps/web/e2e/ai-store-009-live-approved-updates.spec.ts`，门控为 `pnpm harness verify --sprint p27/03 --feature F06`。
 
-## 命令
-- 启动:`pnpm -w run dev`
-- 验证:`pnpm harness verify --sprint p27/03`
-- 调试:<填你的调试命令>
+## 已知实现边界
+
+- Team/BoardX Featured 是独立状态。
+- 首次 BoardX 发布必须审核；approved 后内容编辑免复审并立即同步。
+- BoardX 撤回后保留订阅关系，但禁止新订阅和新执行。
