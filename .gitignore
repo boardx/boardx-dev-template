@@ -13,6 +13,9 @@ dist/
 
 # Next.js / 全栈骨架
 .next/
+# 构建损坏时把 .next 改名保留的现场（`.next.corrupt-<ts>/`）——`.next/` 盖不住它，
+# 曾有一坨 117MB 的残骸在主 checkout 里躺了几天没人认领
+.next.corrupt-*/
 *.tsbuildinfo
 
 # 本地环境与运行时态（派生，不入库）
