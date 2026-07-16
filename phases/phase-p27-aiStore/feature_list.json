@@ -89,9 +89,9 @@
       "area": "ai-store-team-review",
       "title": "Team review and featured lifecycle",
       "user_visible_behavior": "资源所有者可提交 Team 审核，来源 Team owner/admin 可批准、拒绝、撤回和设置 Team Featured；普通成员看不到管理动作且直接调用返回 403，其他 Team 管理员不能操作，published 内容后续编辑立即生效而不重新审核，非法状态转换返回 409。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "03",
-      "owner": null,
+      "owner": "codex-p27-ai-store-control-plane",
       "capability": "CAP-WEB",
       "depends_on": [
         "F04"
@@ -100,7 +100,7 @@
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/ai-store-006-approval-featured.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F05.verify.log @ 2026-07-16T10:21:28.458Z",
       "notes": "teamStatus=draft|pending|published|rejected；Team Featured 仅 published、未归档资源。"
     },
     {

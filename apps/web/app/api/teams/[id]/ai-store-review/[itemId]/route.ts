@@ -6,7 +6,12 @@
 // 还是"状态不允许"，避免探测团队内部数据。
 import { NextResponse } from "next/server";
 import { canManageTeam } from "@repo/auth";
-import { getMembership, reviewTeamAiStoreItem, type TeamAiStoreReviewAction } from "@repo/data";
+import {
+  getAiStoreItem,
+  getMembership,
+  reviewTeamAiStoreItem,
+  type TeamAiStoreReviewAction,
+} from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -37,7 +42,17 @@ export async function POST(req: Request, { params }: { params: { id: string; ite
     const action = actionRaw as TeamAiStoreReviewAction;
 
     const item = await reviewTeamAiStoreItem(itemId, teamId, action);
-    if (!item) return NextResponse.json({ error: "项目不存在或当前状态不支持该操作" }, { status: 404 });
+    if (!item) {
+      const existing = await getAiStoreItem(itemId);
+      if (
+        existing &&
+        existing.scope === "team" &&
+        String(existing.origin_team_id) === String(teamId)
+      ) {
+        return NextResponse.json({ error: "当前状态不支持该审核操作" }, { status: 409 });
+      }
+      return NextResponse.json({ error: "项目不存在或不属于该团队" }, { status: 404 });
+    }
 
     return NextResponse.json({ item });
   } catch (err) {
