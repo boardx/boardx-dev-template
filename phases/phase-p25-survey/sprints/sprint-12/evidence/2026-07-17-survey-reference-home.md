@@ -37,11 +37,11 @@ pnpm exec playwright test \
 
 ## Visual QA
 
-Screenshot: `survey-reference-home.png`
+Implementation screenshot: `survey-home-desktop-legacy.png`
 
-- Information architecture matches the reference.
-- Desktop density and content hierarchy match the reference.
 - Existing BoardX global rail remains intact.
 - Empty/new-account data is represented honestly with zero metrics.
+- The local HTML source has been parsed for structure and copy, but its rendered
+  reference image has not been captured into the same comparison input.
 
-Final result: passed.
+Final result: blocked pending a same-viewport reference/prototype comparison.

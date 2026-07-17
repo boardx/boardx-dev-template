@@ -454,7 +454,7 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
 
   if (data.responses.length === 0) {
     return (
-      <main className="mx-auto max-w-content px-9 py-7">
+      <main data-testid="survey-insight-report" className="mx-auto max-w-content px-9 py-7">
         <Button data-testid="back-to-survey-workspace" size="sm" variant="ghost" onClick={returnToSurveyWorkspace} className="mb-4 gap-1.5">
           <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
           {returnToEditor ? "返回问卷编辑" : "返回问卷列表"}
@@ -544,7 +544,8 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
   }
 
   return (
-    <main data-testid="survey-results-page" className="mx-auto max-w-content px-9 py-7">
+    <main data-testid="survey-insight-report" className="mx-auto max-w-content px-9 py-7">
+      <div data-testid="survey-results-page">
       <Button data-testid="back-to-survey-workspace" size="sm" variant="ghost" onClick={returnToSurveyWorkspace} className="mb-4 gap-1.5">
         <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
         {returnToEditor ? "返回问卷编辑" : "返回问卷列表"}
@@ -1056,6 +1057,7 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
           )}
         </section>
       )}
+      </div>
     </main>
   );
 }

@@ -16,8 +16,9 @@ test("BoardX Survey home matches the diagnostic workspace reference", async ({ p
   await expect(page.getByTestId("survey-source-sidebar")).toContainText("BoardX Survey");
   const navigation = page.getByRole("navigation", { name: "Survey navigation" });
   await expect(navigation).toContainText("主页");
-  await expect(navigation.locator("button")).toHaveCount(4);
-  await expect(navigation.locator("button svg")).toHaveCount(4);
+  await expect(navigation).toContainText("洞察报告");
+  await expect(navigation.locator("button")).toHaveCount(5);
+  await expect(navigation.locator("button svg")).toHaveCount(5);
   await expect(page.getByRole("heading", { name: /下午好|上午好|晚上好/ })).toBeVisible();
   await expect(page.getByTestId("survey-home-context")).toBeVisible();
   await expect(page.getByTestId("survey-home-metrics")).toBeVisible();
@@ -28,9 +29,11 @@ test("BoardX Survey home matches the diagnostic workspace reference", async ({ p
   await expect(page.getByTestId("survey-home-recent")).toBeVisible();
   await expect(page.getByTestId("ai-survey-command-center")).toHaveCount(0);
   await page.screenshot({
-    path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-reference-home.png",
+    path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-home-desktop.png",
     fullPage: true,
   });
+  await page.getByTestId("survey-home-method").getByRole("button", { name: "查看问卷" }).click();
+  await expect(page).toHaveURL(/\/surveys\?view=my/);
 });
 
 test("my surveys exposes all three reference creation paths", async ({ page }) => {
@@ -215,4 +218,22 @@ test("sidebar report templates opens a selected survey's report template workflo
   await expect(page).toHaveURL(new RegExp(`/surveys\\?survey=${survey.id}&step=template`));
   await expect(page.getByTestId("report-template-builder")).toBeVisible();
   await expect(page.getByTestId("template-editor-shell")).toHaveCount(0);
+});
+
+test("sidebar insight report opens the selected survey report", async ({ page }) => {
+  await register(page);
+  const created = await page.request.post("/api/surveys", {
+    data: {
+      title: "洞察报告入口问卷",
+      questions: [{ title: "你最关注哪个问题？", type: "text", required: true, options: [] }],
+    },
+  });
+  expect(created.status()).toBe(201);
+  const survey = (await created.json()).survey as { id: number };
+
+  await page.goto("/surveys");
+  await expect(page.getByTestId("survey-home-recent")).toContainText("洞察报告入口问卷");
+  await page.getByTestId("survey-nav-insights").click();
+  await expect(page).toHaveURL(new RegExp(`/surveys/${survey.id}/results`));
+  await expect(page.getByTestId("survey-insight-report")).toBeVisible();
 });

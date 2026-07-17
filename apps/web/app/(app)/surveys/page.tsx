@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import * as echarts from "echarts/core";
@@ -40,6 +40,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { ReportLayoutCanvas } from "@/components/survey/report-layout-canvas";
 import { ProfessionalReportDocument } from "@/components/survey/professional-report-document";
 import { SurveyAiPanel } from "@/components/survey/survey-ai-panel";
+import { SurveyHomeDashboard } from "@/components/survey/survey-home-dashboard";
+import { SurveyListScreen } from "@/components/survey/survey-list-screen";
 import { SurveyOutlinePanel } from "@/components/survey/survey-outline-panel";
 import { SurveyDesignWorkbench } from "@/components/survey/survey-design-workbench";
 import {
@@ -293,11 +295,6 @@ const STATUS_LABEL: Record<Survey["status"], string> = {
   paused: "暂停",
 };
 
-const surveyThemeStyle = {
-  "--primary": "262 74% 54%",
-  "--primary-foreground": "0 0% 100%",
-  "--ring": "262 74% 54%",
-} as CSSProperties;
 const AI_CREATE_FLOW_KEY = "survey-ai-create-flow";
 const LEGACY_DEFAULT_CATEGORIES = new Set([
   "user_info",
@@ -671,6 +668,7 @@ function WorkspaceShell({
     { id: "workspace", label: "我的问卷", icon: ClipboardList },
     { id: "templates", label: "问卷模板", icon: LayoutTemplate },
     { id: "reports", label: "报告模板", icon: BarChart3 },
+    { id: "insights", label: "洞察报告", icon: Eye },
   ];
   const workflowSteps: Array<{
     id: Exclude<WorkspaceTarget, "workspace">;
@@ -703,7 +701,7 @@ function WorkspaceShell({
     <div data-testid={inSurveyWorkflow ? "survey-workflow-shell" : undefined} className="min-h-full bg-secondary text-foreground">
       <div className={focusedMode ? "grid min-h-screen" : "grid min-h-screen lg:grid-cols-[280px_minmax(0,1fr)]"}>
         {!focusedMode ? (
-          <aside data-testid="survey-source-sidebar" className="border-r border-border bg-background px-6 py-7">
+          <aside data-testid="survey-source-sidebar" className="sticky top-0 flex h-screen flex-col border-r border-border bg-background px-4.5 py-5.5">
             <div className="flex items-center gap-3 px-1">
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-foreground text-background">
                 <ListChecks className="h-5 w-5" strokeWidth={1.7} />
@@ -714,7 +712,7 @@ function WorkspaceShell({
               </div>
             </div>
 
-            <nav aria-label="Survey navigation" className="mt-10 grid gap-1">
+            <nav aria-label="Survey navigation" className="mt-5 grid gap-1">
               {nav.map((item) => {
                 const Icon = item.icon;
                 const isActive =
@@ -723,9 +721,9 @@ function WorkspaceShell({
                   || (item.id === "home" && dashboardMode);
                 return (
                   <div key={item.id}>
-                    {(item.id === "home" || item.id === "templates") ? (
-                      <p className={`${item.id === "templates" ? "mt-7" : ""} mb-2 px-3 text-11 font-medium text-muted-foreground`}>
-                        {item.id === "home" ? "工作台" : "模板库"}
+                    {(item.id === "home" || item.id === "templates" || item.id === "insights") ? (
+                      <p className={`${item.id === "home" ? "" : "mt-7"} mb-2 px-3 text-11 font-medium text-muted-foreground`}>
+                        {item.id === "home" ? "工作台" : item.id === "templates" ? "模板库" : "参考"}
                       </p>
                     ) : null}
                   <Button
@@ -754,6 +752,12 @@ function WorkspaceShell({
                         onNavigate("template");
                         return;
                       }
+                      if (item.id === "insights") {
+                        window.location.href = currentSurvey
+                          ? `/surveys/${currentSurvey.id}/results`
+                          : "/surveys?view=my";
+                        return;
+                      }
                       onNavigate("workspace");
                     }}
                   >
@@ -766,6 +770,13 @@ function WorkspaceShell({
                 );
               })}
             </nav>
+            <div className="mt-auto rounded-lg border border-border bg-surface-1 p-3.5">
+              <div className="flex items-center gap-2 text-12 font-semibold text-foreground">
+                <Sparkles className="h-4 w-4 text-survey" strokeWidth={1.7} />
+                AI 助手默认开启
+              </div>
+              <p className="mt-1 text-12 leading-5 text-muted-foreground">新建问卷时可直接用对话生成第一版，再逐步迭代。</p>
+            </div>
           </aside>
         ) : null}
 
@@ -891,7 +902,7 @@ function WorkspaceShell({
             )}
           </header>}
 
-          <div className={inSurveyWorkflow ? "p-4" : "mx-auto w-full max-w-7xl px-6 py-8 lg:px-10"}>
+          <div className={inSurveyWorkflow ? "p-4" : ""}>
             {children}
           </div>
         </section>
@@ -1844,7 +1855,8 @@ function WorkspaceReportComposer({
           )}
         </main>
 
-        <aside data-testid="report-ai-assistant" className="order-3 min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
+        <aside data-testid="report-module-inspector" className="order-3 min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
+          <div data-testid="report-ai-assistant">
           <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
             <h3 className="text-14 font-bold text-foreground">设置</h3>
             <span className="text-12 text-muted-foreground">
@@ -2118,6 +2130,7 @@ function WorkspaceReportComposer({
           ) : (
             <p className="mt-3 text-13 text-muted-foreground">选择左侧分类后编辑设置。</p>
           )}
+          </div>
         </aside>
       </section>
 
@@ -5696,10 +5709,16 @@ export default function SurveysPage() {
   const activeSurveyCount = visibleSurveys.filter((survey) => survey.status === "active").length;
   const totalResponses = visibleSurveys.reduce((sum, survey) => sum + survey.responses, 0);
   const generatedReportCount = Object.keys(generatedReportsBySurveyId).length + Object.keys(professionalReportsBySurveyId).length;
+  const completionRate = null;
   const greeting = new Date().getHours() < 12 ? "上午好" : new Date().getHours() < 18 ? "下午好" : "晚上好";
   const builtInTemplates = templates.filter((template) => template.source === "built_in");
   const savedTemplates = templates.filter((template) => template.source === "saved");
   const allTemplates = [...savedTemplates, ...builtInTemplates];
+  const organizationName = teams[0]?.name ?? "个人工作区";
+  const organizationSummary = teams.length
+    ? `${teams.length} 个可用组织 · ${savedTemplates.length} 个自定义模板`
+    : `${visibleSurveys.length} 份个人问卷 · ${savedTemplates.length} 个自定义模板`;
+  const communityTemplate = builtInTemplates[0] ?? null;
   const templateCategories = Array.from(new Set(allTemplates.map((template) => template.category ?? "通用")));
   const templateListTags = Array.from(new Set(
     allTemplates.flatMap((template) => [
@@ -5957,7 +5976,7 @@ export default function SurveysPage() {
         onCreateBlank={() => openEditor()}
         onNavigate={(target) => void navigateWorkspace(target)}
       >
-        <div data-testid="survey-ai-create-shell" className="pb-8" style={surveyThemeStyle}>
+        <div data-testid="survey-ai-create-shell" className="pb-8">
         <div className="mb-4 rounded-lg border border-border bg-background">
           <div className="flex items-center gap-3 px-4 py-4">
             <Button
@@ -6276,8 +6295,8 @@ export default function SurveysPage() {
         onCreateBlank={() => openTemplateEditor()}
         onNavigate={(target) => void navigateWorkspace(target)}
       >
-      <div data-testid={isTemplateEditor ? "template-editor-shell" : "survey-editor-shell"} className="pb-8" style={surveyThemeStyle}>
-        <div className="mb-4 rounded-lg border border-border bg-background">
+      <div data-testid={isTemplateEditor ? "template-editor-shell" : "survey-editor-screen"} className="pb-8">
+        <div data-testid={isTemplateEditor ? undefined : "survey-editor-shell"} className="mb-4 rounded-lg border border-border bg-background">
           <div data-testid="editor-command-bar" className="flex flex-wrap items-center gap-3 px-4 py-4">
             <Button
               data-testid="back-to-list"
@@ -7482,7 +7501,7 @@ export default function SurveysPage() {
       currentSurvey={currentSurveyForNavigation}
       workflowMode={workspaceView !== "workspace"}
       templateLibraryMode={workbenchTab === "templates"}
-      hideHeader={workbenchTab === "home"}
+      hideHeader={workspaceView === "workspace"}
       onCreateWithAi={openCreateChooser}
       onCreateFromScene={() => void navigateWorkspace("template")}
       onCreateBlank={() => (workbenchTab === "templates" ? openTemplateEditor() : openCreateChooser())}
@@ -7494,33 +7513,35 @@ export default function SurveysPage() {
           survey={currentSurveyForNavigation}
           designContent={
             currentSurveyForNavigation ? (
-              <SurveyDesignWorkbench
-                survey={currentSurveyForNavigation}
-                title={title || currentSurveyForNavigation.title}
-                description={description || currentSurveyForNavigation.description}
-                questions={questions}
-                categories={categories}
-                saving={saving}
-                saveError={saveError}
-                actionMessage={editorActionMessage}
-                onTitleChange={setTitle}
-                onDescriptionChange={setDescription}
-                patchQuestion={patchQuestion}
-                changeQuestionType={changeQuestionType}
-                setQuestionCategory={setQuestionCategory}
-                moveQuestion={moveQuestion}
-                removeQuestion={removeQuestion}
-                addQuestion={() => setQuestions((qs) => [...qs, newQuestion()])}
-                addOption={addOption}
-                patchOption={patchOption}
-                onSave={() => void saveWorkspaceDesign()}
-                onOpenAi={() => void openSelectedSurveyEditor("questions", { withAi: true })}
-                onOpenAnswer={openSelectedSurveyAnswer}
-                onOpenTemplate={() => void navigateWorkspace("template")}
-                typeLabel={TYPE_LABEL}
-                typeGroups={TYPE_GROUPS}
-                choiceTypes={CHOICE_TYPES}
-              />
+              <div data-testid="survey-editor-screen">
+                <SurveyDesignWorkbench
+                  survey={currentSurveyForNavigation}
+                  title={title || currentSurveyForNavigation.title}
+                  description={description || currentSurveyForNavigation.description}
+                  questions={questions}
+                  categories={categories}
+                  saving={saving}
+                  saveError={saveError}
+                  actionMessage={editorActionMessage}
+                  onTitleChange={setTitle}
+                  onDescriptionChange={setDescription}
+                  patchQuestion={patchQuestion}
+                  changeQuestionType={changeQuestionType}
+                  setQuestionCategory={setQuestionCategory}
+                  moveQuestion={moveQuestion}
+                  removeQuestion={removeQuestion}
+                  addQuestion={() => setQuestions((qs) => [...qs, newQuestion()])}
+                  addOption={addOption}
+                  patchOption={patchOption}
+                  onSave={() => void saveWorkspaceDesign()}
+                  onOpenAi={() => void openSelectedSurveyEditor("questions", { withAi: true })}
+                  onOpenAnswer={openSelectedSurveyAnswer}
+                  onOpenTemplate={() => void navigateWorkspace("template")}
+                  typeLabel={TYPE_LABEL}
+                  typeGroups={TYPE_GROUPS}
+                  choiceTypes={CHOICE_TYPES}
+                />
+              </div>
             ) : undefined
           }
           templateContent={
@@ -7604,95 +7625,58 @@ export default function SurveysPage() {
       ) : (
       <div data-testid="survey-professional-dashboard" className="grid gap-4">
         {workbenchTab === "home" ? (
-          <div data-testid="survey-diagnostic-home" className="mx-auto grid w-full max-w-6xl gap-8">
-            <section className="flex flex-wrap items-start justify-between gap-5">
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">{greeting}，Yiran</h1>
-                <p className="mt-2 text-14 text-muted-foreground">从诊断问卷到洞察报告，在一个工作台完成。</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button data-testid="create-with-ai" type="button" onClick={openCreateChooser} className="h-11 gap-2 rounded-xl bg-foreground px-5 text-background hover:bg-foreground/90">
-                  <Plus className="h-4 w-4" />
-                  新建问卷
-                </Button>
-                <Button type="button" variant="outline" onClick={() => { window.location.href = "/surveys?view=templates"; }} className="h-11 rounded-xl px-5">
-                  浏览模板
-                </Button>
-              </div>
-            </section>
-
-            <section>
-              <div data-testid="survey-home-metrics" className="rounded-2xl border border-border bg-background p-7">
-                <p className="text-13 font-semibold text-muted-foreground">我的工作台</p>
-                <div className="mt-6 grid grid-cols-2 gap-6 sm:grid-cols-4">
-                  {[
-                    [String(activeSurveyCount), "进行中问卷"],
-                    [String(totalResponses), "累计回收"],
-                    [String(generatedReportCount), "生成报告"],
-                    [totalResponses ? "78%" : "0%", "平均完成率"],
-                  ].map(([value, label], index) => (
-                    <div key={label}>
-                      <p className={index === 3 ? "text-3xl font-bold text-violet-600" : "text-3xl font-bold text-foreground"}>{value}</p>
-                      <p className="mt-1 text-12 text-muted-foreground">{label}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            <section data-testid="survey-home-templates">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-17 font-bold text-foreground">为你推荐的诊断模板</h2>
-                <Button type="button" variant="ghost" size="sm" onClick={() => { window.location.href = "/surveys?view=templates"; }} className="px-0 text-violet-600 hover:bg-transparent hover:text-violet-600 hover:underline">全部模板 →</Button>
-              </div>
-              <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {allTemplates.slice(0, 4).map((template) => (
-                  <Button key={template.id} type="button" variant="outline" onClick={() => openTemplateEditor(template)} className="h-auto min-h-40 items-start justify-start whitespace-normal rounded-2xl border-border bg-background p-5 text-left font-normal transition-all hover:-translate-y-0.5 hover:border-violet-300 hover:bg-background hover:shadow-sm">
-                    <span className="block w-full">
-                    <Badge variant="muted">{template.category ?? "诊断模板"}</Badge>
-                    <h3 className="mt-4 line-clamp-2 text-15 font-bold text-foreground">{template.name}</h3>
-                    <p className="mt-8 text-12 text-muted-foreground">{template.questions.length} 题 · {template.estimatedMinutes ?? 5} min</p>
-                    </span>
-                  </Button>
-                ))}
-              </div>
-            </section>
-
-            <section data-testid="survey-home-recent">
-              <h2 className="text-17 font-bold text-foreground">最近问卷</h2>
-              <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-background">
-                {visibleSurveys.slice(0, 4).length ? visibleSurveys.slice(0, 4).map((survey) => (
-                  <div key={survey.id} className="grid gap-4 border-b border-border px-6 py-5 last:border-b-0 md:grid-cols-[minmax(0,1fr)_120px_220px_auto] md:items-center">
-                    <div className="min-w-0">
-                      <h3 className="truncate text-14 font-bold text-foreground">{survey.title}</h3>
-                      <p className="mt-1 truncate text-12 text-muted-foreground">{survey.description || `诊断项目 · ${formatUpdated(survey.updatedAt)}`}</p>
-                    </div>
-                    <Badge variant="muted" className="w-fit">{STATUS_LABEL[survey.status]}</Badge>
-                    <div>
-                      <p className="text-12 text-muted-foreground">{survey.responses ? `${survey.responses} 份答卷` : "未发布"}</p>
-                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                        <div className="h-full rounded-full bg-violet-600" style={{ width: `${Math.min(100, survey.responses)}%` }} />
-                      </div>
-                    </div>
-                    <Button type="button" size="sm" variant="outline" onClick={() => void selectSurveyForWorkspace(survey.id, survey.responses ? "report" : "design")}>
-                      {survey.responses ? "查看报告" : "继续编辑"}
-                    </Button>
-                  </div>
-                )) : (
-                  <div className="p-8 text-center text-13 text-muted-foreground">还没有最近问卷，从新建问卷或模板开始。</div>
-                )}
-              </div>
-            </section>
-          </div>
+          <SurveyHomeDashboard
+            greeting={greeting}
+            activeSurveyCount={activeSurveyCount}
+            totalResponses={totalResponses}
+            generatedReportCount={generatedReportCount}
+            completionRate={completionRate}
+            organizationName={organizationName}
+            organizationSummary={organizationSummary}
+            communityTemplateName={communityTemplate?.name ?? null}
+            communityTemplateSummary={communityTemplate
+              ? `${communityTemplate.questions.length} 题 · 预计 ${communityTemplate.estimatedMinutes ?? 3} 分钟`
+              : "模板中心尚无系统模板"}
+            templates={allTemplates.slice(0, 4).map((template) => ({
+              id: template.id,
+              category: template.category ?? "诊断模板",
+              name: template.name,
+              questionCount: template.questions.length,
+              estimatedMinutes: template.estimatedMinutes ?? 3,
+            }))}
+            recentSurveys={visibleSurveys.slice(0, 4).map((survey) => ({
+              id: survey.id,
+              title: survey.title,
+              description: survey.description,
+              status: survey.status,
+              statusLabel: STATUS_LABEL[survey.status],
+              responseCount: survey.responses,
+              responseLimit: survey.responseLimit,
+              updatedLabel: formatUpdated(survey.updatedAt),
+            }))}
+            onCreate={openCreateChooser}
+            onBrowseTemplates={() => {
+              window.location.href = "/surveys?view=templates";
+            }}
+            onBrowseSurveys={() => {
+              window.location.href = "/surveys?view=my";
+            }}
+            onUseTemplate={(templateId) => {
+              const template = allTemplates.find((item) => item.id === templateId);
+              if (template) openEditor({ template });
+            }}
+            onOpenSurvey={(surveyId, target) => void selectSurveyForWorkspace(surveyId, target)}
+          />
         ) : workbenchTab === "templates" ? (
-          <section data-testid="templates-workbench" className="grid gap-4">
+          <section data-testid="templates-workbench" className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-8 sm:px-6 lg:px-10 lg:py-9">
             {loading ? (
               <div className="rounded-lg border border-border bg-background p-4">
                 <SurveySkeleton />
               </div>
             ) : (
               <>
-                <section data-testid="diagnostic-template-center" className="overflow-hidden rounded-2xl border border-border bg-background">
+                <section data-testid="survey-template-center" className="overflow-hidden">
+                <section data-testid="diagnostic-template-center" className="overflow-hidden rounded-lg border border-border bg-background">
                   <div className="border-b border-border px-7 py-7">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
@@ -7701,8 +7685,8 @@ export default function SurveysPage() {
                           问卷模板与配套报告模板成对管理，回收完成后可自动生成洞察。
                         </p>
                       </div>
-                      <Button type="button" size="sm" onClick={() => openTemplateEditor()} className="h-10 rounded-xl bg-violet-600 px-4 text-white hover:bg-violet-700">
-                        <Plus className="h-4 w-4" />
+                      <Button type="button" size="sm" onClick={() => openTemplateEditor()} className="h-10 px-4">
+                        <Plus className="h-4 w-4" strokeWidth={1.7} />
                         手工新建
                       </Button>
                     </div>
@@ -7743,7 +7727,7 @@ export default function SurveysPage() {
                         <section
                           key={`${template.source}-${template.id}`}
                           data-testid={`template-card-${template.id}`}
-                          className="flex min-h-64 flex-col rounded-2xl border border-border bg-background p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-sm"
+                          className="flex min-h-64 flex-col rounded-lg border border-border bg-background p-6 transition-colors duration-200 hover:border-survey"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex flex-wrap gap-2">
@@ -7767,7 +7751,7 @@ export default function SurveysPage() {
                               ))}
                             </div>
                           )}
-                          <p className="mt-4 rounded-xl bg-secondary p-4 text-12 leading-5 text-muted-foreground">
+                          <p className="mt-4 rounded-lg bg-secondary p-4 text-12 leading-5 text-muted-foreground">
                             {template.reportTemplate
                               ? `${template.reportTemplate.title} · ${template.reportTemplate.sections.length} 个报告章节`
                               : "使用后可在报告模板中配置诊断章节。"}
@@ -7828,6 +7812,7 @@ export default function SurveysPage() {
                     </div>
                   )}
                 </section>
+                </section>
 
                 {templateMessage && (
                   <p data-testid="template-saved" className="rounded-lg border border-border bg-background px-4 py-3 text-12 text-muted-foreground">
@@ -7838,115 +7823,28 @@ export default function SurveysPage() {
             )}
           </section>
         ) : (
-          <>
-            <section data-testid="survey-operations-list" className="overflow-hidden rounded-2xl border border-border bg-background">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-6 py-5">
-                <div>
-                  <h2 className="text-18 font-bold text-foreground">我的问卷</h2>
-                  <p className="text-13 text-muted-foreground">每份问卷只显示当前状态和最常用下一步。</p>
-                </div>
-              </div>
-
-              {error && (
-                <p role="alert" data-testid="err-surveys" className="px-4 py-3 text-13 text-destructive">
-                  {error}
-                </p>
-              )}
-
-              {loading ? (
-                <div className="p-4">
-                  <SurveySkeleton />
-                </div>
-              ) : visibleSurveys.length === 0 ? (
-                <div
-                  data-testid="empty"
-                  className="m-4 flex flex-col items-center gap-3 rounded-lg border border-dashed border-border-strong bg-card px-6 py-12 text-center"
-                >
-                  <p className="text-15 font-semibold text-foreground">还没有问卷</p>
-                  <p className="max-w-md text-13 leading-6 text-muted-foreground">
-                    创建后可以在这里查看状态、编辑问题、发布回收和生成报告。
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    <Button
-                      data-testid="empty-new-survey"
-                      size="sm"
-                      onClick={openCreateChooser}
-                      className="gap-1.5 bg-foreground text-background hover:bg-foreground/90 hover:text-background"
-                    >
-                      <Plus className="h-4 w-4" strokeWidth={1.5} />
-                      创建问卷
-                    </Button>
-                    <Button data-testid="empty-create-with-ai" size="sm" variant="outline" onClick={openCreateChooser} className="gap-1.5">
-                      <Sparkles className="h-4 w-4" strokeWidth={1.5} />
-                      AI 创建
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div data-testid="survey-list">
-                  {visibleSurveys.map((s) => {
-                    const reportPlan = inferReportPlan(s);
-                    return (
-                      <section key={s.id} data-testid={`survey-${s.id}`} className="border-b border-border bg-background px-6 py-5 transition-colors last:border-b-0 hover:bg-secondary">
-                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge data-testid={`survey-status-${s.id}`} variant="outline" className={statusBadgeClass(s.status)}>
-                                {STATUS_LABEL[s.status]}
-                              </Badge>
-                              <span className="text-12 text-muted-foreground">{formatUpdated(s.updatedAt)}</span>
-                            </div>
-                            <h3 data-testid={`survey-title-${s.id}`} className="mt-3 truncate text-17 font-bold text-foreground">
-                              {s.title}
-                            </h3>
-                            {s.description && (
-                              <p className="mt-1 line-clamp-2 text-13 leading-6 text-muted-foreground">{s.description}</p>
-                            )}
-                          </div>
-                          <div className="grid gap-3 sm:grid-cols-2 lg:w-96">
-                            <div className="rounded-lg border border-border bg-background px-3 py-2">
-                              <p className="text-12 text-muted-foreground">答卷</p>
-                              <p data-testid={`survey-responses-${s.id}`} className="mt-1 text-18 font-bold text-foreground">{s.responses}</p>
-                            </div>
-                            <div className="rounded-lg border border-border bg-background px-3 py-2">
-                              <p className="text-12 text-muted-foreground">报告规划</p>
-                              <p className="mt-1 truncate text-13 font-semibold text-foreground">{reportPlan.name}</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className={currentSurveyId === s.id ? "border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background" : ""}
-                            onClick={() => void selectSurveyForWorkspace(s.id)}
-                          >
-                            选择
-                          </Button>
-                          <Button data-testid={`open-workspace-${s.id}`} type="button" size="sm" variant="outline" onClick={() => void selectSurveyForWorkspace(s.id, "design")}>
-                            设计
-                          </Button>
-                          <Button type="button" size="sm" variant="outline" onClick={() => void selectSurveyForWorkspace(s.id, "template")}>
-                            模块
-                          </Button>
-                          <Button type="button" size="sm" variant="outline" onClick={() => void selectSurveyForWorkspace(s.id, "collect")}>
-                            发布
-                          </Button>
-                          <Button type="button" size="sm" variant="outline" onClick={() => void selectSurveyForWorkspace(s.id, "answer")}>
-                            答题
-                          </Button>
-                          <Button type="button" size="sm" variant="outline" onClick={() => void selectSurveyForWorkspace(s.id, "report")}>
-                            报告
-                          </Button>
-                        </div>
-                      </section>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-          </>
+          <SurveyListScreen
+            loading={loading}
+            error={error}
+            surveys={visibleSurveys.map((survey) => ({
+              id: survey.id,
+              title: survey.title,
+              description: survey.description,
+              status: survey.status,
+              statusLabel: STATUS_LABEL[survey.status],
+              responseCount: survey.responses,
+              responseLimit: survey.responseLimit,
+              updatedLabel: formatUpdated(survey.updatedAt),
+            }))}
+            onOpenCreateChooser={openCreateChooser}
+            onCreateWithAi={createWithAiFromChooser}
+            onCreateFromTemplate={createFromTemplateChooser}
+            onCreateBlank={createBlankFromChooser}
+            onOpenSurvey={(surveyId) => {
+              const survey = visibleSurveys.find((item) => item.id === surveyId);
+              void selectSurveyForWorkspace(surveyId, survey?.responses ? "report" : "design");
+            }}
+          />
         )}
 
         <Dialog
@@ -7962,9 +7860,9 @@ export default function SurveysPage() {
               type="button"
               variant="outline"
               onClick={createWithAiFromChooser}
-              className="h-auto min-h-40 items-start justify-start gap-3 border-violet-200 bg-violet-50/40 px-5 py-5 text-left transition-all duration-200 hover:border-violet-400 hover:bg-violet-50"
+              className="h-auto min-h-40 items-start justify-start gap-3 border-survey/30 bg-tag-purple/30 px-5 py-5 text-left transition-colors duration-200 hover:border-survey hover:bg-tag-purple/50"
             >
-              <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" strokeWidth={1.6} />
+              <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-survey" strokeWidth={1.6} />
               <span>
                 <span className="block text-15 font-semibold">AI 对话生成</span>
                 <span className="mt-2 block text-12 font-normal leading-5 text-muted-foreground">描述目标和受访者，AI 生成第一版后继续迭代。</span>

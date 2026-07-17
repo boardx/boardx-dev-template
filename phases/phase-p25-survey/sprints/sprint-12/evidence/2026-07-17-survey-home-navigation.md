@@ -21,6 +21,5 @@ git diff --check
 ```
 
 ## 证据文件
-- `survey-reference-home.png`
+- `survey-home-desktop-legacy.png`（该轮实现截图，不是参考源截图）
 - `apps/web/e2e/survey-p25-008-source-stash-ui.spec.ts`
-

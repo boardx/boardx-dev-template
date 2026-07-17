@@ -55,8 +55,13 @@ test("survey workspace restores every source workflow step from the URL", async 
   await expect(page.getByTestId("workspace-answer-link")).toHaveAttribute("href", `/survey/${survey.id}/answer`);
   await page.getByTestId("workflow-report").click();
   await expect(page.getByTestId("workspace-report-link")).toHaveAttribute("href", `/surveys/${survey.id}/results`);
+});
 
+test("insight report exposes the reference screen root", async ({ page }) => {
+  await register(page);
+  const survey = await createSurvey(page);
   await page.goto(`/surveys/${survey.id}/results`);
+
   await expect(page.getByTestId("survey-insight-report")).toBeVisible();
 });
 
