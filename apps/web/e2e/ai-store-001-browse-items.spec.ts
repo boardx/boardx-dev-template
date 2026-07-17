@@ -3,9 +3,12 @@ import { test, expect } from "@playwright/test";
 const uniq = () => `as_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 
 async function register(page: import("@playwright/test").Page) {
-  await page.request.post("/api/auth/register", {
+  expect((await page.request.post("/api/auth/register", {
     data: { firstName: "A", lastName: "B", email: uniq(), password: "secret123", agreeTerms: true },
-  });
+  })).status()).toBe(201);
+  expect((await page.request.post("/api/teams", {
+    data: { name: `Browse Test Team ${Date.now()}` },
+  })).status()).toBe(201);
 }
 
 test("未登录访问 /ai-store 重定向到 /login", async ({ page }) => {
@@ -27,8 +30,7 @@ test("登录后浏览：submenu 分类 + 内容网格", async ({ page }) => {
   // 右侧内容网格（默认 Explore）
   await expect(page.getByTestId("item-grid")).toBeVisible();
   await expect(page.getByTestId("type-tabs")).toBeVisible();
-  // 样本含 Research Agent
-  await expect(page.getByTestId("item-grid")).toContainText("Research Agent");
+  await expect(page.getByTestId("result-count")).not.toHaveText("0 results");
 });
 
 test("类型筛选只显示该类型，并在页面上下文生效", async ({ page }) => {
@@ -61,7 +63,7 @@ test("输入后立即按 Enter 使用当前搜索词刷新网格", async ({ page
   await page.goto("/ai-store");
   const grid = page.getByTestId("item-grid");
   await expect(grid).toBeVisible();
-  await expect(grid).toContainText("Research Agent");
+  const initialGridText = await grid.textContent();
 
   // 已实测排除两种看似合理但实际测不出回归的写法：
   //   1) pressSequentially(text) 后单独再 .press("Enter")：两次调用之间有独立的
@@ -128,7 +130,7 @@ test("输入后立即按 Enter 使用当前搜索词刷新网格", async ({ page
   await expect(search).toHaveValue("Translat");
   // sanity：光打到 "Translat"（还没追加最后一个字符、还没按 Enter）不该已经刷新网格，
   // 确保下面的断言真的是由 appendCharAndEnterBeforeReactFlush 触发的搜索，而不是巧合。
-  await expect(grid).toContainText("Research Agent");
+  await expect(grid).toHaveText(initialGridText ?? "");
 
   await appendCharAndEnterBeforeReactFlush("store-search", "9");
   // 新实现（e.currentTarget.value，读到完整的 "Translat9"）：零命中 → 空态。
@@ -179,33 +181,38 @@ test("未登录调用 GET /api/ai-store/items 返回未授权", async ({ page, r
   expect(res.status()).toBe(401);
 });
 
-test("分页：种子数据超过一页时显示分页控件，翻页后内容更新", async ({ page }) => {
+test("分页：数据超过一页时显示分页控件，翻页后内容更新", async ({ page }) => {
   await register(page);
   await page.goto("/ai-store");
   await expect(page.getByTestId("item-grid")).toBeVisible();
 
-  // 12 条种子数据、默认 pageSize=9 → 应有 2 页。
-  await expect(page.getByTestId("result-count")).toContainText("12");
+  const total = Number((await page.getByTestId("result-count").textContent())?.match(/\d+/)?.[0] ?? 0);
+  expect(total).toBeGreaterThan(9);
   await expect(page.getByTestId("pagination")).toBeVisible();
-  await expect(page.getByTestId("page-indicator")).toContainText("Page 1 / 2");
+  const indicator = page.getByTestId("page-indicator");
+  const totalPages = Number((await indicator.textContent())?.match(/\/\s*(\d+)/)?.[1] ?? 0);
+  expect(totalPages).toBeGreaterThan(1);
+  await expect(indicator).toContainText(`Page 1 / ${totalPages}`);
   await expect(page.getByTestId("page-prev")).toBeDisabled();
 
   const firstPageText = await page.getByTestId("item-grid").textContent();
 
   await page.getByTestId("page-next").click();
-  await expect(page.getByTestId("page-indicator")).toContainText("Page 2 / 2");
-  await expect(page.getByTestId("page-next")).toBeDisabled();
+  await expect(indicator).toContainText(`Page 2 / ${totalPages}`);
   const secondPageText = await page.getByTestId("item-grid").textContent();
   expect(secondPageText).not.toBe(firstPageText);
 
   await page.getByTestId("page-prev").click();
-  await expect(page.getByTestId("page-indicator")).toContainText("Page 1 / 2");
+  await expect(indicator).toContainText(`Page 1 / ${totalPages}`);
 });
 
 test("点卡片打开详情弹窗：展示描述/示例/统计/订阅入口，可关闭", async ({ page }) => {
   await register(page);
   await page.goto("/ai-store");
   await expect(page.getByTestId("item-grid")).toBeVisible();
+
+  await page.getByTestId("store-search").fill("Research Agent");
+  await page.getByTestId("store-search").press("Enter");
 
   const card = page.getByTestId("item-grid").locator('article:has-text("Research Agent")');
   await card.click();

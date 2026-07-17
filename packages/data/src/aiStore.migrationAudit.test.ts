@@ -9,6 +9,12 @@ const migrationPath = join(
   "migrations",
   "039_ai_store_team_tenancy.sql",
 );
+const platformRecoveryMigrationPath = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "migrations",
+  "047_ai_store_platform_team_recovery.sql",
+);
 
 describe("AI Store Team migration audit", () => {
   it("backfills only an existing Team or an owner's unique Team", () => {
@@ -38,5 +44,17 @@ describe("AI Store Team migration audit", () => {
     expect(sql).toContain("ON CONFLICT");
     expect(sql).toContain("origin_team_id IS NOT NULL OR migration_quarantined_at IS NOT NULL");
     expect(sql).toContain("consumer_team_id IS NOT NULL OR migration_quarantined_at IS NOT NULL");
+  });
+
+  it("recovers only quarantined platform resources into an explicit BoardX system Team", () => {
+    const sql = readFileSync(platformRecoveryMigrationPath, "utf8");
+
+    expect(sql).toContain("ai-store-system@boardx.internal");
+    expect(sql).toContain("BoardX AI Store");
+    expect(sql).toContain("scope = 'platform'");
+    expect(sql).toContain("migration_quarantined_at IS NOT NULL");
+    expect(sql).toContain("migration_quarantined_at = NULL");
+    expect(sql).toContain("origin_team_id = system_team.id");
+    expect(sql).not.toMatch(/DELETE\s+FROM\s+ai_store_/i);
   });
 });
