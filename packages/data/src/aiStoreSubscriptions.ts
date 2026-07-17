@@ -18,6 +18,16 @@ export interface AiStoreSubscription {
   created_at: string;
 }
 
+export interface AiStoreSubscriptionResult {
+  subscription: AiStoreSubscription;
+  created: boolean;
+}
+
+export interface AiStoreSubscriptionAvailability {
+  personal: AiStoreSubscription | null;
+  team: AiStoreSubscription | null;
+}
+
 const SUB_COLS =
   "id, item_id, subscriber_user_id, consumer_team_id, consumer_team_id AS team_id, scope, migration_quarantined_at, created_at";
 
@@ -30,26 +40,29 @@ export async function subscribeAiStoreItem(params: {
   subscriberUserId: number;
   scope: AiStoreSubscriptionScope;
   consumerTeamId: number;
-}): Promise<AiStoreSubscription> {
+}): Promise<AiStoreSubscriptionResult> {
+  const conflictTarget = params.scope === "team"
+    ? "(item_id, consumer_team_id) WHERE scope = 'team' AND migration_quarantined_at IS NULL"
+    : "(item_id, subscriber_user_id, consumer_team_id) WHERE scope = 'personal' AND migration_quarantined_at IS NULL";
   const inserted = await query<AiStoreSubscription>(
     `INSERT INTO ai_store_subscriptions (item_id, subscriber_user_id, consumer_team_id, scope)
      VALUES ($1, $2, $3, $4)
-     ON CONFLICT (item_id, subscriber_user_id, consumer_team_id, scope)
-       WHERE migration_quarantined_at IS NULL
+     ON CONFLICT ${conflictTarget}
      DO NOTHING
      RETURNING ${SUB_COLS}`,
     [params.itemId, params.subscriberUserId, params.consumerTeamId, params.scope]
   );
-  if (inserted[0]) return inserted[0];
+  if (inserted[0]) return { subscription: inserted[0], created: true };
 
   const existing = await query<AiStoreSubscription>(
     `SELECT ${SUB_COLS} FROM ai_store_subscriptions
-     WHERE item_id = $1 AND subscriber_user_id = $2
+     WHERE item_id = $1
        AND consumer_team_id = $3 AND scope = $4
+       AND ($4 = 'team' OR subscriber_user_id = $2)
        AND migration_quarantined_at IS NULL`,
     [params.itemId, params.subscriberUserId, params.consumerTeamId, params.scope]
   );
-  return existing[0]!;
+  return { subscription: existing[0]!, created: false };
 }
 
 /**
@@ -59,19 +72,37 @@ export async function unsubscribeAiStoreItem(params: {
   itemId: number;
   subscriberUserId: number;
   consumerTeamId: number;
+  scope: AiStoreSubscriptionScope;
 }): Promise<boolean> {
-  const existing = await getAiStoreSubscription({
-    itemId: params.itemId,
-    subscriberUserId: params.subscriberUserId,
-    consumerTeamId: params.consumerTeamId,
-  });
-  if (!existing) return false;
-
   const rows = await query<{ id: number }>(
-    `DELETE FROM ai_store_subscriptions WHERE id = $1 RETURNING id`,
-    [existing.id]
+    `DELETE FROM ai_store_subscriptions
+     WHERE item_id = $1 AND consumer_team_id = $3 AND scope = $4
+       AND ($4 = 'team' OR subscriber_user_id = $2)
+       AND migration_quarantined_at IS NULL
+     RETURNING id`,
+    [params.itemId, params.subscriberUserId, params.consumerTeamId, params.scope]
   );
   return rows.length > 0;
+}
+
+/** Return both scopes available to this user in the current consumer Team. */
+export async function getAiStoreSubscriptionAvailability(params: {
+  itemId: number;
+  subscriberUserId: number;
+  consumerTeamId: number;
+}): Promise<AiStoreSubscriptionAvailability> {
+  const rows = await query<AiStoreSubscription>(
+    `SELECT ${SUB_COLS} FROM ai_store_subscriptions
+     WHERE item_id = $1 AND consumer_team_id = $3
+       AND ((scope = 'personal' AND subscriber_user_id = $2) OR scope = 'team')
+       AND migration_quarantined_at IS NULL
+     ORDER BY (scope = 'team') DESC`,
+    [params.itemId, params.subscriberUserId, params.consumerTeamId]
+  );
+  return {
+    personal: rows.find((row) => row.scope === "personal") ?? null,
+    team: rows.find((row) => row.scope === "team") ?? null,
+  };
 }
 
 /** 当前用户在当前团队上下文下，对某项目是否已订阅（个人订阅或该团队的团队订阅）。 */
@@ -80,16 +111,23 @@ export async function getAiStoreSubscription(params: {
   subscriberUserId: number;
   consumerTeamId: number;
 }): Promise<AiStoreSubscription | undefined> {
-  const rows = await query<AiStoreSubscription>(
+  const availability = await getAiStoreSubscriptionAvailability(params);
+  return availability.team ?? availability.personal ?? undefined;
+}
+
+/** Rows that make resources available to a user in the current consumer Team. */
+export async function listAiStoreSubscriptions(params: {
+  subscriberUserId: number;
+  consumerTeamId: number;
+}): Promise<AiStoreSubscription[]> {
+  return query<AiStoreSubscription>(
     `SELECT ${SUB_COLS} FROM ai_store_subscriptions
-     WHERE item_id = $1 AND subscriber_user_id = $2
-       AND consumer_team_id = $3
+     WHERE consumer_team_id = $2
+       AND ((scope = 'personal' AND subscriber_user_id = $1) OR scope = 'team')
        AND migration_quarantined_at IS NULL
-     ORDER BY (scope = 'team') DESC
-     LIMIT 1`,
-    [params.itemId, params.subscriberUserId, params.consumerTeamId]
+     ORDER BY created_at DESC`,
+    [params.subscriberUserId, params.consumerTeamId]
   );
-  return rows[0];
 }
 
 /** 「已订阅」列表：当前用户的个人订阅 + 当前团队的团队订阅所命中的项目 id 集合。 */
@@ -97,14 +135,8 @@ export async function listSubscribedAiStoreItemIds(params: {
   subscriberUserId: number;
   consumerTeamId: number;
 }): Promise<number[]> {
-  const rows = await query<{ item_id: number }>(
-    `SELECT DISTINCT item_id FROM ai_store_subscriptions
-     WHERE subscriber_user_id = $1
-       AND consumer_team_id = $2
-       AND migration_quarantined_at IS NULL`,
-    [params.subscriberUserId, params.consumerTeamId]
-  );
-  return rows.map((r) => r.item_id);
+  const rows = await listAiStoreSubscriptions(params);
+  return [...new Set(rows.map((row) => Number(row.item_id)))];
 }
 
 /** 判断某 scope 的订阅是否被允许：只有已发布（published）项目才可订阅（草稿/待审/下架不可）。 */

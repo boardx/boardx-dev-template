@@ -10,7 +10,7 @@ import {
   listAuthorizedAiStoreItems,
   listFavoritedAiStoreItemIds,
   listOwnedAiStoreItems,
-  listSubscribedAiStoreItemIds,
+  listAiStoreSubscriptions,
   type AiStoreItemType,
 } from "@repo/data";
 import { currentUser } from "@/lib/session";
@@ -45,21 +45,34 @@ export async function GET(req: Request) {
   }
 
   if (url.searchParams.get("subscribed") === "me") {
-    const ids = await listSubscribedAiStoreItemIds({
+    const subscriptions = await listAiStoreSubscriptions({
       subscriberUserId: user.id,
       consumerTeamId: teamId,
     });
+    const ids = [...new Set(subscriptions.map((subscription) => Number(subscription.item_id)))];
+    const scopesByItem = new Map<number, Set<string>>();
+    for (const subscription of subscriptions) {
+      const itemId = Number(subscription.item_id);
+      const scopes = scopesByItem.get(itemId) ?? new Set<string>();
+      scopes.add(subscription.scope);
+      scopesByItem.set(itemId, scopes);
+    }
     const items = (await Promise.all(ids.map((id) => getAiStoreItemForSubscription(id)))).filter(
       (it): it is NonNullable<typeof it> => Boolean(it)
     ).map((it) => ({
       ...it,
+      subscriptionScopes: [...(scopesByItem.get(Number(it.id)) ?? [])],
       unavailable:
         it.archived_at != null ||
         (it.scope === "platform"
           ? it.status !== "approved" && it.status !== "published"
           : it.status !== "published"),
     }));
-    return NextResponse.json({ items });
+    const role = await getMembership(teamId, user.id);
+    return NextResponse.json({
+      items,
+      canManageTeam: role === "owner" || role === "admin",
+    });
   }
 
   const typeParam = url.searchParams.get("type") ?? "";

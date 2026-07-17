@@ -6,6 +6,11 @@ async function register(page: import("@playwright/test").Page) {
   await page.request.post("/api/auth/register", {
     data: { firstName: "Subscriber", lastName: "User", email: uniq(), password: "secret123", agreeTerms: true },
   });
+  const response = await page.request.post("/api/teams", {
+    data: { name: `AI Store Test Team ${Date.now()}` },
+  });
+  expect(response.status()).toBe(201);
+  return Number((await response.json()).team.id);
 }
 
 // uc-ai-store-003：订阅并使用 AI Store 项目。
@@ -108,12 +113,9 @@ test("被分享授权的 grantee 可以订阅 personal 项目（不再 404）", 
   await register(page);
 
   // owner：独立浏览器上下文（独立 cookie），创建、发布 personal 项目并生成分享链接。
-  const ownerEmail = uniq();
   const ownerCtx = await browser.newContext();
   const ownerPage = await ownerCtx.newPage();
-  await ownerPage.request.post("/api/auth/register", {
-    data: { firstName: "Owner", lastName: "Grantee", email: ownerEmail, password: "secret123", agreeTerms: true },
-  });
+  await register(ownerPage);
   await ownerPage.goto("/ai-store");
   const suffix = Date.now();
   const itemName = `Grantee Subscribe Item ${suffix}`;
@@ -190,18 +192,11 @@ test("使用 template 项目跳到 Boards 时显示开发中提示", async ({ pa
   await expect(page.getByTestId("template-use-notice")).toContainText("开发中");
 });
 
-// 回归（review fix）：unsubscribeAiStoreItem 的 WHERE 匹配口径必须和 getAiStoreSubscription
-// 一致。此前 unsubscribe 用 COALESCE(team_id,0) = COALESCE($3,0) 做严格相等匹配，
-// 与 getAiStoreSubscription 的 "(team_id IS NULL OR team_id = $3)" 宽匹配不对称：
-// 用户在没有当前团队（teamId cookie 为 null）时个人订阅了某项目（team_id=NULL 落库），
-// 之后切换进一个团队（cookie 变成该团队 id），GET 订阅状态接口仍靠 OR 匹配命中该 NULL 行、
-// 报 subscribed:true；但 DELETE 若按严格相等去找 team_id=当前团队 id 的行，则找不到、
-// 误报 404（"未找到订阅"）——用户被卡住：UI 显示已订阅、点取消订阅却失败。
-test("在无团队上下文订阅后切换进团队，仍可成功取消订阅", async ({ page }) => {
-  await register(page);
+// 个人订阅也属于当前 Team。切换到其他 Team 后不可见，切回原 Team 后可继续管理。
+test("个人订阅按 Team 隔离，切回原 Team 后可成功取消", async ({ page }) => {
+  const originalTeamId = await register(page);
   await page.goto("/ai-store");
 
-  // 以当前（无团队上下文）身份创建并发布一个项目，作为订阅目标。
   const suffix = Date.now();
   const itemName = `Cross Team Unsubscribe Item ${suffix}`;
   await page.getByTestId("nav-create").click();
@@ -221,7 +216,6 @@ test("在无团队上下文订阅后切换进团队，仍可成功取消订阅",
   await card.click();
   const itemId = Number((await card.getAttribute("data-testid"))!.replace("item-", ""));
 
-  // 个人订阅：此时没有当前团队（teamId cookie 为 null）→ 订阅行 team_id = NULL 落库。
   const subscribeRes = await page.request.post(`/api/ai-store/items/${itemId}/subscribe`, {
     data: { scope: "personal" },
   });
@@ -232,23 +226,29 @@ test("在无团队上下文订阅后切换进团队，仍可成功取消订阅",
   ).json();
   expect(beforeSwitch.subscribed).toBe(true);
 
-  // 创建一个团队并切换进去：CURRENT_TEAM_COOKIE 现在变成该团队 id（非 null）。
+  // 创建第二个 Team 会切换当前 Team，原 Team 的个人订阅不可跨 Team 使用。
   const teamRes = await (
     await page.request.post("/api/teams", { data: { name: `Cross Unsub Team ${suffix}` } })
   ).json();
   const teamId = teamRes.team.id as number;
+  expect(Number(teamId)).not.toBe(originalTeamId);
   const currentTeam = await (await page.request.get("/api/teams/current")).json();
   expect(String(currentTeam.teamId)).toBe(String(teamId));
 
-  // GET 订阅状态：切换团队上下文后，宽匹配（team_id IS NULL OR team_id = teamId）仍应命中
-  // 之前个人订阅的那一行,报告 subscribed:true（UI 会展示为已订阅、可点取消）。
-  const afterSwitch = await (
+  const afterSwitch = await page.request.get(`/api/ai-store/items/${itemId}/subscribe`);
+  expect(afterSwitch.status()).toBe(404);
+
+  expect((await page.request.post("/api/teams/current", {
+    data: { teamId: originalTeamId },
+  })).status()).toBe(200);
+  const afterReturn = await (
     await page.request.get(`/api/ai-store/items/${itemId}/subscribe`)
   ).json();
-  expect(afterSwitch.subscribed).toBe(true);
+  expect(afterReturn.subscribed).toBe(true);
 
-  // 取消订阅：在团队上下文里删除，必须成功（不能 404 "未找到订阅"）。
-  const unsubscribeRes = await page.request.delete(`/api/ai-store/items/${itemId}/subscribe`);
+  const unsubscribeRes = await page.request.delete(
+    `/api/ai-store/items/${itemId}/subscribe?scope=personal`,
+  );
   expect(unsubscribeRes.status()).toBe(200);
   const unsubscribeBody = await unsubscribeRes.json();
   expect(unsubscribeBody.ok).toBe(true);
@@ -258,5 +258,5 @@ test("在无团队上下文订阅后切换进团队，仍可成功取消订阅",
     await page.request.get(`/api/ai-store/items/${itemId}/subscribe`)
   ).json();
   expect(afterUnsubscribe.subscribed).toBe(false);
-  expect(afterUnsubscribe.subscription).toBeNull();
+  expect(afterUnsubscribe.personal).toBe(false);
 });

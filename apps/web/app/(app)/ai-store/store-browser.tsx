@@ -34,6 +34,14 @@ interface StoreItem {
   featured: boolean;
   liked?: boolean;
   unavailable?: boolean;
+  subscriptionScopes?: Array<"personal" | "team">;
+}
+
+interface SubscriptionStatus {
+  subscribed: boolean;
+  personal: boolean;
+  team: boolean;
+  canManageTeam: boolean;
 }
 
 interface FavoriteToggleResponse {
@@ -206,6 +214,8 @@ export function StoreBrowser() {
   const [subscribedError, setSubscribedError] = useState("");
   const [subscribing, setSubscribing] = useState<number | null>(null);
   const [subscribeError, setSubscribeError] = useState("");
+  const [detailSubscription, setDetailSubscription] = useState<SubscriptionStatus | null>(null);
+  const [canManageTeamSubscriptions, setCanManageTeamSubscriptions] = useState(false);
 
   async function load(opts: { type: "all" | StoreType; tags: string[]; q: string; page: number }) {
     setLoading(true);
@@ -282,9 +292,10 @@ export function StoreBrowser() {
         setSubscribedLoading(false);
         return;
       }
-      const data = (await res.json()) as { items: StoreItem[] };
+      const data = (await res.json()) as { items: StoreItem[]; canManageTeam?: boolean };
       setSubscribedItems(data.items ?? []);
       setSubscribedIds(new Set((data.items ?? []).map((it) => it.id)));
+      setCanManageTeamSubscriptions(data.canManageTeam === true);
     } catch {
       setSubscribedError("Failed to load your subscriptions. Please try again.");
     }
@@ -344,15 +355,29 @@ export function StoreBrowser() {
   useEffect(() => {
     if (detailId == null) {
       setDetailItem(null);
+      setDetailSubscription(null);
       return;
     }
     let cancelled = false;
     setDetailLoading(true);
     setDetailError(false);
-    fetch(`/api/ai-store/items/${detailId}`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
-      .then((data: { item: StoreItem }) => {
-        if (!cancelled) setDetailItem(data.item);
+    Promise.all([
+      fetch(`/api/ai-store/items/${detailId}`),
+      fetch(`/api/ai-store/items/${detailId}/subscribe`),
+    ])
+      .then(async ([itemResponse, subscriptionResponse]) => {
+        if (!itemResponse.ok) throw itemResponse;
+        const itemData = (await itemResponse.json()) as { item: StoreItem };
+        const subscriptionData = subscriptionResponse.ok
+          ? ((await subscriptionResponse.json()) as SubscriptionStatus)
+          : null;
+        return { itemData, subscriptionData };
+      })
+      .then(({ itemData, subscriptionData }) => {
+        if (!cancelled) {
+          setDetailItem(itemData.item);
+          setDetailSubscription(subscriptionData);
+        }
       })
       .catch(() => {
         if (!cancelled) {
@@ -622,43 +647,32 @@ export function StoreBrowser() {
     }
   }
 
-  // uc-ai-store-003：订阅/取消订阅（个人订阅）。乐观更新按钮态，失败回滚。
-  async function subscribeItem(item: StoreItem) {
+  async function subscribeItem(
+    item: StoreItem,
+    scope: "personal" | "team" = "personal",
+    subscribed = scope === "personal" ? detailSubscription?.personal === true : detailSubscription?.team === true,
+  ) {
     if (!isSubscribable(item) || subscribing != null) return;
     setSubscribing(item.id);
     setSubscribeError("");
-    const wasSubscribed = subscribedIds.has(item.id);
-    setSubscribedIds((prev) => {
-      const next = new Set(prev);
-      if (wasSubscribed) next.delete(item.id);
-      else next.add(item.id);
-      return next;
-    });
     try {
-      const res = await fetch(`/api/ai-store/items/${item.id}/subscribe`, {
-        method: wasSubscribed ? "DELETE" : "POST",
-        headers: wasSubscribed ? undefined : { "Content-Type": "application/json" },
-        body: wasSubscribed ? undefined : JSON.stringify({ scope: "personal" }),
+      const url = `/api/ai-store/items/${item.id}/subscribe${subscribed ? `?scope=${scope}` : ""}`;
+      const res = await fetch(url, {
+        method: subscribed ? "DELETE" : "POST",
+        headers: subscribed ? undefined : { "Content-Type": "application/json" },
+        body: subscribed ? undefined : JSON.stringify({ scope }),
       });
       if (!res.ok) {
-        setSubscribedIds((prev) => {
-          const next = new Set(prev);
-          if (wasSubscribed) next.add(item.id);
-          else next.delete(item.id);
-          return next;
-        });
         const data = await res.json().catch(() => ({}));
         setSubscribeError(data?.error ?? "Action failed. Please try again.");
         return;
       }
-      if (nav === "subscribe") await loadSubscribed();
+      await loadSubscribed();
+      if (detailId === item.id) {
+        const statusResponse = await fetch(`/api/ai-store/items/${item.id}/subscribe`);
+        if (statusResponse.ok) setDetailSubscription((await statusResponse.json()) as SubscriptionStatus);
+      }
     } catch {
-      setSubscribedIds((prev) => {
-        const next = new Set(prev);
-        if (wasSubscribed) next.add(item.id);
-        else next.delete(item.id);
-        return next;
-      });
       setSubscribeError("Action failed. Please try again.");
     } finally {
       setSubscribing(null);
@@ -1057,12 +1071,18 @@ export function StoreBrowser() {
                           <Button
                             size="sm"
                             variant={subscribedIds.has(it.id) ? "outline" : "default"}
-                            disabled={it.status !== "published" || subscribing === it.id}
+                            disabled={!isSubscribable(it) || subscribing === it.id}
                             data-testid={`item-subscribe-${it.id}`}
-                            onClick={() => subscribeItem(it)}
+                            onClick={() => {
+                              if (subscribedIds.has(it.id)) {
+                                setDetailId(it.id);
+                                return;
+                              }
+                              void subscribeItem(it, "personal", false);
+                            }}
                             className="h-7 flex-1 text-11"
                           >
-                            {subscribedIds.has(it.id) ? "Unsubscribe" : "Subscribe"}
+                            {subscribedIds.has(it.id) ? "Manage" : "Subscribe"}
                           </Button>
                           {subscribedIds.has(it.id) && (
                             <Button
@@ -1532,6 +1552,18 @@ export function StoreBrowser() {
                     <p className="mt-2.75 min-h-9 text-13 leading-relaxed text-muted-foreground">
                       {it.description}
                     </p>
+                    <div data-testid={`subscribed-scopes-${it.id}`} className="mt-2 flex flex-wrap gap-1.5">
+                      {it.subscriptionScopes?.includes("personal") && (
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-11 text-secondary-foreground">
+                          Personal
+                        </span>
+                      )}
+                      {it.subscriptionScopes?.includes("team") && (
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-11 text-secondary-foreground">
+                          Team
+                        </span>
+                      )}
+                    </div>
                     <div className="mt-3 flex gap-1.5">
                       <Button
                         size="sm"
@@ -1543,16 +1575,30 @@ export function StoreBrowser() {
                       >
                         Use
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={subscribing === it.id}
-                        data-testid={`subscribed-unsubscribe-${it.id}`}
-                        onClick={() => subscribeItem(it)}
-                        className="h-7 flex-1 text-11"
-                      >
-                        Unsubscribe
-                      </Button>
+                      {it.subscriptionScopes?.includes("personal") && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={subscribing === it.id}
+                          data-testid={`subscribed-unsubscribe-${it.id}`}
+                          onClick={() => subscribeItem(it, "personal", true)}
+                          className="h-7 flex-1 text-11"
+                        >
+                          Remove mine
+                        </Button>
+                      )}
+                      {it.subscriptionScopes?.includes("team") && canManageTeamSubscriptions && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={subscribing === it.id}
+                          data-testid={`subscribed-unsubscribe-team-${it.id}`}
+                          onClick={() => subscribeItem(it, "team", true)}
+                          className="h-7 flex-1 text-11"
+                        >
+                          Remove team
+                        </Button>
+                      )}
                     </div>
                   </article>
                 ))}
@@ -1711,21 +1757,33 @@ export function StoreBrowser() {
                 )}
 
                 {/* 订阅/使用入口（F03）：未发布项目不可订阅；已订阅显示取消订阅 + 使用入口。 */}
-                <div className="mt-4.5 flex gap-2">
+                <div className="mt-4.5 flex flex-wrap gap-2">
                   <Button
                     size="sm"
                     disabled={!isSubscribable(detailItem) || subscribing === detailItem.id}
-                    variant={subscribedIds.has(detailItem.id) ? "outline" : "default"}
+                    variant={detailSubscription?.personal ? "outline" : "default"}
                     data-testid="detail-subscribe"
-                    onClick={() => subscribeItem(detailItem)}
+                    onClick={() => subscribeItem(detailItem, "personal", detailSubscription?.personal === true)}
                     className="flex-1"
                     title={
                       !isSubscribable(detailItem) ? "Unpublished items cannot be subscribed to" : undefined
                     }
                   >
-                    {subscribedIds.has(detailItem.id) ? "Unsubscribe" : "Subscribe"}
+                    {detailSubscription?.personal ? "Unsubscribe for me" : "Subscribe for me"}
                   </Button>
-                  {subscribedIds.has(detailItem.id) && (
+                  {detailSubscription?.canManageTeam && (
+                    <Button
+                      size="sm"
+                      disabled={!isSubscribable(detailItem) || subscribing === detailItem.id}
+                      variant={detailSubscription.team ? "outline" : "secondary"}
+                      data-testid="detail-subscribe-team"
+                      onClick={() => subscribeItem(detailItem, "team", detailSubscription.team)}
+                      className="flex-1"
+                    >
+                      {detailSubscription.team ? "Unsubscribe for team" : "Subscribe for team"}
+                    </Button>
+                  )}
+                  {detailSubscription?.subscribed && (
                     <Button
                       size="sm"
                       variant="secondary"

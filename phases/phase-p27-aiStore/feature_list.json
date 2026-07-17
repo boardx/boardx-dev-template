@@ -130,9 +130,9 @@
       "area": "ai-store-subscription",
       "title": "USER and TEAM subscriptions and use",
       "user_visible_behavior": "普通成员可在当前 Team 为自己订阅 Team A 的 approved 资源并个人使用，当前 Team owner/admin 可为整个 Team 订阅或取消；普通成员请求 TEAM 订阅返回 403，Team B 的订阅不改变来源 Team或授予编辑权，Agent、Skill、Template 使用均解析最新版本并在取消订阅后立即从当前 Team 入口移除。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "04",
-      "owner": null,
+      "owner": "codex-p27-ai-store-control-plane",
       "capability": "CAP-WEB",
       "depends_on": [
         "F03",
@@ -142,7 +142,7 @@
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/ai-store-010-user-team-subscriptions.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F07.verify.log @ 2026-07-17T02:03:14.253Z",
       "notes": "USER 唯一键含 user+consumerTeamId+itemId；TEAM 唯一键含 consumerTeamId+itemId；重复订阅/取消幂等。"
     },
     {
