@@ -45,6 +45,13 @@ confirmed_at: 2026-07-14T00:00:00+08:00
 - 本阶段 UI 直接复用该分支真实组件，不另行重绘；后续实现只接入真实数据、权限、AI、导出与错误处理，不改变已确认信息架构。
 - 2026-07-14 再确认：事实来源包含未提交工作状态，固定为分支 HEAD `0ae3af90c989843025fb2a60aacf90de6ed8df11`
   与 stash tree `1eb9d7ba78cdda3d1a66fecb7d9fc2b7678cc64c`；实现验收以该快照为准。
+- 2026-07-17 需求变更并由用户明确确认：F12 及后续 Survey UI 以
+  `/Users/shenyangjun/Library/Containers/com.tencent.xinWeChat/Data/Documents/xwechat_files/yy774650019_32de/msg/file/2026-07/AI 问卷诊断平台(1).html`
+  为唯一视觉与交互参考，SHA-256 为
+  `bfaaef440519aad4fd4b0e9b9d3934e947e72001758e724e287d04289df65755`。
+- 新参考覆盖六个已确认界面：`Home Dashboard`、`我的问卷`、`模版中心`、
+  `报告模版推演`、`问卷编辑器`、`洞察报告`。此前 BoardX Survey 源分支快照仅保留为历史记录，
+  与新 HTML 冲突时以该 HTML 为准。
 
 ---
 **确认动作**：核对无误后，把顶部 frontmatter 的 `status` 改为 `confirmed`，填 `confirmed_by` / `confirmed_at`，提交。之后才可调 requirement-author 生成 feature_list、跑 new-sprint。

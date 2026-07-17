@@ -12,17 +12,18 @@ test("BoardX Survey home matches the diagnostic workspace reference", async ({ p
   await register(page);
   await page.goto("/surveys");
 
+  await expect(page.getByTestId("survey-diagnostic-home")).toBeVisible();
   await expect(page.getByTestId("survey-source-sidebar")).toContainText("BoardX Survey");
   const navigation = page.getByRole("navigation", { name: "Survey navigation" });
   await expect(navigation).toContainText("主页");
   await expect(navigation.locator("button")).toHaveCount(4);
   await expect(navigation.locator("button svg")).toHaveCount(4);
   await expect(page.getByRole("heading", { name: /下午好|上午好|晚上好/ })).toBeVisible();
+  await expect(page.getByTestId("survey-home-context")).toBeVisible();
   await expect(page.getByTestId("survey-home-metrics")).toBeVisible();
-  await expect(page.getByText("组织", { exact: true })).toHaveCount(0);
-  await expect(page.getByText("顾问社区", { exact: true })).toHaveCount(0);
-  await expect(page.getByText("明道咨询 · 组织与 AI 转型", { exact: true })).toHaveCount(0);
-  await expect(page.getByTestId("survey-home-method")).toHaveCount(0);
+  await expect(page.getByTestId("survey-home-organization")).toBeVisible();
+  await expect(page.getByTestId("survey-home-community")).toBeVisible();
+  await expect(page.getByTestId("survey-home-method")).toBeVisible();
   await expect(page.getByTestId("survey-home-templates")).toBeVisible();
   await expect(page.getByTestId("survey-home-recent")).toBeVisible();
   await expect(page.getByTestId("ai-survey-command-center")).toHaveCount(0);
@@ -30,6 +31,16 @@ test("BoardX Survey home matches the diagnostic workspace reference", async ({ p
     path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-reference-home.png",
     fullPage: true,
   });
+});
+
+test("my surveys exposes all three reference creation paths", async ({ page }) => {
+  await register(page);
+  await page.goto("/surveys?view=my");
+
+  await expect(page.getByTestId("survey-list-screen")).toBeVisible();
+  await expect(page.getByTestId("create-path-ai")).toBeVisible();
+  await expect(page.getByTestId("create-path-template")).toBeVisible();
+  await expect(page.getByTestId("create-path-blank")).toBeVisible();
 });
 
 test("new survey chooser routes each creation path", async ({ page }) => {
@@ -53,6 +64,7 @@ test("new survey chooser routes each creation path", async ({ page }) => {
   await page.goto("/surveys");
   await page.getByTestId("create-with-ai").click();
   await page.getByTestId("new-survey-blank").click();
+  await expect(page.getByTestId("survey-editor-screen")).toBeVisible();
   await expect(page.getByTestId("survey-editor-shell")).toBeVisible();
   await expect(page.getByTestId("ai-assistant-panel")).toHaveCount(0);
 });
@@ -146,6 +158,7 @@ test("diagnostic template center keeps template and report actions available", a
 
   await expect(page).toHaveURL(/\/surveys\?view=templates/);
   await expect(page.getByTestId("survey-source-sidebar")).toBeVisible();
+  await expect(page.getByTestId("survey-template-center")).toBeVisible();
   await expect(page.getByTestId("diagnostic-template-center")).toBeVisible();
   await expect(page.getByRole("heading", { name: "诊断模板中心" })).toBeVisible();
   await expect(page.getByTestId("template-tag-filter")).toBeVisible();

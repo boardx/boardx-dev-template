@@ -30,10 +30,11 @@ async function createSurvey(page: Page) {
 test("survey workspace restores every source workflow step from the URL", async ({ page }) => {
   await register(page);
   const survey = await createSurvey(page);
-  await page.goto("/surveys");
+  await page.goto("/surveys?view=my");
   await page.getByTestId(`open-workspace-${survey.id}`).click();
 
   await expect(page).toHaveURL(new RegExp(`survey=${survey.id}.*step=design`));
+  await expect(page.getByTestId("survey-editor-screen")).toBeVisible();
   await expect(page.getByTestId("survey-workflow-shell")).toContainText("五步工作台调研");
   await expect(page.getByTestId("workflow-design")).toHaveAttribute("aria-current", "step");
   await expect(page.locator("#workflow-category-0")).toHaveValue("需求洞察");
@@ -54,6 +55,9 @@ test("survey workspace restores every source workflow step from the URL", async 
   await expect(page.getByTestId("workspace-answer-link")).toHaveAttribute("href", `/survey/${survey.id}/answer`);
   await page.getByTestId("workflow-report").click();
   await expect(page.getByTestId("workspace-report-link")).toHaveAttribute("href", `/surveys/${survey.id}/results`);
+
+  await page.goto(`/surveys/${survey.id}/results`);
+  await expect(page.getByTestId("survey-insight-report")).toBeVisible();
 });
 
 test("workflow navigation remains usable on a mobile viewport", async ({ page }) => {

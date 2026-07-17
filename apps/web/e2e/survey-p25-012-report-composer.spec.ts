@@ -65,6 +65,7 @@ test("report template exposes chart image text layout and independent prompts", 
   await expect(page.getByTestId("report-template-builder")).toBeVisible();
   await expect(page.getByTestId("report-module-list")).toBeVisible();
   await expect(page.getByTestId("report-module-preview")).toBeVisible();
+  await expect(page.getByTestId("report-module-inspector")).toBeVisible();
   await expect(page.getByTestId("report-ai-assistant")).toBeVisible();
   await expect(page.getByTestId("report-template-builder")).toHaveClass(/xl:grid-cols-/);
   await expect(page.getByTestId("report-layout-canvas")).toBeVisible();
