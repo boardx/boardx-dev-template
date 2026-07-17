@@ -5927,9 +5927,10 @@ export default function SurveysPage() {
   )).sort((a, b) => a.localeCompare(b));
   const visibleTemplateList = templateListTag === "all"
     ? allTemplates
-    : allTemplates.filter((template) => (
-        template.category === templateListTag || template.tags?.includes(templateListTag)
-      ));
+    : allTemplates.filter((template) => {
+        const category = template.category ?? "通用";
+        return category === templateListTag || template.tags?.includes(templateListTag);
+      });
   const editingSurvey = editingSurveyId == null ? undefined : surveys.find((s) => s.id === editingSurveyId);
   const editingSurveyShareUrl = editingSurveyId == null
     ? ""

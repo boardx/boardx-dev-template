@@ -75,6 +75,14 @@ test("new survey chooser routes each creation path", async ({ page }) => {
 
 test("diagnostic template center keeps template and report actions available", async ({ page }) => {
   await register(page);
+  await page.route("**/api/survey-templates", async (route) => {
+    const response = await route.fetch();
+    const payload = await response.json();
+    const templates = (payload.templates ?? []).map((template: Record<string, unknown>, index: number) => (
+      index === 0 ? { ...template, category: undefined } : template
+    ));
+    await route.fulfill({ response, json: { ...payload, templates } });
+  });
   await page.goto("/surveys?view=templates");
 
   await expect(page).toHaveURL(/\/surveys\?view=templates/);
@@ -88,6 +96,17 @@ test("diagnostic template center keeps template and report actions available", a
   const templateCards = templateGrid.locator("[data-testid^=template-card-]");
   await expect(templateCards).not.toHaveCount(0);
   await expect(templateCards.first()).toContainText("系统");
+  const initialTemplateCount = await templateCards.count();
+
+  const genericFilter = page.getByTestId("template-tag-filter").getByRole("button", { name: "通用", exact: true });
+  await expect(genericFilter).toBeVisible();
+  await genericFilter.click();
+  await expect(templateCards).toHaveCount(1);
+  await expect(templateCards.first().locator('[data-testid^="template-category-"]')).toHaveText("通用");
+
+  await page.getByTestId("template-tag-filter").getByRole("button", { name: "全部", exact: true }).click();
+  await expect(templateCards).toHaveCount(initialTemplateCount);
+  await page.unroute("**/api/survey-templates");
 
   const firstTemplateId = await templateCards.first().getAttribute("data-testid");
   expect(firstTemplateId).toBeTruthy();
