@@ -188,7 +188,8 @@ phases:
   - id: "p27"
     slug: aiStore
     name: AI Store
-    goal: "梳理并迁移现有 AI Store 能力，强制 Agent/Skill/Template 按 Team 归属与隔离，将 AI Tool 与 Image Tool 统一为 Skills"
-    status: not_started
+    goal: "交付 Team 隔离的 Agent/Skills/Template 商店完整闭环与已确认的 Resource Library UIUX"
+    status: in_progress
     depends_on: []
+    has_ui: true
     tracking_issue: 662

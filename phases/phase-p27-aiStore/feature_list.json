@@ -256,6 +256,56 @@
       ],
       "evidence": "",
       "notes": "最终兼容和权限回归；不得通过复制 item、清空关系、隐藏 UI 或跳过真实执行来通过验证。"
+    },
+    {
+      "id": "F13",
+      "priority": 1,
+      "area": "ai-store-ui",
+      "title": "Resource Library workspace and responsive catalog",
+      "user_visible_behavior": "用户在已确认的 Resource Library 工作区中通过 Explore、Featured、My subscriptions、Created by me、Authorized editing、Shared with me 及按角色显示的审核入口完成浏览；搜索、筛选、分页、Team 切换和右侧详情使用真实 API，375/768/1280 无溢出，loading/empty/403/404/409/410 均为局部稳定状态。",
+      "status": "not_started",
+      "sprint": "07",
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F03",
+        "F06",
+        "F07",
+        "F08"
+      ],
+      "wave": 8,
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ai-store-015-resource-library-shell.spec.ts",
+        "pnpm --filter @repo/web lint"
+      ],
+      "evidence": "",
+      "notes": "严格采用 ui-signoff 的 Option 1；复用 BoardX shell、语义 token、shadcn/ui 与 Lucide，不增加 UI 依赖。"
+    },
+    {
+      "id": "F14",
+      "priority": 1,
+      "area": "ai-store-ui",
+      "title": "Resource Library authoring, sharing, copy, and review UX",
+      "user_visible_behavior": "用户在统一 Resource Library 编辑器和详情中创建、预览、编辑、订阅、使用、分享与复制 Agent/Skills/Template，Team 管理员和 BoardX 管理员在同一视觉语言下审核；所有动作由真实服务端权限裁决，成功等待持久化响应，失败保留上下文和未保存内容。",
+      "status": "not_started",
+      "sprint": "07",
+      "owner": null,
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F04",
+        "F05",
+        "F06",
+        "F09",
+        "F10",
+        "F13"
+      ],
+      "wave": 9,
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ai-store-016-resource-library-workflows.spec.ts",
+        "pnpm --filter @repo/web lint"
+      ],
+      "evidence": "",
+      "notes": "统一编辑、详情、分享、复制与审核交互；approved/published 编辑免复审并立即同步订阅者。"
     }
   ]
 }

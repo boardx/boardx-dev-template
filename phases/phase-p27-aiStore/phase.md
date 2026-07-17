@@ -1,16 +1,17 @@
 # Phase p27 — aiStore
 
 - **slug**: aiStore
-- **状态**: not_started
+- **状态**: in_progress
 - **创建于**: 2026-07-16 04:26:35
 
 ## 目标
-梳理并迁移现有 AI Store 能力，强制 Agent/Skill/Template 按 Team 归属与隔离，将 AI Tool 与 Image Tool 统一为 Skills。
+梳理并迁移现有 AI Store 能力，强制 Agent/Skill/Template 按 Team 归属与隔离，将 AI Tool 与 Image Tool 统一为 Skills，并以已确认的 Resource Library 方案完成专业 UIUX 和真实前后端集成。
 
 ## 范围与边界
-- 本阶段交付:盘点 `boardx-web` 与 `boardx-backend` 的 AI Store 契约；为所有 Agent/Skill/Template 建立强制 Team 归属与租户隔离；将 AI Tool 与 Image Tool 统一为 Skills；迁移数据/API/Web/AVA 使用入口；保留已有订阅、收藏、分享、审核和精选关系。
+- 本阶段交付:盘点 `boardx-web` 与 `boardx-backend` 的 AI Store 契约；为所有 Agent/Skill/Template 建立强制 Team 归属与租户隔离；将 AI Tool 与 Image Tool 统一为 Skills；迁移数据/API/Web/AVA 使用入口；保留已有订阅、收藏、分享、审核和精选关系；在现有 BoardX 应用壳和设计系统内完成 Resource Library UIUX。
 - 兼容边界:新写入和新响应只使用规范类型 `skill`；旧 `ai-tool`、`image-tool`、`AI_TOOL`、`AI_IMAGE_TOOL` 作为迁移期输入别名可读，不再作为用户可见分类。
-- 明确不做:重做 AI Store 视觉设计；把 Team 归属降级为客户端可选字段；引入旧代码中仅有枚举但没有完整商店闭环的 Model/Dataset；重写具体文本或图片执行引擎。
+- UI 边界:只重构 AI Store、Team review 和 BoardX review 相关界面；保留全局应用壳、现有语义 token、shadcn/ui 与真实 API 契约。
+- 明确不做:把 Team 归属降级为客户端可选字段；引入旧代码中仅有枚举但没有完整商店闭环的 Model/Dataset；重写具体文本或图片执行引擎；增加付费商店、匿名浏览或版本回滚。
 
 ## GitHub 总追踪
 
