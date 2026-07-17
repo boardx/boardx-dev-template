@@ -1,6 +1,7 @@
 # 会话交接 — Sprint p25/12
 
 ## 当前已验证
+- Survey 统一创建界面已通过 10 条完整 Playwright、移动端视觉测试、Web typecheck、design lint 和独立代码复审。
 - Survey 首页导航精简已通过聚焦 E2E、typecheck、design lint 和补丁格式检查。
 - `/surveys` 参考诊断平台首页已通过聚焦 E2E、typecheck、design lint 和视觉截图对照。
 - F12 仍为 `in_progress`，没有提前标记 passing。
@@ -10,6 +11,10 @@
 - 报告模板真实入口的三栏工作台契约已通过 F12 Playwright 3/3、Web typecheck 和 design lint。
 
 ## 本轮改动
+- 新建问卷统一为 AI、诊断模板、空白三路选择器；首页和我的问卷复用同一入口。
+- 模板中心改为标签过滤的诊断模板列表，保留套用、报告模板及自定义模板管理动作。
+- 编辑器改为单边界诊断摘要和连续纸面题目画布；AI draft/changeSet 均需确认后应用。
+- 移动端编辑器改为单列，AI 助手在主内容后完整显示，桌面检查器只在 `xl` 断点显示。
 - Survey 左侧四个菜单项统一为固定尺寸和描边的 Lucide 图标。
 - 首页移除“组织”和“顾问社区”占位卡片，工作台指标改为完整横向区域。
 - WHY / HOW / THEN 三个方法卡分别连接模板中心、AI 新建问卷和分析报告；没有可分析答卷时回到“我的问卷”。
@@ -36,7 +41,7 @@
 - 尚未使用真实千问密钥验收 AI 成功措辞，也未完成不同打印机/PDF 驱动的分页视觉复核。
 
 ## 下一步最佳动作
-- 继续 F12 的模块选择、预览和 AI 应用交互，再检查 Survey 首页、问卷列表、模板中心和其他工作流的统一视觉 feature 边界；不要手改 `active-features.json` 或把 F12 直接改为 passing。
+- 继续 F12 的真实答卷报告、零/低样本限制和失败重试验收；不要手改 `active-features.json` 或把 F12 直接改为 passing。
 
 ## 命令
 - 启动:`pnpm -w run dev`

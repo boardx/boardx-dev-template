@@ -28,7 +28,8 @@ test("blank creation uses the latest boardx-survey workflow editor", async ({ pa
   await expect(page.getByRole("button", { name: /发布回收/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /查看答题/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /分析报告/ })).toBeVisible();
-  await expect(page.getByTestId("templates-workbench")).toBeVisible();
+  await expect(page.getByTestId("template-library")).toBeVisible();
+  await expect(page.getByTestId("template-select")).toBeVisible();
   await expect(page.getByTestId("category-manager")).toBeVisible();
   await expect(page.getByTestId("survey-scope")).toBeVisible();
   await expect(page.getByTestId("question-type-0").locator("option")).toHaveCount(14);

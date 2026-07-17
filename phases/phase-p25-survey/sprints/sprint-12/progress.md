@@ -8,6 +8,13 @@
 - 当前 blocker: F12 仍需验证真实答卷报告、零/低样本限制和失败重试；组合 E2E 另发现本地 `survey_ai_sessions_status_check` 不接受代码既有的 `open` 状态
 
 ## 会话记录
+### 2026-07-17（统一创建界面）
+- 本轮目标: 按诊断工作台参考统一新建选择器、模板中心、问卷编辑器和 AI 助手。
+- 已完成: 三路新建选择器；标签过滤的诊断模板中心；单边界摘要和连续题目画布；AI draft/changeSet 预览确认；移动端单列响应式布局。
+- 运行过的验证: Survey 创建/模板/AI Playwright 10 tests passed；移动编辑器视觉测试 1 passed；Web typecheck；design lint；`git diff --check`；Task 3 独立复审通过。
+- 已记录证据: `evidence/2026-07-17-survey-unified-creation-surfaces.md`、`evidence/survey-unified-editor-desktop.png`、`evidence/survey-unified-editor-mobile.png`。
+- 状态边界: F12 保持 `in_progress`；真实答卷报告、零/低样本限制和失败重试仍需继续验收。
+
 ### 2026-07-17（首页导航精简）
 - 本轮目标: 统一左侧菜单图标，移除首页无效的组织/顾问社区信息，并闭合 WHY/HOW/THEN 三个入口。
 - 已完成: 四个菜单图标统一尺寸与描边；删除组织和顾问社区卡片；模板、AI 新建问卷、分析报告入口接入真实工作流，无可分析答卷时确定性回到“我的问卷”。

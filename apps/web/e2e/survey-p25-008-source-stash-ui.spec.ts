@@ -113,6 +113,17 @@ test("unified survey editor keeps diagnostic structure and a subordinate AI assi
 
   await page.getByTestId("open-ai-assistant").click();
   await expect(workspace.getByTestId("survey-ai-assistant")).toBeVisible();
+
+  await page.screenshot({
+    path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-unified-editor-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(workspace).toBeVisible();
+  await page.screenshot({
+    path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-unified-editor-mobile.png",
+    fullPage: true,
+  });
 });
 
 test("diagnostic template center keeps template and report actions available", async ({ page }) => {

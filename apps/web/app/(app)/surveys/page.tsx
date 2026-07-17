@@ -6798,8 +6798,8 @@ export default function SurveysPage() {
               ? "mx-auto grid items-start gap-4 py-0 xl:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)]"
               : `mx-auto grid gap-4 py-4 ${
                   aiOpen
-                    ? "grid-cols-[minmax(0,1fr)_56px] xl:grid-cols-[minmax(0,1fr)_440px_56px] 2xl:grid-cols-[minmax(0,1fr)_520px_56px]"
-                    : "grid-cols-[minmax(0,1fr)_56px]"
+                    ? "grid-cols-1 xl:grid-cols-[minmax(0,1fr)_440px_56px] 2xl:grid-cols-[minmax(0,1fr)_520px_56px]"
+                    : "grid-cols-1 xl:grid-cols-[minmax(0,1fr)_56px]"
                 }`}
           >
             <main data-testid={isTemplateEditor ? "template-editor-main" : "question-builder-panel"} className="min-w-0">
@@ -7469,7 +7469,7 @@ export default function SurveysPage() {
             {aiOpen && (
               <aside
                 data-testid={isTemplateEditor ? "template-ai-assistant" : "ai-assistant-panel"}
-                className={`sticky top-20 flex max-h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm ${isTemplateEditor ? "min-h-[38.75rem]" : ""}`}
+                className={`flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] ${isTemplateEditor ? "min-h-[38.75rem]" : ""}`}
               >
                 <div data-testid={isTemplateEditor ? undefined : "survey-ai-assistant"} className="flex min-h-0 flex-1 flex-col">
                 <div className="border-b border-border p-4">
@@ -7665,7 +7665,7 @@ export default function SurveysPage() {
               </aside>
             )}
 
-            {!isTemplateEditor && <aside data-testid="editor-inspector-panel" className="sticky top-32 flex h-fit flex-col items-center gap-2 rounded-full border border-border bg-card p-2 shadow-sm">
+            {!isTemplateEditor && <aside data-testid="editor-inspector-panel" className="sticky top-32 hidden h-fit flex-col items-center gap-2 rounded-full border border-border bg-card p-2 shadow-sm xl:flex">
               <Button variant="ghost" size="icon" aria-label="添加问题" onClick={() => setQuestions((qs) => [...qs, newQuestion()])}>
                 <Plus className="h-4 w-4" strokeWidth={1.5} />
               </Button>
