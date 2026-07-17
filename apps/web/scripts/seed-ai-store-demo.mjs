@@ -118,11 +118,50 @@ async function createResource(session, input) {
         tags: input.tags,
         examples: input.examples ?? [],
         allowCopy: input.allowCopy ?? false,
+        templateBoardId: input.templateBoardId,
       },
     },
     201,
   );
   return body.item;
+}
+
+async function createTemplateSourceBoard(session, teamId) {
+  const roomBody = await session.expect(
+    "/api/rooms",
+    {
+      method: "POST",
+      data: {
+        name: `P27 Template Sources ${runId}`,
+        visibility: "team",
+        teamId,
+      },
+    },
+    201,
+  );
+  const boardBody = await session.expect(
+    `/api/rooms/${roomBody.room.id}/boards`,
+    {
+      method: "POST",
+      data: { name: `Product Discovery Source ${runId}` },
+    },
+    201,
+  );
+  const boardId = Number(boardBody.board.id);
+  await session.expect(
+    `/api/boards/${boardId}/items`,
+    {
+      method: "POST",
+      data: {
+        type: "note",
+        x: 32,
+        y: 32,
+        text: "Assumptions, interviews, evidence, opportunities, and next decisions",
+      },
+    },
+    201,
+  );
+  return boardId;
 }
 
 async function approvePlatformResource(admin, item) {
@@ -141,6 +180,7 @@ const consumerMember = new ApiSession("consumer-member");
 
 const creatorEmail = await register(creator, "creator");
 const teamAId = await createTeam(creator, "P27 Creator Studio");
+const templateSourceBoardId = await createTemplateSourceBoard(creator, teamAId);
 
 const adminEmail = await register(boardxAdmin, "boardx-admin");
 await createTeam(boardxAdmin, "P27 BoardX Admin");
@@ -208,6 +248,7 @@ const platformDefinitions = [
     instructions: "Create sections for assumptions, evidence, interviews, opportunities, and next decisions.",
     tags: ["Research", "Productivity"],
     allowCopy: true,
+    templateBoardId: templateSourceBoardId,
   },
 ];
 
@@ -258,6 +299,7 @@ const pendingResource = await createResource(creator, {
   instructions: "Collect launch checks, owners, evidence, risks, and the final go or no-go decision.",
   tags: ["Review", "Productivity"],
   allowCopy: false,
+  templateBoardId: templateSourceBoardId,
 });
 
 const draftResource = await createResource(creator, {

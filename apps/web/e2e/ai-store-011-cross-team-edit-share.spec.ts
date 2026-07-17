@@ -31,7 +31,21 @@ async function createResource(
   request: APIRequestContext,
   type: "agent" | "skill" | "template",
   tag: string,
+  originTeamId: number,
 ) {
+  let templateBoardId: number | undefined;
+  if (type === "template") {
+    const roomResponse = await request.post("/api/rooms", {
+      data: { name: `${tag} Template Source ${Date.now()}`, visibility: "team", teamId: originTeamId },
+    });
+    expect(roomResponse.status()).toBe(201);
+    const roomId = Number((await roomResponse.json()).room.id);
+    const boardResponse = await request.post(`/api/rooms/${roomId}/boards`, {
+      data: { name: `${tag} Template Board ${Date.now()}` },
+    });
+    expect(boardResponse.status()).toBe(201);
+    templateBoardId = Number((await boardResponse.json()).board.id);
+  }
   const response = await request.post("/api/ai-store/items", {
     data: {
       type,
@@ -41,6 +55,7 @@ async function createResource(
       name: `${tag} ${type} ${Date.now()}`,
       description: `${type} shared version one`,
       config: `${type} shared instructions`,
+      templateBoardId,
     },
   });
   expect(response.status()).toBe(201);
@@ -71,9 +86,9 @@ test("cross-Team edit sharing preserves ownership, scopes grants to the receivin
   const originTeam = await createTeam(ownerPage.request, "Origin");
 
   const resources = await Promise.all([
-    createResource(ownerPage.request, "agent", "Shared"),
-    createResource(ownerPage.request, "skill", "Shared"),
-    createResource(ownerPage.request, "template", "Shared"),
+    createResource(ownerPage.request, "agent", "Shared", originTeam.id),
+    createResource(ownerPage.request, "skill", "Shared", originTeam.id),
+    createResource(ownerPage.request, "template", "Shared", originTeam.id),
   ]);
   const tokens = new Map<number, string>();
   for (const resource of resources) {

@@ -65,6 +65,13 @@ interface ListResponse {
   totalPages: number;
 }
 
+interface TemplateBoardOption {
+  id: number;
+  name: string;
+  team_id: number | string | null;
+  ownedByMe?: boolean;
+}
+
 const TYPE_TABS: { key: "all" | StoreType; name: string }[] = [
   { key: "all", name: "All" },
   { key: "agent", name: "Agent" },
@@ -77,6 +84,7 @@ const EMPTY_FORM = {
   expectedVersion: undefined as number | undefined,
   type: "agent" as StoreType,
   skillKind: "text" as SkillKind,
+  templateBoardId: "",
   name: "",
   description: "",
   config: "",
@@ -174,6 +182,11 @@ export function StoreBrowser({
   const [builderBusy, setBuilderBusy] = useState(false);
   const [currentTeam, setCurrentTeam] = useState<{ id: number; name: string; role: string } | null>(initialTeam);
   const [teamReady, setTeamReady] = useState(initialTeam != null);
+  const [urlReady, setUrlReady] = useState(false);
+  const [templateBoards, setTemplateBoards] = useState<TemplateBoardOption[]>([]);
+  const [templateBoardsLoading, setTemplateBoardsLoading] = useState(false);
+  const [templateBoardsError, setTemplateBoardsError] = useState("");
+  const [editingSourceTeamName, setEditingSourceTeamName] = useState("");
   const requestIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -285,7 +298,7 @@ export function StoreBrowser({
       }
       const data = (await res.json()) as { items: StoreItem[]; canManageTeam?: boolean };
       setSubscribedItems(data.items ?? []);
-      setSubscribedIds(new Set((data.items ?? []).map((it) => it.id)));
+      setSubscribedIds(new Set((data.items ?? []).map((it) => Number(it.id))));
       setCanManageTeamSubscriptions(data.canManageTeam === true);
     } catch {
       setSubscribedError("Failed to load your subscriptions. Please try again.");
@@ -296,7 +309,7 @@ export function StoreBrowser({
   // Explore 拉浏览列表；Create 拉属主列表；Authorized 同时拉属主列表（Manage share 入口）
   // 与被授权列表（自己被授权管理、非本人拥有的项目）；Subscribe 拉已订阅列表。
   useEffect(() => {
-    if (!teamReady) return;
+    if (!urlReady || !teamReady) return;
     if (!currentTeam) {
       setItems([]);
       setLoading(false);
@@ -326,7 +339,7 @@ export function StoreBrowser({
       setError("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nav, type, activeTags, teamReady, currentTeam?.id]);
+  }, [nav, type, activeTags, urlReady, teamReady, currentTeam?.id]);
 
   useEffect(() => {
     let active = true;
@@ -360,6 +373,39 @@ export function StoreBrowser({
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    if (!teamReady || !currentTeam) {
+      setTemplateBoards([]);
+      return;
+    }
+    let active = true;
+    setTemplateBoardsLoading(true);
+    setTemplateBoardsError("");
+    fetch("/api/boards?scope=editable")
+      .then(async (response) => {
+        if (!response.ok) throw response;
+        return response.json() as Promise<{ boards?: TemplateBoardOption[] }>;
+      })
+      .then((data) => {
+        if (!active) return;
+        setTemplateBoards(
+          (data.boards ?? []).filter(
+            (board) => Number(board.team_id) === currentTeam.id && board.ownedByMe === true,
+          ),
+        );
+      })
+      .catch(() => {
+        if (active) {
+          setTemplateBoards([]);
+          setTemplateBoardsError("Failed to load source Boards. Please try again.");
+        }
+      })
+      .finally(() => {
+        if (active) setTemplateBoardsLoading(false);
+      });
+    return () => { active = false; };
+  }, [teamReady, currentTeam?.id]);
+
   // 从分享链接跳转回来的着陆态（见 app/(app)/ai-store/share/[id]/page.tsx）：
   // ?nav=authorized 直接切到 Authorized 视图；?shareError=invalid 提示链接失效；
   // ?shared=<id> 提示成功加入。仅在挂载时读一次 URL，不影响后续 client 状态切换。
@@ -389,6 +435,7 @@ export function StoreBrowser({
     if (navParam || params.get("shareError") || params.get("shared")) {
       window.history.replaceState(null, "", window.location.pathname);
     }
+    setUrlReady(true);
   }, []);
 
   // Explore 视图里也要知道自己已订阅了哪些（用于卡片/详情按钮态），首次挂载拉一次。
@@ -618,6 +665,15 @@ export function StoreBrowser({
 
   function selectDestination(destination: StoreDestination) {
     setDetailId(null);
+    setSubscribeError("");
+    if (editingAuthorized) {
+      setEditingAuthorized(false);
+      setEditingSourceTeamName("");
+      setForm(EMPTY_FORM);
+      setEditingStatus(null);
+      setFormErrors({});
+      setFormMessage("");
+    }
     if (destination === "team-review" && currentTeam) {
       router.push(`/teams/${currentTeam.id}/ai-store-review`);
       return;
@@ -643,6 +699,7 @@ export function StoreBrowser({
   function startNewItem() {
     setForm(EMPTY_FORM);
     setEditingAuthorized(false);
+    setEditingSourceTeamName("");
     setEditingStatus(null);
     setEditorErrorStatus(null);
     setEditorDirty(false);
@@ -687,6 +744,10 @@ export function StoreBrowser({
         item.config?.skillKind === "image" || item.config?.skillKind === "text"
           ? item.config.skillKind
           : "text",
+      templateBoardId:
+        item.type === "template" && Number.isInteger(Number(item.config?.templateBoardId))
+          ? String(item.config?.templateBoardId)
+          : "",
       name: item.name,
       description: item.description,
       config: configText(item),
@@ -699,10 +760,11 @@ export function StoreBrowser({
     setFormErrors({});
     setFormMessage("");
     setEditingAuthorized(authorized);
+    setEditingSourceTeamName(item.origin_team_name ?? `Team ${item.origin_team_id}`);
     setEditingStatus(item.status);
     setEditorErrorStatus(null);
     setEditorDirty(false);
-    setNav("create");
+    setNav(authorized ? "authorized" : "create");
   }
 
   async function submitItem(action: SubmitAction) {
@@ -730,7 +792,7 @@ export function StoreBrowser({
             : action === "publish"
               ? "Published. 已发布"
               : data.item.status === "published" || data.item.status === "approved"
-                ? "Changes are live for existing subscribers. 草稿已保存"
+                ? "Changes are live for existing subscribers. 更改已实时生效"
                 : "Draft saved. 草稿已保存"
         );
         setEditorDirty(false);
@@ -798,7 +860,8 @@ export function StoreBrowser({
     subscribed = scope === "personal" ? detailSubscription?.personal === true : detailSubscription?.team === true,
   ) {
     if (!isSubscribable(item) || subscribing != null) return;
-    setSubscribing(item.id);
+    const itemId = Number(item.id);
+    setSubscribing(itemId);
     setSubscribeError("");
     try {
       const url = `/api/ai-store/items/${item.id}/subscribe${subscribed ? `?scope=${scope}` : ""}`;
@@ -813,8 +876,8 @@ export function StoreBrowser({
         return;
       }
       await loadSubscribed();
-      if (detailId === item.id) {
-        const statusResponse = await fetch(`/api/ai-store/items/${item.id}/subscribe`);
+      if (detailId === itemId) {
+        const statusResponse = await fetch(`/api/ai-store/items/${itemId}/subscribe`);
         if (statusResponse.ok) setDetailSubscription((await statusResponse.json()) as SubscriptionStatus);
       }
     } catch {
@@ -824,9 +887,7 @@ export function StoreBrowser({
     }
   }
 
-  // uc-ai-store-003：使用入口——按项目类型带入对应场景。
-  // agent → 打开带该 Agent 上下文的新 AVA 会话；ai-tool → 打开 AVA 并预选该工具；
-  // template → 目前 boards 尚无「按模板建板」入口（超出本 feature 范围），先给出明确的下一步提示。
+  // uc-ai-store-003：使用入口——Agent/Skill 带入 AVA，Template 深复制源 Board 后打开。
   async function useItem(item: StoreItem) {
     if (usingItem != null) return;
     setUsingItem(item.id);
@@ -904,7 +965,7 @@ export function StoreBrowser({
       return new Date(right.updated_at ?? 0).getTime() - new Date(left.updated_at ?? 0).getTime();
     });
   const isExplore = nav === "explore" || nav === "featured";
-  const isCreate = nav === "create";
+  const isCreate = nav === "create" || (nav === "authorized" && editingAuthorized && form.id != null);
   const isAuthorized = nav === "authorized";
   const isShared = nav === "shared";
   const navTitle = {
@@ -913,7 +974,7 @@ export function StoreBrowser({
     subscribe: "My subscriptions",
     create: "Created by me",
     authorized: "Authorized editing",
-    shared: "Shared with me",
+    shared: "Shared by me",
     "team-review": "Team review",
     "boardx-review": "BoardX review",
   }[nav];
@@ -1634,6 +1695,40 @@ export function StoreBrowser({
                     )}
                   </div>
 
+                  {form.type === "template" && !editingAuthorized && (
+                    <div className="flex flex-col gap-1.5 md:col-span-2">
+                      <Label htmlFor="store-template-board">Source Board</Label>
+                      <Select
+                        id="store-template-board"
+                        data-testid="field-template-board"
+                        value={form.templateBoardId}
+                        onChange={(event) => updateForm("templateBoardId", event.target.value)}
+                        disabled={templateBoardsLoading}
+                        aria-describedby={formErrors.templateBoardId ? "store-template-board-error" : undefined}
+                      >
+                        <option value="">
+                          {templateBoardsLoading ? "Loading Boards..." : "Select a Board owned by you"}
+                        </option>
+                        {templateBoards.map((board) => (
+                          <option key={board.id} value={String(board.id)}>{board.name}</option>
+                        ))}
+                      </Select>
+                      {templateBoardsError && (
+                        <p role="alert" className="text-xs text-destructive">{templateBoardsError}</p>
+                      )}
+                      {!templateBoardsLoading && !templateBoardsError && templateBoards.length === 0 && (
+                        <p className="text-11 text-placeholder">
+                          Create a Board in this Team before publishing a Template.
+                        </p>
+                      )}
+                      {formErrors.templateBoardId && (
+                        <p id="store-template-board-error" role="alert" data-testid="err-template-board" className="text-xs text-destructive">
+                          {formErrors.templateBoardId}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   <label className="flex min-h-11 items-center gap-3 rounded-8 border border-border px-3 md:col-span-2">
                     <input type="checkbox"
                       data-testid="field-allow-copy"
@@ -1773,7 +1868,11 @@ export function StoreBrowser({
 
             <aside className="min-w-0 xl:sticky xl:top-0 xl:self-start xl:border-l xl:border-border xl:pl-6">
               <ResourcePreview
-                currentTeamName={currentTeam?.name ?? "Current Team"}
+                currentTeamName={
+                  editingAuthorized
+                    ? editingSourceTeamName || "Source Team"
+                    : currentTeam?.name ?? "Current Team"
+                }
                 name={form.name}
                 description={form.description}
                 type={form.type}
@@ -1809,7 +1908,7 @@ export function StoreBrowser({
                 Your own items — click Share to generate a management authorization link.
               </p>
               <div className="flex-1" />
-              <Button type="button" size="sm" variant="outline" data-testid="authorized-create" onClick={() => setNav("create")}>
+              <Button type="button" size="sm" variant="outline" data-testid="authorized-create" onClick={() => selectDestination("create")}>
                 <Plus className="h-4 w-4" />
                 Create
               </Button>
@@ -1899,7 +1998,7 @@ export function StoreBrowser({
           <div data-testid="shared-view" className="mt-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-15 font-bold text-foreground">Shared resources</h2>
+                <h2 className="text-15 font-bold text-foreground">Shared by this Team</h2>
                 <p className="mt-1 text-12 text-placeholder">
                   Manage edit links and authorized people for resources owned by this Team.
                 </p>
@@ -1972,7 +2071,7 @@ export function StoreBrowser({
                 <Bookmark className="h-7.5 w-7.5 text-border-strong" strokeWidth={1.5} />
                 <p className="mt-2 text-13 font-semibold text-foreground">No subscriptions yet</p>
                 <p className="text-13 text-placeholder">Subscribe to an Agent, tool, or template from Explore.</p>
-                <Button size="sm" variant="outline" data-testid="goto-explore" onClick={() => setNav("explore")} className="mt-3">
+                <Button size="sm" variant="outline" data-testid="goto-explore" onClick={() => selectDestination("explore")} className="mt-3">
                   Go to Explore
                 </Button>
               </div>
@@ -2067,7 +2166,7 @@ export function StoreBrowser({
               size="sm"
               variant="outline"
               data-testid="goto-explore"
-              onClick={() => setNav("explore")}
+              onClick={() => selectDestination("explore")}
               className="mt-3"
             >
               Go to Explore
@@ -2157,7 +2256,9 @@ export function StoreBrowser({
                   {detailItem.type} · by {detailItem.author}
                 </div>
                 <div className="mt-1 flex items-center gap-3 text-11 text-placeholder">
-                  <span data-testid="detail-source-team">Team #{detailItem.origin_team_id}</span>
+                  <span data-testid="detail-source-team">
+                    {detailItem.origin_team_name ?? `Team ${detailItem.origin_team_id}`}
+                  </span>
                   <span data-testid="detail-version">Version {detailItem.version}</span>
                 </div>
                 <p

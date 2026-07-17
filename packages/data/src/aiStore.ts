@@ -178,10 +178,15 @@ export async function listAiStoreItems(opts: ListAiStoreItemsOptions = {}): Prom
 /** 取单个项目详情（供详情弹窗）。不做可见性过滤，调用方按需自行校验。 */
 export async function getAiStoreItem(id: number): Promise<AiStoreItem | undefined> {
   const rows = await query<AiStoreItem>(
-    `SELECT ${ITEM_COLS} FROM ai_store_items
-     WHERE id = $1
-       AND migration_quarantined_at IS NULL
-       AND archived_at IS NULL`,
+    `SELECT item.*, origin_team.name AS origin_team_name
+     FROM (
+       SELECT ${ITEM_COLS}
+       FROM ai_store_items
+       WHERE id = $1
+         AND migration_quarantined_at IS NULL
+         AND archived_at IS NULL
+     ) item
+     JOIN teams origin_team ON origin_team.id = item.origin_team_id`,
     [id]
   );
   return rows[0];

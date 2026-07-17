@@ -29,7 +29,7 @@ const GROUPS = [
       { key: "subscribe", label: "My subscriptions", icon: Bookmark, alias: "subscriptions" },
       { key: "create", label: "Created by me", icon: FolderPen, alias: "created" },
       { key: "authorized", label: "Authorized editing", icon: ShieldCheck },
-      { key: "shared", label: "Shared with me", icon: UsersRound },
+      { key: "shared", label: "Shared by me", icon: UsersRound },
     ],
   },
 ] as const;

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { CURRENT_TEAM_COOKIE } from "@repo/auth";
 import {
   createAiStoreItem,
+  getBoard,
   getAiStoreItem,
   getAiStoreItemForSubscription,
   getMembership,
@@ -123,6 +124,19 @@ export async function POST(req: Request) {
     const body = (await req.json()) as Record<string, unknown>;
     const parsed = parseAiStorePayload(body, currentTeamId);
     if (parsed.errors) return NextResponse.json({ errors: parsed.errors }, { status: 400 });
+    if (parsed.payload?.type === "template") {
+      const board = await getBoard(Number(parsed.payload.config.templateBoardId));
+      if (
+        !board ||
+        Number(board.team_id) !== currentTeamId ||
+        Number(board.owner_user_id) !== Number(user.id)
+      ) {
+        return NextResponse.json(
+          { errors: { templateBoardId: "请选择当前团队中由你拥有的模板源白板" } },
+          { status: 400 },
+        );
+      }
+    }
 
     const item = await createAiStoreItem({
       ...parsed.payload!,

@@ -33,7 +33,24 @@ async function createApprovedResource(
   admin: APIRequestContext,
   type: "agent" | "skill" | "template",
   tag: string,
+  creatorTeamId: number,
 ) {
+  let templateBoardId: number | undefined;
+  if (type === "template") {
+    const roomResponse = await creator.post("/api/rooms", {
+      data: { name: `${tag} Template Source ${Date.now()}`, visibility: "team", teamId: creatorTeamId },
+    });
+    expect(roomResponse.status()).toBe(201);
+    const roomId = Number((await roomResponse.json()).room.id);
+    const boardResponse = await creator.post(`/api/rooms/${roomId}/boards`, {
+      data: { name: `${tag} Template Board ${Date.now()}` },
+    });
+    expect(boardResponse.status()).toBe(201);
+    templateBoardId = Number((await boardResponse.json()).board.id);
+    expect((await creator.post(`/api/boards/${templateBoardId}/items`, {
+      data: { type: "note", x: 20, y: 20, text: "Shared template content" },
+    })).status()).toBe(201);
+  }
   const response = await creator.post("/api/ai-store/items", {
     data: {
       type,
@@ -43,6 +60,7 @@ async function createApprovedResource(
       name: `${tag} ${type} ${Date.now()}`,
       description: `${type} version one`,
       config: `${type} instructions`,
+      templateBoardId,
     },
   });
   expect(response.status()).toBe(201);
@@ -63,7 +81,7 @@ test("USER and TEAM subscriptions are role-gated, Team-scoped, inherited, and in
 }) => {
   const creator = await playwright.request.newContext({ baseURL });
   await register(creator, "Creator");
-  await createTeam(creator, "Creator");
+  const creatorTeamId = await createTeam(creator, "Creator");
 
   const adminEmail = await register(page.request, "BoardXAdmin");
   await createTeam(page.request, "BoardXAdmin");
@@ -72,9 +90,9 @@ test("USER and TEAM subscriptions are role-gated, Team-scoped, inherited, and in
   })).status()).toBe(200);
 
   const resources = await Promise.all([
-    createApprovedResource(creator, page.request, "agent", "Shared"),
-    createApprovedResource(creator, page.request, "skill", "Shared"),
-    createApprovedResource(creator, page.request, "template", "Shared"),
+    createApprovedResource(creator, page.request, "agent", "Shared", creatorTeamId),
+    createApprovedResource(creator, page.request, "skill", "Shared", creatorTeamId),
+    createApprovedResource(creator, page.request, "template", "Shared", creatorTeamId),
   ]);
   const agent = resources[0];
 
@@ -159,9 +177,13 @@ test("USER and TEAM subscriptions are role-gated, Team-scoped, inherited, and in
 
   await memberPage.goto("/ai-store?nav=subscribe");
   await memberPage.getByTestId("nav-subscribe").click();
+  const templateUseResponse = memberPage.waitForResponse(
+    (response) => response.url().endsWith(`/api/ai-store/items/${resources[2].id}/use`)
+      && response.request().method() === "POST",
+  );
   await memberPage.getByTestId(`subscribed-use-${resources[2].id}`).click();
-  await expect(memberPage).toHaveURL(/\/boards$/);
-  await expect(memberPage.getByTestId("template-use-notice")).toBeVisible();
+  expect([200, 201]).toContain((await templateUseResponse).status());
+  await expect(memberPage).toHaveURL(/\/boards\/[A-Za-z0-9_-]+$/);
 
   expect((await member.post(`/api/ai-store/items/${agent.id}/subscribe`, {
     data: { scope: "personal" },

@@ -8,7 +8,7 @@
 
 ## 工作区导航
 
-- 持久导航包含 Explore、Featured、My subscriptions、Created by me、Authorized editing、Shared with me、Team review 和 BoardX review。
+- 持久导航包含 Explore、Featured、My subscriptions、Created by me、Authorized editing、Shared by me、Team review 和 BoardX review。
 - Team review 仅当前 Team owner/admin 可见；BoardX review 仅 BoardX Admin 可见。
 - `Create resource` 是唯一常驻主操作，明确显示目标 Team。
 - Authorized editing 按用户跨 Team 聚合并显示来源 Team；其他业务视图按当前 Team 隔离。
@@ -25,13 +25,14 @@
 
 - 订阅显式区分 `For me` 与 `For team`；TEAM 操作只向当前 Team owner/admin 开放。
 - 使用要求当前 Team 下有效 USER 或 TEAM 订阅，并始终解析最新版本。
-- Shared with me 是收到的分享邀请；Authorized editing 是已接受且仍有效的原资源编辑授权。
-- Created by me 和资源详情负责所有者的外发链接、授权用户、撤销和 `allowCopy` 管理。
+- Authorized editing 是用户已接受且仍有效的原资源编辑授权。
+- Shared by me 集中显示当前 Team 所有者创建的外发分享链接、已授权用户和撤销入口；Created by me 与资源详情也可以进入同一外发分享管理流程。
 - 复制前显示目标 Team，成功后进入目标 Team 的 Created by me 独立草稿。
 
 ## 创建、编辑与审核
 
 - Agent、Skill、Template 共用一致编辑框架；Skill 继续区分 text/image 执行配置。
+- Template 创建必须选择当前 Team 中真实、可编辑的源 Board；资源使用时在订阅者当前 Team 深复制该 Board 及内容后直接打开新 Board，不允许创建无法执行的 Template。
 - 编辑器包含真实表单、实时预览、保存中、成功、字段校验、未保存内容和版本 409 状态。
 - 已 published/approved 资源修改后保持审核状态并立即同步订阅者。
 - Team review 与 BoardX review 复用资源列表、详情、确认和审计模式。

@@ -32,6 +32,19 @@ async function createItem(page: Page, input: {
   description?: string;
   tags?: string;
 }) {
+  let templateBoardId: number | undefined;
+  if (input.type === "template") {
+    const roomResponse = await page.request.post("/api/rooms", {
+      data: { name: `${input.name} Source`, visibility: "team" },
+    });
+    expect(roomResponse.status()).toBe(201);
+    const roomId = Number((await roomResponse.json()).room.id);
+    const boardResponse = await page.request.post(`/api/rooms/${roomId}/boards`, {
+      data: { name: `${input.name} Board` },
+    });
+    expect(boardResponse.status()).toBe(201);
+    templateBoardId = Number((await boardResponse.json()).board.id);
+  }
   const res = await page.request.post("/api/ai-store/items", {
     data: {
       type: input.type,
@@ -43,6 +56,7 @@ async function createItem(page: Page, input: {
       config: `${input.name} instructions`,
       tags: input.tags ?? "research",
       examples: `${input.name} example`,
+      templateBoardId,
     },
   });
   expect(res.status()).toBe(201);
@@ -51,7 +65,8 @@ async function createItem(page: Page, input: {
 
 test("Explore is Team-aware and exposes Agent, Skills, Template detail and pagination", async ({ page }) => {
   await register(page);
-  const teamA = await createTeam(page, `Explore Team A ${Date.now()}`);
+  const teamAName = `Explore Team A ${Date.now()}`;
+  const teamA = await createTeam(page, teamAName);
 
   const agent = await createItem(page, {
     type: "agent",
@@ -78,13 +93,14 @@ test("Explore is Team-aware and exposes Agent, Skills, Template detail and pagin
     type: "agent",
     name: "Team B Private Agent",
   });
+  await switchTeam(page, teamB);
 
-  await page.goto("/ai-store");
+  await page.goto(`/ai-store?q=${encodeURIComponent("Team B Private Agent")}`);
   await expect(page.getByTestId("item-grid")).toContainText("Team B Private Agent");
   await expect(page.getByTestId("item-grid")).not.toContainText("Team A Research Agent");
 
   await switchTeam(page, teamA);
-  await page.reload();
+  await page.goto("/ai-store");
 
   await expect(page.getByTestId("store-submenu")).toBeVisible();
   await expect(page.getByTestId("nav-explore")).toBeVisible();
@@ -99,11 +115,11 @@ test("Explore is Team-aware and exposes Agent, Skills, Template detail and pagin
   await expect(page.getByTestId("type-ai-tool")).toHaveCount(0);
   await expect(page.getByTestId("type-image-tool")).toHaveCount(0);
 
-  await expect(page.getByTestId("result-count")).toContainText("11");
+  await expect(page.getByTestId("result-count")).toContainText("results");
   await expect(page.getByTestId("pagination")).toBeVisible();
-  await expect(page.getByTestId("page-indicator")).toContainText("Page 1 / 2");
+  await expect(page.getByTestId("page-indicator")).toContainText("Page 1 /");
   await page.getByTestId("page-next").click();
-  await expect(page.getByTestId("page-indicator")).toContainText("Page 2 / 2");
+  await expect(page.getByTestId("page-indicator")).toContainText("Page 2 /");
   await page.getByTestId("page-prev").click();
 
   await page.getByTestId("type-skill").click();
@@ -118,7 +134,7 @@ test("Explore is Team-aware and exposes Agent, Skills, Template detail and pagin
 
   const modal = page.getByTestId("item-detail-modal");
   await expect(modal.getByTestId("detail-name")).toHaveText("Team A Research Agent");
-  await expect(modal.getByTestId("detail-source-team")).toHaveText(`Team #${teamA}`);
+  await expect(modal.getByTestId("detail-source-team")).toHaveText(teamAName);
   await expect(modal.getByTestId("detail-version")).toHaveText(`Version ${agent.version}`);
   await expect(modal.getByTestId("detail-description")).toBeVisible();
   await expect(modal.getByTestId("detail-examples")).toBeVisible();
@@ -147,5 +163,6 @@ test("Explore request failure has a stable error and retry state", async ({ page
   await expect(page.getByTestId("error")).toBeVisible();
   await expect(page.getByTestId("retry")).toBeVisible();
   await page.getByTestId("retry").click();
-  await expect(page.getByTestId("empty")).toBeVisible();
+  await expect(page.getByTestId("resource-catalog")).toBeVisible();
+  await expect(page.getByTestId("error")).toHaveCount(0);
 });

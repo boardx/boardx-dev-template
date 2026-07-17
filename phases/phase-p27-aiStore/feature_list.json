@@ -328,6 +328,30 @@
       ],
       "evidence": "evidence/F15.verify.log @ 2026-07-17T10:18:04.481Z",
       "notes": "用户截图回归；热点为 StoreBrowser、StoreNavigation、ResourceCatalog 和 /api/teams/current。必须使用真实 Team/AI Store API，不允许用 mock 数据掩盖 400。"
+    },
+    {
+      "id": "F16",
+      "priority": 1,
+      "area": "ai-store-ui",
+      "title": "Browser acceptance consistency and executable Templates",
+      "user_visible_behavior": "真实用户从带搜索条件的 URL 进入 Explore 时立即看到正确结果，列表、详情和 My subscriptions 的订阅状态及来源 Team 一致；用户创建 Template 时必须选择当前 Team 的真实源 Board，订阅后使用会深复制并打开新 Board；授权编辑保持来源 Team 上下文，切换工作区清除旧错误，外发分享入口明确显示为 Shared by me。",
+      "status": "passing",
+      "sprint": "09",
+      "owner": "codex-p27-ai-store-control-plane",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F07",
+        "F09",
+        "F11",
+        "F15"
+      ],
+      "wave": 11,
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ai-store-018-browser-acceptance-regressions.spec.ts",
+        "pnpm --filter @repo/web lint"
+      ],
+      "evidence": "evidence/F16.verify.log @ 2026-07-17T13:14:03.982Z",
+      "notes": "真人 Chrome 验收回归；热点为 StoreBrowser、ResourceEditor、StoreNavigation、AI Store 详情查询、Template seed 与真实 API E2E。不得用 mock 或无源 Board 的 Template 通过验证。"
     }
   ]
 }

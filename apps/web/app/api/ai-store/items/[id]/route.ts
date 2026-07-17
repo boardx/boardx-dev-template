@@ -4,6 +4,7 @@ import { CURRENT_TEAM_COOKIE } from "@repo/auth";
 import {
   archiveAiStoreItem,
   canAccessAiStoreItem,
+  getBoard,
   getAiStoreItem,
   getMembership,
   incrementAiStoreItemViews,
@@ -45,7 +46,13 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   if (!viewedItem) return NextResponse.json({ error: "未找到" }, { status: 404 });
   const liked = await isAiStoreItemFavorited(id, user.id, teamId);
 
-  return NextResponse.json({ item: { ...viewedItem, liked } });
+  return NextResponse.json({
+    item: {
+      ...viewedItem,
+      origin_team_name: item.origin_team_name,
+      liked,
+    },
+  });
 }
 
 // uc-ai-store-002：属主更新自己的 AI Store 项目（编辑草稿/已发布/审核中项）。
@@ -66,18 +73,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       return NextResponse.json({ error: "当前团队不可用" }, { status: 403 });
     }
 
-    const body = (await req.json()) as Record<string, unknown>;
-    const parsed = parseAiStorePayload(body, currentTeamId);
-    if (parsed.errors) return NextResponse.json({ errors: parsed.errors }, { status: 400 });
-    const expectedVersion = parsed.payload?.expectedVersion;
-    if (expectedVersion == null) {
-      return NextResponse.json({ errors: { expectedVersion: "缺少版本号" } }, { status: 400 });
-    }
-
     const existing = await getAiStoreItem(id);
     if (!existing) return NextResponse.json({ error: "未找到" }, { status: 404 });
 
-    const isOwner = existing.owner_user_id === user.id;
+    const isOwner = Number(existing.owner_user_id) === Number(user.id);
     const isAuthorizedEditor =
       !isOwner && (await isAiStoreItemGrantee(id, user.id, currentTeamId));
     if (!isOwner && !isAuthorizedEditor) {
@@ -86,15 +85,49 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (isOwner && String(existing.origin_team_id) !== String(currentTeamId)) {
       return NextResponse.json({ error: "请切换到资源来源团队后再编辑" }, { status: 403 });
     }
+
+    const body = (await req.json()) as Record<string, unknown>;
+    const effectiveBody = isOwner
+      ? body
+      : {
+          ...body,
+          type: existing.type,
+          skillKind: existing.config.skillKind,
+          scope: existing.scope,
+          action: "draft",
+          allowCopy: existing.allow_copy,
+          templateBoardId: existing.config.templateBoardId,
+        };
+    const parsed = parseAiStorePayload(effectiveBody, currentTeamId);
+    if (parsed.errors) return NextResponse.json({ errors: parsed.errors }, { status: 400 });
+    const payload = parsed.payload!;
+    const expectedVersion = payload.expectedVersion;
+    if (expectedVersion == null) {
+      return NextResponse.json({ errors: { expectedVersion: "缺少版本号" } }, { status: 400 });
+    }
     if (existing.version !== expectedVersion) {
       return NextResponse.json(
         { error: "资源已被其他人更新，请刷新后重试", currentVersion: existing.version },
         { status: 409 },
       );
     }
+    const effectiveType = isOwner ? payload.type : existing.type;
+    if (effectiveType === "template") {
+      const board = await getBoard(Number(payload.config.templateBoardId));
+      if (
+        !board ||
+        Number(board.team_id) !== Number(existing.origin_team_id) ||
+        Number(board.owner_user_id) !== Number(existing.owner_user_id)
+      ) {
+        return NextResponse.json(
+          { errors: { templateBoardId: "模板源白板必须仍属于资源所有者和来源团队" } },
+          { status: 400 },
+        );
+      }
+    }
 
     const item = await updateAiStoreItem(id, user.id, currentTeamId, expectedVersion, {
-      ...parsed.payload!,
+      ...payload,
       ownerUserId: user.id,
       author: user.display_name || `${user.first_name} ${user.last_name}`.trim() || user.email,
     });

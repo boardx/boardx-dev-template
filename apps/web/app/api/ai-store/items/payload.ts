@@ -82,8 +82,8 @@ export function parseAiStorePayload(body: Record<string, unknown>, currentTeamId
   if (!name) errors.name = "名称不能为空";
   if (!description) errors.description = "描述不能为空";
   if (!configText) errors.config = "配置不能为空";
-  if (type === "template" && templateBoardId != null && !Number.isInteger(templateBoardId)) {
-    errors.templateBoardId = "模板白板无效";
+  if (type === "template" && (!Number.isInteger(templateBoardId) || templateBoardId! < 1)) {
+    errors.templateBoardId = "请选择模板源白板";
   }
   if (expectedVersionRaw != null && (!Number.isInteger(expectedVersion) || expectedVersion! < 1)) {
     errors.expectedVersion = "版本号无效";
@@ -125,7 +125,7 @@ export function parseAiStorePayload(body: Record<string, unknown>, currentTeamId
       config: {
         instructions: configText,
         ...(type === "skill" ? { skillKind } : {}),
-        ...(type === "template" && templateBoardId != null ? { templateBoardId } : {}),
+        ...(type === "template" ? { templateBoardId } : {}),
         ...(type === "agent" && Array.isArray(body.relatedSkillIds)
           ? {
               relatedSkillIds: body.relatedSkillIds
