@@ -87,15 +87,30 @@ export async function POST(req: Request) {
     await saveSurveyAiDraftSession({ id: sessionId, actorUserId: user.id, modelId: "mock-survey-fallback", draft: normalizeJsonObject(draft), goal: command });
     return NextResponse.json({ sessionId, draft, model: "mock-survey-fallback", fallback: { from: model, to: "mock-survey-fallback" } });
   }
+  let cleaned: SurveyDraft;
   try {
     const draft = await callQwenJson<Partial<SurveyDraft>>({ model, messages: [
       { role: "system", content: "你是专业问卷研究员。仅输出 JSON，包含 reply,summary,title,description,questions,clarifyingQuestions,assumptions,reportOutline,reportTemplate,intentCanvas。" },
       { role: "user", content: JSON.stringify({ command, mode: body.mode, currentDraft: body.draft ?? null, history: body.history ?? [] }) },
     ] });
-    const cleaned = cleanDraft(draft, command);
+    cleaned = cleanDraft(draft, command);
+  } catch (error) {
+    console.error("[survey-ai] Qwen generation failed", {
+      model,
+      error: error instanceof Error ? error.message : "unknown error",
+    });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "千问生成失败" }, { status: 502 });
+  }
+
+  try {
     await saveSurveyAiDraftSession({ id: sessionId, actorUserId: user.id, modelId: model, draft: normalizeJsonObject(cleaned), goal: command });
     return NextResponse.json({ sessionId, draft: cleaned, model });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "千问生成失败" }, { status: 502 });
+    console.error("[survey-ai] Draft session persistence failed", {
+      model,
+      sessionId,
+      error: error instanceof Error ? error.message : "unknown error",
+    });
+    return NextResponse.json({ error: "问卷已生成，但保存会话失败，请稍后重试" }, { status: 500 });
   }
 }

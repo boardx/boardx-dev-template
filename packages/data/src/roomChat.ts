@@ -1,5 +1,14 @@
-// packages/data/src/roomChat.ts — CAP-DATA 房间聊天线程仓储（P4）
+// packages/data/src/roomChat.ts — CAP-DATA 房间聊天线程仓储（P4；P18 room-ava F05 接入真实网关）
 import { query } from "./index";
+import {
+  defaultGateway,
+  runChatGraph,
+  makeGenerateNode,
+  DEFAULT_AVA_MODEL_ID,
+  DEFAULT_AVA_AGENT_ID,
+  DEFAULT_AVA_TOOL_IDS,
+  type ChatMessage,
+} from "@repo/ai";
 
 export interface RoomChat {
   id: number;
@@ -81,16 +90,55 @@ export interface RoomChatMessage {
   created_at: string;
 }
 
-/** AVA 占位回复：以 room chat 类型 + 当前 roomId 关联当前房间上下文（纯函数，可单测）。
- *  p9 接入真实模型前的确定性桩；不含模型选择/计费（见 UC 不包含）。
- *  uc-rr-010（p20/F11）：若房间配置了 ai_instruction，系统提示注入到桩回复中，使其可被断言
- *  ——真实模型是否「遵循」指令由 p9 真链路阶段验证，这里只证明注入路径存在（同房间全部线程共享）。 */
-export function avaReply(userText: string, roomId: number, aiInstruction?: string | null): string {
-  const t = (userText ?? "").trim();
-  const quoted = t.length > 80 ? `${t.slice(0, 80)}…` : t;
+/** 组装喂给 CAP-AI 网关的消息数组（纯函数，可单测）：
+ *  uc-rr-010（p20/F11）：若房间配置了 ai_instruction，作为 system 消息注入到最前面
+ *  （同房间全部线程共享同一指令）；随后是线程历史，最后追加本次用户消息。
+ *  房间 id 本身不再拼进回复文案里——真实模型不需要靠字符串模板体现"关联当前房间"，
+ *  房间关联体现在这条消息序列本身就是该房间该线程的历史（调用方按 chatId/roomId 隔离）。 */
+export function buildRoomChatMessages(
+  history: Array<Pick<RoomChatMessage, "role" | "content">>,
+  text: string,
+  roomId: number,
+  aiInstruction?: string | null
+): ChatMessage[] {
+  const messages: ChatMessage[] = [];
   const instruction = (aiInstruction ?? "").trim();
-  const systemPromptSuffix = instruction ? ` [系统提示注入 ai_instruction："${instruction}"]` : "";
-  return `AVA（房间 ${roomId} 上下文）已收到：“${quoted}”。${systemPromptSuffix}`;
+  if (instruction) {
+    messages.push({
+      role: "system",
+      content: `你正在房间 ${roomId} 的聊天线程中协助用户。房间管理员设置的系统提示（ai_instruction）：${instruction}`,
+    });
+  }
+  for (const m of history) {
+    messages.push({ role: m.role, content: m.content });
+  }
+  messages.push({ role: "user", content: (text ?? "").trim() });
+  return messages;
+}
+
+/** 调 CAP-AI 网关生成一条完整回复（非流式：内部把网关的流式 token 收集成一整段字符串
+ *  再返回，room chat 目前是"一次 POST 拿到两条消息"的非流式契约，不在本次改造成 SSE）。
+ *  与 /ava 消息路由（apps/web/app/api/ava/threads/[id]/messages/reply-stream.ts）复用同一套
+ *  runChatGraph + makeGenerateNode(defaultGateway.streamChat) 调用方式，不重新发明网关调用约定。 */
+async function generateRoomChatReply(
+  history: RoomChatMessage[],
+  roomId: number,
+  text: string,
+  aiInstruction?: string | null
+): Promise<string> {
+  const messages = buildRoomChatMessages(history, text, roomId, aiInstruction);
+  const generateNode = makeGenerateNode(defaultGateway.streamChat.bind(defaultGateway));
+  const result = await runChatGraph(
+    {
+      threadId: roomId,
+      modelId: DEFAULT_AVA_MODEL_ID,
+      agentId: DEFAULT_AVA_AGENT_ID,
+      toolIds: DEFAULT_AVA_TOOL_IDS,
+      messages,
+    },
+    generateNode
+  );
+  return result.reply;
 }
 
 /** 线程内消息，按时间升序。 */
@@ -117,7 +165,8 @@ async function insertMessage(
   return rows[0]!;
 }
 
-/** 发送一条用户消息并生成 AVA 占位回复；两条都持久化，线程 updated_at 刷新。
+/** 发送一条用户消息并调 CAP-AI 网关生成真实回复（p18 room-ava F05：接通真实链路，
+ *  替换此前的固定占位字符串）；两条都持久化，线程 updated_at 刷新。
  *  uc-rr-010（p20/F11）：房间任一线程发消息都会把 rooms.ai_instruction 注入系统提示
  *  （同房间全部线程共享同一指令），调用方从 getRoomAiInstruction(roomId) 取值传入。 */
 export async function sendRoomChatMessage(
@@ -126,8 +175,10 @@ export async function sendRoomChatMessage(
   text: string,
   aiInstruction?: string | null
 ): Promise<{ userMessage: RoomChatMessage; replyMessage: RoomChatMessage }> {
+  const priorHistory = await listRoomChatMessages(chatId);
   const userMessage = await insertMessage(chatId, roomId, "user", text.trim());
-  const replyMessage = await insertMessage(chatId, roomId, "assistant", avaReply(text, roomId, aiInstruction));
+  const replyText = await generateRoomChatReply(priorHistory, roomId, text, aiInstruction);
+  const replyMessage = await insertMessage(chatId, roomId, "assistant", replyText);
   await query(`UPDATE room_chats SET updated_at = now() WHERE id = $1`, [chatId]);
   return { userMessage, replyMessage };
 }

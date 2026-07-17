@@ -7,6 +7,7 @@ import { portalFetch } from "@/lib/portal-fetch";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { MeTab } from "@/components/portal/tabs/me-tab";
 import { PulseTab } from "@/components/portal/tabs/pulse-tab";
 import { CoordTab } from "@/components/portal/tabs/coord-tab";
 import { TalkTab } from "@/components/portal/tabs/talk-tab";
@@ -14,6 +15,7 @@ import { JoinTab } from "@/components/portal/tabs/join-tab";
 import { PerfTab } from "@/components/portal/tabs/perf-tab";
 
 const TABS = [
+  { key: "me", label: "我的视角" },
   { key: "pulse", label: "脉搏与进度" },
   { key: "coord", label: "实时协调" },
   { key: "talk", label: "讨论流" },
@@ -24,7 +26,7 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"];
 
 export function PortalShell({ developer }: { developer: { name: string; email: string; agentCount: number } }) {
-  const [tab, setTab] = useState<TabKey>("pulse");
+  const [tab, setTab] = useState<TabKey>("me"); // F10：登录后默认落"我"视角首屏
   const [decideCount, setDecideCount] = useState<number | null>(null); // null = 未配置/未知 → 不渲染通知
 
   useEffect(() => {
@@ -100,6 +102,7 @@ export function PortalShell({ developer }: { developer: { name: string; email: s
       </nav>
 
       <div className="mt-5" data-testid={`tab-${tab}`}>
+        {tab === "me" && <MeTab developer={developer} decideCount={decideCount} />}
         {tab === "pulse" && <PulseTab />}
         {tab === "coord" && <CoordTab />}
         {tab === "talk" && <TalkTab />}

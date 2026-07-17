@@ -22,6 +22,19 @@ description: >
 
 ## 启动仪式
 
+### Step 0 — 挂上你的 loop（ADR-014，先做这个）
+
+**module-coordinator 的 loop 周期 = 15 分钟**，每个 loop 跑一条命令：
+
+```bash
+pnpm harness tick --session coord-<你的模块>
+# 权威时钟（不信本机 date）+ 时钟漂移告警 + 续模块租约（防静默过期）+ 拉任务收件箱
+```
+
+每 tick 除 tick 外还做：本模块收件箱/PR 队列扫一眼、首轮 review、按需派子 agent。
+每 3h C-cycle 边界发 cycle-plan/result + 补漏模块 skill 的经验回流。
+实现随 runtime（CC 用 /loop 或 Monitor，Codex 用等价物，cron 亦可）。
+
 ### Step 1 — 确认身份与领域
 **先读你模块的活知识库 `.agents/skills/mod-<模块名>/SKILL.md`**（代码地图/契约/前人踩坑），
 并承担它的 C-cycle 复盘义务：每周期检查本模块合并的 PR，有经验没回流的补写进去

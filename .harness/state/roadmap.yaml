@@ -185,3 +185,9 @@ phases:
     status: in_progress
     depends_on: []
     has_ui: true
+  - id: "p26"
+    slug: ava-legacy-sync
+    name: ava-legacy-sync
+    goal: "同步 boardx-web 与 boardx-backend 的 AVA 旧功能到 boardx-dev-template，建立可验证的兼容 API、迁移清单与分批交付路径。"
+    status: not_started
+    depends_on: []

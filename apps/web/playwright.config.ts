@@ -58,6 +58,13 @@ loadWorktreeEnv();
 // loadWorktreeEnv() 已把 .env / apps/web/.env.local 里的值灌进 process.env，这里直接读。
 const PORT = process.env.E2E_PORT || "3000";
 const COLLAB_WS_PORT = process.env.COLLAB_WS_PORT || "3001";
+function preferIpv4Loopback(value: string | undefined): string | undefined {
+  return value?.replaceAll("localhost", "127.0.0.1");
+}
+function loopbackEnv(key: "DATABASE_URL" | "REDIS_URL" | "S3_ENDPOINT"): Record<string, string> {
+  const value = preferIpv4Loopback(process.env[key]);
+  return value ? { [key]: value } : {};
+}
 // CAP-PAYMENT（F05）：webhook 走共享密钥 fail-closed 校验（见 lib/webhook-auth.ts）。
 // e2e 里模拟支付网关回调需要带上这把密钥；没有真实网关时用一个仅测试用的默认值，
 // 生产环境必须通过环境变量覆盖成真实值（.env.example 里也标了同名变量）。
@@ -96,7 +103,15 @@ export default defineConfig({
       url: `http://localhost:${PORT}/api/health`,
       reuseExistingServer: true,
       timeout: 120_000,
-      env: { ...process.env, WEBHOOK_SECRET: E2E_WEBHOOK_SECRET },
+      env: {
+        ...process.env,
+        ...loopbackEnv("DATABASE_URL"),
+        ...loopbackEnv("REDIS_URL"),
+        ...loopbackEnv("S3_ENDPOINT"),
+        AVA_DEFAULT_MODEL_ID: "stub:default",
+        NEXT_PUBLIC_AVA_DEFAULT_MODEL_ID: "stub:default",
+        WEBHOOK_SECRET: E2E_WEBHOOK_SECRET,
+      },
     },
     {
       command: "node server/collab-gateway.mjs",
