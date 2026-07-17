@@ -157,14 +157,19 @@ jobs:
       (github.event_name == 'schedule' && github.event.schedule == '30 */3 * * *') ||
       (github.event_name == 'workflow_dispatch' && inputs.run_e2e_full)
     runs-on: ubuntu-latest
-    # 止血用的硬上限（#665）：上一次这个 job 跑了 **5.7h**，而 GitHub 的默认硬上限是
-    # 6h。撞默认上限时 job 是被**取消**（不是 failure），`if: failure()` 的告警步骤
-    # 不保证执行——告警恰好在最该叫醒人的场景哑火。90 分钟远超正常全量耗时，够用；
-    # 真跑到 90 分钟本身就说明出事了，该报。
+    # 止血用的硬上限（#665 / 根因见 #675）：最近 13 次 e2e-full 全部跑了 **328–345
+    # 分钟**才失败（conclusion 均为 failure，从未真撞到 GitHub 的 6h 默认上限）——
+    # 绝大部分时间是在对着第 8 分钟就死掉的 dev server 等超时。90 分钟纯粹是止血：
+    # 把"默默烧 5.7 小时"压到"1.5 小时内失败且有人被叫醒"。
+    #
+    # ⚠️ 90 这个值**没有实测支撑**：本仓至今没有一次健康的全量绿跑，所以"正常耗时是
+    # 多少"是未知数。它严格优于现状（现状 100% 在 ~340 分钟失败），但**根因（#675）
+    # 修好、拿到第一次绿跑之后必须回来校准**——否则健康跑若真需要 95 分钟，这里会
+    # 误杀并开假告警，而且因为被取消，你永远测不到真实耗时。
     timeout-minutes: 90
     # 失败时要开 issue 叫醒人类（见末尾步骤）——默认 GITHUB_TOKEN 只读，不显式声明
-    # 告警会静默失败，等于没有告警。对齐 sync-projection.yml 的既有惯例，按最小权限
-    # 只给这个 job。
+    # 告警会静默失败，等于没有告警。按最小权限只给这个 job（`sync-projection.yml`
+    # 用的是 workflow 级顶层 permissions；这里用 job 级，权限内容相同但范围更窄）。
     permissions:
       issues: write
       contents: read
@@ -221,6 +226,10 @@ jobs:
         if: failure() || cancelled()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 显式给仓库上下文：不给的话 gh 靠 checkout 出来的 git remote 解析仓库，
+          # 若 job 在 checkout 期间就被取消，gh 无上下文 → issue list/create 双双失败
+          # → `|| true` 吞掉 → 告警静默丢失。一行 env 解耦。
+          GH_REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
@@ -233,8 +242,13 @@ jobs:
             "- commit：\`${{ github.sha }}\`" \
             "- 触发：\`${{ github.event_name }}\`" \
             "" \
-            "先分诊再退回：job steps 为空 + 秒级失败 + annotation 含 billing/runner 字样 = 基础设施问题，升级人类；否则读失败日志归因到代码。" \
-            "参见 #665（上一次连红 12 次的根因：next dev 的 static-paths-worker 读不到 vendor-chunks，已改为 CI 跑生产构建）。")
+            "**先查是不是已知根因 #675**：如果日志里有大量 \`Cannot find module './vendor-chunks/*.js'\` + \`Unexpected token '<', \\\"<!DOCTYPE\\\"\`，那就是 #675（next dev 的 static-paths-worker 在第 8 分钟起读不到 vendor chunk，此后所有碰 DB 的路由 500），**不是新问题、也不是 worker 的锅**，别退回给写代码的人。" \
+            "" \
+            "⚠️ **#675 明确排除了两条死路**：(1) 加 \`serverExternalPackages\` 是 no-op（\`pg\` 本就在 Next 14 默认外部化列表里）；(2) 改用 \`next build && next start\` 会被人类否决——生产构建的构建期 DCE 会剃光 e2e 测试后门（\`/api/dev/*\`、\`__canvasTestApi\`），而把后门改成 env 守门放进生产包**已被明确禁止**（\`grant-sysadmin\` 是一键提权）。动手前先读 #675。" \
+            "" \
+            "如果不是上述形态，再读失败日志归因到代码。" \
+            "" \
+            "> 注：本告警只在 job 真的跑到了这一步时才会发出。job 压根起不来（runner/billing 类基础设施故障）时它自己也不会跑——那种情况下这条 issue 不会存在，属于已知盲区。")
           if [ -n "$EXISTING" ]; then
             gh issue comment "$EXISTING" --body "$BODY"
           else
