@@ -2,7 +2,6 @@
 import { NextResponse } from "next/server";
 import {
   AVA_MODEL_OPTIONS,
-  AVA_TOOL_OPTIONS,
   DEFAULT_AVA_AGENT_ID,
   DEFAULT_AVA_TOOL_IDS,
   getDefaultAvaModelId,
@@ -10,6 +9,7 @@ import {
 import { getMembership } from "@repo/data";
 import { currentTeamId, currentUser } from "@/lib/session";
 import { listAvaAgentOptions } from "@/lib/ava-agents";
+import { listAvaSkillOptions } from "@/lib/ava-store-skills";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +26,10 @@ export async function GET() {
   const role = teamId == null ? undefined : await getMembership(teamId, user.id);
   const canUseTeamRestrictedModels = canUseRestrictedModel(role);
 
-  const agents = await listAvaAgentOptions(user.id, teamId);
+  const [agents, tools] = await Promise.all([
+    listAvaAgentOptions(user.id, teamId),
+    listAvaSkillOptions(user.id, teamId),
+  ]);
 
   return NextResponse.json({
     teamId,
@@ -45,7 +48,7 @@ export async function GET() {
     })),
     // p18-F09：内置默认 Agent + 当前用户/团队已订阅的 AI Store Agent（真实订阅数据）。
     agents,
-    tools: AVA_TOOL_OPTIONS,
+    tools,
     defaults: {
       modelId: getDefaultAvaModelId(canUseTeamRestrictedModels),
       agentId: DEFAULT_AVA_AGENT_ID,

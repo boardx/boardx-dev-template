@@ -45,9 +45,9 @@ export function Dialog({
   useEffect(() => {
     if (!open) return;
     restoreFocusRef.current = document.activeElement as HTMLElement | null;
-    // 打开时聚焦面板内首个 [autofocus]（无则面板本身），关闭时还原触发元素焦点。
+    // React 会消费 autoFocus 而不保证保留 autofocus 属性；data 属性用于稳定声明首焦点。
     const panel = panelRef.current;
-    const auto = panel?.querySelector<HTMLElement>("[autofocus]");
+    const auto = panel?.querySelector<HTMLElement>("[data-dialog-autofocus], [autofocus]");
     (auto ?? panel)?.focus();
 
     function onKey(e: KeyboardEvent) {

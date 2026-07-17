@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "e2e": "playwright test",
-    "lint": "bash scripts/lint-design.sh"
+    "lint": "bash scripts/lint-design.sh",
+    "seed:ai-store": "node scripts/seed-ai-store-demo.mjs"
   },
   "dependencies": {
     "@repo/ai": "workspace:*",

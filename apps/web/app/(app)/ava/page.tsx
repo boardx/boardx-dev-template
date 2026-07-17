@@ -58,7 +58,7 @@ import {
   AttachmentPreviewStrip,
   RichAttachmentPreview,
 } from "./attachments";
-import { VoiceInputControl } from "./voice-input";
+import { VoiceInputControl } from "@/components/voice-input";
 
 interface ThreadSummary {
   id: number;
@@ -266,6 +266,7 @@ export default function AvaPage() {
   const [modelId, setModelId] = useState(INITIAL_AVA_MODEL_ID);
   const [agentId, setAgentId] = useState("default");
   const [toolIds, setToolIds] = useState<string[]>(["web-search"]);
+  const [storeRecommendations, setStoreRecommendations] = useState<Array<{ id: number; name: string; description: string }>>([]);
   const [shareOpen, setShareOpen] = useState(false);
   const [share, setShare] = useState<ThreadShare | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
@@ -440,13 +441,16 @@ export default function AvaPage() {
     const itemId = agentItemId ?? toolItemId;
     if (!itemId) return;
     const kind = agentItemId ? "agent" : "tool";
+    if (!capabilities) return;
     (async () => {
       try {
-        const res = await fetch(`/api/ai-store/items/${itemId}`);
+        const res = await fetch(`/api/ai-store/items/${itemId}/use`, { method: "POST" });
         if (!res.ok) return;
         const data = await res.json();
         const name: string = data.item?.name ?? "";
         if (!name) return;
+        if (agentItemId) setAgentId(`store-${agentItemId}`);
+        if (toolItemId) setToolIds([`store-skill-${toolItemId}`]);
         setDraft(
           kind === "agent"
             ? `Use the "${name}" agent to help me: `
@@ -459,7 +463,7 @@ export default function AvaPage() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [capabilities]);
 
   useEffect(() => {
     const onFocus = () => {
@@ -701,6 +705,16 @@ export default function AvaPage() {
         onDone: (msg: Message) => {
           setMessages((prev) => [...prev, msg]);
           setStreamingText("");
+          const storeSkill = toolIds.find((id) => id.startsWith("store-skill-"));
+          if (storeSkill) {
+            const skillId = storeSkill.slice("store-skill-".length);
+            void fetch(`/api/ai-store/items/${skillId}/recommendations`)
+              .then((response) => response.ok ? response.json() : { items: [] })
+              .then((data) => setStoreRecommendations(data.items ?? []))
+              .catch(() => setStoreRecommendations([]));
+          } else {
+            setStoreRecommendations([]);
+          }
         },
         onError: (msg: Message) => {
           setMessages((prev) => [...prev, msg]);
@@ -1360,8 +1374,15 @@ export default function AvaPage() {
     if (!latestMessage || latestMessage.role !== "assistant" || latestMessage.status !== "complete" || sending) {
       return [];
     }
+    if (storeRecommendations.length > 0) {
+      return storeRecommendations.slice(0, 3).map((item) => ({
+        id: `store-agent-${item.id}`,
+        label: item.name,
+        prompt: `Continue this work with the "${item.name}" agent: `,
+      }));
+    }
     return FOLLOW_UP_SUGGESTED_ACTIONS;
-  }, [latestMessage, sending]);
+  }, [latestMessage, sending, storeRecommendations]);
 
   function chooseSuggestedAction(prompt: string) {
     setDraft(prompt);

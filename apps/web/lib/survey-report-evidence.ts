@@ -6,6 +6,7 @@ import type {
 } from "./survey-report-planner";
 
 export type SurveyEvidenceConfidence = "none" | "low" | "medium" | "high";
+export const SURVEY_MIN_RELIABLE_SAMPLE = 30;
 
 export interface SurveyDistributionDatum {
   label: string;
@@ -79,7 +80,7 @@ function percentage(count: number, denominator: number) {
 
 function confidenceFor(responseCount: number): SurveyEvidenceConfidence {
   if (responseCount === 0) return "none";
-  if (responseCount < 30) return "low";
+  if (responseCount < SURVEY_MIN_RELIABLE_SAMPLE) return "low";
   if (responseCount < 100) return "medium";
   return "high";
 }
@@ -168,7 +169,9 @@ export function buildSurveyReportEvidence({
   const confidence = confidenceFor(responses.length);
   const limitations: string[] = [];
   if (!responses.length) limitations.push("尚无真实答卷，无法生成分析结论。");
-  else if (responses.length < 30) limitations.push("有效样本少于 30 份，结论仅作为方向性信号。");
+  else if (responses.length < SURVEY_MIN_RELIABLE_SAMPLE) {
+    limitations.push(`有效样本少于 ${SURVEY_MIN_RELIABLE_SAMPLE} 份，结论仅作为方向性信号。`);
+  }
 
   const questions = survey.questions.map((question) => buildQuestionEvidence(question, responses));
   return {

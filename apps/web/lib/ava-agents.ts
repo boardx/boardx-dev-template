@@ -35,9 +35,10 @@ export async function listAvaAgentOptions(
   teamId: number | null
 ): Promise<AvaAgentOption[]> {
   try {
+    if (teamId == null) return [...AVA_AGENT_OPTIONS];
     const subscribedIds = await listSubscribedAiStoreItemIds({
       subscriberUserId: userId,
-      teamId,
+      consumerTeamId: teamId,
     });
     // 批量取详情（WHERE id = ANY($1)），避免逐条 SELECT 的 N+1。
     const items = await getAiStoreItems(subscribedIds);
@@ -49,6 +50,8 @@ export async function listAvaAgentOptions(
         id: `${STORE_AGENT_ID_PREFIX}${it.id}`,
         label: it.name,
         description: it.description,
+        version: it.version,
+        config: it.config,
         deepAgentEnabled: isDeepAgentEnabled(it.config),
         storeId: Number(it.id),
       }));

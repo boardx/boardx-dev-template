@@ -3,7 +3,7 @@
 -- 派送机制不得依赖任何单一 agent runtime 的私有通道。tasks 表 = agent 收件箱：
 -- coordinator POST 派工，assignee 轮询 GET + ack，纯 HTTP + bearer token，
 -- 任何 runtime（CC/Codex/裸脚本）都能接。
-CREATE TABLE tasks (
+CREATE TABLE IF NOT EXISTS tasks (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   issue       INTEGER NOT NULL,                       -- GitHub issue 号（任务规格所在）
   assignee    TEXT NOT NULL REFERENCES agents(id),
@@ -18,4 +18,4 @@ CREATE TABLE tasks (
 );
 
 -- 收件箱查询就是这一个访问模式：WHERE assignee = ? AND status = ?
-CREATE INDEX idx_tasks_assignee_status ON tasks(assignee, status);
+CREATE INDEX IF NOT EXISTS idx_tasks_assignee_status ON tasks(assignee, status);

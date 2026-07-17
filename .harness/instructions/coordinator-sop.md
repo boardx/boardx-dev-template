@@ -118,6 +118,15 @@
    **列名**不用列序号。仓库侧审计对象以 git 树为准——gitignored 的本地派生文件
    （active-features.json）不是审计对象，in-repo 的 PROGRESS.md 才是。
 
+10. **统一时钟 + loop 纪律（2026-07-16 起，ADR-014）**：协调决策一律以
+   coord-service `GET /time` 为准（现在几点/当前哪个周期/租约还新鲜吗），**不信本机
+   `date`**——机器时钟漂移会让你误判租约新鲜度与周期边界，`harness tick` 会在漂移
+   >60s 时告警。**每个层级都必须有 loop**：coord-main 5 分钟、module-coordinator
+   15 分钟、sub-agent/worker 15 分钟，每个 loop 跑 `pnpm harness tick`（权威时钟+
+   漂移检测+续租约+收件箱一条命令做完）。loop 是操作节拍，C-cycle（3h）是汇报节拍
+   ——只有后者没有前者，就是"coord-architecture 租约静默过期 8 小时"的成因。
+   席位按 ttl 正常过期是**诚实信号**，不得调大 ttl 或替人代跑心跳来掩盖失联。
+
 ## 事故分诊速查（来自实战）
 - CI 秒级失败 + steps 空 → 账单/runner，非代码（2026-07-04 账单事故）。
 - evidence 指针存在但文件不在 git 树 → 假 passing（PR #310/#311/#312 三连）。

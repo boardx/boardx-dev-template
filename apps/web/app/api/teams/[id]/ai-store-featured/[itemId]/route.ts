@@ -4,7 +4,7 @@
 // 不存在/不属于该团队/当前状态非 published 时统一 404，不区分具体原因，避免探测团队内部数据。
 import { NextResponse } from "next/server";
 import { canManageTeam } from "@repo/auth";
-import { getMembership, setTeamAiStoreItemFeatured } from "@repo/data";
+import { getAiStoreItem, getMembership, setTeamAiStoreItemFeatured } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -31,7 +31,17 @@ export async function POST(req: Request, { params }: { params: { id: string; ite
     }
 
     const item = await setTeamAiStoreItemFeatured(itemId, teamId, body.featured);
-    if (!item) return NextResponse.json({ error: "项目不存在或当前状态不支持精选" }, { status: 404 });
+    if (!item) {
+      const existing = await getAiStoreItem(itemId);
+      if (
+        existing &&
+        existing.scope === "team" &&
+        String(existing.origin_team_id) === String(teamId)
+      ) {
+        return NextResponse.json({ error: "只有已发布资源可以设置团队精选" }, { status: 409 });
+      }
+      return NextResponse.json({ error: "项目不存在或不属于该团队" }, { status: 404 });
+    }
 
     return NextResponse.json({ item });
   } catch (err) {

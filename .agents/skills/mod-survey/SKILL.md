@@ -41,6 +41,9 @@ phases/phase-p13-survey
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-18：React 会消费 `autoFocus` 而不保证保留 DOM `autofocus` 属性；共享 Dialog 如果在 effect 中
+  查询不到该属性并聚焦面板，会覆盖子按钮首焦点。需要用稳定的 `data-dialog-autofocus` 声明并做浏览器焦点断言
+  （出处：phase-p25 F15 / PR #693）。
 - 2026-07-15：报告编排器的章节名称、问题数、模块数和实时状态不能在导航、画布、设置三栏重复展示；
   每栏只承担一种职责（章节切换 / 结果预览 / 参数编辑），全局操作只保留一个入口，动态约束反馈压缩成摘要
   （出处：phase-p25 F12 / Product Design audit）。

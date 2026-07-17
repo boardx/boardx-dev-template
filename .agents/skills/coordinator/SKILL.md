@@ -48,11 +48,19 @@ gh pr list --state open --json number,statusCheckRollup  # CI 与 review 缺口
 ```
 重建：合并队列、在途 review、changes-requested 欠账、ready-for-dev 待派、lease 巡检对象。
 
-### Step 4 — 挂监控（进入事件驱动）
+### Step 4 — 挂监控 + loop（进入事件驱动，ADR-014）
 - L0：60s 轮询 issue label + PR checks 的**变化 diff**（有变化才动作）。
-- L2：15min tick 全局巡检；**每个 tick 顺手跑 `pnpm harness lock-heartbeat
-  --session <会话标识>`**——这就是唯一性握手的心跳源（D1，服务端 sweeper 按 ttl
-  裁定新鲜度；命令报错说明租约有异常，必须处理不能吞掉）。
+- **L2：coord-main 的 loop = 5 分钟**（全队最紧——合并权独占在你，你的 loop 周期
+  直接决定全队 flow-time；实测 review 积压曾把 flow-time 推到 16.5h / 基线 1.8h）。
+  每个 loop 跑**一条命令**：
+
+  ```bash
+  pnpm harness tick --session <会话标识>
+  # 权威时钟（不信本机 date）+ 漂移告警 + 续 role:coord-main 租约 + 拉收件箱
+  ```
+
+  每 tick 除 tick 外还做：合并队列（CI 绿 + review 全绿的 PR **立即合**，别攒）、
+  andon 处理、review 积压升级。tick 报租约异常必须处理，不能吞掉。
 
 ### Step 5 — 进入 SOP 循环
 按 `coordinator-sop.md` 的 L0/L1/L2 执行。四条铁律（verdict 权威、coordinator 唯一、

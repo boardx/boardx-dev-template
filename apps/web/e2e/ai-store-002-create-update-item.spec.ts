@@ -3,9 +3,12 @@ import { test, expect } from "@playwright/test";
 const uniq = () => `as2_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 
 async function register(page: import("@playwright/test").Page) {
-  await page.request.post("/api/auth/register", {
+  expect((await page.request.post("/api/auth/register", {
     data: { firstName: "Creator", lastName: "User", email: uniq(), password: "secret123", agreeTerms: true },
-  });
+  })).status()).toBe(201);
+  expect((await page.request.post("/api/teams", {
+    data: { name: `Creator Test Team ${Date.now()}` },
+  })).status()).toBe(201);
 }
 
 test("创建器必填校验、草稿/发布/提交审核、Authorized 编辑自己的项目", async ({ page }) => {
@@ -21,7 +24,7 @@ test("创建器必填校验、草稿/发布/提交审核、Authorized 编辑自�
   await expect(page.getByTestId("err-description")).toContainText("描述不能为空");
   await expect(page.getByTestId("err-config")).toContainText("配置不能为空");
 
-  const suffix = Date.now();
+  const suffix = `${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
   const draftName = `Research Creator ${suffix}`;
   await page.getByTestId("field-name").fill(draftName);
   await page.getByTestId("field-description").fill("Turns customer interviews into research briefs.");
@@ -70,14 +73,14 @@ test("创建器必填校验、草稿/发布/提交审核、Authorized 编辑自�
   await page.getByTestId("field-description").fill("Updated research assistant for customer discovery.");
   await page.getByTestId("action-save-draft").click();
   await expect(page.getByTestId("saved")).toContainText("草稿已保存");
-  await expect(page.getByTestId("owner-items").locator(`article:has-text("${draftName}")`)).toContainText("DRAFT");
+  await expect(page.getByTestId("owner-items").locator(`article:has-text("${draftName}")`)).toContainText("PUBLISHED");
 
   const owned = await page.request.get("/api/ai-store/items?owner=me");
   expect(owned.status()).toBe(200);
   const ownedData = await owned.json();
   expect(ownedData.items.some((item: { name: string; status: string; description: string }) => (
     item.name === draftName &&
-    item.status === "draft" &&
+    item.status === "published" &&
     item.description === "Updated research assistant for customer discovery."
   ))).toBeTruthy();
   expect(ownedData.items.some((item: { name: string; status: string; scope: string }) => (

@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { BarChart3, ChevronLeft, Download, FileText, ListChecks, PieChart, RefreshCw, Sparkles, Target, TrendingUp } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { BarChart3, ChevronLeft, Download, FileText, ListChecks, PieChart, RefreshCw, Share2, Sparkles, Target, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { SurveyDiagnosticReport } from "@/components/survey/survey-diagnostic-report";
+import {
+  SurveyMobileNavigation,
+  SurveyNavigationSidebar,
+  type SurveyNavigationTarget,
+} from "@/components/survey/survey-navigation-sidebar";
 
 type QuestionType =
   | "short_text"
@@ -28,6 +34,7 @@ interface Question {
   type: QuestionType;
   required: boolean;
   options: string[];
+  category?: string;
 }
 
 interface Survey {
@@ -40,13 +47,14 @@ interface Survey {
 }
 
 interface SurveyResponse {
-  id: number;
+  id?: number;
   answers: Record<string, unknown>;
   submittedAt: string;
 }
 
 type ResultsData = { survey: Survey; responses: SurveyResponse[] };
 type Tab = "summary" | "individual" | "report";
+type ReturnTarget = "editor" | "workflow-report" | "workflow-answer" | "list";
 
 interface AiSurveyReport {
   title: string;
@@ -128,7 +136,14 @@ function chartColor(index: number) {
 }
 
 function chartHex(index: number) {
-  const colors = ["#7c3aed", "#0ea5e9", "#10b981", "#f59e0b", "#f43f5e", "#64748b"];
+  const colors = [
+    "hsl(var(--survey-accent))",
+    "hsl(var(--foreground))",
+    "hsl(var(--success))",
+    "hsl(var(--muted-foreground))",
+    "hsl(var(--destructive))",
+    "hsl(var(--border-strong))",
+  ];
   return colors[index % colors.length];
 }
 
@@ -138,7 +153,31 @@ function ratingMax(type: QuestionType) {
 }
 
 function hasAnswer(question: Question, value: unknown) {
+  if (typeof value === "boolean") return value;
   return Boolean(formatAnswer(question, value));
+}
+
+function SurveyResultsShell({ surveyId, children }: { surveyId: number; children: ReactNode }) {
+  function navigate(target: SurveyNavigationTarget) {
+    const paths: Record<SurveyNavigationTarget, string> = {
+      home: "/surveys",
+      workspace: "/surveys?view=my",
+      templates: "/surveys?view=templates",
+      reports: `/surveys?survey=${surveyId}&step=template`,
+      insights: `/surveys/${surveyId}/results`,
+    };
+    window.location.href = paths[target];
+  }
+
+  return (
+    <div className="grid min-h-screen bg-secondary text-foreground lg:grid-cols-[330px_minmax(0,1fr)]">
+      <SurveyNavigationSidebar active="insights" onNavigate={navigate} />
+      <section data-testid="survey-results-scroll" className="min-w-0 overflow-x-hidden">
+        <SurveyMobileNavigation active="insights" onNavigate={navigate} />
+        <div>{children}</div>
+      </section>
+    </div>
+  );
 }
 
 function answerRate(question: Question, responses: SurveyResponse[]) {
@@ -157,28 +196,10 @@ function optionCount(values: unknown[], option: string) {
   return values.filter((value) => (Array.isArray(value) ? value.includes(option) : value === option)).length;
 }
 
-function downloadText(filename: string, text: string, type: string) {
-  const blob = new Blob([text], { type });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function escapeCsv(value: string) {
-  return `"${value.replaceAll("\"", "\"\"")}"`;
-}
-
-function buildCsv(data: ResultsData) {
-  const header = ["response_id", "submitted_at", ...data.survey.questions.map((q) => q.title)];
-  const rows = data.responses.map((response) => [
-    String(response.id),
-    response.submittedAt,
-    ...data.survey.questions.map((question) => formatAnswer(question, response.answers[String(question.id)])),
-  ]);
-  return [header, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\n");
+function downloadCsv(surveyId: number) {
+  const link = document.createElement("a");
+  link.href = `/api/surveys/${surveyId}/results/export`;
+  link.click();
 }
 
 function printReport() {
@@ -333,13 +354,17 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [tab, setTab] = useState<Tab>("summary");
-  const [returnToEditor, setReturnToEditor] = useState(false);
+  const [individualResponses, setIndividualResponses] = useState<SurveyResponse[] | null>(null);
+  const [individualLoading, setIndividualLoading] = useState(false);
+  const [individualError, setIndividualError] = useState("");
+  const [returnTarget, setReturnTarget] = useState<ReturnTarget>("list");
   const [aiReport, setAiReport] = useState<AiReportEnvelope | null>(null);
   const [reportModel, setReportModel] = useState("qwen3.7-max");
   const [reportInstruction, setReportInstruction] = useState("");
   const [reportSessionId, setReportSessionId] = useState<string | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState("");
+  const [shareStatus, setShareStatus] = useState("");
 
   async function load() {
     setLoading(true);
@@ -362,13 +387,74 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
     setLoading(false);
   }
 
+  async function loadIndividualResponses(force = false) {
+    if (!force && (individualResponses || individualLoading)) return;
+    setIndividualLoading(true);
+    setIndividualError("");
+    try {
+      const res = await fetch(`/api/surveys/${params.id}/responses?view=individual`);
+      if (!res.ok) {
+        setIndividualError(res.status === 403 ? "你无权查看单份答卷" : "加载单份答卷失败，请重试");
+        return;
+      }
+      const payload = await res.json() as ResultsData;
+      setIndividualResponses(payload.responses);
+    } catch {
+      setIndividualError("加载单份答卷失败，请重试");
+    } finally {
+      setIndividualLoading(false);
+    }
+  }
+
+  function selectTab(nextTab: Tab) {
+    setTab(nextTab);
+    if (nextTab === "individual") void loadIndividualResponses();
+  }
+
   useEffect(() => {
-    setReturnToEditor(new URLSearchParams(window.location.search).get("from") === "editor");
+    const search = new URLSearchParams(window.location.search);
+    const requestedTab = search.get("tab");
+    const source = search.get("from");
+    setReturnTarget(
+      source === "editor"
+        ? "editor"
+        : source === "workflow"
+          ? requestedTab === "individual" ? "workflow-answer" : "workflow-report"
+          : "list"
+    );
+    if (requestedTab === "summary" || requestedTab === "individual" || requestedTab === "report") {
+      setTab(requestedTab);
+      if (requestedTab === "individual") void loadIndividualResponses(true);
+    }
+    setIndividualResponses(null);
+    setIndividualError("");
+    setShareStatus("");
     void load();
   }, [params.id]);
 
   function returnToSurveyWorkspace() {
-    window.location.href = returnToEditor ? `/surveys?edit=${params.id}` : "/surveys";
+    const paths: Record<ReturnTarget, string> = {
+      editor: `/surveys?survey=${params.id}&step=design`,
+      "workflow-report": `/surveys?survey=${params.id}&step=report`,
+      "workflow-answer": `/surveys?survey=${params.id}&step=answer`,
+      list: "/surveys?view=my",
+    };
+    window.location.href = paths[returnTarget];
+  }
+
+  const returnLabel = returnTarget === "editor"
+    ? "返回问卷编辑"
+    : returnTarget.startsWith("workflow")
+      ? "返回工作流"
+      : "返回问卷列表";
+
+  async function copyReportLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setShareStatus("报告链接已复制");
+    } catch {
+      setShareStatus("复制失败，请从地址栏复制链接");
+    }
   }
 
   const ratingAverage = useMemo(() => {
@@ -439,7 +525,7 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
       <main className="mx-auto max-w-content px-9 py-7">
         <Button data-testid="back-to-survey-workspace" size="sm" variant="ghost" onClick={returnToSurveyWorkspace} className="mb-4 gap-1.5">
           <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
-          {returnToEditor ? "返回问卷编辑" : "返回问卷列表"}
+          {returnLabel}
         </Button>
         <p role="alert" data-testid="err-results" className="text-13 text-destructive">
           {error || "加载结果失败，请重试"}
@@ -454,10 +540,11 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
 
   if (data.responses.length === 0) {
     return (
-      <main className="mx-auto max-w-content px-9 py-7">
+      <SurveyResultsShell surveyId={data.survey.id}>
+        <main data-testid="survey-insight-report" className="mx-auto max-w-content px-9 py-7">
         <Button data-testid="back-to-survey-workspace" size="sm" variant="ghost" onClick={returnToSurveyWorkspace} className="mb-4 gap-1.5">
           <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
-          {returnToEditor ? "返回问卷编辑" : "返回问卷列表"}
+          {returnLabel}
         </Button>
         <section data-testid="survey-results-page" className="rounded-12 border border-border bg-card p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -490,10 +577,10 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
             <Button data-testid="tab-summary" size="sm" variant={tab === "summary" ? "default" : "outline"} onClick={() => setTab("summary")}>
               概览
             </Button>
-            <Button data-testid="tab-individual" size="sm" variant={tab === "individual" ? "default" : "outline"} onClick={() => setTab("individual")}>
+            <Button data-testid="tab-individual" size="sm" variant={tab === "individual" ? "default" : "outline"} onClick={() => selectTab("individual")}>
               单份答卷
             </Button>
-            <Button data-testid="tab-report" size="sm" variant={tab === "report" ? "default" : "outline"} onClick={() => setTab("report")}>
+            <Button data-testid="tab-report" size="sm" variant={tab === "report" ? "default" : "outline"} onClick={() => selectTab("report")}>
               AI 报告
             </Button>
           </div>
@@ -539,75 +626,83 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
             </div>
           </div>
         </section>
-      </main>
+        </main>
+      </SurveyResultsShell>
     );
   }
 
   return (
-    <main data-testid="survey-results-page" className="mx-auto max-w-content px-9 py-7">
-      <Button data-testid="back-to-survey-workspace" size="sm" variant="ghost" onClick={returnToSurveyWorkspace} className="mb-4 gap-1.5">
-        <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
-        {returnToEditor ? "返回问卷编辑" : "返回问卷列表"}
-      </Button>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Badge variant={data.survey.status === "active" ? "success" : "muted"}>{data.survey.status}</Badge>
-          <h1 className="mt-3 text-26 font-bold tracking-tight text-foreground">{data.survey.title}</h1>
-          {data.survey.description && <p className="mt-1 text-13 text-muted-foreground">{data.survey.description}</p>}
-        </div>
-        <div className="flex gap-2">
+    <SurveyResultsShell surveyId={data.survey.id}>
+      <main data-testid="survey-insight-report" className="mx-auto w-full max-w-survey-dashboard px-4 py-7 sm:px-8 lg:px-10">
+      <div data-testid="survey-results-page">
+      <header data-testid="survey-insight-report-header">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button data-testid="back-to-survey-workspace" size="sm" variant="outline" onClick={returnToSurveyWorkspace} className="gap-1.5">
+            <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
+            {returnLabel}
+          </Button>
+          <div className="min-w-2 flex-1" />
           <Button
             data-testid="export-csv"
             size="sm"
             variant="outline"
-            onClick={() => downloadText(`survey-results-${data.survey.id}.csv`, buildCsv(data), "text/csv;charset=utf-8")}
+            onClick={() => downloadCsv(data.survey.id)}
             className="gap-1.5"
           >
             <Download className="h-4 w-4" strokeWidth={1.5} />
-            Export CSV
+            导出 CSV
           </Button>
-          <Button
-            data-testid="export-pdf"
-            size="sm"
-            variant="outline"
-            onClick={printReport}
-            className="gap-1.5"
-          >
+          <Button data-testid="share-report" size="sm" variant="outline" onClick={() => void copyReportLink()} className="gap-1.5">
+            <Share2 className="h-4 w-4" strokeWidth={1.5} />
+            分享链接
+          </Button>
+          <Button data-testid="export-pdf" size="sm" onClick={printReport} className="gap-1.5">
             <FileText className="h-4 w-4" strokeWidth={1.5} />
-            Print / PDF
+            导出 PDF
           </Button>
         </div>
-      </div>
+        {shareStatus ? <p aria-live="polite" className="mt-2 text-right text-12 text-muted-foreground">{shareStatus}</p> : null}
+        <div className="mt-5">
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="muted">洞察报告</Badge>
+            <Badge variant="outline">{data.survey.reportTemplate?.title ?? "结构化诊断"}</Badge>
+            <Badge variant={data.survey.status === "active" ? "success" : "muted"}>
+              {data.survey.status === "active" ? "回收中" : "已暂停"}
+            </Badge>
+          </div>
+          <h1 className="mt-3 text-26 font-bold text-foreground">{data.survey.title} · 洞察报告</h1>
+          <p className="mt-2 text-13 text-muted-foreground">
+            <span data-testid="results-count">{data.responses.length}</span> 份已提交答卷 · {data.survey.questions.length} 道题 ·
+            回答完整度 {reportMetrics?.avgCompletion ?? 0}% · 最近提交于 {new Date(data.responses[0]!.submittedAt).toLocaleString("zh-CN")}
+          </p>
+          {data.survey.description ? <p className="mt-1 text-13 text-muted-foreground">{data.survey.description}</p> : null}
+        </div>
+      </header>
 
-      <section className="mt-5 grid gap-3 md:grid-cols-3">
-        <div className="rounded-12 border border-border bg-card p-4">
-          <p className="text-12 text-muted-foreground">Responses</p>
-          <p data-testid="results-count" className="mt-1 text-22 font-bold text-foreground">{data.responses.length}</p>
-        </div>
-        <div className="rounded-12 border border-border bg-card p-4">
-          <p className="text-12 text-muted-foreground">Questions</p>
-          <p className="mt-1 text-22 font-bold text-foreground">{data.survey.questions.length}</p>
-        </div>
-        <div className="rounded-12 border border-border bg-card p-4">
-          <p className="text-12 text-muted-foreground">Average rating</p>
-          <p className="mt-1 text-22 font-bold text-foreground">{ratingAverage}</p>
-        </div>
-      </section>
-
-      <div className="mt-5 flex gap-2" role="tablist" aria-label="Survey result views">
-        <Button data-testid="tab-summary" size="sm" variant={tab === "summary" ? "default" : "outline"} onClick={() => setTab("summary")}>
-          概览
+      <div className="mt-5 flex flex-wrap gap-2 border-b border-border pb-3" role="tablist" aria-label="Survey result views">
+        <Button data-testid="tab-summary" size="sm" variant={tab === "summary" ? "default" : "outline"} onClick={() => selectTab("summary")}>
+          洞察报告
         </Button>
-        <Button data-testid="tab-individual" size="sm" variant={tab === "individual" ? "default" : "outline"} onClick={() => setTab("individual")}>
+        <Button data-testid="tab-individual" size="sm" variant={tab === "individual" ? "default" : "outline"} onClick={() => selectTab("individual")}>
           单份答卷
         </Button>
-        <Button data-testid="tab-report" size="sm" variant={tab === "report" ? "default" : "outline"} onClick={() => setTab("report")}>
+        <Button data-testid="tab-report" size="sm" variant={tab === "report" ? "default" : "outline"} onClick={() => selectTab("report")}>
           AI 报告
         </Button>
       </div>
 
       {tab === "summary" && (
         <section data-testid="summary-panel" className="mt-4 flex flex-col gap-4">
+          <SurveyDiagnosticReport
+            questions={data.survey.questions}
+            responses={data.responses}
+            aiReport={aiReport?.report}
+            reportTemplate={data.survey.reportTemplate}
+          />
+          <div className="mt-4 border-t border-border pt-6">
+            <h2 className="text-15 font-bold text-foreground">单题数据附录</h2>
+            <p className="mt-1 text-12 text-muted-foreground">保留每道题的回答率与分布，便于从诊断结论回查原始统计。</p>
+          </div>
           {reportMetrics && (
             <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
               <article className="rounded-12 border border-border bg-card p-5">
@@ -623,7 +718,7 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
                     <p className="text-12 text-muted-foreground">平均完成率</p>
                     <p className="mt-1 text-22 font-bold text-foreground">{reportMetrics.avgCompletion}%</p>
                     <div className="mt-3 h-2 rounded-full bg-muted">
-                      <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${reportMetrics.avgCompletion}%` }} />
+                      <div className="h-2 rounded-full bg-success" style={{ width: `${reportMetrics.avgCompletion}%` }} />
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-surface-1 p-3">
@@ -666,7 +761,7 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
                     <h2 className="text-18 font-bold text-foreground">题型结构</h2>
                     <p className="mt-1 text-13 text-muted-foreground">问卷覆盖的题型与分析素材。</p>
                   </div>
-                  <PieChart className="h-5 w-5 text-sky-600" strokeWidth={1.5} />
+                  <PieChart className="h-5 w-5 text-survey" strokeWidth={1.5} />
                 </div>
                 <div className="mt-4 space-y-3">
                   {Object.entries(reportMetrics.typeCounts).map(([label, count], index) => (
@@ -739,18 +834,10 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
                 )}
                 {!["single", "multiple", "dropdown", "rating", "linear_scale", "nps"].includes(question.type) && (
                   <div className="mt-4 rounded-lg border border-border bg-surface-1 p-4">
-                    <p className="text-13 text-muted-foreground">{values.filter((value) => formatAnswer(question, value)).length} 条回答</p>
-                    <div className="mt-3 space-y-2">
-                      {values
-                        .map((value) => formatAnswer(question, value))
-                        .filter(Boolean)
-                        .slice(0, 3)
-                        .map((answer, index) => (
-                          <p key={`${question.id}-${index}`} className="rounded-md bg-background px-3 py-2 text-13 text-foreground">
-                            {answer}
-                          </p>
-                        ))}
-                    </div>
+                    <p className="text-13 text-muted-foreground">{values.filter((value) => hasAnswer(question, value)).length} 条回答</p>
+                    <p className="mt-2 text-12 leading-5 text-muted-foreground">
+                      汇总视图不展示原始文本；请在授权的单份答卷视图中查看。
+                    </p>
                   </div>
                 )}
               </article>
@@ -761,8 +848,17 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
 
       {tab === "individual" && (
         <section data-testid="individual-panel" className="mt-4 flex flex-col gap-3">
-          {data.responses.map((response, responseIdx) => (
-            <article key={response.id} className="rounded-12 border border-border bg-card p-4">
+          {individualLoading ? (
+            <p className="rounded-lg border border-border bg-card p-4 text-13 text-muted-foreground">正在加载授权答卷…</p>
+          ) : individualError ? (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+              <p role="alert" className="text-13 text-destructive">{individualError}</p>
+              <Button size="sm" variant="outline" className="mt-3" onClick={() => void loadIndividualResponses()}>
+                重试
+              </Button>
+            </div>
+          ) : (individualResponses ?? []).map((response, responseIdx) => (
+            <article key={response.id ?? responseIdx} className="rounded-12 border border-border bg-card p-4">
               <h2 className="text-15 font-semibold text-foreground">Response {responseIdx + 1}</h2>
               <dl className="mt-3 flex flex-col gap-2">
                 {data.survey.questions.map((question) => (
@@ -830,7 +926,7 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
                 <div className="rounded-12 border border-border bg-background p-4 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-12 text-muted-foreground">样本量</p>
-                    <ListChecks className="h-4 w-4 text-emerald-600" strokeWidth={1.5} />
+                    <ListChecks className="h-4 w-4 text-success" strokeWidth={1.5} />
                   </div>
                   <p className="mt-1 text-22 font-bold text-foreground">{aiReport.sampleSize}</p>
                   <p className="mt-2 text-12 text-muted-foreground">当前有效答卷</p>
@@ -838,17 +934,17 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
                 <div className="rounded-12 border border-border bg-background p-4 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-12 text-muted-foreground">平均完成率</p>
-                    <TrendingUp className="h-4 w-4 text-sky-600" strokeWidth={1.5} />
+                    <TrendingUp className="h-4 w-4 text-survey" strokeWidth={1.5} />
                   </div>
                   <p className="mt-1 text-22 font-bold text-foreground">{reportMetrics?.avgCompletion ?? 0}%</p>
                   <div className="mt-3 h-2 rounded-full bg-muted">
-                    <div className="h-2 rounded-full bg-sky-500" style={{ width: `${reportMetrics?.avgCompletion ?? 0}%` }} />
+                    <div className="h-2 rounded-full bg-survey" style={{ width: `${reportMetrics?.avgCompletion ?? 0}%` }} />
                   </div>
                 </div>
                 <div className="rounded-12 border border-border bg-background p-4 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-12 text-muted-foreground">置信度</p>
-                    <Target className="h-4 w-4 text-amber-600" strokeWidth={1.5} />
+                    <Target className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
                   </div>
                   <p className="mt-1 text-22 font-bold capitalize text-foreground">{aiReport.report.confidence}</p>
                   <p className="mt-2 text-12 text-muted-foreground">结合样本量和题型判断</p>
@@ -916,9 +1012,9 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
 
               <div className="mt-4 grid gap-4 lg:grid-cols-3">
                 {[
-                  ["细分洞察", aiReport.report.segmentInsights, "border-sky-200 bg-sky-50/50"],
-                  ["机会点", aiReport.report.opportunityAreas, "border-emerald-200 bg-emerald-50/50"],
-                  ["风险信号", aiReport.report.risks, "border-rose-200 bg-rose-50/50"],
+                  ["细分洞察", aiReport.report.segmentInsights, "border-border bg-tag-blue/40"],
+                  ["机会点", aiReport.report.opportunityAreas, "border-border bg-tag-green/40"],
+                  ["风险信号", aiReport.report.risks, "border-destructive/20 bg-tag-pink/40"],
                 ].map(([heading, items, className]) => (
                   <article key={heading as string} className={`rounded-12 border p-4 shadow-sm ${className as string}`}>
                     <h3 className="text-15 font-bold text-foreground">{heading as string}</h3>
@@ -1056,6 +1152,8 @@ export default function SurveyResultsPage({ params }: { params: { id: string } }
           )}
         </section>
       )}
-    </main>
+      </div>
+      </main>
+    </SurveyResultsShell>
   );
 }

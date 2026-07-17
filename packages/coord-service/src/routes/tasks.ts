@@ -24,6 +24,8 @@ import type { Handler } from "../router";
 
 const PRIORITIES = new Set(["high", "normal", "low"]);
 const QUERYABLE_STATUSES = new Set<string>(["pending", "acked", "done", "recalled"]);
+const NOTE_MAX_LENGTH = 2000; // #631：派工附言不是日志倾倒场
+const MAX_BODY_BYTES = 16 * 1024; // #631：派工 body 大小上限（16KB 足够，防大包打库）
 
 function requireCoordinator(agentKind: string): void {
   if (!COORDINATOR_KINDS.has(agentKind)) {
@@ -48,9 +50,15 @@ export const dispatchTask: Handler = async (request, env: Env) => {
   const agent = await requireAgent(request, env);
   requireCoordinator(agent.kind);
 
-  const body = (await request.json().catch(() => {
+  // #631：先卡 body 大小再解析——不让超大包进 JSON.parse
+  const rawBody = await request.text();
+  if (rawBody.length > MAX_BODY_BYTES) throw new HttpError(413, "body_too_large");
+  let body: Record<string, unknown>;
+  try {
+    body = JSON.parse(rawBody) as Record<string, unknown>;
+  } catch {
     throw new HttpError(400, "invalid_json_body");
-  })) as Record<string, unknown>;
+  }
 
   const issue = body["issue"];
   if (typeof issue !== "number" || !Number.isInteger(issue) || issue <= 0) {
@@ -66,8 +74,23 @@ export const dispatchTask: Handler = async (request, env: Env) => {
 
   const priority = typeof body["priority"] === "string" ? body["priority"] : "normal";
   if (!PRIORITIES.has(priority)) throw new HttpError(400, "invalid_priority");
-  const deadline = typeof body["deadline"] === "string" ? body["deadline"] : null;
-  const note = typeof body["note"] === "string" ? body["note"] : null;
+
+  // #631：deadline 必须是可解析的时间——脏字符串进库会让"超期"判定永远失效（静默）
+  let deadline: string | null = null;
+  if (body["deadline"] !== undefined && body["deadline"] !== null) {
+    if (typeof body["deadline"] !== "string" || Number.isNaN(Date.parse(body["deadline"]))) {
+      throw new HttpError(400, "invalid_deadline");
+    }
+    deadline = new Date(body["deadline"]).toISOString(); // 归一存储，避免各家格式混存
+  }
+
+  // #631：note 上限——收件箱是协调面，不是日志倾倒场；超限直接拒（不静默截断）
+  let note: string | null = null;
+  if (body["note"] !== undefined && body["note"] !== null) {
+    if (typeof body["note"] !== "string") throw new HttpError(400, "invalid_note");
+    if (body["note"].length > NOTE_MAX_LENGTH) throw new HttpError(400, "note_too_long");
+    note = body["note"];
+  }
   const at = nowIso();
 
   const task = await env.DB.prepare(
@@ -109,7 +132,17 @@ export const listTasks: Handler = async (request, env: Env) => {
   return Response.json({ tasks: rows.results ?? [] });
 };
 
-/** 状态转移的共用骨架：校验授权与前置状态 → UPDATE → 写事件。 */
+/** 状态转移的共用骨架：鉴权 → **原子条件 UPDATE** → 写事件。
+ *
+ *  #631：此前是 read-check-write（先 SELECT 判 status，再无条件 UPDATE），有 TOCTOU
+ *  窗口——两个并发 ack 都能通过检查、都写一条 task-ack 事件；done 与 recall 并发时
+ *  还能互相覆盖导致事件序错乱。这正是 AGENTS.md 明令禁止、claims 表用
+ *  uq_active_claim 守住的那个模式，tasks 却退回去了。
+ *
+ *  改法：把前置状态判定塞进 UPDATE 的 WHERE（`AND status IN (<from>)`），让**数据库
+ *  的原子写本身就是判定**——空返回 = 状态已被别人改走 = 409，不需要也不允许再
+ *  SELECT-then-decide。仍先 SELECT 一次：只为拿 assignee/issue 做鉴权与事件归属，
+ *  不参与转移判定（鉴权字段不随状态变，无 TOCTOU 风险）。 */
 async function transition(
   request: Request,
   env: Env,
@@ -124,17 +157,26 @@ async function transition(
 ): Promise<Response> {
   const agent = await requireAgent(request, env);
   const id = parseTaskIdParam(params);
-  const task = await getTaskOr404(env.DB, id);
+  const task = await getTaskOr404(env.DB, id); // 仅取 assignee/issue 供鉴权与事件归属
   opts.authorize(agent.id, agent.kind, task);
-  if (!opts.from.includes(task.status)) {
-    throw new HttpError(409, `invalid_transition:${task.status}->${opts.to}`);
-  }
+
   const at = nowIso();
+  const placeholders = opts.from.map(() => "?").join(", ");
+  const sets = ["status = ?", "updated_at = ?", ...(opts.setAckedAt ? ["acked_at = ?"] : [])];
+  const binds = [opts.to, at, ...(opts.setAckedAt ? [at] : []), id, ...opts.from];
   const updated = await env.DB.prepare(
-    `UPDATE tasks SET status = ?, updated_at = ?${opts.setAckedAt ? ", acked_at = ?" : ""} WHERE id = ? RETURNING *`
+    `UPDATE tasks SET ${sets.join(", ")} WHERE id = ? AND status IN (${placeholders}) RETURNING *`
   )
-    .bind(...(opts.setAckedAt ? [opts.to, at, at, id] : [opts.to, at, id]))
+    .bind(...binds)
     .first<TaskRow>();
+
+  // 空返回 = 前置状态不满足（已被并发请求改走 / 本就非法）——原子判定的结果
+  if (!updated) {
+    const current = await env.DB.prepare("SELECT status FROM tasks WHERE id = ?").bind(id).first<{ status: string }>();
+    throw new HttpError(409, `invalid_transition:${current?.status ?? "gone"}->${opts.to}`);
+  }
+
+  // 事件只在真的转移成功后写——并发下不会出现两条 task-ack
   await insertEvent(env.DB, {
     type: opts.eventType,
     resourceId: `issue:${task.issue}`,
