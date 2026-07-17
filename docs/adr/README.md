@@ -22,3 +22,4 @@
 | ADR-012 | audit-chain-hardening（doctor + 证据纪律） | Accepted |
 | ADR-013 | contrast-safety-single-source（样式单源策略） | Accepted |
 | ADR-014 | unified-clock-and-loop-discipline（统一时钟 + 分级 loop） | Accepted |
+| ADR-016 | app-default-ai-provider-qwen（应用端默认 AI 用 Qwen） | Accepted |

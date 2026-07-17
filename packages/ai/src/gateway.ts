@@ -3,6 +3,7 @@
 // 这是一个自研的极简前缀路由网关（不是 LiteLLM，也不依赖任何 SDK）：调用方只认
 // modelId + messages，网关按 modelId 前缀路由到具体 provider。
 // 已注册 provider：
+//   - qwenProvider（qwen* 模型，DashScope/OpenAI-compatible，默认真实模型）
 //   - anthropicProvider（anthropic: 前缀，真实 Anthropic Messages API，见 anthropicProvider.ts）
 //   - stubProvider（stub: 前缀，确定性回显，供 CI/e2e 在无供应商额度下跑通端到端）
 //
@@ -345,7 +346,8 @@ export class ChatGateway {
 }
 
 import { anthropicProvider } from "./anthropicProvider";
+import { qwenProvider } from "./qwenProvider";
 
 /** 默认单例网关（进程内共享，注册全部已知 provider）。
- *  anthropic: → 真实 Anthropic API；stub: → 确定性 stub。前缀不重叠，顺序无关。 */
-export const defaultGateway = new ChatGateway([anthropicProvider, stubProvider]);
+ *  qwen* → DashScope 千问；anthropic: → Anthropic API；stub: → 确定性 stub。 */
+export const defaultGateway = new ChatGateway([qwenProvider, anthropicProvider, stubProvider]);
