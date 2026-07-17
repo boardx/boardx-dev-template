@@ -159,9 +159,16 @@ export async function listAiStoreItems(opts: ListAiStoreItemsOptions = {}): Prom
 
   const limitParams = [...params, pageSize, (page - 1) * pageSize];
   const items = await query<AiStoreItem>(
-    `SELECT ${ITEM_COLS} FROM ai_store_items ${whereSql}
-     ORDER BY featured DESC, updated_at DESC, id DESC
-     LIMIT $${limitParams.length - 1} OFFSET $${limitParams.length}`,
+    `SELECT listed.*, origin_team.name AS origin_team_name
+     FROM (
+       SELECT ${ITEM_COLS}
+       FROM ai_store_items
+       ${whereSql}
+       ORDER BY featured DESC, updated_at DESC, id DESC
+       LIMIT $${limitParams.length - 1} OFFSET $${limitParams.length}
+     ) listed
+     JOIN teams origin_team ON origin_team.id = listed.origin_team_id
+     ORDER BY listed.featured DESC, listed.updated_at DESC, listed.id DESC`,
     limitParams
   );
 

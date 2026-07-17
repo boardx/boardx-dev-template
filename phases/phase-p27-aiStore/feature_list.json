@@ -306,6 +306,28 @@
       ],
       "evidence": "evidence/F14.verify.log @ 2026-07-17T07:27:16.882Z",
       "notes": "统一编辑、详情、分享、复制与审核交互；approved/published 编辑免复审并立即同步订阅者。"
+    },
+    {
+      "id": "F15",
+      "priority": 1,
+      "area": "ai-store-ui",
+      "title": "Current Team recovery and approved Explore parity",
+      "user_visible_behavior": "已登录用户没有 current Team cookie 但拥有唯一有效 Team 时，AI Store 自动选择并明确显示该 Team，随后真实 API 返回资源而不是 400；桌面 Explore 逐项采用已确认 Option 1 的持久左导航、分层类型与筛选工具栏、完整资源表格和稳定局部错误状态，375/768/1280 不溢出。",
+      "status": "passing",
+      "sprint": "08",
+      "owner": "codex-p27-ai-store-control-plane",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F13",
+        "F14"
+      ],
+      "wave": 10,
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ai-store-017-team-recovery-design-parity.spec.ts",
+        "pnpm --filter @repo/web lint"
+      ],
+      "evidence": "evidence/F15.verify.log @ 2026-07-17T10:18:04.481Z",
+      "notes": "用户截图回归；热点为 StoreBrowser、StoreNavigation、ResourceCatalog 和 /api/teams/current。必须使用真实 Team/AI Store API，不允许用 mock 数据掩盖 400。"
     }
   ]
 }

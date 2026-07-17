@@ -82,8 +82,14 @@ export function ResourceCatalog({
       ) : (
         <>
           <div data-testid="item-grid" role="table" aria-label="AI resources" className="min-w-0 border-y border-border">
-            <div data-testid="resource-table" role="row" className="hidden grid-cols-[minmax(12rem,2fr)_5rem_minmax(6rem,1fr)_7rem] gap-3 px-3 py-2.5 text-10 font-semibold uppercase text-placeholder md:grid 2xl:grid-cols-[minmax(15rem,2fr)_7rem_minmax(8rem,1fr)_5rem_8rem_6rem_7rem]">
-              <span>Resource</span><span>Type</span><span>Source</span><span className="hidden 2xl:block">Version</span><span className="hidden 2xl:block">Subscription</span><span className="hidden 2xl:block">Updated</span><span className="text-right">Actions</span>
+            <div data-testid="resource-table" role="row" className="hidden gap-3 px-3 py-2.5 text-10 font-semibold uppercase text-placeholder md:grid md:grid-cols-[minmax(12rem,2fr)_5rem_minmax(6rem,1fr)_7rem] lg:grid-cols-[minmax(14rem,2fr)_6rem_minmax(7rem,1fr)_4.5rem_7rem_5rem_6.5rem]">
+              <span data-testid="resource-column-name">Resource</span>
+              <span data-testid="resource-column-type">Type</span>
+              <span data-testid="resource-column-source">Source</span>
+              <span data-testid="resource-column-version" className="hidden lg:block">Version</span>
+              <span data-testid="resource-column-subscription" className="hidden lg:block">Subscription</span>
+              <span data-testid="resource-column-updated" className="hidden lg:block">Updated</span>
+              <span className="text-right">Actions</span>
             </div>
             <div data-testid="resource-mobile-list" className="h-px md:hidden" />
             {items.map((item) => {
@@ -102,7 +108,7 @@ export function ResourceCatalog({
                       onOpen(Number(item.id));
                     }
                   }}
-                  className="grid cursor-pointer grid-cols-1 gap-3 border-b border-border px-3 py-3 transition-colors hover:bg-surface-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:grid-cols-[minmax(12rem,2fr)_5rem_minmax(6rem,1fr)_7rem] md:items-center 2xl:grid-cols-[minmax(15rem,2fr)_7rem_minmax(8rem,1fr)_5rem_8rem_6rem_7rem]"
+                  className="grid cursor-pointer grid-cols-1 gap-3 border-b border-border px-3 py-3 transition-colors hover:bg-surface-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:grid-cols-[minmax(12rem,2fr)_5rem_minmax(6rem,1fr)_7rem] md:items-center lg:grid-cols-[minmax(14rem,2fr)_6rem_minmax(7rem,1fr)_4.5rem_7rem_5rem_6.5rem]"
                 >
                   <div className="flex min-w-0 items-start gap-3">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
@@ -120,9 +126,9 @@ export function ResourceCatalog({
                     <Badge variant="outline" className="shrink-0 capitalize md:hidden">{item.type}</Badge>
                     <span className="hidden items-center gap-1.5 text-12 capitalize text-foreground md:flex"><Icon className="h-3.5 w-3.5" />{item.type}</span>
                     <span className="hidden min-w-0 md:block"><span data-testid={`item-source-team-${item.id}`} className="block truncate text-12 font-medium text-foreground">{item.origin_team_name ?? `Team ${item.origin_team_id}`}</span><span className="block truncate text-10 text-placeholder">By {item.author}</span></span>
-                    <span className="hidden text-12 text-foreground 2xl:block">v{item.version}</span>
-                    <span className="hidden text-11 text-muted-foreground 2xl:block">{subscriptionLabel(item, subscribed)}</span>
-                    <span className="hidden text-11 text-placeholder 2xl:block">{item.updated_at ? new Date(item.updated_at).toLocaleDateString() : "Latest"}</span>
+                    <span className="hidden text-12 text-foreground lg:block">v{item.version}</span>
+                    <span className="hidden text-11 text-muted-foreground lg:block">{subscriptionLabel(item, subscribed)}</span>
+                    <span className="hidden text-11 text-placeholder lg:block">{item.updated_at ? new Date(item.updated_at).toLocaleDateString() : "Latest"}</span>
                     <div className="flex shrink-0 items-center justify-end gap-1" onClick={(event) => event.stopPropagation()}>
                       <Button
                         type="button"

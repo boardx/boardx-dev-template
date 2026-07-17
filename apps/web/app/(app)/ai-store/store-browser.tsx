@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Bookmark, Plus, Share2, LayoutGrid, Pencil, Heart, Link2, Trash2, X, SlidersHorizontal, Check } from "lucide-react";
+import { Search, Bookmark, Plus, Share2, LayoutGrid, Pencil, Heart, Link2, Trash2, X, SlidersHorizontal, Check, ChevronDown, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -149,6 +149,9 @@ export function StoreBrowser({
   const [ownedError, setOwnedError] = useState("");
   const [type, setType] = useState<"all" | StoreType>("all");
   const [activeTags, setActiveTags] = useState<string[]>([]);
+  const [sourceFilter, setSourceFilter] = useState<"all" | "boardx" | "team">("all");
+  const [subscriptionFilter, setSubscriptionFilter] = useState<"all" | "subscribed" | "unsubscribed">("all");
+  const [sortOrder, setSortOrder] = useState<"newest" | "name">("newest");
   const [q, setQ] = useState("");
   const [detailId, setDetailId] = useState<number | null>(null);
   const [detailItem, setDetailItem] = useState<StoreItem | null>(null);
@@ -170,6 +173,7 @@ export function StoreBrowser({
   const [builderIdea, setBuilderIdea] = useState("");
   const [builderBusy, setBuilderBusy] = useState(false);
   const [currentTeam, setCurrentTeam] = useState<{ id: number; name: string; role: string } | null>(initialTeam);
+  const [teamReady, setTeamReady] = useState(initialTeam != null);
   const requestIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -292,6 +296,13 @@ export function StoreBrowser({
   // Explore 拉浏览列表；Create 拉属主列表；Authorized 同时拉属主列表（Manage share 入口）
   // 与被授权列表（自己被授权管理、非本人拥有的项目）；Subscribe 拉已订阅列表。
   useEffect(() => {
+    if (!teamReady) return;
+    if (!currentTeam) {
+      setItems([]);
+      setLoading(false);
+      setError("Select a Team to browse AI resources.");
+      return;
+    }
     if (nav === "explore" || nav === "featured") {
       const tags = nav === "featured" ? [...new Set(["featured", ...activeTags])] : activeTags;
       void load({ type, tags, q, page: 1 });
@@ -315,21 +326,36 @@ export function StoreBrowser({
       setError("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nav, type, activeTags]);
+  }, [nav, type, activeTags, teamReady, currentTeam?.id]);
 
   useEffect(() => {
     let active = true;
     Promise.all([
       fetch("/api/teams").then((response) => response.ok ? response.json() : { teams: [] }),
       fetch("/api/teams/current").then((response) => response.ok ? response.json() : { teamId: null }),
-    ]).then(([teamsData, currentData]) => {
+    ]).then(async ([teamsData, currentData]) => {
       if (!active) return;
-      const team = (teamsData.teams ?? []).find(
+      const teams = (teamsData.teams ?? []) as Array<{ id: number | string; name: string; role?: string }>;
+      let team = teams.find(
         (candidate: { id: number | string }) => String(candidate.id) === String(currentData.teamId),
       );
+      if (!team && teams.length === 1) {
+        const candidate = teams[0]!;
+        const selection = await fetch("/api/teams/current", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ teamId: Number(candidate.id) }),
+        });
+        if (selection.ok) team = candidate;
+      }
+      if (!active) return;
       setCurrentTeam(team ? { id: Number(team.id), name: team.name, role: team.role ?? "member" } : null);
+      setTeamReady(true);
     }).catch(() => {
-      if (active) setCurrentTeam(null);
+      if (active) {
+        setCurrentTeam(null);
+        setTeamReady(true);
+      }
     });
     return () => { active = false; };
   }, []);
@@ -354,7 +380,6 @@ export function StoreBrowser({
     if (qParam || parsedType !== "all") {
       setQ(qParam);
       setType(parsedType);
-      void load({ type: parsedType, tags: viewParam === "featured" ? ["featured"] : [], q: qParam, page: 1 });
     }
     if (params.get("shareError") === "invalid") {
       setShareRedeemNotice("分享链接无效、已关闭或项目不存在");
@@ -368,9 +393,10 @@ export function StoreBrowser({
 
   // Explore 视图里也要知道自己已订阅了哪些（用于卡片/详情按钮态），首次挂载拉一次。
   useEffect(() => {
+    if (!teamReady || !currentTeam) return;
     void loadSubscribed();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [teamReady, currentTeam?.id]);
 
   // 详情弹窗：按 id 拉取详情。
   useEffect(() => {
@@ -608,6 +634,9 @@ export function StoreBrowser({
     setActiveTags([]);
     setQ("");
     setType("all");
+    setSourceFilter("all");
+    setSubscriptionFilter("all");
+    setSortOrder("newest");
     syncUrl({ type: "all", q: "", tags: [], page: 1 });
   }
 
@@ -853,7 +882,27 @@ export function StoreBrowser({
     }
   }
 
-  const filtersActive = activeTags.length > 0 || q.trim().length > 0 || type !== "all";
+  const filtersActive = activeTags.length > 0
+    || q.trim().length > 0
+    || type !== "all"
+    || sourceFilter !== "all"
+    || subscriptionFilter !== "all"
+    || sortOrder !== "newest";
+  const catalogItems = [...items]
+    .filter((item) => {
+      if (sourceFilter === "boardx") return item.scope === "platform";
+      if (sourceFilter === "team") return item.scope !== "platform" && item.origin_team_id === currentTeam?.id;
+      return true;
+    })
+    .filter((item) => {
+      if (subscriptionFilter === "subscribed") return subscribedIds.has(Number(item.id));
+      if (subscriptionFilter === "unsubscribed") return !subscribedIds.has(Number(item.id));
+      return true;
+    })
+    .sort((left, right) => {
+      if (sortOrder === "name") return left.name.localeCompare(right.name);
+      return new Date(right.updated_at ?? 0).getTime() - new Date(left.updated_at ?? 0).getTime();
+    });
   const isExplore = nav === "explore" || nav === "featured";
   const isCreate = nav === "create";
   const isAuthorized = nav === "authorized";
@@ -1004,77 +1053,160 @@ export function StoreBrowser({
 
         {isExplore ? (
           <>
-            <div className="mt-5 flex flex-col gap-3 border-y border-border py-3">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                <div className="relative min-w-0 flex-1">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-placeholder" />
-                  <Input
-                    data-testid="store-search"
-                    aria-label="Search resources"
-                    placeholder="Search resources by name or description"
-                    value={q}
-                    onChange={(event) => setQ(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key !== "Enter") return;
-                      event.preventDefault();
-                      searchExplore(event.currentTarget.value);
+            <div className="mt-5 space-y-3 border-t border-border pt-4">
+              <div className="relative min-w-0">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-placeholder" />
+                <Input
+                  data-testid="store-search"
+                  aria-label="Search resources"
+                  placeholder="Search resources by name, description, or tag"
+                  value={q}
+                  onChange={(event) => setQ(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter") return;
+                    event.preventDefault();
+                    searchExplore(event.currentTarget.value);
+                  }}
+                  className="pl-9"
+                />
+              </div>
+
+              <div data-testid="type-tabs" className="flex min-w-0 gap-1 overflow-x-auto">
+                {TYPE_TABS.map((tab) => (
+                  <Button
+                    key={tab.key}
+                    type="button"
+                    size="sm"
+                    variant={type === tab.key ? "default" : "outline"}
+                    data-testid={`type-${tab.key}`}
+                    aria-pressed={type === tab.key}
+                    onClick={() => {
+                      setType(tab.key);
+                      syncUrl({ type: tab.key, page: 1 });
                     }}
-                    className="pl-9"
-                  />
-                </div>
-                <div data-testid="type-tabs" className="flex shrink-0 gap-1 rounded-lg border border-border p-1">
-                  {TYPE_TABS.map((tab) => (
-                    <Button
-                      key={tab.key}
-                      type="button"
-                      size="sm"
-                      variant={type === tab.key ? "secondary" : "ghost"}
-                      data-testid={`type-${tab.key}`}
-                      aria-pressed={type === tab.key}
-                      onClick={() => {
-                        setType(tab.key);
-                        syncUrl({ type: tab.key, page: 1 });
-                      }}
-                      className="h-7 px-2.5 text-11"
-                    >
-                      {tab.name}
-                    </Button>
-                  ))}
+                    className="h-8 shrink-0 rounded-full px-4 text-11"
+                  >
+                    {tab.name}
+                  </Button>
+                ))}
+              </div>
+
+              <div data-testid="approved-design-toolbar" className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-border bg-background p-2.5">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                  <Button type="button" size="sm" variant="outline" className="h-8" aria-label="Resource filters">
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    Filters
+                  </Button>
+                  <DropdownMenu
+                    align="start"
+                    trigger={({ open, onClick }) => (
+                      <Button type="button" size="sm" variant="outline" data-testid="filter-type" aria-expanded={open} onClick={onClick} className="h-8">
+                        {type === "all" ? "Type" : TYPE_TABS.find((tab) => tab.key === type)?.name}
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  >
+                    {TYPE_TABS.map((tab) => (
+                      <DropdownMenuItem key={tab.key} onSelect={() => { setType(tab.key); syncUrl({ type: tab.key, page: 1 }); }}>
+                        <Check className={cn("h-3.5 w-3.5", type === tab.key ? "opacity-100" : "opacity-0")} />
+                        {tab.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenu>
+                  <DropdownMenu
+                    align="start"
+                    trigger={({ open, onClick }) => (
+                      <Button type="button" size="sm" variant="outline" data-testid="filter-source-team" aria-expanded={open} onClick={onClick} className="h-8">
+                        {sourceFilter === "all" ? "Source team" : sourceFilter === "boardx" ? "BoardX" : currentTeam?.name ?? "Current Team"}
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  >
+                    {(["all", "boardx", "team"] as const).map((option) => (
+                      <DropdownMenuItem key={option} onSelect={() => setSourceFilter(option)}>
+                        <Check className={cn("h-3.5 w-3.5", sourceFilter === option ? "opacity-100" : "opacity-0")} />
+                        {option === "all" ? "All sources" : option === "boardx" ? "BoardX" : currentTeam?.name ?? "Current Team"}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenu>
+                  <DropdownMenu
+                    align="start"
+                    trigger={({ open, onClick }) => (
+                      <Button type="button" size="sm" variant="outline" data-testid="filter-version" aria-expanded={open} onClick={onClick} className="h-8">
+                        Version
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  >
+                    <DropdownMenuItem onSelect={() => undefined}>
+                      <Check className="h-3.5 w-3.5" />
+                      Latest version
+                    </DropdownMenuItem>
+                  </DropdownMenu>
+                  <DropdownMenu
+                    align="start"
+                    trigger={({ open, onClick }) => (
+                      <Button type="button" size="sm" variant="outline" data-testid="filter-subscription" aria-expanded={open} onClick={onClick} className="h-8">
+                        {subscriptionFilter === "all" ? "Subscription" : subscriptionFilter === "subscribed" ? "Subscribed" : "Not subscribed"}
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  >
+                    {(["all", "subscribed", "unsubscribed"] as const).map((option) => (
+                      <DropdownMenuItem key={option} onSelect={() => setSubscriptionFilter(option)}>
+                        <Check className={cn("h-3.5 w-3.5", subscriptionFilter === option ? "opacity-100" : "opacity-0")} />
+                        {option === "all" ? "All subscriptions" : option === "subscribed" ? "Subscribed" : "Not subscribed"}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenu>
+                  <DropdownMenu
+                    align="start"
+                    testId="resource-filter-menu"
+                    trigger={({ open, onClick }) => (
+                      <Button type="button" size="sm" variant="outline" data-testid="filter-tags" aria-expanded={open} onClick={onClick} className="h-8">
+                        Tags{activeTags.filter((tag) => tag !== "featured").length > 0 ? ` (${activeTags.filter((tag) => tag !== "featured").length})` : ""}
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  >
+                    {TAGS.filter((tag) => tag !== "featured").map((tag) => (
+                      <DropdownMenuItem key={tag} testId={`tag-${tag}`} onSelect={() => toggleTag(tag)}>
+                        <Check className={cn("h-3.5 w-3.5", activeTags.includes(tag) ? "opacity-100" : "opacity-0")} />
+                        {tagLabel(tag)}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenu>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={activeTags.includes("featured") ? "secondary" : "ghost"}
+                    data-testid="filter-featured"
+                    aria-pressed={activeTags.includes("featured")}
+                    onClick={() => toggleTag("featured")}
+                    className="h-8 px-2.5"
+                  >
+                    <Star className="h-3.5 w-3.5" />
+                    BoardX Featured
+                  </Button>
                 </div>
                 <DropdownMenu
                   align="end"
-                  testId="resource-filter-menu"
                   trigger={({ open, onClick }) => (
-                    <Button type="button" size="sm" variant="outline" aria-expanded={open} onClick={onClick} className="shrink-0">
-                      <SlidersHorizontal className="h-4 w-4" />
-                      Filters
+                    <Button type="button" size="sm" variant="ghost" data-testid="sort-resources" aria-expanded={open} onClick={onClick} className="h-8 shrink-0">
+                      Sort: {sortOrder === "newest" ? "Newest" : "Name"}
+                      <ChevronDown className="h-3.5 w-3.5" />
                     </Button>
                   )}
                 >
-                  {TAGS.map((tag) => (
-                    <DropdownMenuItem key={tag} onSelect={() => toggleTag(tag)}>
-                      <Check className={cn("h-3.5 w-3.5", activeTags.includes(tag) ? "opacity-100" : "opacity-0")} aria-hidden="true" />
-                      {tagLabel(tag)}
-                    </DropdownMenuItem>
-                  ))}
+                  <DropdownMenuItem onSelect={() => setSortOrder("newest")}>
+                    <Check className={cn("h-3.5 w-3.5", sortOrder === "newest" ? "opacity-100" : "opacity-0")} />
+                    Newest
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setSortOrder("name")}>
+                    <Check className={cn("h-3.5 w-3.5", sortOrder === "name" ? "opacity-100" : "opacity-0")} />
+                    Name
+                  </DropdownMenuItem>
                 </DropdownMenu>
-              </div>
-              <div className="flex items-center gap-1 overflow-x-auto">
-                <span className="shrink-0 text-10 font-semibold uppercase text-placeholder">Tags</span>
-                {TAGS.map((tag) => (
-                  <Button
-                    key={tag}
-                    type="button"
-                    size="sm"
-                    variant={activeTags.includes(tag) ? "secondary" : "ghost"}
-                    data-testid={`tag-${tag}`}
-                    aria-pressed={activeTags.includes(tag)}
-                    onClick={() => toggleTag(tag)}
-                    className="h-7 shrink-0 px-2 text-10"
-                  >
-                    {tagLabel(tag)}
-                  </Button>
-                ))}
               </div>
               {filtersActive && (
                 <div className="flex items-center gap-2">
@@ -1084,7 +1216,7 @@ export function StoreBrowser({
               )}
             </div>
             <ResourceCatalog
-              items={items}
+              items={catalogItems}
               loading={loading}
               error={error}
               total={total}
