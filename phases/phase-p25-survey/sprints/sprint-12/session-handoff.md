@@ -20,6 +20,9 @@
 - WHY / HOW / THEN 三个方法卡分别连接模板中心、AI 新建问卷和分析报告；没有可分析答卷时回到“我的问卷”。
 - `/surveys` 改为诊断工作台首页；`?view=my` 为我的问卷；`?view=templates` 为模板中心。
 - 首页按参考稿实现工作台指标、组织/社区、WHY/HOW/THEN、推荐模板和最近问卷。
+- 2026-07-17 最新需求澄清: 微信目录 `AI 问卷诊断平台(1).html` 是唯一 UI 与交互基线；此前 resource-library 解释已被取代，不进入最终实现。
+- 原文件与 Desktop 副本 SHA-256 均为 `bfaaef440519aad4fd4b0e9b9d3934e947e72001758e724e287d04289df65755`。
+- 新增需求记录: `phases/phase-p25-survey/requirements/12-diagnostic-platform-html-fidelity.md`。
 - 报告不再使用模板模拟数字；服务端按真实答卷生成 `SurveyReportEvidenceBundle`。
 - 不同题目独立聚合并保留有效回答分母；多选使用有效答题人数计算选择率。
 - 千问只接收结构化证据，返回结论必须匹配 evidence ID、value 和 denominator；失败时保留真实统计。
@@ -37,6 +40,7 @@
 ## 仍损坏或未验证
 - 尚未运行整个 Harness verify，因为 F12 的真实答卷生成、零/低样本限制和失败重试尚未全部形成可执行验收。
 - 尚未以真实 `DASHSCOPE_API_KEY` 验证供应商成功分支；无密钥降级分支已验证。
+- resource-library 方向的局部改动不再作为验收目标；后续验证以参考 HTML 六界面和 `requirements/12-diagnostic-platform-html-fidelity.md` 为准。
 - AI fallback 场景已在后续统一创建界面回归中通过；原本地数据库约束阻塞不再是当前 blocker。
 - 尚未使用真实千问密钥验收 AI 成功措辞，也未完成不同打印机/PDF 驱动的分页视觉复核。
 
@@ -47,3 +51,7 @@
 - 启动:`pnpm -w run dev`
 - 验证:`pnpm harness verify --sprint p25/12`
 - 调试:`pnpm --filter @repo/web exec playwright test e2e/survey-p25-012-report-composer.spec.ts --reporter=line`
+- 本轮已跑:`pnpm --filter @repo/web run lint`
+- 本轮已跑:`pnpm --filter @repo/web run typecheck`
+- 本轮已跑:`pnpm --filter @repo/web run test -- survey-report`
+- 本轮未通过:`E2E_PORT=62138 COLLAB_WS_PORT=62139 pnpm --filter @repo/web exec playwright test e2e/survey-p25-012-report-composer.spec.ts --reporter=line`（DB password authentication failed for user `boardx`）

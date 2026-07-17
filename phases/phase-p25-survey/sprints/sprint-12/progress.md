@@ -23,6 +23,22 @@
 - 已记录证据: `evidence/2026-07-17-survey-home-navigation.md`、`evidence/survey-reference-home.png`；F12 保持 `in_progress`。
 - 下一步最佳动作: 继续统一“我的问卷”、模板中心及五步工作流的视觉与交互边界。
 
+### 2026-07-17（资源库式我的问卷）
+- 本轮目标: 按新 UIUX 参考稿调整 Survey 管理工作台，参考本地 `AI 问卷诊断平台(1).html` 与 AI Store resource library 截图。
+- 已完成: 新增 `requirements/12-resource-library-uiux-change.md`；将 `?view=my` 的我的问卷改为左侧分组导航、顶部搜索/团队栏、胶囊筛选和资源表格列表；保留 F12 报告编排器和既有 `data-testid` 验证入口。
+- 运行过的验证: `pnpm --filter @repo/web run lint`；`pnpm --filter @repo/web run typecheck`；`pnpm --filter @repo/web run test -- survey-report`（21 files / 107 tests passed）。
+- 未通过验证: `E2E_PORT=62138 COLLAB_WS_PORT=62139 pnpm --filter @repo/web exec playwright test e2e/survey-p25-012-report-composer.spec.ts --reporter=line` 启动成功但 4 tests failed，原因是注册用户时 Postgres 返回 `password authentication failed for user "boardx"`；需恢复该 worktree 的标准 DB 凭证/容器后重跑。
+- 已记录证据: 尚未生成正式 Harness evidence；F12 保持 `in_progress`。
+- 已知风险或未解决问题: 本轮是我的问卷 UIUX 调整，不覆盖 F12 的真实答卷报告生成、零/低样本限制与任务失败重试最终验收。
+- 下一步最佳动作: 复跑验证后提交到 `codex/p25-f12-survey-ui-redesign`，再通过 PR 同步 main。
+
+### 2026-07-17（需求澄清：HTML 为唯一 UI 基线）
+- 本轮目标: 核对用户指定的微信目录原文件，并消除 resource-library 解释与原型信息架构的冲突。
+- 已完成: 微信原文件与 Desktop 副本 SHA-256 均为 `bfaaef440519aad4fd4b0e9b9d3934e947e72001758e724e287d04289df65755`；新增 `requirements/12-diagnostic-platform-html-fidelity.md`，明确六个界面和真实数据约束；更新 UIUX 设计规格。
+- 需求结论: 上一条 resource-library 方向被本次澄清取代，不作为实现目标；`/surveys` 保持参考 HTML 的诊断工作台首页，“我的问卷”保持三种创建入口加紧凑列表。
+- 已记录证据: 原文件路径、哈希和界面清单已写入 requirements 与设计规格；F12 保持 `in_progress`。
+- 下一步最佳动作: 按更新后的规格完成 UI 预览并进行人类 UI signoff，再进入 F12 最终实现与 Harness verify。
+
 ### 2026-07-17（参考诊断平台首页）
 - 本轮目标: 修正 `/surveys` 仍显示旧问卷列表的问题，按 `AI 问卷诊断平台(1).html` 落实参考首页。
 - 已完成: 新增诊断工作台首页、四项指标、组织/社区信息、WHY/HOW/THEN 方法区、推荐模板和最近问卷；我的问卷移动到 `?view=my`，模板中心保留 `?view=templates`。

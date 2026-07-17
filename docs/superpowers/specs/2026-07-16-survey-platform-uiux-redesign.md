@@ -4,20 +4,27 @@ Date: 2026-07-16
 
 ## 1. Goal
 
-Redesign the complete BoardX Survey product around the interaction and visual system demonstrated by:
+Redesign the complete BoardX Survey product as a faithful implementation of:
 
-`AI 问卷诊断平台(1).html`
+`/Users/shenyangjun/Library/Containers/com.tencent.xinWeChat/Data/Documents/xwechat_files/yy774650019_32de/msg/file/2026-07/AI 问卷诊断平台(1).html`
+
+Reference SHA-256:
+
+`bfaaef440519aad4fd4b0e9b9d3934e947e72001758e724e287d04289df65755`
 
 The implementation must preserve the current Survey data model, permissions, Qwen AI integration, public answer flow, reporting capabilities, and five-step workflow. This is a product-wide UIUX redesign, not a replacement prototype or a static visual clone.
+
+GitHub tracking is issue `boardx/boardx-dev-template#648`. The AI Store resource-library screenshot is not the information-architecture source for this redesign.
 
 ## 2. Product Principles
 
 1. Survey is an AI-assisted research and diagnosis workspace, not only a form builder.
-2. The primary journey is:
+2. The reference HTML is the visual and interaction authority. Adaptations are allowed only where repository accessibility, semantic-token, or security contracts require them.
+3. The primary journey is:
    create survey -> design report template -> publish and collect -> review responses -> generate insights.
-3. AI is available throughout the workflow, but every generated change is previewed before it is applied.
-4. Each surface has one primary responsibility. Navigation, editing, configuration, preview, and analysis must not repeat the same content.
-5. Operational pages prioritize scanning, comparison, and repeated action over decorative presentation.
+4. AI is available throughout the workflow, but every generated change is previewed before it is applied.
+5. Each surface has one primary responsibility. Navigation, editing, configuration, preview, and analysis must not repeat the same content.
+6. Operational pages prioritize scanning, comparison, and repeated action over decorative presentation.
 
 ## 3. Application Shell
 
@@ -71,6 +78,8 @@ The home page includes:
 - recommended templates;
 - recent surveys in a compact list.
 
+These sections remain visible as one coherent dashboard. Do not replace the home page with a generic resource-library table.
+
 Primary actions:
 
 - New Survey
@@ -91,6 +100,8 @@ Surveys are displayed as a compact table-like list with:
 - response progress;
 - completion rate;
 - next recommended action.
+
+The three creation paths and the survey list are both required. Do not move the creation paths into an undiscoverable secondary menu.
 
 Actions depend on state:
 
@@ -337,6 +348,9 @@ The redesign is complete only when:
 - desktop and mobile screenshots show no overlap, clipping, or blank chart canvases;
 - Survey Playwright suites, typecheck, unit tests, design lint, and harness verification pass;
 - screenshots and command output are stored in phase evidence.
+- the six reference screens (`Home Dashboard`, `我的问卷`, `模版中心`, `报告模版推演`, `问卷编辑器`, `洞察报告`) are represented by real application states;
+- visual QA compares the reference and implementation at the same viewport and state;
+- metrics and progress values come from real denominators or render an explicit zero/unknown state.
 
 The refinement covering the New Survey chooser, Survey Editor, and Survey Template Center additionally requires stable E2E anchors for all three creation paths, template filtering and use-template actions, the five workflow steps, and AI preview/application. Existing data, authorization, publish, and report behavior must remain unchanged.
 
