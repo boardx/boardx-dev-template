@@ -1,7 +1,8 @@
-import type {
-  SurveyEvidenceClaim,
-  SurveyQuestionEvidence,
-  SurveyReportEvidenceBundle,
+import {
+  SURVEY_MIN_RELIABLE_SAMPLE,
+  type SurveyEvidenceClaim,
+  type SurveyQuestionEvidence,
+  type SurveyReportEvidenceBundle,
 } from "./survey-report-evidence";
 
 export interface AiEvidenceClaimCandidate {
@@ -93,7 +94,9 @@ function chapterForQuestion(
 ): ProfessionalReportChapter {
   const limitations: string[] = [];
   if (!question.validResponseCount) limitations.push("该题暂无有效回答。");
-  else if (lowSample) limitations.push("该题样本不足 30，结果仅作为方向性信号。");
+  else if (lowSample) {
+    limitations.push(`该题样本不足 ${SURVEY_MIN_RELIABLE_SAMPLE}，结果仅作为方向性信号。`);
+  }
   if (question.missingResponseCount > 0) limitations.push(`该题有 ${question.missingResponseCount} 份缺失回答。`);
   return {
     id: `question-${question.questionId}`,
@@ -119,7 +122,8 @@ export function buildProfessionalReportDocument({
 }): ProfessionalSurveyReportDocument {
   const validatedAiClaims = validateEvidenceClaims(evidence, aiClaims);
   const claims: ValidatedReportClaim[] = validatedAiClaims.length ? validatedAiClaims : evidence.claims;
-  const lowSample = evidence.sample.responseCount > 0 && evidence.sample.responseCount < 30;
+  const lowSample = evidence.sample.responseCount > 0
+    && evidence.sample.responseCount < SURVEY_MIN_RELIABLE_SAMPLE;
   const status = evidence.sample.responseCount === 0 ? "empty" : lowSample ? "directional" : "ready";
   return {
     title: `${evidence.survey.title} 分析报告`,

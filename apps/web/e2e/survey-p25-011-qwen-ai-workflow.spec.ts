@@ -28,8 +28,13 @@ test("blank creation uses the latest boardx-survey workflow editor", async ({ pa
   await expect(page.getByRole("button", { name: /发布回收/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /查看答题/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /分析报告/ })).toBeVisible();
-  await expect(page.getByTestId("template-library")).toBeVisible();
-  await expect(page.getByTestId("template-select")).toBeVisible();
+  await expect(page.getByTestId("survey-diagnostic-summary")).toBeVisible();
+  await expect(page.getByTestId("survey-diagnostic-dimensions")).toBeVisible();
+  await expect(page.getByTestId("survey-hypotheses")).toBeVisible();
+  await expect(page.getByTestId("template-library")).toBeHidden();
+  await expect(page.getByTestId("template-select")).toBeHidden();
+  await expect(page.getByTestId("open-hypothesis-composer")).toBeVisible();
+  await page.getByTestId("open-hypothesis-composer").click();
   await expect(page.getByTestId("category-manager")).toBeVisible();
   await expect(page.getByTestId("survey-scope")).toBeVisible();
   await expect(page.getByTestId("question-type-0").locator("option")).toHaveCount(14);
@@ -155,7 +160,8 @@ test("existing survey applies only confirmed AI changes once", async ({ page }) 
   });
 
   await page.goto(`/surveys?edit=${survey.id}`);
-  await page.getByTestId("open-ai-assistant").click();
+  await expect(page.getByTestId("survey-editor-screen")).toBeVisible();
+  await expect(page.getByTestId("ai-input")).toBeVisible();
   await page.getByTestId("ai-input").fill("补充一项后续问题");
   await page.getByTestId("ai-send").click();
 

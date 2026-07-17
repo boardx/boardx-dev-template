@@ -25,6 +25,7 @@ export interface SurveyHomeRecentItem {
 
 interface SurveyHomeDashboardProps {
   greeting: string;
+  userName: string | null;
   activeSurveyCount: number;
   totalResponses: number;
   generatedReportCount: number;
@@ -73,6 +74,7 @@ function responseProgress(item: SurveyHomeRecentItem) {
 
 export function SurveyHomeDashboard({
   greeting,
+  userName,
   activeSurveyCount,
   totalResponses,
   generatedReportCount,
@@ -97,12 +99,11 @@ export function SurveyHomeDashboard({
   ];
 
   return (
-    <div data-testid="survey-diagnostic-home" className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-10 lg:py-9">
+    <div data-testid="survey-diagnostic-home" className="mx-auto w-full max-w-survey-dashboard px-4 py-8 sm:px-6 lg:px-10 lg:py-9">
       <section data-testid="survey-home-context" className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-26 font-bold text-foreground">{greeting}，Yiran</h1>
+          <h1 className="text-26 font-bold text-foreground">{greeting}，{userName || "欢迎回来"}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Badge variant="muted">独立咨询顾问</Badge>
             <Badge variant="muted">{organizationName} · 组织与 AI 转型</Badge>
           </div>
         </div>
@@ -113,13 +114,13 @@ export function SurveyHomeDashboard({
           </Button>
           <Button type="button" variant="outline" onClick={onBrowseTemplates} className="h-10 gap-2 px-4">
             <LayoutTemplate className="h-4 w-4" strokeWidth={1.7} />
-            浏览模板
+            浏览模版
           </Button>
         </div>
       </section>
 
       <section className="mt-6 grid gap-4 lg:grid-cols-[1.3fr_1fr_1fr]">
-        <article data-testid="survey-home-metrics" className="rounded-lg border border-border bg-background px-5 py-5">
+        <article data-testid="survey-home-metrics" className="min-h-40 rounded-lg border border-border bg-background px-5 py-5">
           <h2 className="text-13 font-semibold text-muted-foreground">我的工作台</h2>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {metrics.map((metric) => (
@@ -131,13 +132,13 @@ export function SurveyHomeDashboard({
           </div>
         </article>
 
-        <article data-testid="survey-home-organization" className="rounded-lg border border-border bg-background px-5 py-5">
+        <article data-testid="survey-home-organization" className="min-h-40 rounded-lg border border-border bg-background px-5 py-5">
           <h2 className="text-13 font-semibold text-muted-foreground">组织</h2>
           <p className="mt-3 text-15 font-bold text-foreground">{organizationName}</p>
           <p className="mt-1 text-12 leading-5 text-muted-foreground">{organizationSummary}</p>
         </article>
 
-        <article data-testid="survey-home-community" className="rounded-lg border border-border bg-background px-5 py-5">
+        <article data-testid="survey-home-community" className="min-h-40 rounded-lg border border-border bg-background px-5 py-5">
           <h2 className="text-13 font-semibold text-muted-foreground">顾问社区</h2>
           <p className="mt-3 text-13 leading-5 text-foreground">
             {communityTemplateName ? <>推荐模板：<strong>{communityTemplateName}</strong></> : "暂无可推荐模板"}
@@ -184,9 +185,9 @@ export function SurveyHomeDashboard({
 
       <section data-testid="survey-home-templates" className="mt-6">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-15 font-bold text-foreground">为你推荐的诊断模板</h2>
+          <h2 className="text-15 font-bold text-foreground">为你推荐的诊断模版</h2>
           <Button type="button" variant="link" size="sm" onClick={onBrowseTemplates} className="h-auto gap-1 px-0 text-survey">
-            全部模板
+            全部模版
             <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.8} />
           </Button>
         </div>
@@ -195,6 +196,7 @@ export function SurveyHomeDashboard({
             {templates.map((template) => (
               <button
                 key={template.id}
+                data-testid={`survey-home-template-${template.id}`}
                 type="button"
                 onClick={() => onUseTemplate(template.id)}
                 className="min-h-32 rounded-lg border border-border bg-background p-4 text-left transition-colors duration-200 hover:border-survey focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"

@@ -44,7 +44,10 @@ const config: Config = {
           pink: "hsl(var(--tag-pink))",
           yellow: "hsl(var(--tag-yellow))",
         },
-        survey: "hsl(var(--survey-accent))",
+        survey: {
+          DEFAULT: "hsl(var(--survey-accent))",
+          foreground: "hsl(var(--survey-accent-foreground))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -83,10 +86,18 @@ const config: Config = {
         "15": "60px",
         "62": "248px",
         "85": "340px",
+        "survey-create-card": "116px",
+        "survey-sidebar-inset": "31px",
+        "survey-workbench": "1180px",
       },
       maxWidth: {
         brand: "420px",
         content: "980px",
+        "survey-dashboard": "1240px",
+        "survey-editor": "1360px",
+      },
+      borderWidth: {
+        "3": "3px",
       },
     },
   },

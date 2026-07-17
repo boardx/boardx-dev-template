@@ -76,7 +76,7 @@ test("new survey chooser opens the current AI assistant", async ({ page }) => {
   await expect(assistant.getByTestId("ai-send")).toBeDisabled();
 });
 
-test("editor shell groups the question builder, inspector, and unified paper preview", async ({ page }) => {
+test("editor shell keeps the reference workflow, default AI assistant, and unified paper preview", async ({ page }) => {
   await register(page);
   await page.route("**/api/survey-templates", async (route) => {
     await route.fulfill({
@@ -114,30 +114,33 @@ test("editor shell groups the question builder, inspector, and unified paper pre
   await page.getByTestId("new-survey-blank").click();
   await expect(page.getByTestId("survey-editor-shell")).toBeVisible();
   await expect(page.getByTestId("editor-command-bar")).toBeVisible();
+  await expect(page.getByTestId("survey-editor-stepper")).toBeVisible();
   await expect(page.getByTestId("question-builder-panel")).toBeVisible();
-  await expect(page.getByTestId("editor-inspector-panel")).toBeVisible();
+  await expect(page.getByTestId("survey-ai-assistant")).toBeVisible();
+  await expect(page.getByTestId("editor-inspector-panel")).toHaveCount(0);
   await expect(page.getByTestId("survey-responses-tab")).toHaveCount(0);
   await expect(page.getByTestId("survey-settings-tab")).toHaveCount(0);
-  await expect(page.getByTestId("template-select")).toBeVisible();
-  await page.getByTestId("template-tag-filter").selectOption("product_safety");
-  await expect(page.getByTestId("template-select").locator("option")).toHaveCount(2);
-  await page.getByTestId("template-select").selectOption("built_in:product-safety-research");
-  await expect(page.getByTestId("survey-title")).toHaveValue("商品安全市场调研问卷");
+  await expect(page.getByTestId("template-select")).toBeHidden();
   await page.getByTestId("question-type-0").selectOption("single");
   await page.getByTestId("question-add-option-0").click();
 
   await page.getByTestId("preview-survey").click();
   await expect(page.getByTestId("survey-preview")).toBeVisible();
   await expect(page.getByTestId("preview-brand-banner")).toBeVisible();
-  await expect(page.getByTestId("survey-preview-sheet")).toHaveClass(/border-0/);
-  await expect(page.getByTestId("survey-preview-sheet")).toHaveClass(/shadow-sm/);
-  await expect(page.getByTestId("preview-question-list")).not.toHaveClass(/divide-y/);
-  await expect(page.getByTestId("preview-question-list")).toHaveClass(/space-y-0/);
-  await expect(page.getByTestId("preview-question-0")).not.toHaveClass(/rounded/);
-  await expect(page.getByTestId("preview-question-0")).toHaveClass(/py-3/);
   await expect(page.getByTestId("preview-question-type-0")).toHaveText("（单选）");
-  await expect(page.getByTestId("preview-option-0-0")).toHaveClass(/border-0/);
-  await expect(page.getByTestId("preview-option-0-0")).toHaveClass(/bg-muted/);
+  const [previewSheet, previewQuestion, previewOption] = await Promise.all([
+    page.getByTestId("survey-preview-sheet").boundingBox(),
+    page.getByTestId("preview-question-0").boundingBox(),
+    page.getByTestId("preview-option-0-0").boundingBox(),
+  ]);
+  expect(previewSheet).not.toBeNull();
+  expect(previewQuestion).not.toBeNull();
+  expect(previewOption).not.toBeNull();
+  expect(previewQuestion!.x).toBeGreaterThan(previewSheet!.x);
+  expect(previewQuestion!.width).toBeLessThan(previewSheet!.width);
+  expect(previewOption!.x).toBeGreaterThanOrEqual(previewQuestion!.x);
+  expect(previewOption!.x + previewOption!.width).toBeLessThanOrEqual(previewQuestion!.x + previewQuestion!.width);
+  expect(previewOption!.y).toBeGreaterThan(previewQuestion!.y);
   await page.getByTestId("edit-survey").click();
   await expect(page.getByTestId("question-builder-panel")).toBeVisible();
 });
@@ -170,15 +173,20 @@ test("answer and acceptance small surfaces share the professional shell", async 
 
   await page.goto(survey.shareUrl);
   await expect(page.getByTestId("answer-brand-banner")).toBeVisible();
-  await expect(page.getByTestId("answer-professional-shell")).toHaveClass(/border-0/);
-  await expect(page.getByTestId("answer-professional-shell")).toHaveClass(/shadow-sm/);
-  await expect(page.getByTestId("answer-question-list")).not.toHaveClass(/divide-y/);
-  await expect(page.getByTestId("answer-question-list")).toHaveClass(/space-y-0/);
-  await expect(page.getByTestId("answer-question-0")).not.toHaveClass(/rounded/);
-  await expect(page.getByTestId("answer-question-0")).toHaveClass(/py-3/);
   await expect(page.getByTestId("answer-question-type-1")).toHaveText("（单选）");
-  await expect(page.getByTestId("answer-option-1-0")).toHaveClass(/border-0/);
-  await expect(page.getByTestId("answer-option-1-0")).toHaveClass(/bg-muted/);
+  const [answerShell, answerQuestion, answerOption] = await Promise.all([
+    page.getByTestId("answer-professional-shell").boundingBox(),
+    page.getByTestId("answer-question-1").boundingBox(),
+    page.getByTestId("answer-option-1-0").boundingBox(),
+  ]);
+  expect(answerShell).not.toBeNull();
+  expect(answerQuestion).not.toBeNull();
+  expect(answerOption).not.toBeNull();
+  expect(answerQuestion!.x).toBeGreaterThan(answerShell!.x);
+  expect(answerQuestion!.width).toBeLessThan(answerShell!.width);
+  expect(answerOption!.x).toBeGreaterThanOrEqual(answerQuestion!.x);
+  expect(answerOption!.x + answerOption!.width).toBeLessThanOrEqual(answerQuestion!.x + answerQuestion!.width);
+  expect(answerOption!.y).toBeGreaterThan(answerQuestion!.y);
   await page.getByTestId("submit-answer").click();
   await expect(page.getByTestId("err-answer")).toContainText("请完成必填题");
   await page.getByTestId("answer-rating-0-4").click();

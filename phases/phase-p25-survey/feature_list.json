@@ -273,7 +273,7 @@
       "title": "重建动态报告规划与分类报告编排器",
       "user_visible_behavior": "问卷管理者可按题目分类配置报告章节、输入模块、图表类型、提示词和顺序，保存后刷新可恢复；系统只基于真实答卷生成结构化报告，零样本和低样本明确展示限制，任务进度和失败可重试。",
       "design_ref": "requirements/05-ai-report-agent.md、08-dynamic-report-engine-design.md、09-category-report-composer-design.md",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "12",
       "owner": "wrk-survey-1",
       "capability": "CAP-AI",
@@ -287,7 +287,7 @@
         "pnpm --filter @repo/web run typecheck",
         "pnpm --filter @repo/web exec playwright test e2e/survey-p25-012-report-composer.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F12.verify.log @ 2026-07-17T12:56:35.771Z",
       "notes": "共享热点：survey-report-planner/category-plan、results page、ai-report/report-template/report-categories routes；原始答卷不得全量发给客户端。"
     },
     {
