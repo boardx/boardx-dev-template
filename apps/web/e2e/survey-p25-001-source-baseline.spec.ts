@@ -12,56 +12,44 @@ async function register(page: Page) {
 test("user creates a categorized survey from a built-in template", async ({ page }) => {
   await register(page);
   await page.goto("/surveys");
-  await page.getByTestId("empty-new-survey").click();
-  await expect(page.getByTestId("template-library")).toBeVisible();
-  await expect(page.getByTestId("template-product-safety-research")).toBeVisible();
-  await expect(page.getByTestId("template-category-product-safety-research")).toContainText("product_safety");
-  await page.getByTestId("template-product-safety-research").click();
-  await expect(page.getByTestId("survey-title")).toHaveValue("商品安全市场调研问卷");
-  await expect(page.getByTestId("question-title-0")).toHaveValue("你的年龄段是？");
-  await expect(page.getByTestId("question-category-0")).toContainText("demographics");
+  await expect(page.getByTestId("survey-diagnostic-home")).toBeVisible();
+  await page.getByTestId("create-with-ai").click();
+  await page.getByTestId("new-survey-template").click();
+
+  const templateGrid = page.getByTestId("diagnostic-template-grid");
+  await expect(templateGrid).toBeVisible();
+  const templateCard = templateGrid.locator('[data-testid^="template-card-"]').first();
+  await expect(templateCard).toContainText("系统");
+  await templateCard.getByTestId(/use-template-/).click();
+
+  await expect(page.getByTestId("survey-editor-shell")).toBeVisible();
+  await expect(page.getByTestId("question-title-0")).not.toHaveValue("");
 });
 
-test("AI creates a categorized draft from pasted reference content with report template", async ({ page }) => {
+test("new homepage chooser opens the AI survey workflow", async ({ page }) => {
   await register(page);
   await page.goto("/surveys");
   await page.getByTestId("create-with-ai").click();
-  await page.getByTestId("ai-model").selectOption("mock-survey-fast");
-  await page.getByTestId("ai-input").fill(
-    [
-      "我要做一个商品安全市场调研。",
-      "参考内容：用户最担心成分、认证、生产日期和品牌责任。",
-      "请生成一份问卷，并绑定报告模板。",
-    ].join("\n")
-  );
-  await page.getByTestId("ai-send").click();
-  await expect(page.getByTestId("ai-draft-preview")).toBeVisible();
-  await expect(page.getByTestId("ai-draft-markdown")).toContainText("分类：");
-  await expect(page.getByTestId("ai-draft-markdown")).toContainText("报告模板");
-  await expect(page.getByTestId("ai-draft-markdown")).toContainText("图表");
+  await page.getByTestId("new-survey-ai").click();
+
+  await expect(page.getByTestId("survey-editor-shell")).toBeVisible();
+  await expect(page.getByTestId("survey-ai-assistant")).toBeVisible();
+  await expect(page.getByTestId("ai-input")).toBeVisible();
 });
 
-test("Survey workbench separates personal, team, template, and AI entry points", async ({ page }) => {
+test("Survey navigation reaches the current workspace and template center", async ({ page }) => {
   await register(page);
   await page.goto("/surveys");
-  await expect(page.getByTestId("survey-workbench-tabs")).toBeVisible();
+  await expect(page.getByTestId("survey-source-sidebar")).toBeVisible();
 
-  await page.getByTestId("tab-my-surveys").click();
+  await page.getByTestId("survey-nav-workspace").click();
   await expect(page.getByTestId("empty").or(page.getByTestId("survey-list"))).toBeVisible();
 
-  await page.getByTestId("tab-team-surveys").click();
-  await expect(page.getByTestId("team-surveys-empty").or(page.getByTestId("survey-list"))).toBeVisible();
-
-  await page.getByTestId("tab-survey-templates").click();
-  await expect(page.getByTestId("templates-workbench")).toBeVisible();
-  await expect(page.getByTestId("workbench-template-product-safety-research")).toBeVisible();
-
-  await page.getByTestId("tab-ai-create").click();
-  await expect(page.getByTestId("ai-create-workbench")).toBeVisible();
-  await expect(page.getByTestId("create-with-ai")).toBeVisible();
+  await page.getByTestId("survey-nav-templates").click();
+  await expect(page.getByTestId("diagnostic-template-center")).toBeVisible();
 });
 
-test("AI report uses report template and handles zero responses", async ({ page }) => {
+test("report workflow keeps the zero-response limitation visible", async ({ page }) => {
   await register(page);
   const created = await page.request.post("/api/surveys", {
     data: {
@@ -87,17 +75,9 @@ test("AI report uses report template and handles zero responses", async ({ page 
   expect(created.status()).toBe(201);
   const survey = (await created.json()).survey as { id: number };
 
-  await page.goto(`/surveys/${survey.id}/results`);
-  await page.getByTestId("tab-report").click();
-  await expect(page.getByTestId("report-template-panel")).toBeVisible();
-  await expect(page.getByTestId("report-template-title")).toContainText("零样本商品安全调研");
-  await expect(page.getByTestId("report-template-sections")).toContainText("样本概览");
-  await expect(page.getByTestId("report-template-sections")).toContainText("关键指标");
-
-  await page.getByTestId("report-model").selectOption("mock-survey-quality");
-  await page.getByTestId("generate-ai-report").click();
-  await expect(page.getByTestId("report-panel")).toContainText("暂无答卷", { timeout: 20_000 });
-  await expect(page.getByTestId("report-panel")).toContainText("仅提供分析框架", { timeout: 20_000 });
+  await page.goto(`/surveys?survey=${survey.id}&step=report`);
+  await expect(page.getByTestId("professional-report-document")).toContainText("尚无真实答卷", { timeout: 20_000 });
+  await expect(page.getByTestId("professional-report-document")).not.toContainText("模拟数据");
 });
 
 test("survey list preserves publish settings and identified one-response gate", async ({ page }) => {

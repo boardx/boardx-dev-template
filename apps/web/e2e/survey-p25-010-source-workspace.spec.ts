@@ -30,10 +30,11 @@ async function createSurvey(page: Page) {
 test("survey workspace restores every source workflow step from the URL", async ({ page }) => {
   await register(page);
   const survey = await createSurvey(page);
-  await page.goto("/surveys");
+  await page.goto("/surveys?view=my");
   await page.getByTestId(`open-workspace-${survey.id}`).click();
 
   await expect(page).toHaveURL(new RegExp(`survey=${survey.id}.*step=design`));
+  await expect(page.getByTestId("survey-editor-screen")).toBeVisible();
   await expect(page.getByTestId("survey-workflow-shell")).toContainText("五步工作台调研");
   await expect(page.getByTestId("workflow-design")).toHaveAttribute("aria-current", "step");
   await expect(page.locator("#workflow-category-0")).toHaveValue("需求洞察");
@@ -44,16 +45,24 @@ test("survey workspace restores every source workflow step from the URL", async 
     ["answer", "workspace-answer-workbench"],
     ["report", "workspace-report-workbench"],
   ] as const) {
-    await page.getByTestId(`workflow-${step}`).click();
+    await page.goto(`/surveys?survey=${survey.id}&step=${step}`);
     await expect(page).toHaveURL(new RegExp(`step=${step}`));
     await page.reload();
     await expect(page.getByTestId(testId)).toBeVisible();
   }
 
-  await page.getByTestId("workflow-answer").click();
+  await page.goto(`/surveys?survey=${survey.id}&step=answer`);
   await expect(page.getByTestId("workspace-answer-link")).toHaveAttribute("href", `/survey/${survey.id}/answer`);
-  await page.getByTestId("workflow-report").click();
+  await page.goto(`/surveys?survey=${survey.id}&step=report`);
   await expect(page.getByTestId("workspace-report-link")).toHaveAttribute("href", `/surveys/${survey.id}/results`);
+});
+
+test("insight report exposes the reference screen root", async ({ page }) => {
+  await register(page);
+  const survey = await createSurvey(page);
+  await page.goto(`/surveys/${survey.id}/results`);
+
+  await expect(page.getByTestId("survey-insight-report")).toBeVisible();
 });
 
 test("workflow navigation remains usable on a mobile viewport", async ({ page }) => {

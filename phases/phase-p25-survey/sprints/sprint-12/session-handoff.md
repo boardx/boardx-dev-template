@@ -1,12 +1,28 @@
 # 会话交接 — Sprint p25/12
 
 ## 当前已验证
+- Survey 统一创建界面已通过 10 条完整 Playwright、移动端视觉测试、Web typecheck、design lint 和独立代码复审。
+- Survey 首页导航精简已通过聚焦 E2E、typecheck、design lint 和补丁格式检查。
+- `/surveys` 参考诊断平台首页已通过聚焦 E2E、typecheck、design lint 和视觉截图对照。
 - F12 仍为 `in_progress`，没有提前标记 passing。
 - 专业报告链已通过 9 个 Vitest、typecheck、design lint 和 3 个聚焦 Playwright E2E。
 - 报告分类 API 修复已通过 Web typecheck、86 个 Vitest 测试和 1 个聚焦 Playwright E2E。
 - Survey AI 工作台第一版已通过布局单测、Web typecheck、design lint，以及 4 条聚焦 Playwright 路径。
+- 报告模板真实入口的三栏工作台契约已通过 F12 Playwright 3/3、Web typecheck 和 design lint。
 
 ## 本轮改动
+- 新建问卷统一为 AI、诊断模板、空白三路选择器；首页和我的问卷复用同一入口。
+- 模板中心改为标签过滤的诊断模板列表，保留套用、报告模板及自定义模板管理动作。
+- 编辑器改为单边界诊断摘要和连续纸面题目画布；AI draft/changeSet 均需确认后应用。
+- 移动端编辑器改为单列，AI 助手在主内容后完整显示，桌面检查器只在 `xl` 断点显示。
+- Survey 左侧四个菜单项统一为固定尺寸和描边的 Lucide 图标。
+- 首页移除“组织”和“顾问社区”占位卡片，工作台指标改为完整横向区域。
+- WHY / HOW / THEN 三个方法卡分别连接模板中心、AI 新建问卷和分析报告；没有可分析答卷时回到“我的问卷”。
+- `/surveys` 改为诊断工作台首页；`?view=my` 为我的问卷；`?view=templates` 为模板中心。
+- 首页按参考稿实现工作台指标、组织/社区、WHY/HOW/THEN、推荐模板和最近问卷。
+- 2026-07-17 最新需求澄清: 微信目录 `AI 问卷诊断平台(1).html` 是唯一 UI 与交互基线；此前 resource-library 解释已被取代，不进入最终实现。
+- 原文件与 Desktop 副本 SHA-256 均为 `bfaaef440519aad4fd4b0e9b9d3934e947e72001758e724e287d04289df65755`。
+- 新增需求记录: `phases/phase-p25-survey/requirements/12-diagnostic-platform-html-fidelity.md`。
 - 报告不再使用模板模拟数字；服务端按真实答卷生成 `SurveyReportEvidenceBundle`。
 - 不同题目独立聚合并保留有效回答分母；多选使用有效答题人数计算选择率。
 - 千问只接收结构化证据，返回结论必须匹配 evidence ID、value 和 denominator；失败时保留真实统计。
@@ -19,17 +35,23 @@
 - `POST /api/surveys/:id/report-categories` 接入千问 JSON 分类，并沿用主仓 Survey scope 管理权限。
 - 千问缺少配置、超时或供应商失败时生成并保存确定性默认分类，页面可继续编辑。
 - E2E 验证真实问题 ID 被持久化，且非管理者返回 403。
+- `step=template` 当前入口已稳定为可折叠模块列表、实时报告预览和 AI/配置助手三栏结构，并新增可执行的 UI 契约断言。
 
 ## 仍损坏或未验证
 - 尚未运行整个 Harness verify，因为 F12 的真实答卷生成、零/低样本限制和失败重试尚未全部形成可执行验收。
 - 尚未以真实 `DASHSCOPE_API_KEY` 验证供应商成功分支；无密钥降级分支已验证。
-- 聚焦组合 E2E 中 AI fallback 用例被本地数据库约束阻塞：代码写入 `status=open`，`survey_ai_sessions_status_check` 拒绝该值；本轮没有扩大 UI 任务范围修改数据契约。
+- resource-library 方向的局部改动不再作为验收目标；后续验证以参考 HTML 六界面和 `requirements/12-diagnostic-platform-html-fidelity.md` 为准。
+- AI fallback 场景已在后续统一创建界面回归中通过；原本地数据库约束阻塞不再是当前 blocker。
 - 尚未使用真实千问密钥验收 AI 成功措辞，也未完成不同打印机/PDF 驱动的分页视觉复核。
 
 ## 下一步最佳动作
-- 先由人类检查 `http://localhost:3010/surveys` 的五个工作流界面并反馈，再继续同一 F12 的真实答卷、零/低样本和失败重试测试；不要手改 `active-features.json` 或把 F12 直接改为 passing。
+- 继续 F12 的真实答卷报告、零/低样本限制和失败重试验收；不要手改 `active-features.json` 或把 F12 直接改为 passing。
 
 ## 命令
 - 启动:`pnpm -w run dev`
 - 验证:`pnpm harness verify --sprint p25/12`
 - 调试:`pnpm --filter @repo/web exec playwright test e2e/survey-p25-012-report-composer.spec.ts --reporter=line`
+- 本轮已跑:`pnpm --filter @repo/web run lint`
+- 本轮已跑:`pnpm --filter @repo/web run typecheck`
+- 本轮已跑:`pnpm --filter @repo/web run test -- survey-report`
+- 本轮未通过:`E2E_PORT=62138 COLLAB_WS_PORT=62139 pnpm --filter @repo/web exec playwright test e2e/survey-p25-012-report-composer.spec.ts --reporter=line`（DB password authentication failed for user `boardx`）

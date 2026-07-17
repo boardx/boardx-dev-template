@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 import * as echarts from "echarts/core";
 import { BarChart, FunnelChart, GaugeChart, HeatmapChart, LineChart, PieChart, RadarChart, ScatterChart, TreemapChart } from "echarts/charts";
 import { GridComponent, LegendComponent, RadarComponent, TooltipComponent, VisualMapComponent } from "echarts/components";
@@ -30,6 +31,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -38,7 +40,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { ReportLayoutCanvas } from "@/components/survey/report-layout-canvas";
 import { ProfessionalReportDocument } from "@/components/survey/professional-report-document";
 import { SurveyAiPanel } from "@/components/survey/survey-ai-panel";
+import { SurveyHomeDashboard } from "@/components/survey/survey-home-dashboard";
+import { SurveyListScreen } from "@/components/survey/survey-list-screen";
 import { SurveyOutlinePanel } from "@/components/survey/survey-outline-panel";
+import { SurveyDesignWorkbench } from "@/components/survey/survey-design-workbench";
 import {
   downloadProfessionalWordReport,
   openProfessionalPdfExportWindow,
@@ -290,11 +295,6 @@ const STATUS_LABEL: Record<Survey["status"], string> = {
   paused: "暂停",
 };
 
-const surveyThemeStyle = {
-  "--primary": "262 74% 54%",
-  "--primary-foreground": "0 0% 100%",
-  "--ring": "262 74% 54%",
-} as CSSProperties;
 const AI_CREATE_FLOW_KEY = "survey-ai-create-flow";
 const LEGACY_DEFAULT_CATEGORIES = new Set([
   "user_info",
@@ -352,19 +352,23 @@ function getTemplateDraftSignature(input: {
   });
 }
 
-function QuestionPreviewAnswer({ question }: { question: Question }) {
+function QuestionPreviewAnswer({ question, questionIndex }: { question: Question; questionIndex?: number }) {
   if (["short_text", "email", "number", "phone"].includes(question.type)) {
-    return <Input disabled placeholder="短文本回答" className="bg-muted/30" />;
+    return <Input disabled placeholder="短文本回答" className="rounded-none border-x-0 border-t-0 bg-transparent px-0 shadow-none" />;
   }
   if (question.type === "text") {
-    return <Textarea disabled placeholder="段落回答" className="min-h-20 bg-muted/30" />;
+    return <Textarea disabled placeholder="段落回答" className="min-h-20 rounded-none border-x-0 border-t-0 bg-transparent px-0 shadow-none" />;
   }
   if (CHOICE_TYPES.includes(question.type) && question.type !== "dropdown") {
     return (
       <div className="grid gap-2">
         {(question.options.length ? question.options : ["选项 1"]).map((option, optionIndex) => (
-          <div key={`${question.id}-${optionIndex}`} className="flex items-center gap-2 text-13 text-muted-foreground">
-            <span className={question.type === "multiple" ? "h-3.5 w-3.5 rounded border border-border-strong" : "h-3.5 w-3.5 rounded-full border border-border-strong"} />
+          <div
+            key={`${question.id}-${optionIndex}`}
+            data-testid={questionIndex == null ? undefined : `preview-option-${questionIndex}-${optionIndex}`}
+            className="flex min-h-11 items-center gap-3 rounded-md border-0 bg-muted/40 px-4 py-2.5 text-14 text-foreground"
+          >
+            <span className={question.type === "multiple" ? "h-4 w-4 rounded border border-border-strong" : "h-4 w-4 rounded-full border border-border-strong"} />
             {option || `选项 ${optionIndex + 1}`}
           </div>
         ))}
@@ -386,9 +390,9 @@ function QuestionPreviewAnswer({ question }: { question: Question }) {
   if (question.type === "rating") return <div className="text-22 text-border-strong">★ ★ ★ ★ ★</div>;
   if (question.type === "linear_scale") return <div className="text-14 text-muted-foreground">1&nbsp;&nbsp;2&nbsp;&nbsp;3&nbsp;&nbsp;4&nbsp;&nbsp;5</div>;
   if (question.type === "nps") return <div className="text-14 text-muted-foreground">0 1 2 3 4 5 6 7 8 9 10</div>;
-  if (question.type === "date") return <Input disabled type="date" className="max-w-xs bg-muted/30" />;
-  if (question.type === "time") return <Input disabled type="time" className="max-w-xs bg-muted/30" />;
-  return <Input disabled type="file" className="max-w-xs bg-muted/30" />;
+  if (question.type === "date") return <Input disabled type="date" className="max-w-xs rounded-none border-x-0 border-t-0 bg-transparent px-0 shadow-none" />;
+  if (question.type === "time") return <Input disabled type="time" className="max-w-xs rounded-none border-x-0 border-t-0 bg-transparent px-0 shadow-none" />;
+  return <Input disabled type="file" className="max-w-xs rounded-none border-x-0 border-t-0 bg-transparent px-0 shadow-none" />;
 }
 
 function questionsFromApi(raw: unknown): Question[] {
@@ -631,6 +635,7 @@ type WorkspaceTarget = "workspace" | "design" | "template" | "collect" | "report
 interface WorkspaceShellProps {
   children: ReactNode;
   active?: WorkspaceTarget;
+  dashboardMode?: boolean;
   currentSurvey?: Survey;
   workflowMode?: boolean;
   templateLibraryMode?: boolean;
@@ -645,6 +650,7 @@ interface WorkspaceShellProps {
 function WorkspaceShell({
   children,
   active = "workspace",
+  dashboardMode = false,
   currentSurvey,
   workflowMode = false,
   templateLibraryMode = false,
@@ -658,9 +664,11 @@ function WorkspaceShell({
   const inSurveyWorkflow = workflowMode || (active !== "workspace" && active !== "template");
   const focusedMode = inSurveyWorkflow || hideSidebar;
   const nav = [
-    { id: "home", label: "Home Page", icon: Home },
+    { id: "home", label: "主页", icon: Home },
     { id: "workspace", label: "我的问卷", icon: ClipboardList },
-    { id: "templates", label: "问卷模版", icon: LayoutTemplate },
+    { id: "templates", label: "问卷模板", icon: LayoutTemplate },
+    { id: "reports", label: "报告模板", icon: BarChart3 },
+    { id: "insights", label: "洞察报告", icon: Eye },
   ];
   const workflowSteps: Array<{
     id: Exclude<WorkspaceTarget, "workspace">;
@@ -691,54 +699,84 @@ function WorkspaceShell({
   };
   return (
     <div data-testid={inSurveyWorkflow ? "survey-workflow-shell" : undefined} className="min-h-full bg-secondary text-foreground">
-      <div className={focusedMode ? "grid min-h-screen" : "grid min-h-screen lg:grid-cols-[244px_minmax(0,1fr)]"}>
+      <div className={focusedMode ? "grid min-h-screen" : "grid min-h-screen lg:grid-cols-[280px_minmax(0,1fr)]"}>
         {!focusedMode ? (
-          <aside className="border-r border-border bg-background px-4 py-5">
-            <div className="flex items-center gap-3 px-2">
-              <div className="grid h-9 w-9 place-items-center rounded-lg bg-foreground text-background">
-                <ListChecks className="h-4 w-4" strokeWidth={1.8} />
+          <aside data-testid="survey-source-sidebar" className="sticky top-0 flex h-screen flex-col border-r border-border bg-background px-4.5 py-5.5">
+            <div className="flex items-center gap-3 px-1">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-foreground text-background">
+                <ListChecks className="h-5 w-5" strokeWidth={1.7} />
               </div>
               <div>
-                <p className="text-14 font-bold">BoardX Survey</p>
-                <p className="text-12 text-muted-foreground">React prototype</p>
+                <p className="text-15 font-bold">BoardX Survey</p>
+                <p className="text-12 text-muted-foreground">咨询诊断工作台</p>
               </div>
             </div>
 
-            <nav className="mt-6 grid gap-1">
+            <nav aria-label="Survey navigation" className="mt-5 grid gap-1">
               {nav.map((item) => {
                 const Icon = item.icon;
                 const isActive =
-                  (item.id === "workspace" && active === "workspace")
+                  (item.id === "workspace" && active === "workspace" && !dashboardMode)
                   || (item.id === "templates" && active === "template")
-                  || (item.id === "home" && false);
+                  || (item.id === "home" && dashboardMode);
                 return (
+                  <div key={item.id}>
+                    {(item.id === "home" || item.id === "templates" || item.id === "insights") ? (
+                      <p className={`${item.id === "home" ? "" : "mt-7"} mb-2 px-3 text-11 font-medium text-muted-foreground`}>
+                        {item.id === "home" ? "工作台" : item.id === "templates" ? "模板库" : "参考"}
+                      </p>
+                    ) : null}
                   <Button
-                    key={item.id}
+                    data-testid={`survey-nav-${item.id}`}
                     type="button"
                     variant="ghost"
-                    className={`justify-start gap-2 border-l-2 ${
+                    className={`h-11 w-full justify-start gap-3 rounded-lg border-0 px-3 text-14 ${
                       isActive
-                      ? "!border-foreground !bg-foreground !text-background hover:!bg-foreground hover:!text-background"
-                        : "border-transparent text-foreground"
+                        ? "!bg-foreground !text-background hover:!bg-foreground hover:!text-background"
+                        : "bg-transparent text-foreground hover:bg-secondary"
                     }`}
                     onClick={() => {
                       if (item.id === "home") {
-                        window.location.href = "/";
+                        window.location.href = "/surveys";
+                        return;
+                      }
+                      if (item.id === "workspace") {
+                        window.location.href = "/surveys?view=my";
                         return;
                       }
                       if (item.id === "templates") {
                         window.location.href = "/surveys?view=templates";
                         return;
                       }
+                      if (item.id === "reports") {
+                        onNavigate("template");
+                        return;
+                      }
+                      if (item.id === "insights") {
+                        window.location.href = currentSurvey
+                          ? `/surveys/${currentSurvey.id}/results`
+                          : "/surveys?view=my";
+                        return;
+                      }
                       onNavigate("workspace");
                     }}
                   >
-                    <Icon className="h-4 w-4" strokeWidth={1.6} />
+                    <span className="grid h-5 w-5 shrink-0 place-items-center text-current" aria-hidden="true">
+                      <Icon className="h-4 w-4" strokeWidth={1.8} />
+                    </span>
                     {item.label}
                   </Button>
+                  </div>
                 );
               })}
             </nav>
+            <div className="mt-auto rounded-lg border border-border bg-surface-1 p-3.5">
+              <div className="flex items-center gap-2 text-12 font-semibold text-foreground">
+                <Sparkles className="h-4 w-4 text-survey" strokeWidth={1.7} />
+                AI 助手默认开启
+              </div>
+              <p className="mt-1 text-12 leading-5 text-muted-foreground">新建问卷时可直接用对话生成第一版，再逐步迭代。</p>
+            </div>
           </aside>
         ) : null}
 
@@ -821,7 +859,7 @@ function WorkspaceShell({
               <div className="flex min-h-10 items-center justify-between gap-4">
                 <div>
                   <h1 className="text-22 font-bold tracking-normal">
-                    {templateLibraryMode ? "问卷模版" : activeNav.label}
+                    {templateLibraryMode ? "问卷模板" : activeNav.label}
                   </h1>
                   <p className="mt-1 text-13 text-muted-foreground">
                     {templateLibraryMode ? "管理可复用的问卷结构，快速创建新的调查。" : headerCopy[active]}
@@ -838,7 +876,7 @@ function WorkspaceShell({
                       className="h-9 gap-1.5 rounded-lg border-foreground bg-foreground px-3 text-13 text-background hover:bg-foreground/90 hover:text-background"
                     >
                       <Plus className="h-4 w-4" strokeWidth={1.6} />
-                      新建问卷模版
+                      新建问卷模板
                     </Button>
                   ) : (
                     <>
@@ -864,7 +902,7 @@ function WorkspaceShell({
             )}
           </header>}
 
-          <div className="p-4">
+          <div className={inSurveyWorkflow ? "p-4" : ""}>
             {children}
           </div>
         </section>
@@ -1194,255 +1232,6 @@ function WorkspaceModulePanel({
   );
 }
 
-function WorkspaceDesignWorkbench({
-  survey,
-  title,
-  description,
-  questions,
-  categories,
-  saving,
-  saveError,
-  actionMessage,
-  onTitleChange,
-  onDescriptionChange,
-  patchQuestion,
-  changeQuestionType,
-  setQuestionCategory,
-  moveQuestion,
-  removeQuestion,
-  addQuestion,
-  addOption,
-  patchOption,
-  onSave,
-  onOpenAi,
-  onOpenAnswer,
-  onOpenTemplate,
-}: {
-  survey: Survey;
-  title: string;
-  description: string;
-  questions: Question[];
-  categories: string[];
-  saving: boolean;
-  saveError: string;
-  actionMessage: string;
-  onTitleChange: (value: string) => void;
-  onDescriptionChange: (value: string) => void;
-  patchQuestion: (id: string, patch: Partial<Question>) => void;
-  changeQuestionType: (id: string, type: QType) => void;
-  setQuestionCategory: (id: string, value: string) => void;
-  moveQuestion: (id: string, direction: -1 | 1) => void;
-  removeQuestion: (id: string) => void;
-  addQuestion: () => void;
-  addOption: (id: string) => void;
-  patchOption: (id: string, index: number, value: string) => void;
-  onSave: () => void;
-  onOpenAi: () => void;
-  onOpenAnswer: () => void;
-  onOpenTemplate: () => void;
-}) {
-  const [outlineCollapsed, setOutlineCollapsed] = useState(false);
-  const [aiCollapsed, setAiCollapsed] = useState(false);
-  const [selectedQuestionId, setSelectedQuestionId] = useState(questions[0]?.id ?? "");
-
-  useEffect(() => {
-    if (!questions.some((question) => question.id === selectedQuestionId)) {
-      setSelectedQuestionId(questions[0]?.id ?? "");
-    }
-  }, [questions, selectedQuestionId]);
-
-  return (
-    <div data-testid="workspace-design-workbench" className="grid gap-3">
-      <div className={aiCollapsed ? "grid min-w-0 xl:grid-cols-[auto_minmax(0,1fr)_auto]" : "grid min-w-0 xl:grid-cols-[auto_minmax(0,1fr)_320px]"}>
-        <SurveyOutlinePanel
-          title="题目大纲"
-          items={questions.map((question) => ({ id: question.id, label: question.title || "未命名问题", meta: TYPE_LABEL[question.type] }))}
-          selectedId={selectedQuestionId}
-          collapsed={outlineCollapsed}
-          onToggle={() => setOutlineCollapsed((collapsed) => !collapsed)}
-          onSelect={setSelectedQuestionId}
-          footer={<Button type="button" size="sm" variant="outline" className="mt-2 w-full border-dashed" onClick={addQuestion}><Plus className="h-4 w-4" />添加问题</Button>}
-        />
-        <section className="grid gap-2.5">
-          <div className="rounded-lg border border-border bg-background p-3">
-            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <Badge variant="outline">Design</Badge>
-                <h2 className="mt-1.5 text-17 font-bold text-foreground">{title || survey.title}</h2>
-                <p className="text-12 text-muted-foreground">维护题目、分类和问卷基础信息。</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" size="sm" variant="outline" onClick={onOpenAnswer}>
-                  预览答题
-                </Button>
-                <Button type="button" size="sm" variant="outline" disabled={saving} onClick={onSave}>
-                  {saving ? "保存中…" : "保存"}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={onOpenTemplate}
-                  className="gap-1.5 border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background focus-visible:ring-foreground/30"
-                >
-                  下一步
-                  <Send className="h-4 w-4" strokeWidth={1.6} />
-                </Button>
-              </div>
-            </div>
-            <Label className="text-12 text-muted-foreground" htmlFor="workspace-survey-title">
-              问卷标题
-            </Label>
-            <Input
-              id="workspace-survey-title"
-              value={title}
-              onChange={(event) => onTitleChange(event.target.value)}
-              className="mt-1.5 h-10"
-            />
-            <Label className="mt-3 block text-12 text-muted-foreground" htmlFor="workspace-survey-description">
-              问卷说明
-            </Label>
-            <Textarea
-              id="workspace-survey-description"
-              value={description}
-              onChange={(event) => onDescriptionChange(event.target.value)}
-              className="mt-1.5 min-h-20"
-            />
-          </div>
-
-          <div className="grid gap-2.5">
-            {questions.filter((question) => question.id === selectedQuestionId).map((question) => {
-              const index = questions.findIndex((item) => item.id === question.id);
-              return (
-              <section key={question.id} data-testid={`workspace-question-${index}`} className="rounded-lg border border-border bg-background p-3">
-                <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-                  <Badge variant="muted">Q{index + 1}</Badge>
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" size="sm" variant="outline" onClick={() => moveQuestion(question.id, -1)}>
-                      上移
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={() => moveQuestion(question.id, 1)}>
-                      下移
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={() => removeQuestion(question.id)} className="text-destructive hover:text-destructive">
-                      删除
-                    </Button>
-                  </div>
-                </div>
-                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_150px]">
-                  <label className="text-12 text-muted-foreground">
-                    题目标题
-                    <Input
-                      value={question.title}
-                      onChange={(event) => patchQuestion(question.id, { title: event.target.value })}
-                      placeholder={`问题 ${index + 1}`}
-                      className="mt-2"
-                    />
-                  </label>
-                  <label className="text-12 text-muted-foreground">
-                    题型
-                    <Select className="mt-2" value={question.type} onChange={(event) => changeQuestionType(question.id, event.target.value as QType)}>
-                      {TYPE_GROUPS.map((group) => (
-                        <optgroup key={group.label} label={group.label}>
-                          {group.types.map((type) => (
-                            <option key={type} value={type}>{TYPE_LABEL[type]}</option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </Select>
-                  </label>
-                  <label className="text-12 text-muted-foreground">
-                    分类
-                    <Select id={`workflow-category-${index}`} className="mt-2" value={question.category ?? ""} onChange={(event) => setQuestionCategory(question.id, event.target.value)}>
-                      <option value="">未分类</option>
-                      {categories.map((category) => (
-                        <option key={category} value={category}>{category}</option>
-                      ))}
-                    </Select>
-                  </label>
-                </div>
-                <label className="mt-2.5 flex w-fit cursor-pointer items-center gap-2 text-13 text-muted-foreground">
-                  <Input
-                    type="checkbox"
-                    checked={question.required}
-                    onChange={(event) => patchQuestion(question.id, { required: event.target.checked })}
-                    className="h-4 w-4 accent-primary"
-                  />
-                  必填
-                </label>
-
-                {CHOICE_TYPES.includes(question.type) ? (
-                  <div className="mt-3 grid gap-2">
-                    {question.options.map((option, optionIndex) => (
-                      <div key={`${question.id}-${optionIndex}`} className="flex items-center gap-2">
-                        <span className={question.type === "multiple" ? "h-4 w-4 rounded border border-border-strong" : "h-4 w-4 rounded-full border border-border-strong"} />
-                        <Input
-                          value={option}
-                          onChange={(event) => patchOption(question.id, optionIndex, event.target.value)}
-                          placeholder={`选项 ${optionIndex + 1}`}
-                        />
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => patchQuestion(question.id, { options: question.options.filter((_, idx) => idx !== optionIndex) })}
-                        >
-                          删除选项
-                        </Button>
-                      </div>
-                    ))}
-                    <Button type="button" size="sm" variant="outline" onClick={() => addOption(question.id)} className="w-full border-dashed">
-                      <Plus className="h-4 w-4" strokeWidth={1.6} />
-                      添加选项
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="mt-3 rounded-lg border border-dashed border-border-strong bg-card px-3 py-2 text-13 text-muted-foreground">
-                    {TYPE_LABEL[question.type]}回答
-                  </div>
-                )}
-              </section>
-              );
-            })}
-          </div>
-
-          <Button type="button" variant="outline" onClick={addQuestion} className="w-full border-dashed border-border-strong bg-background">
-            <Plus className="h-4 w-4" strokeWidth={1.6} />
-            添加问题
-          </Button>
-          {saveError && <p role="alert" className="text-13 text-destructive">{saveError}</p>}
-          {actionMessage && <p className="text-13 text-muted-foreground">{actionMessage}</p>}
-        </section>
-
-        {aiCollapsed ? (
-          <div className="hidden border-l border-border bg-background xl:flex xl:items-start xl:justify-center xl:px-1 xl:py-3">
-            <Button
-              data-testid="survey-ai-expand"
-              type="button"
-              size="icon"
-              variant="ghost"
-              aria-label="展开 AI 助手"
-              title="展开 AI 助手"
-              onClick={() => setAiCollapsed(false)}
-            >
-              <PanelRightOpen className="h-4 w-4" strokeWidth={1.7} />
-            </Button>
-          </div>
-        ) : (
-          <SurveyAiPanel
-            placeholder="例如：把题目改得更适合家长填写，并补充心理健康相关问题"
-            resultLabel="AI 优化建议已生成"
-            onSubmit={() => onOpenAi()}
-            onPreview={onOpenAi}
-            onApply={onOpenAi}
-            onCollapse={() => setAiCollapsed(true)}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
 function EChartsReportPreview({ chart }: { chart: NonNullable<ReportComposerPreview["sections"][number]["chart"]> }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -1628,6 +1417,14 @@ function WorkspaceReportComposer({
   const [chartPickerOpen, setChartPickerOpen] = useState(false);
   const [previewSyncToken, setPreviewSyncToken] = useState(0);
   const [outlineCollapsed, setOutlineCollapsed] = useState(false);
+  const [reportWorkbenchTab, setReportWorkbenchTab] = useState<"style" | "data" | "mapping">("style");
+  const [reportAssistantInput, setReportAssistantInput] = useState("");
+  const [reportAssistantMessages, setReportAssistantMessages] = useState<Array<{ role: "assistant" | "user"; text: string }>>([
+    {
+      role: "assistant",
+      text: "我会基于问卷结构推演报告模块。你也可以描述读者、用途和表达要求，我会把它写入当前章节的生成提示。",
+    },
+  ]);
   const previewSectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const composerQuestions = workspaceQuestionsForComposer(questions);
   useEffect(() => {
@@ -1763,6 +1560,26 @@ function WorkspaceReportComposer({
     });
   }
 
+  function applyReportAssistantInstruction(instruction: string) {
+    const nextInstruction = instruction.trim();
+    if (!nextInstruction || !selectedCategory) return;
+    const currentPrompt = selectedCategory.prompt.trim();
+    patchSelected({
+      prompt: currentPrompt.includes(nextInstruction)
+        ? currentPrompt
+        : [currentPrompt, nextInstruction].filter(Boolean).join("\n"),
+    });
+    setReportAssistantMessages((messages) => [
+      ...messages,
+      { role: "user", text: nextInstruction },
+      {
+        role: "assistant",
+        text: `已写入「${selectedCategory.name}」的分析提示。保存模版后，报告生成会使用这条要求。`,
+      },
+    ]);
+    setReportAssistantInput("");
+  }
+
   const modeLabels: Record<ReportInputMode, string> = {
     text: "文本",
     chat: "QA",
@@ -1818,6 +1635,27 @@ function WorkspaceReportComposer({
     { mode: "chart", label: "报表", desc: "把选择题和评分题转成可比较的数据视图。", icon: BarChart3 },
     { mode: "text", label: "文本", desc: "输出结论、证据和执行建议。", icon: FileText },
   ];
+  const mappingRows = visibleInputModes(selectedCategory?.inputModes ?? []).flatMap((mode) => {
+    if (mode === "chart") {
+      return [
+        { property: "series[].name", source: "questions[].options", description: "维度或选项名称" },
+        { property: "series[].value", source: "responses[].answers", description: "按数据约束聚合后的值" },
+        { property: "sampleSize", source: "responses.validCount", description: "有效样本量" },
+      ];
+    }
+    if (mode === "image") {
+      return [
+        { property: "image.prompt", source: "modulePrompts.image", description: "章节配图生成要求" },
+      ];
+    }
+    if (mode === "text") {
+      return [
+        { property: "text.headline", source: "category.prompt", description: "章节核心结论" },
+        { property: "text.bullets[]", source: "responses.evidence", description: "证据、限制和行动建议" },
+      ];
+    }
+    return [];
+  });
 
   function renderCategorySection(section: ReportComposerPreview["sections"][number]) {
     const hasText = section.inputModes.includes("text");
@@ -1910,39 +1748,48 @@ function WorkspaceReportComposer({
   }
 
   return (
-    <div data-testid="workspace-report-composer" className="grid gap-4">
-      <section className="rounded-lg border border-border bg-background p-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-18 font-bold leading-tight text-foreground">报告模板</h2>
-              <span className="text-12 text-muted-foreground">{completedCategoryCount}/{categories.length} 个章节已配置</span>
-            </div>
-          </div>
-          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end">
-            <Button type="button" size="sm" variant="ghost" onClick={onBackToDesign}>
-              返回问卷
-            </Button>
-            <Button type="button" size="sm" variant="outline" disabled={classifying} onClick={onClassify}>
-              <Sparkles className="h-4 w-4" strokeWidth={1.6} />
-              {classifying ? "分类中…" : "AI 重新分类"}
-            </Button>
-            <Button data-testid="save-report-plan" type="button" size="sm" disabled={saving} onClick={() => onSavePlan(draft)} className="bg-foreground text-background hover:bg-foreground/90">
-              {saving ? "保存中…" : "保存规划"}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={onOpenCollect}
-              className="gap-1.5 border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background"
-            >
-              下一步
-              <Send className="h-4 w-4" strokeWidth={1.6} />
-            </Button>
-          </div>
+    <div data-testid="workspace-report-composer" className="mx-auto grid w-full max-w-7xl gap-4 py-2">
+      <header className="flex flex-wrap items-center gap-3">
+        <Button type="button" size="sm" variant="outline" onClick={onBackToDesign}>
+          <ChevronLeft className="h-4 w-4" strokeWidth={1.7} />
+          返回模版
+        </Button>
+        <div className="min-w-0">
+          <h2 className="truncate text-18 font-bold text-foreground">报告模版 · {survey.title}</h2>
+          <p className="mt-1 text-12 text-muted-foreground">
+            每个模块包含效果预览、数据生成提示词和可视化映射，AI 可帮助推演整体结构。
+          </p>
         </div>
-      </section>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Button type="button" size="sm" variant="outline" onClick={onGenerateReport}>
+            <Eye className="h-4 w-4" strokeWidth={1.7} />
+            预览示例报告
+          </Button>
+          <Button
+            data-testid="save-report-plan"
+            type="button"
+            size="sm"
+            disabled={saving}
+            onClick={() => onSavePlan(draft)}
+          >
+            {saving ? "保存中…" : "保存模版"}
+          </Button>
+        </div>
+      </header>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 text-12 text-muted-foreground">
+        <span>{completedCategoryCount}/{categories.length} 个模块已配置</span>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" variant="outline" disabled={classifying} onClick={onClassify}>
+            <Sparkles className="h-4 w-4" strokeWidth={1.6} />
+            {classifying ? "推演中…" : "AI 重新推演"}
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={onOpenCollect}>
+            继续发布
+            <Send className="h-4 w-4" strokeWidth={1.6} />
+          </Button>
+        </div>
+      </div>
 
       {(status || error) && (
         <div
@@ -1957,19 +1804,25 @@ function WorkspaceReportComposer({
         </div>
       )}
 
-      <section className={outlineCollapsed ? "grid min-w-0 gap-4 xl:grid-cols-[56px_minmax(0,1fr)_430px]" : "grid min-w-0 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_430px]"}>
+      <section
+        data-testid="report-template-builder"
+        className={outlineCollapsed ? "grid min-w-0 gap-4 xl:grid-cols-[56px_minmax(0,1fr)_360px]" : "grid min-w-0 gap-4 xl:grid-cols-[320px_minmax(0,1fr)_360px]"}
+      >
         {outlineCollapsed ? (
-          <aside data-testid="report-outline-panel" className="flex min-h-96 flex-col items-center gap-3 border border-border bg-background py-3">
+          <aside data-testid="report-module-list" className="order-2 flex min-h-96 flex-col items-center gap-3 border border-border bg-background py-3 xl:order-1">
             <Button data-testid="report-outline-toggle" type="button" size="icon" variant="ghost" aria-label="展开报告章节" title="展开报告章节" onClick={() => setOutlineCollapsed(false)}>
               <ChevronLeft className="h-4 w-4 rotate-180" />
             </Button>
             <Badge variant="muted">{categories.length}</Badge>
           </aside>
         ) : (
-        <aside data-testid="report-outline-panel" className="min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
+        <aside data-testid="report-module-list" className="order-2 min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:order-1 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
           <div className="border-b border-border px-4 py-3">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-14 font-bold text-foreground">章节</h3>
+              <div>
+                <h3 className="text-14 font-bold text-foreground">报告结构模块</h3>
+                <p className="mt-1 text-11 leading-5 text-muted-foreground">点击模块查看与定制；排序决定报告章节顺序。</p>
+              </div>
               <div className="flex items-center gap-1">
                 <Badge variant="outline">{categories.length}</Badge>
                 <Button data-testid="report-outline-toggle" type="button" size="icon" variant="ghost" aria-label="收起报告章节" title="收起报告章节" onClick={() => setOutlineCollapsed(true)}>
@@ -2036,90 +1889,166 @@ function WorkspaceReportComposer({
         </aside>
         )}
 
-        <main data-testid="report-preview-panel" className="min-w-0 overflow-hidden rounded-lg border border-border bg-background">
-          {!canExport ? (
-            <div className="m-5 rounded-lg border border-dashed border-border bg-card p-10 text-center text-13 text-muted-foreground">
-              请先完成报告分类和输入方式设置，再预览或导出报告。
-            </div>
-          ) : (
-            <article data-testid="selected-report-section" className="grid gap-3 bg-card p-3">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
-                <div>
-                  <p className="text-12 text-muted-foreground">当前章节</p>
-                  <h3 className="mt-1 text-18 font-bold text-foreground">{selectedCategory?.name}</h3>
-                </div>
-                <Badge variant="outline">{selectedQuestions.length} 个问题 · {visibleInputModes(selectedCategory?.inputModes ?? []).length} 个模块</Badge>
-              </div>
-              <ReportLayoutCanvas
-                chartPreview={selectedPreviewChart ? <EChartsReportPreview chart={selectedPreviewChart} /> : undefined}
-                prompts={{
-                  chart: selectedCategory?.modulePrompts?.chart,
-                  image: selectedCategory?.modulePrompts?.image,
-                  text: selectedCategory?.modulePrompts?.text,
-                }}
-                onPromptChange={(type, value) => patchModulePrompt(type, value)}
-              />
-            </article>
-          )}
-        </main>
-
-        <aside data-testid="report-settings-panel" className="min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
-          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-            <h3 className="text-14 font-bold text-foreground">设置</h3>
-            <span className="text-12 text-muted-foreground">
-              {categories.length ? `章节 ${selectedCategoryIndex + 1}/${categories.length}` : "暂无章节"}
-            </span>
-          </div>
+        <main data-testid="report-module-preview" className="order-1 min-w-0 overflow-hidden rounded-lg border border-border bg-background xl:order-2">
           {selectedCategory ? (
-            <div className="grid gap-4 p-4">
-              <section className="grid gap-3 rounded-lg border border-border bg-background p-3">
-                <p className="text-13 font-bold text-foreground">章节信息</p>
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="report-category-name">分类标题</Label>
-                    <span className="text-11 text-muted-foreground">{selectedCategory.name.length}/50</span>
-                  </div>
-                  <Input id="report-category-name" value={selectedCategory.name} onChange={(event) => patchSelected({ name: event.target.value })} />
+            <article data-testid="selected-report-section">
+              <header className="px-5 pt-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-15 font-bold text-foreground">{selectedCategory.name}</h3>
+                  <Badge variant="muted">{chartTypeLabel}</Badge>
                 </div>
+                <p className="mt-1 text-12 leading-5 text-muted-foreground">
+                  {selectedCategory.description || "为当前模块配置展示效果、数据口径和字段映射。"}
+                </p>
+                <div role="tablist" aria-label="报告模版模块设置" className="mt-4 flex border-b border-border">
+                  {([
+                    ["style", "效果与样式"],
+                    ["data", "数据与提示词"],
+                    ["mapping", "可视化映射"],
+                  ] as const).map(([id, label]) => (
+                    <Button
+                      key={id}
+                      data-testid={`report-tab-${id}`}
+                      type="button"
+                      role="tab"
+                      aria-selected={reportWorkbenchTab === id}
+                      variant="ghost"
+                      onClick={() => setReportWorkbenchTab(id)}
+                      className={[
+                        "h-10 rounded-none border-b-2 px-4 text-12",
+                        reportWorkbenchTab === id
+                          ? "border-survey text-survey hover:bg-transparent hover:text-survey"
+                          : "border-transparent text-muted-foreground hover:bg-transparent hover:text-foreground",
+                      ].join(" ")}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+              </header>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="report-category-desc">分类说明</Label>
-                  <Textarea id="report-category-desc" value={selectedCategory.description} onChange={(event) => patchSelected({ description: event.target.value })} className="min-h-20" />
-                </div>
-              </section>
-
-              <section className="rounded-lg border border-border bg-background p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-13 font-bold text-foreground">问题来源</p>
-                  </div>
-                  <Badge variant="outline">{selectedQuestions.length}/{composerQuestions.length}</Badge>
-                </div>
-                <div className="mt-3 grid max-h-64 gap-2 overflow-auto pr-1">
-                  {selectedQuestions.length ? selectedQuestions.map((question) => {
-                    const questionIndex = composerQuestions.findIndex((item) => Number(item.id) === Number(question.id));
-                    return (
-                      <Button
-                        key={question.id}
-                        type="button"
-                        variant="outline"
-                        onClick={() => toggleQuestion(Number(question.id))}
-                        className="h-auto justify-start whitespace-normal rounded-lg border-foreground bg-card px-3 py-2 text-left"
-                      >
-                        <span className="mr-2 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-foreground text-11 font-bold text-background">✓</span>
-                        <span className="mr-2 text-11 font-bold text-muted-foreground">Q{String(questionIndex + 1).padStart(2, "0")}</span>
-                        <span className="min-w-0 flex-1 truncate text-12 text-foreground">{question.title}</span>
-                      </Button>
-                    );
-                  }) : (
-                    <div className="rounded-lg border border-dashed border-border bg-background px-3 py-3 text-12 text-muted-foreground">
-                      当前分类还没有绑定问题。
+              {reportWorkbenchTab === "style" ? (
+                <div className="grid gap-5 p-5">
+                  {!canExport ? (
+                    <div className="rounded-lg border border-dashed border-border p-8 text-center text-13 text-muted-foreground">
+                      请先完成报告分类和输入方式设置，再预览或导出报告。
                     </div>
+                  ) : (
+                    <ReportLayoutCanvas
+                      compact
+                      chartPreview={selectedPreviewChart ? <EChartsReportPreview chart={selectedPreviewChart} /> : undefined}
+                      prompts={{
+                        chart: selectedCategory.modulePrompts?.chart,
+                        image: selectedCategory.modulePrompts?.image,
+                        text: selectedCategory.modulePrompts?.text,
+                      }}
+                      onPromptChange={(type, value) => patchModulePrompt(type, value)}
+                    />
                   )}
-                  {unselectedQuestions.length ? (
-                    <>
-                      <p className="pt-2 text-12 font-semibold text-muted-foreground">可添加问题</p>
-                      {unselectedQuestions.slice(0, 8).map((question) => {
+
+                  {selectedCategory.inputModes.includes("chart") ? (
+                    <section data-testid="report-chart-design-controls" className="grid gap-4 border-t border-border pt-5">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-13 font-bold text-foreground">图表设计</p>
+                        <Button type="button" size="sm" variant="outline" onClick={() => setChartPickerOpen(true)}>
+                          更换图表类型
+                        </Button>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid gap-2">
+                          <Label htmlFor="report-chart-style">视觉风格</Label>
+                          <Select
+                            id="report-chart-style"
+                            data-testid="report-chart-style"
+                            value={selectedCategory.chartStyle ?? "auto"}
+                            onChange={(event) => patchSelected({ chartStyle: event.target.value as ReportCategoryChartStyle })}
+                          >
+                            {chartStyleOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                          </Select>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="report-chart-color">主色</Label>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {["#4f6edb", "#0f766e", "#d97706", "#be123c", "#6d28d9", "#171717"].map((color) => (
+                              <Button
+                                key={color}
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                title={color}
+                                aria-label={`使用颜色 ${color}`}
+                                className={[
+                                  "h-7 w-7 rounded-md border-2 transition-transform hover:scale-105",
+                                  (selectedCategory.chartConfig?.primaryColor ?? "#4f6edb") === color ? "border-foreground ring-2 ring-foreground/15" : "border-background",
+                                ].join(" ")}
+                                style={{ backgroundColor: color }}
+                                onClick={() => patchChartConfig({ primaryColor: color })}
+                              />
+                            ))}
+                            <Input
+                              id="report-chart-color"
+                              data-testid="report-chart-color"
+                              type="color"
+                              value={selectedCategory.chartConfig?.primaryColor ?? "#4f6edb"}
+                              onChange={(event) => patchChartConfig({ primaryColor: event.target.value })}
+                              className="h-8 w-10 cursor-pointer rounded-md border border-border bg-card p-1"
+                              title="自定义颜色"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="report-chart-dimensions">显示维度</Label>
+                          <Select id="report-chart-dimensions" data-testid="report-chart-dimensions" value={String(selectedCategory.chartConfig?.maxDimensions ?? 6)} onChange={(event) => patchChartConfig({ maxDimensions: Number(event.target.value) })}>
+                            {[3, 5, 6, 8, 10, 12].map((value) => <option key={value} value={value}>最多 {value} 个</option>)}
+                          </Select>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="report-chart-sort">排序</Label>
+                          <Select id="report-chart-sort" data-testid="report-chart-sort" value={selectedCategory.chartConfig?.sort ?? "none"} onChange={(event) => patchChartConfig({ sort: event.target.value as "none" | "asc" | "desc" })}>
+                            <option value="none">原始顺序</option>
+                            <option value="desc">从高到低</option>
+                            <option value="asc">从低到高</option>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-3">
+                        <label className="flex cursor-pointer items-center gap-2 text-12 font-semibold text-foreground">
+                          <input type="checkbox" data-testid="report-chart-labels" checked={selectedCategory.chartConfig?.showLabels !== false} onChange={(event) => patchChartConfig({ showLabels: event.target.checked })} />
+                          显示数值标签
+                        </label>
+                        <label className="flex cursor-pointer items-center gap-2 text-12 font-semibold text-foreground">
+                          <input type="checkbox" data-testid="report-chart-legend" checked={selectedCategory.chartConfig?.showLegend === true} onChange={(event) => patchChartConfig({ showLegend: event.target.checked })} />
+                          显示图例
+                        </label>
+                      </div>
+                    </section>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {reportWorkbenchTab === "data" ? (
+                <div className="divide-y divide-border px-5">
+                  <section className="grid gap-3 py-5 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="report-category-name">模块标题</Label>
+                        <span className="text-11 text-muted-foreground">{selectedCategory.name.length}/50</span>
+                      </div>
+                      <Input id="report-category-name" value={selectedCategory.name} onChange={(event) => patchSelected({ name: event.target.value })} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="report-category-desc">模块说明</Label>
+                      <Textarea id="report-category-desc" value={selectedCategory.description} onChange={(event) => patchSelected({ description: event.target.value })} className="min-h-20" />
+                    </div>
+                  </section>
+
+                  <section className="py-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-13 font-bold text-foreground">问题来源</p>
+                      <Badge variant="outline">{selectedQuestions.length}/{composerQuestions.length}</Badge>
+                    </div>
+                    <div className="mt-3 grid max-h-64 gap-2 overflow-auto pr-1">
+                      {selectedQuestions.length ? selectedQuestions.map((question) => {
                         const questionIndex = composerQuestions.findIndex((item) => Number(item.id) === Number(question.id));
                         return (
                           <Button
@@ -2127,216 +2056,247 @@ function WorkspaceReportComposer({
                             type="button"
                             variant="outline"
                             onClick={() => toggleQuestion(Number(question.id))}
-                            className="h-auto justify-start whitespace-normal rounded-lg border-border bg-background px-3 py-2 text-left"
+                            className="h-auto justify-start whitespace-normal border-foreground px-3 py-2 text-left"
                           >
-                            <span className="mr-2 text-13 font-bold">+</span>
+                            <span className="mr-2 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-foreground text-11 font-bold text-background">✓</span>
                             <span className="mr-2 text-11 font-bold text-muted-foreground">Q{String(questionIndex + 1).padStart(2, "0")}</span>
                             <span className="min-w-0 flex-1 truncate text-12 text-foreground">{question.title}</span>
                           </Button>
                         );
-                      })}
-                    </>
-                  ) : null}
-                </div>
-              </section>
-
-              <section className="rounded-lg border border-border bg-background p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <p className="text-13 font-bold text-foreground">输出模块</p>
-                  </div>
-                  <span className="text-11 text-muted-foreground">至少 1 项</span>
-                </div>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  {moduleOptions.map(({ mode, label, desc, icon: Icon }) => {
-                    const active = selectedCategory.inputModes.includes(mode);
-                    return (
-                      <Button
-                        key={mode}
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          if (mode === "chart") {
-                            setChartPickerOpen(true);
-                          } else {
-                            toggleMode(mode);
-                          }
-                        }}
-                        className={[
-                          "h-auto min-h-24 flex-col items-start justify-start whitespace-normal p-3 text-left",
-                          active ? "border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background" : "bg-card",
-                        ].join(" ")}
-                      >
-                        <span className="flex w-full items-center justify-between gap-2">
-                          <span className="flex items-center gap-2 text-13 font-bold">
-                            <Icon className="h-4 w-4" strokeWidth={1.6} />
-                            {label}
-                          </span>
-                          <span>{active ? "✓" : "+"}</span>
-                        </span>
-                        <span className={active ? "mt-2 text-11 font-normal leading-5 text-background/70" : "mt-2 text-11 font-normal leading-5 text-muted-foreground"}>
-                          {mode === "chart" && active ? chartTypeLabel : desc}
-                        </span>
-                      </Button>
-                    );
-                  })}
-                </div>
-                <div data-testid="report-module-prompts" className="mt-3 grid gap-3">
-                  {visibleInputModes(selectedCategory.inputModes).map((mode) => {
-                    const meta = modulePromptMeta[mode];
-                    if (!meta) return null;
-                    const value = selectedCategory.modulePrompts?.[mode] ?? "";
-                    return (
-                      <div key={mode} className="grid gap-1.5 rounded-lg border border-border bg-card p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <Label htmlFor={`report-module-prompt-${mode}`}>{meta.label}</Label>
-                          <span className="text-11 text-muted-foreground">{value.length}/1000</span>
+                      }) : (
+                        <div className="rounded-lg border border-dashed border-border px-3 py-3 text-12 text-muted-foreground">
+                          当前模块还没有绑定问题。
                         </div>
-                        <Textarea
-                          id={`report-module-prompt-${mode}`}
-                          data-testid={`report-module-prompt-${mode}`}
-                          maxLength={1000}
-                          value={value}
-                          onChange={(event) => patchModulePrompt(mode, event.target.value)}
-                          placeholder={meta.placeholder}
-                          className="min-h-20"
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
+                      )}
+                      {unselectedQuestions.length ? (
+                        <>
+                          <p className="pt-2 text-12 font-semibold text-muted-foreground">可添加问题</p>
+                          {unselectedQuestions.slice(0, 8).map((question) => {
+                            const questionIndex = composerQuestions.findIndex((item) => Number(item.id) === Number(question.id));
+                            return (
+                              <Button
+                                key={question.id}
+                                type="button"
+                                variant="outline"
+                                onClick={() => toggleQuestion(Number(question.id))}
+                                className="h-auto justify-start whitespace-normal px-3 py-2 text-left"
+                              >
+                                <Plus className="mr-2 h-3.5 w-3.5" strokeWidth={1.8} />
+                                <span className="mr-2 text-11 font-bold text-muted-foreground">Q{String(questionIndex + 1).padStart(2, "0")}</span>
+                                <span className="min-w-0 flex-1 truncate text-12 text-foreground">{question.title}</span>
+                              </Button>
+                            );
+                          })}
+                        </>
+                      ) : null}
+                    </div>
+                  </section>
 
-              {selectedCategory.inputModes.includes("chart") ? (
-                <div data-testid="report-chart-design-controls" className="grid gap-4 rounded-lg border border-border bg-background p-3">
-                  <div>
-                    <p className="text-13 font-bold text-foreground">图表设计</p>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="report-chart-style">视觉风格</Label>
-                  <Select
-                    id="report-chart-style"
-                    data-testid="report-chart-style"
-                    value={selectedCategory.chartStyle ?? "auto"}
-                    onChange={(event) => patchSelected({ chartStyle: event.target.value as ReportCategoryChartStyle })}
-                  >
-                    {chartStyleOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                  </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="report-chart-color">主色</Label>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {["#4f6edb", "#0f766e", "#d97706", "#be123c", "#6d28d9", "#171717"].map((color) => (
-                        <Button
-                          key={color}
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          title={color}
-                          aria-label={`使用颜色 ${color}`}
-                          className={[
-                            "h-7 w-7 rounded-md border-2 transition-transform hover:scale-105",
-                            (selectedCategory.chartConfig?.primaryColor ?? "#4f6edb") === color ? "border-foreground ring-2 ring-foreground/15" : "border-background",
-                          ].join(" ")}
-                          style={{ backgroundColor: color }}
-                          onClick={() => patchChartConfig({ primaryColor: color })}
-                        />
-                      ))}
-                      <Input
-                        id="report-chart-color"
-                        data-testid="report-chart-color"
-                        type="color"
-                        value={selectedCategory.chartConfig?.primaryColor ?? "#4f6edb"}
-                        onChange={(event) => patchChartConfig({ primaryColor: event.target.value })}
-                        className="h-8 w-10 cursor-pointer rounded-md border border-border bg-card p-1"
-                        title="自定义颜色"
+                  <section className="py-5">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-13 font-bold text-foreground">输出模块</p>
+                      <span className="text-11 text-muted-foreground">至少 1 项</span>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                      {moduleOptions.map(({ mode, label, desc, icon: Icon }) => {
+                        const active = selectedCategory.inputModes.includes(mode);
+                        return (
+                          <Button
+                            key={mode}
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              if (mode === "chart") setChartPickerOpen(true);
+                              else toggleMode(mode);
+                            }}
+                            className={[
+                              "h-auto min-h-24 flex-col items-start justify-start whitespace-normal p-3 text-left",
+                              active ? "border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background" : "",
+                            ].join(" ")}
+                          >
+                            <span className="flex w-full items-center justify-between gap-2">
+                              <span className="flex items-center gap-2 text-13 font-bold">
+                                <Icon className="h-4 w-4" strokeWidth={1.6} />
+                                {label}
+                              </span>
+                              <span>{active ? "✓" : "+"}</span>
+                            </span>
+                            <span className={active ? "mt-2 text-11 font-normal leading-5 text-background/70" : "mt-2 text-11 font-normal leading-5 text-muted-foreground"}>
+                              {mode === "chart" && active ? chartTypeLabel : desc}
+                            </span>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <div data-testid="report-module-prompts" className="mt-4 grid gap-3">
+                      {visibleInputModes(selectedCategory.inputModes).map((mode) => {
+                        const meta = modulePromptMeta[mode];
+                        if (!meta) return null;
+                        const value = selectedCategory.modulePrompts?.[mode] ?? "";
+                        return (
+                          <div key={mode} className="grid gap-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <Label htmlFor={`report-module-prompt-${mode}`}>{meta.label}</Label>
+                              <span className="text-11 text-muted-foreground">{value.length}/1000</span>
+                            </div>
+                            <Textarea
+                              id={`report-module-prompt-${mode}`}
+                              data-testid={`report-module-prompt-${mode}`}
+                              maxLength={1000}
+                              value={value}
+                              onChange={(event) => patchModulePrompt(mode, event.target.value)}
+                              placeholder={meta.placeholder}
+                              className="min-h-20"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="grid gap-3 py-5">
+                    <p className="text-13 font-bold text-foreground">数据生成提示词</p>
+                    <div className="grid gap-2">
+                      <Label htmlFor="report-category-prompt">分析提示</Label>
+                      <Textarea id="report-category-prompt" maxLength={1000} value={selectedCategory.prompt} onChange={(event) => patchSelected({ prompt: event.target.value })} placeholder="例如：先给结论，再解释关键驱动因素，语气面向管理层。" className="min-h-20" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="report-data-prompt">数据约束</Label>
+                      <Textarea
+                        id="report-data-prompt"
+                        data-testid="report-data-prompt"
+                        maxLength={1000}
+                        value={selectedCategory.dataPrompt ?? ""}
+                        onChange={(event) => patchSelected({ dataPrompt: event.target.value })}
+                        placeholder="例如：仅统计有效答卷；样本量不足时不输出百分比；所有比例保留 1 位小数。"
+                        className="min-h-24"
                       />
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="report-chart-dimensions">显示维度</Label>
-                      <Select id="report-chart-dimensions" data-testid="report-chart-dimensions" value={String(selectedCategory.chartConfig?.maxDimensions ?? 6)} onChange={(event) => patchChartConfig({ maxDimensions: Number(event.target.value) })}>
-                        {[3, 5, 6, 8, 10, 12].map((value) => <option key={value} value={value}>最多 {value} 个</option>)}
-                      </Select>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="report-chart-sort">排序</Label>
-                      <Select id="report-chart-sort" data-testid="report-chart-sort" value={selectedCategory.chartConfig?.sort ?? "none"} onChange={(event) => patchChartConfig({ sort: event.target.value as "none" | "asc" | "desc" })}>
-                        <option value="none">原始顺序</option>
-                        <option value="desc">从高到低</option>
-                        <option value="asc">从低到高</option>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>方向</Label>
-                    <div className="grid grid-cols-2 rounded-md border border-border p-1">
-                      {([['vertical', '纵向'], ['horizontal', '横向']] as const).map(([value, label]) => (
-                        <Button key={value} type="button" size="sm" variant={(selectedCategory.chartConfig?.orientation ?? "vertical") === value ? "default" : "ghost"} onClick={() => patchChartConfig({ orientation: value })}>{label}</Button>
+                    <div className="flex flex-wrap gap-1.5">
+                      {["仅使用有效答卷", "标注样本量与缺失值", "小样本分组不展示", "比例保留 1 位小数"].map((constraint) => (
+                        <Button key={constraint} type="button" size="sm" variant="outline" className="h-7 rounded-full px-2 text-11" onClick={() => appendDataConstraint(constraint)}>
+                          + {constraint}
+                        </Button>
                       ))}
                     </div>
+                    {selectedPreviewChart ? (
+                      <p data-testid="recognized-chart-constraints" className="text-11 text-muted-foreground">
+                        已应用 {selectedPreviewChart.appliedConstraints.length} 条约束 · {selectedPreviewChart.rows.length} 个维度
+                      </p>
+                    ) : null}
+                  </section>
+                </div>
+              ) : null}
+
+              {reportWorkbenchTab === "mapping" ? (
+                <div data-testid="report-mapping-panel" className="grid gap-4 p-5">
+                  <div>
+                    <h4 className="text-13 font-bold text-foreground">可视化映射</h4>
+                    <p className="mt-1 text-12 text-muted-foreground">提示词产出的数据如何绑定到当前模块的图表、文本和图片字段。</p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <label className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-12 font-semibold text-foreground">
-                      <input type="checkbox" data-testid="report-chart-labels" checked={selectedCategory.chartConfig?.showLabels !== false} onChange={(event) => patchChartConfig({ showLabels: event.target.checked })} />
-                      显示数值标签
-                    </label>
-                    <label className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-12 font-semibold text-foreground">
-                      <input type="checkbox" data-testid="report-chart-legend" checked={selectedCategory.chartConfig?.showLegend === true} onChange={(event) => patchChartConfig({ showLegend: event.target.checked })} />
-                      显示图例
-                    </label>
+                  <pre className="overflow-x-auto rounded-lg bg-surface-dark-2 p-4 text-11 leading-5 text-surface-dark-foreground">{JSON.stringify({
+                    module: selectedCategory.id,
+                    chartType: selectedCategory.chartType ?? null,
+                    inputs: selectedCategory.inputModes,
+                    questionIds: selectedCategory.questionIds,
+                  }, null, 2)}</pre>
+                  <div className="overflow-x-auto rounded-lg border border-border">
+                    <div className="grid min-w-full grid-cols-3 bg-secondary px-3 py-2 text-11 font-semibold text-muted-foreground">
+                      <span>图表属性</span>
+                      <span>数据源路径</span>
+                      <span>说明</span>
+                    </div>
+                    {mappingRows.map((row) => (
+                      <div key={`${row.property}-${row.source}`} className="grid min-w-full grid-cols-3 border-t border-border px-3 py-2 text-12">
+                        <code className="text-survey">{row.property}</code>
+                        <code className="text-muted-foreground">{row.source}</code>
+                        <span className="text-muted-foreground">{row.description}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ) : null}
 
-              <section className="grid gap-3 rounded-lg border border-border bg-background p-3">
-                <p className="text-13 font-bold text-foreground">生成要求</p>
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="report-category-prompt">分析提示</Label>
-                    <span className="text-11 text-muted-foreground">{selectedCategory.prompt.length}/1000</span>
-                  </div>
-                  <Textarea id="report-category-prompt" maxLength={1000} value={selectedCategory.prompt} onChange={(event) => patchSelected({ prompt: event.target.value })} placeholder="例如：先给结论，再解释关键驱动因素，语气面向管理层。" className="min-h-20" />
-                </div>
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label htmlFor="report-data-prompt">数据约束</Label>
-                    <span className="text-11 text-muted-foreground">{selectedCategory.dataPrompt?.length ?? 0}/1000</span>
-                  </div>
-                  <Textarea
-                    id="report-data-prompt"
-                    data-testid="report-data-prompt"
-                    maxLength={1000}
-                    value={selectedCategory.dataPrompt ?? ""}
-                    onChange={(event) => patchSelected({ dataPrompt: event.target.value })}
-                    placeholder="例如：仅统计有效答卷；样本量不足时不输出百分比；所有比例保留 1 位小数。"
-                    className="min-h-24"
-                  />
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {["仅使用有效答卷", "标注样本量与缺失值", "小样本分组不展示", "比例保留 1 位小数"].map((constraint) => (
-                    <Button key={constraint} type="button" size="sm" variant="outline" className="h-7 px-2 text-11" onClick={() => appendDataConstraint(constraint)}>
-                      + {constraint}
-                    </Button>
-                  ))}
-                </div>
-                {selectedPreviewChart ? (
-                  <p data-testid="recognized-chart-constraints" className="text-11 text-muted-foreground">
-                    已应用 {selectedPreviewChart.appliedConstraints.length} 条约束 · {selectedPreviewChart.rows.length} 个维度
-                  </p>
-                ) : null}
-              </section>
-
-              {(selectedCategory.questionIds.length === 0 || selectedCategory.inputModes.length === 0) && (
-                <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-12 text-amber-800">
-                  当前分类需要至少 1 个问题和 1 种输入方式。
+              {(selectedCategory.questionIds.length === 0 || selectedCategory.inputModes.length === 0) ? (
+                <p role="alert" className="mx-5 mb-5 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-12 text-warning-foreground">
+                  当前模块需要至少 1 个问题和 1 种输入方式。
                 </p>
-              )}
-            </div>
+              ) : null}
+            </article>
           ) : (
-            <p className="mt-3 text-13 text-muted-foreground">选择左侧分类后编辑设置。</p>
+            <p className="p-5 text-13 text-muted-foreground">选择左侧模块后进行编辑。</p>
           )}
+        </main>
+
+        <aside data-testid="report-module-inspector" className="order-3 min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4">
+          <div data-testid="report-ai-assistant" className="flex min-h-[32rem] flex-col p-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-survey" strokeWidth={1.7} />
+              <h3 className="text-14 font-bold text-foreground">AI 推演助手</h3>
+              <Badge variant="muted" className="bg-tag-purple text-survey">默认开启</Badge>
+            </div>
+            <div className="mt-4 flex min-h-56 flex-1 flex-col gap-2 overflow-y-auto">
+              {reportAssistantMessages.map((message, index) => (
+                <p
+                  key={`${message.role}-${index}`}
+                  className={[
+                    "max-w-[88%] rounded-lg px-3 py-2 text-12 leading-5",
+                    message.role === "user"
+                      ? "self-end bg-foreground text-background"
+                      : "self-start bg-secondary text-foreground",
+                  ].join(" ")}
+                >
+                  {message.text}
+                </p>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button type="button" size="sm" variant="outline" className="h-8 rounded-full text-11" onClick={() => applyReportAssistantInstruction("面向 CEO 的 10 分钟汇报，先结论后证据。")}>
+                面向 CEO 汇报
+              </Button>
+              <Button type="button" size="sm" variant="outline" className="h-8 rounded-full text-11" onClick={() => applyReportAssistantInstruction("所有结论必须标注样本量、缺失值和证据边界。")}>
+                强化证据边界
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 rounded-full text-11"
+                disabled={classifying}
+                onClick={() => {
+                  setReportAssistantMessages((messages) => [
+                    ...messages,
+                    { role: "user", text: "按当前问卷重新推演整体结构。" },
+                    { role: "assistant", text: "正在调用分类能力重新推演模块；完成后请检查左侧结构。" },
+                  ]);
+                  onClassify();
+                }}
+              >
+                重新推演结构
+              </Button>
+            </div>
+            <div className="mt-3 flex gap-2">
+              <Input
+                data-testid="report-ai-input"
+                value={reportAssistantInput}
+                onChange={(event) => setReportAssistantInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") applyReportAssistantInstruction(reportAssistantInput);
+                }}
+                placeholder="描述读者与用途"
+              />
+              <Button
+                data-testid="report-ai-send"
+                type="button"
+                size="icon"
+                aria-label="发送报告推演要求"
+                disabled={!reportAssistantInput.trim()}
+                onClick={() => applyReportAssistantInstruction(reportAssistantInput)}
+              >
+                <Send className="h-4 w-4" strokeWidth={1.7} />
+              </Button>
+            </div>
+          </div>
         </aside>
       </section>
 
@@ -4812,7 +4772,11 @@ function WorkspaceReportWorkbench({
 
 export default function SurveysPage() {
   const searchParams = useSearchParams();
-  const initialWorkbenchTab = searchParams.get("view") === "templates" ? "templates" : "my";
+  const initialWorkbenchTab = searchParams.get("view") === "templates"
+    ? "templates"
+    : searchParams.get("view") === "my"
+      ? "my"
+      : "home";
   const requestedSurveyId = Number(searchParams.get("survey"));
   const requestedStep = searchParams.get("step");
   const initialSurveyId = Number.isFinite(requestedSurveyId) && requestedSurveyId > 0 ? requestedSurveyId : null;
@@ -4826,9 +4790,11 @@ export default function SurveysPage() {
   const [view, setView] = useState<"edit" | "preview">("edit");
   const [editorTab, setEditorTab] = useState<"questions" | "responses" | "settings">("questions");
   const [filter, setFilter] = useState<"my" | "team">("my");
-  const [workbenchTab, setWorkbenchTab] = useState<"my" | "team" | "templates" | "ai">(initialWorkbenchTab);
+  const [workbenchTab, setWorkbenchTab] = useState<"home" | "my" | "team" | "templates" | "ai">(initialWorkbenchTab);
   const [workspaceView, setWorkspaceView] = useState<WorkspaceTarget>(initialWorkspaceView);
   const [workspaceSurvey, setWorkspaceSurvey] = useState<Survey | null>(null);
+  const [createChooserOpen, setCreateChooserOpen] = useState(false);
+  const [templateTagManagerOpen, setTemplateTagManagerOpen] = useState(false);
 
   // editor state
   const [editingSurveyId, setEditingSurveyId] = useState<number | null>(initialSurveyId);
@@ -4853,6 +4819,9 @@ export default function SurveysPage() {
   const [created, setCreated] = useState<{ id: number; shareUrl: string; reportReady: boolean } | null>(null);
   const [editorActionMessage, setEditorActionMessage] = useState("");
   const [templates, setTemplates] = useState<SurveyTemplate[]>([]);
+  const [templateLoadError, setTemplateLoadError] = useState("");
+  const [templateListTag, setTemplateListTag] = useState("all");
+  const [templateListSelection, setTemplateListSelection] = useState("blank");
   const [templateMessage, setTemplateMessage] = useState("");
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [templateTags, setTemplateTags] = useState<string[]>([]);
@@ -4876,6 +4845,8 @@ export default function SurveysPage() {
   const [workspaceReportClassifying, setWorkspaceReportClassifying] = useState(false);
   const [aiSessionId, setAiSessionId] = useState<string | null>(null);
   const [pendingAiDraft, setPendingAiDraft] = useState<AiDraft | null>(null);
+  const [pendingAiCommand, setPendingAiCommand] = useState("");
+  const [aiDraftApplied, setAiDraftApplied] = useState(false);
   const [pendingAiChangeSet, setPendingAiChangeSet] = useState<AiChangeSet | null>(null);
   const [confirmedAiOps, setConfirmedAiOps] = useState<string[]>([]);
   const [aiFallbackNotice, setAiFallbackNotice] = useState("");
@@ -4958,7 +4929,13 @@ export default function SurveysPage() {
   }, []);
 
   useEffect(() => {
-    setWorkbenchTab(searchParams.get("view") === "templates" ? "templates" : "my");
+    setWorkbenchTab(
+      searchParams.get("view") === "templates"
+        ? "templates"
+        : searchParams.get("view") === "my"
+          ? "my"
+          : "home"
+    );
   }, [searchParams]);
 
   async function loadTeams() {
@@ -4971,11 +4948,16 @@ export default function SurveysPage() {
   }
 
   async function loadTemplates() {
+    setTemplateLoadError("");
     try {
       const res = await fetch("/api/survey-templates");
-      if (res.ok) setTemplates((await res.json()).templates ?? []);
+      if (!res.ok) {
+        setTemplateLoadError("模板加载失败，仍可创建空白问卷或模板。");
+        return;
+      }
+      setTemplates((await res.json()).templates ?? []);
     } catch {
-      // 模板加载失败不阻塞 Blank 创建。
+      setTemplateLoadError("模板加载失败，仍可创建空白问卷或模板。");
     }
   }
 
@@ -5078,6 +5060,8 @@ export default function SurveysPage() {
     setCreated(null);
     setEditorActionMessage("");
     setTemplateMessage("");
+    setTemplateListTag("all");
+    setTemplateListSelection("blank");
     setView("edit");
     setEditorTab("questions");
     setMode("editor");
@@ -5088,7 +5072,48 @@ export default function SurveysPage() {
     void loadTemplates();
   }
 
-  function openTemplateEditor(template?: SurveyTemplate) {
+  function openCreateChooser() {
+    setCreateChooserOpen(true);
+  }
+
+  function createWithAiFromChooser() {
+    setCreateChooserOpen(false);
+    openEditor({ withAi: true });
+  }
+
+  function createFromTemplateChooser() {
+    setCreateChooserOpen(false);
+    window.location.href = "/surveys?view=templates";
+  }
+
+  function createBlankFromChooser() {
+    setCreateChooserOpen(false);
+    openEditor();
+  }
+
+  async function openReportTemplateWorkflow(template: SurveyTemplate) {
+    setTemplateMessage("");
+    const res = await fetch("/api/surveys", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        title: template.title,
+        description: template.description,
+        scope: "private",
+        questions: template.questions,
+        reportTemplate: template.reportTemplate,
+      }),
+    });
+    if (!res.ok) {
+      setTemplateMessage("无法创建问卷以配置报告模板，请稍后重试。");
+      return;
+    }
+    const { survey } = await res.json();
+    setSurveys((items) => [survey, ...items.filter((item) => item.id !== survey.id)]);
+    await selectSurveyForWorkspace(survey.id, "template");
+  }
+
+  function openTemplateEditor(template?: SurveyTemplate, options: { withAi?: boolean } = {}) {
     setEditingSurveyId(null);
     setEditingTemplateId(template?.source === "saved" ? template.id : null);
     setTitle(template?.title ?? "");
@@ -5121,7 +5146,7 @@ export default function SurveysPage() {
     setMode("template");
     setAiCreateFlow(false);
     rememberAiCreateFlow(false);
-    resetAiState(true);
+    resetAiState(options.withAi === true);
     setAiMessages([
       {
         role: "assistant",
@@ -5132,6 +5157,7 @@ export default function SurveysPage() {
   }
 
   function applyBlankTemplate() {
+    setTemplateListSelection("blank");
     setTitle("");
     setDescription("");
     setQuestions([newQuestion()]);
@@ -5141,6 +5167,7 @@ export default function SurveysPage() {
   }
 
   function applyTemplate(template: SurveyTemplate) {
+    setTemplateListSelection(`${template.source}:${template.id}`);
     setTitle(template.title);
     setDescription(template.description);
     const nextQuestions = template.questions.length
@@ -5467,18 +5494,23 @@ export default function SurveysPage() {
     );
   }
 
-  function applyAiDraft(draft: AiDraft) {
-    setTitle(draft.title);
-    setDescription(draft.description);
-    const nextQuestions = draft.questions.length
-      ? draft.questions.map((q) => ({
+  function applyAiDraft(draft: AiDraft, options: { append?: boolean } = {}) {
+    if (!options.append || !title.trim()) setTitle(draft.title);
+    if (!options.append || !description.trim()) setDescription(draft.description);
+    const generatedQuestions = draft.questions.map((q) => ({
             ...newQuestion(),
             title: q.title,
             type: q.type,
             required: q.required,
             options: CHOICE_TYPES.includes(q.type) ? q.options : [],
             ...(cleanCategoryLabel(q.category ?? "") ? { category: cleanCategoryLabel(q.category ?? "") } : {}),
-          }))
+          }));
+    const existingTitles = new Set(questions.map((question) => question.title.trim().toLocaleLowerCase()).filter(Boolean));
+    const additions = generatedQuestions.filter((question) => !existingTitles.has(question.title.trim().toLocaleLowerCase()));
+    const nextQuestions = draft.questions.length
+      ? options.append
+        ? [...questions, ...additions]
+        : generatedQuestions
       : questions;
     setQuestions(nextQuestions);
     setCategories((items) => mergeCategoryLabels(items, nextQuestions.map((question) => question.category)));
@@ -5532,7 +5564,7 @@ export default function SurveysPage() {
     const cleanCommand = command.trim();
     if (!cleanCommand) return;
     const activeDraft =
-      editingSurveyId == null && pendingAiDraft
+      editingSurveyId == null && pendingAiDraft && !aiDraftApplied
         ? {
             title: pendingAiDraft.title,
             description: pendingAiDraft.description,
@@ -5542,6 +5574,8 @@ export default function SurveysPage() {
         : { title, description, questions };
     const nextMessages: AiMessage[] = [...aiMessages, { role: "user", content: cleanCommand }];
     setAiMessages(nextMessages);
+    setPendingAiCommand(cleanCommand);
+    setAiDraftApplied(false);
     setAiInput("");
     setAiBusy(true);
     try {
@@ -5634,11 +5668,12 @@ export default function SurveysPage() {
   }
 
   function applyPendingAiDraft() {
-    if (!pendingAiDraft) return;
-    applyAiDraft(pendingAiDraft);
+    if (!pendingAiDraft || aiDraftApplied) return;
+    const append = questions.some((question) => question.title.trim().length > 0);
+    applyAiDraft(pendingAiDraft, { append });
+    setAiDraftApplied(true);
     setAiCreateFlow(false);
     setAiOpen(true);
-    setPendingAiDraft(null);
     setPendingAiChangeSet(null);
     rememberAiCreateFlow(false);
     setAiMessages((items) => [...items, {
@@ -5722,6 +5757,8 @@ export default function SurveysPage() {
         ? `已应用 ${selected.length} 项变更到模板，请预览并保存。`
         : `已应用 ${selected.length} 项变更到 Builder，请预览并保存。`,
     }]);
+    setPendingAiChangeSet(null);
+    setConfirmedAiOps([]);
     if (aiSessionId && pendingAiChangeSet.id) {
       void fetch(`/api/surveys/ai/sessions/${aiSessionId}`, {
         method: "PATCH",
@@ -5836,10 +5873,32 @@ export default function SurveysPage() {
   const mySurveys = surveys.filter((s) => s.isOwner);
   const teamSurveys = surveys.filter((s) => s.scope === "team");
   const visibleSurveys = mySurveys;
+  const activeSurveyCount = visibleSurveys.filter((survey) => survey.status === "active").length;
+  const totalResponses = visibleSurveys.reduce((sum, survey) => sum + survey.responses, 0);
+  const generatedReportCount = Object.keys(generatedReportsBySurveyId).length + Object.keys(professionalReportsBySurveyId).length;
+  const completionRate = null;
+  const greeting = new Date().getHours() < 12 ? "上午好" : new Date().getHours() < 18 ? "下午好" : "晚上好";
   const builtInTemplates = templates.filter((template) => template.source === "built_in");
   const savedTemplates = templates.filter((template) => template.source === "saved");
   const allTemplates = [...savedTemplates, ...builtInTemplates];
+  const organizationName = teams[0]?.name ?? "个人工作区";
+  const organizationSummary = teams.length
+    ? `${teams.length} 个可用组织 · ${savedTemplates.length} 个自定义模板`
+    : `${visibleSurveys.length} 份个人问卷 · ${savedTemplates.length} 个自定义模板`;
+  const communityTemplate = builtInTemplates[0] ?? null;
   const templateCategories = Array.from(new Set(allTemplates.map((template) => template.category ?? "通用")));
+  const templateListTags = Array.from(new Set(
+    allTemplates.flatMap((template) => [
+      template.category ?? "通用",
+      ...(template.tags ?? []),
+    ])
+  )).sort((a, b) => a.localeCompare(b));
+  const visibleTemplateList = templateListTag === "all"
+    ? allTemplates
+    : allTemplates.filter((template) => {
+        const category = template.category ?? "通用";
+        return category === templateListTag || template.tags?.includes(templateListTag);
+      });
   const editingSurvey = editingSurveyId == null ? undefined : surveys.find((s) => s.id === editingSurveyId);
   const editingSurveyShareUrl = editingSurveyId == null
     ? ""
@@ -6084,7 +6143,7 @@ export default function SurveysPage() {
         onCreateBlank={() => openEditor()}
         onNavigate={(target) => void navigateWorkspace(target)}
       >
-        <div data-testid="survey-ai-create-shell" className="pb-8" style={surveyThemeStyle}>
+        <div data-testid="survey-ai-create-shell" className="pb-8">
         <div className="mb-4 rounded-lg border border-border bg-background">
           <div className="flex items-center gap-3 px-4 py-4">
             <Button
@@ -6393,7 +6452,7 @@ export default function SurveysPage() {
     });
     return (
       <WorkspaceShell
-        active={isTemplateEditor ? "template" : editorTab === "responses" ? "report" : editorTab === "settings" ? "collect" : "design"}
+        active={isTemplateEditor ? "template" : "design"}
         currentSurvey={currentSurveyForNavigation}
         workflowMode={!isTemplateEditor}
         templateLibraryMode={isTemplateEditor}
@@ -6403,8 +6462,8 @@ export default function SurveysPage() {
         onCreateBlank={() => openTemplateEditor()}
         onNavigate={(target) => void navigateWorkspace(target)}
       >
-      <div data-testid={isTemplateEditor ? "template-editor-shell" : "survey-editor-shell"} className="pb-8" style={surveyThemeStyle}>
-        <div className="mb-4 rounded-lg border border-border bg-background">
+      <div data-testid={isTemplateEditor ? "template-editor-shell" : "survey-editor-screen"} className="pb-8">
+        <div data-testid={isTemplateEditor ? undefined : "survey-editor-shell"} className="mb-4 rounded-lg border border-border bg-background">
           <div data-testid="editor-command-bar" className="flex flex-wrap items-center gap-3 px-4 py-4">
             <Button
               data-testid="back-to-list"
@@ -6592,28 +6651,6 @@ export default function SurveysPage() {
               {templateMessage}
             </p>
           )}
-          {!isTemplateEditor && <div className="flex items-center justify-center gap-8 border-t border-border px-4">
-            {[
-              { id: "questions", label: "问题", testId: "survey-questions-tab" },
-              { id: "responses", label: "回答", testId: "survey-responses-tab" },
-              { id: "settings", label: "设置", testId: "survey-settings-tab" },
-            ].map((tab) => (
-              <Button
-                key={tab.id}
-                data-testid={tab.testId}
-                onClick={() => setEditorTab(tab.id as "questions" | "responses" | "settings")}
-                variant="ghost"
-                size="sm"
-                className={`border-b-2 px-4 py-3 text-14 font-semibold ${
-                  editorTab === tab.id
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {tab.label}
-              </Button>
-            ))}
-          </div>}
         </div>
 
         {created && (
@@ -6677,37 +6714,58 @@ export default function SurveysPage() {
         )}
 
         {!created && view === "preview" && !isTemplateEditor && (
-          <div className="mx-auto mt-4 max-w-3xl" data-testid="survey-preview">
-            <div className="overflow-hidden rounded-12 border border-border bg-card shadow-sm">
-              <div className="h-2 bg-primary" />
-              <div className="p-6">
-                <h2 className="text-22 font-bold text-foreground">{title.trim() || "未命名问卷"}</h2>
-                {description.trim() && <p className="mt-2 text-14 text-muted-foreground">{description}</p>}
-              </div>
-            </div>
-            <div className="mt-4 flex flex-col gap-3">
-              {questions.map((q, idx) => (
-                <div key={q.id} data-testid={`preview-question-${idx}`} className="rounded-12 border border-border bg-card p-5 shadow-sm">
-                  <p className="text-15 font-semibold text-foreground">
-                    {q.title.trim() || `问题 ${idx + 1}`}
-                    {q.required && <span className="ml-1 text-destructive">*</span>}
-                  </p>
-                  <div className="mt-3"><QuestionPreviewAnswer question={q} /></div>
+          <div className="mx-auto mt-4 max-w-6xl px-4 pb-12" data-testid="survey-preview">
+            <section data-testid="survey-preview-sheet" className="overflow-hidden rounded-lg border-0 bg-background shadow-sm">
+              <div data-testid="preview-brand-banner" className="relative h-24 overflow-hidden">
+                <Image src="/survey/fluent-research-header.png" alt="" fill priority sizes="(max-width: 1024px) 100vw, 1024px" className="object-cover" />
+                <div className="relative flex h-full items-center justify-between px-7 text-white">
+                  <div className="flex items-center gap-3">
+                    <ListChecks className="h-6 w-6" strokeWidth={1.8} />
+                    <span className="text-15 font-bold">BoardX 调查</span>
+                  </div>
+                  <span className="rounded-md bg-white/15 px-3 py-1 text-12 font-medium">问卷预览</span>
                 </div>
-              ))}
-            </div>
+              </div>
+              <div className="mx-auto max-w-4xl px-7 pb-10">
+                <header className="pb-8 pt-8">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-12 text-muted-foreground">
+                    <span className="font-semibold text-foreground">问卷进度</span>
+                    <span>0 / {questions.length}</span>
+                  </div>
+                  <progress aria-label="问卷预览进度" className="survey-progress mt-3 h-1 w-full" value={0} max={Math.max(questions.length, 1)} />
+                  <h2 className="mt-8 text-30 font-bold tracking-tight text-foreground">{title.trim() || "未命名问卷"}</h2>
+                  {description.trim() && <p className="mt-2 text-14 leading-6 text-muted-foreground">{description}</p>}
+                </header>
+                <div data-testid="preview-question-list" className="space-y-0">
+                  {questions.map((q, idx) => (
+                    <section key={q.id} data-testid={`preview-question-${idx}`} className="py-3">
+                      <div className="flex flex-wrap items-baseline gap-x-1.5">
+                        <p className="text-15 font-semibold text-foreground">
+                          {idx + 1}. {q.title.trim() || `问题 ${idx + 1}`}
+                          {q.required && <span className="ml-1 text-destructive">*</span>}
+                        </p>
+                        <span data-testid={`preview-question-type-${idx}`} className="text-12 text-muted-foreground">
+                          （{TYPE_LABEL[q.type]}）
+                        </span>
+                      </div>
+                      <div className="mt-2"><QuestionPreviewAnswer question={q} questionIndex={idx} /></div>
+                    </section>
+                  ))}
+                </div>
+              </div>
+            </section>
           </div>
         )}
 
         {!created && (view === "edit" || isTemplateEditor) && (
           <div
-            data-testid={isTemplateEditor ? "template-editor-workspace" : undefined}
+            data-testid={isTemplateEditor ? "template-editor-workspace" : "survey-editor-workspace"}
             className={isTemplateEditor
               ? "mx-auto grid items-start gap-4 py-0 xl:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)]"
               : `mx-auto grid gap-4 py-4 ${
                   aiOpen
-                    ? "grid-cols-[minmax(0,1fr)_56px] xl:grid-cols-[minmax(0,1fr)_440px_56px] 2xl:grid-cols-[minmax(0,1fr)_520px_56px]"
-                    : "grid-cols-[minmax(0,1fr)_56px]"
+                    ? "grid-cols-1 xl:grid-cols-[minmax(0,1fr)_440px_56px] 2xl:grid-cols-[minmax(0,1fr)_520px_56px]"
+                    : "grid-cols-1 xl:grid-cols-[minmax(0,1fr)_56px]"
                 }`}
           >
             <main data-testid={isTemplateEditor ? "template-editor-main" : "question-builder-panel"} className="min-w-0">
@@ -7026,67 +7084,64 @@ export default function SurveysPage() {
 
               {!isTemplateEditor && editorTab === "questions" && editingSurveyId == null && (
                 <div className="mb-4 rounded-12 border border-border bg-card p-4 shadow-sm">
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-end justify-between gap-4">
                     <div>
                       <p className="text-15 font-semibold text-foreground">模板库</p>
-                      <p className="text-12 text-muted-foreground">从空白开始，或套用已保存的问卷结构。</p>
+                      <p className="text-12 text-muted-foreground">按标签筛选并选择一套问卷结构。</p>
                     </div>
                     <Button data-testid="save-template" variant="outline" size="sm" onClick={() => void saveAsTemplate()}>
                       保存为模板
                     </Button>
                   </div>
-                  <div data-testid="template-library" className="mt-3 flex flex-wrap gap-2">
-                    <Button data-testid="template-blank" variant="outline" size="sm" onClick={applyBlankTemplate}>
-                      空白问卷
-                    </Button>
-                    {templates.filter((template) => template.source === "built_in").map((template) => (
-                      <Button
-                        key={template.id}
-                        data-testid={`template-${template.id}`}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => applyTemplate(template)}
-                        className="h-auto flex-col items-start gap-1 px-3 py-2 text-left"
-                      >
-                        <span className="text-13 font-semibold">{template.name}</span>
-                        <span className="flex items-center gap-1.5 text-11 text-muted-foreground">
-                          {template.category && (
-                            <Badge data-testid={`template-category-${template.id}`} variant="muted" className="text-11">
-                              {template.category}
-                            </Badge>
-                          )}
-                          <span>{template.estimatedMinutes ?? 3} min</span>
-                        </span>
-                      </Button>
-                    ))}
+                  <div data-testid="template-library" className="mt-3 grid gap-3 sm:grid-cols-[minmax(160px,0.35fr)_minmax(260px,1fr)]">
+                      <div>
+                        <Label htmlFor="template-list-tag" className="text-11 text-muted-foreground">标签</Label>
+                        <Select
+                          id="template-list-tag"
+                          data-testid="template-tag-filter"
+                          value={templateListTag}
+                          onChange={(event) => {
+                            setTemplateListTag(event.target.value);
+                            setTemplateListSelection("blank");
+                          }}
+                          className="mt-1"
+                        >
+                          <option value="all">全部标签</option>
+                          {templateListTags.map((tag) => (
+                            <option key={tag} value={tag}>{tag}</option>
+                          ))}
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="template-list-select" className="text-11 text-muted-foreground">选择模板</Label>
+                        <Select
+                          id="template-list-select"
+                          data-testid="template-select"
+                          value={templateListSelection}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            if (value === "blank") {
+                              applyBlankTemplate();
+                              return;
+                            }
+                            const selected = visibleTemplateList.find(
+                              (template) => `${template.source}:${template.id}` === value
+                            );
+                            if (selected) applyTemplate(selected);
+                          }}
+                          className="mt-1"
+                        >
+                          <option value="blank">空白问卷</option>
+                          {visibleTemplateList.map((template) => (
+                            <option key={`${template.source}-${template.id}`} value={`${template.source}:${template.id}`}>
+                              {template.name} · {template.category ?? template.tags?.[0] ?? "通用"} · {template.questions.length} 题 · {template.estimatedMinutes ?? 3} min
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
                   </div>
-                  <div data-testid="saved-template-list" className="mt-3 flex flex-col gap-2">
-                    {templates.filter((template) => template.source === "saved").length === 0 ? (
-                      <p className="text-12 text-muted-foreground">还没有保存的团队模板</p>
-                    ) : (
-                      templates.filter((template) => template.source === "saved").map((template, idx) => (
-                        <div key={template.id} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
-                          <Button
-                            data-testid={`template-saved-${idx}`}
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => applyTemplate(template)}
-                            className="min-w-0 flex-1 justify-start"
-                          >
-                            {template.name}
-                          </Button>
-                          <Button
-                            data-testid={`delete-template-${idx}`}
-                            variant="ghost"
-                            size="icon"
-                            aria-label="删除模板"
-                            onClick={() => void deleteTemplate(template)}
-                          >
-                            <Trash2 className="h-4 w-4" strokeWidth={1.5} />
-                          </Button>
-                        </div>
-                      ))
-                    )}
+                  <div data-testid="saved-template-list" className="sr-only">
+                    {savedTemplates.length === 0 && <span>还没有保存的团队模板</span>}
                   </div>
                   {templateMessage && (
                     <p data-testid="template-saved" className="mt-2 text-12 text-muted-foreground">
@@ -7096,9 +7151,14 @@ export default function SurveysPage() {
                 </div>
               )}
 
-              {view === "edit" && editorTab === "questions" && <section className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+              {view === "edit" && editorTab === "questions" && <section
+                data-testid={isTemplateEditor ? undefined : "survey-diagnostic-summary"}
+                aria-labelledby={isTemplateEditor ? undefined : "survey-diagnostic-summary-title"}
+                className={isTemplateEditor ? "overflow-hidden rounded-lg border border-border bg-card shadow-sm" : "border border-border bg-background"}
+              >
                 {!isTemplateEditor && <div className="h-2 bg-primary" />}
                 <div className={isTemplateEditor ? "p-4" : "p-6"}>
+                  {!isTemplateEditor && <h2 id="survey-diagnostic-summary-title" className="mb-3 text-12 font-semibold text-muted-foreground">诊断摘要</h2>}
                   <Input
                     id="survey-title"
                     data-testid="survey-title"
@@ -7117,10 +7177,15 @@ export default function SurveysPage() {
                     onChange={(e) => setDescription(e.target.value)}
                     className="mt-3 min-h-12 w-full resize-none rounded-none border-0 border-b border-border bg-transparent px-0 py-2 text-14 text-foreground transition-colors placeholder:text-placeholder focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
                   />
-                  <div data-testid="category-manager" className={`rounded-lg border border-border bg-secondary/30 ${isTemplateEditor ? "mt-4 p-3" : "mt-5 p-4"}`}>
+                  <section
+                    data-testid={isTemplateEditor ? undefined : "survey-hypotheses"}
+                    aria-labelledby={isTemplateEditor ? undefined : "survey-hypotheses-label"}
+                    className={isTemplateEditor ? undefined : "mt-5 border-t border-border pt-5"}
+                  >
+                  <div data-testid="category-manager" className={isTemplateEditor ? "mt-4 rounded-lg border border-border bg-secondary/30 p-3" : ""}>
                     <div className="flex flex-wrap items-end gap-3">
                       <div className="min-w-64 flex-1">
-                        <Label htmlFor="category-input">问卷分类</Label>
+                        <Label id={isTemplateEditor ? undefined : "survey-hypotheses-label"} htmlFor="category-input">诊断假设</Label>
                         <Input
                           id="category-input"
                           data-testid="category-input"
@@ -7132,7 +7197,7 @@ export default function SurveysPage() {
                               addCategory();
                             }
                           }}
-                          placeholder="例如：基本信息、学习情况、心理健康"
+                          placeholder="例如：使用场景、学习情况、心理健康"
                           className="mt-1.5"
                         />
                       </div>
@@ -7149,11 +7214,16 @@ export default function SurveysPage() {
                           </Badge>
                         ))
                       ) : (
-                        <p className="text-12 text-muted-foreground">添加分类后，可在每道题中选择归类。</p>
+                        <p className="text-12 text-muted-foreground">添加假设后，可在每道题中选择归类。</p>
                       )}
                     </div>
                   </div>
-                  <div className="mt-5 flex flex-wrap items-end gap-3">
+                  </section>
+                  <section
+                    data-testid={isTemplateEditor ? undefined : "survey-diagnostic-dimensions"}
+                    aria-label={isTemplateEditor ? undefined : "问卷设置"}
+                    className={isTemplateEditor ? "mt-5 flex flex-wrap items-end gap-3" : "mt-5 flex flex-wrap items-end gap-3 border-t border-border pt-5"}
+                  >
                     {!isTemplateEditor && (
                       <>
                         <div className="flex flex-col gap-1.5">
@@ -7190,7 +7260,7 @@ export default function SurveysPage() {
                     )}
                     <Badge variant="muted">{questions.length} 题</Badge>
                     <Badge variant="muted">{isTemplateEditor ? "模版草稿" : "草稿"}</Badge>
-                  </div>
+                  </section>
                   {!isTemplateEditor && scope === "team" && teams.length === 0 && (
                     <p className="mt-2 text-12 text-muted-foreground">
                       当前还没有团队。先到 Teams 创建团队后，就可以发布为团队问卷。
@@ -7199,14 +7269,22 @@ export default function SurveysPage() {
                 </div>
               </section>}
 
-              {view === "edit" && editorTab === "questions" && <div data-testid="question-list" className="mt-3 flex flex-col gap-3">
+              {view === "edit" && editorTab === "questions" && <section
+                data-testid={isTemplateEditor ? undefined : "survey-question-canvas"}
+                aria-labelledby={isTemplateEditor ? undefined : "survey-question-canvas-title"}
+                className={isTemplateEditor ? "mt-3" : "mt-4 overflow-hidden border border-border bg-background"}
+              >
+                {!isTemplateEditor && <h2 id="survey-question-canvas-title" className="sr-only">问卷题目</h2>}
+                <div data-testid="question-list" className={isTemplateEditor ? "flex flex-col gap-3" : "divide-y divide-border"}>
                 {questions.map((q, idx) => (
                   <section
                     key={q.id}
                     data-testid={`question-${idx}`}
-                    className="rounded-lg border border-border bg-card shadow-sm transition-colors hover:border-border-strong"
+                    aria-labelledby={isTemplateEditor ? undefined : `survey-question-heading-${q.id}`}
+                    className={isTemplateEditor ? "rounded-lg border border-border bg-card shadow-sm transition-colors hover:border-border-strong" : "p-5"}
                   >
-                    <div className="border-l-4 border-primary p-5">
+                    {!isTemplateEditor && <h3 id={`survey-question-heading-${q.id}`} className="sr-only">问题 {idx + 1}</h3>}
+                    <div className={isTemplateEditor ? "border-l-4 border-primary p-5" : ""}>
                       <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_176px_176px]">
                         <Input
                           data-testid={`question-title-${idx}`}
@@ -7332,7 +7410,8 @@ export default function SurveysPage() {
                     </div>
                   </section>
                 ))}
-              </div>}
+                </div>
+              </section>}
 
               {view === "edit" && editorTab === "questions" && (
                 <Button
@@ -7356,8 +7435,9 @@ export default function SurveysPage() {
             {aiOpen && (
               <aside
                 data-testid={isTemplateEditor ? "template-ai-assistant" : "ai-assistant-panel"}
-                className={`sticky top-20 flex max-h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm ${isTemplateEditor ? "min-h-[38.75rem]" : ""}`}
+                className={`flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] ${isTemplateEditor ? "min-h-[38.75rem]" : ""}`}
               >
+                <div data-testid={isTemplateEditor ? undefined : "survey-ai-assistant"} className="flex min-h-0 flex-1 flex-col">
                 <div className="border-b border-border p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -7383,7 +7463,7 @@ export default function SurveysPage() {
                   <div className="mt-3 rounded-lg border border-border bg-background px-3 py-2 text-12 leading-5 text-muted-foreground">
                     {isTemplateEditor
                       ? `当前模板：${title.trim() || "未命名模板"} · ${questions.length} 题。AI 建议不会直接覆盖内容。`
-                      : "左侧始终是可编辑预览；右侧只负责生成建议和结构化变更，不直接覆盖你的问卷。"}
+                      : "AI 先生成可确认的建议，不会直接覆盖左侧问卷。"}
                   </div>
                   {editingSurvey?.status === "active" && (
                     <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-12 text-amber-900">
@@ -7404,7 +7484,8 @@ export default function SurveysPage() {
                 </div>
                 <div className="border-t border-border p-4">
                   {pendingAiDraft && (
-                    <div data-testid="ai-draft-preview" className="mb-4 rounded-lg border border-border bg-background p-3">
+                    <div data-testid="survey-ai-preview" className="mb-4">
+                    <div data-testid="ai-draft-preview" className="rounded-lg border border-border bg-background p-3">
                       <p data-testid="ai-summary" className="text-13 font-semibold text-foreground">
                         {pendingAiDraft.summary ?? pendingAiDraft.reply}
                       </p>
@@ -7471,9 +7552,10 @@ export default function SurveysPage() {
                           报告大纲：{pendingAiDraft.reportOutline.join(" / ")}
                         </div>
                       ) : null}
-                      <Button data-testid="apply-ai-draft" type="button" size="sm" className="mt-3 w-full bg-primary text-primary-foreground hover:bg-primary/90" onClick={applyPendingAiDraft}>
-                        {isTemplateEditor ? "应用到左侧模板" : "应用到左侧问卷"}
+                      <Button data-testid="apply-ai-draft" type="button" size="sm" disabled={aiDraftApplied} className="mt-3 w-full bg-primary text-primary-foreground hover:bg-primary/90" onClick={applyPendingAiDraft}>
+                        {aiDraftApplied ? "已应用到左侧" : isTemplateEditor ? "应用到左侧模板" : "应用到左侧问卷"}
                       </Button>
+                    </div>
                     </div>
                   )}
                   {pendingAiChangeSet && (
@@ -7545,10 +7627,11 @@ export default function SurveysPage() {
                   </Button>
                 </div>
                 </div>
+                </div>
               </aside>
             )}
 
-            {!isTemplateEditor && <aside data-testid="editor-inspector-panel" className="sticky top-32 flex h-fit flex-col items-center gap-2 rounded-full border border-border bg-card p-2 shadow-sm">
+            {!isTemplateEditor && <aside data-testid="editor-inspector-panel" className="sticky top-32 hidden h-fit flex-col items-center gap-2 rounded-full border border-border bg-card p-2 shadow-sm xl:flex">
               <Button variant="ghost" size="icon" aria-label="添加问题" onClick={() => setQuestions((qs) => [...qs, newQuestion()])}>
                 <Plus className="h-4 w-4" strokeWidth={1.5} />
               </Button>
@@ -7581,12 +7664,14 @@ export default function SurveysPage() {
   return (
     <WorkspaceShell
       active={workbenchTab === "templates" ? "template" : workspaceView}
+      dashboardMode={workbenchTab === "home"}
       currentSurvey={currentSurveyForNavigation}
       workflowMode={workspaceView !== "workspace"}
       templateLibraryMode={workbenchTab === "templates"}
-      onCreateWithAi={() => openEditor({ withAi: true })}
+      hideHeader={workspaceView === "workspace" || workspaceView === "template"}
+      onCreateWithAi={openCreateChooser}
       onCreateFromScene={() => void navigateWorkspace("template")}
-      onCreateBlank={() => (workbenchTab === "templates" ? openTemplateEditor() : openEditor())}
+      onCreateBlank={() => (workbenchTab === "templates" ? openTemplateEditor() : openCreateChooser())}
       onNavigate={(target) => void navigateWorkspace(target)}
     >
       {workspaceView !== "workspace" ? (
@@ -7595,30 +7680,35 @@ export default function SurveysPage() {
           survey={currentSurveyForNavigation}
           designContent={
             currentSurveyForNavigation ? (
-              <WorkspaceDesignWorkbench
-                survey={currentSurveyForNavigation}
-                title={title || currentSurveyForNavigation.title}
-                description={description || currentSurveyForNavigation.description}
-                questions={questions}
-                categories={categories}
-                saving={saving}
-                saveError={saveError}
-                actionMessage={editorActionMessage}
-                onTitleChange={setTitle}
-                onDescriptionChange={setDescription}
-                patchQuestion={patchQuestion}
-                changeQuestionType={changeQuestionType}
-                setQuestionCategory={setQuestionCategory}
-                moveQuestion={moveQuestion}
-                removeQuestion={removeQuestion}
-                addQuestion={() => setQuestions((qs) => [...qs, newQuestion()])}
-                addOption={addOption}
-                patchOption={patchOption}
-                onSave={() => void saveWorkspaceDesign()}
-                onOpenAi={() => void openSelectedSurveyEditor("questions", { withAi: true })}
-                onOpenAnswer={openSelectedSurveyAnswer}
-                onOpenTemplate={() => void navigateWorkspace("template")}
-              />
+              <div data-testid="survey-editor-screen">
+                <SurveyDesignWorkbench
+                  survey={currentSurveyForNavigation}
+                  title={title || currentSurveyForNavigation.title}
+                  description={description || currentSurveyForNavigation.description}
+                  questions={questions}
+                  categories={categories}
+                  saving={saving}
+                  saveError={saveError}
+                  actionMessage={editorActionMessage}
+                  onTitleChange={setTitle}
+                  onDescriptionChange={setDescription}
+                  patchQuestion={patchQuestion}
+                  changeQuestionType={changeQuestionType}
+                  setQuestionCategory={setQuestionCategory}
+                  moveQuestion={moveQuestion}
+                  removeQuestion={removeQuestion}
+                  addQuestion={() => setQuestions((qs) => [...qs, newQuestion()])}
+                  addOption={addOption}
+                  patchOption={patchOption}
+                  onSave={() => void saveWorkspaceDesign()}
+                  onOpenAi={() => void openSelectedSurveyEditor("questions", { withAi: true })}
+                  onOpenAnswer={openSelectedSurveyAnswer}
+                  onOpenTemplate={() => void navigateWorkspace("template")}
+                  typeLabel={TYPE_LABEL}
+                  typeGroups={TYPE_GROUPS}
+                  choiceTypes={CHOICE_TYPES}
+                />
+              </div>
             ) : undefined
           }
           templateContent={
@@ -7635,7 +7725,9 @@ export default function SurveysPage() {
                   onClassify={() => void classifyWorkspaceReportCategories(currentSurveyForNavigation.id)}
                   onSavePlan={(plan) => void saveWorkspaceReportCategoryPlan(currentSurveyForNavigation.id, plan)}
                   onGenerateReport={() => void generateWorkspaceCategoryReport(currentSurveyForNavigation.id)}
-                  onBackToDesign={() => void navigateWorkspace("design")}
+                  onBackToDesign={() => {
+                    window.location.href = "/surveys?view=templates";
+                  }}
                   onOpenCollect={() => void navigateWorkspace("collect")}
                 />
               </div>
@@ -7701,99 +7793,237 @@ export default function SurveysPage() {
         />
       ) : (
       <div data-testid="survey-professional-dashboard" className="grid gap-4">
-        {workbenchTab === "templates" ? (
-          <section data-testid="template-library" className="grid gap-4">
+        {workbenchTab === "home" ? (
+          <SurveyHomeDashboard
+            greeting={greeting}
+            activeSurveyCount={activeSurveyCount}
+            totalResponses={totalResponses}
+            generatedReportCount={generatedReportCount}
+            completionRate={completionRate}
+            organizationName={organizationName}
+            organizationSummary={organizationSummary}
+            communityTemplateName={communityTemplate?.name ?? null}
+            communityTemplateSummary={communityTemplate
+              ? `${communityTemplate.questions.length} 题 · 预计 ${communityTemplate.estimatedMinutes ?? 3} 分钟`
+              : "模板中心尚无系统模板"}
+            templates={allTemplates.slice(0, 4).map((template) => ({
+              id: template.id,
+              category: template.category ?? "诊断模板",
+              name: template.name,
+              questionCount: template.questions.length,
+              estimatedMinutes: template.estimatedMinutes ?? 3,
+            }))}
+            recentSurveys={visibleSurveys.slice(0, 4).map((survey) => ({
+              id: survey.id,
+              title: survey.title,
+              description: survey.description,
+              status: survey.status,
+              statusLabel: STATUS_LABEL[survey.status],
+              responseCount: survey.responses,
+              responseLimit: survey.responseLimit,
+              updatedLabel: formatUpdated(survey.updatedAt),
+            }))}
+            onCreate={openCreateChooser}
+            onBrowseTemplates={() => {
+              window.location.href = "/surveys?view=templates";
+            }}
+            onBrowseSurveys={() => {
+              window.location.href = "/surveys?view=my";
+            }}
+            onUseTemplate={(templateId) => {
+              const template = allTemplates.find((item) => item.id === templateId);
+              if (template) openEditor({ template });
+            }}
+            onOpenSurvey={(surveyId, target) => void selectSurveyForWorkspace(surveyId, target)}
+          />
+        ) : workbenchTab === "templates" ? (
+          <section data-testid="templates-workbench" className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-8 sm:px-6 lg:px-10 lg:py-9">
             {loading ? (
               <div className="rounded-lg border border-border bg-background p-4">
                 <SurveySkeleton />
               </div>
             ) : (
               <>
-                <section className="rounded-lg border border-border bg-background">
-                  <div className="grid gap-4 border-b border-border px-4 py-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="outline">Template Manager</Badge>
-                        <Badge variant="muted">{allTemplates.length} 个模板</Badge>
-                      </div>
-                      <h2 className="mt-3 text-18 font-bold text-foreground">管理问卷模版</h2>
-                      <p className="mt-1 max-w-2xl text-13 leading-6 text-muted-foreground">
-                        模版只作为可复用结构管理。进入编辑器可以调整题目、说明和分类；自定义模版可以删除。
-                      </p>
-                    </div>
-                    <div className="grid gap-2 rounded-lg border border-border bg-card p-3 sm:grid-cols-3">
+                <section data-testid="survey-template-center">
+                  <div data-testid="diagnostic-template-center">
+                    <header className="flex flex-wrap items-start justify-between gap-4">
                       <div>
-                        <p className="text-12 text-muted-foreground">全部模版</p>
-                        <p className="mt-1 text-20 font-bold text-foreground">{allTemplates.length}</p>
-                      </div>
-                      <div>
-                        <p className="text-12 text-muted-foreground">自定义</p>
-                        <p className="mt-1 text-20 font-bold text-foreground">{savedTemplates.length}</p>
-                      </div>
-                      <div>
-                        <p className="text-12 text-muted-foreground">分类</p>
-                        <p className="mt-1 text-20 font-bold text-foreground">{templateCategories.length}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
-                    <span className="text-12 font-semibold text-muted-foreground">分类</span>
-                    {templateCategories.map((category) => (
-                      <Badge key={category} variant="muted">
-                        {category}
-                      </Badge>
-                    ))}
-                  </div>
-
-                  <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
-                    {allTemplates.map((template, idx) => (
-                      <section key={template.id} className="flex min-h-52 flex-col rounded-lg border border-border bg-card p-4 transition-all duration-200 hover:border-border-strong hover:shadow-sm">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex flex-wrap gap-2">
-                            <Badge data-testid={`template-category-${template.id}`} variant="muted">
-                              {template.category ?? "通用"}
-                            </Badge>
-                            <Badge variant={template.source === "saved" ? "outline" : "muted"}>
-                              {template.source === "saved" ? "自定义" : "系统"}
-                            </Badge>
-                          </div>
-                          <span className="text-12 text-muted-foreground">{template.estimatedMinutes ?? 3} min</span>
-                        </div>
-                        <h3 className="mt-4 text-15 font-bold text-foreground">{template.name}</h3>
-                        <p className="mt-3 line-clamp-3 text-13 leading-6 text-muted-foreground">
-                          {template.description}
+                        <h1 className="text-22 font-bold text-foreground">诊断模版中心</h1>
+                        <p className="mt-1.5 max-w-3xl text-13 leading-6 text-muted-foreground">
+                          问卷模版与配套报告模版成对管理：回收完成后按报告模版自动生成洞察。
                         </p>
-                        {(template.tags?.length ?? 0) > 0 && (
-                          <div className="mt-3 flex flex-wrap gap-1.5">
-                            {template.tags!.map((tag) => (
-                              <Badge key={tag} variant="outline">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                        <div className="mt-auto flex items-center justify-between gap-3 pt-5">
-                          <span className="text-13 text-muted-foreground">{template.questions.length} 个问题</span>
-                          <div className="flex gap-2">
-                            <Button data-testid={`template-edit-${idx}`} type="button" size="sm" variant="outline" onClick={() => openTemplateEditor(template)}>
-                              编辑
-                            </Button>
-                            <Button
-                              data-testid={`template-delete-${idx}`}
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={template.source !== "saved"}
-                              title={template.source === "saved" ? "删除模板" : "系统模板不可删除"}
-                              onClick={() => void deleteTemplate(template)}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          data-testid="template-create-ai"
+                          type="button"
+                          onClick={() => openTemplateEditor(undefined, { withAi: true })}
+                          className="h-10 gap-2 bg-survey px-4 text-primary-foreground hover:bg-survey/90"
+                        >
+                          <Sparkles className="h-4 w-4" strokeWidth={1.7} />
+                          用 AI 生成模版
+                        </Button>
+                        <Button
+                          data-testid="template-create-manual"
+                          type="button"
+                          variant="outline"
+                          onClick={() => openTemplateEditor()}
+                          className="h-10 gap-2 px-4"
+                        >
+                          <Plus className="h-4 w-4" strokeWidth={1.7} />
+                          手工新建
+                        </Button>
+                      </div>
+                    </header>
+
+                    <div data-testid="template-tag-filter" className="my-5 flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={templateListTag === "all" ? "default" : "outline"}
+                        className="rounded-full"
+                        aria-pressed={templateListTag === "all"}
+                        onClick={() => setTemplateListTag("all")}
+                      >
+                        全部
+                      </Button>
+                      {Array.from(new Set([...templateCategories, ...templateListTags])).map((tag) => (
+                        <Button
+                          key={tag}
+                          type="button"
+                          size="sm"
+                          variant={templateListTag === tag ? "default" : "outline"}
+                          className="rounded-full"
+                          aria-pressed={templateListTag === tag}
+                          onClick={() => setTemplateListTag(tag)}
+                        >
+                          {tag}
+                        </Button>
+                      ))}
+                      <Button
+                        data-testid="template-manage-tags"
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full border-dashed text-muted-foreground"
+                        onClick={() => setTemplateTagManagerOpen(true)}
+                      >
+                        <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={1.7} />
+                        管理标签
+                      </Button>
+                    </div>
+
+                    {templateLoadError ? (
+                      <p role="alert" data-testid="err-template" className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-13 text-destructive">
+                        {templateLoadError}
+                      </p>
+                    ) : null}
+
+                    {visibleTemplateList.length ? (
+                      <div data-testid="diagnostic-template-grid" className="grid gap-4 md:grid-cols-2">
+                        {visibleTemplateList.map((template, idx) => {
+                          const dimensions = Array.from(new Set(
+                            template.questions
+                              .map((question) => question.category?.trim())
+                              .filter((category): category is string => Boolean(category))
+                          ));
+                          const cardTags = template.tags?.length
+                            ? template.tags
+                            : [template.category ?? "通用"];
+                          return (
+                            <article
+                              key={`${template.source}-${template.id}`}
+                              data-testid={`template-card-${template.id}`}
+                              className="flex min-h-64 flex-col rounded-lg border border-border bg-background p-5 transition-colors duration-200 hover:border-border-strong"
                             >
-                              删除
-                            </Button>
-                          </div>
-                        </div>
-                      </section>
-                    ))}
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex flex-wrap gap-1.5">
+                                  {cardTags.map((tag) => (
+                                    <Badge
+                                      key={tag}
+                                      data-testid={tag === (template.category ?? "通用") ? `template-category-${template.id}` : undefined}
+                                      variant="muted"
+                                    >
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                  <Badge
+                                    variant={template.source === "saved" ? "outline" : "muted"}
+                                    className={template.source === "saved" ? undefined : "bg-tag-purple text-survey"}
+                                  >
+                                    {template.source === "saved" ? "自定义" : "系统"}
+                                  </Badge>
+                                </div>
+                                <span className="shrink-0 text-12 text-muted-foreground">
+                                  {template.questions.length} 题 · {template.estimatedMinutes ?? 3} min
+                                </span>
+                              </div>
+                              <h2 className="mt-3 text-15 font-bold text-foreground">{template.name}</h2>
+                              <p className="mt-2 min-h-11 text-13 leading-6 text-muted-foreground">
+                                {template.description || "暂无模版说明。"}
+                              </p>
+                              <div className="mt-3 rounded-lg bg-secondary px-3 py-2.5 text-12 leading-5 text-muted-foreground">
+                                <p>三级框架：维度 → 指标 → 题目</p>
+                                <p>诊断维度：{dimensions.length ? dimensions.join("、") : "按题目分类自动生成"}</p>
+                                <p>
+                                  配套报告：
+                                  {template.reportTemplate
+                                    ? `${template.reportTemplate.title} · ${template.reportTemplate.sections.length} 个章节`
+                                    : "使用后配置报告章节"}
+                                </p>
+                              </div>
+                              <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
+                                <Button data-testid={`use-template-${template.id}`} type="button" size="sm" onClick={() => openEditor({ template })}>
+                                  用此模版建问卷
+                                </Button>
+                                <Button
+                                  data-testid={`view-report-template-${template.id}`}
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => void openReportTemplateWorkflow(template)}
+                                >
+                                  查看报告模版
+                                </Button>
+                                {template.source === "saved" ? (
+                                  <div className="ml-auto flex items-center gap-1">
+                                    <Button
+                                      data-testid={`template-edit-${idx}`}
+                                      type="button"
+                                      size="icon"
+                                      variant="ghost"
+                                      aria-label={`编辑模版 ${template.name}`}
+                                      title="编辑模版"
+                                      onClick={() => openTemplateEditor(template)}
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      data-testid={`template-delete-${idx}`}
+                                      type="button"
+                                      size="icon"
+                                      variant="ghost"
+                                      aria-label={`删除模版 ${template.name}`}
+                                      title="删除模版"
+                                      onClick={() => void deleteTemplate(template)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div data-testid="empty" className="flex flex-col items-center gap-4 rounded-lg border border-dashed border-border-strong px-4 py-12 text-center">
+                        <p className="text-13 text-muted-foreground">没有匹配此标签的诊断模版。</p>
+                        <Button type="button" size="sm" variant="outline" onClick={() => setTemplateListTag("all")}>
+                          重置筛选
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </section>
 
@@ -7806,116 +8036,111 @@ export default function SurveysPage() {
             )}
           </section>
         ) : (
-          <>
-            <section data-testid="survey-operations-list" className="rounded-lg border border-border bg-background">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
-                <div>
-                  <h2 className="text-18 font-bold text-foreground">我的问卷</h2>
-                  <p className="text-13 text-muted-foreground">每份问卷只显示当前状态和最常用下一步。</p>
-                </div>
-              </div>
-
-              {error && (
-                <p role="alert" data-testid="err-surveys" className="px-4 py-3 text-13 text-destructive">
-                  {error}
-                </p>
-              )}
-
-              {loading ? (
-                <div className="p-4">
-                  <SurveySkeleton />
-                </div>
-              ) : visibleSurveys.length === 0 ? (
-                <div
-                  data-testid="empty"
-                  className="m-4 flex flex-col items-center gap-3 rounded-lg border border-dashed border-border-strong bg-card px-6 py-12 text-center"
-                >
-                  <p className="text-15 font-semibold text-foreground">还没有问卷</p>
-                  <p className="max-w-md text-13 leading-6 text-muted-foreground">
-                    创建后可以在这里查看状态、编辑问题、发布回收和生成报告。
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    <Button
-                      data-testid="empty-new-survey"
-                      size="sm"
-                      onClick={() => openEditor()}
-                      className="gap-1.5 bg-foreground text-background hover:bg-foreground/90 hover:text-background"
-                    >
-                      <Plus className="h-4 w-4" strokeWidth={1.5} />
-                      创建问卷
-                    </Button>
-                    <Button data-testid="empty-create-with-ai" size="sm" variant="outline" onClick={() => openEditor({ withAi: true })} className="gap-1.5">
-                      <Sparkles className="h-4 w-4" strokeWidth={1.5} />
-                      AI 创建
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div data-testid="survey-list" className="grid gap-3 p-4">
-                  {visibleSurveys.map((s) => {
-                    const reportPlan = inferReportPlan(s);
-                    return (
-                      <section key={s.id} data-testid={`survey-${s.id}`} className="rounded-lg border border-border bg-card p-4 transition-all duration-200 hover:border-border-strong hover:shadow-sm">
-                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge data-testid={`survey-status-${s.id}`} variant="outline" className={statusBadgeClass(s.status)}>
-                                {STATUS_LABEL[s.status]}
-                              </Badge>
-                              <span className="text-12 text-muted-foreground">{formatUpdated(s.updatedAt)}</span>
-                            </div>
-                            <h3 data-testid={`survey-title-${s.id}`} className="mt-3 truncate text-17 font-bold text-foreground">
-                              {s.title}
-                            </h3>
-                            {s.description && (
-                              <p className="mt-1 line-clamp-2 text-13 leading-6 text-muted-foreground">{s.description}</p>
-                            )}
-                          </div>
-                          <div className="grid gap-3 sm:grid-cols-2 lg:w-96">
-                            <div className="rounded-lg border border-border bg-background px-3 py-2">
-                              <p className="text-12 text-muted-foreground">答卷</p>
-                              <p data-testid={`survey-responses-${s.id}`} className="mt-1 text-18 font-bold text-foreground">{s.responses}</p>
-                            </div>
-                            <div className="rounded-lg border border-border bg-background px-3 py-2">
-                              <p className="text-12 text-muted-foreground">报告规划</p>
-                              <p className="mt-1 truncate text-13 font-semibold text-foreground">{reportPlan.name}</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className={currentSurveyId === s.id ? "border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background" : ""}
-                            onClick={() => void selectSurveyForWorkspace(s.id)}
-                          >
-                            选择
-                          </Button>
-                          <Button data-testid={`open-workspace-${s.id}`} type="button" size="sm" variant="outline" onClick={() => void selectSurveyForWorkspace(s.id, "design")}>
-                            设计
-                          </Button>
-                          <Button type="button" size="sm" variant="outline" onClick={() => void selectSurveyForWorkspace(s.id, "template")}>
-                            模块
-                          </Button>
-                          <Button type="button" size="sm" variant="outline" onClick={() => void selectSurveyForWorkspace(s.id, "collect")}>
-                            发布
-                          </Button>
-                          <Button type="button" size="sm" variant="outline" onClick={() => void selectSurveyForWorkspace(s.id, "answer")}>
-                            答题
-                          </Button>
-                          <Button type="button" size="sm" variant="outline" onClick={() => void selectSurveyForWorkspace(s.id, "report")}>
-                            报告
-                          </Button>
-                        </div>
-                      </section>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-          </>
+          <SurveyListScreen
+            loading={loading}
+            error={error}
+            surveys={visibleSurveys.map((survey) => ({
+              id: survey.id,
+              title: survey.title,
+              description: survey.description,
+              status: survey.status,
+              statusLabel: STATUS_LABEL[survey.status],
+              responseCount: survey.responses,
+              responseLimit: survey.responseLimit,
+              updatedLabel: formatUpdated(survey.updatedAt),
+            }))}
+            onOpenCreateChooser={openCreateChooser}
+            onCreateWithAi={createWithAiFromChooser}
+            onCreateFromTemplate={createFromTemplateChooser}
+            onCreateBlank={createBlankFromChooser}
+            onOpenSurvey={(surveyId) => {
+              const survey = visibleSurveys.find((item) => item.id === surveyId);
+              void selectSurveyForWorkspace(surveyId, survey?.responses ? "report" : "design");
+            }}
+          />
         )}
+
+        <Dialog
+          open={templateTagManagerOpen}
+          onClose={() => setTemplateTagManagerOpen(false)}
+          title="管理标签"
+          description="选择标签筛选模版；标签随自定义模版保存。"
+          testId="template-tag-manager-dialog"
+          className="max-w-xl rounded-lg"
+        >
+          <div className="grid gap-2 sm:grid-cols-2">
+            {Array.from(new Set([...templateCategories, ...templateListTags])).map((tag) => {
+              const count = allTemplates.filter((template) =>
+                (template.category ?? "通用") === tag || template.tags?.includes(tag)
+              ).length;
+              return (
+                <Button
+                  key={tag}
+                  type="button"
+                  variant="outline"
+                  className="h-auto justify-between px-3 py-2"
+                  onClick={() => {
+                    setTemplateListTag(tag);
+                    setTemplateTagManagerOpen(false);
+                  }}
+                >
+                  <span>{tag}</span>
+                  <Badge variant="muted">{count}</Badge>
+                </Button>
+              );
+            })}
+          </div>
+        </Dialog>
+
+        <Dialog
+          open={createChooserOpen}
+          onClose={() => setCreateChooserOpen(false)}
+          title="新建问卷"
+          description="选择一种方式开始你的诊断问卷。"
+          testId="new-survey-dialog"
+        >
+          <div className="grid gap-3 md:grid-cols-3">
+            <Button
+              data-testid="new-survey-ai"
+              type="button"
+              variant="outline"
+              onClick={createWithAiFromChooser}
+              className="h-auto min-h-40 items-start justify-start gap-3 border-survey/30 bg-tag-purple/30 px-5 py-5 text-left transition-colors duration-200 hover:border-survey hover:bg-tag-purple/50"
+            >
+              <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-survey" strokeWidth={1.6} />
+              <span>
+                <span className="block text-15 font-semibold">AI 对话生成</span>
+                <span className="mt-2 block text-12 font-normal leading-5 text-muted-foreground">描述目标和受访者，AI 生成第一版后继续迭代。</span>
+              </span>
+            </Button>
+            <Button
+              data-testid="new-survey-template"
+              type="button"
+              variant="outline"
+              onClick={createFromTemplateChooser}
+              className="h-auto min-h-40 items-start justify-start gap-3 px-5 py-5 text-left transition-all duration-200 hover:border-foreground/30 hover:bg-accent"
+            >
+              <LayoutTemplate className="h-5 w-5 shrink-0" strokeWidth={1.6} />
+              <span>
+                <span className="block text-15 font-semibold">从模板开始</span>
+                <span className="mt-2 block text-12 font-normal leading-5 text-muted-foreground">从诊断模板中心选择成熟结构，再按项目调整。</span>
+              </span>
+            </Button>
+            <Button
+              data-testid="new-survey-blank"
+              type="button"
+              variant="outline"
+              onClick={createBlankFromChooser}
+              className="h-auto min-h-40 items-start justify-start gap-3 px-5 py-5 text-left transition-all duration-200 hover:border-foreground/30 hover:bg-accent"
+            >
+              <FileText className="h-5 w-5 shrink-0" strokeWidth={1.6} />
+              <span>
+                <span className="block text-15 font-semibold">空白问卷</span>
+                <span className="mt-2 block text-12 font-normal leading-5 text-muted-foreground">从零搭建题目，过程中仍可随时召唤 AI 助手。</span>
+              </span>
+            </Button>
+          </div>
+        </Dialog>
       </div>
       )}
     </WorkspaceShell>
