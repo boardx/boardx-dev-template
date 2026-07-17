@@ -32,7 +32,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/ava-chat-basic.spec.ts e2e/ava-message-actions.spec.ts e2e/ava-message-send-actions.spec.ts e2e/ava-attach-files.spec.ts e2e/ava-voice-input.spec.ts"
       ],
       "evidence": "evidence/F02.verify.log @ 2026-07-16T11:00:07.480Z",
-      "notes": "来源：boardx-web/src/components/ava/ChatUIComponent/MessageEditor 与 ChatItem。会改 `apps/web/app/(app)/ava/page.tsx`、`voice-input.tsx`、`attachments.tsx`，必须串行在 F01 后。增量验收：普通本地 dev 必须通过 Next 转译 `@repo/ai` 读取当前 Qwen 默认模型，`/api/ava/capabilities` 返回 `qwen3.7-max`，composer textarea 不出现原生黑色内层边框。"
+      "notes": "来源：boardx-web/src/components/ava/ChatUIComponent/MessageEditor、ChatItem、Deep Research composer 入口，以及 boardx-backend 的 DashScope/Qwen 与 Deep Agent 处理链路。会改 `apps/web/app/(app)/ava/page.tsx`、`voice-input.tsx`、`attachments.tsx`、AVA API routes、`packages/ai` 与 Next dev 配置，必须串行在 F01 后。增量需求摘要（详见 `requirements/01-change-intake.md`）：1. 默认真实模型为 `qwen3.7-max`，capabilities / New chat / 普通发送默认走 Qwen；缺少 key 时稳定失败，不能静默回退 stub；e2e 环境可显式注入 stub 保持确定性。2. composer 同步 Deep Agent 入口，选择支持 Deep Agent 的 Agent 或显式 deepAgent 请求时走 `/api/v1/deep-agent/execute`，配置 `NEXT_PUBLIC_API_URL` 时代理 boardx-backend，不落回普通 AVA stub。3. 消息阅读列、用户/助手对齐、composer focus、inline edit 必须符合可用聊天体验，不能出现原生黑色内层边框或右侧漂浮编辑卡。4. 最后一条用户请求的删除按钮显示 `Delete`，确认文案和 `data-testid=\"msg-delete\"` 保持兼容。5. Regenerate 不能丢失原问题，也不能阻塞 composer 下一次普通发送。6. 附件选择/拖拽后立即显示 `attachment-preview-strip` 的 uploading 状态，上传成功转 uploaded，失败可重试；对象存储初始化和本地 Docker 端点要避免导致长期 uploading。7. Next dev 必须转译 `@repo/ai`，本地 3003 重启后 `/api/ava/capabilities` 返回 `defaults.modelId: \"qwen3.7-max\"`。8. 本地 DashScope/SURVEY 配置只写 `.env.local`，密钥不进入 git。"
     },
     {
       "id": "F03",
