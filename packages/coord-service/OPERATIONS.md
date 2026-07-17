@@ -146,7 +146,24 @@ export COORD_SERVICE_TOKEN=$(jq -r '.tokens["<你的身份id>"]' .harness/state/
 > 文件——那套 `<coord-id>.env` 文件仍然有效（本质是同一 token 的另一种存放），
 > 但新 mint 一律进中央文件，文档以本节为准。
 
-### 给新身份发 token（registry.yaml 加了新 agent 之后）
+### 自助领取（开发者身份的主路径，ADR-011 P2，2026-07-14 起）
+
+registry.yaml 合并（owner=你的 GitHub login）后，开发者在 **develop.boardx.us →
+加入开发 → 第 5 步**直接领取/轮换自己身份的 token——门户验 Access 身份 + registry
+归属，经 portal-broker（kind=token-broker，仅有 mint 权力）代调
+`POST /agents/:id/mint-token`。明文只显示一次；轮换使旧 token 立即失效（丢失/泄露
+自救通道）。coordinator/token-broker 身份**不可自助**，走下面的人工流程。
+
+### 存量身份迁移到自助（P3 上线后一次性）
+
+P3 之前人工 mint 到中央凭据文件的开发者身份（如 usersyj 的 wrk-survey-syj-1 /
+wrk-ava-syj-1），可选择走一次自助 reveal 脱离人工链：本人登录 develop.boardx.us
+→ 加入开发 → 第 5 步 → 对该身份点「领取 / 轮换」——旧 token 立即失效、新 token
+只在其浏览器显示一次。**这是所有者本人的动作**：coord-main/管理员不代为 reveal
+（明文只应出现在所有者已认证的浏览器里）。中央凭据文件仍作为本机会话分发通道
+不变，迁与不迁都可用。
+
+### 人工发放（coordinator 级身份 / 自助通道不可用时）
 
 ```bash
 cd packages/coord-service

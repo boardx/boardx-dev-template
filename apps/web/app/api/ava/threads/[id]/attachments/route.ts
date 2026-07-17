@@ -84,7 +84,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       const buffer = Buffer.from(await file.arrayBuffer());
       await putObject(objectKey, buffer, file.type || "application/octet-stream");
     } catch (err) {
-      return NextResponse.json({ error: `对象存储写入失败：${String(err)}` }, { status: 502 });
+      // 内部细节（endpoint/凭据/网络栈）只进日志，不出网（ADR-015 / #539）
+      console.error("[api] storage write failed", err);
+      return NextResponse.json({ error: "storage_write_failed" }, { status: 502 });
     }
 
     const attachment = await createAvaAttachment({
@@ -100,6 +102,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     return NextResponse.json({ attachment }, { status: 201 });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    // 内部细节只进日志，响应给稳定错误码（ADR-015 / #539 教训）
+    console.error("[api] unhandled", err);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 }

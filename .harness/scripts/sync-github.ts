@@ -55,18 +55,30 @@ function renderDependsOn(f: Feature, phaseId: string, fl: FeatureList): string[]
  *  原则：GitHub 是只读投影，仓库才是权威——body 提供完整契约 + 指回权威文件的链接，
  *  不试图复制仓库里所有规则（规则以 AGENTS.md 为准）。
  *  模版规格见 .harness/templates/github-issue-body.template.md（改这里请同步改模版文档）。 */
-function buildIssueBody(
+export function buildIssueBody(
   f: Feature,
   phaseId: string,
   sprintId: string,
   repo: string,
-  fl: FeatureList
+  fl: FeatureList,
+  trackingIssue?: number,
 ): string {
   const phaseDir = basename(findPhaseDir(phaseId));
   const blob = (p: string) => `https://github.com/${repo}/blob/main/${p}`;
   const evidencePath = `phases/${phaseDir}/sprints/sprint-${sprintId}/evidence/${f.id}.verify.log`;
+  const parentSection = trackingIssue == null
+    ? []
+    : [
+        `## Parent Tracking Issue`,
+        ``,
+        `Parent: #${trackingIssue}`,
+        ``,
+        `https://github.com/${repo}/issues/${trackingIssue}`,
+        ``,
+      ];
 
   return [
+    ...parentSection,
     `## 交付契约（user_visible_behavior）`,
     ``,
     f.user_visible_behavior,
@@ -206,7 +218,14 @@ export function syncGithub(args: Args): void {
       if (statusAction.add_label) labels.push(statusAction.add_label);
 
       const title = `[${f.id}] ${f.title}`;
-      const body = buildIssueBody(f, phaseId, sid, cfg.repo, fl);
+      const body = buildIssueBody(
+        f,
+        phaseId,
+        sid,
+        cfg.repo,
+        fl,
+        phase.tracking_issue,
+      );
 
       // body 走 --body-file 而不是 --body "<内联字符串>"：
       // 内联时 bash 双引号里的反引号会做命令替换（body 含 `pnpm test`/`./init.sh` 这类

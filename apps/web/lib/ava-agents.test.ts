@@ -21,7 +21,7 @@ describe("listAvaAgentOptions", () => {
   it("订阅查询抛错时降级返回内置默认 Agent，不抛异常", async () => {
     mockListSubscribedAiStoreItemIds.mockRejectedValue(new Error("db connection lost"));
 
-    const result = await listAvaAgentOptions(1, null);
+    const result = await listAvaAgentOptions(1, 7);
 
     expect(result).toEqual(AVA_AGENT_OPTIONS);
     expect(mockGetAiStoreItems).not.toHaveBeenCalled();
@@ -33,7 +33,7 @@ describe("listAvaAgentOptions", () => {
     mockListSubscribedAiStoreItemIds.mockResolvedValue([42]);
     mockGetAiStoreItems.mockRejectedValue(new Error("query timeout"));
 
-    const result = await listAvaAgentOptions(1, null);
+    const result = await listAvaAgentOptions(1, 7);
 
     expect(result).toEqual(AVA_AGENT_OPTIONS);
     expect(console.error).toHaveBeenCalled();
@@ -47,7 +47,10 @@ describe("listAvaAgentOptions", () => {
         type: "agent",
         scope: "platform",
         owner_user_id: null,
-        team_id: null,
+        origin_team_id: 7,
+        team_id: 7,
+        migration_quarantined_at: null,
+        version: 1,
         status: "published",
         name: "Store Agent",
         description: "a subscribed agent",
@@ -59,12 +62,15 @@ describe("listAvaAgentOptions", () => {
         likes: 0,
         views: 0,
         featured: false,
+        allow_copy: false,
+        copied_from_item_id: null,
+        copied_from_version: null,
         created_at: "2026-07-01T00:00:00.000Z",
         updated_at: "2026-07-01T00:00:00.000Z",
       },
     ]);
 
-    const result = await listAvaAgentOptions(1, null);
+    const result = await listAvaAgentOptions(1, 7);
 
     expect(result).toEqual([
       ...AVA_AGENT_OPTIONS,
@@ -72,6 +78,10 @@ describe("listAvaAgentOptions", () => {
         id: `${STORE_AGENT_ID_PREFIX}7`,
         label: "Store Agent",
         description: "a subscribed agent",
+        version: 1,
+        config: {},
+        deepAgentEnabled: false,
+        storeId: 7,
       },
     ]);
   });

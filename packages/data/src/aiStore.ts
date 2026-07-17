@@ -1,9 +1,14 @@
 // packages/data/src/aiStore.ts — CAP-DATA AI Store 商品仓储（P11）
 // ai_store_items：Agent / AI 工具 / 图片工具 / 模板，scope=personal/team/platform。
-import { randomBytes } from "node:crypto";
-import { query } from "./index";
+import { randomBytes, randomUUID } from "node:crypto";
+import { getPool, query } from "./index";
+import { generateId } from "./ids";
+import type { Board } from "./board";
+import { getAiStoreSubscription } from "./aiStoreSubscriptions";
 
-export type AiStoreItemType = "agent" | "ai-tool" | "image-tool" | "template";
+export type AiStoreItemType = "agent" | "skill" | "template";
+export type AiStoreLegacyItemType = "ai-tool" | "image-tool" | "AI_TOOL" | "AI_IMAGE_TOOL";
+export type AiStoreSkillKind = "text" | "image";
 export type AiStoreItemScope = "personal" | "team" | "platform";
 export type AiStoreItemStatus = "draft" | "published" | "pending" | "approved" | "rejected";
 export type AiStoreSubmitAction = "draft" | "publish" | "submit_review";
@@ -13,7 +18,12 @@ export interface AiStoreItem {
   type: AiStoreItemType;
   scope: AiStoreItemScope;
   owner_user_id: number | null;
+  origin_team_id: number;
+  /** @deprecated Compatibility alias for existing Web consumers. */
   team_id: number | null;
+  migration_quarantined_at: string | null;
+  archived_at?: string | null;
+  version: number;
   status: AiStoreItemStatus;
   name: string;
   description: string;
@@ -25,12 +35,31 @@ export interface AiStoreItem {
   likes: number;
   views: number;
   featured: boolean;
+  allow_copy: boolean;
+  copied_from_item_id: number | null;
+  copied_from_version: number | null;
   created_at: string;
   updated_at: string;
+  origin_team_name?: string;
 }
 
 const ITEM_COLS =
-  "id, type, scope, owner_user_id, team_id, status, name, description, cover, author, tags, examples, config, likes, views, featured, created_at, updated_at";
+  "id, type, scope, owner_user_id, origin_team_id, origin_team_id AS team_id, migration_quarantined_at, archived_at, version, status, name, description, cover, author, tags, examples, config, likes, views, featured, allow_copy, copied_from_item_id, copied_from_version, created_at, updated_at";
+
+export function normalizeAiStoreItemType(
+  value: string,
+): { type: AiStoreItemType; skillKind?: AiStoreSkillKind } | undefined {
+  if (value === "agent" || value === "template" || value === "skill") {
+    return { type: value };
+  }
+  if (value === "ai-tool" || value === "AI_TOOL") {
+    return { type: "skill", skillKind: "text" };
+  }
+  if (value === "image-tool" || value === "AI_IMAGE_TOOL") {
+    return { type: "skill", skillKind: "image" };
+  }
+  return undefined;
+}
 
 export interface ListAiStoreItemsOptions {
   /** 类型筛选；空/undefined = 不筛选。 */
@@ -61,7 +90,7 @@ export interface AiStoreItemDraftInput {
   scope: AiStoreItemScope;
   status: AiStoreItemStatus;
   ownerUserId: number;
-  teamId?: number | null;
+  originTeamId: number;
   name: string;
   description: string;
   cover?: string | null;
@@ -69,6 +98,7 @@ export interface AiStoreItemDraftInput {
   tags?: string[];
   examples?: string[];
   config?: Record<string, unknown>;
+  allowCopy?: boolean;
 }
 
 const DEFAULT_PAGE_SIZE = 9;
@@ -89,14 +119,20 @@ export async function listAiStoreItems(opts: ListAiStoreItemsOptions = {}): Prom
 
   // 可见性：published 或 approved 的 platform 项目 + 命中团队的 team 项目 + 属于当前用户的 personal 项目。
   const visClauses: string[] = ["(status IN ('published', 'approved') AND scope = 'platform')"];
+  let teamParamIndex: number | undefined;
   if (opts.teamId != null) {
     params.push(opts.teamId);
-    visClauses.push(`(status = 'published' AND scope = 'team' AND team_id = $${params.length})`);
+    teamParamIndex = params.length;
+    visClauses.push(`(status = 'published' AND scope = 'team' AND origin_team_id = $${teamParamIndex})`);
   }
-  if (opts.userId != null) {
+  if (opts.userId != null && teamParamIndex != null) {
     params.push(opts.userId);
-    visClauses.push(`(scope = 'personal' AND owner_user_id = $${params.length})`);
+    visClauses.push(
+      `(scope = 'personal' AND owner_user_id = $${params.length} AND origin_team_id = $${teamParamIndex})`,
+    );
   }
+  conds.push("migration_quarantined_at IS NULL");
+  conds.push("archived_at IS NULL");
   conds.push(`(${visClauses.join(" OR ")})`);
 
   if (opts.type) {
@@ -123,9 +159,16 @@ export async function listAiStoreItems(opts: ListAiStoreItemsOptions = {}): Prom
 
   const limitParams = [...params, pageSize, (page - 1) * pageSize];
   const items = await query<AiStoreItem>(
-    `SELECT ${ITEM_COLS} FROM ai_store_items ${whereSql}
-     ORDER BY featured DESC, updated_at DESC, id DESC
-     LIMIT $${limitParams.length - 1} OFFSET $${limitParams.length}`,
+    `SELECT listed.*, origin_team.name AS origin_team_name
+     FROM (
+       SELECT ${ITEM_COLS}
+       FROM ai_store_items
+       ${whereSql}
+       ORDER BY featured DESC, updated_at DESC, id DESC
+       LIMIT $${limitParams.length - 1} OFFSET $${limitParams.length}
+     ) listed
+     JOIN teams origin_team ON origin_team.id = listed.origin_team_id
+     ORDER BY listed.featured DESC, listed.updated_at DESC, listed.id DESC`,
     limitParams
   );
 
@@ -134,23 +177,42 @@ export async function listAiStoreItems(opts: ListAiStoreItemsOptions = {}): Prom
 
 /** 取单个项目详情（供详情弹窗）。不做可见性过滤，调用方按需自行校验。 */
 export async function getAiStoreItem(id: number): Promise<AiStoreItem | undefined> {
-  const rows = await query<AiStoreItem>(`SELECT ${ITEM_COLS} FROM ai_store_items WHERE id = $1`, [id]);
+  const rows = await query<AiStoreItem>(
+    `SELECT item.*, origin_team.name AS origin_team_name
+     FROM (
+       SELECT ${ITEM_COLS}
+       FROM ai_store_items
+       WHERE id = $1
+         AND migration_quarantined_at IS NULL
+         AND archived_at IS NULL
+     ) item
+     JOIN teams origin_team ON origin_team.id = item.origin_team_id`,
+    [id]
+  );
   return rows[0];
 }
 
 /** 批量取项目详情（单条 WHERE id = ANY($1)，避免调用方逐条 SELECT 的 N+1）。不做可见性过滤。 */
 export async function getAiStoreItems(ids: number[]): Promise<AiStoreItem[]> {
   if (ids.length === 0) return [];
-  return query<AiStoreItem>(`SELECT ${ITEM_COLS} FROM ai_store_items WHERE id = ANY($1)`, [ids]);
+  return query<AiStoreItem>(
+    `SELECT ${ITEM_COLS} FROM ai_store_items
+     WHERE id = ANY($1)
+       AND migration_quarantined_at IS NULL
+       AND archived_at IS NULL`,
+    [ids]
+  );
 }
 
 /** 拥有者管理列表：用于 Create/Authorized 视图展示自己的草稿、已发布和审核中项目。 */
-export async function listOwnedAiStoreItems(ownerUserId: number): Promise<AiStoreItem[]> {
+export async function listOwnedAiStoreItems(ownerUserId: number, originTeamId: number): Promise<AiStoreItem[]> {
   return query<AiStoreItem>(
     `SELECT ${ITEM_COLS} FROM ai_store_items
-     WHERE owner_user_id = $1
+     WHERE owner_user_id = $1 AND origin_team_id = $2
+       AND migration_quarantined_at IS NULL
+       AND archived_at IS NULL
      ORDER BY updated_at DESC, id DESC`,
-    [ownerUserId]
+    [ownerUserId, originTeamId]
   );
 }
 
@@ -158,15 +220,15 @@ export async function listOwnedAiStoreItems(ownerUserId: number): Promise<AiStor
 export async function createAiStoreItem(input: AiStoreItemDraftInput): Promise<AiStoreItem> {
   const rows = await query<AiStoreItem>(
     `INSERT INTO ai_store_items
-       (type, scope, owner_user_id, team_id, status, name, description, cover, author, tags, examples, config)
+       (type, scope, owner_user_id, origin_team_id, status, name, description, cover, author, tags, examples, config, allow_copy)
      VALUES
-       ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb)
+       ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13)
      RETURNING ${ITEM_COLS}`,
     [
       input.type,
       input.scope,
       input.ownerUserId,
-      input.teamId ?? null,
+      input.originTeamId,
       input.status,
       input.name,
       input.description,
@@ -175,39 +237,76 @@ export async function createAiStoreItem(input: AiStoreItemDraftInput): Promise<A
       input.tags ?? [],
       input.examples ?? [],
       JSON.stringify(input.config ?? {}),
+      input.allowCopy ?? false,
     ]
   );
   return rows[0]!;
 }
 
-/** 仅 owner 可更新自己的 AI Store 项目。调用方负责决定状态动作是否合法。 */
+/**
+ * Owner 或有效授权编辑者可更新内容。来源 Team 永不从输入更新；操作者 Team 只写审计。
+ * 授权编辑者不能改变 type/scope/status，避免通过内容编辑扩大资源可见范围。
+ */
 export async function updateAiStoreItem(
   id: number,
-  ownerUserId: number,
+  actorUserId: number,
+  actorTeamId: number,
+  expectedVersion: number,
   input: AiStoreItemDraftInput
 ): Promise<AiStoreItem | undefined> {
   const rows = await query<AiStoreItem>(
-    `UPDATE ai_store_items
-     SET type = $3,
-         scope = $4,
-         team_id = $5,
-         status = $6,
-         name = $7,
-         description = $8,
-         cover = $9,
-         author = $10,
-         tags = $11,
-         examples = $12,
-         config = $13::jsonb,
-         updated_at = now()
-     WHERE id = $1 AND owner_user_id = $2
-     RETURNING ${ITEM_COLS}`,
+    `WITH updated AS (
+       UPDATE ai_store_items
+       SET type = CASE WHEN owner_user_id = $2 THEN $5 ELSE type END,
+           scope = CASE WHEN owner_user_id = $2 THEN $6 ELSE scope END,
+           status = CASE
+             WHEN status IN ('approved', 'published') THEN status
+             WHEN owner_user_id = $2 THEN $7
+             ELSE status
+           END,
+           name = $8,
+           description = $9,
+           cover = $10,
+           author = CASE WHEN owner_user_id = $2 THEN $11 ELSE author END,
+           tags = $12,
+           examples = $13,
+           config = $14::jsonb,
+           allow_copy = CASE WHEN owner_user_id = $2 THEN $15 ELSE allow_copy END,
+           version = version + 1,
+           updated_at = now()
+       WHERE id = $1 AND version = $4
+         AND migration_quarantined_at IS NULL
+         AND archived_at IS NULL
+         AND (
+           owner_user_id = $2 OR EXISTS (
+             SELECT 1 FROM ai_store_item_grants g
+             WHERE g.item_id = ai_store_items.id
+               AND g.user_id = $2
+               AND g.consumer_team_id = $3
+           )
+         )
+       RETURNING *
+     ),
+     audited AS (
+       INSERT INTO ai_store_revision_audit
+         (item_id, version, action, actor_user_id, actor_team_id, changed_fields)
+       SELECT
+         id,
+         version,
+         'content_updated',
+         $2,
+         $3,
+         ARRAY['type', 'scope', 'status', 'name', 'description', 'cover', 'author', 'tags', 'examples', 'config', 'allow_copy']
+       FROM updated
+     )
+     SELECT ${ITEM_COLS} FROM updated`,
     [
       id,
-      ownerUserId,
+      actorUserId,
+      actorTeamId,
+      expectedVersion,
       input.type,
       input.scope,
-      input.teamId ?? null,
       input.status,
       input.name,
       input.description,
@@ -216,7 +315,288 @@ export async function updateAiStoreItem(
       input.tags ?? [],
       input.examples ?? [],
       JSON.stringify(input.config ?? {}),
+      input.allowCopy ?? false,
     ]
+  );
+  return rows[0];
+}
+
+export interface CopyAiStoreItemResult {
+  item: AiStoreItem;
+  board?: Board;
+  idempotent: boolean;
+}
+
+export async function getUsableSubscribedAiStoreItem(params: {
+  itemId: number;
+  userId: number;
+  consumerTeamId: number;
+}): Promise<{ item?: AiStoreItem; reason?: "forbidden" | "unavailable" }> {
+  const subscription = await getAiStoreSubscription({
+    itemId: params.itemId,
+    subscriberUserId: params.userId,
+    consumerTeamId: params.consumerTeamId,
+  });
+  if (!subscription) return { reason: "forbidden" };
+  const item = await getAiStoreItemForSubscription(params.itemId);
+  if (!item || item.archived_at != null) return { reason: "unavailable" };
+  const available = item.status === "published" || (item.scope === "platform" && item.status === "approved");
+  return available ? { item } : { reason: "unavailable" };
+}
+
+export async function listUsableSubscribedAiStoreItems(
+  userId: number,
+  consumerTeamId: number,
+): Promise<AiStoreItem[]> {
+  const { listSubscribedAiStoreItemIds } = await import("./aiStoreSubscriptions");
+  const ids = await listSubscribedAiStoreItemIds({ subscriberUserId: userId, consumerTeamId });
+  const items = await getAiStoreItems(ids);
+  return items.filter(
+    (item) => item.status === "published" || (item.scope === "platform" && item.status === "approved"),
+  );
+}
+
+export async function listAiStoreAgentRecommendations(
+  skillId: number,
+  userId: number,
+  consumerTeamId: number,
+): Promise<AiStoreItem[]> {
+  const available = await listUsableSubscribedAiStoreItems(userId, consumerTeamId);
+  return available.filter((item) =>
+    item.type === "agent" &&
+    Array.isArray(item.config.relatedSkillIds) &&
+    item.config.relatedSkillIds.some((id) => Number(id) === Number(skillId)),
+  );
+}
+
+export async function instantiateAiStoreTemplate(params: {
+  source: AiStoreItem;
+  userId: number;
+  consumerTeamId: number;
+  idempotencyKey: string;
+}): Promise<{ board: Board; idempotent: boolean }> {
+  const templateBoardId = Number(params.source.config.templateBoardId);
+  if (!Number.isFinite(templateBoardId)) throw new Error("AI_STORE_TEMPLATE_BOARD_NOT_FOUND");
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))", [
+      `${params.source.id}:${params.consumerTeamId}:${params.userId}`,
+      params.idempotencyKey,
+    ]);
+    const previous = await client.query<{ board_id: number }>(
+      `SELECT board_id FROM ai_store_template_instances
+       WHERE template_item_id = $1 AND consumer_team_id = $2 AND user_id = $3 AND idempotency_key = $4`,
+      [params.source.id, params.consumerTeamId, params.userId, params.idempotencyKey],
+    );
+    if (previous.rows[0]) {
+      const board = (await client.query<Board>("SELECT * FROM boards WHERE id = $1", [previous.rows[0].board_id])).rows[0]!;
+      await client.query("COMMIT");
+      return { board, idempotent: true };
+    }
+    const sourceBoard = (await client.query<Board>(
+      "SELECT * FROM boards WHERE id = $1 AND team_id = $2 AND owner_user_id = $3",
+      [templateBoardId, params.source.origin_team_id, params.source.owner_user_id],
+    )).rows[0];
+    if (!sourceBoard) throw new Error("AI_STORE_TEMPLATE_BOARD_NOT_FOUND");
+    const roomId = (await client.query<{ id: number }>(
+      `INSERT INTO rooms (name, owner_user_id, team_id, visibility, public_id)
+       VALUES ($1, $2, $3, 'team', $4) RETURNING id`,
+      [`${params.source.name} Workspace`, params.userId, params.consumerTeamId, generateId("rm")],
+    )).rows[0]!.id;
+    await client.query("INSERT INTO room_members (room_id, user_id, role) VALUES ($1, $2, 'owner')", [roomId, params.userId]);
+    const board = (await client.query<Board>(
+      `INSERT INTO boards
+         (room_id, team_id, name, cover, category, description, visibility, owner_user_id, settings, tags, public_id)
+       VALUES ($1, $2, $3, $4, $5, $6, 'room', $7, $8::jsonb, $9, $10) RETURNING *`,
+      [roomId, params.consumerTeamId, sourceBoard.name, sourceBoard.cover, sourceBoard.category,
+        sourceBoard.description, params.userId, JSON.stringify(sourceBoard.settings ?? {}), sourceBoard.tags ?? [], generateId("brd")],
+    )).rows[0]!;
+    const sourceItems = await client.query<{
+      type: string; x: number; y: number; w: number; h: number; text: string; color: string | null;
+    }>("SELECT type, x, y, w, h, text, color FROM board_items WHERE board_id = $1", [templateBoardId]);
+    for (const item of sourceItems.rows) {
+      await client.query(
+        `INSERT INTO board_items (id, room_id, board_id, type, x, y, w, h, text, color)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [randomUUID(), roomId, board.id, item.type, item.x, item.y, item.w, item.h, item.text, item.color],
+      );
+    }
+    await client.query(
+      `INSERT INTO ai_store_template_instances
+         (template_item_id, consumer_team_id, user_id, idempotency_key, board_id)
+       VALUES ($1,$2,$3,$4,$5)`,
+      [params.source.id, params.consumerTeamId, params.userId, params.idempotencyKey, board.id],
+    );
+    await client.query("COMMIT");
+    return { board, idempotent: false };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+/** Create an independent private draft in the receiving Team, including Template canvas data. */
+export async function copyAiStoreItem(
+  source: AiStoreItem,
+  userId: number,
+  consumerTeamId: number,
+  author: string,
+  idempotencyKey?: string,
+): Promise<CopyAiStoreItemResult> {
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+
+    if (idempotencyKey) {
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))", [
+        `${source.id}:${consumerTeamId}:${userId}`,
+        idempotencyKey,
+      ]);
+      const previous = await client.query<{ copied_item_id: number; copied_board_id: number | null }>(
+        `SELECT copied_item_id, copied_board_id FROM ai_store_copy_requests
+         WHERE source_item_id = $1 AND consumer_team_id = $2 AND user_id = $3 AND idempotency_key = $4`,
+        [source.id, consumerTeamId, userId, idempotencyKey],
+      );
+      if (previous.rows[0]) {
+        const existing = await client.query<AiStoreItem>(
+          `SELECT ${ITEM_COLS} FROM ai_store_items WHERE id = $1`,
+          [previous.rows[0].copied_item_id],
+        );
+        const board = previous.rows[0].copied_board_id == null
+          ? undefined
+          : (await client.query<Board>("SELECT * FROM boards WHERE id = $1", [previous.rows[0].copied_board_id])).rows[0];
+        await client.query("COMMIT");
+        return { item: existing.rows[0]!, board, idempotent: true };
+      }
+    }
+
+    let copiedBoard: Board | undefined;
+    const copiedConfig = { ...source.config };
+    const templateBoardId = source.type === "template" ? Number(source.config.templateBoardId) : NaN;
+    if (Number.isFinite(templateBoardId)) {
+      const sourceBoardResult = await client.query<Board>(
+        `SELECT * FROM boards
+         WHERE id = $1 AND team_id = $2 AND owner_user_id = $3`,
+        [templateBoardId, source.origin_team_id, source.owner_user_id],
+      );
+      const sourceBoard = sourceBoardResult.rows[0];
+      if (!sourceBoard) throw new Error("AI_STORE_TEMPLATE_BOARD_NOT_FOUND");
+
+      const roomResult = await client.query<{ id: number }>(
+        `INSERT INTO rooms (name, owner_user_id, team_id, visibility, public_id)
+         VALUES ($1, $2, $3, 'team', $4) RETURNING id`,
+        [`${source.name} Copy`, userId, consumerTeamId, generateId("rm")],
+      );
+      const roomId = roomResult.rows[0]!.id;
+      await client.query(
+        "INSERT INTO room_members (room_id, user_id, role) VALUES ($1, $2, 'owner')",
+        [roomId, userId],
+      );
+      const boardResult = await client.query<Board>(
+        `INSERT INTO boards
+           (room_id, team_id, name, cover, category, description, visibility, owner_user_id, settings, tags, public_id)
+         VALUES ($1, $2, $3, $4, $5, $6, 'room', $7, $8::jsonb, $9, $10)
+         RETURNING *`,
+        [
+          roomId,
+          consumerTeamId,
+          `${sourceBoard.name} Copy`,
+          sourceBoard.cover,
+          sourceBoard.category,
+          sourceBoard.description,
+          userId,
+          JSON.stringify(sourceBoard.settings ?? {}),
+          sourceBoard.tags ?? [],
+          generateId("brd"),
+        ],
+      );
+      copiedBoard = boardResult.rows[0]!;
+      copiedConfig.templateBoardId = copiedBoard.id;
+
+      const sourceItems = await client.query<{
+        type: string; x: number; y: number; w: number; h: number; text: string; color: string | null;
+      }>("SELECT type, x, y, w, h, text, color FROM board_items WHERE board_id = $1", [templateBoardId]);
+      for (const item of sourceItems.rows) {
+        await client.query(
+          `INSERT INTO board_items (id, room_id, board_id, type, x, y, w, h, text, color)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [randomUUID(), roomId, copiedBoard.id, item.type, item.x, item.y, item.w, item.h, item.text, item.color],
+        );
+      }
+    }
+
+    const copiedResult = await client.query<AiStoreItem>(
+      `INSERT INTO ai_store_items
+         (type, scope, owner_user_id, origin_team_id, status, name, description, cover, author,
+          tags, examples, config, allow_copy, copied_from_item_id, copied_from_version)
+       VALUES ($1, 'personal', $2, $3, 'draft', $4, $5, $6, $7, $8, $9, $10::jsonb, false, $11, $12)
+       RETURNING ${ITEM_COLS}`,
+      [
+        source.type, userId, consumerTeamId, source.name, source.description, source.cover, author,
+        source.tags, source.examples, JSON.stringify(copiedConfig), source.id, source.version,
+      ],
+    );
+    const copiedItem = copiedResult.rows[0]!;
+
+    if (idempotencyKey) {
+      await client.query(
+        `INSERT INTO ai_store_copy_requests
+           (source_item_id, consumer_team_id, user_id, idempotency_key, copied_item_id, copied_board_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [source.id, consumerTeamId, userId, idempotencyKey, copiedItem.id, copiedBoard?.id ?? null],
+      );
+    }
+    await client.query("COMMIT");
+    return { item: copiedItem, board: copiedBoard, idempotent: false };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+/** 订阅列表专用：保留已归档资源的最小元数据，以便显示“不可用”而不是静默消失。 */
+export async function getAiStoreItemForSubscription(id: number): Promise<AiStoreItem | undefined> {
+  const rows = await query<AiStoreItem>(
+    `SELECT ${ITEM_COLS} FROM ai_store_items
+     WHERE id = $1 AND migration_quarantined_at IS NULL`,
+    [id]
+  );
+  return rows[0];
+}
+
+/** 仅来源 Team 中的 owner 可软归档；订阅和审计记录保留。 */
+export async function archiveAiStoreItem(
+  id: number,
+  ownerUserId: number,
+  originTeamId: number
+): Promise<AiStoreItem | undefined> {
+  const rows = await query<AiStoreItem>(
+    `WITH archived AS (
+       UPDATE ai_store_items
+       SET archived_at = now(),
+           share_enabled = false,
+           version = version + 1,
+           updated_at = now()
+       WHERE id = $1
+         AND owner_user_id = $2
+         AND origin_team_id = $3
+         AND migration_quarantined_at IS NULL
+         AND archived_at IS NULL
+       RETURNING *
+     ),
+     audited AS (
+       INSERT INTO ai_store_revision_audit
+         (item_id, version, action, actor_user_id, actor_team_id, changed_fields)
+       SELECT id, version, 'archived', $2, $3, ARRAY['archived_at', 'share_enabled']
+       FROM archived
+     )
+     SELECT ${ITEM_COLS} FROM archived`,
+    [id, ownerUserId, originTeamId]
   );
   return rows[0];
 }
@@ -233,8 +613,23 @@ export function isAiStoreItemVisible(
   teamId: number | null | undefined
 ): boolean {
   if (item.scope === "platform") return item.status === "published" || item.status === "approved";
-  if (item.scope === "team") return item.status === "published" && teamId != null && item.team_id === teamId;
-  if (item.scope === "personal") return userId != null && item.owner_user_id === userId;
+  if (item.scope === "team") {
+    return (
+      item.status === "published" &&
+      teamId != null &&
+      item.team_id != null &&
+      String(item.team_id) === String(teamId)
+    );
+  }
+  if (item.scope === "personal") {
+    return (
+      userId != null &&
+      teamId != null &&
+      item.owner_user_id === userId &&
+      item.team_id != null &&
+      String(item.team_id) === String(teamId)
+    );
+  }
   return false;
 }
 
@@ -268,7 +663,11 @@ export async function listPlatformReviewItems(
   const page = Math.max(1, opts.page ?? 1);
   const pageSize = Math.min(50, Math.max(1, opts.pageSize ?? 20));
 
-  const conds: string[] = ["scope = 'platform'"];
+  const conds: string[] = [
+    "scope = 'platform'",
+    "migration_quarantined_at IS NULL",
+    "archived_at IS NULL",
+  ];
   const params: unknown[] = [];
 
   if (opts.status === "pending" || opts.status === "approved") {
@@ -319,6 +718,8 @@ export async function setAiStoreItemReviewStatus(
     `UPDATE ai_store_items
      SET status = $3, updated_at = now()
      WHERE id = $1 AND scope = 'platform' AND status = $2
+       AND migration_quarantined_at IS NULL
+       AND archived_at IS NULL
      RETURNING ${ITEM_COLS}`,
     [id, fromStatus, toStatus]
   );
@@ -362,7 +763,12 @@ export async function listFeaturedCandidateItems(
   const page = Math.max(1, opts.page ?? 1);
   const pageSize = Math.min(50, Math.max(1, opts.pageSize ?? 20));
 
-  const conds: string[] = ["scope = 'platform'", "status = 'approved'"];
+  const conds: string[] = [
+    "scope = 'platform'",
+    "status = 'approved'",
+    "migration_quarantined_at IS NULL",
+    "archived_at IS NULL",
+  ];
   const params: unknown[] = [];
 
   if (typeof opts.featured === "boolean") {
@@ -411,6 +817,8 @@ export async function setAiStoreItemFeatured(
     `UPDATE ai_store_items
      SET featured = $2, updated_at = now()
      WHERE id = $1 AND scope = 'platform' AND status = 'approved'
+       AND migration_quarantined_at IS NULL
+       AND archived_at IS NULL
      RETURNING ${ITEM_COLS}`,
     [id, featured]
   );
@@ -420,26 +828,39 @@ export async function setAiStoreItemFeatured(
 }
 
 // ---------------------------------------------------------------------------
-// 喜欢/收藏（P11 F04，uc-ai-store-004）：ai_store_favorites 记录 (user_id, item_id)，
+// 喜欢/收藏（P11 F04，uc-ai-store-004）：ai_store_favorites 记录
+// (user_id, consumer_team_id, item_id)，
 // ai_store_items.likes 是聚合计数缓存；toggle 时同步更新计数，避免和明细表漂移。
 // ---------------------------------------------------------------------------
 
 /** 某用户是否已喜欢/收藏该项目。 */
-export async function isAiStoreItemFavorited(itemId: number, userId: number): Promise<boolean> {
+export async function isAiStoreItemFavorited(
+  itemId: number,
+  userId: number,
+  consumerTeamId: number,
+): Promise<boolean> {
   const rows = await query<{ one: number }>(
-    `SELECT 1 AS one FROM ai_store_favorites WHERE item_id = $1 AND user_id = $2`,
-    [itemId, userId]
+    `SELECT 1 AS one
+     FROM ai_store_favorites
+     WHERE item_id = $1 AND user_id = $2 AND consumer_team_id = $3`,
+    [itemId, userId, consumerTeamId]
   );
   return rows.length > 0;
 }
 
 /** 该用户在给定项目集合中已喜欢的 id 集合（供列表页批量标注 liked 状态）。 */
-export async function listFavoritedAiStoreItemIds(itemIds: number[], userId: number): Promise<Set<number>> {
+export async function listFavoritedAiStoreItemIds(
+  itemIds: number[],
+  userId: number,
+  consumerTeamId: number,
+): Promise<Set<number>> {
   if (itemIds.length === 0) return new Set();
   // item_id 是 bigint，pg 默认把 INT8 当字符串返回；显式 ::int 转换，保证 Set<number> 与类型注解一致。
   const rows = await query<{ item_id: number }>(
-    `SELECT item_id::int AS item_id FROM ai_store_favorites WHERE user_id = $1 AND item_id = ANY($2)`,
-    [userId, itemIds]
+    `SELECT item_id::int AS item_id
+     FROM ai_store_favorites
+     WHERE user_id = $1 AND consumer_team_id = $2 AND item_id = ANY($3)`,
+    [userId, consumerTeamId, itemIds]
   );
   return new Set(rows.map((r) => r.item_id));
 }
@@ -462,38 +883,53 @@ export interface ToggleAiStoreFavoriteResult {
  */
 export async function toggleAiStoreFavorite(
   itemId: number,
-  userId: number
+  userId: number,
+  consumerTeamId: number,
 ): Promise<ToggleAiStoreFavoriteResult | undefined> {
   const existing = await getAiStoreItem(itemId);
   if (!existing) return undefined;
 
-  const already = await isAiStoreItemFavorited(itemId, userId);
+  const already = await isAiStoreItemFavorited(itemId, userId, consumerTeamId);
   if (already) {
     const rows = await query<{ likes: number }>(
       `WITH del AS (
-         DELETE FROM ai_store_favorites WHERE item_id = $1 AND user_id = $2 RETURNING 1
+         DELETE FROM ai_store_favorites
+         WHERE item_id = $1 AND user_id = $2 AND consumer_team_id = $3
+         RETURNING 1
        )
        UPDATE ai_store_items
           SET likes = GREATEST(0, likes - (SELECT count(*) FROM del))
         WHERE id = $1
         RETURNING likes`,
-      [itemId, userId]
+      [itemId, userId, consumerTeamId]
     );
     return { favorited: false, likes: rows[0]?.likes ?? 0 };
   }
 
   const rows = await query<{ likes: number }>(
     `WITH ins AS (
-       INSERT INTO ai_store_favorites (item_id, user_id) VALUES ($1, $2)
+       INSERT INTO ai_store_favorites (item_id, user_id, consumer_team_id) VALUES ($1, $2, $3)
        ON CONFLICT DO NOTHING RETURNING 1
      )
      UPDATE ai_store_items
         SET likes = likes + (SELECT count(*) FROM ins)
       WHERE id = $1
       RETURNING likes`,
-    [itemId, userId]
+    [itemId, userId, consumerTeamId]
   );
   return { favorited: true, likes: rows[0]?.likes ?? 0 };
+}
+
+/** Record one successful, authorized detail view without affecting content ordering. */
+export async function incrementAiStoreItemViews(id: number): Promise<AiStoreItem | undefined> {
+  const rows = await query<AiStoreItem>(
+    `UPDATE ai_store_items
+     SET views = views + 1
+     WHERE id = $1 AND migration_quarantined_at IS NULL AND archived_at IS NULL
+     RETURNING ${ITEM_COLS}`,
+    [id],
+  );
+  return rows[0];
 }
 
 // ---------------------------------------------------------------------------
@@ -512,6 +948,8 @@ export interface AiStoreItemShare {
 
 export interface AiStoreShareGrantee {
   user_id: number;
+  consumer_team_id: number;
+  consumer_team_name: string;
   email: string;
   display_name: string;
   granted_at: string;
@@ -526,7 +964,10 @@ export function newAiStoreShareToken(): string {
 /** 取某项目当前分享状态；不存在返回 undefined。不做鉴权，调用方负责校验属主。 */
 export async function getAiStoreItemShare(itemId: number): Promise<AiStoreItemShare | undefined> {
   const rows = await query<AiStoreItemShare>(
-    `SELECT ${SHARE_COLS} FROM ai_store_items WHERE id = $1`,
+    `SELECT ${SHARE_COLS} FROM ai_store_items
+     WHERE id = $1
+       AND migration_quarantined_at IS NULL
+       AND archived_at IS NULL`,
     [itemId]
   );
   return rows[0];
@@ -544,7 +985,7 @@ export async function enableAiStoreItemShare(itemId: number): Promise<AiStoreIte
   const rows = await query<AiStoreItemShare>(
     `UPDATE ai_store_items
      SET share_token = $2, share_enabled = true, share_updated_at = now()
-     WHERE id = $1
+     WHERE id = $1 AND archived_at IS NULL
      RETURNING ${SHARE_COLS}`,
     [itemId, token]
   );
@@ -559,7 +1000,7 @@ export async function disableAiStoreItemShare(itemId: number): Promise<AiStoreIt
   const rows = await query<AiStoreItemShare>(
     `UPDATE ai_store_items
      SET share_enabled = false, share_updated_at = now()
-     WHERE id = $1
+     WHERE id = $1 AND archived_at IS NULL
      RETURNING ${SHARE_COLS}`,
     [itemId]
   );
@@ -574,31 +1015,40 @@ export async function disableAiStoreItemShare(itemId: number): Promise<AiStoreIt
 export async function redeemAiStoreItemShare(
   itemId: number,
   shareToken: string,
-  userId: number
+  userId: number,
+  consumerTeamId: number,
 ): Promise<AiStoreItem | undefined> {
   if (!shareToken) return undefined;
   const rows = await query<AiStoreItem>(
     `SELECT ${ITEM_COLS} FROM ai_store_items
-     WHERE id = $1 AND share_token = $2 AND share_enabled = true`,
+     WHERE id = $1 AND share_token = $2 AND share_enabled = true
+       AND migration_quarantined_at IS NULL
+       AND archived_at IS NULL`,
     [itemId, shareToken]
   );
   const item = rows[0];
   if (!item) return undefined;
 
   await query(
-    `INSERT INTO ai_store_item_grants (item_id, user_id, granted_via_token)
-     VALUES ($1, $2, $3)
-     ON CONFLICT (item_id, user_id) DO NOTHING`,
-    [itemId, userId, shareToken]
+    `INSERT INTO ai_store_item_grants (item_id, user_id, consumer_team_id, granted_via_token)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (item_id, user_id, consumer_team_id) DO NOTHING`,
+    [itemId, userId, consumerTeamId, shareToken]
   );
   return item;
 }
 
 /** 某用户是否已被授权管理该项目（供路由做 grantee 权限判定 + 卡片“已授权”标识）。 */
-export async function isAiStoreItemGrantee(itemId: number, userId: number): Promise<boolean> {
+export async function isAiStoreItemGrantee(
+  itemId: number,
+  userId: number,
+  consumerTeamId: number,
+): Promise<boolean> {
   const rows = await query<{ one: number }>(
-    `SELECT 1 AS one FROM ai_store_item_grants WHERE item_id = $1 AND user_id = $2`,
-    [itemId, userId]
+    `SELECT 1 AS one
+     FROM ai_store_item_grants
+     WHERE item_id = $1 AND user_id = $2 AND consumer_team_id = $3`,
+    [itemId, userId, consumerTeamId]
   );
   return rows.length > 0;
 }
@@ -614,18 +1064,22 @@ export async function canAccessAiStoreItem(
   teamId: number | null | undefined
 ): Promise<boolean> {
   if (isAiStoreItemVisible(item, userId, teamId)) return true;
-  if (item.scope !== "personal" || userId == null) return false;
-  return isAiStoreItemGrantee(item.id, userId);
+  if (item.scope !== "personal" || userId == null || teamId == null) return false;
+  return isAiStoreItemGrantee(item.id, userId, teamId);
 }
 
 /** 已授权用户列表（供分享管理弹窗展示，按授权时间正序）。 */
 export async function listAiStoreItemGrantees(itemId: number): Promise<AiStoreShareGrantee[]> {
   return query<AiStoreShareGrantee>(
-    `SELECT u.id AS user_id, u.email,
+    `SELECT u.id AS user_id,
+            g.consumer_team_id,
+            t.name AS consumer_team_name,
+            u.email,
             COALESCE(NULLIF(TRIM(u.first_name || ' ' || u.last_name), ''), u.email) AS display_name,
             g.created_at AS granted_at
      FROM ai_store_item_grants g
      JOIN users u ON u.id = g.user_id
+     JOIN teams t ON t.id = g.consumer_team_id
      WHERE g.item_id = $1
      ORDER BY g.created_at ASC`,
     [itemId]
@@ -633,23 +1087,37 @@ export async function listAiStoreItemGrantees(itemId: number): Promise<AiStoreSh
 }
 
 /** 拥有者移除某个已授权用户；返回是否真的删除了一行（供路由判定 404 vs 200）。 */
-export async function removeAiStoreItemGrantee(itemId: number, userId: number): Promise<boolean> {
+export async function removeAiStoreItemGrantee(
+  itemId: number,
+  userId: number,
+  consumerTeamId: number,
+): Promise<boolean> {
   const rows = await query<{ one: number }>(
-    `DELETE FROM ai_store_item_grants WHERE item_id = $1 AND user_id = $2 RETURNING 1`,
-    [itemId, userId]
+    `DELETE FROM ai_store_item_grants
+     WHERE item_id = $1 AND user_id = $2 AND consumer_team_id = $3
+     RETURNING 1`,
+    [itemId, userId, consumerTeamId]
   );
   return rows.length > 0;
 }
 
 /** 授权协作者视角的“Authorized”列表：自己被授权管理、且非本人拥有的项目。 */
-export async function listAuthorizedAiStoreItems(userId: number): Promise<AiStoreItem[]> {
+export async function listAuthorizedAiStoreItems(
+  userId: number,
+  consumerTeamId: number,
+): Promise<AiStoreItem[]> {
   return query<AiStoreItem>(
-    `SELECT ${ITEM_COLS.split(", ").map((c) => `it.${c}`).join(", ")}
+    `SELECT ${ITEM_COLS.split(", ").map((c) => `it.${c}`).join(", ")},
+            origin_team.name AS origin_team_name
      FROM ai_store_items it
      JOIN ai_store_item_grants g ON g.item_id = it.id
-     WHERE g.user_id = $1 AND it.owner_user_id IS DISTINCT FROM $1
+     JOIN teams origin_team ON origin_team.id = it.origin_team_id
+     WHERE g.user_id = $1 AND g.consumer_team_id = $2
+       AND it.owner_user_id IS DISTINCT FROM $1
+       AND it.migration_quarantined_at IS NULL
+       AND it.archived_at IS NULL
      ORDER BY g.created_at DESC`,
-    [userId]
+    [userId, consumerTeamId]
   );
 }
 
@@ -668,7 +1136,9 @@ export type TeamAiStoreReviewAction = "approve" | "reject" | "withdraw";
 export async function listTeamPendingAiStoreItems(teamId: number): Promise<AiStoreItem[]> {
   return query<AiStoreItem>(
     `SELECT ${ITEM_COLS} FROM ai_store_items
-     WHERE scope = 'team' AND team_id = $1 AND status = 'pending'
+     WHERE scope = 'team' AND origin_team_id = $1 AND status = 'pending'
+       AND migration_quarantined_at IS NULL
+       AND archived_at IS NULL
      ORDER BY updated_at ASC, id ASC`,
     [teamId]
   );
@@ -678,7 +1148,9 @@ export async function listTeamPendingAiStoreItems(teamId: number): Promise<AiSto
 export async function listTeamApprovedAiStoreItems(teamId: number): Promise<AiStoreItem[]> {
   return query<AiStoreItem>(
     `SELECT ${ITEM_COLS} FROM ai_store_items
-     WHERE scope = 'team' AND team_id = $1 AND status = 'published'
+     WHERE scope = 'team' AND origin_team_id = $1 AND status = 'published'
+       AND migration_quarantined_at IS NULL
+       AND archived_at IS NULL
      ORDER BY featured DESC, updated_at DESC, id DESC`,
     [teamId]
   );
@@ -713,7 +1185,9 @@ export async function reviewTeamAiStoreItem(
   const rows = await query<AiStoreItem>(
     `UPDATE ai_store_items
      SET status = $4, updated_at = now()
-     WHERE id = $1 AND scope = 'team' AND team_id = $2 AND status = ANY($3)
+     WHERE id = $1 AND scope = 'team' AND origin_team_id = $2 AND status = ANY($3)
+       AND migration_quarantined_at IS NULL
+       AND archived_at IS NULL
      RETURNING ${ITEM_COLS}`,
     [itemId, teamId, fromStatuses, toStatus]
   );
@@ -733,7 +1207,9 @@ export async function setTeamAiStoreItemFeatured(
   const rows = await query<AiStoreItem>(
     `UPDATE ai_store_items
      SET featured = $3, updated_at = now()
-     WHERE id = $1 AND scope = 'team' AND team_id = $2 AND status = 'published'
+     WHERE id = $1 AND scope = 'team' AND origin_team_id = $2 AND status = 'published'
+       AND migration_quarantined_at IS NULL
+       AND archived_at IS NULL
      RETURNING ${ITEM_COLS}`,
     [itemId, teamId, featured]
   );

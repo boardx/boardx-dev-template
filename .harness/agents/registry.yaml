@@ -18,6 +18,16 @@
 version: 1
 
 agents:
+  # 门户自助发 token 的 broker（ADR-011 P2）：kind=token-broker 只有一个权力——
+  # 调 coord-service 的 mint 端点；不 claim、不派工、不 andon。它的 bearer 是
+  # devportal 的 Pages secret（COORD_BROKER_TOKEN），不属于任何人类会话。
+  - id: portal-broker
+    active: true
+    kind: token-broker
+    model: service
+    areas: [portal]
+    responsibilities:
+      - devportal 自助 token 领取/轮换的唯一服务端入口（mint 经它代调）
   # ── 主 Agent：编排者（唯一）────────────────────────────────────────────────
   - id: coord-main
     active: true
@@ -50,7 +60,7 @@ agents:
   # （不可自行 merge——避免跨模块热点文件的合并冲突失去唯一把关人）。
   - id: coord-room
     active: true
-    owner: usamshen
+    owner: usersyj  # 接管：usamshen → usersyj（#621，人类 2026-07-18 批准）
     kind: module-coordinator
     model: opus-4.8
     areas: [room, room-files, room-survey, room-chat, invite, share]
@@ -76,12 +86,19 @@ agents:
     model: opus-4.8
     areas: [ai-core, deep-research, voice, ai-settings, attachments, message-actions, knowledge-base]
     reports_to: coord-main
+  - id: coord-ai-store
+    active: true
+    owner: usersyj  # 新建：ai-store 从 coord-store-admin 拆出，专职（#662，人类 2026-07-18 批准）
+    kind: module-coordinator
+    model: opus-4.8
+    areas: [ai-store]
+    reports_to: coord-main
   - id: coord-store-admin
     active: true
     owner: usamshen
     kind: module-coordinator
     model: opus-4.8
-    areas: [ai-store, admin]
+    areas: [admin]  # ai-store 已拆给 coord-ai-store（#662）；此身份现只管 admin
     reports_to: coord-main
   - id: coord-survey
     active: true

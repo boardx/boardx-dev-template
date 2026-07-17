@@ -51,7 +51,12 @@ export async function getRoom(roomId: number): Promise<Room | undefined> {
 export async function resolveRoomId(idParam: string): Promise<number> {
   if (isValidPublicId(idParam, "rm")) {
     const rows = await query<{ id: number }>("SELECT id FROM rooms WHERE public_id = $1", [idParam]);
-    return rows[0]?.id ?? -1;
+    // pg 的 bigint 主键运行时按字符串返回（这里的 TS 类型 { id: number } 只是编译期
+    // 断言，不改变运行时类型）——不显式 Number() 归一化的话，调用方任何 `=== 数字` /
+    // `Number(x) === roomId` 的比较都会因为「数字 vs 数字字符串」永远为 false，
+    // 导致所有走 public_id 路径解析出的房间在下游查找里都表现为"不存在"（真实回归，
+    // 见 room-chat 详情接口 404 排查）。
+    return rows[0] ? Number(rows[0].id) : -1;
   }
   const n = Number(idParam);
   return Number.isFinite(n) ? n : -1;

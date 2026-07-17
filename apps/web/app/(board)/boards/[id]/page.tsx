@@ -16,6 +16,7 @@ import { BoardStatistics } from "@/components/board/board-statistics";
 import { SlidesPanel } from "@/components/board/slides-panel";
 import { BoardCanvas, type BoardCanvasHandle } from "@/components/board/board-canvas";
 import { LocalWorkspace } from "@/components/board/local-workspace";
+import { VoiceInputControl } from "@/components/voice-input";
 
 interface Board {
   id: number | string;
@@ -481,6 +482,12 @@ export default function BoardPage() {
               >
                 <Redo2 className="h-4 w-4" />
               </Button>
+              {/* p7:F10（uc-board-header-006）：语音转录到白板。复用 AVA 同款
+                  VoiceInputControl（components/voice-input.tsx）——录音/波形/权限拒绝/
+                  转写中/失败态全部现成，只需把转写结果接到 addVoiceText。 */}
+              <VoiceInputControl
+                onTranscribed={(text) => canvasRef.current?.addVoiceText(text)}
+              />
             </>
           )}
           {/* 实时协作（uc-canvas-005）：在线成员头像 + 真实同步状态。

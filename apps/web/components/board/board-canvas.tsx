@@ -471,6 +471,10 @@ function mergeRemoteItems(
 export interface BoardCanvasHandle {
   undo: () => void;
   redo: () => void;
+  // p7:F10（uc-board-header-006）：语音转录到白板——Header 的麦克风录制+转写完成后，
+  // 把识别文本作为文本组件写入画布并选中。复用 addText 的落库/哨兵/选中管线，只是
+  // 文案来自转写结果而非 DEFAULT_TEXT。
+  addVoiceText: (text: string) => void;
 }
 
 export const BoardCanvas = forwardRef<
@@ -1354,6 +1358,51 @@ export const BoardCanvas = forwardRef<
     upsertItem(docRef.current, item.id, { color: TEXT_MARK });
     const textItem: Item = { ...item, color: TEXT_MARK };
     recordOp({ kind: "add", items: [textItem] });
+    await load();
+    setSelected(new Set([item.id]));
+  }
+
+  // p7:F10（uc-board-header-006 主流程 4/6）：语音转录到白板——Header 麦克风录制 +
+  // 转写（复用 AVA 的 VoiceInputControl + /api/ava/transcribe，STT 能力见 p18:F06/F07）
+  // 完成后回填画布。落库/哨兵/选中管线与 addText 完全一致，只有两点不同：文案是转写
+  // 结果（而非 DEFAULT_TEXT）；落点固定在画布中央附近（UC 明确写"画布中央附近的文本
+  // 组件"，不用 addText 的左上角堆叠位——语音转录不是靠 Board Menu 连续点出来的，没有
+  // "上一个在哪就往下堆"的语境，中心点更符合"转录结果应该显眼"的直觉）。
+  async function addVoiceText(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed) return; // 转写为空（识别失败/静音）不建组件，避免留下空文本垃圾
+    setActiveTool("text");
+    setOpenPanel(null);
+    const x = 400;
+    const y = 300 + placeN.current++ * 40; // 多次转录避免完全重叠，仍聚在中央附近
+    const res = await fetch(`/api/boards/${boardId}/items`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "note", x, y, text: trimmed }),
+    });
+    if (res.status !== 201) return;
+    const { item } = (await res.json()) as { item: Item };
+    await fetch(`/api/board-items/${item.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ color: TEXT_MARK }),
+    });
+    // 强写完整字段（不只 color）：真实回归排查发现，只写 color 时偶发被并发的远端
+    // sync-response 用"POST 落库但还没等到这次 PATCH"的旧快照覆盖回 collab doc——
+    // 旧快照本身 text 也是对的（POST 已经把 trimmed 文本落库），但这里如果只强写
+    // color，一旦真的被旧快照覆盖过，text 字段就没有第二次机会被纠正回来。全字段
+    // 强写像 connector 创建那样一次到位，不留这个缝。
+    const finalItem: Item = { ...item, color: TEXT_MARK };
+    upsertItem(docRef.current, item.id, {
+      x: finalItem.x,
+      y: finalItem.y,
+      w: finalItem.w,
+      h: finalItem.h,
+      text: finalItem.text,
+      type: finalItem.type,
+      color: TEXT_MARK,
+    });
+    recordOp({ kind: "add", items: [finalItem] });
     await load();
     setSelected(new Set([item.id]));
   }
@@ -2291,7 +2340,11 @@ export const BoardCanvas = forwardRef<
 
   // board-shell reskin（issue #468）：撤销/重做按钮在页面 header（page.tsx）渲染，
   // 经 ref 句柄调进来；可用态随 historyTick 变化回传（初始也发一次，header 首屏即禁用态）。
-  useImperativeHandle(ref, () => ({ undo: () => void undo(), redo: () => void redo() }), [undo, redo]);
+  useImperativeHandle(
+    ref,
+    () => ({ undo: () => void undo(), redo: () => void redo(), addVoiceText: (text: string) => void addVoiceText(text) }),
+    [undo, redo, addVoiceText],
+  );
   useEffect(() => {
     onHistoryChange?.({ canUndo, canRedo });
     // eslint-disable-next-line react-hooks/exhaustive-deps

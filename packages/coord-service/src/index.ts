@@ -2,7 +2,10 @@ import { Router } from "./router";
 import { claimResource, heartbeatRoute, queryClaims, releaseRoute } from "./routes/claims";
 import { submitVerdict } from "./routes/verdicts";
 import { submitEvent } from "./routes/events";
+import { dispatchTask, listTasks, ackTask, doneTask, recallTask } from "./routes/tasks";
+import { mintAgentToken } from "./routes/mint";
 import { publicStatus } from "./routes/status";
+import { serverTime } from "./routes/time";
 import { sweepStaleClaims } from "./cron/sweeper";
 import { runProjector } from "./cron/projector";
 import type { Env } from "./db/types";
@@ -18,12 +21,19 @@ router.get("/", async () =>
       "Agent coordination authority (claims/heartbeats/leases) — see ADR-009 and packages/coord-service/OPERATIONS.md",
     endpoints: {
       "GET /status": "public read-only snapshot: active claims + recent events",
+      "GET /time": "authoritative clock: server UTC + current C-cycle boundaries (ADR-014)",
       "GET /claims?resource_id=&status=": "query claims (Bearer token)",
       "POST /claims": "atomic claim (Bearer token)",
       "POST /claims/:id/heartbeat": "refresh lease (Bearer token)",
       "POST /claims/:id/release": "release lease (Bearer token)",
       "POST /verdicts": "record review verdict (Bearer token)",
       "POST /events": "record a narrative event: cycle-plan | cycle-result | andon (Bearer token)",
+      "POST /tasks": "dispatch a task to an agent inbox (coordinator token) — #594",
+      "GET /tasks?assignee=&status=": "agent inbox (own token; coordinators may query anyone)",
+      "POST /tasks/:id/ack": "acknowledge a pending task (assignee token)",
+      "POST /tasks/:id/done": "mark own task done (assignee token)",
+      "POST /tasks/:id/recall": "recall a task (coordinator token)",
+      "POST /agents/:id/mint-token": "self-service token mint/rotate (token-broker only; ADR-011 P2)",
     },
   })
 );
@@ -33,7 +43,14 @@ router.post("/claims/:id/heartbeat", heartbeatRoute);
 router.post("/claims/:id/release", releaseRoute);
 router.post("/verdicts", submitVerdict);
 router.post("/events", submitEvent);
+router.post("/tasks", dispatchTask);
+router.get("/tasks", listTasks);
+router.post("/tasks/:id/ack", ackTask);
+router.post("/tasks/:id/done", doneTask);
+router.post("/tasks/:id/recall", recallTask);
+router.post("/agents/:id/mint-token", mintAgentToken);
 router.get("/status", publicStatus);
+router.get("/time", serverTime);
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {

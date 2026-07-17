@@ -41,6 +41,35 @@ phases/phase-p13-survey
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-18：React 会消费 `autoFocus` 而不保证保留 DOM `autofocus` 属性；共享 Dialog 如果在 effect 中
+  查询不到该属性并聚焦面板，会覆盖子按钮首焦点。需要用稳定的 `data-dialog-autofocus` 声明并做浏览器焦点断言
+  （出处：phase-p25 F15 / PR #693）。
+- 2026-07-15：报告编排器的章节名称、问题数、模块数和实时状态不能在导航、画布、设置三栏重复展示；
+  每栏只承担一种职责（章节切换 / 结果预览 / 参数编辑），全局操作只保留一个入口，动态约束反馈压缩成摘要
+  （出处：phase-p25 F12 / Product Design audit）。
+- 2026-07-15：同步 Survey 工作台不能只核对 API 路径是否存在，还要逐项核对页面实际调用的 HTTP method；
+  `report-categories` 仅有 GET/PATCH 时，UI 的 POST AI 分类会稳定返回 405。供应商降级必须继续经过主仓
+  `canManageSurveyScope` 权限并持久化默认结果（出处：phase-p25 F12 / issue #648）。
+- 2026-07-14：源仓最新版创建器不能按截图在简化页上补壳；应先比较源/目标主页面行数和直接依赖，
+  完整同步 UI 后再适配主仓 lint、Room 权限与已 passing 的 URL 恢复契约。详情接口和列表接口并发时，
+  工作流应保留独立详情状态，避免后写列表覆盖当前问卷（出处：phase-p25 F11 / PR #637）。
+- 2026-07-14：源 Survey 五步工作台仅用 React state 切换时刷新会回首页；主仓同步应把 survey id 和 step 投影到
+  URL，并用 Playwright 对每一步执行 reload，才能满足恢复契约（出处：phase-p25 F10 / PR #637）。
+- 2026-07-14：移植独立 Survey 源仓的数据契约时，`survey_templates` 的个人模板模型不能直接覆盖主仓团队模板模型；
+  应增量加入 `tags`/`category_plan`，并继续用 `canViewSurvey` + `canManageSurveyScope` 执行 team/room 边界
+  （出处：phase-p25 F09 / PR #637）。
+- 2026-07-14：用户要求同步“包括未提交内容”时，源事实必须核对 `git status` 和 `git stash list/show`；
+  只读取分支 HEAD 会漏掉 stash 中已完成但未提交的首页/导航设计。同步前应记录源 commit、stash 标识和目标文件哈希
+  （出处：phase-p25 F08）。
+- 2026-07-14：UI 对 session 恢复接口的 404 如果被 `catch` 静默吞掉，常规 happy-path E2E 不会暴露功能缺失；
+  同步原型时要搜索全部 `fetch` URL 并逐一确认 route 存在，草稿恢复需单独做刷新 E2E（出处：phase-p25 F07）。
+- 2026-07-14：从独立 Survey 原型仓同步时不能直接覆盖 `packages/data/src/survey.ts`：原型分支缺少主仓的
+  Room scope 权限，且 AI 路由曾引用未实现的 session 数据函数。正确做法是保留主仓权限边界，用向后兼容
+  migration 增量扩展发布设置/报告产物，并先跑 typecheck 暴露悬空契约（出处：phase-p25 F01-F06）。
+- 2026-07-14：禁止把纯文本 Blob 以 `application/pdf` 和 `.pdf` 名称下载；浏览器端无 PDF 生成器时应使用
+  `window.print()` 走系统 Print/PDF，CSV 则继续由鉴权服务端生成并防公式注入（出处：phase-p25 F05）。
+- 2026-07-14：Playwright 串行跑完整 Survey 套件时，Next.js 首次冷编译可超过默认 10 秒；只对等待服务端
+  生成结果的断言设置 20 秒超时，不提高全局超时，避免掩盖真实卡死（出处：phase-p25 F02/F06）。
 - 2026-07-08：`pnpm harness sync` 的 `near_term_window` 切片按字典序取**最早**的 N 个 sprint，
   不是最近的——新 feature 挂到新 sprint 后永远不会被 sync 自动开 issue。发现于 F07 排到
   sprint-07 却只投影 sprint-01/02。绕过：手工按 `buildIssueBody` 模板开 issue；根因待修（已开独立

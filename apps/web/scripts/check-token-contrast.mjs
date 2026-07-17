@@ -20,7 +20,7 @@ import { dirname, join } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const css = readFileSync(join(__dirname, "..", "app", "globals.css"), "utf8");
 
-const NEUTRAL_PAIRS = ["background", "card", "popover", "primary", "secondary", "muted", "accent", "disabled"];
+const NEUTRAL_PAIRS = ["background", "card", "popover", "primary", "secondary", "muted", "accent", "disabled", "survey-accent"];
 const STATUS_PAIRS = ["destructive", "success"];
 
 function parseVars(block) {

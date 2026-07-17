@@ -12,6 +12,17 @@ import { getAiStoreItems, listSubscribedAiStoreItemIds } from "@repo/data";
 // 前端 <select> 的 value / 消息路由的 agentId 校验都用这个带前缀的 id。
 export const STORE_AGENT_ID_PREFIX = "store-";
 
+function isDeepAgentEnabled(config: Record<string, unknown> | undefined): boolean {
+  if (!config || typeof config !== "object") return false;
+  if (config.enableDeepAgent === true) return true;
+  const knowledgeBase = config.knowledge_base;
+  return (
+    typeof knowledgeBase === "object" &&
+    knowledgeBase !== null &&
+    (knowledgeBase as { enabled?: unknown }).enabled === true
+  );
+}
+
 /**
  * 内置默认 Agent + 当前用户/团队已订阅的 AI Store Agent（去重后按 id 升序稳定排序）。
  *
@@ -24,9 +35,10 @@ export async function listAvaAgentOptions(
   teamId: number | null
 ): Promise<AvaAgentOption[]> {
   try {
+    if (teamId == null) return [...AVA_AGENT_OPTIONS];
     const subscribedIds = await listSubscribedAiStoreItemIds({
       subscriberUserId: userId,
-      teamId,
+      consumerTeamId: teamId,
     });
     // 批量取详情（WHERE id = ANY($1)），避免逐条 SELECT 的 N+1。
     const items = await getAiStoreItems(subscribedIds);
@@ -38,6 +50,10 @@ export async function listAvaAgentOptions(
         id: `${STORE_AGENT_ID_PREFIX}${it.id}`,
         label: it.name,
         description: it.description,
+        version: it.version,
+        config: it.config,
+        deepAgentEnabled: isDeepAgentEnabled(it.config),
+        storeId: Number(it.id),
       }));
     return [...AVA_AGENT_OPTIONS, ...storeAgents];
   } catch (err) {

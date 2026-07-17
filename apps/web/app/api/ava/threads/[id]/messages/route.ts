@@ -35,6 +35,7 @@ import {
 import { currentTeamId, currentUser } from "@/lib/session";
 import { isThreadInCurrentContext } from "@/lib/ava-thread-auth";
 import { listAvaAgentOptions } from "@/lib/ava-agents";
+import { listAvaSkillOptions } from "@/lib/ava-store-skills";
 import { createAvaReplyStreamResponse } from "./reply-stream";
 
 export const runtime = "nodejs";
@@ -61,6 +62,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     modelId?: unknown;
     agentId?: unknown;
     toolIds?: unknown;
+    deepAgent?: unknown;
+    researchType?: unknown;
   };
   const text = String(body.text ?? "").trim();
   const attachmentIds = Array.isArray(body.attachmentIds)
@@ -71,6 +74,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
   const teamId = currentTeamId();
   const role = teamId == null ? undefined : await getMembership(teamId, user.id);
+  const [agentOptions, toolOptions] = await Promise.all([
+    listAvaAgentOptions(user.id, teamId),
+    listAvaSkillOptions(user.id, teamId),
+  ]);
   const settings = normalizeAvaAiSettings(
     {
       modelId: typeof body.modelId === "string" ? body.modelId : DEFAULT_MODEL_ID,
@@ -82,8 +89,65 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     role === "owner" || role === "admin",
     // p18-F09：agentId 的合法集合 = 内置默认 + 已订阅的 AI Store Agent（store-<id>），
     // 与 /api/ava/capabilities 下发给 agent-select 的选项同一来源；不在集合内则归一化为默认。
-    await listAvaAgentOptions(user.id, teamId)
+    agentOptions,
+    toolOptions,
   );
+  const runtimeInstructions = [
+    agentOptions.find((option) => option.id === settings.agentId)?.config?.instructions,
+    ...toolOptions
+      .filter((option) => settings.toolIds.includes(option.id))
+      .map((option) => option.config?.instructions),
+  ].filter((instruction): instruction is string => typeof instruction === "string" && instruction.trim().length > 0);
+
+  const selectedAgent = agentOptions.find((agent) => agent.id === settings.agentId);
+  const shouldUseDeepAgent =
+    body.deepAgent === true ||
+    body.researchType === "deep_agent" ||
+    selectedAgent?.deepAgentEnabled === true;
+
+  // boardx-web 旧链路：Deep Agent 不是普通 AVA chat stub，而是走
+  // /api/v1/deep-agent/execute，由 boardx-backend DeepAgentController 处理。
+  // 这里放在消息落库前，避免普通 stub 和 deep-agent 都各写一份 user 消息。
+  if (shouldUseDeepAgent && text) {
+    const origin = new URL(req.url).origin;
+    const deepAgentRes = await fetch(`${origin}/api/v1/deep-agent/execute`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "text/event-stream",
+        "X-Chat-Thread-Id": String(threadId),
+        cookie: req.headers.get("cookie") ?? "",
+        ...(req.headers.get("authorization")
+          ? { authorization: req.headers.get("authorization") as string }
+          : {}),
+      },
+      body: JSON.stringify({
+        input: text,
+        chatId: String(threadId),
+        chatThreadId: String(threadId),
+        teamId: teamId == null ? "" : String(teamId),
+        userId: String(user.id),
+        model: settings.modelId,
+        storeId: selectedAgent?.storeId ? String(selectedAgent.storeId) : undefined,
+        executionMode: selectedAgent?.storeId ? "tool-auto" : "chat",
+        toolScope: selectedAgent?.storeId ? "agent" : "none",
+        responseFormat: "markdown",
+      }),
+      signal: req.signal,
+    });
+
+    return new Response(deepAgentRes.body, {
+      status: deepAgentRes.status,
+      headers: {
+        "Content-Type": deepAgentRes.headers.get("Content-Type") || "text/event-stream",
+        "Cache-Control": deepAgentRes.headers.get("Cache-Control") || "no-cache, no-transform",
+        Connection: deepAgentRes.headers.get("Connection") || "keep-alive",
+        "X-Accel-Buffering": "no",
+        "X-Ava-Message-Backend": "deep-agent",
+        "X-Deep-Agent-Backend": deepAgentRes.headers.get("X-Deep-Agent-Backend") || "",
+      },
+    });
+  }
 
   // 用户消息先落库：即使下面生成失败，用户输入也不会丢失。
   const userMessage = await insertAvaMessage(threadId, "user", text);
@@ -141,6 +205,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     modelId: settings.modelId,
     agentId: settings.agentId,
     toolIds: settings.toolIds,
+    systemPrompt: runtimeInstructions.join("\n\n"),
     status: 201,
     // P18 F02：客户端点击停止/断开连接时 Next.js 会 abort 这个 signal；透传给流式生成，
     // 使真实 provider 的底层 fetch 被真实中断，而非等它自然结束后再丢弃结果。

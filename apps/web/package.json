@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "e2e": "playwright test",
-    "lint": "bash scripts/lint-design.sh"
+    "lint": "bash scripts/lint-design.sh",
+    "seed:ai-store": "node scripts/seed-ai-store-demo.mjs"
   },
   "dependencies": {
     "@repo/ai": "workspace:*",
@@ -21,6 +22,7 @@
     "@repo/storage": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "echarts": "^6.1.0",
     "fabric": "^7.4.0",
     "lucide-react": "^0.544.0",
     "next": "14.2.5",
@@ -31,7 +33,9 @@
     "remark-gfm": "^4.0.0",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
-    "yaml": "^2.5.0"
+    "yaml": "^2.5.0",
+    "@repo/export": "workspace:*",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@playwright/test": "^1.47.0",

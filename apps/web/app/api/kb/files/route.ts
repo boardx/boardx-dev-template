@@ -4,7 +4,7 @@ import { CURRENT_TEAM_COOKIE } from "@repo/auth";
 import { createKbFile, getMembership, listKbFiles, type KbScope } from "@repo/data";
 import { validateKbUpload, extOf, buildKbObjectKey, putObject, ensureBucket } from "@repo/storage";
 import { makeQueue, QUEUE_NAMES } from "@repo/queue";
-import { currentUser } from "@/lib/session";
+import { ApiError, withAuth } from "@/lib/api/handler";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,10 +27,7 @@ function parseBoundedInt(v: string | null, fallback: number, min: number, max: n
   return Math.max(min, Math.min(Math.floor(n), max));
 }
 
-export async function GET(req: Request) {
-  const user = await currentUser();
-  if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-
+export const GET = withAuth(async (req, { user }) => {
   const url = new URL(req.url);
   const scope = parseScope(url.searchParams.get("scope"));
   const q = url.searchParams.get("q") ?? undefined;
@@ -56,13 +53,11 @@ export async function GET(req: Request) {
       hasMore: offset + files.length < total,
     },
   });
-}
+});
 
-export async function POST(req: Request) {
-  try {
-    const user = await currentUser();
-    if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-
+// multipart 上传：withValidation 走 JSON 不适用，但 withAuth + ApiError 照样把
+// 鉴权与错误边界收敛（ADR-015：分层可组合，非 JSON 路由同样受保护）。
+export const POST = withAuth(async (req, { user }) => {
     const form = await req.formData();
     const file = form.get("file");
     if (!(file instanceof File)) {
@@ -96,7 +91,8 @@ export async function POST(req: Request) {
       const buffer = Buffer.from(await file.arrayBuffer());
       await putObject(objectKey, buffer, file.type || "application/octet-stream");
     } catch (err) {
-      return NextResponse.json({ error: `对象存储写入失败：${String(err)}` }, { status: 502 });
+      // 内部细节（endpoint/凭据/网络栈）只进日志，不出网——#539 教训
+      throw new ApiError(502, "storage_write_failed", err);
     }
 
     // 对象存储写入成功后才落库（status=processing）。
@@ -122,7 +118,4 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ file: kbFile }, { status: 201 });
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
-  }
-}
+});

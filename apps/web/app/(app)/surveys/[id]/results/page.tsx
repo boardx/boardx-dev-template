@@ -1,475 +1,1159 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
-import { ChevronLeft, Download, FileText, RefreshCw, Sparkles, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
-type QType = "text" | "single" | "multiple" | "rating";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { BarChart3, ChevronLeft, Download, FileText, ListChecks, PieChart, RefreshCw, Share2, Sparkles, Target, TrendingUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
+import { SurveyDiagnosticReport } from "@/components/survey/survey-diagnostic-report";
+import {
+  SurveyMobileNavigation,
+  SurveyNavigationSidebar,
+  type SurveyNavigationTarget,
+} from "@/components/survey/survey-navigation-sidebar";
+
+type QuestionType =
+  | "short_text"
+  | "text"
+  | "email"
+  | "number"
+  | "phone"
+  | "single"
+  | "multiple"
+  | "dropdown"
+  | "rating"
+  | "linear_scale"
+  | "nps"
+  | "date"
+  | "time"
+  | "file";
 
 interface Question {
   id: number;
   title: string;
-  type: QType;
+  type: QuestionType;
   required: boolean;
   options: string[];
+  category?: string;
 }
 
-interface OptionCount {
-  option: string;
-  count: number;
-}
-
-interface QuestionSummary {
+interface Survey {
   id: number;
   title: string;
-  type: QType;
-  required: boolean;
-  answeredCount: number;
-  skippedCount: number;
-  optionCounts?: OptionCount[];
-  average?: number;
-  textAnswers?: string[];
+  description: string;
+  status: "active" | "paused";
+  questions: Question[];
+  reportTemplate?: ReportTemplate;
 }
 
-interface ResponseItem {
-  id: number;
-  submittedAt: string;
-  respondentUserId: number | null;
+interface SurveyResponse {
+  id?: number;
   answers: Record<string, unknown>;
+  submittedAt: string;
 }
 
-interface ResultsPayload {
-  survey: { id: number; title: string; description: string; status: "active" | "paused"; questions: Question[] };
-  totalResponses: number;
-  averageCompletion: number;
-  summary: QuestionSummary[];
-  responses: ResponseItem[];
-}
-
+type ResultsData = { survey: Survey; responses: SurveyResponse[] };
 type Tab = "summary" | "individual" | "report";
+type ReturnTarget = "editor" | "workflow-report" | "workflow-answer" | "list";
 
-function formatDate(value: string) {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+interface AiSurveyReport {
+  title: string;
+  executiveSummary: string;
+  metricHighlights: string[];
+  segmentInsights: string[];
+  opportunityAreas: string[];
+  keyFindings: string[];
+  risks: string[];
+  recommendations: string[];
+  followUpQuestions: string[];
+  methodology: string;
+  confidence: "low" | "medium" | "high";
 }
 
-function answerText(question: Question, value: unknown): string {
-  if (value == null) return "—";
-  if (Array.isArray(value)) return value.length > 0 ? value.join(", ") : "—";
-  const s = String(value).trim();
-  return s.length > 0 ? s : "—";
+interface ReportTemplate {
+  title: string;
+  sections: string[];
+  metrics: string[];
+  chartSlots: string[];
+  caveats: string[];
 }
 
-function OptionBars({ counts, total }: { counts: OptionCount[]; total: number }) {
+interface AiReportEnvelope {
+  report: AiSurveyReport;
+  model: string;
+  generatedAt: string;
+  sampleSize: number;
+  reportTemplate?: ReportTemplate;
+}
+
+interface EChartDatum {
+  label: string;
+  value: number;
+}
+
+type EChartType = "bar" | "donut";
+
+function formatAnswer(question: Question, value: unknown): string {
+  if (question.type === "multiple" || question.type === "file") return Array.isArray(value) ? value.join(", ") : "";
+  if (["rating", "linear_scale", "nps", "number"].includes(question.type)) return typeof value === "number" ? String(value) : "";
+  return typeof value === "string" ? value : "";
+}
+
+function average(values: number[]) {
+  if (values.length === 0) return "0";
+  const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
+  return Number.isInteger(avg) ? String(avg) : avg.toFixed(1);
+}
+
+function percent(count: number, total: number) {
+  if (total === 0) return 0;
+  return Math.round((count / total) * 100);
+}
+
+function typeLabel(type: QuestionType) {
+  const labels: Record<QuestionType, string> = {
+    short_text: "短文本",
+    text: "长文本",
+    email: "邮箱",
+    number: "数字",
+    phone: "电话",
+    single: "单选",
+    multiple: "多选",
+    dropdown: "下拉",
+    rating: "评分",
+    linear_scale: "线性量表",
+    nps: "NPS",
+    date: "日期",
+    time: "时间",
+    file: "文件",
+  };
+  return labels[type];
+}
+
+function chartColor(index: number) {
+  const colors = ["bg-primary", "bg-secondary", "bg-accent", "bg-muted-foreground", "bg-destructive", "bg-border-strong"];
+  return colors[index % colors.length];
+}
+
+function chartHex(index: number) {
+  const colors = [
+    "hsl(var(--survey-accent))",
+    "hsl(var(--foreground))",
+    "hsl(var(--success))",
+    "hsl(var(--muted-foreground))",
+    "hsl(var(--destructive))",
+    "hsl(var(--border-strong))",
+  ];
+  return colors[index % colors.length];
+}
+
+function ratingMax(type: QuestionType) {
+  if (type === "nps") return 10;
+  return 5;
+}
+
+function hasAnswer(question: Question, value: unknown) {
+  if (typeof value === "boolean") return value;
+  return Boolean(formatAnswer(question, value));
+}
+
+function SurveyResultsShell({ surveyId, children }: { surveyId: number; children: ReactNode }) {
+  function navigate(target: SurveyNavigationTarget) {
+    const paths: Record<SurveyNavigationTarget, string> = {
+      home: "/surveys",
+      workspace: "/surveys?view=my",
+      templates: "/surveys?view=templates",
+      reports: `/surveys?survey=${surveyId}&step=template`,
+      insights: `/surveys/${surveyId}/results`,
+    };
+    window.location.href = paths[target];
+  }
+
   return (
-    <div className="mt-3 flex flex-col gap-2">
-      {counts.map((c) => {
-        const pct = total > 0 ? Math.round((c.count / total) * 100) : 0;
-        return (
-          <div key={c.option} data-testid="option-row" className="flex items-center gap-3">
-            <span className="w-32 shrink-0 truncate text-12 text-foreground">{c.option}</span>
-            <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-              <div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${pct}%` }} />
-            </div>
-            <span className="w-16 shrink-0 text-right text-12 text-muted-foreground">
-              {c.count} ({pct}%)
-            </span>
-          </div>
-        );
-      })}
+    <div className="grid min-h-screen bg-secondary text-foreground lg:grid-cols-[330px_minmax(0,1fr)]">
+      <SurveyNavigationSidebar active="insights" onNavigate={navigate} />
+      <section data-testid="survey-results-scroll" className="min-w-0 overflow-x-hidden">
+        <SurveyMobileNavigation active="insights" onNavigate={navigate} />
+        <div>{children}</div>
+      </section>
     </div>
   );
 }
 
-export default function SurveyResultsPage() {
-  const params = useParams<{ id: string }>();
-  const surveyId = params.id;
+function answerRate(question: Question, responses: SurveyResponse[]) {
+  return percent(responses.filter((response) => hasAnswer(question, response.answers[String(question.id)])).length, responses.length);
+}
 
-  const [data, setData] = useState<ResultsPayload | null>(null);
+function questionTypeCounts(questions: Question[]) {
+  return questions.reduce<Record<string, number>>((acc, question) => {
+    const label = typeLabel(question.type);
+    acc[label] = (acc[label] ?? 0) + 1;
+    return acc;
+  }, {});
+}
+
+function optionCount(values: unknown[], option: string) {
+  return values.filter((value) => (Array.isArray(value) ? value.includes(option) : value === option)).length;
+}
+
+function downloadCsv(surveyId: number) {
+  const link = document.createElement("a");
+  link.href = `/api/surveys/${surveyId}/results/export`;
+  link.click();
+}
+
+function printReport() {
+  window.print();
+}
+
+function EChartPanel({
+  title,
+  description,
+  type,
+  data,
+  unit = "",
+  testId,
+}: {
+  title: string;
+  description?: string;
+  type: EChartType;
+  data: EChartDatum[];
+  unit?: string;
+  testId: string;
+}) {
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+  const maxValue = Math.max(1, ...data.map((item) => item.value));
+  const barWidth = data.length ? 240 / data.length : 240;
+  const donutRadius = 44;
+  const donutCircumference = 2 * Math.PI * donutRadius;
+  let donutOffset = 0;
+
+  return (
+    <article data-testid={testId} className="rounded-12 border border-border bg-background p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-14 font-bold text-foreground">{title}</h3>
+          {description && <p className="mt-1 text-12 leading-5 text-muted-foreground">{description}</p>}
+        </div>
+        <Badge variant="outline">EChart</Badge>
+      </div>
+
+      {type === "bar" ? (
+        <div className="mt-4">
+          <svg aria-label={title} role="img" viewBox="0 0 280 150" className="h-40 w-full overflow-visible">
+            <line x1="20" y1="124" x2="270" y2="124" stroke="hsl(var(--border))" strokeWidth="1" />
+            {data.map((item, index) => {
+              const height = Math.max(8, Math.round((item.value / maxValue) * 96));
+              const x = 28 + index * barWidth;
+              const width = Math.max(16, Math.min(42, barWidth - 14));
+              return (
+                <g key={`${item.label}-${index}`}>
+                  <rect x={x} y={124 - height} width={width} height={height} rx="6" fill={chartHex(index)} />
+                  <text x={x + width / 2} y={116 - height} textAnchor="middle" className="fill-foreground text-10 font-semibold">
+                    {item.value}{unit}
+                  </text>
+                  <text x={x + width / 2} y="142" textAnchor="middle" className="fill-muted-foreground text-10">
+                    {item.label.slice(0, 8)}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      ) : (
+        <div className="mt-4 grid gap-4 md:grid-cols-[150px_1fr]">
+          <svg aria-label={title} role="img" viewBox="0 0 120 120" className="h-36 w-36">
+            <circle cx="60" cy="60" r={donutRadius} fill="none" stroke="hsl(var(--muted))" strokeWidth="16" />
+            {data.map((item, index) => {
+              const length = total > 0 ? (item.value / total) * donutCircumference : 0;
+              const circle = (
+                <circle
+                  key={`${item.label}-${index}`}
+                  cx="60"
+                  cy="60"
+                  r={donutRadius}
+                  fill="none"
+                  stroke={chartHex(index)}
+                  strokeWidth="16"
+                  strokeDasharray={`${length} ${donutCircumference - length}`}
+                  strokeDashoffset={-donutOffset}
+                  strokeLinecap="round"
+                  transform="rotate(-90 60 60)"
+                />
+              );
+              donutOffset += length;
+              return circle;
+            })}
+            <text x="60" y="57" textAnchor="middle" className="fill-foreground text-18 font-bold">
+              {total}
+            </text>
+            <text x="60" y="74" textAnchor="middle" className="fill-muted-foreground text-10">
+              total
+            </text>
+          </svg>
+          <div className="flex flex-col justify-center gap-2">
+            {data.map((item, index) => (
+              <div key={`${item.label}-${index}`} className="flex items-center justify-between gap-3 text-12">
+                <span className="flex min-w-0 items-center gap-2 text-foreground">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: chartHex(index) }} />
+                  <span className="truncate">{item.label}</span>
+                </span>
+                <span className="font-medium text-muted-foreground">{item.value}{unit}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function ReportTemplatePanel({ template, fallbackTitle }: { template?: ReportTemplate; fallbackTitle: string }) {
+  const fallback: ReportTemplate = {
+    title: `${fallbackTitle} 分析报告`,
+    sections: ["样本概览", "关键指标", "行动建议"],
+    metrics: ["response_count"],
+    chartSlots: ["题目回答分布"],
+    caveats: ["样本量低时仅输出方向性判断。"],
+  };
+  const current = template ?? fallback;
+  return (
+    <section data-testid="report-template-panel" className="rounded-12 border border-border bg-background p-4 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-12 font-medium uppercase tracking-wide text-muted-foreground">Report Template</p>
+          <h3 data-testid="report-template-title" className="mt-1 text-15 font-bold text-foreground">
+            {current.title}
+          </h3>
+        </div>
+        <Badge variant="outline">{current.chartSlots.length} charts</Badge>
+      </div>
+      <div data-testid="report-template-sections" className="mt-3 flex flex-wrap gap-2">
+        {current.sections.map((section) => (
+          <Badge key={section} variant="muted">
+            {section}
+          </Badge>
+        ))}
+      </div>
+      <div className="mt-3 grid gap-2 md:grid-cols-2">
+        <div className="rounded-lg border border-border bg-surface-1 px-3 py-2">
+          <p className="text-12 text-muted-foreground">Metrics</p>
+          <p className="mt-1 text-13 text-foreground">{current.metrics.join(" / ")}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-surface-1 px-3 py-2">
+          <p className="text-12 text-muted-foreground">Caveats</p>
+          <p className="mt-1 text-13 text-foreground">{current.caveats.join(" / ")}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default function SurveyResultsPage({ params }: { params: { id: string } }) {
+  const [data, setData] = useState<ResultsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [forbidden, setForbidden] = useState(false);
   const [tab, setTab] = useState<Tab>("summary");
-  const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
-  const [exportError, setExportError] = useState("");
-
-  // uc-survey-007 — AI 摘要不持久化：每次进入/切换问卷都重置，只在当前会话内存在。
-  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
-  const [aiSummaryText, setAiSummaryText] = useState("");
-  const [aiSummaryError, setAiSummaryError] = useState("");
+  const [individualResponses, setIndividualResponses] = useState<SurveyResponse[] | null>(null);
+  const [individualLoading, setIndividualLoading] = useState(false);
+  const [individualError, setIndividualError] = useState("");
+  const [returnTarget, setReturnTarget] = useState<ReturnTarget>("list");
+  const [aiReport, setAiReport] = useState<AiReportEnvelope | null>(null);
+  const [reportModel, setReportModel] = useState("qwen3.7-max");
+  const [reportInstruction, setReportInstruction] = useState("");
+  const [reportSessionId, setReportSessionId] = useState<string | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState("");
+  const [shareStatus, setShareStatus] = useState("");
 
   async function load() {
     setLoading(true);
     setError("");
-    setForbidden(false);
     try {
-      const res = await fetch(`/api/surveys/${surveyId}/results`);
+      const res = await fetch(`/api/surveys/${params.id}/responses`);
       if (res.status === 401) {
         window.location.href = "/login";
         return;
       }
-      if (res.status === 403 || res.status === 404) {
-        setForbidden(true);
-        setLoading(false);
-        return;
-      }
       if (!res.ok) {
-        setError("加载报告失败，请重试");
+        setError(res.status === 403 ? "你无权查看该问卷结果" : "加载结果失败，请重试");
         setLoading(false);
         return;
       }
       setData(await res.json());
     } catch {
-      setError("加载报告失败，请重试");
+      setError("加载结果失败，请重试");
     }
     setLoading(false);
   }
 
+  async function loadIndividualResponses(force = false) {
+    if (!force && (individualResponses || individualLoading)) return;
+    setIndividualLoading(true);
+    setIndividualError("");
+    try {
+      const res = await fetch(`/api/surveys/${params.id}/responses?view=individual`);
+      if (!res.ok) {
+        setIndividualError(res.status === 403 ? "你无权查看单份答卷" : "加载单份答卷失败，请重试");
+        return;
+      }
+      const payload = await res.json() as ResultsData;
+      setIndividualResponses(payload.responses);
+    } catch {
+      setIndividualError("加载单份答卷失败，请重试");
+    } finally {
+      setIndividualLoading(false);
+    }
+  }
+
+  function selectTab(nextTab: Tab) {
+    setTab(nextTab);
+    if (nextTab === "individual") void loadIndividualResponses();
+  }
+
   useEffect(() => {
-    // code review 加固：surveyId 变化时必须清空上一份问卷生成的 AI 摘要状态。若某次导航
-    // 复用了同一个组件实例（不重新挂载，只有这个 effect 的依赖 surveyId 变化），不重置就
-    // 会把上一份问卷的摘要文本/失败态误展示成当前问卷的内容——本文件上面的注释早已声明
-    // "每次进入/切换问卷都重置"，但重置逻辑此前没有真正写出来。这里的重置对硬导航
-    // （组件本就会重新挂载，state 已是初始值）没有副作用，成本几乎为零，是纯防御性写法。
-    setAiSummaryLoading(false);
-    setAiSummaryText("");
-    setAiSummaryError("");
+    const search = new URLSearchParams(window.location.search);
+    const requestedTab = search.get("tab");
+    const source = search.get("from");
+    setReturnTarget(
+      source === "editor"
+        ? "editor"
+        : source === "workflow"
+          ? requestedTab === "individual" ? "workflow-answer" : "workflow-report"
+          : "list"
+    );
+    if (requestedTab === "summary" || requestedTab === "individual" || requestedTab === "report") {
+      setTab(requestedTab);
+      if (requestedTab === "individual") void loadIndividualResponses(true);
+    }
+    setIndividualResponses(null);
+    setIndividualError("");
+    setShareStatus("");
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [surveyId]);
+  }, [params.id]);
 
-  async function exportCsv() {
-    setExporting("csv");
-    setExportError("");
-    try {
-      const res = await fetch(`/api/surveys/${surveyId}/results/export`);
-      if (!res.ok) {
-        setExportError("导出失败，请重试");
-        setExporting(null);
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `survey-${surveyId}-responses.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      setExportError("导出失败，请重试");
-    }
-    setExporting(null);
+  function returnToSurveyWorkspace() {
+    const paths: Record<ReturnTarget, string> = {
+      editor: `/surveys?survey=${params.id}&step=design`,
+      "workflow-report": `/surveys?survey=${params.id}&step=report`,
+      "workflow-answer": `/surveys?survey=${params.id}&step=answer`,
+      list: "/surveys?view=my",
+    };
+    window.location.href = paths[returnTarget];
   }
 
-  async function generateAiSummary() {
-    setAiSummaryLoading(true);
-    setAiSummaryError("");
+  const returnLabel = returnTarget === "editor"
+    ? "返回问卷编辑"
+    : returnTarget.startsWith("workflow")
+      ? "返回工作流"
+      : "返回问卷列表";
+
+  async function copyReportLink() {
     try {
-      const res = await fetch(`/api/surveys/${surveyId}/results/ai-summary`, { method: "POST" });
-      if (!res.ok) {
-        setAiSummaryError("生成摘要失败，请重试");
-        setAiSummaryLoading(false);
-        return;
-      }
-      const body = await res.json();
-      setAiSummaryText(String(body.text ?? ""));
+      await navigator.clipboard.writeText(window.location.href);
+      setShareStatus("报告链接已复制");
     } catch {
-      setAiSummaryError("生成摘要失败，请重试");
+      setShareStatus("复制失败，请从地址栏复制链接");
     }
-    setAiSummaryLoading(false);
   }
 
-  function exportPdf() {
-    setExporting("pdf");
-    setExportError("");
-    setTab("report");
-    // Report 视图为打印优化布局；浏览器原生打印到 PDF，无需额外依赖。
-    window.setTimeout(() => {
-      window.print();
-      setExporting(null);
-    }, 50);
+  const ratingAverage = useMemo(() => {
+    if (!data) return "0";
+    const ratings = data.responses.flatMap((response) =>
+      data.survey.questions
+        .filter((question) => question.type === "rating" || question.type === "linear_scale" || question.type === "nps")
+        .map((question) => response.answers[String(question.id)])
+        .filter((value): value is number => typeof value === "number")
+    );
+    return average(ratings);
+  }, [data]);
+
+  const reportMetrics = useMemo(() => {
+    if (!data) return null;
+    const rates = data.survey.questions.map((question) => answerRate(question, data.responses));
+    const avgCompletion = rates.length ? Math.round(rates.reduce((sum, value) => sum + value, 0) / rates.length) : 0;
+    const numericQuestions = data.survey.questions.filter((question) => ["rating", "linear_scale", "nps", "number"].includes(question.type));
+    const choiceQuestions = data.survey.questions.filter((question) => ["single", "multiple", "dropdown"].includes(question.type));
+    const textQuestions = data.survey.questions.filter((question) => ["short_text", "text", "email", "phone"].includes(question.type));
+    const typeCounts = questionTypeCounts(data.survey.questions);
+    return {
+      avgCompletion,
+      numericQuestions,
+      choiceQuestions,
+      textQuestions,
+      typeCounts,
+      topQuestionRate: Math.max(0, ...rates),
+      lowQuestionRate: rates.length ? Math.min(...rates) : 0,
+    };
+  }, [data]);
+
+  async function generateAiReport(instruction = "") {
+    setReportError("");
+    setReportLoading(true);
+    try {
+      const res = await fetch(`/api/surveys/${params.id}/ai-report`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: reportModel, instruction, currentReport: aiReport?.report ?? null }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setReportError(payload.error ?? "AI 报告生成失败，请确认 QWEN_API_KEY / DASHSCOPE_API_KEY 已配置。");
+        return;
+      }
+      setAiReport(payload as AiReportEnvelope);
+      if (typeof payload.sessionId === "string") setReportSessionId(payload.sessionId);
+      setReportInstruction("");
+    } catch {
+      setReportError("AI 报告服务暂时不可用，请稍后重试。");
+    } finally {
+      setReportLoading(false);
+    }
   }
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-content px-9 pb-14 pt-7">
-        <div data-testid="results-loading" className="mt-5 grid animate-pulse gap-3">
-          <div className="h-8 w-1/2 rounded-lg bg-muted" />
-          <div className="h-32 rounded-12 border border-border bg-muted/40" />
-          <div className="h-32 rounded-12 border border-border bg-muted/40" />
-        </div>
-      </div>
+      <main data-testid="loading" className="mx-auto max-w-content animate-pulse px-9 py-7">
+        <div className="h-10 w-72 rounded-lg bg-muted" />
+        <div className="mt-5 h-64 rounded-12 border border-border bg-muted/40" />
+      </main>
     );
   }
 
-  if (forbidden) {
+  if (!data) {
     return (
-      <div className="mx-auto max-w-content px-9 pb-14 pt-7">
-        <Link href="/surveys" className="inline-flex items-center gap-1 text-13 text-muted-foreground hover:text-foreground">
+      <main className="mx-auto max-w-content px-9 py-7">
+        <Button data-testid="back-to-survey-workspace" size="sm" variant="ghost" onClick={returnToSurveyWorkspace} className="mb-4 gap-1.5">
           <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
-          Surveys
-        </Link>
-        <div data-testid="results-forbidden" className="mt-6 rounded-12 border border-dashed border-border-strong px-6 py-15 text-center">
-          <p className="text-15 font-semibold text-foreground">You do not have access to this report</p>
-          <p className="mt-2 text-13 text-muted-foreground">Only the survey creator or team members can view responses.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error && !data) {
-    return (
-      <div className="mx-auto max-w-content px-9 pb-14 pt-7">
-        <p role="alert" data-testid="err-results" className="text-13 text-destructive">
-          {error}
-        </p>
-        <Button data-testid="retry-results" size="sm" variant="outline" className="mt-3 gap-1.5" onClick={() => void load()}>
-          <RefreshCw className="h-4 w-4" strokeWidth={1.5} />
-          Retry
+          {returnLabel}
         </Button>
-      </div>
+        <p role="alert" data-testid="err-results" className="text-13 text-destructive">
+          {error || "加载结果失败，请重试"}
+        </p>
+        <Button size="sm" variant="outline" onClick={() => void load()} className="mt-3 gap-1.5">
+          <RefreshCw className="h-4 w-4" strokeWidth={1.5} />
+          重试
+        </Button>
+      </main>
     );
   }
 
-  if (!data) return null;
-
-  const { survey, totalResponses, averageCompletion, summary, responses } = data;
+  if (data.responses.length === 0) {
+    return (
+      <SurveyResultsShell surveyId={data.survey.id}>
+        <main data-testid="survey-insight-report" className="mx-auto max-w-content px-9 py-7">
+        <Button data-testid="back-to-survey-workspace" size="sm" variant="ghost" onClick={returnToSurveyWorkspace} className="mb-4 gap-1.5">
+          <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
+          {returnLabel}
+        </Button>
+        <section data-testid="survey-results-page" className="rounded-12 border border-border bg-card p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <Badge variant="outline">Report</Badge>
+              <h1 className="mt-3 text-22 font-bold text-foreground">{data.survey.title}</h1>
+              {data.survey.description && <p className="mt-1 text-13 text-muted-foreground">{data.survey.description}</p>}
+            </div>
+            <Badge variant={data.survey.status === "active" ? "success" : "muted"}>{data.survey.status}</Badge>
+          </div>
+          <section className="mt-5 grid gap-3 md:grid-cols-3">
+            <div className="rounded-12 border border-border bg-background p-4">
+              <p className="text-12 text-muted-foreground">Responses</p>
+              <p data-testid="results-count" className="mt-1 text-22 font-bold text-foreground">0</p>
+            </div>
+            <div className="rounded-12 border border-border bg-background p-4">
+              <p className="text-12 text-muted-foreground">Questions</p>
+              <p className="mt-1 text-22 font-bold text-foreground">{data.survey.questions.length}</p>
+            </div>
+            <div className="rounded-12 border border-border bg-background p-4">
+              <p className="text-12 text-muted-foreground">Status</p>
+              <p className="mt-1 text-22 font-bold text-foreground">{data.survey.status === "active" ? "Collecting" : "Paused"}</p>
+            </div>
+          </section>
+          <div data-testid="results-empty" className="mt-5 rounded-12 border border-dashed border-border-strong p-8 text-center">
+            <p className="text-15 font-semibold text-foreground">还没有答卷</p>
+            <p className="mt-1 text-13 text-muted-foreground">发布并分享问卷后，摘要、个体答卷和 AI 报告会自动填充。</p>
+          </div>
+          <div className="mt-5 flex gap-2" role="tablist" aria-label="Survey result views">
+            <Button data-testid="tab-summary" size="sm" variant={tab === "summary" ? "default" : "outline"} onClick={() => setTab("summary")}>
+              概览
+            </Button>
+            <Button data-testid="tab-individual" size="sm" variant={tab === "individual" ? "default" : "outline"} onClick={() => selectTab("individual")}>
+              单份答卷
+            </Button>
+            <Button data-testid="tab-report" size="sm" variant={tab === "report" ? "default" : "outline"} onClick={() => selectTab("report")}>
+              AI 报告
+            </Button>
+          </div>
+          <div data-testid="report-panel" className="mt-5 rounded-12 border border-border bg-surface-1 p-5">
+            <h2 className="text-18 font-bold text-foreground">报告框架</h2>
+            <div className="mt-4">
+              <ReportTemplatePanel template={data.survey.reportTemplate} fallbackTitle={data.survey.title} />
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <Select
+                data-testid="report-model"
+                aria-label="Report model"
+                value={reportModel}
+                onChange={(event) => setReportModel(event.target.value)}
+                className="h-9 w-56"
+              >
+                <option value="qwen3.7-max">qwen3.7-max</option>
+                <option value="mock-survey-quality">Mock Survey Quality</option>
+                <option value="mock-survey-fast">Mock Survey Fast</option>
+              </Select>
+              <Button data-testid="generate-ai-report" type="button" className="gap-1.5" disabled={reportLoading} onClick={() => void generateAiReport()}>
+                <Sparkles className="h-4 w-4" strokeWidth={1.5} />
+                {reportLoading ? "生成中…" : aiReport ? "重新生成" : "生成 AI 报告"}
+              </Button>
+            </div>
+            {reportError && (
+              <p role="alert" data-testid="ai-report-error" className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-13 text-destructive">
+                {reportError}
+              </p>
+            )}
+            {aiReport && (
+              <article className="mt-4 rounded-12 border border-border bg-background p-5 shadow-sm">
+                <h3 className="text-15 font-bold text-foreground">{aiReport.report.title}</h3>
+                <p className="mt-2 text-14 leading-7 text-muted-foreground">{aiReport.report.executiveSummary}</p>
+              </article>
+            )}
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {["样本规模与回收进度", "关键指标与评分趋势", "选择题分布与偏好", "开放反馈主题归纳", "风险信号与异常回答", "下一步行动建议"].map((item) => (
+                <div key={item} className="rounded-lg border border-border bg-background px-3 py-2 text-13 text-foreground">
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+        </main>
+      </SurveyResultsShell>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-content px-9 pb-14 pt-7 print:px-0 print:pt-0">
-      <div className="flex items-center gap-3 print:hidden">
-        <Link href="/surveys" className="inline-flex items-center gap-1 text-13 text-muted-foreground hover:text-foreground">
-          <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
-          Surveys
-        </Link>
-        <div className="flex-1" />
-        <Button data-testid="export-csv" variant="outline" size="sm" disabled={exporting !== null} onClick={() => void exportCsv()} className="gap-1.5">
-          <Download className="h-4 w-4" strokeWidth={1.5} />
-          {exporting === "csv" ? "Exporting…" : "Export CSV"}
-        </Button>
-        <Button data-testid="export-pdf" variant="outline" size="sm" disabled={exporting !== null} onClick={exportPdf} className="gap-1.5">
-          <FileText className="h-4 w-4" strokeWidth={1.5} />
-          {exporting === "pdf" ? "Preparing…" : "Export PDF"}
-        </Button>
-      </div>
-
-      {exportError && (
-        <div className="mt-3 flex items-center gap-3 print:hidden">
-          <p role="alert" data-testid="err-export" className="text-13 text-destructive">
-            {exportError}
-          </p>
-          <Button data-testid="retry-export" size="sm" variant="outline" onClick={() => void exportCsv()}>
-            Retry
+    <SurveyResultsShell surveyId={data.survey.id}>
+      <main data-testid="survey-insight-report" className="mx-auto w-full max-w-survey-dashboard px-4 py-7 sm:px-8 lg:px-10">
+      <div data-testid="survey-results-page">
+      <header data-testid="survey-insight-report-header">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button data-testid="back-to-survey-workspace" size="sm" variant="outline" onClick={returnToSurveyWorkspace} className="gap-1.5">
+            <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
+            {returnLabel}
+          </Button>
+          <div className="min-w-2 flex-1" />
+          <Button
+            data-testid="export-csv"
+            size="sm"
+            variant="outline"
+            onClick={() => downloadCsv(data.survey.id)}
+            className="gap-1.5"
+          >
+            <Download className="h-4 w-4" strokeWidth={1.5} />
+            导出 CSV
+          </Button>
+          <Button data-testid="share-report" size="sm" variant="outline" onClick={() => void copyReportLink()} className="gap-1.5">
+            <Share2 className="h-4 w-4" strokeWidth={1.5} />
+            分享链接
+          </Button>
+          <Button data-testid="export-pdf" size="sm" onClick={printReport} className="gap-1.5">
+            <FileText className="h-4 w-4" strokeWidth={1.5} />
+            导出 PDF
           </Button>
         </div>
-      )}
-
-      <header className="mt-5">
-        <h1 data-testid="results-title" className="text-26 font-bold tracking-tight text-foreground">
-          {survey.title}
-        </h1>
-        {survey.description && <p className="mt-1 text-13 text-muted-foreground">{survey.description}</p>}
-        <div className="mt-3 flex items-center gap-3">
-          <Badge variant={survey.status === "active" ? "success" : "muted"}>{survey.status === "active" ? "Active" : "Paused"}</Badge>
-          <span data-testid="results-total" className="flex items-center gap-1.5 text-13 text-muted-foreground">
-            <Users className="h-4 w-4" strokeWidth={1.5} />
-            {totalResponses} responses collected
-          </span>
+        {shareStatus ? <p aria-live="polite" className="mt-2 text-right text-12 text-muted-foreground">{shareStatus}</p> : null}
+        <div className="mt-5">
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="muted">洞察报告</Badge>
+            <Badge variant="outline">{data.survey.reportTemplate?.title ?? "结构化诊断"}</Badge>
+            <Badge variant={data.survey.status === "active" ? "success" : "muted"}>
+              {data.survey.status === "active" ? "回收中" : "已暂停"}
+            </Badge>
+          </div>
+          <h1 className="mt-3 text-26 font-bold text-foreground">{data.survey.title} · 洞察报告</h1>
+          <p className="mt-2 text-13 text-muted-foreground">
+            <span data-testid="results-count">{data.responses.length}</span> 份已提交答卷 · {data.survey.questions.length} 道题 ·
+            回答完整度 {reportMetrics?.avgCompletion ?? 0}% · 最近提交于 {new Date(data.responses[0]!.submittedAt).toLocaleString("zh-CN")}
+          </p>
+          {data.survey.description ? <p className="mt-1 text-13 text-muted-foreground">{data.survey.description}</p> : null}
         </div>
       </header>
 
-      {totalResponses === 0 ? (
-        <div data-testid="results-empty" className="mt-8 rounded-12 border border-dashed border-border-strong px-6 py-15 text-center">
-          <p className="text-15 font-semibold text-foreground">No responses yet</p>
-          <p className="mt-2 text-13 text-muted-foreground">Share the survey link to start collecting answers.</p>
-          <div data-testid="report-ai-summary" className="mt-5 flex flex-col items-center gap-2">
-            <Button data-testid="report-ai-summary-generate" size="sm" variant="outline" disabled className="gap-1.5">
-              <Sparkles className="h-4 w-4" strokeWidth={1.5} />
-              Generate summary
-            </Button>
-            <p className="text-12 text-muted-foreground">Collect at least one response before generating an AI summary.</p>
+      <div className="mt-5 flex flex-wrap gap-2 border-b border-border pb-3" role="tablist" aria-label="Survey result views">
+        <Button data-testid="tab-summary" size="sm" variant={tab === "summary" ? "default" : "outline"} onClick={() => selectTab("summary")}>
+          洞察报告
+        </Button>
+        <Button data-testid="tab-individual" size="sm" variant={tab === "individual" ? "default" : "outline"} onClick={() => selectTab("individual")}>
+          单份答卷
+        </Button>
+        <Button data-testid="tab-report" size="sm" variant={tab === "report" ? "default" : "outline"} onClick={() => selectTab("report")}>
+          AI 报告
+        </Button>
+      </div>
+
+      {tab === "summary" && (
+        <section data-testid="summary-panel" className="mt-4 flex flex-col gap-4">
+          <SurveyDiagnosticReport
+            questions={data.survey.questions}
+            responses={data.responses}
+            aiReport={aiReport?.report}
+            reportTemplate={data.survey.reportTemplate}
+          />
+          <div className="mt-4 border-t border-border pt-6">
+            <h2 className="text-15 font-bold text-foreground">单题数据附录</h2>
+            <p className="mt-1 text-12 text-muted-foreground">保留每道题的回答率与分布，便于从诊断结论回查原始统计。</p>
           </div>
-        </div>
-      ) : (
-        <>
-          <div className="mt-6 flex items-center gap-2 print:hidden" role="tablist" aria-label="Results view">
-            <Button data-testid="tab-summary" size="sm" variant={tab === "summary" ? "default" : "outline"} onClick={() => setTab("summary")}>
-              Summary
-            </Button>
-            <Button data-testid="tab-individual" size="sm" variant={tab === "individual" ? "default" : "outline"} onClick={() => setTab("individual")}>
-              Individual
-            </Button>
-            <Button data-testid="tab-report" size="sm" variant={tab === "report" ? "default" : "outline"} onClick={() => setTab("report")}>
-              Report
-            </Button>
-          </div>
-
-          {tab === "summary" && (
-            <section data-testid="summary-view" className="mt-6 flex flex-col gap-4 print:hidden">
-              {summary.map((q) => (
-                <div key={q.id} data-testid={`summary-question-${q.id}`} className="rounded-12 border border-border bg-card p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-14 font-semibold text-foreground">{q.title}</p>
-                    <span data-testid={`summary-answered-${q.id}`} className="shrink-0 text-12 text-muted-foreground">
-                      {q.answeredCount} answered · {q.skippedCount} skipped
-                    </span>
-                  </div>
-
-                  {(q.type === "single" || q.type === "multiple" || q.type === "rating") && q.optionCounts && (
-                    <OptionBars counts={q.optionCounts} total={q.answeredCount} />
-                  )}
-
-                  {q.type === "rating" && (
-                    <p data-testid={`summary-average-${q.id}`} className="mt-2 text-13 text-muted-foreground">
-                      Average rating: <span className="font-semibold text-foreground">{q.average}</span> / 5
-                    </p>
-                  )}
-
-                  {q.type === "text" && (
-                    <div className="mt-3 flex flex-col gap-1.5">
-                      {(q.textAnswers ?? []).length === 0 ? (
-                        <p className="text-12 text-muted-foreground">No answers yet.</p>
-                      ) : (
-                        (q.textAnswers ?? []).slice(0, 5).map((t, idx) => (
-                          <p key={idx} className="truncate rounded-lg border border-border bg-background px-3 py-1.5 text-12 text-foreground">
-                            {t}
-                          </p>
-                        ))
-                      )}
-                      {(q.textAnswers ?? []).length > 5 && (
-                        <p className="text-11 text-muted-foreground">+{(q.textAnswers ?? []).length - 5} more in Individual view</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </section>
-          )}
-
-          {tab === "individual" && (
-            <section data-testid="individual-view" className="mt-6 flex flex-col gap-4 print:hidden">
-              {responses.map((r, idx) => (
-                <div key={r.id} data-testid={`response-${r.id}`} className="rounded-12 border border-border bg-card p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-13 font-semibold text-foreground">Response #{idx + 1}</p>
-                    <span className="text-12 text-muted-foreground">{formatDate(r.submittedAt)}</span>
-                  </div>
-                  <div className="mt-3 flex flex-col gap-2">
-                    {survey.questions.map((q) => (
-                      <div key={q.id} className="text-12">
-                        <p className="text-muted-foreground">{q.title}</p>
-                        <p data-testid={`response-${r.id}-answer-${q.id}`} className="mt-0.5 font-medium text-foreground">
-                          {answerText(q, r.answers[String(q.id)])}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </section>
-          )}
-
-          {tab === "report" && (
-            <section data-testid="report-view" className="mt-6 flex flex-col gap-5">
-              <div className="rounded-12 border border-border bg-card p-5 print:border-0 print:p-0">
-                <h2 className="text-18 font-bold text-foreground">Report: {survey.title}</h2>
-                <p className="mt-1 text-13 text-muted-foreground">Generated {formatDate(new Date().toISOString())}</p>
-                <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
-                  <div>
-                    <p className="text-12 text-muted-foreground">Total responses</p>
-                    <p data-testid="report-total" className="text-20 font-bold text-foreground">{totalResponses}</p>
-                  </div>
-                  <div>
-                    <p className="text-12 text-muted-foreground">Avg. completion</p>
-                    <p data-testid="report-completion" className="text-20 font-bold text-foreground">{averageCompletion}%</p>
-                  </div>
-                  <div>
-                    <p className="text-12 text-muted-foreground">Questions</p>
-                    <p className="text-20 font-bold text-foreground">{survey.questions.length}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div data-testid="report-ai-summary" className="rounded-12 border border-border bg-card p-5 print:break-inside-avoid">
+          {reportMetrics && (
+            <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
+              <article className="rounded-12 border border-border bg-card p-5">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-primary" strokeWidth={1.5} />
-                    <h3 className="text-14 font-semibold text-foreground">AI Summary</h3>
+                  <div>
+                    <h2 className="text-18 font-bold text-foreground">结果概览</h2>
+                    <p className="mt-1 text-13 text-muted-foreground">参考 Google Forms 的 Summary 视图，先看整体质量，再下钻单题。</p>
                   </div>
-                  <Button
-                    data-testid="report-ai-summary-generate"
-                    size="sm"
-                    variant="outline"
-                    disabled={totalResponses === 0 || aiSummaryLoading}
-                    onClick={() => void generateAiSummary()}
-                    className="gap-1.5 print:hidden"
-                  >
-                    <Sparkles className="h-4 w-4" strokeWidth={1.5} />
-                    {aiSummaryLoading ? "Generating…" : aiSummaryText || aiSummaryError ? "Regenerate" : "Generate summary"}
-                  </Button>
+                  <BarChart3 className="h-5 w-5 text-primary" strokeWidth={1.5} />
                 </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-lg border border-border bg-surface-1 p-3">
+                    <p className="text-12 text-muted-foreground">平均完成率</p>
+                    <p className="mt-1 text-22 font-bold text-foreground">{reportMetrics.avgCompletion}%</p>
+                    <div className="mt-3 h-2 rounded-full bg-muted">
+                      <div className="h-2 rounded-full bg-success" style={{ width: `${reportMetrics.avgCompletion}%` }} />
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-surface-1 p-3">
+                    <p className="text-12 text-muted-foreground">量化题</p>
+                    <p className="mt-1 text-22 font-bold text-foreground">{reportMetrics.numericQuestions.length}</p>
+                    <p className="mt-2 text-12 text-muted-foreground">评分 / NPS / 数字</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-surface-1 p-3">
+                    <p className="text-12 text-muted-foreground">开放反馈题</p>
+                    <p className="mt-1 text-22 font-bold text-foreground">{reportMetrics.textQuestions.length}</p>
+                    <p className="mt-2 text-12 text-muted-foreground">短答 / 长答 / 联系方式</p>
+                  </div>
+                </div>
+                <div data-testid="echat-summary-charts" className="mt-4 grid gap-3 lg:grid-cols-2">
+                  <EChartPanel
+                    testId="echat-completion-chart"
+                    title="回答完成率图表"
+                    description="平均完成率、最高回答率和最低回答率。"
+                    type="bar"
+                    unit="%"
+                    data={[
+                      { label: "平均", value: reportMetrics.avgCompletion },
+                      { label: "最高", value: reportMetrics.topQuestionRate },
+                      { label: "最低", value: reportMetrics.lowQuestionRate },
+                    ]}
+                  />
+                  <EChartPanel
+                    testId="echat-question-type-chart"
+                    title="题型分布图表"
+                    description="按题型聚合，辅助判断报告素材结构。"
+                    type="donut"
+                    data={Object.entries(reportMetrics.typeCounts).map(([label, value]) => ({ label, value }))}
+                  />
+                </div>
+              </article>
 
-                {aiSummaryLoading && (
-                  <div data-testid="report-ai-summary-loading" className="mt-3 grid animate-pulse gap-2">
-                    <div className="h-3 w-full rounded bg-muted" />
-                    <div className="h-3 w-5/6 rounded bg-muted" />
-                    <div className="h-3 w-2/3 rounded bg-muted" />
+              <article className="rounded-12 border border-border bg-card p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-18 font-bold text-foreground">题型结构</h2>
+                    <p className="mt-1 text-13 text-muted-foreground">问卷覆盖的题型与分析素材。</p>
+                  </div>
+                  <PieChart className="h-5 w-5 text-survey" strokeWidth={1.5} />
+                </div>
+                <div className="mt-4 space-y-3">
+                  {Object.entries(reportMetrics.typeCounts).map(([label, count], index) => (
+                    <div key={label}>
+                      <div className="flex items-center justify-between text-13">
+                        <span className="text-foreground">{label}</span>
+                        <span className="text-muted-foreground">{count} 题</span>
+                      </div>
+                      <div className="mt-1.5 h-2 rounded-full bg-muted">
+                        <div className={`h-2 rounded-full ${chartColor(index)}`} style={{ width: `${percent(count, data.survey.questions.length)}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            </div>
+          )}
+
+          {data.survey.questions.map((question, questionIndex) => {
+            const values = data.responses.map((response) => response.answers[String(question.id)]);
+            const ratingValues = values.filter((value): value is number => typeof value === "number");
+            const answeredRate = answerRate(question, data.responses);
+            return (
+              <article key={question.id} className="rounded-12 border border-border bg-card p-5 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-15 font-semibold text-foreground">{question.title}</h2>
+                      <Badge variant="outline">{typeLabel(question.type)}</Badge>
+                    </div>
+                    <p className="mt-1 text-12 text-muted-foreground">{answeredRate}% 回答率 · {question.required ? "必答" : "选答"}</p>
+                  </div>
+                  <div className="min-w-32">
+                    <div className="h-2 rounded-full bg-muted">
+                      <div className="h-2 rounded-full bg-primary" style={{ width: `${answeredRate}%` }} />
+                    </div>
+                  </div>
+                </div>
+                {(question.type === "rating" || question.type === "linear_scale" || question.type === "nps") && (
+                  <div className="mt-4 grid gap-3 md:grid-cols-[220px_1fr]">
+                    <div className="rounded-lg border border-border bg-surface-1 p-4">
+                      <p className="text-12 text-muted-foreground">平均分</p>
+                      <p className="mt-1 text-30 font-bold text-foreground">{average(ratingValues)}</p>
+                      <p className="text-12 text-muted-foreground">满分 {ratingMax(question.type)}</p>
+                    </div>
+                    <div className="rounded-lg border border-border bg-background p-4">
+                      <EChartPanel
+                        testId={`echat-question-chart-${questionIndex}`}
+                        title="评分分布"
+                        description="按分值统计回答数量。"
+                        type="bar"
+                        data={Array.from({ length: ratingMax(question.type) }, (_, idx) => {
+                          const score = idx + 1;
+                          return { label: String(score), value: ratingValues.filter((value) => value === score).length };
+                        })}
+                      />
+                    </div>
                   </div>
                 )}
-
-                {!aiSummaryLoading && aiSummaryError && (
-                  <div className="mt-3 flex items-center gap-3">
-                    <p role="alert" data-testid="err-report-ai-summary" className="text-13 text-destructive">
-                      {aiSummaryError}
+                {(question.type === "single" || question.type === "multiple" || question.type === "dropdown") && (
+                  <div className="mt-4">
+                    <EChartPanel
+                      testId={`echat-question-chart-${questionIndex}`}
+                      title="选项分布"
+                      description="每个选项的回答数量。"
+                      type="bar"
+                      data={question.options.map((option) => ({ label: option, value: optionCount(values, option) }))}
+                    />
+                  </div>
+                )}
+                {!["single", "multiple", "dropdown", "rating", "linear_scale", "nps"].includes(question.type) && (
+                  <div className="mt-4 rounded-lg border border-border bg-surface-1 p-4">
+                    <p className="text-13 text-muted-foreground">{values.filter((value) => hasAnswer(question, value)).length} 条回答</p>
+                    <p className="mt-2 text-12 leading-5 text-muted-foreground">
+                      汇总视图不展示原始文本；请在授权的单份答卷视图中查看。
                     </p>
-                    <Button
-                      data-testid="retry-report-ai-summary"
-                      size="sm"
-                      variant="outline"
-                      className="print:hidden"
-                      onClick={() => void generateAiSummary()}
-                    >
-                      Retry
-                    </Button>
                   </div>
                 )}
+              </article>
+            );
+          })}
+        </section>
+      )}
 
-                {!aiSummaryLoading && !aiSummaryError && aiSummaryText && (
-                  <p data-testid="report-ai-summary-text" className="mt-3 text-13 leading-relaxed text-foreground">
-                    {aiSummaryText}
-                  </p>
-                )}
-
-                {!aiSummaryLoading && !aiSummaryError && !aiSummaryText && (
-                  <p className="mt-3 text-13 text-muted-foreground">
-                    {totalResponses === 0
-                      ? "Collect at least one response before generating an AI summary."
-                      : "Click Generate summary to get an AI-written overview of this report."}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-4">
-                {summary.map((q) => (
-                  <div key={q.id} data-testid={`report-question-${q.id}`} className="rounded-12 border border-border p-4 print:break-inside-avoid">
-                    <p className="text-14 font-semibold text-foreground">{q.title}</p>
-                    <p className="mt-1 text-12 text-muted-foreground">{q.answeredCount} answered · {q.skippedCount} skipped</p>
-                    {(q.type === "single" || q.type === "multiple" || q.type === "rating") && q.optionCounts && (
-                      <OptionBars counts={q.optionCounts} total={q.answeredCount} />
-                    )}
-                    {q.type === "rating" && <p className="mt-2 text-13 text-muted-foreground">Average rating: {q.average} / 5</p>}
+      {tab === "individual" && (
+        <section data-testid="individual-panel" className="mt-4 flex flex-col gap-3">
+          {individualLoading ? (
+            <p className="rounded-lg border border-border bg-card p-4 text-13 text-muted-foreground">正在加载授权答卷…</p>
+          ) : individualError ? (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+              <p role="alert" className="text-13 text-destructive">{individualError}</p>
+              <Button size="sm" variant="outline" className="mt-3" onClick={() => void loadIndividualResponses()}>
+                重试
+              </Button>
+            </div>
+          ) : (individualResponses ?? []).map((response, responseIdx) => (
+            <article key={response.id ?? responseIdx} className="rounded-12 border border-border bg-card p-4">
+              <h2 className="text-15 font-semibold text-foreground">Response {responseIdx + 1}</h2>
+              <dl className="mt-3 flex flex-col gap-2">
+                {data.survey.questions.map((question) => (
+                  <div key={question.id} className="rounded-lg bg-surface-1 px-3 py-2">
+                    <dt className="text-12 text-muted-foreground">{question.title}</dt>
+                    <dd className="mt-1 text-13 text-foreground">{formatAnswer(question, response.answers[String(question.id)]) || "-"}</dd>
                   </div>
                 ))}
-              </div>
-            </section>
-          )}
-        </>
+              </dl>
+            </article>
+          ))}
+        </section>
       )}
-    </div>
+
+      {tab === "report" && (
+        <section data-testid="report-panel" className="mt-4 overflow-hidden rounded-12 border border-border bg-card">
+          <div className="border-b border-border bg-surface-1 p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-12 font-medium text-primary">
+                  <Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  {reportModel}
+                </div>
+                <h2 className="mt-3 text-20 font-bold text-foreground">AI 专业调研报告</h2>
+                <p className="mt-1 text-13 text-muted-foreground">
+                  基于 {data.responses.length} 份答卷、{data.survey.questions.length} 道题，生成管理层摘要、风险信号和行动建议。
+                </p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Select
+                  data-testid="report-model"
+                  aria-label="Report model"
+                  value={reportModel}
+                  onChange={(event) => setReportModel(event.target.value)}
+                  className="h-9"
+                >
+                  <option value="qwen3.7-max">qwen3.7-max</option>
+                  <option value="mock-survey-quality">Mock Survey Quality</option>
+                  <option value="mock-survey-fast">Mock Survey Fast</option>
+                </Select>
+                <Button data-testid="generate-ai-report" type="button" className="gap-1.5" disabled={reportLoading} onClick={() => void generateAiReport()}>
+                  <Sparkles className="h-4 w-4" strokeWidth={1.5} />
+                  {reportLoading ? "生成中…" : aiReport ? "重新生成" : "生成 AI 报告"}
+                </Button>
+              </div>
+            </div>
+            {reportError && (
+              <p role="alert" data-testid="ai-report-error" className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-13 text-destructive">
+                {reportError}
+              </p>
+            )}
+          </div>
+          <div className="border-b border-border p-5">
+            <ReportTemplatePanel template={aiReport?.reportTemplate ?? data.survey.reportTemplate} fallbackTitle={data.survey.title} />
+          </div>
+
+          {aiReport ? (
+            <div className="p-5">
+              {reportSessionId && (
+                <p data-testid="report-session-id" className="mb-3 text-12 text-muted-foreground">
+                  AI session: {reportSessionId}
+                </p>
+              )}
+              <div className="grid gap-3 lg:grid-cols-4">
+                <div className="rounded-12 border border-border bg-background p-4 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-12 text-muted-foreground">样本量</p>
+                    <ListChecks className="h-4 w-4 text-success" strokeWidth={1.5} />
+                  </div>
+                  <p className="mt-1 text-22 font-bold text-foreground">{aiReport.sampleSize}</p>
+                  <p className="mt-2 text-12 text-muted-foreground">当前有效答卷</p>
+                </div>
+                <div className="rounded-12 border border-border bg-background p-4 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-12 text-muted-foreground">平均完成率</p>
+                    <TrendingUp className="h-4 w-4 text-survey" strokeWidth={1.5} />
+                  </div>
+                  <p className="mt-1 text-22 font-bold text-foreground">{reportMetrics?.avgCompletion ?? 0}%</p>
+                  <div className="mt-3 h-2 rounded-full bg-muted">
+                    <div className="h-2 rounded-full bg-survey" style={{ width: `${reportMetrics?.avgCompletion ?? 0}%` }} />
+                  </div>
+                </div>
+                <div className="rounded-12 border border-border bg-background p-4 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-12 text-muted-foreground">置信度</p>
+                    <Target className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+                  </div>
+                  <p className="mt-1 text-22 font-bold capitalize text-foreground">{aiReport.report.confidence}</p>
+                  <p className="mt-2 text-12 text-muted-foreground">结合样本量和题型判断</p>
+                </div>
+                <div className="rounded-12 border border-border bg-background p-4 shadow-sm">
+                  <p className="text-12 text-muted-foreground">生成模型</p>
+                  <p className="mt-1 text-15 font-semibold text-foreground">{aiReport.model}</p>
+                  <p className="mt-2 text-12 text-muted-foreground">{new Date(aiReport.generatedAt).toLocaleString("zh-CN")}</p>
+                </div>
+              </div>
+
+              <article className="mt-4 rounded-12 border border-border bg-background p-5 shadow-sm">
+                <h3 className="text-15 font-bold text-foreground">{aiReport.report.title}</h3>
+                <p className="mt-2 text-14 leading-7 text-muted-foreground">{aiReport.report.executiveSummary}</p>
+              </article>
+
+              <article className="mt-4 rounded-12 border border-border bg-background p-4 shadow-sm">
+                <h3 className="text-15 font-bold text-foreground">追问 / 改写报告</h3>
+                <textarea
+                  data-testid="report-followup-input"
+                  value={reportInstruction}
+                  onChange={(event) => setReportInstruction(event.target.value)}
+                  placeholder="例如：压缩成高管摘要；语气更正式；补充行动优先级"
+                  className="mt-3 min-h-20 w-full resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
+                />
+                <Button
+                  data-testid="refine-ai-report"
+                  type="button"
+                  size="sm"
+                  className="mt-3"
+                  disabled={reportLoading || !reportInstruction.trim()}
+                  onClick={() => void generateAiReport(reportInstruction)}
+                >
+                  {reportLoading ? "改写中…" : "确认改写报告"}
+                </Button>
+              </article>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+                <div data-testid="echat-report-charts">
+                  <EChartPanel
+                    testId="echat-report-metric-chart"
+                    title="报告指标图表"
+                    description="AI 报告使用的核心回答覆盖指标。"
+                    type="bar"
+                    unit="%"
+                    data={[
+                      { label: "回答覆盖", value: reportMetrics?.avgCompletion ?? 0 },
+                      { label: "最高回答率", value: reportMetrics?.topQuestionRate ?? 0 },
+                      { label: "最低回答率", value: reportMetrics?.lowQuestionRate ?? 0 },
+                    ]}
+                  />
+                </div>
+
+                <article className="rounded-12 border border-border bg-background p-4 shadow-sm">
+                  <h3 className="text-15 font-bold text-foreground">指标解读</h3>
+                  <ul className="mt-3 grid gap-2 text-13 leading-6 text-muted-foreground">
+                    {aiReport.report.metricHighlights.map((item) => (
+                      <li key={item} className="rounded-lg bg-surface-1 px-3 py-2">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              </div>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-3">
+                {[
+                  ["细分洞察", aiReport.report.segmentInsights, "border-border bg-tag-blue/40"],
+                  ["机会点", aiReport.report.opportunityAreas, "border-border bg-tag-green/40"],
+                  ["风险信号", aiReport.report.risks, "border-destructive/20 bg-tag-pink/40"],
+                ].map(([heading, items, className]) => (
+                  <article key={heading as string} className={`rounded-12 border p-4 shadow-sm ${className as string}`}>
+                    <h3 className="text-15 font-bold text-foreground">{heading as string}</h3>
+                    <ul className="mt-3 space-y-2 text-13 leading-6 text-muted-foreground">
+                      {(items as string[]).slice(0, 4).map((item) => (
+                        <li key={item} className="rounded-lg bg-background/80 px-3 py-2">
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </article>
+                ))}
+              </div>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                {[
+                  ["关键发现", aiReport.report.keyFindings],
+                  ["行动建议", aiReport.report.recommendations],
+                  ["建议追问", aiReport.report.followUpQuestions],
+                ].map(([heading, items]) => (
+                  <article key={heading as string} className="rounded-12 border border-border bg-background p-4 shadow-sm">
+                    <h3 className="text-15 font-bold text-foreground">{heading as string}</h3>
+                    <ul className="mt-3 space-y-2 text-13 leading-6 text-muted-foreground">
+                      {(items as string[]).map((item) => (
+                        <li key={item} className="rounded-lg bg-surface-1 px-3 py-2">
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </article>
+                ))}
+              </div>
+
+              <article className="mt-4 rounded-12 border border-border bg-background p-4 shadow-sm">
+                <h3 className="text-15 font-bold text-foreground">单题图表快照</h3>
+                <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                  {data.survey.questions.slice(0, 4).map((question) => {
+                    const values = data.responses.map((response) => response.answers[String(question.id)]);
+                    const ratingValues = values.filter((value): value is number => typeof value === "number");
+                    return (
+                      <div key={question.id} className="rounded-lg border border-border bg-surface-1 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-13 font-medium text-foreground">{question.title}</p>
+                          <Badge variant="outline">{typeLabel(question.type)}</Badge>
+                        </div>
+                        {(question.type === "single" || question.type === "multiple" || question.type === "dropdown") && (
+                          <div className="mt-3 space-y-2">
+                            {question.options.slice(0, 4).map((option, index) => {
+                              const count = optionCount(values, option);
+                              const optionPercent = percent(count, data.responses.length);
+                              return (
+                                <div key={option}>
+                                  <div className="flex justify-between text-12 text-muted-foreground">
+                                    <span>{option}</span>
+                                    <span>{optionPercent}%</span>
+                                  </div>
+                                  <div className="mt-1 h-1.5 rounded-full bg-muted">
+                                    <div className={`h-1.5 rounded-full ${chartColor(index)}`} style={{ width: `${optionPercent}%` }} />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {(question.type === "rating" || question.type === "linear_scale" || question.type === "nps") && (
+                          <div className="mt-3 flex items-end gap-2">
+                            <p className="text-22 font-bold text-foreground">{average(ratingValues)}</p>
+                            <p className="pb-1 text-12 text-muted-foreground">平均分 / {ratingMax(question.type)}</p>
+                          </div>
+                        )}
+                        {!["single", "multiple", "dropdown", "rating", "linear_scale", "nps"].includes(question.type) && (
+                          <p className="mt-3 text-13 text-muted-foreground">{values.filter((value) => formatAnswer(question, value)).length} 条文本回答</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </article>
+
+              <article className="mt-4 rounded-12 border border-border bg-background p-4 shadow-sm">
+                <h3 className="text-15 font-bold text-foreground">方法与边界</h3>
+                <p className="mt-2 text-13 leading-6 text-muted-foreground">{aiReport.report.methodology}</p>
+              </article>
+            </div>
+          ) : (
+            <div className="p-5">
+              <div className="rounded-12 border border-dashed border-border-strong bg-background p-5">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-15 font-bold text-foreground">报告生成前预览</h3>
+                    <p className="mt-2 max-w-2xl text-14 leading-6 text-muted-foreground">
+                      当前已具备 {data.responses.length} 份答卷、{data.survey.questions.length} 道题、平均评分 {ratingAverage}。生成后会把本地统计图表和 AI 研究判断合并成一份图文报告。
+                    </p>
+                  </div>
+                  <div className="rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-12 font-medium text-primary">
+                    Google / Microsoft 风格摘要 + AI 洞察
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-3 lg:grid-cols-3">
+                  {[
+                    ["1", "基础统计", "样本量、完成率、题型结构、评分均值"],
+                    ["2", "图表分析", "选择题分布、评分柱状图、开放题回答量"],
+                    ["3", "AI 洞察", "管理层摘要、细分洞察、机会点、风险与建议"],
+                  ].map(([step, title, desc]) => (
+                    <div key={step} className="rounded-lg border border-border bg-surface-1 p-4">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background text-13 font-bold text-primary">{step}</div>
+                      <p className="mt-3 text-14 font-semibold text-foreground">{title}</p>
+                      <p className="mt-1 text-12 leading-5 text-muted-foreground">{desc}</p>
+                    </div>
+                  ))}
+                </div>
+                <div data-testid="echat-report-preview-charts" className="mt-5 grid gap-3 md:grid-cols-2">
+                  <EChartPanel
+                    testId="echat-report-preview-completion-chart"
+                    title="报告预览指标"
+                    description="生成 AI 报告前可先查看样本覆盖情况。"
+                    type="bar"
+                    unit="%"
+                    data={[
+                      { label: "平均完成率", value: reportMetrics?.avgCompletion ?? 0 },
+                      { label: "最高题目", value: reportMetrics?.topQuestionRate ?? 0 },
+                      { label: "最低题目", value: reportMetrics?.lowQuestionRate ?? 0 },
+                    ]}
+                  />
+                  <EChartPanel
+                    testId="echat-report-preview-type-chart"
+                    title="报告素材结构"
+                    description="AI 将结合题型结构生成报告。"
+                    type="donut"
+                    data={Object.entries(reportMetrics?.typeCounts ?? {}).map(([label, value]) => ({ label, value }))}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+      </div>
+      </main>
+    </SurveyResultsShell>
   );
 }

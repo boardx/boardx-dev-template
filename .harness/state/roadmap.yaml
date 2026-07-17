@@ -178,6 +178,27 @@ phases:
     status: not_started
     depends_on: []
     has_ui: true
+  - id: "p25"
+    slug: survey
+    name: Survey System
+    goal: "以 boardx-survey/codex-survey-home-nav-redesign 为事实来源，交付 AI 原生问卷设计、发布回收、答卷分析与专业报告完整闭环"
+    status: in_progress
+    depends_on: []
+    has_ui: true
+  - id: "p26"
+    slug: ava-legacy-sync
+    name: ava-legacy-sync
+    goal: "同步 boardx-web 与 boardx-backend 的 AVA 旧功能到 boardx-dev-template，建立可验证的兼容 API、迁移清单与分批交付路径。"
+    status: not_started
+    depends_on: []
+  - id: "p27"
+    slug: aiStore
+    name: AI Store
+    goal: "交付 Team 隔离的 Agent/Skills/Template 商店完整闭环与已确认的 Resource Library UIUX"
+    status: in_progress
+    depends_on: []
+    has_ui: true
+    tracking_issue: 679
   - id: "p28"
     slug: platform-accounts-gap2
     name: platform-accounts-gap2

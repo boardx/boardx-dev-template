@@ -40,6 +40,15 @@ if [ -n "$unknown" ]; then
   for k in $unknown; do grep -rn "\btext-$k\b" app components --include="*.tsx" | head -3; done
 fi
 
+# ── 1.7 API 错误泄漏门控（ADR-015；#539 String(err) 泄漏事故；#669 门控假绿修正）─
+# 内部错误细节（message/stack/SQL/endpoint）绝不回传客户端——只进服务端日志。
+# 交给 check-error-leaks.mjs 做括号平衡扫描（跨行、任意异常变量名、web+devportal），
+# 取代原来那行 grep——后者只覆盖 err/e 且逐行，恰好漏掉 error.message 这类真泄漏、
+# 门却绿着（#669 review 实测）。放行 zod validation.message / console.error / 入库 trace。
+if ! node scripts/check-error-leaks.mjs; then
+  err "API 路由把内部错误细节回传客户端（改用通用文案 + console.error 落日志，见 ADR-015）"
+fi
+
 # ── 2. 原生表单元素（必须用 shadcn 封装）────────────────────────────────────
 # 允许 shadcn 组件本身内部使用（components/ui/ 路径排除）；只扫 app/ 页面层
 raw_select=$(grep -rn "<select" app --include="*.tsx" 2>/dev/null || true)

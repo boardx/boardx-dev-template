@@ -100,7 +100,17 @@ export default function StudioPage() {
       setPrompt("");
     } else {
       const d = await res.json().catch(() => ({}));
-      setGenError(d.errors?.type ?? d.error ?? "生成失败，请重试");
+      // /api/studio 走 withValidation（ADR-015），失败回**机器码** error
+      // （validation_failed / unauthenticated / …）。UI 负责 code→中文映射，
+      // 否则用户会看到英文机器码（#669 review）。兼容旧契约的 d.errors.type。
+      // 未知 code 一律落到通用文案，绝不把机器码直接展示给用户。
+      const codeMsg: Record<string, string> = {
+        unauthenticated: "请先登录后再生成",
+        validation_failed: "请检查产物类型和描述后重试",
+        invalid_json_body: "请求内容格式有误",
+        internal_error: "生成失败，请重试",
+      };
+      setGenError(d.errors?.type ?? codeMsg[d.error as string] ?? "生成失败，请重试");
     }
     setGenerating(false);
   }

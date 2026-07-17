@@ -28,6 +28,8 @@ export async function POST(req: Request) {
     cookies().set(CURRENT_TEAM_COOKIE, String(teamId), { httpOnly: true, sameSite: "lax", path: "/" });
     return NextResponse.json({ teamId });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    // 内部细节只进日志，响应给稳定错误码（ADR-015 / #539 教训）
+    console.error("[api] unhandled", err);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 }

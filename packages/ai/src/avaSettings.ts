@@ -11,12 +11,19 @@ export interface AvaAgentOption {
   id: string;
   label: string;
   description: string;
+  version?: number;
+  config?: Record<string, unknown>;
+  deepAgentEnabled?: boolean;
+  storeId?: number;
 }
 
 export interface AvaToolOption {
   id: string;
   label: string;
   description: string;
+  version?: number;
+  skillKind?: "text" | "image";
+  config?: Record<string, unknown>;
 }
 
 export interface AvaAiSettings {
@@ -25,13 +32,23 @@ export interface AvaAiSettings {
   toolIds: string[];
 }
 
-export const DEFAULT_AVA_MODEL_ID = "stub:default";
+export const DEFAULT_AVA_MODEL_ID = "qwen3.7-max";
 export const DEFAULT_AVA_AGENT_ID = "default";
 export const DEFAULT_AVA_TOOL_IDS = ["web-search"];
 
 export const AVA_MODEL_OPTIONS: AvaModelOption[] = [
   {
     id: DEFAULT_AVA_MODEL_ID,
+    label: "Qwen 3.7 Max",
+    description: "BoardX default real AVA model via DashScope. Requires DASHSCOPE_API_KEY or QWEN_API_KEY.",
+  },
+  {
+    id: "qwen3.6-plus",
+    label: "Qwen 3.6 Plus",
+    description: "DashScope Qwen model for faster AVA responses.",
+  },
+  {
+    id: "stub:default",
     label: "Stub Default",
     description: "Fast deterministic AVA stub model for local chat.",
   },
@@ -92,23 +109,35 @@ export function isModelSelectable(modelId: string, canUseTeamRestrictedModels: b
   return !model.teamRestricted || canUseTeamRestrictedModels;
 }
 
+export function getDefaultAvaModelId(canUseTeamRestrictedModels = true): string {
+  const requested =
+    process.env.AVA_DEFAULT_MODEL_ID ??
+    process.env.NEXT_PUBLIC_AVA_DEFAULT_MODEL_ID ??
+    "";
+  return isModelSelectable(requested, canUseTeamRestrictedModels)
+    ? requested
+    : DEFAULT_AVA_MODEL_ID;
+}
+
 export function normalizeAvaAiSettings(
   input: Partial<AvaAiSettings>,
   canUseTeamRestrictedModels: boolean,
   // p18-F09：agent 选项不再只有内置常量——调用方（如消息路由）可传入
   // 「内置 + 当前用户/团队已订阅的 AI Store Agent」的完整可选集；
   // 不传时退化为内置常量（与历史行为一致）。
-  agentOptions: ReadonlyArray<Pick<AvaAgentOption, "id">> = AVA_AGENT_OPTIONS
+  agentOptions: ReadonlyArray<Pick<AvaAgentOption, "id">> = AVA_AGENT_OPTIONS,
+  toolOptions: ReadonlyArray<Pick<AvaToolOption, "id">> = AVA_TOOL_OPTIONS,
 ): AvaAiSettings {
+  const defaultModelId = getDefaultAvaModelId(canUseTeamRestrictedModels);
   const modelId = isModelSelectable(input.modelId ?? "", canUseTeamRestrictedModels)
     ? input.modelId!
-    : DEFAULT_AVA_MODEL_ID;
+    : defaultModelId;
 
   const agentId = agentOptions.some((a) => a.id === input.agentId)
     ? input.agentId!
     : DEFAULT_AVA_AGENT_ID;
 
-  const allowedTools = new Set(AVA_TOOL_OPTIONS.map((t) => t.id));
+  const allowedTools = new Set(toolOptions.map((t) => t.id));
   const requestedTools = Array.isArray(input.toolIds) ? input.toolIds : DEFAULT_AVA_TOOL_IDS;
   const toolIds = requestedTools.filter((id) => allowedTools.has(id));
 

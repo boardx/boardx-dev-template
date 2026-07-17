@@ -36,6 +36,7 @@ ADR-001/003/005/009/010/011/012/013；postmortem-p23-false-passing.md；coordina
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-17：coord-service 补了 CD（deploy-coord-service.yml，Closes andon #272/#290 根因）。此前它是**唯一没有 CD 的部署目标**，手动 wrangler deploy → 两个分支 last-write-wins 互相覆盖（#629 部署覆盖掉 #614 的 tasks 路由，线上收件箱静默消失）。CD 只从 main 部署、串行不取消，从根本消除竞争；冒烟检查带**部署漂移探针**（/time 存在 + /tasks 返 401 而非 404）。铁律推论：**协调权威绝不手动部署**，改代码走 PR 合 main 触发 CD。
 - 2026-07-10：P23 假 passing 事件——verify --phase 模式断审计链（postmortem 全文必读）。
 - 2026-07-10：doctor 首跑全仓 85 FAIL——手抄清单/人肉纪律必然漂移，能机器判定的绝不留给人。
 - 2026-07-11：#545 合错 base + force-push 丢 workflow（#547 恢复）——工作流类文件合并后要验 main 树。

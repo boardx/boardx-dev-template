@@ -17,6 +17,7 @@ export function createAvaReplyStreamResponse(input: {
   modelId?: string;
   agentId?: string;
   toolIds?: string[];
+  systemPrompt?: string;
   status?: number;
   /** P18 F02：客户端点击停止/断开连接时由路由传入的 request.signal，
    *  透传给网关/provider 实现真实中断（而非等待完整回显后再丢弃结果）。 */
@@ -58,7 +59,10 @@ export function createAvaReplyStreamResponse(input: {
             modelId: input.modelId ?? DEFAULT_MODEL_ID,
             agentId: input.agentId,
             toolIds: input.toolIds,
-            messages: input.history.map((m) => ({ role: m.role, content: m.content })),
+            messages: [
+              ...(input.systemPrompt ? [{ role: "system" as const, content: input.systemPrompt }] : []),
+              ...input.history.map((m) => ({ role: m.role, content: m.content })),
+            ],
             onToken: (token) => {
               partial += token;
               send("token", { token });

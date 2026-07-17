@@ -26,6 +26,8 @@ export async function PUT(req: Request) {
     await upsertSettings(user.id, { ai_model: aiModel, default_privacy: defaultPrivacy });
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    // 内部细节只进日志，响应给稳定错误码（ADR-015 / #539 教训）
+    console.error("[api] unhandled", err);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 }
