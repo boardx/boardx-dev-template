@@ -213,14 +213,19 @@
       "area": "portal",
       "title": "【Phase F 后置】登录后'我'视角首页",
       "user_visible_behavior": "登录后首页=我的 agent 队伍、@我的待拍板、我卡住的 PR、我的 flow-time，全局脉搏第二屏——10 秒内知道'我现在该干什么'。",
-      "status": "blocked",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "03",
+      "owner": "coord-architecture",
       "capability": "CAP-WEB",
       "verification": [
-        "false  # Phase F 后置：依赖 ADR-011 OAuth 身份绑定，暂不排期"
+        "test -f apps/devportal/app/api/portal/my-home/route.ts",
+        "grep -q 'data-testid=\"me-home\"' apps/devportal/components/portal/tabs/me-tab.tsx",
+        "grep -q 'data-testid=\"my-agents\"' apps/devportal/components/portal/tabs/me-tab.tsx",
+        "grep -q 'data-testid=\"my-flow-time\"' apps/devportal/components/portal/tabs/me-tab.tsx",
+        "grep -q 'key: \"me\"' apps/devportal/components/portal/portal-shell.tsx",
+        "pnpm --filter @repo/devportal exec tsc --noEmit"
       ],
-      "evidence": "",
+      "evidence": "evidence/F10.verify.log @ 2026-07-14T18:07:42.291Z",
       "notes": "coord-main review 战略方向；blocked-on ADR-011 P2 落地，不进本阶段 sprint。",
       "depends_on": [
         "F09"

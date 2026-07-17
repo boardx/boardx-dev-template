@@ -1,0 +1,71 @@
+{
+  "phase": "p26",
+  "features": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "area": "web",
+      "title": "同步旧 AVA chat 兼容 API",
+      "user_visible_behavior": "旧 boardx-backend 的 `/v1/chat/*` AVA 调用面在当前 Next 项目中存在对应 `/api/v1/chat/*` 路由；旧 widget/chat/title/translate/digitize DTO 字段能被兼容层转换为当前 `@repo/ai` 网关请求，未知旧模型名降级到安全 stub 模型，错误响应不泄漏原始异常文本。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": "codex-ava",
+      "capability": "CAP-WEB",
+      "verification": [
+        "pnpm --filter @repo/web test -- lib/ava-legacy-compat.test.ts app/api/v1/chat/handleRequestAIChat/route.test.ts",
+        "pnpm --filter @repo/web typecheck"
+      ],
+      "evidence": "evidence/F01.verify.log @ 2026-07-15T09:38:21.462Z",
+      "notes": "来源：boardx-backend/src/ava/ava.chat.controller.ts 与 src/core/dto/ava/*。预计触碰 `apps/web/lib/ava-legacy-compat.ts` 和 `apps/web/app/api/v1/chat/*`。本 feature 不迁移旧 Redux 服务层；旧前端 UI parity 由 F02/F03 继续断言。"
+    },
+    {
+      "id": "F02",
+      "priority": 2,
+      "area": "web",
+      "title": "迁移旧 AVA composer 与消息动作能力",
+      "user_visible_behavior": "用户进入当前 AVA 页面时，旧 boardx-web 中的文件/图片/语音输入、消息复制/编辑/重试/发送到白板等核心交互在当前页面有等价入口，并保留现有 `data-testid` 回归测试可定位。",
+      "status": "passing",
+      "sprint": "02",
+      "owner": "codex-ava",
+      "capability": "CAP-WEB",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ava-chat-basic.spec.ts e2e/ava-message-actions.spec.ts e2e/ava-message-send-actions.spec.ts e2e/ava-attach-files.spec.ts e2e/ava-voice-input.spec.ts"
+      ],
+      "evidence": "evidence/F02.verify.log @ 2026-07-16T11:00:07.480Z",
+      "notes": "来源：boardx-web/src/components/ava/ChatUIComponent/MessageEditor 与 ChatItem。会改 `apps/web/app/(app)/ava/page.tsx`、`voice-input.tsx`、`attachments.tsx`，必须串行在 F01 后。增量验收：普通本地 dev 必须通过 Next 转译 `@repo/ai` 读取当前 Qwen 默认模型，`/api/ava/capabilities` 返回 `qwen3.7-max`，composer textarea 不出现原生黑色内层边框。"
+    },
+    {
+      "id": "F03",
+      "priority": 3,
+      "area": "web",
+      "title": "迁移旧 AVA Deep Research 细节视图",
+      "user_visible_behavior": "用户在当前 AVA Deep Research 流程中能看到旧 boardx-web 的计划、澄清问题、专家/persona、执行时间线、报告 notice 与 user-research 细节的等价信息结构，并且刷新后 researchType 与报告内容保持一致。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "pnpm --filter @repo/web exec playwright test e2e/ava-deep-research.spec.ts e2e/ava-research-persistence.spec.ts e2e/ava-research-type-selector.spec.ts e2e/ava-research-report-templates.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "来源：boardx-web/src/components/ava/ChatUIComponent/DeepResearch。必须保护 mod-ava 约束：explicit researchType 优先于模型输出与关键词推断。"
+    },
+    {
+      "id": "F04",
+      "priority": 4,
+      "area": "ai",
+      "title": "评估并迁移旧后端 provider/tool 差异",
+      "user_visible_behavior": "系统有一份可执行迁移映射，说明旧 `handleRequestAIChat`、Claude/Gemini、widget、translate、digitize whiteboard 与当前 `packages/ai` 网关/board canvas 能力的对应关系；已迁移项有测试，未迁移项有后续 feature 归属。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AI",
+      "verification": [
+        "pnpm --filter @repo/ai test",
+        "pnpm --filter @repo/web test -- lib/ava-legacy-compat.test.ts"
+      ],
+      "evidence": "",
+      "notes": "来源：boardx-backend/src/ava/infrustructure 与 src/ava/tools。不要绕过 `packages/ai` 网关直连 provider。"
+    }
+  ]
+}
