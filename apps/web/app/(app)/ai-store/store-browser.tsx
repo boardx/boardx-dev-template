@@ -1,45 +1,25 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Compass, Bookmark, Plus, ShieldCheck, Share2, LayoutGrid, Pencil, Heart, Link2, Trash2, X, Copy } from "lucide-react";
+import { Search, Bookmark, Plus, Share2, LayoutGrid, Pencil, Heart, Link2, Trash2, X, Copy, SlidersHorizontal, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-
-type StoreType = "agent" | "skill" | "template";
-type SkillKind = "text" | "image";
-type StoreScope = "personal" | "team" | "platform";
-type StoreStatus = "draft" | "published" | "pending" | "approved" | "rejected";
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { ResourceCatalog } from "./_components/resource-catalog";
+import { StoreNavigation } from "./_components/store-navigation";
+import type {
+  SkillKind,
+  StoreDestination,
+  StoreItem,
+  StoreScope,
+  StoreStatus,
+  StoreType,
+} from "./_components/store-types";
 type SubmitAction = "draft" | "publish" | "submit_review";
-
-interface StoreItem {
-  id: number;
-  version: number;
-  origin_team_id: number;
-  name: string;
-  description: string;
-  type: StoreType;
-  scope: StoreScope;
-  status: StoreStatus;
-  cover: string | null;
-  tags: string[];
-  examples: string[];
-  config?: Record<string, unknown>;
-  author: string;
-  likes: number;
-  views: number;
-  featured: boolean;
-  allow_copy: boolean;
-  copied_from_item_id?: number | null;
-  copied_from_version?: number | null;
-  liked?: boolean;
-  unavailable?: boolean;
-  subscriptionScopes?: Array<"personal" | "team">;
-  origin_team_name?: string;
-}
 
 interface SubscriptionStatus {
   subscribed: boolean;
@@ -82,27 +62,6 @@ interface ListResponse {
   pageSize: number;
   totalPages: number;
 }
-
-type NavItem = { key: string; name: string; icon: typeof Compass };
-type NavGroup = { group: string; items: NavItem[] };
-
-const NAV_GROUPS: NavGroup[] = [
-  {
-    group: "Browsing",
-    items: [
-      { key: "explore", name: "Explore", icon: Compass },
-      { key: "subscribe", name: "Subscribe", icon: Bookmark },
-    ],
-  },
-  {
-    group: "Creation",
-    items: [
-      { key: "create", name: "Create", icon: Plus },
-      { key: "authorized", name: "Authorized Agents", icon: ShieldCheck },
-      { key: "shared", name: "Shared", icon: Share2 },
-    ],
-  },
-];
 
 const TYPE_TABS: { key: "all" | StoreType; name: string }[] = [
   { key: "all", name: "All" },
@@ -174,9 +133,15 @@ function configText(item: StoreItem) {
   return item.config && Object.keys(item.config).length > 0 ? JSON.stringify(item.config, null, 2) : "";
 }
 
-export function StoreBrowser() {
+export function StoreBrowser({
+  isSysAdmin = false,
+  initialTeam = null,
+}: {
+  isSysAdmin?: boolean;
+  initialTeam?: { id: number; name: string; role: string } | null;
+}) {
   const router = useRouter();
-  const [nav, setNav] = useState<string>("explore");
+  const [nav, setNav] = useState<StoreDestination>("explore");
   const [items, setItems] = useState<StoreItem[]>([]);
   const [ownedItems, setOwnedItems] = useState<StoreItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -192,7 +157,7 @@ export function StoreBrowser() {
   const [detailId, setDetailId] = useState<number | null>(null);
   const [detailItem, setDetailItem] = useState<StoreItem | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState(false);
+  const [detailError, setDetailError] = useState<number | null>(null);
   const [detailRequestVersion, setDetailRequestVersion] = useState(0);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingAuthorized, setEditingAuthorized] = useState(false);
@@ -204,6 +169,9 @@ export function StoreBrowser() {
   const [usingItem, setUsingItem] = useState<number | null>(null);
   const [builderIdea, setBuilderIdea] = useState("");
   const [builderBusy, setBuilderBusy] = useState(false);
+  const [currentTeam, setCurrentTeam] = useState<{ id: number; name: string; role: string } | null>(initialTeam);
+  const requestIdRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
 
   // P11 F05：分享管理弹窗状态。shareItemId != null 时弹窗打开，对应 owned 项目的 id。
   const [shareItemId, setShareItemId] = useState<number | null>(null);
@@ -230,6 +198,10 @@ export function StoreBrowser() {
   const [canManageTeamSubscriptions, setCanManageTeamSubscriptions] = useState(false);
 
   async function load(opts: { type: "all" | StoreType; tags: string[]; q: string; page: number }) {
+    const requestId = ++requestIdRef.current;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
     setError("");
     const params = new URLSearchParams();
@@ -238,18 +210,21 @@ export function StoreBrowser() {
     if (opts.q.trim()) params.set("q", opts.q.trim());
     params.set("page", String(opts.page));
     try {
-      const res = await fetch(`/api/ai-store/items?${params}`);
+      const res = await fetch(`/api/ai-store/items?${params}`, { signal: controller.signal });
+      if (requestId !== requestIdRef.current) return;
       if (!res.ok) {
         setError("Failed to load. Please try again.");
         setLoading(false);
         return;
       }
       const data = (await res.json()) as ListResponse;
+      if (requestId !== requestIdRef.current) return;
       setItems(data.items ?? []);
       setTotal(data.total ?? 0);
       setPage(data.page ?? 1);
       setTotalPages(data.totalPages ?? 1);
-    } catch {
+    } catch (cause) {
+      if (controller.signal.aborted || requestId !== requestIdRef.current) return;
       setError("Failed to load. Please try again.");
     }
     setLoading(false);
@@ -317,7 +292,10 @@ export function StoreBrowser() {
   // Explore 拉浏览列表；Create 拉属主列表；Authorized 同时拉属主列表（Manage share 入口）
   // 与被授权列表（自己被授权管理、非本人拥有的项目）；Subscribe 拉已订阅列表。
   useEffect(() => {
-    if (nav === "explore") void load({ type, tags: activeTags, q, page: 1 });
+    if (nav === "explore" || nav === "featured") {
+      const tags = nav === "featured" ? [...new Set(["featured", ...activeTags])] : activeTags;
+      void load({ type, tags, q, page: 1 });
+    }
     else if (nav === "create" || nav === "authorized" || nav === "shared") {
       setItems([]);
       setLoading(false);
@@ -339,6 +317,23 @@ export function StoreBrowser() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nav, type, activeTags]);
 
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      fetch("/api/teams").then((response) => response.ok ? response.json() : { teams: [] }),
+      fetch("/api/teams/current").then((response) => response.ok ? response.json() : { teamId: null }),
+    ]).then(([teamsData, currentData]) => {
+      if (!active) return;
+      const team = (teamsData.teams ?? []).find(
+        (candidate: { id: number | string }) => String(candidate.id) === String(currentData.teamId),
+      );
+      setCurrentTeam(team ? { id: Number(team.id), name: team.name, role: team.role ?? "member" } : null);
+    }).catch(() => {
+      if (active) setCurrentTeam(null);
+    });
+    return () => { active = false; };
+  }, []);
+
   // 从分享链接跳转回来的着陆态（见 app/(app)/ai-store/share/[id]/page.tsx）：
   // ?nav=authorized 直接切到 Authorized 视图；?shareError=invalid 提示链接失效；
   // ?shared=<id> 提示成功加入。仅在挂载时读一次 URL，不影响后续 client 状态切换。
@@ -347,6 +342,20 @@ export function StoreBrowser() {
     const params = new URLSearchParams(window.location.search);
     const navParam = params.get("nav");
     if (navParam === "authorized") setNav("authorized");
+    const viewParam = params.get("view");
+    if (["explore", "featured", "subscribe", "create", "authorized", "shared"].includes(viewParam ?? "")) {
+      setNav(viewParam as StoreDestination);
+    }
+    const qParam = params.get("q") ?? "";
+    const typeParam = params.get("type");
+    const parsedType = ["agent", "skill", "template"].includes(typeParam ?? "")
+      ? typeParam as StoreType
+      : "all";
+    if (qParam || parsedType !== "all") {
+      setQ(qParam);
+      setType(parsedType);
+      void load({ type: parsedType, tags: viewParam === "featured" ? ["featured"] : [], q: qParam, page: 1 });
+    }
     if (params.get("shareError") === "invalid") {
       setShareRedeemNotice("分享链接无效、已关闭或项目不存在");
     } else if (params.get("shared")) {
@@ -372,7 +381,7 @@ export function StoreBrowser() {
     }
     let cancelled = false;
     setDetailLoading(true);
-    setDetailError(false);
+    setDetailError(null);
     Promise.all([
       fetch(`/api/ai-store/items/${detailId}`),
       fetch(`/api/ai-store/items/${detailId}/subscribe`),
@@ -391,10 +400,10 @@ export function StoreBrowser() {
           setDetailSubscription(subscriptionData);
         }
       })
-      .catch(() => {
+      .catch((cause: unknown) => {
         if (!cancelled) {
           setDetailItem(null);
-          setDetailError(true);
+          setDetailError(cause instanceof Response ? cause.status : 500);
         }
       })
       .finally(() => {
@@ -558,20 +567,54 @@ export function StoreBrowser() {
     setActiveTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   }
 
+  function syncUrl(next: {
+    nav?: StoreDestination;
+    type?: "all" | StoreType;
+    q?: string;
+    tags?: string[];
+    page?: number;
+  }) {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams();
+    const nextNav = next.nav ?? nav;
+    const nextType = next.type ?? type;
+    const nextQ = next.q ?? q;
+    const nextTags = next.tags ?? activeTags;
+    const nextPage = next.page ?? page;
+    if (nextNav !== "explore") params.set("view", nextNav);
+    if (nextType !== "all") params.set("type", nextType);
+    if (nextQ.trim()) params.set("q", nextQ.trim());
+    for (const tag of nextTags) params.append("tag", tag);
+    if (nextPage > 1) params.set("page", String(nextPage));
+    const query = params.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+  }
+
+  function selectDestination(destination: StoreDestination) {
+    setDetailId(null);
+    setNav(destination);
+    syncUrl({ nav: destination, page: 1 });
+  }
+
   function clearFilters() {
     setActiveTags([]);
     setQ("");
     setType("all");
+    syncUrl({ type: "all", q: "", tags: [], page: 1 });
   }
 
   function searchExplore(nextQ: string) {
     setQ(nextQ);
-    void load({ type, tags: activeTags, q: nextQ, page: 1 });
+    const tags = nav === "featured" ? [...new Set(["featured", ...activeTags])] : activeTags;
+    syncUrl({ q: nextQ, page: 1 });
+    void load({ type, tags, q: nextQ, page: 1 });
   }
 
   function goToPage(p: number) {
     if (p < 1 || p > totalPages || p === page) return;
-    void load({ type, tags: activeTags, q, page: p });
+    const tags = nav === "featured" ? [...new Set(["featured", ...activeTags])] : activeTags;
+    syncUrl({ page: p });
+    void load({ type, tags, q, page: p });
   }
 
   function updateForm<K extends keyof typeof EMPTY_FORM>(key: K, value: (typeof EMPTY_FORM)[K]) {
@@ -780,12 +823,20 @@ export function StoreBrowser() {
   }
 
   const filtersActive = activeTags.length > 0 || q.trim().length > 0 || type !== "all";
-  const isExplore = nav === "explore";
+  const isExplore = nav === "explore" || nav === "featured";
   const isCreate = nav === "create";
   const isAuthorized = nav === "authorized";
   const isShared = nav === "shared";
-  const navTitle =
-    NAV_GROUPS.flatMap((g) => g.items).find((n) => n.key === nav)?.name ?? "Explore";
+  const navTitle = {
+    explore: "Explore",
+    featured: "Featured",
+    subscribe: "My subscriptions",
+    create: "Created by me",
+    authorized: "Authorized editing",
+    shared: "Shared with me",
+    "team-review": "Team review",
+    "boardx-review": "BoardX review",
+  }[nav];
   const ownedList = (
     <div data-testid="owner-items" className="mt-5">
       {ownedLoading ? (
@@ -889,57 +940,137 @@ export function StoreBrowser() {
   );
 
   return (
-    <div className="flex h-full overflow-hidden" data-testid="ai-store">
-      {/* store submenu */}
-      <aside
-        data-testid="store-submenu"
-        className="w-62 shrink-0 overflow-auto border-r border-border px-3 py-4.5"
-      >
-        <div className="px-2 pb-3 text-15 font-bold text-foreground">AI Store</div>
-        {NAV_GROUPS.map((g) => (
-          <div key={g.group}>
-            <div className="px-2 pb-1.5 pt-3 text-10 font-semibold uppercase tracking-wide text-placeholder">
-              {g.group}
-            </div>
-            {g.items.map(({ key, name, icon: Icon }) => (
-              <Button
-                key={key}
-                variant="ghost"
-                data-testid={`nav-${key}`}
-                aria-pressed={nav === key}
-                onClick={() => setNav(key)}
-                className={cn(
-                  "h-8.5 w-full justify-start gap-2 rounded-9 px-2 text-13 font-medium",
-                  nav === key
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:bg-surface-1 hover:text-foreground",
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-                <span className="truncate">{name}</span>
-              </Button>
-            ))}
-          </div>
-        ))}
-      </aside>
+    <div className="flex h-full min-w-0 flex-col overflow-hidden lg:flex-row" data-testid="ai-store">
+      <StoreNavigation
+        active={nav}
+        currentTeamName={currentTeam?.name ?? "Current Team"}
+        canReviewTeam={currentTeam?.role === "owner" || currentTeam?.role === "admin" || canManageTeamSubscriptions}
+        isSysAdmin={isSysAdmin}
+        onSelect={selectDestination}
+      />
 
       {/* store content */}
-      <section className="flex-1 overflow-auto px-8 py-7">
-        <div className="flex items-center gap-3">
-          <h1 className="text-22 font-bold tracking-tight text-foreground">{navTitle}</h1>
+      <section data-testid="resource-library-workspace" className="min-w-0 flex-1 overflow-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+        <div className="flex flex-wrap items-start gap-3">
+          <div className="min-w-0">
+            <h1 className="text-22 font-bold text-foreground">{navTitle}</h1>
+            <p className="mt-1 text-12 text-muted-foreground">
+              {isExplore ? "Discover Team-scoped Agents, Skills, and Templates." : "Manage AI resources in the current Team context."}
+            </p>
+          </div>
           {isExplore && (
-            <span data-testid="result-count" className="text-13 text-placeholder">
+            <span data-testid="result-count" className="pt-1 text-12 text-placeholder">
               {total} results
             </span>
           )}
           <div className="flex-1" />
-          <Button size="sm" data-testid="create-item" onClick={() => setNav("create")}>
+          <Button size="sm" data-testid="create-item" onClick={() => selectDestination("create")}>
             <Plus className="h-4 w-4" />
-            Create
+            <span data-testid="create-resource">Create resource</span>
           </Button>
         </div>
 
         {isExplore ? (
+          <>
+            <div className="mt-5 flex flex-col gap-3 border-y border-border py-3">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                <div className="relative min-w-0 flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-placeholder" />
+                  <Input
+                    data-testid="store-search"
+                    aria-label="Search resources"
+                    placeholder="Search resources by name or description"
+                    value={q}
+                    onChange={(event) => setQ(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter") return;
+                      event.preventDefault();
+                      searchExplore(event.currentTarget.value);
+                    }}
+                    className="pl-9"
+                  />
+                </div>
+                <div data-testid="type-tabs" className="flex shrink-0 gap-1 rounded-lg border border-border p-1">
+                  {TYPE_TABS.map((tab) => (
+                    <Button
+                      key={tab.key}
+                      type="button"
+                      size="sm"
+                      variant={type === tab.key ? "secondary" : "ghost"}
+                      data-testid={`type-${tab.key}`}
+                      aria-pressed={type === tab.key}
+                      onClick={() => {
+                        setType(tab.key);
+                        syncUrl({ type: tab.key, page: 1 });
+                      }}
+                      className="h-7 px-2.5 text-11"
+                    >
+                      {tab.name}
+                    </Button>
+                  ))}
+                </div>
+                <DropdownMenu
+                  align="end"
+                  testId="resource-filter-menu"
+                  trigger={({ open, onClick }) => (
+                    <Button type="button" size="sm" variant="outline" aria-expanded={open} onClick={onClick} className="shrink-0">
+                      <SlidersHorizontal className="h-4 w-4" />
+                      Filters
+                    </Button>
+                  )}
+                >
+                  {TAGS.map((tag) => (
+                    <DropdownMenuItem key={tag} onSelect={() => toggleTag(tag)}>
+                      <Check className={cn("h-3.5 w-3.5", activeTags.includes(tag) ? "opacity-100" : "opacity-0")} aria-hidden="true" />
+                      {tagLabel(tag)}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenu>
+              </div>
+              <div className="flex items-center gap-1 overflow-x-auto">
+                <span className="shrink-0 text-10 font-semibold uppercase text-placeholder">Tags</span>
+                {TAGS.map((tag) => (
+                  <Button
+                    key={tag}
+                    type="button"
+                    size="sm"
+                    variant={activeTags.includes(tag) ? "secondary" : "ghost"}
+                    data-testid={`tag-${tag}`}
+                    aria-pressed={activeTags.includes(tag)}
+                    onClick={() => toggleTag(tag)}
+                    className="h-7 shrink-0 px-2 text-10"
+                  >
+                    {tagLabel(tag)}
+                  </Button>
+                ))}
+              </div>
+              {filtersActive && (
+                <div className="flex items-center gap-2">
+                  <span data-testid="filters-active" className="text-11 text-muted-foreground">Filters active</span>
+                  <Button type="button" size="sm" variant="link" data-testid="clear-filters" onClick={clearFilters} className="h-7 px-1 text-11">Clear all</Button>
+                </div>
+              )}
+            </div>
+            <ResourceCatalog
+              items={items}
+              loading={loading}
+              error={error}
+              total={total}
+              page={page}
+              totalPages={totalPages}
+              filtersActive={filtersActive}
+              subscribedIds={subscribedIds}
+              subscribing={subscribing}
+              onRetry={() => void load({ type, tags: nav === "featured" ? ["featured", ...activeTags] : activeTags, q, page })}
+              onClear={clearFilters}
+              onOpen={setDetailId}
+              onFavorite={(id) => void toggleFavorite(id)}
+              onSubscribe={(item) => void subscribeItem(item, "personal", false)}
+              onUse={(item) => void useItem(item)}
+              onPage={goToPage}
+            />
+          </>
+        ) : false ? (
           <>
             {/* 搜索 */}
             <div className="relative mt-4">
@@ -1811,18 +1942,18 @@ export function StoreBrowser() {
 
       {/* store detail modal */}
       {detailId != null && (
-        <div
+        <aside
           data-testid="item-detail-modal"
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/35"
-          onClick={() => setDetailId(null)}
+          aria-label="Resource details"
+          className="fixed inset-y-0 right-0 z-50 w-full border-l border-border bg-background shadow-xl sm:w-[28rem] lg:w-[30rem]"
         >
+          <span data-testid="resource-detail-panel" className="sr-only">Resource details</span>
           <div
-            className="max-h-[84vh] w-85 max-w-[92vw] overflow-auto rounded-14 bg-background shadow-[0_24px_60px_rgba(0,0,0,0.28)]"
-            onClick={(e) => e.stopPropagation()}
+            className="h-full overflow-auto bg-background"
           >
             <div
               className={cn(
-                "relative flex h-32 items-center justify-center rounded-t-14 text-30",
+                "relative flex h-24 items-center justify-center border-b border-border text-22",
                 fillFor(detailId),
               )}
             >
@@ -1833,9 +1964,9 @@ export function StoreBrowser() {
                 data-testid="close-detail"
                 aria-label="Close"
                 onClick={() => setDetailId(null)}
-                className="absolute right-2.25 top-2.25 h-7 w-7 rounded-full bg-background/70 text-muted-foreground hover:bg-background"
+                className="absolute right-3 top-3 h-8 w-8 bg-background text-muted-foreground hover:bg-muted"
               >
-                ✕
+                <X className="h-4 w-4" />
               </Button>
               {detailItem ? detailItem.name.charAt(0).toUpperCase() : ""}
             </div>
@@ -1844,9 +1975,22 @@ export function StoreBrowser() {
               <div className="p-6 text-13 text-placeholder" data-testid="detail-loading">
                 Loading…
               </div>
-            ) : detailError || !detailItem ? (
+            ) : detailError != null || !detailItem ? (
               <div className="p-6" data-testid="detail-error" role="alert">
-                <p className="text-13 text-destructive">Failed to load this resource.</p>
+                <div data-testid={`detail-state-${detailError ?? 500}`}>
+                  <p className="text-13 font-semibold text-foreground">
+                    {detailError === 403
+                      ? "You no longer have access to this resource."
+                      : detailError === 404
+                        ? "This resource could not be found."
+                        : detailError === 409
+                          ? "This resource changed. Refresh before continuing."
+                          : detailError === 410
+                            ? "This resource is no longer available."
+                            : "Failed to load this resource."}
+                  </p>
+                  <p className="mt-1 text-12 text-muted-foreground">The catalog and your current filters remain unchanged.</p>
+                </div>
                 <Button
                   type="button"
                   size="sm"
@@ -1996,7 +2140,7 @@ export function StoreBrowser() {
               </div>
             )}
           </div>
-        </div>
+        </aside>
       )}
 
       {/* 分享管理弹窗（P11 F05，uc-ai-store-005）：复制授权链接 / 关闭分享链接 / 已授权用户列表。 */}

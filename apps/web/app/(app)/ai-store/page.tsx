@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { currentUser } from "@/lib/session";
+import { getMembership, getTeam } from "@repo/data";
+import { currentTeamId, currentUser, toPublicUser } from "@/lib/session";
 import { StoreBrowser } from "./store-browser";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +10,15 @@ export const dynamic = "force-dynamic";
 export default async function AiStorePage() {
   const user = await currentUser();
   if (!user) redirect("/login");
+  const teamId = currentTeamId();
+  const [team, role] = teamId == null
+    ? [undefined, undefined]
+    : await Promise.all([getTeam(teamId), getMembership(teamId, user.id)]);
 
-  return <StoreBrowser />;
+  return (
+    <StoreBrowser
+      isSysAdmin={toPublicUser(user).isSysAdmin}
+      initialTeam={team && role ? { id: Number(team.id), name: team.name, role } : null}
+    />
+  );
 }

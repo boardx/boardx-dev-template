@@ -263,9 +263,9 @@
       "area": "ai-store-ui",
       "title": "Resource Library workspace and responsive catalog",
       "user_visible_behavior": "用户在已确认的 Resource Library 工作区中通过 Explore、Featured、My subscriptions、Created by me、Authorized editing、Shared with me 及按角色显示的审核入口完成浏览；搜索、筛选、分页、Team 切换和右侧详情使用真实 API，375/768/1280 无溢出，loading/empty/403/404/409/410 均为局部稳定状态。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "07",
-      "owner": null,
+      "owner": "codex-p27-ai-store-control-plane",
       "capability": "CAP-WEB",
       "depends_on": [
         "F03",
@@ -278,7 +278,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/ai-store-015-resource-library-shell.spec.ts",
         "pnpm --filter @repo/web lint"
       ],
-      "evidence": "",
+      "evidence": "evidence/F13.verify.log @ 2026-07-17T06:09:04.191Z",
       "notes": "严格采用 ui-signoff 的 Option 1；复用 BoardX shell、语义 token、shadcn/ui 与 Lucide，不增加 UI 依赖。"
     },
     {
