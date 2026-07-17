@@ -22,6 +22,7 @@ export interface ParsedAiStorePayload {
   tags: string[];
   examples: string[];
   config: Record<string, unknown>;
+  allowCopy: boolean;
   expectedVersion?: number;
 }
 
@@ -75,11 +76,15 @@ export function parseAiStorePayload(body: Record<string, unknown>, currentTeamId
   const name = String(body.name ?? "").trim();
   const description = String(body.description ?? "").trim();
   const configText = String(body.config ?? "").trim();
+  const templateBoardId = body.templateBoardId == null ? undefined : Number(body.templateBoardId);
   const expectedVersionRaw = body.expectedVersion;
   const expectedVersion = expectedVersionRaw == null ? undefined : Number(expectedVersionRaw);
   if (!name) errors.name = "名称不能为空";
   if (!description) errors.description = "描述不能为空";
   if (!configText) errors.config = "配置不能为空";
+  if (type === "template" && templateBoardId != null && !Number.isInteger(templateBoardId)) {
+    errors.templateBoardId = "模板白板无效";
+  }
   if (expectedVersionRaw != null && (!Number.isInteger(expectedVersion) || expectedVersion! < 1)) {
     errors.expectedVersion = "版本号无效";
   }
@@ -120,7 +125,9 @@ export function parseAiStorePayload(body: Record<string, unknown>, currentTeamId
       config: {
         instructions: configText,
         ...(type === "skill" ? { skillKind } : {}),
+        ...(type === "template" && templateBoardId != null ? { templateBoardId } : {}),
       },
+      allowCopy: body.allowCopy === true,
       expectedVersion,
     },
   };

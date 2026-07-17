@@ -55,6 +55,9 @@ const personalItem = {
   likes: 0,
   views: 0,
   featured: false,
+  allow_copy: false,
+  copied_from_item_id: null,
+  copied_from_version: null,
   created_at: "2026-07-01T00:00:00.000Z",
   updated_at: "2026-07-01T00:00:00.000Z",
 };

@@ -191,9 +191,9 @@
       "area": "ai-store-copy",
       "title": "allowCopy and independent resource copies",
       "user_visible_behavior": "能查看资源的用户在 allowCopy=true 时可把 Agent、Skill 或 Template 复制到当前 Team，得到新 itemId、私有 draft 和独立所有权；allowCopy=false 返回 403，副本不继承订阅、收藏、统计、审核、精选或分享，原资源后续编辑不会同步到副本，Template 的 Board 被深拷贝到目标 Team。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "05",
-      "owner": null,
+      "owner": "codex-p27-ai-store-control-plane",
       "capability": "CAP-WEB",
       "depends_on": [
         "F04",
@@ -203,7 +203,7 @@
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/ai-store-012-copy-resources.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F10.verify.log @ 2026-07-17T03:01:50.494Z",
       "notes": "记录 copiedFromItemId/copiedFromVersion；复制事务和 Template Board deep copy 原子化；支持 idempotency key。"
     },
     {

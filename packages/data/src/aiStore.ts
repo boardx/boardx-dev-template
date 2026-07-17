@@ -1,7 +1,9 @@
 // packages/data/src/aiStore.ts — CAP-DATA AI Store 商品仓储（P11）
 // ai_store_items：Agent / AI 工具 / 图片工具 / 模板，scope=personal/team/platform。
-import { randomBytes } from "node:crypto";
-import { query } from "./index";
+import { randomBytes, randomUUID } from "node:crypto";
+import { getPool, query } from "./index";
+import { generateId } from "./ids";
+import type { Board } from "./board";
 
 export type AiStoreItemType = "agent" | "skill" | "template";
 export type AiStoreLegacyItemType = "ai-tool" | "image-tool" | "AI_TOOL" | "AI_IMAGE_TOOL";
@@ -32,13 +34,16 @@ export interface AiStoreItem {
   likes: number;
   views: number;
   featured: boolean;
+  allow_copy: boolean;
+  copied_from_item_id: number | null;
+  copied_from_version: number | null;
   created_at: string;
   updated_at: string;
   origin_team_name?: string;
 }
 
 const ITEM_COLS =
-  "id, type, scope, owner_user_id, origin_team_id, origin_team_id AS team_id, migration_quarantined_at, archived_at, version, status, name, description, cover, author, tags, examples, config, likes, views, featured, created_at, updated_at";
+  "id, type, scope, owner_user_id, origin_team_id, origin_team_id AS team_id, migration_quarantined_at, archived_at, version, status, name, description, cover, author, tags, examples, config, likes, views, featured, allow_copy, copied_from_item_id, copied_from_version, created_at, updated_at";
 
 export function normalizeAiStoreItemType(
   value: string,
@@ -92,6 +97,7 @@ export interface AiStoreItemDraftInput {
   tags?: string[];
   examples?: string[];
   config?: Record<string, unknown>;
+  allowCopy?: boolean;
 }
 
 const DEFAULT_PAGE_SIZE = 9;
@@ -201,9 +207,9 @@ export async function listOwnedAiStoreItems(ownerUserId: number, originTeamId: n
 export async function createAiStoreItem(input: AiStoreItemDraftInput): Promise<AiStoreItem> {
   const rows = await query<AiStoreItem>(
     `INSERT INTO ai_store_items
-       (type, scope, owner_user_id, origin_team_id, status, name, description, cover, author, tags, examples, config)
+       (type, scope, owner_user_id, origin_team_id, status, name, description, cover, author, tags, examples, config, allow_copy)
      VALUES
-       ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb)
+       ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13)
      RETURNING ${ITEM_COLS}`,
     [
       input.type,
@@ -218,6 +224,7 @@ export async function createAiStoreItem(input: AiStoreItemDraftInput): Promise<A
       input.tags ?? [],
       input.examples ?? [],
       JSON.stringify(input.config ?? {}),
+      input.allowCopy ?? false,
     ]
   );
   return rows[0]!;
@@ -251,6 +258,7 @@ export async function updateAiStoreItem(
            tags = $12,
            examples = $13,
            config = $14::jsonb,
+           allow_copy = CASE WHEN owner_user_id = $2 THEN $15 ELSE allow_copy END,
            version = version + 1,
            updated_at = now()
        WHERE id = $1 AND version = $4
@@ -275,7 +283,7 @@ export async function updateAiStoreItem(
          'content_updated',
          $2,
          $3,
-         ARRAY['type', 'scope', 'status', 'name', 'description', 'cover', 'author', 'tags', 'examples', 'config']
+         ARRAY['type', 'scope', 'status', 'name', 'description', 'cover', 'author', 'tags', 'examples', 'config', 'allow_copy']
        FROM updated
      )
      SELECT ${ITEM_COLS} FROM updated`,
@@ -294,9 +302,137 @@ export async function updateAiStoreItem(
       input.tags ?? [],
       input.examples ?? [],
       JSON.stringify(input.config ?? {}),
+      input.allowCopy ?? false,
     ]
   );
   return rows[0];
+}
+
+export interface CopyAiStoreItemResult {
+  item: AiStoreItem;
+  board?: Board;
+  idempotent: boolean;
+}
+
+/** Create an independent private draft in the receiving Team, including Template canvas data. */
+export async function copyAiStoreItem(
+  source: AiStoreItem,
+  userId: number,
+  consumerTeamId: number,
+  author: string,
+  idempotencyKey?: string,
+): Promise<CopyAiStoreItemResult> {
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+
+    if (idempotencyKey) {
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))", [
+        `${source.id}:${consumerTeamId}:${userId}`,
+        idempotencyKey,
+      ]);
+      const previous = await client.query<{ copied_item_id: number; copied_board_id: number | null }>(
+        `SELECT copied_item_id, copied_board_id FROM ai_store_copy_requests
+         WHERE source_item_id = $1 AND consumer_team_id = $2 AND user_id = $3 AND idempotency_key = $4`,
+        [source.id, consumerTeamId, userId, idempotencyKey],
+      );
+      if (previous.rows[0]) {
+        const existing = await client.query<AiStoreItem>(
+          `SELECT ${ITEM_COLS} FROM ai_store_items WHERE id = $1`,
+          [previous.rows[0].copied_item_id],
+        );
+        const board = previous.rows[0].copied_board_id == null
+          ? undefined
+          : (await client.query<Board>("SELECT * FROM boards WHERE id = $1", [previous.rows[0].copied_board_id])).rows[0];
+        await client.query("COMMIT");
+        return { item: existing.rows[0]!, board, idempotent: true };
+      }
+    }
+
+    let copiedBoard: Board | undefined;
+    const copiedConfig = { ...source.config };
+    const templateBoardId = source.type === "template" ? Number(source.config.templateBoardId) : NaN;
+    if (Number.isFinite(templateBoardId)) {
+      const sourceBoardResult = await client.query<Board>(
+        `SELECT * FROM boards
+         WHERE id = $1 AND team_id = $2 AND owner_user_id = $3`,
+        [templateBoardId, source.origin_team_id, source.owner_user_id],
+      );
+      const sourceBoard = sourceBoardResult.rows[0];
+      if (!sourceBoard) throw new Error("AI_STORE_TEMPLATE_BOARD_NOT_FOUND");
+
+      const roomResult = await client.query<{ id: number }>(
+        `INSERT INTO rooms (name, owner_user_id, team_id, visibility, public_id)
+         VALUES ($1, $2, $3, 'team', $4) RETURNING id`,
+        [`${source.name} Copy`, userId, consumerTeamId, generateId("rm")],
+      );
+      const roomId = roomResult.rows[0]!.id;
+      await client.query(
+        "INSERT INTO room_members (room_id, user_id, role) VALUES ($1, $2, 'owner')",
+        [roomId, userId],
+      );
+      const boardResult = await client.query<Board>(
+        `INSERT INTO boards
+           (room_id, team_id, name, cover, category, description, visibility, owner_user_id, settings, tags, public_id)
+         VALUES ($1, $2, $3, $4, $5, $6, 'room', $7, $8::jsonb, $9, $10)
+         RETURNING *`,
+        [
+          roomId,
+          consumerTeamId,
+          `${sourceBoard.name} Copy`,
+          sourceBoard.cover,
+          sourceBoard.category,
+          sourceBoard.description,
+          userId,
+          JSON.stringify(sourceBoard.settings ?? {}),
+          sourceBoard.tags ?? [],
+          generateId("brd"),
+        ],
+      );
+      copiedBoard = boardResult.rows[0]!;
+      copiedConfig.templateBoardId = copiedBoard.id;
+
+      const sourceItems = await client.query<{
+        type: string; x: number; y: number; w: number; h: number; text: string; color: string | null;
+      }>("SELECT type, x, y, w, h, text, color FROM board_items WHERE board_id = $1", [templateBoardId]);
+      for (const item of sourceItems.rows) {
+        await client.query(
+          `INSERT INTO board_items (id, room_id, board_id, type, x, y, w, h, text, color)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [randomUUID(), roomId, copiedBoard.id, item.type, item.x, item.y, item.w, item.h, item.text, item.color],
+        );
+      }
+    }
+
+    const copiedResult = await client.query<AiStoreItem>(
+      `INSERT INTO ai_store_items
+         (type, scope, owner_user_id, origin_team_id, status, name, description, cover, author,
+          tags, examples, config, allow_copy, copied_from_item_id, copied_from_version)
+       VALUES ($1, 'personal', $2, $3, 'draft', $4, $5, $6, $7, $8, $9, $10::jsonb, false, $11, $12)
+       RETURNING ${ITEM_COLS}`,
+      [
+        source.type, userId, consumerTeamId, source.name, source.description, source.cover, author,
+        source.tags, source.examples, JSON.stringify(copiedConfig), source.id, source.version,
+      ],
+    );
+    const copiedItem = copiedResult.rows[0]!;
+
+    if (idempotencyKey) {
+      await client.query(
+        `INSERT INTO ai_store_copy_requests
+           (source_item_id, consumer_team_id, user_id, idempotency_key, copied_item_id, copied_board_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [source.id, consumerTeamId, userId, idempotencyKey, copiedItem.id, copiedBoard?.id ?? null],
+      );
+    }
+    await client.query("COMMIT");
+    return { item: copiedItem, board: copiedBoard, idempotent: false };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 /** 订阅列表专用：保留已归档资源的最小元数据，以便显示“不可用”而不是静默消失。 */

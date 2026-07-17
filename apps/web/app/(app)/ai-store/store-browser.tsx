@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Compass, Bookmark, Plus, ShieldCheck, Share2, LayoutGrid, Pencil, Heart, Link2, Trash2, X } from "lucide-react";
+import { Search, Compass, Bookmark, Plus, ShieldCheck, Share2, LayoutGrid, Pencil, Heart, Link2, Trash2, X, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +32,9 @@ interface StoreItem {
   likes: number;
   views: number;
   featured: boolean;
+  allow_copy: boolean;
+  copied_from_item_id?: number | null;
+  copied_from_version?: number | null;
   liked?: boolean;
   unavailable?: boolean;
   subscriptionScopes?: Array<"personal" | "team">;
@@ -126,6 +129,7 @@ const EMPTY_FORM = {
   scope: "personal" as StoreScope,
   tags: "",
   examples: "",
+  allowCopy: false,
 };
 
 const TAGS = ["research", "writing", "design", "productivity", "meetings", "featured"];
@@ -196,6 +200,7 @@ export function StoreBrowser() {
   const [formMessage, setFormMessage] = useState("");
   const [submitting, setSubmitting] = useState<SubmitAction | null>(null);
   const [archiving, setArchiving] = useState<number | null>(null);
+  const [copying, setCopying] = useState<number | null>(null);
 
   // P11 F05：分享管理弹窗状态。shareItemId != null 时弹窗打开，对应 owned 项目的 id。
   const [shareItemId, setShareItemId] = useState<number | null>(null);
@@ -593,6 +598,7 @@ export function StoreBrowser() {
       scope: item.scope,
       tags: item.tags.join(", "),
       examples: item.examples.join(", "),
+      allowCopy: item.allow_copy,
     });
     setFormErrors({});
     setFormMessage("");
@@ -652,6 +658,31 @@ export function StoreBrowser() {
       setOwnedError("Failed to archive. Please try again.");
     } finally {
       setArchiving(null);
+    }
+  }
+
+  async function copyItem(item: StoreItem) {
+    if (!item.allow_copy || copying != null) return;
+    setCopying(item.id);
+    setSubscribeError("");
+    try {
+      const res = await fetch(`/api/ai-store/items/${item.id}/copy`, {
+        method: "POST",
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+      });
+      const data = (await res.json()) as { item?: StoreItem; error?: string };
+      if (!res.ok || !data.item) {
+        setSubscribeError(data.error ?? "Failed to copy. Please try again.");
+        return;
+      }
+      setDetailId(null);
+      editItem(data.item);
+      setFormMessage("Copied as a private draft in the current Team");
+      await loadOwned();
+    } catch {
+      setSubscribeError("Failed to copy. Please try again.");
+    } finally {
+      setCopying(null);
     }
   }
 
@@ -1279,6 +1310,20 @@ export function StoreBrowser() {
                     )}
                   </div>
 
+                  <label className="flex min-h-11 items-center gap-3 rounded-8 border border-border px-3 md:col-span-2">
+                    <input type="checkbox"
+                      data-testid="field-allow-copy"
+                      checked={form.allowCopy}
+                      onChange={(event) => updateForm("allowCopy", event.target.checked)}
+                      disabled={editingAuthorized}
+                      className="h-4 w-4 accent-foreground"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-13 font-semibold text-foreground">Allow independent copies</span>
+                      <span className="block text-11 text-placeholder">Copies become private drafts owned by the receiving Team.</span>
+                    </span>
+                  </label>
+
                   <div className="flex flex-col gap-1.5 md:col-span-2">
                     <Label htmlFor="store-config">Configuration</Label>
                     <Textarea
@@ -1867,6 +1912,19 @@ export function StoreBrowser() {
                       className="flex-1"
                     >
                       Use
+                    </Button>
+                  )}
+                  {detailItem.allow_copy && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      data-testid="detail-copy"
+                      disabled={copying === detailItem.id}
+                      onClick={() => void copyItem(detailItem)}
+                      className="flex-1"
+                    >
+                      <Copy className="mr-1.5 h-4 w-4" />
+                      {copying === detailItem.id ? "Copying..." : "Copy to Team"}
                     </Button>
                   )}
                 </div>
