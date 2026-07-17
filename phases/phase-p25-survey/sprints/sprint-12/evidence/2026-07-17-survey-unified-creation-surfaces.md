@@ -16,6 +16,8 @@
 - `bash apps/web/scripts/lint-design.sh`: PASS（仅既有 `LABEL-LANG-MIX` 非阻断警告）
 - `E2E_PORT=62730 COLLAB_WS_PORT=62731 pnpm exec playwright test e2e/survey-p25-008-source-stash-ui.spec.ts e2e/survey-p25-011-qwen-ai-workflow.spec.ts --reporter=dot`: 10 passed
 - `E2E_PORT=62750 COLLAB_WS_PORT=62751 pnpm exec playwright test e2e/survey-p25-008-source-stash-ui.spec.ts --grep 'unified survey editor' --reporter=dot`: 1 passed
+- 最终审查修复后，p25-001/008/011/012 四个 spec: 22 passed。
+- p25-002 公开答题与专业 UI: 匿名移动端长问卷等 4 条通过；跨页面仪表盘测试增加首次编译预算后单独 1 passed。
 - 独立 Task 3 reviewer 重跑聚焦 Playwright: 4 passed；Critical/Important/Minor 均为 0。
 - `git diff --check`: PASS
 
@@ -23,6 +25,13 @@
 
 - `survey-unified-editor-desktop.png`
 - `survey-unified-editor-mobile.png`
+
+## 最终审查修复
+
+- “报告模板”入口连接真实报告模板工作流，不再打开问卷题目模板编辑器。
+- AI 对已有题目的追加不再依赖少量中文关键词，不会因“再来两题”或英文请求覆盖现有内容。
+- 新建选择器桌面三列、移动单列；报告编排器移动端以预览优先排序。
+- 公开答题页为移动端长问卷提供持续可达的提交操作，并通过匿名上下文验证。
 
 ## 状态边界
 

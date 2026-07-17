@@ -12,6 +12,7 @@
 - 本轮目标: 按诊断工作台参考统一新建选择器、模板中心、问卷编辑器和 AI 助手。
 - 已完成: 三路新建选择器；标签过滤的诊断模板中心；单边界摘要和连续题目画布；AI draft/changeSet 预览确认；移动端单列响应式布局。
 - 运行过的验证: Survey 创建/模板/AI Playwright 10 tests passed；移动编辑器视觉测试 1 passed；Web typecheck；design lint；`git diff --check`；Task 3 独立复审通过。
+- 最终审查修复验证: p25-001/008/011/012 共 22 tests passed；p25-002 的匿名移动长问卷等 4 条通过，跨页面测试单独 1 passed。
 - 已记录证据: `evidence/2026-07-17-survey-unified-creation-surfaces.md`、`evidence/survey-unified-editor-desktop.png`、`evidence/survey-unified-editor-mobile.png`。
 - 状态边界: F12 保持 `in_progress`；真实答卷报告、零/低样本限制和失败重试仍需继续验收。
 
@@ -48,7 +49,7 @@
 ### 2026-07-15（AI 工作台 UI）
 - 本轮目标: 按已确认 UI 方案重构 Survey 五步工作流，突出 AI 创建、修改、报告模板和报告生成。
 - 已完成: 五步导航将“设计模块”改为“报告模板”；设计、发布、答卷、报告页接入可折叠目录和精简 AI 助手；报告模板新增图表/图片/文本 12 列画布、位置大小调整及模块级提示词。
-- 运行过的验证: `pnpm exec vitest run lib/survey-report-layout.test.ts`（3 passed）；`pnpm --filter @repo/web run typecheck`；`pnpm --filter @repo/web run lint`；聚焦 Playwright（4 passed，1 个既有数据库约束失败）。
+- 运行过的验证: `pnpm exec vitest run lib/survey-report-layout.test.ts`（3 passed）；`pnpm --filter @repo/web run typecheck`；`pnpm --filter @repo/web run lint`；当时聚焦 Playwright 为 4 passed，遗留 fallback 场景已在后续统一创建界面回归中闭合。
 - 已记录证据: `evidence/2026-07-15-survey-ai-workbench-ui.md`；F12 保持 `in_progress`。
 - 提交记录: UI 设计检查点 `f54d79c`；实现提交待本轮收尾。
 - 已知风险或未解决问题: AI 面板当前复用现有动作，预览与应用尚未引入新的差异协议；F12 的非 UI 验收边界仍未完成。

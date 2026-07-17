@@ -39,6 +39,7 @@ async function createSurvey(page: Page, active = false, questions = defaultQuest
 }
 
 test("professional dashboard exposes unified entry points and workbench interactions", async ({ page }) => {
+  test.setTimeout(120_000);
   await register(page);
   const survey = await createSurvey(page);
 
@@ -109,7 +110,7 @@ test("editor shell groups the question builder, inspector, and unified paper pre
   });
 
   await page.goto("/surveys");
-  await page.getByTestId("empty-new-survey").click();
+  await page.getByTestId("create-with-ai").click();
   await page.getByTestId("new-survey-blank").click();
   await expect(page.getByTestId("survey-editor-shell")).toBeVisible();
   await expect(page.getByTestId("editor-command-bar")).toBeVisible();
