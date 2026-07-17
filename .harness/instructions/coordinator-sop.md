@@ -127,6 +127,13 @@
    ——只有后者没有前者，就是"coord-architecture 租约静默过期 8 小时"的成因。
    席位按 ttl 正常过期是**诚实信号**，不得调大 ttl 或替人代跑心跳来掩盖失联。
 
+11. **协调权威（coord-service）绝不手动部署（2026-07-17 起）**：coord-service 有了
+   CD（deploy-coord-service.yml）——改它的代码一律走 PR 合 main 触发自动部署，
+   **不再 `wrangler deploy`**。手动部署会 last-write-wins 互相覆盖（#629 覆盖 #614
+   的 tasks 路由、线上收件箱静默消失，andon #272/#290）。CD 冒烟带部署漂移探针
+   （/time 存在 + /tasks 返 401 而非 404），漂移当场红。这条对 devportal/devapp
+   同理——**有 CD 的目标不手动部署**，把"从哪个 checkout 部署"的竞争彻底消灭。
+
 ## 事故分诊速查（来自实战）
 - CI 秒级失败 + steps 空 → 账单/runner，非代码（2026-07-04 账单事故）。
 - evidence 指针存在但文件不在 git 树 → 假 passing（PR #310/#311/#312 三连）。
