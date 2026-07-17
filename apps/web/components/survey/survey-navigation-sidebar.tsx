@@ -8,6 +8,7 @@ export type SurveyNavigationTarget = "home" | "workspace" | "templates" | "repor
 
 interface SurveyNavigationSidebarProps {
   active: SurveyNavigationTarget;
+  surveyCount?: number;
   onNavigate: (target: SurveyNavigationTarget) => void;
 }
 
@@ -19,7 +20,7 @@ const NAVIGATION = [
   { id: "insights", label: "洞察报告", group: "参考", icon: Eye },
 ] as const;
 
-export function SurveyNavigationSidebar({ active, onNavigate }: SurveyNavigationSidebarProps) {
+export function SurveyNavigationSidebar({ active, surveyCount, onNavigate }: SurveyNavigationSidebarProps) {
   return (
     <aside
       data-testid="survey-source-sidebar"
@@ -60,7 +61,16 @@ export function SurveyNavigationSidebar({ active, onNavigate }: SurveyNavigation
                 <span className="grid h-5 w-5 shrink-0 place-items-center text-current" aria-hidden="true">
                   <Icon className="h-4 w-4" strokeWidth={1.8} />
                 </span>
-                {item.label}
+                <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
+                {item.id === "workspace" && surveyCount != null ? (
+                  <span
+                    data-testid="survey-nav-workspace-count"
+                    aria-label={`${surveyCount} 份问卷`}
+                    className="ml-auto min-w-6 text-right text-12 font-semibold tabular-nums opacity-70"
+                  >
+                    {surveyCount}
+                  </span>
+                ) : null}
               </Button>
             </div>
           );
@@ -78,7 +88,7 @@ export function SurveyNavigationSidebar({ active, onNavigate }: SurveyNavigation
   );
 }
 
-export function SurveyMobileNavigation({ active, onNavigate }: SurveyNavigationSidebarProps) {
+export function SurveyMobileNavigation({ active, surveyCount, onNavigate }: SurveyNavigationSidebarProps) {
   return (
     <header
       data-testid="survey-mobile-navigation"
@@ -94,7 +104,9 @@ export function SurveyMobileNavigation({ active, onNavigate }: SurveyNavigationS
         className="min-w-0 flex-1"
       >
         {NAVIGATION.map((item) => (
-          <option key={item.id} value={item.id}>{item.label}</option>
+          <option key={item.id} value={item.id}>
+            {item.label}{item.id === "workspace" && surveyCount != null ? ` (${surveyCount})` : ""}
+          </option>
         ))}
       </Select>
     </header>

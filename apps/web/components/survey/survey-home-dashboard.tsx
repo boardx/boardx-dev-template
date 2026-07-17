@@ -20,6 +20,7 @@ export interface SurveyHomeRecentItem {
   statusLabel: string;
   responseCount: number;
   responseLimit: number | null;
+  publishedAt: string | null;
   updatedLabel: string;
 }
 
@@ -31,9 +32,6 @@ interface SurveyHomeDashboardProps {
   generatedReportCount: number;
   completionRate: number | null;
   organizationName: string;
-  organizationSummary: string;
-  communityTemplateName: string | null;
-  communityTemplateSummary: string;
   templates: SurveyHomeTemplate[];
   recentSurveys: SurveyHomeRecentItem[];
   onCreate: () => void;
@@ -72,6 +70,20 @@ function responseProgress(item: SurveyHomeRecentItem) {
   return Math.min(100, Math.round((item.responseCount / item.responseLimit) * 100));
 }
 
+function formatPublishedAt(value: string | null) {
+  if (!value) return "尚未发布";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "发布时间待确认";
+  return `发布时间 ${date.toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })}`;
+}
+
 export function SurveyHomeDashboard({
   greeting,
   userName,
@@ -80,9 +92,6 @@ export function SurveyHomeDashboard({
   generatedReportCount,
   completionRate,
   organizationName,
-  organizationSummary,
-  communityTemplateName,
-  communityTemplateSummary,
   templates,
   recentSurveys,
   onCreate,
@@ -119,7 +128,7 @@ export function SurveyHomeDashboard({
         </div>
       </section>
 
-      <section className="mt-6 grid gap-4 lg:grid-cols-[1.3fr_1fr_1fr]">
+      <section className="mt-6">
         <article data-testid="survey-home-metrics" className="min-h-40 rounded-lg border border-border bg-background px-5 py-5">
           <h2 className="text-13 font-semibold text-muted-foreground">我的工作台</h2>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -130,24 +139,6 @@ export function SurveyHomeDashboard({
               </div>
             ))}
           </div>
-        </article>
-
-        <article data-testid="survey-home-organization" className="min-h-40 rounded-lg border border-border bg-background px-5 py-5">
-          <h2 className="text-13 font-semibold text-muted-foreground">组织</h2>
-          <p className="mt-3 text-15 font-bold text-foreground">{organizationName}</p>
-          <p className="mt-1 text-12 leading-5 text-muted-foreground">{organizationSummary}</p>
-        </article>
-
-        <article data-testid="survey-home-community" className="min-h-40 rounded-lg border border-border bg-background px-5 py-5">
-          <h2 className="text-13 font-semibold text-muted-foreground">顾问社区</h2>
-          <p className="mt-3 text-13 leading-5 text-foreground">
-            {communityTemplateName ? <>推荐模板：<strong>{communityTemplateName}</strong></> : "暂无可推荐模板"}
-          </p>
-          <p className="mt-1 text-12 leading-5 text-muted-foreground">{communityTemplateSummary}</p>
-          <Button type="button" variant="link" size="sm" onClick={onBrowseTemplates} className="mt-2 h-auto gap-1 px-0 text-survey">
-            去看看
-            <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.8} />
-          </Button>
         </article>
       </section>
 
@@ -220,11 +211,17 @@ export function SurveyHomeDashboard({
           {recentSurveys.length ? recentSurveys.map((survey) => {
             const progress = responseProgress(survey);
             return (
-              <div key={survey.id} className="grid gap-3 border-b border-border px-5 py-4 last:border-b-0 md:grid-cols-[minmax(0,1fr)_auto_180px_auto] md:items-center">
+              <div key={survey.id} className="grid gap-3 border-b border-border px-5 py-4 last:border-b-0 md:grid-cols-[minmax(0,1fr)_160px_auto_180px_auto] md:items-center">
                 <div className="min-w-0">
                   <h3 className="truncate text-13 font-semibold text-foreground">{survey.title}</h3>
                   <p className="mt-1 truncate text-12 text-muted-foreground">{survey.description || survey.updatedLabel}</p>
                 </div>
+                <p
+                  data-testid={`survey-home-published-at-${survey.id}`}
+                  className="text-12 text-muted-foreground"
+                >
+                  {formatPublishedAt(survey.publishedAt)}
+                </p>
                 <Badge variant={survey.status === "active" ? "success" : "muted"} className="w-fit">{survey.statusLabel}</Badge>
                 <div>
                   <p className="text-12 text-muted-foreground">

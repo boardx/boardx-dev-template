@@ -58,16 +58,13 @@ test("BoardX Survey home matches the diagnostic workspace reference", async ({ p
   await expect(page.getByTestId("survey-home-metrics")).toBeVisible();
   const reportMetric = page.getByTestId("survey-home-metrics").getByText("生成报告").locator("..");
   await expect(reportMetric).toContainText("0");
-  await expect(page.getByTestId("survey-home-organization")).toBeVisible();
-  await expect(page.getByTestId("survey-home-community")).toBeVisible();
+  await expect(page.getByTestId("survey-home-organization")).toHaveCount(0);
+  await expect(page.getByTestId("survey-home-community")).toHaveCount(0);
+  await expect(page.getByTestId("survey-nav-workspace-count")).toHaveText(String(surveys.length));
   await expect(page.getByTestId("survey-home-method")).toBeVisible();
   await expect(page.getByTestId("survey-home-templates")).toBeVisible();
   await expect(page.getByTestId("survey-home-recent")).toBeVisible();
   await expect(page.getByTestId("ai-survey-command-center")).toHaveCount(0);
-  await page.screenshot({
-    path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-home-desktop.png",
-    fullPage: true,
-  });
   await page.getByTestId("survey-home-method").getByRole("button", { name: "查看问卷" }).click();
   await expect(page).toHaveURL(/\/surveys\?view=my/);
 

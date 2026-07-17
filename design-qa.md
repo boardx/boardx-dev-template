@@ -86,4 +86,16 @@ The 35-test Playwright run completed without application console errors. Node em
 
 The public answer-page comparison remains recorded in `phases/phase-p25-survey/sprints/sprint-12/evidence/2026-07-17-fluent-answer-design-qa.md`.
 
+## F15 Incremental Home Review
+
+The 2026-07-18 user annotation supersedes the two optional home cards from the original HTML reference:
+
+- Source annotation: `phases/phase-p25-survey/sprints/sprint-13/evidence/source-home-dashboard-adjustments.png`
+- Normalized source: `phases/phase-p25-survey/sprints/sprint-13/evidence/source-home-dashboard-adjustments-1672.png`
+- Implementation: `phases/phase-p25-survey/sprints/sprint-13/evidence/survey-home-f15-desktop.png`
+- Side-by-side comparison: `phases/phase-p25-survey/sprints/sprint-13/evidence/comparison-home-f15.png`
+- Comparison viewport: `1672 x 996` per side.
+
+The organization and consultant-community cards are gone, the metrics band fills the row, the owner survey count is aligned after “我的问卷”, and each recent survey has a real publication-time state. No P0, P1, or P2 visual issue remains; the `390 x 844` mobile check has no horizontal overflow.
+
 final result: passed

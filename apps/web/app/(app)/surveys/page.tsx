@@ -648,6 +648,7 @@ interface WorkspaceShellProps {
   children: ReactNode;
   active?: WorkspaceTarget;
   dashboardMode?: boolean;
+  surveyCount?: number;
   currentSurvey?: Survey;
   workflowMode?: boolean;
   templateLibraryMode?: boolean;
@@ -663,6 +664,7 @@ function WorkspaceShell({
   children,
   active = "workspace",
   dashboardMode = false,
+  surveyCount,
   currentSurvey,
   workflowMode = false,
   templateLibraryMode = false,
@@ -713,6 +715,7 @@ function WorkspaceShell({
         {!focusedMode ? (
           <SurveyNavigationSidebar
             active={activeNavigation}
+            surveyCount={surveyCount}
             onNavigate={(target) => {
               if (target === "home") {
                 window.location.href = "/surveys";
@@ -5302,10 +5305,6 @@ export default function SurveysPage() {
   const savedTemplates = templates.filter((template) => template.source === "saved");
   const allTemplates = [...savedTemplates, ...builtInTemplates];
   const organizationName = teams[0]?.name ?? "个人工作区";
-  const organizationSummary = teams.length
-    ? `${teams.length} 个可用组织 · ${savedTemplates.length} 个自定义模板`
-    : `${visibleSurveys.length} 份个人问卷 · ${savedTemplates.length} 个自定义模板`;
-  const communityTemplate = builtInTemplates[0] ?? null;
   const templateCategories = Array.from(new Set(allTemplates.map((template) => template.category ?? "通用")));
   const templateListTags = Array.from(new Set(
     allTemplates.flatMap((template) => [
@@ -7191,6 +7190,7 @@ export default function SurveysPage() {
     <WorkspaceShell
       active={workbenchTab === "templates" ? "template" : workspaceView}
       dashboardMode={workbenchTab === "home"}
+      surveyCount={visibleSurveys.length}
       currentSurvey={currentSurveyForNavigation}
       workflowMode={workspaceView !== "workspace"}
       templateLibraryMode={workbenchTab === "templates"}
@@ -7324,11 +7324,6 @@ export default function SurveysPage() {
             generatedReportCount={generatedReportCount}
             completionRate={completionRate}
             organizationName={organizationName}
-            organizationSummary={organizationSummary}
-            communityTemplateName={communityTemplate?.name ?? null}
-            communityTemplateSummary={communityTemplate
-              ? `${communityTemplate.questions.length} 题 · 预计 ${communityTemplate.estimatedMinutes ?? 3} 分钟`
-              : "模板中心尚无系统模板"}
             templates={allTemplates.slice(0, 4).map((template) => ({
               id: template.id,
               category: templateTagLabel(template.category ?? "诊断模版"),
@@ -7344,6 +7339,7 @@ export default function SurveysPage() {
               statusLabel: STATUS_LABEL[survey.status],
               responseCount: survey.responses,
               responseLimit: survey.responseLimit,
+              publishedAt: survey.status === "active" ? survey.publishStartAt ?? survey.updatedAt : null,
               updatedLabel: formatUpdated(survey.updatedAt),
             }))}
             onCreate={openCreateChooser}
