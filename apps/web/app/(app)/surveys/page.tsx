@@ -700,20 +700,20 @@ function WorkspaceShell({
   };
   return (
     <div data-testid={inSurveyWorkflow ? "survey-workflow-shell" : undefined} className="min-h-full bg-secondary text-foreground">
-      <div className={focusedMode ? "grid min-h-screen" : "grid min-h-screen lg:grid-cols-[244px_minmax(0,1fr)]"}>
+      <div className={focusedMode ? "grid min-h-screen" : "grid min-h-screen lg:grid-cols-[280px_minmax(0,1fr)]"}>
         {!focusedMode ? (
-          <aside data-testid="survey-source-sidebar" className="border-r border-border bg-background px-4 py-5">
-            <div className="flex items-center gap-3 px-2">
-              <div className="grid h-9 w-9 place-items-center rounded-lg bg-foreground text-background">
-                <ListChecks className="h-4 w-4" strokeWidth={1.8} />
+          <aside data-testid="survey-source-sidebar" className="border-r border-border bg-background px-6 py-7">
+            <div className="flex items-center gap-3 px-1">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-foreground text-background">
+                <ListChecks className="h-5 w-5" strokeWidth={1.7} />
               </div>
               <div>
-                <p className="text-14 font-bold">BoardX Survey</p>
+                <p className="text-15 font-bold">BoardX Survey</p>
                 <p className="text-12 text-muted-foreground">咨询诊断工作台</p>
               </div>
             </div>
 
-            <nav aria-label="Survey navigation" className="mt-8 grid gap-1">
+            <nav aria-label="Survey navigation" className="mt-10 grid gap-1">
               {nav.map((item) => {
                 const Icon = item.icon;
                 const isActive =
@@ -721,15 +721,20 @@ function WorkspaceShell({
                   || (item.id === "templates" && active === "template")
                   || (item.id === "home" && dashboardMode);
                 return (
+                  <div key={item.id}>
+                    {(item.id === "home" || item.id === "templates") ? (
+                      <p className={`${item.id === "templates" ? "mt-7" : ""} mb-2 px-3 text-11 font-medium text-muted-foreground`}>
+                        {item.id === "home" ? "工作台" : "模板库"}
+                      </p>
+                    ) : null}
                   <Button
-                    key={item.id}
                     data-testid={`survey-nav-${item.id}`}
                     type="button"
                     variant="ghost"
-                    className={`justify-start gap-2 border-l-2 ${
+                    className={`h-11 w-full justify-start gap-3 rounded-lg border-0 px-3 text-14 ${
                       isActive
-                      ? "!border-foreground !bg-foreground !text-background hover:!bg-foreground hover:!text-background"
-                        : "border-transparent text-foreground"
+                        ? "!bg-foreground !text-background hover:!bg-foreground hover:!text-background"
+                        : "bg-transparent text-foreground hover:bg-secondary"
                     }`}
                     onClick={() => {
                       if (item.id === "home") {
@@ -751,11 +756,12 @@ function WorkspaceShell({
                       onNavigate("workspace");
                     }}
                   >
-                    <span className="grid h-5 w-5 shrink-0 place-items-center" aria-hidden="true">
+                    <span className="grid h-5 w-5 shrink-0 place-items-center text-current" aria-hidden="true">
                       <Icon className="h-4 w-4" strokeWidth={1.8} />
                     </span>
                     {item.label}
                   </Button>
+                  </div>
                 );
               })}
             </nav>
@@ -884,7 +890,7 @@ function WorkspaceShell({
             )}
           </header>}
 
-          <div className="p-4">
+          <div className={inSurveyWorkflow ? "p-4" : "mx-auto w-full max-w-7xl px-6 py-8 lg:px-10"}>
             {children}
           </div>
         </section>
@@ -7843,29 +7849,27 @@ export default function SurveysPage() {
       ) : (
       <div data-testid="survey-professional-dashboard" className="grid gap-4">
         {workbenchTab === "home" ? (
-          <div data-testid="survey-diagnostic-home" className="mx-auto grid w-full max-w-7xl gap-6 px-2 py-4 lg:px-6">
+          <div data-testid="survey-diagnostic-home" className="mx-auto grid w-full max-w-6xl gap-8">
             <section className="flex flex-wrap items-start justify-between gap-5">
               <div>
                 <h1 className="text-3xl font-bold text-foreground">{greeting}，Yiran</h1>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Badge variant="muted">独立咨询顾问</Badge>
-                </div>
+                <p className="mt-2 text-14 text-muted-foreground">从诊断问卷到洞察报告，在一个工作台完成。</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button data-testid="create-with-ai" type="button" onClick={openCreateChooser} className="gap-2 bg-foreground text-background hover:bg-foreground/90">
+                <Button data-testid="create-with-ai" type="button" onClick={openCreateChooser} className="h-11 gap-2 rounded-xl bg-foreground px-5 text-background hover:bg-foreground/90">
                   <Plus className="h-4 w-4" />
                   新建问卷
                 </Button>
-                <Button type="button" variant="outline" onClick={() => { window.location.href = "/surveys?view=templates"; }}>
+                <Button type="button" variant="outline" onClick={() => { window.location.href = "/surveys?view=templates"; }} className="h-11 rounded-xl px-5">
                   浏览模板
                 </Button>
               </div>
             </section>
 
             <section>
-              <div data-testid="survey-home-metrics" className="rounded-lg border border-border bg-background p-6">
+              <div data-testid="survey-home-metrics" className="rounded-2xl border border-border bg-background p-7">
                 <p className="text-13 font-semibold text-muted-foreground">我的工作台</p>
-                <div className="mt-6 grid grid-cols-2 gap-5 sm:grid-cols-4">
+                <div className="mt-6 grid grid-cols-2 gap-6 sm:grid-cols-4">
                   {[
                     [String(activeSurveyCount), "进行中问卷"],
                     [String(totalResponses), "累计回收"],
@@ -7888,7 +7892,7 @@ export default function SurveysPage() {
               </div>
               <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 {allTemplates.slice(0, 4).map((template) => (
-                  <Button key={template.id} type="button" variant="outline" onClick={() => openTemplateEditor(template)} className="h-auto min-h-40 items-start justify-start whitespace-normal rounded-lg p-5 text-left font-normal transition-colors hover:border-foreground/30 hover:bg-card">
+                  <Button key={template.id} type="button" variant="outline" onClick={() => openTemplateEditor(template)} className="h-auto min-h-40 items-start justify-start whitespace-normal rounded-2xl border-border bg-background p-5 text-left font-normal transition-all hover:-translate-y-0.5 hover:border-violet-300 hover:bg-background hover:shadow-sm">
                     <span className="block w-full">
                     <Badge variant="muted">{template.category ?? "诊断模板"}</Badge>
                     <h3 className="mt-4 line-clamp-2 text-15 font-bold text-foreground">{template.name}</h3>
@@ -7901,9 +7905,9 @@ export default function SurveysPage() {
 
             <section data-testid="survey-home-recent">
               <h2 className="text-17 font-bold text-foreground">最近问卷</h2>
-              <div className="mt-4 overflow-hidden rounded-lg border border-border bg-background">
+              <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-background">
                 {visibleSurveys.slice(0, 4).length ? visibleSurveys.slice(0, 4).map((survey) => (
-                  <div key={survey.id} className="grid gap-4 border-b border-border px-5 py-4 last:border-b-0 md:grid-cols-[minmax(0,1fr)_120px_220px_auto] md:items-center">
+                  <div key={survey.id} className="grid gap-4 border-b border-border px-6 py-5 last:border-b-0 md:grid-cols-[minmax(0,1fr)_120px_220px_auto] md:items-center">
                     <div className="min-w-0">
                       <h3 className="truncate text-14 font-bold text-foreground">{survey.title}</h3>
                       <p className="mt-1 truncate text-12 text-muted-foreground">{survey.description || `诊断项目 · ${formatUpdated(survey.updatedAt)}`}</p>
@@ -7933,30 +7937,25 @@ export default function SurveysPage() {
               </div>
             ) : (
               <>
-                <section data-testid="diagnostic-template-center" className="overflow-hidden rounded-lg border border-border bg-background">
-                  <div className="border-b border-border px-4 py-5">
+                <section data-testid="diagnostic-template-center" className="overflow-hidden rounded-2xl border border-border bg-background">
+                  <div className="border-b border-border px-7 py-7">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="outline">诊断工作台</Badge>
-                          <Badge variant="muted">{allTemplates.length} 个模板</Badge>
-                        </div>
-                        <h2 className="mt-3 text-18 font-bold text-foreground">诊断模板中心</h2>
-                        <p className="mt-1 max-w-2xl text-13 leading-6 text-muted-foreground">
-                          选择成熟的诊断结构开始问卷，或进入模板编辑器调整题目、标签和报告框架。
+                        <h2 className="text-22 font-bold text-foreground">诊断模板中心</h2>
+                        <p className="mt-2 max-w-2xl text-13 leading-6 text-muted-foreground">
+                          问卷模板与配套报告模板成对管理，回收完成后可自动生成洞察。
                         </p>
                       </div>
-                      <Button type="button" variant="outline" size="sm" onClick={() => openTemplateEditor()}>
+                      <Button type="button" size="sm" onClick={() => openTemplateEditor()} className="h-10 rounded-xl bg-violet-600 px-4 text-white hover:bg-violet-700">
                         <Plus className="h-4 w-4" />
-                        新建空白模板
+                        手工新建
                       </Button>
                     </div>
-                    <div data-testid="template-tag-filter" className="mt-4 flex flex-wrap items-center gap-2">
-                      <span className="text-12 font-semibold text-muted-foreground">标签</span>
+                    <div data-testid="template-tag-filter" className="mt-6 flex flex-wrap items-center gap-2">
                       <Button
                         type="button"
                         size="sm"
-                        variant={templateListTag === "all" ? "secondary" : "ghost"}
+                        variant={templateListTag === "all" ? "default" : "outline"}
                         aria-pressed={templateListTag === "all"}
                         onClick={() => setTemplateListTag("all")}
                       >
@@ -7967,7 +7966,7 @@ export default function SurveysPage() {
                           key={tag}
                           type="button"
                           size="sm"
-                          variant={templateListTag === tag ? "secondary" : "ghost"}
+                          variant={templateListTag === tag ? "default" : "outline"}
                           aria-pressed={templateListTag === tag}
                           onClick={() => setTemplateListTag(tag)}
                         >
@@ -7984,12 +7983,12 @@ export default function SurveysPage() {
                   )}
 
                   {visibleTemplateList.length ? (
-                    <div data-testid="diagnostic-template-grid" className="grid gap-4 p-4 md:grid-cols-2">
+                    <div data-testid="diagnostic-template-grid" className="grid gap-5 p-6 md:grid-cols-2">
                       {visibleTemplateList.map((template, idx) => (
                         <section
                           key={`${template.source}-${template.id}`}
                           data-testid={`template-card-${template.id}`}
-                          className="flex min-h-52 flex-col rounded-lg border border-border bg-card p-4 transition-all duration-200 hover:border-border-strong hover:shadow-sm"
+                          className="flex min-h-64 flex-col rounded-2xl border border-border bg-background p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-sm"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex flex-wrap gap-2">
@@ -8002,7 +8001,7 @@ export default function SurveysPage() {
                             </div>
                             <span className="shrink-0 text-12 text-muted-foreground">{template.estimatedMinutes ?? 3} min</span>
                           </div>
-                          <h3 className="mt-4 text-15 font-bold text-foreground">{template.name}</h3>
+                          <h3 className="mt-4 text-17 font-bold text-foreground">{template.name}</h3>
                           <p className="mt-2 line-clamp-2 text-13 leading-6 text-muted-foreground">
                             {template.description || "暂无模板说明。"}
                           </p>
@@ -8013,7 +8012,7 @@ export default function SurveysPage() {
                               ))}
                             </div>
                           )}
-                          <p className="mt-3 text-12 text-muted-foreground">
+                          <p className="mt-4 rounded-xl bg-secondary p-4 text-12 leading-5 text-muted-foreground">
                             {template.reportTemplate
                               ? `${template.reportTemplate.title} · ${template.reportTemplate.sections.length} 个报告章节`
                               : "使用后可在报告模板中配置诊断章节。"}
@@ -8085,8 +8084,8 @@ export default function SurveysPage() {
           </section>
         ) : (
           <>
-            <section data-testid="survey-operations-list" className="rounded-lg border border-border bg-background">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+            <section data-testid="survey-operations-list" className="overflow-hidden rounded-2xl border border-border bg-background">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-6 py-5">
                 <div>
                   <h2 className="text-18 font-bold text-foreground">我的问卷</h2>
                   <p className="text-13 text-muted-foreground">每份问卷只显示当前状态和最常用下一步。</p>
@@ -8129,11 +8128,11 @@ export default function SurveysPage() {
                   </div>
                 </div>
               ) : (
-                <div data-testid="survey-list" className="grid gap-3 p-4">
+                <div data-testid="survey-list">
                   {visibleSurveys.map((s) => {
                     const reportPlan = inferReportPlan(s);
                     return (
-                      <section key={s.id} data-testid={`survey-${s.id}`} className="rounded-lg border border-border bg-card p-4 transition-all duration-200 hover:border-border-strong hover:shadow-sm">
+                      <section key={s.id} data-testid={`survey-${s.id}`} className="border-b border-border bg-background px-6 py-5 transition-colors last:border-b-0 hover:bg-secondary">
                         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
