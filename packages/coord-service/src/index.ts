@@ -5,6 +5,7 @@ import { submitEvent } from "./routes/events";
 import { dispatchTask, listTasks, ackTask, doneTask, recallTask } from "./routes/tasks";
 import { mintAgentToken } from "./routes/mint";
 import { publicStatus } from "./routes/status";
+import { serverTime } from "./routes/time";
 import { sweepStaleClaims } from "./cron/sweeper";
 import { runProjector } from "./cron/projector";
 import type { Env } from "./db/types";
@@ -20,6 +21,7 @@ router.get("/", async () =>
       "Agent coordination authority (claims/heartbeats/leases) — see ADR-009 and packages/coord-service/OPERATIONS.md",
     endpoints: {
       "GET /status": "public read-only snapshot: active claims + recent events",
+      "GET /time": "authoritative clock: server UTC + current C-cycle boundaries (ADR-014)",
       "GET /claims?resource_id=&status=": "query claims (Bearer token)",
       "POST /claims": "atomic claim (Bearer token)",
       "POST /claims/:id/heartbeat": "refresh lease (Bearer token)",
@@ -48,6 +50,7 @@ router.post("/tasks/:id/done", doneTask);
 router.post("/tasks/:id/recall", recallTask);
 router.post("/agents/:id/mint-token", mintAgentToken);
 router.get("/status", publicStatus);
+router.get("/time", serverTime);
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {

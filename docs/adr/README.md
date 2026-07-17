@@ -2,7 +2,7 @@
 
 > 2026-07-12 起（人类拍板）：ADR 是全项目治理文件，统一放这里；此前散在
 > `docs/adr/`（ADR-001~013，已迁入）与本目录早期两篇
-> （0001/0002，旧编号序列，保留原名）。新 ADR 编号从 ADR-014 起。
+> （0001/0002，旧编号序列，保留原名）。新 ADR 编号从 ADR-017 起。
 
 | 编号 | 主题 | 状态 |
 |---|---|---|
@@ -21,4 +21,5 @@
 | ADR-011 | self-service-identity-registration（开发者一等实体） | Proposed |
 | ADR-012 | audit-chain-hardening（doctor + 证据纪律） | Accepted |
 | ADR-013 | contrast-safety-single-source（样式单源策略） | Accepted |
+| ADR-014 | unified-clock-and-loop-discipline（统一时钟 + 分级 loop） | Accepted |
 | ADR-016 | app-default-ai-provider-qwen（应用端默认 AI 用 Qwen） | Accepted |
