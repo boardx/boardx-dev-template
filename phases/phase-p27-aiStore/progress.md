@@ -3,11 +3,11 @@
 ## 当前状态
 
 - Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
-- 当前最高优先级: F10 allowCopy and independent resource copies
-- 计划规模: 14 Features / 7 Sprints / F01-F09 `passing`，F10-F14 `not_started`
-- Runtime 实现: 审核发布、订阅使用、统计与跨 Team 编辑分享已完成；F10-F14 尚未开始。
+- 当前最高优先级: Phase 完成，等待同步与人工验收
+- 计划规模: 14 Features / 7 Sprints / F01-F14 全部 `passing`
+- Runtime 实现: Team-scoped Agent/Skills/Template、审核发布、订阅使用、统计、分享编辑、独立复制和 Resource Library UIUX 均已完成。
 - UI 签核: Resource Library Option 1 已由用户确认，见 `ui-signoff.md`。
-- 基线门禁: F06 verification 与 `pnpm -w run verify:base` 已通过。
+- 基线门禁: F14 verification、`pnpm -w run verify:base` 与 `pnpm harness doctor --phase p27` 已通过。
 
 ## 已完成
 
@@ -25,18 +25,21 @@
 - F07 已完成个人/团队订阅、管理员权限、团队继承、Team 隔离、独立取消及 Agent/Skill/Template 使用。
 - F08 已完成 Team-scoped 收藏、服务端原子喜欢数、授权详情浏览统计、失败回滚和并发不漂移。
 - F09 已完成 Team-scoped 编辑授权、来源 Team 展示、Authorized/Shared、不可变所有权和即时撤销。
-- F13/F14 已记录已确认的 Resource Library UIUX，并依赖对应运行时 Feature 后实施。
+- F10 已完成 allowCopy 开关、Team 归属的独立 draft、副本来源记录和 Template Board 深拷贝。
+- F11 已完成 Agent/Skills/Template 在真实运行入口中的集成。
+- F12 已完成旧 AI Tool/Image Tool 数据兼容和完整回归。
+- F13 已完成 Option 1 Resource Library 响应式目录、筛选、详情和角色导航。
+- F14 已完成统一编辑器、即时生效更新、分享、复制确认和 Team/BoardX 审核工作区。
 
-## 未开始边界
+## 验证边界
 
 - F01/F02 evidence 位于 `sprints/sprint-01/evidence/`，F03/F04 evidence 位于 Sprint 02。
 - F06 evidence 位于 `sprints/sprint-03/evidence/F06.verify.log`；F07/F08 evidence 位于 Sprint 04。
-- F09 evidence 位于 `sprints/sprint-05/evidence/F09.verify.log`；F10-F14 不存在 passing 声明或成功 evidence。
-- 远程 GitHub `--apply` 未执行；当前环境没有可用的 `gh` CLI/认证。
+- F09/F10 evidence 位于 Sprint 05；F11/F12 位于 Sprint 06；F13/F14 位于 Sprint 07。
+- `pnpm harness doctor --phase p27` 返回 `0 FAIL / 0 WARN`。
 
 ## 下一步
 
-1. 认领 F10: `pnpm harness claim --phase p27 --feature F10 --owner <agent-id>`。
-2. 编写 `apps/web/e2e/ai-store-012-copy-resources.spec.ts` 的失败测试。
-3. 完成 allowCopy 开关、独立 draft、副本来源和 Template Board 深拷贝。
-4. 运行 `pnpm harness verify --sprint p27/05 --feature F10`。
+1. 运行 `pnpm harness sync --phase p27 --apply` 将完成状态投影到 Parent Issue #662。
+2. 启动 Web，人工验收 `/ai-store` 的 Explore、订阅、创建、授权、分享和审核路径。
+3. 由 coordinator 根据全部 Feature passing 状态决定是否关闭 Parent Issue #662。
