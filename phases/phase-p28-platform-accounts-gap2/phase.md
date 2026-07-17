@@ -1,4 +1,4 @@
-# Phase p25 — platform-accounts-gap2
+# Phase p28 — platform-accounts-gap2
 
 - **slug**: platform-accounts-gap2
 - **状态**: not_started

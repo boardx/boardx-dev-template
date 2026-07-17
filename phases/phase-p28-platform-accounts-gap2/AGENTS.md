@@ -1,4 +1,4 @@
-# AGENTS.md — Phase p25 (platform-accounts-gap2) 局部指令
+# AGENTS.md — Phase p28 (platform-accounts-gap2) 局部指令
 
 > 阶段级 scoped 指令,补充根 AGENTS.md。只写本阶段特有的约束。
 

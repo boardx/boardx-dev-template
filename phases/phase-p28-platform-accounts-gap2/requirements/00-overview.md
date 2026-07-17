@@ -1,4 +1,4 @@
-# 原始需求（概览）— Platform/Accounts 差距修复第二轮（Phase p25）
+# 原始需求（概览）— Platform/Accounts 差距修复第二轮（Phase p28）
 
 ## 背景 / 为什么做
 2026-07-14 五维差距审计（见 `../gap-report.md`，含方法论与探针复用注意）确认：

@@ -1,11 +1,11 @@
 ---
-phase: "p25"
+phase: "p28"
 status: pending          # pending | confirmed —— 人类工程师确认 UI 后，把这里改成 confirmed
 confirmed_by:            # 确认人（姓名/邮箱）
 confirmed_at:            # 确认时间（ISO，如 2026-07-01T10:00:00Z）
 ---
 
-# UI 先行确认 — platform-accounts-gap2（Phase p25）
+# UI 先行确认 — platform-accounts-gap2（Phase p28）
 
 > 这是本阶段的 **UI 签核关卡**（ADR-003）。UI 相关阶段必须先把真实界面做出来、
 > 由**人类工程师确认**，才能生成/定稿 `feature_list.json` 并开 sprint 进入代码开发。
