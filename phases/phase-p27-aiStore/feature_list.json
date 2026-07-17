@@ -352,6 +352,28 @@
       ],
       "evidence": "evidence/F16.verify.log @ 2026-07-17T13:14:03.982Z",
       "notes": "真人 Chrome 验收回归；热点为 StoreBrowser、ResourceEditor、StoreNavigation、AI Store 详情查询、Template seed 与真实 API E2E。不得用 mock 或无源 Board 的 Template 通过验证。"
+    },
+    {
+      "id": "F17",
+      "priority": 1,
+      "area": "ai-store-runtime",
+      "title": "Persist local AI Store runtime data across Compose restarts",
+      "user_visible_behavior": "开发者在同一 Harness worktree 停止并重新启动 Docker Compose 后，登录和 AI Store 页面继续使用原有 migration、Team、资源、订阅及 Template Board 数据，不再出现 relation sessions does not exist；不同 worktree 的数据卷保持隔离。",
+      "status": "passing",
+      "sprint": "10",
+      "owner": "codex-p27-ai-store-control-plane",
+      "capability": "CAP-DATA",
+      "depends_on": [
+        "F16"
+      ],
+      "wave": 12,
+      "verification": [
+        "pnpm --filter @repo/data exec vitest run src/dockerComposePersistence.test.ts",
+        "docker compose -p codex-p27-ai-store-control-plane -f infra/docker-compose.yml config --format json | jq -e '.services.postgres.volumes[0].type == \"volume\" and .services.postgres.volumes[0].source == \"postgres_data\" and .services.redis.volumes[0].source == \"redis_data\" and .services.minio.volumes[0].source == \"minio_data\"'",
+        "docker exec codex-p27-ai-store-control-plane-postgres-1 psql -U boardx -d boardx -Atc \"SELECT to_regclass('public.sessions') IS NOT NULL AND to_regclass('public.ai_store_items') IS NOT NULL AND (SELECT count(*) FROM _migrations) > 0\" | grep -qx t"
+      ],
+      "evidence": "evidence/F17.verify.log @ 2026-07-17T14:03:47.883Z",
+      "notes": "用户截图回归；热点为 infra/docker-compose.yml、init.sh 与本地数据库恢复流程。命名卷必须由 COMPOSE_PROJECT_NAME 隔离，fresh volume 必须先 migrate，禁止绑定其他 worktree 的卷或删除旧卷。"
     }
   ]
 }

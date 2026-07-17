@@ -31,6 +31,6 @@
 | p24 | room-board-management | not_started | 0 | 0 | 0 | 0 |
 | p25 | Survey System | in_progress | 0 | 1 | 0 | 11 |
 | p26 | ava-legacy-sync | not_started | 2 | 0 | 0 | 2 |
-| p27 | AI Store | in_progress | 0 | 0 | 0 | 16 |
+| p27 | AI Store | in_progress | 0 | 0 | 0 | 17 |
 
-_最近聚合:2026-07-17T13:14:04.007Z_
+_最近聚合:2026-07-17T14:03:47.968Z_
