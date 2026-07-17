@@ -10,7 +10,9 @@ export async function GET() {
     const notes = await listNotes();
     return NextResponse.json({ notes });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    // 内部细节只进日志，响应给稳定错误码（ADR-015 / #539 教训）
+    console.error("[api] unhandled", err);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 }
 
@@ -23,6 +25,8 @@ export async function POST(req: Request) {
     const note = await createNote(body.text);
     return NextResponse.json({ note }, { status: 201 });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    // 内部细节只进日志，响应给稳定错误码（ADR-015 / #539 教训）
+    console.error("[api] unhandled", err);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 }

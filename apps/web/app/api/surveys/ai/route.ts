@@ -99,7 +99,9 @@ export async function POST(req: Request) {
       model,
       error: error instanceof Error ? error.message : "unknown error",
     });
-    return NextResponse.json({ error: error instanceof Error ? error.message : "千问生成失败" }, { status: 502 });
+    // #669/ADR-015：内部错误细节（provider 报文/堆栈）只进上面的 console.error，
+    // 绝不回客户端。对外统一通用文案。
+    return NextResponse.json({ error: "千问生成失败" }, { status: 502 });
   }
 
   try {

@@ -67,6 +67,8 @@ export async function POST(req: Request) {
     await createTeamInvite(token, teamId, "member", expiresAt(TEAM_INVITE_TTL_MS));
     return NextResponse.json({ status: "invited", email, token }, { status: 200 });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    // 内部细节只进日志，响应给稳定错误码（ADR-015 / #539 教训）
+    console.error("[api] unhandled", err);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 }
