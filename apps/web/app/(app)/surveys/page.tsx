@@ -4881,6 +4881,7 @@ export default function SurveysPage() {
   const [created, setCreated] = useState<{ id: number; shareUrl: string; reportReady: boolean } | null>(null);
   const [editorActionMessage, setEditorActionMessage] = useState("");
   const [templates, setTemplates] = useState<SurveyTemplate[]>([]);
+  const [templateLoadError, setTemplateLoadError] = useState("");
   const [templateListTag, setTemplateListTag] = useState("all");
   const [templateListSelection, setTemplateListSelection] = useState("blank");
   const [templateMessage, setTemplateMessage] = useState("");
@@ -5009,11 +5010,16 @@ export default function SurveysPage() {
   }
 
   async function loadTemplates() {
+    setTemplateLoadError("");
     try {
       const res = await fetch("/api/survey-templates");
-      if (res.ok) setTemplates((await res.json()).templates ?? []);
+      if (!res.ok) {
+        setTemplateLoadError("模板加载失败，仍可创建空白问卷或模板。");
+        return;
+      }
+      setTemplates((await res.json()).templates ?? []);
     } catch {
-      // 模板加载失败不阻塞 Blank 创建。
+      setTemplateLoadError("模板加载失败，仍可创建空白问卷或模板。");
     }
   }
 
@@ -7920,92 +7926,146 @@ export default function SurveysPage() {
               </div>
             ) : (
               <>
-                <section className="rounded-lg border border-border bg-background">
-                  <div className="grid gap-4 border-b border-border px-4 py-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="outline">Template Manager</Badge>
-                        <Badge variant="muted">{allTemplates.length} 个模板</Badge>
-                      </div>
-                      <h2 className="mt-3 text-18 font-bold text-foreground">管理问卷模版</h2>
-                      <p className="mt-1 max-w-2xl text-13 leading-6 text-muted-foreground">
-                        模版只作为可复用结构管理。进入编辑器可以调整题目、说明和分类；自定义模版可以删除。
-                      </p>
-                    </div>
-                    <div data-testid="template-summary" className="grid gap-2 rounded-lg border border-border bg-card p-3 sm:grid-cols-3">
+                <section data-testid="diagnostic-template-center" className="border border-border bg-background">
+                  <div className="border-b border-border px-4 py-5">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
-                        <p className="text-12 text-muted-foreground">全部模版</p>
-                        <p className="mt-1 text-20 font-bold text-foreground">{allTemplates.length}</p>
-                      </div>
-                      <div>
-                        <p className="text-12 text-muted-foreground">自定义</p>
-                        <p className="mt-1 text-20 font-bold text-foreground">{savedTemplates.length}</p>
-                      </div>
-                      <div>
-                        <p className="text-12 text-muted-foreground">分类</p>
-                        <p className="mt-1 text-20 font-bold text-foreground">{templateCategories.length}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div data-testid="template-categories" className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
-                    <span className="text-12 font-semibold text-muted-foreground">分类</span>
-                    {templateCategories.map((category) => (
-                      <Badge key={category} variant="muted">
-                        {category}
-                      </Badge>
-                    ))}
-                  </div>
-
-                  <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
-                    {allTemplates.map((template, idx) => (
-                      <section key={template.id} className="flex min-h-52 flex-col rounded-lg border border-border bg-card p-4 transition-all duration-200 hover:border-border-strong hover:shadow-sm">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex flex-wrap gap-2">
-                            <Badge data-testid={`template-category-${template.id}`} variant="muted">
-                              {template.category ?? "通用"}
-                            </Badge>
-                            <Badge variant={template.source === "saved" ? "outline" : "muted"}>
-                              {template.source === "saved" ? "自定义" : "系统"}
-                            </Badge>
-                          </div>
-                          <span className="text-12 text-muted-foreground">{template.estimatedMinutes ?? 3} min</span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline">诊断工作台</Badge>
+                          <Badge variant="muted">{allTemplates.length} 个模板</Badge>
                         </div>
-                        <h3 className="mt-4 text-15 font-bold text-foreground">{template.name}</h3>
-                        <p className="mt-3 line-clamp-3 text-13 leading-6 text-muted-foreground">
-                          {template.description}
+                        <h2 className="mt-3 text-18 font-bold text-foreground">诊断模板中心</h2>
+                        <p className="mt-1 max-w-2xl text-13 leading-6 text-muted-foreground">
+                          选择成熟的诊断结构开始问卷，或进入模板编辑器调整题目、标签和报告框架。
                         </p>
-                        {(template.tags?.length ?? 0) > 0 && (
-                          <div className="mt-3 flex flex-wrap gap-1.5">
-                            {template.tags!.map((tag) => (
-                              <Badge key={tag} variant="outline">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                        <div className="mt-auto flex items-center justify-between gap-3 pt-5">
-                          <span className="text-13 text-muted-foreground">{template.questions.length} 个问题</span>
-                          <div className="flex gap-2">
-                            <Button data-testid={`template-edit-${idx}`} type="button" size="sm" variant="outline" onClick={() => openTemplateEditor(template)}>
-                              编辑
-                            </Button>
-                            <Button
-                              data-testid={`template-delete-${idx}`}
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={template.source !== "saved"}
-                              title={template.source === "saved" ? "删除模板" : "系统模板不可删除"}
-                              onClick={() => void deleteTemplate(template)}
-                            >
-                              删除
-                            </Button>
-                          </div>
-                        </div>
-                      </section>
-                    ))}
+                      </div>
+                      <Button type="button" variant="outline" size="sm" onClick={() => openTemplateEditor()}>
+                        <Plus className="h-4 w-4" />
+                        新建空白模板
+                      </Button>
+                    </div>
+                    <div data-testid="template-tag-filter" className="mt-4 flex flex-wrap items-center gap-2">
+                      <span className="text-12 font-semibold text-muted-foreground">标签</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={templateListTag === "all" ? "secondary" : "ghost"}
+                        aria-pressed={templateListTag === "all"}
+                        onClick={() => setTemplateListTag("all")}
+                      >
+                        全部
+                      </Button>
+                      {Array.from(new Set([...templateCategories, ...templateListTags])).map((tag) => (
+                        <Button
+                          key={tag}
+                          type="button"
+                          size="sm"
+                          variant={templateListTag === tag ? "secondary" : "ghost"}
+                          aria-pressed={templateListTag === tag}
+                          onClick={() => setTemplateListTag(tag)}
+                        >
+                          {tag}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
+
+                  {templateLoadError && (
+                    <p role="alert" data-testid="err-template" className="border-b border-border px-4 py-3 text-13 text-destructive">
+                      {templateLoadError}
+                    </p>
+                  )}
+
+                  {visibleTemplateList.length ? (
+                    <div data-testid="diagnostic-template-grid" className="grid gap-4 p-4 md:grid-cols-2">
+                      {visibleTemplateList.map((template, idx) => (
+                        <section
+                          key={`${template.source}-${template.id}`}
+                          data-testid={`template-card-${template.id}`}
+                          className="flex min-h-52 flex-col rounded-lg border border-border bg-card p-4 transition-all duration-200 hover:border-border-strong hover:shadow-sm"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex flex-wrap gap-2">
+                              <Badge data-testid={`template-category-${template.id}`} variant="muted">
+                                {template.category ?? "通用"}
+                              </Badge>
+                              <Badge variant={template.source === "saved" ? "outline" : "muted"}>
+                                {template.source === "saved" ? "自定义" : "系统"}
+                              </Badge>
+                            </div>
+                            <span className="shrink-0 text-12 text-muted-foreground">{template.estimatedMinutes ?? 3} min</span>
+                          </div>
+                          <h3 className="mt-4 text-15 font-bold text-foreground">{template.name}</h3>
+                          <p className="mt-2 line-clamp-2 text-13 leading-6 text-muted-foreground">
+                            {template.description || "暂无模板说明。"}
+                          </p>
+                          {(template.tags?.length ?? 0) > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-1.5">
+                              {template.tags!.map((tag) => (
+                                <Badge key={tag} variant="outline">{tag}</Badge>
+                              ))}
+                            </div>
+                          )}
+                          <p className="mt-3 text-12 text-muted-foreground">
+                            {template.reportTemplate
+                              ? `${template.reportTemplate.title} · ${template.reportTemplate.sections.length} 个报告章节`
+                              : "使用后可在报告模板中配置诊断章节。"}
+                          </p>
+                          <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-5">
+                            <span className="text-13 text-muted-foreground">{template.questions.length} 个问题</span>
+                            <div className="flex flex-wrap gap-2">
+                              <Button data-testid={`use-template-${template.id}`} type="button" size="sm" onClick={() => openEditor({ template })}>
+                                使用模板
+                              </Button>
+                              <Button
+                                data-testid={`view-report-template-${template.id}`}
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openTemplateEditor(template)}
+                              >
+                                <FileText className="h-4 w-4" />
+                                报告模板
+                              </Button>
+                              {template.source === "saved" && (
+                                <>
+                                  <Button
+                                    data-testid={`template-edit-${idx}`}
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    aria-label={`编辑模板 ${template.name}`}
+                                    title="编辑模板"
+                                    onClick={() => openTemplateEditor(template)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    data-testid={`template-delete-${idx}`}
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    aria-label={`删除模板 ${template.name}`}
+                                    title="删除模板"
+                                    onClick={() => void deleteTemplate(template)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </section>
+                      ))}
+                    </div>
+                  ) : (
+                    <div data-testid="empty" className="flex flex-col items-center gap-4 px-4 py-12 text-center">
+                      <p className="text-13 text-muted-foreground">没有匹配此标签的诊断模板。</p>
+                      <Button type="button" size="sm" variant="outline" onClick={() => setTemplateListTag("all")}>
+                        重置筛选
+                      </Button>
+                    </div>
+                  )}
                 </section>
 
                 {templateMessage && (

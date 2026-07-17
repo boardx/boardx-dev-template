@@ -73,14 +73,34 @@ test("new survey chooser routes each creation path", async ({ page }) => {
   await expect(page.getByTestId("ai-assistant-panel")).toHaveCount(0);
 });
 
-test("template URL restores the source stash template manager", async ({ page }) => {
+test("diagnostic template center keeps template and report actions available", async ({ page }) => {
   await register(page);
   await page.goto("/surveys?view=templates");
 
   await expect(page).toHaveURL(/\/surveys\?view=templates/);
-  await expect(page.getByRole("heading", { name: "问卷模版" })).toBeVisible();
-  await expect(page.getByTestId("templates-workbench")).toContainText("Template Manager");
-  await expect(page.getByTestId("template-summary")).toContainText("全部模版");
-  await expect(page.getByTestId("template-categories")).toBeVisible();
-  await expect(page.getByTestId("templates-workbench").getByText("系统").first()).toBeVisible();
+  await expect(page.getByTestId("survey-source-sidebar")).toBeVisible();
+  await expect(page.getByTestId("diagnostic-template-center")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "诊断模板中心" })).toBeVisible();
+  await expect(page.getByTestId("template-tag-filter")).toBeVisible();
+
+  const templateGrid = page.getByTestId("diagnostic-template-grid");
+  await expect(templateGrid).toHaveClass(/md:grid-cols-2/);
+  const templateCards = templateGrid.locator("[data-testid^=template-card-]");
+  await expect(templateCards).not.toHaveCount(0);
+  await expect(templateCards.first()).toContainText("系统");
+
+  const firstTemplateId = await templateCards.first().getAttribute("data-testid");
+  expect(firstTemplateId).toBeTruthy();
+  const templateId = firstTemplateId!.replace("template-card-", "");
+  await expect(page.getByTestId(`use-template-${templateId}`)).toBeVisible();
+  await expect(page.getByTestId(`view-report-template-${templateId}`)).toBeVisible();
+  await expect(page.getByText("Template Manager", { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("template-summary")).toHaveCount(0);
+
+  await page.getByTestId(`use-template-${templateId}`).click();
+  await expect(page.getByTestId("survey-editor-shell")).toBeVisible();
+
+  await page.goto("/surveys?view=templates");
+  await page.getByTestId(`view-report-template-${templateId}`).click();
+  await expect(page.getByTestId("template-editor-shell")).toBeVisible();
 });
