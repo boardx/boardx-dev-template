@@ -1,6 +1,6 @@
 # 进度日志 - Sprint p27/03
 
-- Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
+- Parent Issue: [#679](https://github.com/boardx/boardx-dev-template/issues/679)
 - Features: F05 Team review and featured lifecycle; F06 BoardX review, featured, and live approved updates.
 - 状态: F05、F06 均为 `passing`。
 - 依赖: F04、F05 已 passing，F06 已完成。

@@ -198,4 +198,4 @@ phases:
     status: in_progress
     depends_on: []
     has_ui: true
-    tracking_issue: 662
+    tracking_issue: 679

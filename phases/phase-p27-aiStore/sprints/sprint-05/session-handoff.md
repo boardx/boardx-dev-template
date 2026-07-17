@@ -2,7 +2,7 @@
 
 ## 当前工作
 
-- Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
+- Parent Issue: [#679](https://github.com/boardx/boardx-dev-template/issues/679)
 - F09 已由 Harness 门控转为 `passing`，evidence: `evidence/F09.verify.log`。
 - 下一 Feature: F10 allowCopy and independent resource copies。
 - Claim: `pnpm harness claim --phase p27 --feature F10 --owner <agent-id>`。

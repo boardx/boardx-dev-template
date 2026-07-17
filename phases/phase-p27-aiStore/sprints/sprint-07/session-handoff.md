@@ -11,11 +11,11 @@
 
 ## 仍损坏或未验证
 - 无已知损坏功能。
-- 尚需人工浏览器验收；GitHub Issue #662 远程投影需执行 `harness sync --apply`。
+- 尚需人工浏览器验收；GitHub Issue #679 远程投影需执行 `harness sync --apply`。
 
 ## 下一步最佳动作
 - 启动 Web 并人工走查 Explore、创建、订阅、分享、复制和审核。
-- 同步 GitHub Parent Issue #662，由 coordinator 决定关闭状态。
+- 同步 GitHub Parent Issue #679，由 coordinator 决定关闭状态。
 
 ## 命令
 - 启动:`pnpm --filter @repo/web dev`

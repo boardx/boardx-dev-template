@@ -27,4 +27,7 @@
   - `evidence/F15-resource-library-1490.png`
 - 提交记录: 本轮 F15 提交见当前分支 Git 历史。
 - 已知风险或未解决问题: 设计 lint 仍报告 phase-p17 归属的既有中英文混用警告，不阻断本阶段。
-- 下一步最佳动作: 推送 `codex/p27-ai-store-control-plane` 并创建绑定 Issue #662 的 PR。
+- GitHub 同步:
+  - 已创建正确的 p27 产品追踪 Issue #679，并写入完整需求、15/15 Harness 状态和 PR #676。
+  - 原 #662 是 module-coordinator onboarding Issue，已从 p27 Harness 绑定中移除且未改写。
+- 下一步最佳动作: 等待 PR #676 合并；合并并完成最终协调验收后关闭 Issue #679。

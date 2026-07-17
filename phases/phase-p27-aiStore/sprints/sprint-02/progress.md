@@ -1,6 +1,6 @@
 # 进度日志 - Sprint p27/02
 
-- Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
+- Parent Issue: [#679](https://github.com/boardx/boardx-dev-template/issues/679)
 - Features: F03 Complete Explore, navigation, and detail; F04 Create, edit, preview, and archive.
 - 状态: F03、F04 均为 `passing`。
 - 依赖: F01、F02 已 passing，Sprint 02 已完成。

@@ -2,7 +2,7 @@
 
 ## 当前已验证
 
-- Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
+- Parent Issue: [#679](https://github.com/boardx/boardx-dev-template/issues/679)
 - F03 已通过完整 Explore Playwright 和全仓基础验证。
 - Evidence: `evidence/F03.verify.log`。
 - Team 切换隔离、Skills Tab、分页、详情来源/版本、错误重试均已覆盖。

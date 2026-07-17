@@ -1,6 +1,6 @@
 # 进度日志 - Sprint p27/04
 
-- Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
+- Parent Issue: [#679](https://github.com/boardx/boardx-dev-template/issues/679)
 - Features: F07 USER and TEAM subscriptions and use; F08 Favorites and view statistics.
 - 状态: F07/F08 均 `passing`。
 - 依赖: F07 的 F03/F06 依赖已满足；F08 的 F03 依赖已满足。

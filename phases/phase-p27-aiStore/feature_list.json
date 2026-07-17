@@ -231,7 +231,7 @@
       "priority": 1,
       "area": "ai-store-compatibility",
       "title": "Migration compatibility and complete regression",
-      "user_visible_behavior": "升级后旧 Agent、AI Tool、Image Tool、Template 及其订阅、收藏、分享、审核、精选和统计继续在正确 Team 可用，公共响应只暴露 Agent/Skills/Template；所有核心旅程、权限失败和 approved 实时更新通过完整回归，任何单项失败都保持 P27 未完成且不会关闭 Parent Issue #662。",
+      "user_visible_behavior": "升级后旧 Agent、AI Tool、Image Tool、Template 及其订阅、收藏、分享、审核、精选和统计继续在正确 Team 可用，公共响应只暴露 Agent/Skills/Template；所有核心旅程、权限失败和 approved 实时更新通过完整回归，任何单项失败都保持 P27 未完成且不会关闭 Parent Issue #679。",
       "status": "passing",
       "sprint": "06",
       "owner": "codex-p27-ai-store-control-plane",

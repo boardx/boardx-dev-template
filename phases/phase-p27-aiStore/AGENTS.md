@@ -16,8 +16,8 @@
 
 ## GitHub 投影
 
-- 本阶段唯一总追踪 Issue 是 [#662](https://github.com/boardx/boardx-dev-template/issues/662)。
-- 所有 Feature Issue 必须回链 `Parent: #662`。
+- 本阶段唯一总追踪 Issue 是 [#679](https://github.com/boardx/boardx-dev-template/issues/679)。
+- 所有 Feature Issue 必须回链 `Parent: #679`。
 - 禁止创建第二个 AI Store 总追踪 Issue。
 
 ## 规则继承

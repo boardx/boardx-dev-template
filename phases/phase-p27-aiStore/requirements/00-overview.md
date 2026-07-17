@@ -4,7 +4,7 @@
 
 `boardx-web` 与 `boardx-backend` 已有 AI Store 的浏览、创作、发布审核、订阅使用、收藏、管理分享、精选、Agent Builder 和推荐闭环；模板仓库 P11 也已有主要 E2E 基线。P27 的目标不是重写商店，而是把这些能力整理成 Team-aware、可迁移、可验收的统一产品契约。
 
-本阶段唯一总追踪为 [GitHub Issue #662](https://github.com/boardx/boardx-dev-template/issues/662)，仓库内 `feature_list.json` 仍是执行状态的唯一权威。
+本阶段唯一总追踪为 [GitHub Issue #679](https://github.com/boardx/boardx-dev-template/issues/679)，仓库内 `feature_list.json` 仍是执行状态的唯一权威。
 
 ## 已确认产品规则
 

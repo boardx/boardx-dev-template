@@ -23,5 +23,5 @@
 - 运行过的验证: F13/F14 Playwright、design lint、TypeScript、`verify:base`、`pnpm harness doctor --phase p27`。
 - 已记录证据: `evidence/F13.verify.log`、`evidence/F14.verify.log` 及 Playwright 稳定态截图。
 - 提交记录: `e0daeae`（F13）、`91fb4ce`（F14）。
-- 已知风险或未解决问题: 无功能 blocker；等待人工浏览器验收和 GitHub Issue #662 投影。
+- 已知风险或未解决问题: 无功能 blocker；等待人工浏览器验收和 GitHub Issue #679 投影。
 - 下一步最佳动作: 启动 Web 供人工验收，并执行 `pnpm harness sync --phase p27 --apply`。

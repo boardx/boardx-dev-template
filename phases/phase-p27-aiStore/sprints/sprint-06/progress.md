@@ -1,6 +1,6 @@
 # 进度日志 - Sprint p27/06
 
-- Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
+- Parent Issue: [#679](https://github.com/boardx/boardx-dev-template/issues/679)
 - Features: F11 AVA, Template, Agent Builder, and recommendations; F12 Migration compatibility and complete regression.
 - 状态: F11/F12 均 `not_started`，无 evidence。
 - 依赖: F11 等待 F07；F12 等待 F01-F11 全部 passing。

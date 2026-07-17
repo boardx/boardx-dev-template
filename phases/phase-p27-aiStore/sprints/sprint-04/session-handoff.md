@@ -2,7 +2,7 @@
 
 ## 当前工作
 
-- Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
+- Parent Issue: [#679](https://github.com/boardx/boardx-dev-template/issues/679)
 - F07/F08 已由 Harness 门控转为 `passing`。
 - Evidence: `evidence/F07.verify.log`、`evidence/F08.verify.log`。
 - 下一 Feature: Sprint 05 的 F09 Cross-Team edit sharing and Authorized/Shared。

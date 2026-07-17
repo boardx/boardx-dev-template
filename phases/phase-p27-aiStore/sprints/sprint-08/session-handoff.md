@@ -16,7 +16,8 @@
 - 设计 lint 的中英文混用警告属于既有 phase-p17 范围，本阶段未扩散处理。
 
 ## 下一步最佳动作
-- 推送当前分支并创建绑定 Issue #662 的 PR。
+- PR #676 已创建；Parent Tracking Issue 已纠正为 #679 并同步完整需求与 15/15 passing 状态。
+- 等待 PR #676 合并；最终协调验收后以 completed 关闭 #679。
 - 不要提交 worktree 内工具生成且无关的 `.superpowers/`。
 
 ## 命令

@@ -2,7 +2,7 @@
 
 ## 首个工作
 
-- Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
+- Parent Issue: [#679](https://github.com/boardx/boardx-dev-template/issues/679)
 - 首个 Feature: F05 Team review and featured lifecycle。
 - Claim: `pnpm harness claim --phase p27 --feature F05 --owner <agent-id>`。
 - 首个失败测试: `apps/web/e2e/ai-store-006-approval-featured.spec.ts`。

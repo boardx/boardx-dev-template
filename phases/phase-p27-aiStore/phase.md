@@ -15,9 +15,12 @@
 
 ## GitHub 总追踪
 
-- Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
-- 仓库是唯一事实来源；#662 是外部协调与汇总视图。
-- 单个 Feature 完成不关闭 #662；仅全部 Feature passing 后由 coordinator 关闭。
+- Parent Issue: [#679](https://github.com/boardx/boardx-dev-template/issues/679)
+- 仓库是唯一事实来源；#679 是外部协调与汇总视图。
+- 原 `tracking_issue: 662` 指向 Developer Portal 的 module-coordinator onboarding 申请，
+  与 p27 产品需求无关；2026-07-17 已纠正为 #679，#662 保持原用途且不做改写。
+- 单个 Feature 完成不关闭 #679；仅全部 Feature passing、实现 PR 合并且最终协调验收完成后
+  由 coordinator 关闭。
 
 ## 需求 → 功能清单 流水线
 1. **原始需求**写进同目录的 `requirements/` 文件夹（可按领域放多份 `*.md`，人类语言、可模糊）。

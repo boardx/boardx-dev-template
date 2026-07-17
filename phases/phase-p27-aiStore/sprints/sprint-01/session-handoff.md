@@ -2,7 +2,7 @@
 
 ## 当前已验证
 
-- Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
+- Parent Issue: [#679](https://github.com/boardx/boardx-dev-template/issues/679)
 - F01 已通过两条目标测试和全仓基础验证。
 - Evidence: `evidence/F01.verify.log`。
 - 数据库迁移 `039_ai_store_team_tenancy.sql` 已在本机开发库成功应用。

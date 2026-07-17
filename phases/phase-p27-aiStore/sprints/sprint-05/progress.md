@@ -1,6 +1,6 @@
 # 进度日志 - Sprint p27/05
 
-- Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
+- Parent Issue: [#679](https://github.com/boardx/boardx-dev-template/issues/679)
 - Features: F09 Cross-Team edit sharing and Authorized/Shared; F10 allowCopy and independent resource copies.
 - 状态: F09 `passing`；F10 `not_started`。
 - 依赖: F09 的 F04 依赖已满足；F10 的 F04/F09 依赖已满足。
