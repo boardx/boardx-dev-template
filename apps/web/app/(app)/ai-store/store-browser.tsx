@@ -35,6 +35,7 @@ interface StoreItem {
   liked?: boolean;
   unavailable?: boolean;
   subscriptionScopes?: Array<"personal" | "team">;
+  origin_team_name?: string;
 }
 
 interface SubscriptionStatus {
@@ -52,6 +53,8 @@ interface FavoriteToggleResponse {
 // P11 F05：分享管理。share 挂在 item 上（同一时刻一条有效链接），grantees 是被授权用户列表。
 interface ShareGrantee {
   user_id: number;
+  consumer_team_id: number;
+  consumer_team_name: string;
   email: string;
   display_name: string;
   granted_at: string;
@@ -188,6 +191,7 @@ export function StoreBrowser() {
   const [detailError, setDetailError] = useState(false);
   const [detailRequestVersion, setDetailRequestVersion] = useState(0);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [editingAuthorized, setEditingAuthorized] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formMessage, setFormMessage] = useState("");
   const [submitting, setSubmitting] = useState<SubmitAction | null>(null);
@@ -306,7 +310,7 @@ export function StoreBrowser() {
   // 与被授权列表（自己被授权管理、非本人拥有的项目）；Subscribe 拉已订阅列表。
   useEffect(() => {
     if (nav === "explore") void load({ type, tags: activeTags, q, page: 1 });
-    else if (nav === "create" || nav === "authorized") {
+    else if (nav === "create" || nav === "authorized" || nav === "shared") {
       setItems([]);
       setLoading(false);
       setError("");
@@ -518,20 +522,23 @@ export function StoreBrowser() {
     setShareBusy(false);
   }
 
-  async function removeGrantee(userId: number) {
+  async function removeGrantee(userId: number, consumerTeamId: number) {
     if (shareItemId == null) return;
     setShareBusy(true);
     setShareError("");
     try {
-      const res = await fetch(`/api/ai-store/items/${shareItemId}/share/grantees/${userId}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `/api/ai-store/items/${shareItemId}/share/grantees/${userId}?consumerTeamId=${consumerTeamId}`,
+        { method: "DELETE" },
+      );
       if (!res.ok) {
         setShareError("Failed to remove authorization. Please try again.");
         setShareBusy(false);
         return;
       }
-      setShareGrantees((prev) => prev.filter((g) => g.user_id !== userId));
+      setShareGrantees((prev) =>
+        prev.filter((g) => g.user_id !== userId || g.consumer_team_id !== consumerTeamId),
+      );
       setShareMessage("已移除授权");
     } catch {
       setShareError("Failed to remove authorization. Please try again.");
@@ -570,7 +577,7 @@ export function StoreBrowser() {
     setFormMessage("");
   }
 
-  function editItem(item: StoreItem) {
+  function editItem(item: StoreItem, authorized = false) {
     setForm({
       id: item.id,
       expectedVersion: item.version,
@@ -589,6 +596,7 @@ export function StoreBrowser() {
     });
     setFormErrors({});
     setFormMessage("");
+    setEditingAuthorized(authorized);
     setNav("create");
   }
 
@@ -608,7 +616,7 @@ export function StoreBrowser() {
         return;
       }
       if (data.item) {
-        editItem(data.item);
+        editItem(data.item, editingAuthorized);
         setFormMessage(
           action === "submit_review"
             ? "已提交审核，状态为 PENDING"
@@ -700,6 +708,7 @@ export function StoreBrowser() {
   const isExplore = nav === "explore";
   const isCreate = nav === "create";
   const isAuthorized = nav === "authorized";
+  const isShared = nav === "shared";
   const navTitle =
     NAV_GROUPS.flatMap((g) => g.items).find((n) => n.key === nav)?.name ?? "Explore";
   const ownedList = (
@@ -1144,6 +1153,7 @@ export function StoreBrowser() {
                     data-testid={`creator-type-${creator.key}`}
                     aria-pressed={form.type === creator.key}
                     onClick={() => updateForm("type", creator.key)}
+                    disabled={editingAuthorized}
                     className="h-auto justify-start rounded-12 p-4 text-left transition-all duration-200"
                   >
                     <span className="flex flex-col items-start gap-1">
@@ -1165,6 +1175,7 @@ export function StoreBrowser() {
                       data-testid={`skill-kind-${kind}`}
                       aria-pressed={form.skillKind === kind}
                       onClick={() => updateForm("skillKind", kind)}
+                      disabled={editingAuthorized}
                       className="h-7"
                     >
                       {kind === "text" ? "Text Skill" : "Image Skill"}
@@ -1184,14 +1195,18 @@ export function StoreBrowser() {
                 <div className="flex items-center gap-3">
                   <div>
                     <h2 className="text-15 font-bold text-foreground">
-                      {form.id ? "Edit AI Store item" : "Create AI Store item"}
+                      {editingAuthorized
+                        ? "Edit authorized resource"
+                        : form.id
+                          ? "Edit AI Store item"
+                          : "Create AI Store item"}
                     </h2>
                     <p className="mt-1 text-12 text-placeholder">
                       Fill the required fields, then save, publish, or submit for review.
                     </p>
                   </div>
                   <div className="flex-1" />
-                  {form.id && (
+                  {form.id && !editingAuthorized && (
                     <Button
                       type="button"
                       size="sm"
@@ -1199,6 +1214,7 @@ export function StoreBrowser() {
                       data-testid="new-item"
                       onClick={() => {
                         setForm(EMPTY_FORM);
+                        setEditingAuthorized(false);
                         setFormErrors({});
                         setFormMessage("");
                       }}
@@ -1233,6 +1249,7 @@ export function StoreBrowser() {
                       data-testid="field-scope"
                       value={form.scope}
                       onChange={(e) => updateForm("scope", e.target.value as StoreScope)}
+                      disabled={editingAuthorized}
                     >
                       <option value="personal">Personal</option>
                       <option value="team">Team</option>
@@ -1362,25 +1379,29 @@ export function StoreBrowser() {
                     data-testid="action-save-draft"
                     disabled={submitting != null}
                   >
-                    Save draft
+                    {editingAuthorized ? "Save changes" : "Save draft"}
                   </Button>
-                  <Button
-                    type="button"
-                    data-testid="action-publish"
-                    disabled={submitting != null}
-                    onClick={() => submitItem("publish")}
-                  >
-                    Publish
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    data-testid="action-submit-review"
-                    disabled={submitting != null}
-                    onClick={() => submitItem("submit_review")}
-                  >
-                    Submit review
-                  </Button>
+                  {!editingAuthorized && (
+                    <>
+                      <Button
+                        type="button"
+                        data-testid="action-publish"
+                        disabled={submitting != null}
+                        onClick={() => submitItem("publish")}
+                      >
+                        Publish
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        data-testid="action-submit-review"
+                        disabled={submitting != null}
+                        onClick={() => submitItem("submit_review")}
+                      >
+                        Submit review
+                      </Button>
+                    </>
+                  )}
                 </div>
               </form>
             </div>
@@ -1474,13 +1495,19 @@ export function StoreBrowser() {
                           <p className="mt-2 line-clamp-2 text-12 leading-relaxed text-muted-foreground">
                             {it.description}
                           </p>
+                          <p
+                            data-testid={`authorized-origin-team-${it.id}`}
+                            className="mt-1 text-11 text-placeholder"
+                          >
+                            {it.origin_team_name ?? `Team ${it.origin_team_id}`}
+                          </p>
                         </div>
                         <Button
                           type="button"
                           size="sm"
                           variant="outline"
                           data-testid={`authorized-edit-item-${it.id}`}
-                          onClick={() => editItem(it)}
+                          onClick={() => editItem(it, true)}
                         >
                           <Pencil className="h-3.5 w-3.5" />
                           Edit
@@ -1491,6 +1518,54 @@ export function StoreBrowser() {
                 </div>
               )}
             </div>
+          </div>
+        ) : isShared ? (
+          <div data-testid="shared-view" className="mt-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-15 font-bold text-foreground">Shared resources</h2>
+                <p className="mt-1 text-12 text-placeholder">
+                  Manage edit links and authorized people for resources owned by this Team.
+                </p>
+              </div>
+              <Button type="button" size="sm" variant="outline" onClick={loadOwned}>
+                Refresh
+              </Button>
+            </div>
+            {ownedLoading ? (
+              <div data-testid="loading" className="mt-4 h-24 animate-pulse rounded-8 bg-muted" />
+            ) : ownedItems.length === 0 ? (
+              <div className="mt-4 border border-dashed border-border py-8 text-center text-13 text-placeholder">
+                No resources available to share.
+              </div>
+            ) : (
+              <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+                {ownedItems.map((item) => (
+                  <article
+                    key={item.id}
+                    data-testid={`shared-item-${item.id}`}
+                    className="flex items-center gap-3 border border-border p-4"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-13 font-semibold text-foreground">{item.name}</p>
+                      <p className="mt-1 text-11 text-placeholder">
+                        {item.type} · {statusLabel(item.status)}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={item.status === "draft" || item.status === "rejected"}
+                      onClick={() => openShareModal(item.id)}
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                      Manage
+                    </Button>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         ) : nav === "subscribe" ? (
           <div data-testid="subscribe-view" className="mt-5">
@@ -1905,7 +1980,7 @@ export function StoreBrowser() {
                     <ul data-testid="share-grantee-list" className="mt-2 space-y-1.5">
                       {shareGrantees.map((g) => (
                         <li
-                          key={g.user_id}
+                          key={`${g.user_id}:${g.consumer_team_id}`}
                           data-testid={`share-grantee-${g.user_id}`}
                           className="flex items-center justify-between rounded-9 border border-border px-2.5 py-1.75 text-12"
                         >
@@ -1916,10 +1991,10 @@ export function StoreBrowser() {
                             variant="ghost"
                             data-testid={`share-remove-grantee-${g.user_id}`}
                             disabled={shareBusy}
-                            onClick={() => void removeGrantee(g.user_id)}
+                            onClick={() => void removeGrantee(g.user_id, g.consumer_team_id)}
                             className="h-6 px-1.5 text-11 text-destructive hover:text-destructive"
                           >
-                            Remove
+                            Remove · {g.consumer_team_name}
                           </Button>
                         </li>
                       ))}

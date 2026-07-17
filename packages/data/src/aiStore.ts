@@ -34,6 +34,7 @@ export interface AiStoreItem {
   featured: boolean;
   created_at: string;
   updated_at: string;
+  origin_team_name?: string;
 }
 
 const ITEM_COLS =
@@ -258,7 +259,9 @@ export async function updateAiStoreItem(
          AND (
            owner_user_id = $2 OR EXISTS (
              SELECT 1 FROM ai_store_item_grants g
-             WHERE g.item_id = ai_store_items.id AND g.user_id = $2
+             WHERE g.item_id = ai_store_items.id
+               AND g.user_id = $2
+               AND g.consumer_team_id = $3
            )
          )
        RETURNING *
@@ -685,6 +688,8 @@ export interface AiStoreItemShare {
 
 export interface AiStoreShareGrantee {
   user_id: number;
+  consumer_team_id: number;
+  consumer_team_name: string;
   email: string;
   display_name: string;
   granted_at: string;
@@ -750,7 +755,8 @@ export async function disableAiStoreItemShare(itemId: number): Promise<AiStoreIt
 export async function redeemAiStoreItemShare(
   itemId: number,
   shareToken: string,
-  userId: number
+  userId: number,
+  consumerTeamId: number,
 ): Promise<AiStoreItem | undefined> {
   if (!shareToken) return undefined;
   const rows = await query<AiStoreItem>(
@@ -764,19 +770,25 @@ export async function redeemAiStoreItemShare(
   if (!item) return undefined;
 
   await query(
-    `INSERT INTO ai_store_item_grants (item_id, user_id, granted_via_token)
-     VALUES ($1, $2, $3)
-     ON CONFLICT (item_id, user_id) DO NOTHING`,
-    [itemId, userId, shareToken]
+    `INSERT INTO ai_store_item_grants (item_id, user_id, consumer_team_id, granted_via_token)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (item_id, user_id, consumer_team_id) DO NOTHING`,
+    [itemId, userId, consumerTeamId, shareToken]
   );
   return item;
 }
 
 /** 某用户是否已被授权管理该项目（供路由做 grantee 权限判定 + 卡片“已授权”标识）。 */
-export async function isAiStoreItemGrantee(itemId: number, userId: number): Promise<boolean> {
+export async function isAiStoreItemGrantee(
+  itemId: number,
+  userId: number,
+  consumerTeamId: number,
+): Promise<boolean> {
   const rows = await query<{ one: number }>(
-    `SELECT 1 AS one FROM ai_store_item_grants WHERE item_id = $1 AND user_id = $2`,
-    [itemId, userId]
+    `SELECT 1 AS one
+     FROM ai_store_item_grants
+     WHERE item_id = $1 AND user_id = $2 AND consumer_team_id = $3`,
+    [itemId, userId, consumerTeamId]
   );
   return rows.length > 0;
 }
@@ -792,18 +804,22 @@ export async function canAccessAiStoreItem(
   teamId: number | null | undefined
 ): Promise<boolean> {
   if (isAiStoreItemVisible(item, userId, teamId)) return true;
-  if (item.scope !== "personal" || userId == null) return false;
-  return isAiStoreItemGrantee(item.id, userId);
+  if (item.scope !== "personal" || userId == null || teamId == null) return false;
+  return isAiStoreItemGrantee(item.id, userId, teamId);
 }
 
 /** 已授权用户列表（供分享管理弹窗展示，按授权时间正序）。 */
 export async function listAiStoreItemGrantees(itemId: number): Promise<AiStoreShareGrantee[]> {
   return query<AiStoreShareGrantee>(
-    `SELECT u.id AS user_id, u.email,
+    `SELECT u.id AS user_id,
+            g.consumer_team_id,
+            t.name AS consumer_team_name,
+            u.email,
             COALESCE(NULLIF(TRIM(u.first_name || ' ' || u.last_name), ''), u.email) AS display_name,
             g.created_at AS granted_at
      FROM ai_store_item_grants g
      JOIN users u ON u.id = g.user_id
+     JOIN teams t ON t.id = g.consumer_team_id
      WHERE g.item_id = $1
      ORDER BY g.created_at ASC`,
     [itemId]
@@ -811,25 +827,37 @@ export async function listAiStoreItemGrantees(itemId: number): Promise<AiStoreSh
 }
 
 /** 拥有者移除某个已授权用户；返回是否真的删除了一行（供路由判定 404 vs 200）。 */
-export async function removeAiStoreItemGrantee(itemId: number, userId: number): Promise<boolean> {
+export async function removeAiStoreItemGrantee(
+  itemId: number,
+  userId: number,
+  consumerTeamId: number,
+): Promise<boolean> {
   const rows = await query<{ one: number }>(
-    `DELETE FROM ai_store_item_grants WHERE item_id = $1 AND user_id = $2 RETURNING 1`,
-    [itemId, userId]
+    `DELETE FROM ai_store_item_grants
+     WHERE item_id = $1 AND user_id = $2 AND consumer_team_id = $3
+     RETURNING 1`,
+    [itemId, userId, consumerTeamId]
   );
   return rows.length > 0;
 }
 
 /** 授权协作者视角的“Authorized”列表：自己被授权管理、且非本人拥有的项目。 */
-export async function listAuthorizedAiStoreItems(userId: number): Promise<AiStoreItem[]> {
+export async function listAuthorizedAiStoreItems(
+  userId: number,
+  consumerTeamId: number,
+): Promise<AiStoreItem[]> {
   return query<AiStoreItem>(
-    `SELECT ${ITEM_COLS.split(", ").map((c) => `it.${c}`).join(", ")}
+    `SELECT ${ITEM_COLS.split(", ").map((c) => `it.${c}`).join(", ")},
+            origin_team.name AS origin_team_name
      FROM ai_store_items it
      JOIN ai_store_item_grants g ON g.item_id = it.id
-     WHERE g.user_id = $1 AND it.owner_user_id IS DISTINCT FROM $1
+     JOIN teams origin_team ON origin_team.id = it.origin_team_id
+     WHERE g.user_id = $1 AND g.consumer_team_id = $2
+       AND it.owner_user_id IS DISTINCT FROM $1
        AND it.migration_quarantined_at IS NULL
        AND it.archived_at IS NULL
      ORDER BY g.created_at DESC`,
-    [userId]
+    [userId, consumerTeamId]
   );
 }
 

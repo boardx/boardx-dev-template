@@ -2,9 +2,10 @@
 
 - Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
 - Features: F09 Cross-Team edit sharing and Authorized/Shared; F10 allowCopy and independent resource copies.
-- 状态: F09/F10 均 `not_started`，无 evidence。
-- 依赖: F09 等待 F04；F10 等待 F04 与 F09。
+- 状态: F09 `passing`；F10 `not_started`。
+- 依赖: F09 的 F04 依赖已满足；F10 的 F04/F09 依赖已满足。
 - F09 验证: `pnpm --filter @repo/web exec playwright test e2e/ai-store-011-cross-team-edit-share.spec.ts`。
 - F10 验证: `pnpm --filter @repo/web exec playwright test e2e/ai-store-012-copy-resources.spec.ts`。
-- blocker: 内容编辑权限与 archive 边界尚未实现。
-- 下一步: F04 passing 后认领 F09，先写接受分享不改变所有权/来源 Team 的失败 E2E。
+- F09 evidence: `evidence/F09.verify.log`；跨 Team 闭环 E2E 与基础验证均通过。
+- F09 已完成: 三类资源 Team-scoped 授权、来源 Team 展示、Authorized/Shared、内容编辑、权限边界与即时撤销。
+- 下一步: 认领 F10，先写 allowCopy 关闭 403、开启后独立 draft 和来源追踪 E2E。

@@ -171,9 +171,9 @@
       "area": "ai-store-sharing",
       "title": "Cross-Team edit sharing and Authorized/Shared",
       "user_visible_behavior": "资源所有者可创建编辑链接、查看授权列表、关闭链接或撤销用户；其他 Team 的接收者接受后在 Authorized 中看到来源 Team 并编辑原 item，保存立即影响所有订阅者，但不能改变 createdBy、originTeamId、审核/精选、allowCopy、分享或归档，越权返回 403，撤销后立即失效。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "05",
-      "owner": null,
+      "owner": "codex-p27-ai-store-control-plane",
       "capability": "CAP-WEB",
       "depends_on": [
         "F04"
@@ -182,7 +182,7 @@
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/ai-store-011-cross-team-edit-share.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F09.verify.log @ 2026-07-17T02:46:43.233Z",
       "notes": "management-share create/info/accept/access-list/revoke/revoke-user 完整闭环；接受授权不得改写所有权或伪造 Team membership。"
     },
     {

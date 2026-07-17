@@ -99,14 +99,14 @@ describe("canAccessAiStoreItem", () => {
 
   it("已授权的 grantee（ai_store_item_grants 命中）可访问", async () => {
     mockQuery.mockResolvedValueOnce([{ one: 1 }]);
-    const ok = await canAccessAiStoreItem(personalItem, 6, null);
+    const ok = await canAccessAiStoreItem(personalItem, 6, 8);
     expect(ok).toBe(true);
-    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("ai_store_item_grants"), [42, 6]);
+    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("ai_store_item_grants"), [42, 6, 8]);
   });
 
   it("被移除授权的用户（grants 表无记录）不可访问", async () => {
     mockQuery.mockResolvedValueOnce([]);
-    const ok = await canAccessAiStoreItem(personalItem, 6, null);
+    const ok = await canAccessAiStoreItem(personalItem, 6, 8);
     expect(ok).toBe(false);
   });
 

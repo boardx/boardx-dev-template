@@ -30,6 +30,6 @@
 | p23 | developer-portal | in_progress | 0 | 0 | 1 | 9 |
 | p24 | room-board-management | not_started | 0 | 0 | 0 | 0 |
 | p25 | Survey System | in_progress | 0 | 1 | 0 | 11 |
-| p27 | AI Store | in_progress | 6 | 0 | 0 | 8 |
+| p27 | AI Store | in_progress | 5 | 0 | 0 | 9 |
 
-_最近聚合:2026-07-17T02:25:50.786Z_
+_最近聚合:2026-07-17T02:46:43.263Z_

@@ -78,7 +78,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (!existing) return NextResponse.json({ error: "未找到" }, { status: 404 });
 
     const isOwner = existing.owner_user_id === user.id;
-    const isAuthorizedEditor = !isOwner && (await isAiStoreItemGrantee(id, user.id));
+    const isAuthorizedEditor =
+      !isOwner && (await isAiStoreItemGrantee(id, user.id, currentTeamId));
     if (!isOwner && !isAuthorizedEditor) {
       return NextResponse.json({ error: "无权编辑该资源" }, { status: 403 });
     }

@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { CURRENT_TEAM_COOKIE } from "@repo/auth";
 import { currentUser } from "@/lib/session";
-import { redeemAiStoreItemShare } from "@repo/data";
+import { getMembership, redeemAiStoreItemShare } from "@repo/data";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +27,17 @@ export default async function AiStoreSharePage({
     redirect("/ai-store?nav=authorized&shareError=invalid");
   }
 
-  const item = await redeemAiStoreItemShare(itemId, shareToken, user!.id);
+  const teamIdRaw = cookies().get(CURRENT_TEAM_COOKIE)?.value;
+  const teamId = teamIdRaw ? Number(teamIdRaw) : null;
+  if (
+    teamId == null ||
+    !Number.isFinite(teamId) ||
+    !(await getMembership(teamId, user!.id))
+  ) {
+    redirect("/ai-store?nav=authorized&shareError=invalid");
+  }
+
+  const item = await redeemAiStoreItemShare(itemId, shareToken, user!.id, teamId);
   if (!item) {
     redirect("/ai-store?nav=authorized&shareError=invalid");
   }

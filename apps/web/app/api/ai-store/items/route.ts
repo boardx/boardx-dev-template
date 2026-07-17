@@ -41,7 +41,7 @@ export async function GET(req: Request) {
   // uc-ai-store-005：Authorized 视图——自己被授权管理、但非本人拥有的项目（授权视图只显示
   // 被授权范围内项目，不含拥有者自己的项目，避免和 owner=me 的 Create 视图重复）。
   if (url.searchParams.get("authorized") === "me") {
-    return NextResponse.json({ items: await listAuthorizedAiStoreItems(user.id) });
+    return NextResponse.json({ items: await listAuthorizedAiStoreItems(user.id, teamId) });
   }
 
   if (url.searchParams.get("subscribed") === "me") {

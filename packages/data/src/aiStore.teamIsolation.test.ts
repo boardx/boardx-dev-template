@@ -57,7 +57,9 @@ describe("AI Store Team isolation", () => {
 
     const [sql, params] = mockQuery.mock.calls[0]!;
     expect(sql).toContain("owner_user_id = $2 OR EXISTS");
-    expect(sql).toContain("g.item_id = ai_store_items.id AND g.user_id = $2");
+    expect(sql).toContain("g.item_id = ai_store_items.id");
+    expect(sql).toContain("g.user_id = $2");
+    expect(sql).toContain("g.consumer_team_id = $3");
     const updateClause = sql.slice(sql.indexOf("SET"), sql.indexOf("WHERE"));
     expect(updateClause).not.toContain("origin_team_id");
     expect(params?.slice(0, 3)).toEqual([1, 11, 101]);
