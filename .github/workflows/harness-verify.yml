@@ -28,7 +28,9 @@ on:
 jobs:
   verify:
     # 轻量门控：每个 PR/push 都跑，只测受本次改动影响的模块；定时(daily)不重复跑。
-    if: github.event_name != 'schedule'
+    # 也排除 workflow_dispatch：dispatch 是专门用来手动跑 e2e-full 的，payload 里没有
+    # `before` 字段 → TURBO_SCM_BASE 会解析成空串 → `turbo --affected` 基线为空。
+    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -155,6 +157,11 @@ jobs:
       (github.event_name == 'schedule' && github.event.schedule == '30 */3 * * *') ||
       (github.event_name == 'workflow_dispatch' && inputs.run_e2e_full)
     runs-on: ubuntu-latest
+    # 止血用的硬上限（#665）：上一次这个 job 跑了 **5.7h**，而 GitHub 的默认硬上限是
+    # 6h。撞默认上限时 job 是被**取消**（不是 failure），`if: failure()` 的告警步骤
+    # 不保证执行——告警恰好在最该叫醒人的场景哑火。90 分钟远超正常全量耗时，够用；
+    # 真跑到 90 分钟本身就说明出事了，该报。
+    timeout-minutes: 90
     # 失败时要开 issue 叫醒人类（见末尾步骤）——默认 GITHUB_TOKEN 只读，不显式声明
     # 告警会静默失败，等于没有告警。对齐 sync-projection.yml 的既有惯例，按最小权限
     # 只给这个 job。
@@ -199,7 +206,7 @@ jobs:
         run: pnpm --filter @repo/web exec playwright install --with-deps chromium
       # kb/studio/presentation 的异步生成链路（入队→worker 消费→回写状态）依赖
       # workflow-worker 进程；不起它，相关 e2e（kb-001/presentations/studio）会稳定超时。
-      - name: Playwright e2e（全量：auth/team/room/canvas/profile/board + 各功能模块；CI 上 webServer 起生产构建 next build && next start，先后台起 workflow-worker）
+      - name: Playwright e2e（全量：auth/team/room/canvas/profile/board + 各功能模块；webServer 自动起 next dev，先后台起 workflow-worker）
         run: |
           set -euo pipefail
           pnpm --filter @repo/workflow-worker start &
@@ -209,7 +216,9 @@ jobs:
       # 定时任务跑、PR 上永远 skipping，没有任何人被叫醒。红了就必须有人知道：开一个
       # issue（同一根因只留一个，已存在则追加评论），而不是静静地红下去。
       - name: 全量回归失败 → 开 issue 叫醒人类
-        if: failure()
+        # `|| cancelled()` 不可省：撞 timeout-minutes 时 job 是被**取消**而非 failure，
+        # 只写 failure() 会让告警在"跑挂了 90 分钟"这个最该报的场景哑火。
+        if: failure() || cancelled()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
