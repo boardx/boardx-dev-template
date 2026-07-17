@@ -1,0 +1,816 @@
+$ pnpm --filter @repo/web exec playwright test e2e/ava-chat-basic.spec.ts e2e/ava-message-actions.spec.ts e2e/ava-message-send-actions.spec.ts e2e/ava-attach-files.spec.ts e2e/ava-voice-input.spec.ts
+[exit 0]
+
+Running 30 tests using 1 worker
+
+  ✓  1 [chromium] › ava-attach-files.spec.ts:20:5 › composer 附件入口：选择图片 → 预览条展示上传中到完成 → 发送后随消息进入聊天历史，AI 提及文件名 (36.8s)
+  ✓  2 [chromium] › ava-attach-files.spec.ts:91:5 › 拖拽上传：拖一个文件到 composer 区域也能触发上传 (2.3s)
+  ✓  3 [chromium] › ava-attach-files.spec.ts:122:5 › 校验：不支持的文件类型 → 预览条展示失败态 + 可读提示，可重试 (1.4s)
+  ✓  4 [chromium] › ava-attach-files.spec.ts:138:5 › 校验：超过大小上限的文件 → 失败态提示 (1.2s)
+  ✓  5 [chromium] › ava-attach-files.spec.ts:152:5 › 校验：超过数量上限一次性选择 6 个文件 → 拒绝并提示，不触发上传 (1.6s)
+  ✓  6 [chromium] › ava-attach-files.spec.ts:168:5 › 移除附件：上传完成后可移除，移除后不随消息发送 (2.6s)
+  ✓  7 [chromium] › ava-attach-files.spec.ts:187:5 › 服务端二次校验：绕过前端直接 POST 不支持类型 → 400 且不落库 (1.9s)
+  ✓  8 [chromium] › ava-attach-files.spec.ts:206:5 › 未登录访问附件上传接口 → 401 (822ms)
+  ✓  9 [chromium] › ava-chat-basic.spec.ts:11:5 › 登录用户：空态建议 → 发送 → user+assistant(Markdown/代码块) 气泡 → 线程入列表 → reload 后可继续追问 (4.2s)
+  ✓  10 [chromium] › ava-chat-basic.spec.ts:50:5 › 未登录访问 /ava：跳转 /login (2.8s)
+  ✓  11 [chromium] › ava-chat-basic.spec.ts:56:5 › 空消息被 API 拒绝（400，不创建线程） (503ms)
+  ✓  12 [chromium] › ava-chat-basic.spec.ts:68:5 › 生成失败：展示失败态，用户输入已持久化不丢失 (3.0s)
+  ✓  13 [chromium] › ava-chat-basic.spec.ts:89:5 › 未登录调用发消息接口 → 401 (465ms)
+  ✓  14 [chromium] › ava-message-actions.spec.ts:22:5 › 消息操作条：复制整条消息、代码块单独复制、点赞/点踩持久化、重新生成不丢原问题 (9.4s)
+  ✓  15 [chromium] › ava-message-actions.spec.ts:81:5 › 重新生成失败时保留原回复不丢，展示错误提示 (5.5s)
+  ✓  16 [chromium] › ava-message-actions.spec.ts:96:5 › 未登录调用反馈/重新生成接口 → 401 (802ms)
+  ✓  17 [chromium] › ava-message-actions.spec.ts:127:5 › 反馈只允许对 assistant 消息提交，对 user 消息返回 404 (1.0s)
+  ✓  18 [chromium] › ava-message-send-actions.spec.ts:22:5 › 发送到 Board：选择有编辑权限的白板后写入便利贴并展示成功提示 (9.3s)
+  ✓  19 [chromium] › ava-message-send-actions.spec.ts:52:5 › 发送到 Board：无编辑权限的白板不可选或提示权限不足 (2.2s)
+  ✓  20 [chromium] › ava-message-send-actions.spec.ts:63:5 › 发送到 Board：非编辑权限 Board 调用底层接口返回 403 权限不足 (930ms)
+  ✓  21 [chromium] › ava-message-send-actions.spec.ts:100:5 › 发送邮件：成功发送到当前用户邮箱，独立成功提示 (7.1s)
+  ✓  22 [chromium] › ava-message-send-actions.spec.ts:119:5 › 发送邮件：频控——同一分钟内连续点击第二次被拦截，不发第二封 (5.7s)
+  ✓  23 [chromium] › ava-voice-input.spec.ts:30:5 › 录音结束后：真实转写文本回填输入框（替换固定占位文案） (9.7s)
+  ✓  24 [chromium] › ava-voice-input.spec.ts:57:5 › 取消录音：不产生任何文本，输入框保持录音前状态 (3.8s)
+  ✓  25 [chromium] › ava-voice-input.spec.ts:77:5 › 转写请求失败时展示 transcription-failed 错误文案 (5.2s)
+  ✓  26 [chromium] › ava-voice-input.spec.ts:96:5 › 音频超过体积上限时（413）展示 transcription-failed 错误文案 (4.1s)
+  ✓  27 [chromium] › ava-voice-input.spec.ts:118:5 › 音频 MIME 类型不受支持时（415）展示 transcription-failed 错误文案 (3.8s)
+  ✓  28 [chromium] › ava-voice-input.spec.ts:141:5 › POST /api/ava/transcribe：超过 25MB 返回结构化 413 (1.4s)
+  ✓  29 [chromium] › ava-voice-input.spec.ts:159:5 › POST /api/ava/transcribe：MIME 类型不在白名单返回结构化 415 (834ms)
+  ✓  30 [chromium] › ava-voice-input.spec.ts:178:5 › 无转写服务凭证时：转写结果附带占位提示（不伪装成真实转写） (5.3s)
+
+  Slow test file: [chromium] › ava-attach-files.spec.ts (48.5s)
+  Slow test file: [chromium] › ava-voice-input.spec.ts (34.2s)
+  Slow test file: [chromium] › ava-message-send-actions.spec.ts (25.2s)
+  Slow test file: [chromium] › ava-message-actions.spec.ts (16.7s)
+  Consider splitting slow test files to speed up parallel execution
+  30 passed (2.5m)
+[2m[WebServer] [22m(node:20575) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:20582) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+(node:20687) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:20687) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21084) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21128) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21164) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21202) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21208) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21243) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21244) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21281) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21297) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21299) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21319) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21341) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21342) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21346) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21381) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m[ava-reply-stream] generate failed: Error: forced AVA failure for e2e
+[2m[WebServer] [22m    at Object.start (webpack-internal:///(rsc)/./app/api/ava/threads/[id]/messages/reply-stream.ts:36:27)
+[2m[WebServer] [22m[90m    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+[2m[WebServer] [22m(node:21385) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21389) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21390) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21392) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21396) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21402) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21438) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21440) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21441) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21445) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21446) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21501) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21502) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m[ava-reply-stream] generate failed: Error: forced AVA failure for e2e
+[2m[WebServer] [22m    at Object.start (webpack-internal:///(rsc)/./app/api/ava/threads/[id]/messages/reply-stream.ts:36:27)
+[2m[WebServer] [22m[90m    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+[2m[WebServer] [22m(node:21539) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21540) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21541) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21542) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21544) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21545) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21546) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21551) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21585) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21589) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21642) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21677) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21681) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21682) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21683) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21684) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21686) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21692) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21761) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:21762) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+
+[BASE VERIFY] $ pnpm -w run verify:base
+[exit 0]
+
+> boardx-dev-template@ verify:base /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava
+> turbo run typecheck lint test
+
+• Packages in scope: @repo/agent-core, @repo/ai, @repo/auth, @repo/canvas, @repo/collab, @repo/coord-dashboard, @repo/coord-service, @repo/data, @repo/devportal, @repo/export, @repo/memory, @repo/orchestrator, @repo/queue, @repo/storage, @repo/tools, @repo/web, @repo/workflow-worker
+• Running typecheck, lint, test in 17 packages
+• Remote caching disabled
+@repo/canvas:typecheck: cache hit, replaying logs 6d4489ffd167db18
+@repo/auth:typecheck: cache hit, replaying logs f67a5f2d8fb04e4a
+@repo/canvas:typecheck: 
+@repo/canvas:typecheck: > @repo/canvas@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/canvas
+@repo/canvas:typecheck: > tsc --noEmit
+@repo/canvas:typecheck: 
+@repo/export:lint: cache hit, replaying logs 0ce21cc9859d0bb5
+@repo/auth:typecheck: 
+@repo/auth:typecheck: > @repo/auth@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/auth
+@repo/auth:typecheck: > tsc --noEmit
+@repo/auth:typecheck: 
+@repo/export:lint: 
+@repo/export:lint: > @repo/export@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/export
+@repo/export:lint: > echo 'lint: ok'
+@repo/export:lint: 
+@repo/export:lint: lint: ok
+@repo/devportal:typecheck: cache hit, replaying logs a7595bb59720f9e7
+@repo/devportal:typecheck: 
+@repo/devportal:typecheck: > @repo/devportal@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/devportal
+@repo/devportal:typecheck: > tsc --noEmit
+@repo/devportal:typecheck: 
+@repo/workflow-worker:lint: cache hit, replaying logs f3c04a08cf775c58
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: > @repo/workflow-worker@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/workflow-worker
+@repo/workflow-worker:lint: > echo 'lint: ok'
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: lint: ok
+@repo/tools:typecheck: cache hit, replaying logs 6797e306f3b5b94d
+@repo/tools:typecheck: 
+@repo/tools:typecheck: > @repo/tools@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/tools
+@repo/tools:typecheck: > tsc --noEmit
+@repo/tools:typecheck: 
+@repo/devportal:lint: cache hit, replaying logs fee7e9fa5c1822cd
+@repo/devportal:lint: 
+@repo/devportal:lint: > @repo/devportal@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/devportal
+@repo/devportal:lint: > echo 'lint: ok'
+@repo/devportal:lint: 
+@repo/devportal:lint: lint: ok
+@repo/devportal:test: cache hit, replaying logs 2af25e4510352091
+@repo/devportal:test: 
+@repo/devportal:test: > @repo/devportal@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/devportal
+@repo/devportal:test: > vitest run --passWithNoTests
+@repo/devportal:test: 
+@repo/devportal:test: 
+@repo/devportal:test:  RUN  v2.1.9 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/devportal
+@repo/devportal:test: 
+@repo/devportal:test: include: **/*.{test,spec}.?(c|m)[jt]s?(x)
+@repo/devportal:test: exclude:  **/node_modules/**, **/dist/**, **/cypress/**, **/.{idea,git,cache,output,temp}/**, **/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*
+@repo/devportal:test: No test files found, exiting with code 0
+@repo/devportal:test: 
+@repo/memory:lint: cache hit, replaying logs 39f3a08f38ca99a6
+@repo/memory:lint: 
+@repo/memory:lint: > @repo/memory@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/memory
+@repo/memory:lint: > echo 'lint: ok'
+@repo/memory:lint: 
+@repo/memory:lint: lint: ok
+@repo/tools:test: cache hit, replaying logs 322c0182eccd2838
+@repo/tools:test: 
+@repo/tools:test: > @repo/tools@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/tools
+@repo/tools:test: > vitest run
+@repo/tools:test: 
+@repo/tools:test: 
+@repo/tools:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/tools
+@repo/tools:test: 
+@repo/tools:test:  ✓ src/index.test.ts  (12 tests) 1718ms
+@repo/tools:test: 
+@repo/tools:test:  Test Files  1 passed (1)
+@repo/tools:test:       Tests  12 passed (12)
+@repo/tools:test:    Start at  17:20:41
+@repo/tools:test:    Duration  7.91s (transform 642ms, setup 0ms, collect 931ms, tests 1.72s, environment 1ms, prepare 1.52s)
+@repo/tools:test: 
+@repo/storage:typecheck: cache miss, executing 7daa6b49a4312793
+@repo/queue:typecheck: cache hit, replaying logs 8914841e015175f8
+@repo/queue:typecheck: 
+@repo/queue:typecheck: > @repo/queue@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/queue
+@repo/queue:typecheck: > tsc --noEmit
+@repo/queue:typecheck: 
+@repo/queue:lint: cache hit, replaying logs aec60868674f9df6
+@repo/queue:lint: 
+@repo/queue:lint: > @repo/queue@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/queue
+@repo/queue:lint: > echo 'lint: ok'
+@repo/queue:lint: 
+@repo/queue:lint: lint: ok
+@repo/storage:build: cache miss, executing c8e6e91646123be6
+@repo/storage:lint: cache miss, executing 499a656e772bb6a8
+@repo/memory:typecheck: cache hit, replaying logs a13127eb24e79cad
+@repo/memory:typecheck: 
+@repo/memory:typecheck: > @repo/memory@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/memory
+@repo/memory:typecheck: > tsc --noEmit
+@repo/memory:typecheck: 
+@repo/memory:test: cache hit, replaying logs f602b1208c679a7f
+@repo/memory:test: 
+@repo/memory:test: > @repo/memory@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/memory
+@repo/memory:test: > vitest run
+@repo/memory:test: 
+@repo/memory:test: 
+@repo/memory:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/memory
+@repo/memory:test: 
+@repo/memory:test:  ✓ src/index.test.ts  (13 tests) 339ms
+@repo/memory:test: 
+@repo/memory:test:  Test Files  1 passed (1)
+@repo/memory:test:       Tests  13 passed (13)
+@repo/memory:test:    Start at  17:20:14
+@repo/memory:test:    Duration  15.07s (transform 1.38s, setup 0ms, collect 1.61s, tests 339ms, environment 0ms, prepare 2.82s)
+@repo/memory:test: 
+@repo/canvas:test: cache hit, replaying logs b1f872ee6a85523d
+@repo/canvas:test: 
+@repo/canvas:test: > @repo/canvas@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/canvas
+@repo/canvas:test: > vitest run
+@repo/canvas:test: 
+@repo/canvas:test: 
+@repo/canvas:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/canvas
+@repo/canvas:test: 
+@repo/canvas:test:  ✓ src/index.test.ts  (25 tests) 315ms
+@repo/canvas:test: 
+@repo/canvas:test:  Test Files  1 passed (1)
+@repo/canvas:test:       Tests  25 passed (25)
+@repo/canvas:test:    Start at  17:20:43
+@repo/canvas:test:    Duration  8.32s (transform 1.39s, setup 0ms, collect 767ms, tests 315ms, environment 0ms, prepare 2.54s)
+@repo/canvas:test: 
+@repo/ai:build: cache hit, replaying logs 7af3a5e2abc625dc
+@repo/ai:build: 
+@repo/ai:build: > @repo/ai@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/ai
+@repo/ai:build: > tsc --noEmit
+@repo/ai:build: 
+@repo/queue:build: cache hit, replaying logs 3ec055dbfad9e8d6
+@repo/queue:build: 
+@repo/queue:build: > @repo/queue@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/queue
+@repo/queue:build: > tsc --noEmit
+@repo/queue:build: 
+@repo/agent-core:typecheck: cache hit, replaying logs 20e44e34ecb3c0ee
+@repo/collab:test: cache hit, replaying logs f67b38ba1dc642e9
+@repo/collab:test: 
+@repo/collab:test: > @repo/collab@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/collab
+@repo/collab:test: > vitest run
+@repo/collab:test: 
+@repo/collab:test: 
+@repo/collab:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/collab
+@repo/collab:test: 
+@repo/collab:test:  ✓ src/index.test.ts  (14 tests) 433ms
+@repo/collab:test: 
+@repo/collab:test:  Test Files  1 passed (1)
+@repo/collab:test:       Tests  14 passed (14)
+@repo/collab:test:    Start at  17:21:19
+@repo/collab:test:    Duration  6.43s (transform 1.45s, setup 0ms, collect 2.42s, tests 433ms, environment 0ms, prepare 1.86s)
+@repo/collab:test: 
+@repo/agent-core:typecheck: 
+@repo/agent-core:typecheck: > @repo/agent-core@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/agent-core
+@repo/agent-core:typecheck: > tsc --noEmit
+@repo/agent-core:typecheck: 
+@repo/collab:typecheck: cache hit, replaying logs 9f0167f0dc95f21f
+@repo/agent-core:lint: cache hit, replaying logs 6b303aeb38946aae
+@repo/collab:lint: cache hit, replaying logs d4442b6bd4109f9f
+@repo/collab:lint: 
+@repo/collab:typecheck: 
+@repo/collab:typecheck: > @repo/collab@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/collab
+@repo/collab:typecheck: > tsc --noEmit
+@repo/collab:typecheck: 
+@repo/canvas:lint: cache hit, replaying logs 42949ec12610e869
+@repo/canvas:lint: 
+@repo/canvas:lint: > @repo/canvas@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/canvas
+@repo/canvas:lint: > echo 'lint: ok'
+@repo/canvas:lint: 
+@repo/canvas:lint: lint: ok
+@repo/agent-core:lint: 
+@repo/agent-core:lint: > @repo/agent-core@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/agent-core
+@repo/agent-core:lint: > echo 'lint: ok'
+@repo/agent-core:lint: 
+@repo/agent-core:lint: lint: ok
+@repo/collab:lint: > @repo/collab@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/collab
+@repo/collab:lint: > echo 'lint: ok'
+@repo/collab:lint: 
+@repo/collab:lint: lint: ok
+@repo/agent-core:test: cache hit, replaying logs a1b1d611ee89de49
+@repo/agent-core:test: 
+@repo/agent-core:test: > @repo/agent-core@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/agent-core
+@repo/agent-core:test: > vitest run
+@repo/agent-core:test: 
+@repo/agent-core:test: 
+@repo/agent-core:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/agent-core
+@repo/agent-core:test: 
+@repo/agent-core:test:  ✓ src/index.test.ts  (3 tests) 26ms
+@repo/agent-core:test: 
+@repo/agent-core:test:  Test Files  1 passed (1)
+@repo/agent-core:test:       Tests  3 passed (3)
+@repo/agent-core:test:    Start at  17:20:12
+@repo/agent-core:test:    Duration  15.73s (transform 1.99s, setup 0ms, collect 1.40s, tests 26ms, environment 18ms, prepare 3.81s)
+@repo/agent-core:test: 
+@repo/agent-core:build: cache hit, replaying logs 74f8f5d4a0abb29b
+@repo/export:test: cache hit, replaying logs 76775e9b0da6d970
+@repo/export:test: 
+@repo/export:test: > @repo/export@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/export
+@repo/export:test: > vitest run
+@repo/export:test: 
+@repo/export:test: 
+@repo/export:test:  RUN  v2.1.9 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/export
+@repo/export:test: 
+@repo/export:test:  ✓ src/index.test.ts (9 tests) 883ms
+@repo/export:test:    ✓ renderBoardToPdf > 空板也出非空 PDF（一页白板） 340ms
+@repo/export:test: 
+@repo/export:test:  Test Files  1 passed (1)
+@repo/export:test:       Tests  9 passed (9)
+@repo/export:test:    Start at  17:21:12
+@repo/export:test:    Duration  5.38s (transform 713ms, setup 0ms, collect 1.97s, tests 883ms, environment 0ms, prepare 930ms)
+@repo/export:test: 
+@repo/agent-core:build: 
+@repo/agent-core:build: > @repo/agent-core@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/agent-core
+@repo/agent-core:build: > tsc --noEmit
+@repo/agent-core:build: 
+@repo/export:typecheck: cache hit, replaying logs 49dea108f2cc3f8e
+@repo/export:typecheck: 
+@repo/export:typecheck: > @repo/export@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/export
+@repo/export:typecheck: > tsc --noEmit
+@repo/export:typecheck: 
+@repo/auth:lint: cache hit, replaying logs d56f13b839e565f8
+@repo/auth:build: cache hit, replaying logs b7898bc78145cd20
+@repo/auth:build: 
+@repo/auth:build: > @repo/auth@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/auth
+@repo/auth:build: > tsc --noEmit
+@repo/auth:build: 
+@repo/auth:lint: 
+@repo/auth:lint: > @repo/auth@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/auth
+@repo/auth:lint: > echo 'lint: ok'
+@repo/auth:lint: 
+@repo/auth:lint: lint: ok
+@repo/coord-service:lint: cache hit, replaying logs c4e86719bb2c38e1
+@repo/coord-service:lint: 
+@repo/coord-service:lint: > @repo/coord-service@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/coord-service
+@repo/coord-service:lint: > echo 'lint: ok'
+@repo/coord-service:lint: 
+@repo/coord-service:lint: lint: ok
+@repo/auth:test: cache hit, replaying logs 0377280879dcd4cc
+@repo/auth:test: 
+@repo/auth:test: > @repo/auth@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/auth
+@repo/auth:test: > vitest run
+@repo/auth:test: 
+@repo/auth:test: 
+@repo/auth:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/auth
+@repo/auth:test: 
+@repo/auth:test:  ✓ src/index.test.ts  (15 tests) 4305ms
+@repo/auth:test: 
+@repo/auth:test:  Test Files  1 passed (1)
+@repo/auth:test:       Tests  15 passed (15)
+@repo/auth:test:    Start at  17:20:13
+@repo/auth:test:    Duration  20.26s (transform 1.77s, setup 0ms, collect 2.27s, tests 4.30s, environment 10ms, prepare 3.46s)
+@repo/auth:test: 
+@repo/web:lint: cache miss, executing c07e2c95eb749e4c
+@repo/coord-service:test: cache hit, replaying logs c34b6f80cbcce7b2
+@repo/coord-service:test: 
+@repo/coord-service:test: > @repo/coord-service@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/coord-service
+@repo/coord-service:test: > vitest run
+@repo/coord-service:test: 
+@repo/coord-service:test: 
+@repo/coord-service:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/coord-service
+@repo/coord-service:test: 
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_tty_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_fs_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_http_modules` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_perf_hooks_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:info] Starting isolated runtimes for vitest.config.ts...
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's suite "POST /events (narrative events — ADR-009 GitHub 协调面退役后的站会/andon 信道)"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x50\x4f\x53\x54\x20\x2f\x65\x76\x65\x6e\x74\x73\x20\x28\x6e\x61\x72\x72\x61\x74\x69\x76\x65\x20\x65\x76\x65\x6e\x74\x73\x20\xe2\x80\x94\x20\x41\x44\x52\x2d\x30\x30\x39\x20\x47\x69\x74\x48\x75\x62\x20\xe5\x8d\x8f\xe8\xb0\x83\xe9\x9d\xa2\xe9\x80\x80\xe5\xbd\xb9\xe5\x90\x8e\xe7\x9a\x84\xe7\xab\x99\xe4\xbc\x9a\x2f\x61\x6e\x64\x6f\x6e\x20\xe4\xbf\xa1\xe9\x81\x93\x29\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's suite "POST /agents/:id/mint-token（ADR-011 P2 自助领取）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x50\x4f\x53\x54\x20\x2f\x61\x67\x65\x6e\x74\x73\x2f\x3a\x69\x64\x2f\x6d\x69\x6e\x74\x2d\x74\x6f\x6b\x65\x6e\xef\xbc\x88\x41\x44\x52\x2d\x30\x31\x31\x20\x50\x32\x20\xe8\x87\xaa\xe5\x8a\xa9\xe9\xa2\x86\xe5\x8f\x96\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's suite "tasks 派工原语（#594：收件箱 + 轮询契约的服务端）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x74\x61\x73\x6b\x73\x20\xe6\xb4\xbe\xe5\xb7\xa5\xe5\x8e\x9f\xe8\xaf\xad\xef\xbc\x88\x23\x35\x39\x34\xef\xbc\x9a\xe6\x94\xb6\xe4\xbb\xb6\xe7\xae\xb1\x20\x2b\x20\xe8\xbd\xae\xe8\xaf\xa2\xe5\xa5\x91\xe7\xba\xa6\xe7\x9a\x84\xe6\x9c\x8d\xe5\x8a\xa1\xe7\xab\xaf\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's test "非 broker 一律 403（worker 不能给自己 mint，coordinator 也不行——入口唯一）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe9\x9d\x9e\x20\x62\x72\x6f\x6b\x65\x72\x20\xe4\xb8\x80\xe5\xbe\x8b\x20\x34\x30\x33\xef\xbc\x88\x77\x6f\x72\x6b\x65\x72\x20\xe4\xb8\x8d\xe8\x83\xbd\xe7\xbb\x99\xe8\x87\xaa\xe5\xb7\xb1\x20\x6d\x69\x6e\x74\xef\xbc\x8c\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe4\xb9\x9f\xe4\xb8\x8d\xe8\xa1\x8c\xe2\x80\x94\xe2\x80\x94\xe5\x85\xa5\xe5\x8f\xa3\xe5\x94\xaf\xe4\xb8\x80\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "worker 不能派工（403）——派工是协调层权力，同 andon 的门"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe4\xb8\x8d\xe8\x83\xbd\xe6\xb4\xbe\xe5\xb7\xa5\xef\xbc\x88\x34\x30\x33\xef\xbc\x89\xe2\x80\x94\xe2\x80\x94\xe6\xb4\xbe\xe5\xb7\xa5\xe6\x98\xaf\xe5\x8d\x8f\xe8\xb0\x83\xe5\xb1\x82\xe6\x9d\x83\xe5\x8a\x9b\xef\xbc\x8c\xe5\x90\x8c\x20\x61\x6e\x64\x6f\x6e\x20\xe7\x9a\x84\xe9\x97\xa8\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "no bearer token → 401"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x6e\x6f\x20\x62\x65\x61\x72\x65\x72\x20\x74\x6f\x6b\x65\x6e\x20\xe2\x86\x92\x20\x34\x30\x31\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "no bearer token → 401"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x6e\x6f\x20\x62\x65\x61\x72\x65\x72\x20\x74\x6f\x6b\x65\x6e\x20\xe2\x86\x92\x20\x34\x30\x31\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "worker 不能派工（403）——派工是协调层权力，同 andon 的门"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe4\xb8\x8d\xe8\x83\xbd\xe6\xb4\xbe\xe5\xb7\xa5\xef\xbc\x88\x34\x30\x33\xef\xbc\x89\xe2\x80\x94\xe2\x80\x94\xe6\xb4\xbe\xe5\xb7\xa5\xe6\x98\xaf\xe5\x8d\x8f\xe8\xb0\x83\xe5\xb1\x82\xe6\x9d\x83\xe5\x8a\x9b\xef\xbc\x8c\xe5\x90\x8c\x20\x61\x6e\x64\x6f\x6e\x20\xe7\x9a\x84\xe9\x97\xa8\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's test "非 broker 一律 403（worker 不能给自己 mint，coordinator 也不行——入口唯一）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe9\x9d\x9e\x20\x62\x72\x6f\x6b\x65\x72\x20\xe4\xb8\x80\xe5\xbe\x8b\x20\x34\x30\x33\xef\xbc\x88\x77\x6f\x72\x6b\x65\x72\x20\xe4\xb8\x8d\xe8\x83\xbd\xe7\xbb\x99\xe8\x87\xaa\xe5\xb7\xb1\x20\x6d\x69\x6e\x74\xef\xbc\x8c\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe4\xb9\x9f\xe4\xb8\x8d\xe8\xa1\x8c\xe2\x80\x94\xe2\x80\x94\xe5\x85\xa5\xe5\x8f\xa3\xe5\x94\xaf\xe4\xb8\x80\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "cycle-plan 写入成功并可在 /status 的 recent_events 里看到"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xe5\xb9\xb6\xe5\x8f\xaf\xe5\x9c\xa8\x20\x2f\x73\x74\x61\x74\x75\x73\x20\xe7\x9a\x84\x20\x72\x65\x63\x65\x6e\x74\x5f\x65\x76\x65\x6e\x74\x73\x20\xe9\x87\x8c\xe7\x9c\x8b\xe5\x88\xb0\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "coordinator 派工成功；assignee 收件箱可见 pending"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe6\xb4\xbe\xe5\xb7\xa5\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x9b\x61\x73\x73\x69\x67\x6e\x65\x65\x20\xe6\x94\xb6\xe4\xbb\xb6\xe7\xae\xb1\xe5\x8f\xaf\xe8\xa7\x81\x20\x70\x65\x6e\x64\x69\x6e\x67\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's test "broker mint 成功：返回明文一次；旧 token 立即失效、新 token 立即可用"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x62\x72\x6f\x6b\x65\x72\x20\x6d\x69\x6e\x74\x20\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x9a\xe8\xbf\x94\xe5\x9b\x9e\xe6\x98\x8e\xe6\x96\x87\xe4\xb8\x80\xe6\xac\xa1\xef\xbc\x9b\xe6\x97\xa7\x20\x74\x6f\x6b\x65\x6e\x20\xe7\xab\x8b\xe5\x8d\xb3\xe5\xa4\xb1\xe6\x95\x88\xe3\x80\x81\xe6\x96\xb0\x20\x74\x6f\x6b\x65\x6e\x20\xe7\xab\x8b\xe5\x8d\xb3\xe5\x8f\xaf\xe7\x94\xa8\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "cycle-plan 写入成功并可在 /status 的 recent_events 里看到"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xe5\xb9\xb6\xe5\x8f\xaf\xe5\x9c\xa8\x20\x2f\x73\x74\x61\x74\x75\x73\x20\xe7\x9a\x84\x20\x72\x65\x63\x65\x6e\x74\x5f\x65\x76\x65\x6e\x74\x73\x20\xe9\x87\x8c\xe7\x9c\x8b\xe5\x88\xb0\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "coordinator 派工成功；assignee 收件箱可见 pending"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe6\xb4\xbe\xe5\xb7\xa5\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x9b\x61\x73\x73\x69\x67\x6e\x65\x65\x20\xe6\x94\xb6\xe4\xbb\xb6\xe7\xae\xb1\xe5\x8f\xaf\xe8\xa7\x81\x20\x70\x65\x6e\x64\x69\x6e\x67\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's test "broker mint 成功：返回明文一次；旧 token 立即失效、新 token 立即可用"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x62\x72\x6f\x6b\x65\x72\x20\x6d\x69\x6e\x74\x20\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x9a\xe8\xbf\x94\xe5\x9b\x9e\xe6\x98\x8e\xe6\x96\x87\xe4\xb8\x80\xe6\xac\xa1\xef\xbc\x9b\xe6\x97\xa7\x20\x74\x6f\x6b\x65\x6e\x20\xe7\xab\x8b\xe5\x8d\xb3\xe5\xa4\xb1\xe6\x95\x88\xe3\x80\x81\xe6\x96\xb0\x20\x74\x6f\x6b\x65\x6e\x20\xe7\xab\x8b\xe5\x8d\xb3\xe5\x8f\xaf\xe7\x94\xa8\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "andon stop 信号写入成功，payload 原样保留"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x61\x6e\x64\x6f\x6e\x20\x73\x74\x6f\x70\x20\xe4\xbf\xa1\xe5\x8f\xb7\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x8c\x70\x61\x79\x6c\x6f\x61\x64\x20\xe5\x8e\x9f\xe6\xa0\xb7\xe4\xbf\x9d\xe7\x95\x99\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "派给未注册/inactive 身份直接 400——收件箱黑洞在入口拒绝"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe6\xb4\xbe\xe7\xbb\x99\xe6\x9c\xaa\xe6\xb3\xa8\xe5\x86\x8c\x2f\x69\x6e\x61\x63\x74\x69\x76\x65\x20\xe8\xba\xab\xe4\xbb\xbd\xe7\x9b\xb4\xe6\x8e\xa5\x20\x34\x30\x30\xe2\x80\x94\xe2\x80\x94\xe6\x94\xb6\xe4\xbb\xb6\xe7\xae\xb1\xe9\xbb\x91\xe6\xb4\x9e\xe5\x9c\xa8\xe5\x85\xa5\xe5\x8f\xa3\xe6\x8b\x92\xe7\xbb\x9d\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "andon stop 信号写入成功，payload 原样保留"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x61\x6e\x64\x6f\x6e\x20\x73\x74\x6f\x70\x20\xe4\xbf\xa1\xe5\x8f\xb7\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x8c\x70\x61\x79\x6c\x6f\x61\x64\x20\xe5\x8e\x9f\xe6\xa0\xb7\xe4\xbf\x9d\xe7\x95\x99\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/sweeper.test.ts  (2 tests) 2195ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's test "broker/全部协调层身份不可经自助通道轮换（共享设施钥匙走人类运维流程）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x62\x72\x6f\x6b\x65\x72\x2f\xe5\x85\xa8\xe9\x83\xa8\xe5\x8d\x8f\xe8\xb0\x83\xe5\xb1\x82\xe8\xba\xab\xe4\xbb\xbd\xe4\xb8\x8d\xe5\x8f\xaf\xe7\xbb\x8f\xe8\x87\xaa\xe5\x8a\xa9\xe9\x80\x9a\xe9\x81\x93\xe8\xbd\xae\xe6\x8d\xa2\xef\xbc\x88\xe5\x85\xb1\xe4\xba\xab\xe8\xae\xbe\xe6\x96\xbd\xe9\x92\xa5\xe5\x8c\x99\xe8\xb5\xb0\xe4\xba\xba\xe7\xb1\xbb\xe8\xbf\x90\xe7\xbb\xb4\xe6\xb5\x81\xe7\xa8\x8b\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "派给未注册/inactive 身份直接 400——收件箱黑洞在入口拒绝"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe6\xb4\xbe\xe7\xbb\x99\xe6\x9c\xaa\xe6\xb3\xa8\xe5\x86\x8c\x2f\x69\x6e\x61\x63\x74\x69\x76\x65\x20\xe8\xba\xab\xe4\xbb\xbd\xe7\x9b\xb4\xe6\x8e\xa5\x20\x34\x30\x30\xe2\x80\x94\xe2\x80\x94\xe6\x94\xb6\xe4\xbb\xb6\xe7\xae\xb1\xe9\xbb\x91\xe6\xb4\x9e\xe5\x9c\xa8\xe5\x85\xa5\xe5\x8f\xa3\xe6\x8b\x92\xe7\xbb\x9d\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/unit/time.test.ts  (3 tests) 2784ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "claim 生命周期类型（如 claim）不接受手写 → 400，防止伪造审计历史"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x6c\x61\x69\x6d\x20\xe7\x94\x9f\xe5\x91\xbd\xe5\x91\xa8\xe6\x9c\x9f\xe7\xb1\xbb\xe5\x9e\x8b\xef\xbc\x88\xe5\xa6\x82\x20\x63\x6c\x61\x69\x6d\xef\xbc\x89\xe4\xb8\x8d\xe6\x8e\xa5\xe5\x8f\x97\xe6\x89\x8b\xe5\x86\x99\x20\xe2\x86\x92\x20\x34\x30\x30\xef\xbc\x8c\xe9\x98\xb2\xe6\xad\xa2\xe4\xbc\xaa\xe9\x80\xa0\xe5\xae\xa1\xe8\xae\xa1\xe5\x8e\x86\xe5\x8f\xb2\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's test "broker/全部协调层身份不可经自助通道轮换（共享设施钥匙走人类运维流程）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x62\x72\x6f\x6b\x65\x72\x2f\xe5\x85\xa8\xe9\x83\xa8\xe5\x8d\x8f\xe8\xb0\x83\xe5\xb1\x82\xe8\xba\xab\xe4\xbb\xbd\xe4\xb8\x8d\xe5\x8f\xaf\xe7\xbb\x8f\xe8\x87\xaa\xe5\x8a\xa9\xe9\x80\x9a\xe9\x81\x93\xe8\xbd\xae\xe6\x8d\xa2\xef\xbc\x88\xe5\x85\xb1\xe4\xba\xab\xe8\xae\xbe\xe6\x96\xbd\xe9\x92\xa5\xe5\x8c\x99\xe8\xb5\xb0\xe4\xba\xba\xe7\xb1\xbb\xe8\xbf\x90\xe7\xbb\xb4\xe6\xb5\x81\xe7\xa8\x8b\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/status.test.ts  (2 tests) 3438ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "收件箱是私有的：worker 查别人 403，coordinator 查任何人 200"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe6\x94\xb6\xe4\xbb\xb6\xe7\xae\xb1\xe6\x98\xaf\xe7\xa7\x81\xe6\x9c\x89\xe7\x9a\x84\xef\xbc\x9a\x77\x6f\x72\x6b\x65\x72\x20\xe6\x9f\xa5\xe5\x88\xab\xe4\xba\xba\x20\x34\x30\x33\xef\xbc\x8c\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe6\x9f\xa5\xe4\xbb\xbb\xe4\xbd\x95\xe4\xba\xba\x20\x32\x30\x30\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "claim 生命周期类型（如 claim）不接受手写 → 400，防止伪造审计历史"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x6c\x61\x69\x6d\x20\xe7\x94\x9f\xe5\x91\xbd\xe5\x91\xa8\xe6\x9c\x9f\xe7\xb1\xbb\xe5\x9e\x8b\xef\xbc\x88\xe5\xa6\x82\x20\x63\x6c\x61\x69\x6d\xef\xbc\x89\xe4\xb8\x8d\xe6\x8e\xa5\xe5\x8f\x97\xe6\x89\x8b\xe5\x86\x99\x20\xe2\x86\x92\x20\x34\x30\x30\xef\xbc\x8c\xe9\x98\xb2\xe6\xad\xa2\xe4\xbc\xaa\xe9\x80\xa0\xe5\xae\xa1\xe8\xae\xa1\xe5\x8e\x86\xe5\x8f\xb2\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's test "未注册身份 404；缺 requested_by 400；mint 写 token-mint 审计事件"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe6\x9c\xaa\xe6\xb3\xa8\xe5\x86\x8c\xe8\xba\xab\xe4\xbb\xbd\x20\x34\x30\x34\xef\xbc\x9b\xe7\xbc\xba\x20\x72\x65\x71\x75\x65\x73\x74\x65\x64\x5f\x62\x79\x20\x34\x30\x30\xef\xbc\x9b\x6d\x69\x6e\x74\x20\xe5\x86\x99\x20\x74\x6f\x6b\x65\x6e\x2d\x6d\x69\x6e\x74\x20\xe5\xae\xa1\xe8\xae\xa1\xe4\xba\x8b\xe4\xbb\xb6\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "收件箱是私有的：worker 查别人 403，coordinator 查任何人 200"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe6\x94\xb6\xe4\xbb\xb6\xe7\xae\xb1\xe6\x98\xaf\xe7\xa7\x81\xe6\x9c\x89\xe7\x9a\x84\xef\xbc\x9a\x77\x6f\x72\x6b\x65\x72\x20\xe6\x9f\xa5\xe5\x88\xab\xe4\xba\xba\x20\x34\x30\x33\xef\xbc\x8c\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe6\x9f\xa5\xe4\xbb\xbb\xe4\xbd\x95\xe4\xba\xba\x20\x32\x30\x30\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "缺 resource_id → 400"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe7\xbc\xba\x20\x72\x65\x73\x6f\x75\x72\x63\x65\x5f\x69\x64\x20\xe2\x86\x92\x20\x34\x30\x30\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's test "未注册身份 404；缺 requested_by 400；mint 写 token-mint 审计事件"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe6\x9c\xaa\xe6\xb3\xa8\xe5\x86\x8c\xe8\xba\xab\xe4\xbb\xbd\x20\x34\x30\x34\xef\xbc\x9b\xe7\xbc\xba\x20\x72\x65\x71\x75\x65\x73\x74\x65\x64\x5f\x62\x79\x20\x34\x30\x30\xef\xbc\x9b\x6d\x69\x6e\x74\x20\xe5\x86\x99\x20\x74\x6f\x6b\x65\x6e\x2d\x6d\x69\x6e\x74\x20\xe5\xae\xa1\xe8\xae\xa1\xe4\xba\x8b\xe4\xbb\xb6\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "缺 resource_id → 400"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe7\xbc\xba\x20\x72\x65\x73\x6f\x75\x72\x63\x65\x5f\x69\x64\x20\xe2\x86\x92\x20\x34\x30\x30\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/claims.auth.test.ts  (4 tests) 4221ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "ack：仅 assignee；pending→acked 写 acked_at；重复 ack 409"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x61\x63\x6b\xef\xbc\x9a\xe4\xbb\x85\x20\x61\x73\x73\x69\x67\x6e\x65\x65\xef\xbc\x9b\x70\x65\x6e\x64\x69\x6e\x67\xe2\x86\x92\x61\x63\x6b\x65\x64\x20\xe5\x86\x99\x20\x61\x63\x6b\x65\x64\x5f\x61\x74\xef\xbc\x9b\xe9\x87\x8d\xe5\xa4\x8d\x20\x61\x63\x6b\x20\x34\x30\x39\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's suite "POST /agents/:id/mint-token（ADR-011 P2 自助领取）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x50\x4f\x53\x54\x20\x2f\x61\x67\x65\x6e\x74\x73\x2f\x3a\x69\x64\x2f\x6d\x69\x6e\x74\x2d\x74\x6f\x6b\x65\x6e\xef\xbc\x88\x41\x44\x52\x2d\x30\x31\x31\x20\x50\x32\x20\xe8\x87\xaa\xe5\x8a\xa9\xe9\xa2\x86\xe5\x8f\x96\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 andon → 403（停线信号是 coordinator 层专属，防伪造拉停 fleet）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x61\x6e\x64\x6f\x6e\x20\xe2\x86\x92\x20\x34\x30\x33\xef\xbc\x88\xe5\x81\x9c\xe7\xba\xbf\xe4\xbf\xa1\xe5\x8f\xb7\xe6\x98\xaf\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe5\xb1\x82\xe4\xb8\x93\xe5\xb1\x9e\xef\xbc\x8c\xe9\x98\xb2\xe4\xbc\xaa\xe9\x80\xa0\xe6\x8b\x89\xe5\x81\x9c\x20\x66\x6c\x65\x65\x74\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/claims.lifecycle.test.ts  (4 tests) 4689ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 andon → 403（停线信号是 coordinator 层专属，防伪造拉停 fleet）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x61\x6e\x64\x6f\x6e\x20\xe2\x86\x92\x20\x34\x30\x33\xef\xbc\x88\xe5\x81\x9c\xe7\xba\xbf\xe4\xbf\xa1\xe5\x8f\xb7\xe6\x98\xaf\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe5\xb1\x82\xe4\xb8\x93\xe5\xb1\x9e\xef\xbc\x8c\xe9\x98\xb2\xe4\xbc\xaa\xe9\x80\xa0\xe6\x8b\x89\xe5\x81\x9c\x20\x66\x6c\x65\x65\x74\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "ack：仅 assignee；pending→acked 写 acked_at；重复 ack 409"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x61\x63\x6b\xef\xbc\x9a\xe4\xbb\x85\x20\x61\x73\x73\x69\x67\x6e\x65\x65\xef\xbc\x9b\x70\x65\x6e\x64\x69\x6e\x67\xe2\x86\x92\x61\x63\x6b\x65\x64\x20\xe5\x86\x99\x20\x61\x63\x6b\x65\x64\x5f\x61\x74\xef\xbc\x9b\xe9\x87\x8d\xe5\xa4\x8d\x20\x61\x63\x6b\x20\x34\x30\x39\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/mint.test.ts  (4 tests) 4797ms
+@repo/storage:test: cache miss, executing 243898baa4fada94
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 cycle-plan → 201（叙述站会不限 coordinator）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe2\x86\x92\x20\x32\x30\x31\xef\xbc\x88\xe5\x8f\x99\xe8\xbf\xb0\xe7\xab\x99\xe4\xbc\x9a\xe4\xb8\x8d\xe9\x99\x90\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "done：assignee 可从 acked 或 pending 直达；recalled 后不可 done"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x64\x6f\x6e\x65\xef\xbc\x9a\x61\x73\x73\x69\x67\x6e\x65\x65\x20\xe5\x8f\xaf\xe4\xbb\x8e\x20\x61\x63\x6b\x65\x64\x20\xe6\x88\x96\x20\x70\x65\x6e\x64\x69\x6e\x67\x20\xe7\x9b\xb4\xe8\xbe\xbe\xef\xbc\x9b\x72\x65\x63\x61\x6c\x6c\x65\x64\x20\xe5\x90\x8e\xe4\xb8\x8d\xe5\x8f\xaf\x20\x64\x6f\x6e\x65\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 cycle-plan → 201（叙述站会不限 coordinator）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe2\x86\x92\x20\x32\x30\x31\xef\xbc\x88\xe5\x8f\x99\xe8\xbf\xb0\xe7\xab\x99\xe4\xbc\x9a\xe4\xb8\x8d\xe9\x99\x90\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's suite "POST /events (narrative events — ADR-009 GitHub 协调面退役后的站会/andon 信道)"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x50\x4f\x53\x54\x20\x2f\x65\x76\x65\x6e\x74\x73\x20\x28\x6e\x61\x72\x72\x61\x74\x69\x76\x65\x20\x65\x76\x65\x6e\x74\x73\x20\xe2\x80\x94\x20\x41\x44\x52\x2d\x30\x30\x39\x20\x47\x69\x74\x48\x75\x62\x20\xe5\x8d\x8f\xe8\xb0\x83\xe9\x9d\xa2\xe9\x80\x80\xe5\xbd\xb9\xe5\x90\x8e\xe7\x9a\x84\xe7\xab\x99\xe4\xbc\x9a\x2f\x61\x6e\x64\x6f\x6e\x20\xe4\xbf\xa1\xe9\x81\x93\x29\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/unit/auth.test.ts  (7 tests) 4458ms
+@repo/coord-service:test:  ✓ test/unit/projector.test.ts  (8 tests) 4829ms
+@repo/coord-service:test:  ✓ test/integration/events.test.ts  (7 tests) 5012ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "done：assignee 可从 acked 或 pending 直达；recalled 后不可 done"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x64\x6f\x6e\x65\xef\xbc\x9a\x61\x73\x73\x69\x67\x6e\x65\x65\x20\xe5\x8f\xaf\xe4\xbb\x8e\x20\x61\x63\x6b\x65\x64\x20\xe6\x88\x96\x20\x70\x65\x6e\x64\x69\x6e\x67\x20\xe7\x9b\xb4\xe8\xbe\xbe\xef\xbc\x9b\x72\x65\x63\x61\x6c\x6c\x65\x64\x20\xe5\x90\x8e\xe4\xb8\x8d\xe5\x8f\xaf\x20\x64\x6f\x6e\x65\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "recall：仅 coordinator（assignee 自己不能撤）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x72\x65\x63\x61\x6c\x6c\xef\xbc\x9a\xe4\xbb\x85\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\xef\xbc\x88\x61\x73\x73\x69\x67\x6e\x65\x65\x20\xe8\x87\xaa\xe5\xb7\xb1\xe4\xb8\x8d\xe8\x83\xbd\xe6\x92\xa4\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "recall：仅 coordinator（assignee 自己不能撤）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x72\x65\x63\x61\x6c\x6c\xef\xbc\x9a\xe4\xbb\x85\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\xef\xbc\x88\x61\x73\x73\x69\x67\x6e\x65\x65\x20\xe8\x87\xaa\xe5\xb7\xb1\xe4\xb8\x8d\xe8\x83\xbd\xe6\x92\xa4\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "全生命周期照写 events（task-dispatch/ack/done），portal 可对账"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe5\x85\xa8\xe7\x94\x9f\xe5\x91\xbd\xe5\x91\xa8\xe6\x9c\x9f\xe7\x85\xa7\xe5\x86\x99\x20\x65\x76\x65\x6e\x74\x73\xef\xbc\x88\x74\x61\x73\x6b\x2d\x64\x69\x73\x70\x61\x74\x63\x68\x2f\x61\x63\x6b\x2f\x64\x6f\x6e\x65\xef\xbc\x89\xef\xbc\x8c\x70\x6f\x72\x74\x61\x6c\x20\xe5\x8f\xaf\xe5\xaf\xb9\xe8\xb4\xa6\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "全生命周期照写 events（task-dispatch/ack/done），portal 可对账"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe5\x85\xa8\xe7\x94\x9f\xe5\x91\xbd\xe5\x91\xa8\xe6\x9c\x9f\xe7\x85\xa7\xe5\x86\x99\x20\x65\x76\x65\x6e\x74\x73\xef\xbc\x88\x74\x61\x73\x6b\x2d\x64\x69\x73\x70\x61\x74\x63\x68\x2f\x61\x63\x6b\x2f\x64\x6f\x6e\x65\xef\xbc\x89\xef\xbc\x8c\x70\x6f\x72\x74\x61\x6c\x20\xe5\x8f\xaf\xe5\xaf\xb9\xe8\xb4\xa6\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "手写 POST /events 不接受 task-* 类型（只能由 /tasks 路由内部产生）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe6\x89\x8b\xe5\x86\x99\x20\x50\x4f\x53\x54\x20\x2f\x65\x76\x65\x6e\x74\x73\x20\xe4\xb8\x8d\xe6\x8e\xa5\xe5\x8f\x97\x20\x74\x61\x73\x6b\x2d\x2a\x20\xe7\xb1\xbb\xe5\x9e\x8b\xef\xbc\x88\xe5\x8f\xaa\xe8\x83\xbd\xe7\x94\xb1\x20\x2f\x74\x61\x73\x6b\x73\x20\xe8\xb7\xaf\xe7\x94\xb1\xe5\x86\x85\xe9\x83\xa8\xe4\xba\xa7\xe7\x94\x9f\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/claims.concurrency.test.ts  (5 tests) 5266ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "手写 POST /events 不接受 task-* 类型（只能由 /tasks 路由内部产生）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe6\x89\x8b\xe5\x86\x99\x20\x50\x4f\x53\x54\x20\x2f\x65\x76\x65\x6e\x74\x73\x20\xe4\xb8\x8d\xe6\x8e\xa5\xe5\x8f\x97\x20\x74\x61\x73\x6b\x2d\x2a\x20\xe7\xb1\xbb\xe5\x9e\x8b\xef\xbc\x88\xe5\x8f\xaa\xe8\x83\xbd\xe7\x94\xb1\x20\x2f\x74\x61\x73\x6b\x73\x20\xe8\xb7\xaf\xe7\x94\xb1\xe5\x86\x85\xe9\x83\xa8\xe4\xba\xa7\xe7\x94\x9f\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's suite "tasks 派工原语（#594：收件箱 + 轮询契约的服务端）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x74\x61\x73\x6b\x73\x20\xe6\xb4\xbe\xe5\xb7\xa5\xe5\x8e\x9f\xe8\xaf\xad\xef\xbc\x88\x23\x35\x39\x34\xef\xbc\x9a\xe6\x94\xb6\xe4\xbb\xb6\xe7\xae\xb1\x20\x2b\x20\xe8\xbd\xae\xe8\xaf\xa2\xe5\xa5\x91\xe7\xba\xa6\xe7\x9a\x84\xe6\x9c\x8d\xe5\x8a\xa1\xe7\xab\xaf\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/tasks.test.ts  (9 tests) 5368ms
+@repo/coord-service:test: 
+@repo/coord-service:test:  Test Files  11 passed (11)
+@repo/coord-service:test:       Tests  55 passed (55)
+@repo/coord-service:test:    Start at  17:21:18
+@repo/coord-service:test:    Duration  63.52s (transform 8.07s, setup 96.25s, collect 17.56s, tests 47.06s, environment 3ms, prepare 36.72s)
+@repo/coord-service:test: 
+@repo/coord-service:test: [vpw:debug] Shutting down runtimes...
+@repo/coord-service:test: [vpw:debug] Disposing remote proxy sessions...
+@repo/canvas:build: cache hit, replaying logs 5ecb069133781c1a
+@repo/canvas:build: 
+@repo/canvas:build: > @repo/canvas@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/canvas
+@repo/canvas:build: > tsc --noEmit
+@repo/canvas:build: 
+@repo/collab:build: cache hit, replaying logs 1500520eb10f0446
+@repo/collab:build: 
+@repo/collab:build: > @repo/collab@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/collab
+@repo/collab:build: > tsc --noEmit
+@repo/collab:build: 
+@repo/orchestrator:lint: cache hit, replaying logs 094883171d342198
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: > @repo/orchestrator@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/orchestrator
+@repo/orchestrator:lint: > echo 'lint: ok'
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: lint: ok
+@repo/tools:build: cache hit, replaying logs fbfb7a2dd008d006
+@repo/tools:build: 
+@repo/tools:build: > @repo/tools@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/tools
+@repo/tools:build: > tsc --noEmit
+@repo/tools:build: 
+@repo/ai:test: cache hit, replaying logs 3d9f18967eff91ee
+@repo/ai:test: 
+@repo/ai:test: > @repo/ai@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/ai
+@repo/ai:test: > vitest run
+@repo/ai:test: 
+@repo/ai:test: 
+@repo/ai:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/ai
+@repo/ai:test: 
+@repo/ai:test:  ✓ src/studioGenerator.test.ts  (4 tests) 7ms
+@repo/ai:test:  ✓ src/sttProvider.test.ts  (6 tests) 57ms
+@repo/ai:test:  ✓ src/index.test.ts  (12 tests) 8ms
+@repo/ai:test:  ✓ src/qwenProvider.test.ts  (6 tests) 45ms
+@repo/ai:test:  ✓ src/anthropicProvider.test.ts  (13 tests) 64ms
+@repo/ai:test: 
+@repo/ai:test:  Test Files  5 passed (5)
+@repo/ai:test:       Tests  41 passed (41)
+@repo/ai:test:    Start at  17:04:44
+@repo/ai:test:    Duration  1.58s (transform 796ms, setup 2ms, collect 1.19s, tests 181ms, environment 1ms, prepare 1.48s)
+@repo/ai:test: 
+@repo/data:lint: cache hit, replaying logs 88412d80112e2f79
+@repo/data:lint: 
+@repo/data:lint: > @repo/data@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/data
+@repo/data:lint: > echo 'lint: ok'
+@repo/data:lint: 
+@repo/data:lint: lint: ok
+@repo/coord-service:typecheck: cache hit, replaying logs 6d1d38f9fb349340
+@repo/ai:typecheck: cache hit, replaying logs e48a9b546be78354
+@repo/ai:typecheck: 
+@repo/ai:typecheck: > @repo/ai@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/ai
+@repo/ai:typecheck: > tsc --noEmit
+@repo/ai:typecheck: 
+@repo/coord-service:typecheck: 
+@repo/coord-service:typecheck: > @repo/coord-service@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/coord-service
+@repo/coord-service:typecheck: > tsc --noEmit
+@repo/coord-service:typecheck: 
+@repo/memory:build: cache hit, replaying logs c949dcd62eb605ba
+@repo/memory:build: 
+@repo/memory:build: > @repo/memory@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/memory
+@repo/memory:build: > tsc --noEmit
+@repo/memory:build: 
+@repo/ai:lint: cache hit, replaying logs 52ce25efc18ddadb
+@repo/ai:lint: 
+@repo/ai:lint: > @repo/ai@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/ai
+@repo/ai:lint: > echo 'lint: ok'
+@repo/ai:lint: 
+@repo/ai:lint: lint: ok
+@repo/queue:test: cache hit, replaying logs f49ec615b3c58209
+@repo/queue:test: 
+@repo/queue:test: > @repo/queue@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/queue
+@repo/queue:test: > vitest run
+@repo/queue:test: 
+@repo/queue:test: 
+@repo/queue:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/queue
+@repo/queue:test: 
+@repo/queue:test:  ✓ src/index.test.ts  (4 tests) 426ms
+@repo/queue:test: 
+@repo/queue:test:  Test Files  1 passed (1)
+@repo/queue:test:       Tests  4 passed (4)
+@repo/queue:test:    Start at  17:21:33
+@repo/queue:test:    Duration  8.81s (transform 651ms, setup 0ms, collect 4.41s, tests 426ms, environment 0ms, prepare 1.39s)
+@repo/queue:test: 
+@repo/tools:lint: cache hit, replaying logs e53f6e179fac9338
+@repo/tools:lint: 
+@repo/tools:lint: > @repo/tools@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/tools
+@repo/tools:lint: > echo 'lint: ok'
+@repo/tools:lint: 
+@repo/tools:lint: lint: ok
+@repo/data:test: cache hit, replaying logs d1c888998d8b8bf4
+@repo/data:test: 
+@repo/data:test: > @repo/data@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/data
+@repo/data:test: > vitest run
+@repo/data:test: 
+@repo/data:test: 
+@repo/data:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/data
+@repo/data:test: 
+@repo/data:test:  ✓ src/aiStore.test.ts  (17 tests) 10ms
+@repo/data:test:  ✓ src/ids.test.ts  (8 tests) 165ms
+@repo/data:test:  ✓ src/migrateHelpers.test.ts  (6 tests) 195ms
+@repo/data:test:  ✓ src/index.test.ts  (3 tests) 4ms
+@repo/data:test:  ✓ src/survey-source-contract.test.ts  (2 tests) 7ms
+@repo/data:test:  ✓ src/survey.test.ts  (5 tests) 5ms
+@repo/data:test:  ✓ src/board.test.ts  (11 tests) 5ms
+@repo/data:test:  ✓ src/avaChat.test.ts  (5 tests) 4ms
+@repo/data:test:  ✓ src/roomChat.test.ts  (5 tests) 7ms
+@repo/data:test:  ✓ src/rooms.test.ts  (2 tests) 3ms
+@repo/data:test: 
+@repo/data:test:  Test Files  10 passed (10)
+@repo/data:test:       Tests  64 passed (64)
+@repo/data:test:    Start at  17:04:47
+@repo/data:test:    Duration  2.04s (transform 1.31s, setup 4ms, collect 5.62s, tests 405ms, environment 2ms, prepare 2.66s)
+@repo/data:test: 
+@repo/data:typecheck: cache hit, replaying logs 8021c388ea14c505
+@repo/data:typecheck: 
+@repo/data:typecheck: > @repo/data@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/data
+@repo/data:typecheck: > tsc --noEmit
+@repo/data:typecheck: 
+@repo/data:build: cache hit, replaying logs b15898eb99f9e605
+@repo/data:build: 
+@repo/data:build: > @repo/data@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/data
+@repo/data:build: > tsc --noEmit
+@repo/data:build: 
+@repo/orchestrator:typecheck: cache hit, replaying logs 1684fd1effcbee57
+@repo/orchestrator:typecheck: 
+@repo/orchestrator:typecheck: > @repo/orchestrator@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/orchestrator
+@repo/orchestrator:typecheck: > tsc --noEmit
+@repo/orchestrator:typecheck: 
+@repo/orchestrator:test: cache hit, replaying logs 0acf732ff9d79ca2
+@repo/orchestrator:test: 
+@repo/orchestrator:test: > @repo/orchestrator@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/orchestrator
+@repo/orchestrator:test: > vitest run
+@repo/orchestrator:test: 
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/orchestrator
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  ✓ src/orchestrator.test.ts  (3 tests) 432ms
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  Test Files  1 passed (1)
+@repo/orchestrator:test:       Tests  3 passed (3)
+@repo/orchestrator:test:    Start at  17:21:46
+@repo/orchestrator:test:    Duration  10.37s (transform 1.01s, setup 0ms, collect 1.06s, tests 432ms, environment 0ms, prepare 3.49s)
+@repo/orchestrator:test: 
+@repo/storage:typecheck: 
+@repo/storage:typecheck: > @repo/storage@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/storage
+@repo/storage:typecheck: > tsc --noEmit
+@repo/storage:typecheck: 
+@repo/web:lint: 
+@repo/web:lint: > @repo/web@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/web
+@repo/web:lint: > bash scripts/lint-design.sh
+@repo/web:lint: 
+@repo/storage:build: 
+@repo/storage:build: > @repo/storage@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/storage
+@repo/storage:build: > tsc --noEmit
+@repo/storage:build: 
+@repo/storage:lint: 
+@repo/storage:lint: > @repo/storage@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/storage
+@repo/storage:lint: > echo 'lint: ok'
+@repo/storage:lint: 
+@repo/web:lint: · 扫描范围：app/ + components/（含 ava/ai-store/surveys/admin/studio/presentations 等模块）
+@repo/storage:lint: lint: ok
+@repo/storage:test: 
+@repo/storage:test: > @repo/storage@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/storage
+@repo/storage:test: > vitest run
+@repo/storage:test: 
+@repo/web:lint: ✓ token 对比度：全部色面/文字对过线（中性 ≥4.5:1，状态色 ≥3:1，明暗两套）
+@repo/storage:test: 
+@repo/storage:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/packages/storage
+@repo/storage:test: 
+@repo/storage:test:  ✓ src/index.test.ts  (19 tests) 10ms
+@repo/storage:test: 
+@repo/storage:test:  Test Files  1 passed (1)
+@repo/storage:test:       Tests  19 passed (19)
+@repo/storage:test:    Start at  18:59:47
+@repo/storage:test:    Duration  2.13s (transform 377ms, setup 0ms, collect 673ms, tests 10ms, environment 0ms, prepare 399ms)
+@repo/storage:test: 
+@repo/web:lint: ⚠ LABEL-LANG-MIX(同文件内中英混用，警告，不拦截；修复归属 phase-p17 reskin)：
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:180:  { id: "understand-file", label: "理解文件", prompt: "帮我理解这份材料，并总结关键结论。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:181:  { id: "draft-email", label: "起草邮件", prompt: "帮我起草一封项目进展同步邮件。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:182:  { id: "summarize-trends", label: "总结趋势", prompt: "帮我总结最近用户反馈中的主要趋势。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:183:  { id: "brainstorm", label: "头脑风暴", prompt: "围绕这个目标帮我头脑风暴 5 个可执行方案。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:200:    label: "深度研究",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:206:    label: "用户研究",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:213:  { id: "make-tasks", label: "拆成任务", prompt: "把上面的建议拆成可执行任务，并按优先级排序。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:214:  { id: "find-risks", label: "识别风险", prompt: "基于上面的回复，列出主要风险和缓解措施。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:215:  { id: "shorten", label: "压缩摘要", prompt: "把上面的回复压缩成 5 条要点。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2965:  if (diffDays === 0) return { key: "today", label: "Today" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2966:  if (diffDays === 1) return { key: "yesterday", label: "Yesterday" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2967:  if (diffDays < 7) return { key: "last-7-days", label: "Last 7 days" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2968:  return { key: "older", label: "Older" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:278:  { label: "文本", types: ["short_text", "text", "email", "number", "phone"] },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:279:  { label: "选择", types: ["single", "multiple", "dropdown"] },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:280:  { label: "量表", types: ["rating", "linear_scale", "nps"] },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:281:  { label: "时间与文件", types: ["date", "time", "file"] },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:559:      label: "Purpose",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:566:      label: "Audience",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:573:      label: "Decision",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:580:      label: "Information",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:587:      label: "Constraints",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:658:    { id: "home", label: "Home Page", icon: Home },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:659:    { id: "workspace", label: "我的问卷", icon: ClipboardList },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:660:    { id: "templates", label: "问卷模版", icon: LayoutTemplate },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:668:    { id: "design", label: "设计问卷", desc: "题目与元数据", icon: ClipboardList },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:669:    { id: "template", label: "设计模块", desc: "分类与报告组件", icon: FileText },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:670:    { id: "collect", label: "发布回收", desc: "链接与回收规则", icon: Send },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:671:    { id: "answer", label: "查看答题", desc: "答题页与样本", icon: Eye },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:672:    { id: "report", label: "分析报告", desc: "洞察与导出", icon: BarChart3 },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:901:      label: "Design",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:907:      label: "Report Blocks",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:913:      label: "Collect",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:919:      label: "Report",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:925:      label: "Responses",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1761:    image: { label: "图片生成要求", placeholder: "例如：使用真实产品研究场景，避免装饰性背景，保留数据标注区域。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1762:    chart: { label: "报表生成要求", placeholder: "例如：突出关键差异，显示数值标签，按占比从高到低排序。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1763:    text: { label: "文本生成要求", placeholder: "例如：先给结论，再说明证据、限制和行动建议。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1789:    { value: "auto", label: "自动匹配" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1790:    { value: "business", label: "商务分析" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1791:    { value: "minimal", label: "极简数据" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1792:    { value: "editorial", label: "编辑叙事" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1793:    { value: "presentation", label: "演示汇报" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1794:    { value: "dark", label: "深色大屏" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1805:    { mode: "image", label: "图片", desc: "为报告页生成配图或场景说明。", icon: Eye },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1806:    { mode: "chart", label: "报表", desc: "把选择题和评分题转成可比较的数据视图。", icon: BarChart3 },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1807:    { mode: "text", label: "文本", desc: "输出结论、证据和执行建议。", icon: FileText },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:4235:                      : section.chart?.rows ?? [{ label: "待生成", value: 0 }];
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:6109:                    label: "Survey Agent",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:6114:                    label: "Report Agent",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:6119:                    label: "Publish",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:6583:              { id: "questions", label: "问题", testId: "survey-questions-tab" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:6584:              { id: "responses", label: "回答", testId: "survey-responses-tab" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:6585:              { id: "settings", label: "设置", testId: "survey-settings-tab" },
+@repo/web:lint: ⚠ LABEL-LANG-MIX(跨文件中英混用，警告，不拦截；修复归属 phase-p17 reskin)：以下文件整体用中文 label，而以下文件整体用英文 label，同一层级 UI 组件的文案语言应统一：
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/[id]/results/page.tsx:648:                      { label: "平均", value: reportMetrics.avgCompletion },
+@repo/web:lint:     LABEL-LANG-MIX: components/board/board-canvas.tsx:190:  { value: "sans-serif", label: "无衬线" },
+@repo/web:lint:     LABEL-LANG-MIX: components/board/sync-status.tsx:14:  synced: { label: "已同步", dot: "bg-tag-green", text: "text-success" },
+@repo/web:lint:     LABEL-LANG-MIX: components/studio/studio-panel.tsx:29:  { type: "audio", label: "音频概览", icon: AudioLines },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/account/page.tsx:15:  { key: "personal", label: "Personal info", icon: User },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/admin-home.tsx:113:        { testKey: "users", label: "Total users", stat: stats.users },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/admin-tabs.tsx:8:  { key: "overview", label: "Overview", href: "/admin" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/ai-store/featured/page.tsx:33:  { key: "", label: "All approved" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/ai-store/review/page.tsx:36:  { key: "", label: "All" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/credits/page.tsx:237:              <SummaryCard value={fmt(wallet.balance)} label="Current balance" />
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/rooms/[id]/layout.tsx:27:  { key: "boards", label: "Boards", segment: "boards" },
+@repo/web:lint:     LABEL-LANG-MIX: components/app-shell/sidebar.tsx:45:  { label: "Home", icon: Home, href: "/" },
+@repo/web:lint:   示例（Board 工具条 vs Sidebar 导航）：见 components/board/board-canvas.tsx 与 components/app-shell/sidebar.tsx
+@repo/web:lint: ✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性/文案语言一致性）
+@repo/workflow-worker:typecheck: cache miss, executing bf96d5e51f2d6d47
+@repo/workflow-worker:test: cache miss, executing 03b23b5c77634c7d
+@repo/web:typecheck: cache miss, executing 9f6260b481ed33c1
+@repo/web:test: cache miss, executing 84d4be1a3540f50d
+@repo/web:typecheck: 
+@repo/web:typecheck: > @repo/web@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/web
+@repo/web:typecheck: > tsc --noEmit
+@repo/web:typecheck: 
+@repo/web:test: 
+@repo/web:test: > @repo/web@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/web
+@repo/web:test: > vitest run
+@repo/web:test: 
+@repo/workflow-worker:typecheck: 
+@repo/workflow-worker:typecheck: > @repo/workflow-worker@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/workflow-worker
+@repo/workflow-worker:typecheck: > tsc --noEmit
+@repo/workflow-worker:typecheck: 
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test: > @repo/workflow-worker@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/workflow-worker
+@repo/workflow-worker:test: > vitest run
+@repo/workflow-worker:test: 
+@repo/web:test: [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/workflow-worker
+@repo/workflow-worker:test: 
+@repo/web:test: 
+@repo/web:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/web
+@repo/web:test: 
+@repo/workflow-worker:test:  ✓ src/kbFileJob.test.ts  (2 tests) 5ms
+@repo/workflow-worker:test:  ✓ src/job.test.ts  (3 tests) 9ms
+@repo/workflow-worker:test:  ✓ src/studioJob.test.ts  (2 tests) 4ms
+@repo/workflow-worker:test:  ✓ src/presentationRevisionJob.test.ts  (4 tests) 6ms
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  Test Files  4 passed (4)
+@repo/workflow-worker:test:       Tests  11 passed (11)
+@repo/workflow-worker:test:    Start at  18:59:53
+@repo/workflow-worker:test:    Duration  3.47s (transform 1.66s, setup 3ms, collect 1.14s, tests 24ms, environment 1ms, prepare 7.75s)
+@repo/workflow-worker:test: 
+@repo/web:test:  ✓ lib/canvas-snap.test.ts  (14 tests) 23ms
+@repo/web:test:  ✓ lib/collab-bus.test.ts  (4 tests) 17ms
+@repo/web:test:  ✓ app/api/ava/threads/[id]/share/route.test.ts  (5 tests) 70ms
+@repo/web:test:  ✓ app/api/ava/threads/[id]/route.test.ts  (4 tests) 36ms
+@repo/web:test: stderr | app/api/admin/coordination/status/route.test.ts > GET /api/admin/coordination/status > 502 when upstream fetch throws (network failure / timeout)
+@repo/web:test: [admin/coordination/status] coord-service fetch failed Error: fetch failed
+@repo/web:test:     at /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/web/app/api/admin/coordination/status/route.test.ts:75:15
+@repo/web:test:     at mockCall (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/node_modules/.pnpm/@vitest+spy@2.0.0/node_modules/@vitest/spy/dist/index.js:61:17)
+@repo/web:test:     at spy (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/node_modules/.pnpm/tinyspy@3.0.2/node_modules/tinyspy/dist/index.js:45:80)
+@repo/web:test:     at Module.GET (/Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/web/app/api/admin/coordination/status/route.ts:31:23)
+@repo/web:test:     at processTicksAndRejections (node:internal/process/task_queues:105:5)
+@repo/web:test:     at /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/web/app/api/admin/coordination/status/route.test.ts:78:17
+@repo/web:test:     at runTest (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:939:11)
+@repo/web:test:     at runSuite (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runSuite (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runFiles (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1152:5)
+@repo/web:test: 
+@repo/web:test:  ✓ app/api/admin/coordination/status/route.test.ts  (6 tests) 97ms
+@repo/web:test:  ✓ lib/ava-legacy-compat.test.ts  (6 tests) 9ms
+@repo/web:test:  ✓ lib/ava-agents.test.ts  (3 tests) 6ms
+@repo/web:test:  ✓ app/api/ai-store/items/[id]/route.test.ts  (2 tests) 13ms
+@repo/web:test:  ✓ app/api/boards/[id]/ai-chat/route.test.ts  (3 tests) 63ms
+@repo/web:test:  ✓ lib/utils.test.ts  (30 tests) 20ms
+@repo/web:test:  ✓ app/api/v1/chat/handleRequestAIChat/route.test.ts  (2 tests) 199ms
+@repo/web:test:  ✓ lib/feedback.test.ts  (2 tests) 4ms
+@repo/web:test:  ✓ lib/agents.test.ts  (5 tests) 14ms
+@repo/web:test:  ✓ lib/health.test.ts  (1 test) 4ms
+@repo/web:test:  ✓ app/api/collab/config/route.test.ts  (3 tests) 13ms
+@repo/web:test:  ✓ lib/viewport.test.ts  (4 tests) 18ms
+@repo/web:test:  ✓ lib/qwen.test.ts  (1 test) 263ms
+@repo/web:test: 
+@repo/web:test:  Test Files  17 passed (17)
+@repo/web:test:       Tests  95 passed (95)
+@repo/web:test:    Start at  18:59:53
+@repo/web:test:    Duration  9.90s (transform 2.78s, setup 2ms, collect 7.69s, tests 869ms, environment 26ms, prepare 12.41s)
+@repo/web:test: 
+
+ Tasks:    58 successful, 58 total
+Cached:    49 cached, 58 total
+  Time:    29.435s 
+
+turbo 2.5.0
+
+ WARNING  no output files found for task @repo/storage#build. Please check your `outputs` key in `turbo.json`

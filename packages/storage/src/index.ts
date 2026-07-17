@@ -241,6 +241,7 @@ export function validateAvaUpload(
 
 let client: S3Client | undefined;
 let cfg: StorageConfig | undefined;
+let bucketReady: Promise<void> | undefined;
 
 function getClient(): { client: S3Client; cfg: StorageConfig } {
   if (!client || !cfg) {
@@ -257,12 +258,20 @@ function getClient(): { client: S3Client; cfg: StorageConfig } {
 
 /** 确保桶存在（本地开发体验；生产环境由运维预建，此调用是幂等的 no-op）。 */
 export async function ensureBucket(): Promise<void> {
-  const { client, cfg } = getClient();
-  try {
-    await client.send(new HeadBucketCommand({ Bucket: cfg.bucket }));
-  } catch {
-    await client.send(new CreateBucketCommand({ Bucket: cfg.bucket }));
+  if (!bucketReady) {
+    bucketReady = (async () => {
+      const { client, cfg } = getClient();
+      try {
+        await client.send(new HeadBucketCommand({ Bucket: cfg.bucket }));
+      } catch {
+        await client.send(new CreateBucketCommand({ Bucket: cfg.bucket }));
+      }
+    })().catch((err) => {
+      bucketReady = undefined;
+      throw err;
+    });
   }
+  return bucketReady;
 }
 
 export async function putObject(key: string, body: Buffer, contentType: string): Promise<void> {
@@ -310,4 +319,5 @@ export async function presignPutUrl(
 export function resetStorageClient(): void {
   client = undefined;
   cfg = undefined;
+  bucketReady = undefined;
 }

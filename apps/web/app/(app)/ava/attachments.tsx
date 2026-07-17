@@ -105,9 +105,6 @@ export function useAvaAttachments({ threadId, ensureThread }: UseAvaAttachmentsP
         return;
       }
 
-      const tid = await ensureThread();
-      if (tid == null) return; // 未登录，ensureThread 内部已处理跳转
-
       const newEntries: AttachmentEntry[] = list.map((file) => {
         const ext = extOf(file.name);
         const localId = `local_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
@@ -132,10 +129,23 @@ export function useAvaAttachments({ threadId, ensureThread }: UseAvaAttachmentsP
 
       setEntries((prev) => [...prev, ...newEntries]);
 
-      for (const entry of newEntries) {
-        if (entry.status === "uploading") {
-          void uploadOne(entry.localId, entry.file, tid);
-        }
+      const uploadableEntries = newEntries.filter((entry) => entry.status === "uploading");
+      if (uploadableEntries.length === 0) return;
+
+      const tid = await ensureThread();
+      if (tid == null) {
+        setEntries((prev) =>
+          prev.map((entry) =>
+            uploadableEntries.some((uploadable) => uploadable.localId === entry.localId)
+              ? { ...entry, status: "failed", errorMessage: "请登录后重试" }
+              : entry
+          )
+        );
+        return;
+      }
+
+      for (const entry of uploadableEntries) {
+        void uploadOne(entry.localId, entry.file, tid);
       }
     },
     [entries, ensureThread, uploadOne]

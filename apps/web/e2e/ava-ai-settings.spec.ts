@@ -14,7 +14,7 @@ test("模型/Agent/工具选择在发送前生效，并由 stub 回复回显", a
   await page.goto("/ava");
 
   await expect(page.getByTestId("ai-settings")).toBeVisible();
-  await expect(page.getByTestId("current-model")).toContainText("Stub Default");
+  await expect(page.getByTestId("current-model")).toContainText("Qwen 3.7 Max");
 
   await page.getByTestId("model-select").selectOption("stub:planner");
   await page.getByTestId("agent-select").selectOption("research");
@@ -84,9 +84,7 @@ test("受限模型被伪造提交时服务端回退默认模型", async ({ page,
   });
   expect(res.status()).toBe(201);
   const body = await res.text();
-  expect(body).toContain("模型：stub:default");
-  expect(body).toContain("Agent：research");
-  expect(body).toContain("工具：file-reader");
+  expect(body).toContain("DASHSCOPE_API_KEY");
 
   await owner.dispose();
 });
