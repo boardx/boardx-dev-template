@@ -1,5 +1,5 @@
 "use client";
-// apps/web/app/(app)/ava/voice-input.tsx — AVA 语音输入（P18 F07 接通真实转写）
+// apps/web/components/voice-input.tsx — 通用语音录制+转写控件（P18 F07 起交付于 AVA）
 //
 // 差距：phase-p9-ava-chat 的 F09（语音输入）此前 blocked——不仅转写服务（STT）未就绪，
 // 连"点麦克风→请求权限→录音中看到时长/音量→结束"这条纯前端路径都完全没有实现（无
@@ -7,7 +7,13 @@
 // `getUserMedia` 权限请求 + 真实 `MediaRecorder` 录音 + 真实 `AnalyserNode` 音量可视化 +
 // 真实计时器；录音结束后把录制的音频 Blob POST 到 /api/ava/transcribe，由该端点调用
 // P18 F06 落地的 STT provider（`packages/ai` `transcribeAudio`，OpenAI Whisper API）
-// 做真实转写，返回文本直接回填输入框（不再是固定占位文案）。
+// 做真实转写，转写结果经 `onTranscribed` 回调交给调用方处理（不关心回填到哪，AVA 回填
+// 输入框，Board（p7:F10）用来创建文本组件）。
+//
+// 从 app/(app)/ava/voice-input.tsx 挪到这个共享位置（p7:F10 起）：转写这条前端路径与
+// AVA 业务完全解耦，Board 复用同一套录音/波形/错误处理，没有理由为第二个消费者复制一份。
+// API 端点 /api/ava/transcribe 命名带 "ava" 前缀是历史遗留（p18 交付时的路由归属），
+// 但接口本身与业务无关，跨域复用不需要为此新开路由。
 //
 // 边界状态覆盖 uc-ava-008：权限拒绝 / 无麦克风 / 浏览器不支持 / 录音过短 / 转写失败
 // （含服务端体积超限 413 / MIME 不在白名单 415，均复用同一个 transcription-failed

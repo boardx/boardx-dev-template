@@ -58,7 +58,7 @@ import {
   AttachmentPreviewStrip,
   RichAttachmentPreview,
 } from "./attachments";
-import { VoiceInputControl } from "./voice-input";
+import { VoiceInputControl } from "@/components/voice-input";
 
 interface ThreadSummary {
   id: number;
