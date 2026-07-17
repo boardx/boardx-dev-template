@@ -98,4 +98,16 @@ The 2026-07-18 user annotation supersedes the two optional home cards from the o
 
 The organization and consultant-community cards are gone, the metrics band fills the row, the owner survey count is aligned after “我的问卷”, and each recent survey has a real publication-time state. No P0, P1, or P2 visual issue remains; the `390 x 844` mobile check has no horizontal overflow.
 
+## F15 Create Dialog Review Rework
+
+The 2026-07-18 PR review identified a compressed `448px` create chooser whose inherited `white-space: nowrap` caused descriptions to cross card boundaries.
+
+- Source review screenshot: `phases/phase-p25-survey/sprints/sprint-13/evidence/source-create-dialog-usability.png`
+- Normalized source: `phases/phase-p25-survey/sprints/sprint-13/evidence/source-create-dialog-usability-1624.png`
+- Implementation: `phases/phase-p25-survey/sprints/sprint-13/evidence/survey-create-dialog-f15-desktop.png`
+- Side-by-side comparison: `phases/phase-p25-survey/sprints/sprint-13/evidence/comparison-create-dialog-f15.png`
+- Comparison viewport: `1624 x 934` per side.
+
+The implementation uses a wider three-card chooser with wrapped descriptions, explicit action labels, an AI recommendation badge, and stable initial focus. The source and implementation were reviewed together at the same dimensions. No text crosses a card boundary, no control is clipped, and spacing, border radii, icon treatment, and hierarchy remain consistent with the Survey design system. The `390 x 844` test confirms single-column cards and no horizontal overflow. No P0, P1, or P2 issue remains.
+
 final result: passed

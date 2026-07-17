@@ -8,6 +8,7 @@ import { GridComponent, LegendComponent, RadarComponent, TooltipComponent, Visua
 import { CanvasRenderer } from "echarts/renderers";
 import {
   ArrowDown,
+  ArrowRight,
   ArrowUp,
   BarChart3,
   ChevronLeft,
@@ -7617,19 +7618,44 @@ export default function SurveysPage() {
           title="新建问卷"
           description="选择一种方式开始你的诊断问卷。"
           testId="new-survey-dialog"
+          className="max-h-full max-w-3xl gap-5 overflow-y-auto rounded-lg"
         >
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-3">
             <Button
               data-testid="new-survey-ai"
+              data-dialog-autofocus
               type="button"
               variant="outline"
+              autoFocus
               onClick={createWithAiFromChooser}
-              className="h-auto min-h-40 items-start justify-start gap-3 border-survey/30 bg-tag-purple/30 px-5 py-5 text-left transition-colors duration-200 hover:border-survey hover:bg-tag-purple/50"
+              className="group h-auto min-h-0 min-w-0 items-stretch justify-start whitespace-normal border-survey/30 bg-tag-purple/30 px-4 py-4 text-left transition-all duration-200 hover:border-survey hover:bg-tag-purple/50 active:bg-tag-purple/50 md:min-h-56 md:px-5 md:py-5"
             >
-              <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-survey" strokeWidth={1.6} />
-              <span>
-                <span className="block text-15 font-semibold">AI 对话生成</span>
-                <span className="mt-2 block text-12 font-normal leading-5 text-muted-foreground">描述目标和受访者，AI 生成第一版后继续迭代。</span>
+              <span className="flex w-full min-w-0 items-start gap-3 md:flex-col md:gap-5">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-survey/20 bg-background text-survey">
+                  <Sparkles className="h-5 w-5" strokeWidth={1.6} />
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col self-stretch">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-15 font-semibold text-foreground">AI 对话生成</span>
+                    <Badge
+                      data-testid="new-survey-ai-recommended"
+                      variant="outline"
+                      className="border-survey/30 bg-background text-survey"
+                    >
+                      推荐
+                    </Badge>
+                  </span>
+                  <span className="mt-2 block break-words text-12 font-normal leading-5 text-muted-foreground">
+                    描述目标和受访者，AI 生成第一版后继续迭代。
+                  </span>
+                  <span
+                    data-testid="new-survey-ai-action"
+                    className="mt-4 flex items-center gap-1 text-12 font-semibold text-survey md:mt-auto md:pt-5"
+                  >
+                    开始对话
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={1.8} />
+                  </span>
+                </span>
               </span>
             </Button>
             <Button
@@ -7637,12 +7663,25 @@ export default function SurveysPage() {
               type="button"
               variant="outline"
               onClick={createFromTemplateChooser}
-              className="h-auto min-h-40 items-start justify-start gap-3 px-5 py-5 text-left transition-all duration-200 hover:border-foreground/30 hover:bg-accent"
+              className="group h-auto min-h-0 min-w-0 items-stretch justify-start whitespace-normal px-4 py-4 text-left transition-all duration-200 hover:border-foreground/30 hover:bg-accent active:bg-accent md:min-h-56 md:px-5 md:py-5"
             >
-              <LayoutTemplate className="h-5 w-5 shrink-0" strokeWidth={1.6} />
-              <span>
-                <span className="block text-15 font-semibold">从模板开始</span>
-                <span className="mt-2 block text-12 font-normal leading-5 text-muted-foreground">从诊断模板中心选择成熟结构，再按项目调整。</span>
+              <span className="flex w-full min-w-0 items-start gap-3 md:flex-col md:gap-5">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-1 text-foreground">
+                  <LayoutTemplate className="h-5 w-5" strokeWidth={1.6} />
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col self-stretch">
+                  <span className="text-15 font-semibold text-foreground">从模板开始</span>
+                  <span className="mt-2 block break-words text-12 font-normal leading-5 text-muted-foreground">
+                    从诊断模板中心选择成熟结构，再按项目调整。
+                  </span>
+                  <span
+                    data-testid="new-survey-template-action"
+                    className="mt-4 flex items-center gap-1 text-12 font-semibold text-foreground md:mt-auto md:pt-5"
+                  >
+                    浏览模板
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={1.8} />
+                  </span>
+                </span>
               </span>
             </Button>
             <Button
@@ -7650,12 +7689,25 @@ export default function SurveysPage() {
               type="button"
               variant="outline"
               onClick={createBlankFromChooser}
-              className="h-auto min-h-40 items-start justify-start gap-3 px-5 py-5 text-left transition-all duration-200 hover:border-foreground/30 hover:bg-accent"
+              className="group h-auto min-h-0 min-w-0 items-stretch justify-start whitespace-normal px-4 py-4 text-left transition-all duration-200 hover:border-foreground/30 hover:bg-accent active:bg-accent md:min-h-56 md:px-5 md:py-5"
             >
-              <FileText className="h-5 w-5 shrink-0" strokeWidth={1.6} />
-              <span>
-                <span className="block text-15 font-semibold">空白问卷</span>
-                <span className="mt-2 block text-12 font-normal leading-5 text-muted-foreground">从零搭建题目，过程中仍可随时召唤 AI 助手。</span>
+              <span className="flex w-full min-w-0 items-start gap-3 md:flex-col md:gap-5">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-1 text-foreground">
+                  <FileText className="h-5 w-5" strokeWidth={1.6} />
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col self-stretch">
+                  <span className="text-15 font-semibold text-foreground">空白问卷</span>
+                  <span className="mt-2 block break-words text-12 font-normal leading-5 text-muted-foreground">
+                    从零搭建题目，过程中仍可随时召唤 AI 助手。
+                  </span>
+                  <span
+                    data-testid="new-survey-blank-action"
+                    className="mt-4 flex items-center gap-1 text-12 font-semibold text-foreground md:mt-auto md:pt-5"
+                  >
+                    从空白开始
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={1.8} />
+                  </span>
+                </span>
               </span>
             </Button>
           </div>

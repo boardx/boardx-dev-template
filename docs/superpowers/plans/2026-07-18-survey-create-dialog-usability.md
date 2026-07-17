@@ -29,7 +29,7 @@
 - Consumes: the authenticated `/surveys` fixture setup and existing `new-survey-*` test IDs.
 - Produces: desktop and mobile assertions for readable card content, action labels, recommendation state, focus, and overflow containment.
 
-- [ ] **Step 1: Write the failing desktop test**
+- [x] **Step 1: Write the failing desktop test**
 
 Open `/surveys`, click the existing `survey-home-create` control, and assert:
 
@@ -42,11 +42,11 @@ await expect(page.getByTestId("new-survey-blank-action")).toHaveText("从空白�
 
 Also assert every option has `white-space: normal`, no horizontal content overflow, and the dialog is at least 680 CSS pixels wide on a desktop viewport.
 
-- [ ] **Step 2: Write the failing mobile test**
+- [x] **Step 2: Write the failing mobile test**
 
 Use a `390 x 844` viewport and assert the dialog remains inside the viewport, the three cards share the same horizontal position, and both the document and each card satisfy `scrollWidth <= clientWidth`.
 
-- [ ] **Step 3: Run the focused test and verify RED**
+- [x] **Step 3: Run the focused test and verify RED**
 
 Run:
 
@@ -65,11 +65,11 @@ Expected: FAIL because recommendation and action test IDs do not exist, the curr
 - Consumes: `createWithAiFromChooser`, `createFromTemplateChooser`, `createBlankFromChooser`, shared `Dialog`, `Badge`, and Lucide icons.
 - Produces: a `max-w-3xl` responsive chooser with complete card text and stable visual-action test IDs.
 
-- [ ] **Step 1: Add the required icon import**
+- [x] **Step 1: Add the required icon import**
 
 Add `ArrowRight` to the existing `lucide-react` import list. Do not add a package.
 
-- [ ] **Step 2: Make the dialog fit the viewport**
+- [x] **Step 2: Make the dialog fit the viewport**
 
 Pass a class that widens only this dialog and allows internal vertical scrolling:
 
@@ -77,7 +77,7 @@ Pass a class that widens only this dialog and allows internal vertical scrolling
 className="max-h-full max-w-3xl overflow-y-auto rounded-lg"
 ```
 
-- [ ] **Step 3: Replace each compressed option with a responsive card**
+- [x] **Step 3: Replace each compressed option with a responsive card**
 
 Keep the existing `Button` and callback, but override its single-line behavior with `whitespace-normal`, use `min-w-0`, and compose each option as:
 
@@ -97,7 +97,7 @@ Keep the existing `Button` and callback, but override its single-line behavior w
 
 Add `autoFocus` to the AI option, a `new-survey-ai-recommended` badge, and the three action test IDs from Task 1.
 
-- [ ] **Step 4: Run the focused test and verify GREEN**
+- [x] **Step 4: Run the focused test and verify GREEN**
 
 Run:
 
@@ -120,7 +120,7 @@ Expected: 2 tests passed.
 - Consumes: the approved user screenshot and the rendered local dialog at the same desktop viewport.
 - Produces: repository evidence, updated F15 verification evidence, and a clean PR branch.
 
-- [ ] **Step 1: Run focused and regression validation**
+- [x] **Step 1: Run focused and regression validation**
 
 Run:
 
@@ -132,11 +132,11 @@ pnpm --filter @repo/web exec playwright test e2e/survey-p25-015-home-information
 
 Expected: all commands exit 0.
 
-- [ ] **Step 2: Capture and compare at the source viewport**
+- [x] **Step 2: Capture and compare at the source viewport**
 
 Capture the implemented open dialog at the same viewport as the supplied source, place both images side by side, and confirm no text overlap, clipping, incoherent spacing, or viewport overflow remains.
 
-- [ ] **Step 3: Refresh passing evidence through Harness**
+- [x] **Step 3: Refresh passing evidence through Harness**
 
 Run:
 

@@ -22,4 +22,9 @@
 - 用户反馈: 当前“新建问卷”弹窗三列过窄、说明文字重叠，信息层级和行动提示不够友好。
 - 已确认方案: 扩大弹窗；保留三入口卡片；补完整说明、行动文案和 AI 推荐标记；移动端单列。
 - 文档状态: 新增 `requirements/14-create-dialog-usability-review.md`，补充 UI signoff、F15 契约和实现计划。
-- 实现状态: 尚未修改生产代码；下一步先新增 `survey-p25-015-create-dialog.spec.ts` 并观察预期失败。
+- 测试先行: 生产代码修改前桌面测试以实测宽度 `448px < 680px` 失败；实现后桌面/移动聚焦测试 `2/2` 通过。
+- 已完成: 弹窗扩大到 `max-w-3xl`；三入口说明自然换行；补行动文案、AI 推荐标记和稳定首焦点；移动端单列且弹窗内部可滚动。
+- 视觉验收: 来源与实现按每侧 `1624 x 934` 并排检查，无 P0/P1/P2；证据见 `comparison-create-dialog-f15.png`。
+- 运行过的验证: design lint；Web typecheck；F15 组合回归 `6/6`；Survey 八规格 `40/40`；Web 单测 `109/109`；`verify:base` `58/58`。
+- Harness: `pnpm harness verify --sprint p25/13 --feature F15 --backfill-evidence` 通过，`pnpm harness doctor --phase p25` 为 `0 FAIL / 0 WARN`。
+- 下一步最佳动作: 提交并推送 review 返工，更新现有 PR #693 与 issue #648。
