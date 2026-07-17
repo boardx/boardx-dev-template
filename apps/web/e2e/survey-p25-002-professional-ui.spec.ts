@@ -2,6 +2,18 @@ import { expect, test, type Page } from "@playwright/test";
 
 const uniq = () => `sv15_${Date.now()}_${Math.floor(Math.random() * 1e6)}@ex.com`;
 
+const defaultQuestions = [
+  { title: "你对这次体验满意吗？", type: "rating", required: true, options: [] },
+  { title: "希望重点优化哪里？", type: "single", required: true, options: ["首页", "AI 创建", "编辑器"] },
+];
+
+const longMobileQuestions = Array.from({ length: 18 }, (_, index) => ({
+  title: `移动端长问卷问题 ${index + 1}`,
+  type: index === 0 ? "rating" : index === 1 ? "single" : "short_text",
+  required: index < 2,
+  options: index === 1 ? ["首页", "AI 创建", "编辑器"] : [],
+}));
+
 async function register(page: Page) {
   const res = await page.request.post("/api/auth/register", {
     data: { firstName: "S", lastName: "V", email: uniq(), password: "secret123", agreeTerms: true },
@@ -9,15 +21,12 @@ async function register(page: Page) {
   expect(res.status()).toBe(201);
 }
 
-async function createSurvey(page: Page, active = false) {
+async function createSurvey(page: Page, active = false, questions = defaultQuestions) {
   const created = await page.request.post("/api/surveys", {
     data: {
       title: "专业 UI 验收问卷",
       description: "验证统一风格、按钮反馈和跳转。",
-      questions: [
-        { title: "你对这次体验满意吗？", type: "rating", required: true, options: [] },
-        { title: "希望重点优化哪里？", type: "single", required: true, options: ["首页", "AI 创建", "编辑器"] },
-      ],
+      questions,
     },
   });
   expect(created.status()).toBe(201);
@@ -43,27 +52,27 @@ test("professional dashboard exposes unified entry points and workbench interact
   await expect(page.getByTestId("templates-workbench")).toBeVisible();
   await page.goto("/surveys");
   await expect(page.getByTestId("create-with-ai")).toBeVisible();
+  await page.getByTestId("create-with-ai").click();
+  await expect(page.getByTestId("new-survey-dialog")).toBeVisible();
+  await expect(page.getByTestId("new-survey-ai")).toBeVisible();
+  await expect(page.getByTestId("new-survey-template")).toBeVisible();
+  await expect(page.getByTestId("new-survey-blank")).toBeVisible();
   await page.goto("/surveys/acceptance");
   await expect(page).toHaveURL(/\/surveys\/acceptance/);
 });
 
-test("AI creation studio validates empty send and shows draft actions", async ({ page }) => {
+test("new survey chooser opens the current AI assistant", async ({ page }) => {
   await register(page);
 
   await page.goto("/surveys");
   await page.getByTestId("create-with-ai").click();
-  await expect(page.getByTestId("ai-studio-layout")).toBeVisible();
-  await expect(page.getByTestId("ai-intent-panel")).toContainText("目标");
-  await expect(page.getByTestId("ai-draft-workbench")).toBeVisible();
-  await expect(page.getByTestId("ai-send")).toBeDisabled();
-
-  await page.getByTestId("ai-model").selectOption("mock-survey-fast");
-  await page.getByTestId("ai-input").fill("生成一个商品反馈问卷，控制在 5 题以内，并需要报告大纲。");
-  await page.getByTestId("ai-send").click();
-  await expect(page.getByTestId("ai-draft-preview")).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByTestId("preview-ai-draft")).toBeVisible();
-  await expect(page.getByTestId("apply-ai-draft")).toBeVisible();
-  await expect(page.getByTestId("publish-ai-draft")).toBeVisible();
+  await page.getByTestId("new-survey-ai").click();
+  await expect(page.getByTestId("survey-editor-shell")).toBeVisible();
+  const assistant = page.getByTestId("survey-ai-assistant");
+  await expect(assistant).toBeVisible();
+  await expect(assistant).toContainText("AI 助手");
+  await expect(assistant).toContainText("不会直接覆盖左侧问卷");
+  await expect(assistant.getByTestId("ai-send")).toBeDisabled();
 });
 
 test("editor shell groups the question builder, inspector, and unified paper preview", async ({ page }) => {
@@ -101,6 +110,7 @@ test("editor shell groups the question builder, inspector, and unified paper pre
 
   await page.goto("/surveys");
   await page.getByTestId("empty-new-survey").click();
+  await page.getByTestId("new-survey-blank").click();
   await expect(page.getByTestId("survey-editor-shell")).toBeVisible();
   await expect(page.getByTestId("editor-command-bar")).toBeVisible();
   await expect(page.getByTestId("question-builder-panel")).toBeVisible();
@@ -129,6 +139,27 @@ test("editor shell groups the question builder, inspector, and unified paper pre
   await expect(page.getByTestId("preview-option-0-0")).toHaveClass(/bg-muted/);
   await page.getByTestId("edit-survey").click();
   await expect(page.getByTestId("question-builder-panel")).toBeVisible();
+});
+
+test("anonymous mobile respondents retain a visible submission action while scrolling a long survey", async ({ page, browser }) => {
+  await register(page);
+  const survey = await createSurvey(page, true, longMobileQuestions);
+  const anonymousContext = await browser.newContext({ viewport: { width: 375, height: 812 } });
+  const anonymousPage = await anonymousContext.newPage();
+
+  try {
+    await anonymousPage.goto(survey.shareUrl);
+    const mobileSubmit = anonymousPage.getByTestId("submit-answer-mobile");
+
+    await expect(anonymousPage.getByTestId("answer-page")).toBeVisible();
+    await expect(mobileSubmit).toBeInViewport();
+    await anonymousPage.getByTestId("answer-question-9").scrollIntoViewIfNeeded();
+    await expect(mobileSubmit).toBeInViewport();
+    await anonymousPage.getByTestId("answer-question-17").scrollIntoViewIfNeeded();
+    await expect(mobileSubmit).toBeInViewport();
+  } finally {
+    await anonymousContext.close();
+  }
 });
 
 test("answer and acceptance small surfaces share the professional shell", async ({ page }) => {

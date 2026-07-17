@@ -125,7 +125,7 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
           </div>
         </div>
 
-        <div className="mx-auto max-w-4xl px-6 pb-10 sm:px-8">
+        <div className="mx-auto max-w-4xl px-6 pb-28 sm:px-8 sm:pb-10">
           <header className="pb-8 pt-8">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-12 font-semibold text-foreground">问卷进度</span>
@@ -350,7 +350,7 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
             })}
           </div>
 
-          <div className="flex flex-col items-start gap-3 pb-2 pt-4">
+          <div className="hidden flex-col items-start gap-3 pb-2 pt-4 sm:flex">
             {error && (
               <p role="alert" data-testid="err-answer" className="text-13 text-destructive">
                 {error}
@@ -364,6 +364,24 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
           </div>
         </div>
       </section>
+
+      <div data-testid="mobile-submit-answer-bar" className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 py-3 shadow-lg backdrop-blur sm:hidden">
+        {error && (
+          <p role="alert" data-testid="err-answer-mobile" className="mb-2 text-13 text-destructive">
+            {error}
+          </p>
+        )}
+        <Button
+          data-testid="submit-answer-mobile"
+          type="button"
+          disabled={submitting}
+          onClick={() => void submit()}
+          className="w-full gap-1.5 bg-survey text-white hover:bg-survey/90"
+        >
+          <Send className="h-4 w-4" strokeWidth={1.5} />
+          {submitting ? "提交中..." : "提交"}
+        </Button>
+      </div>
     </main>
   );
 }
