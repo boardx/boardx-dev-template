@@ -841,7 +841,7 @@ function WorkspaceShell({
               <div className="flex min-h-10 items-center justify-between gap-4">
                 <div>
                   <h1 className="text-22 font-bold tracking-normal">
-                    {templateLibraryMode ? "问卷模版" : activeNav.label}
+                    {templateLibraryMode ? "问卷模板" : activeNav.label}
                   </h1>
                   <p className="mt-1 text-13 text-muted-foreground">
                     {templateLibraryMode ? "管理可复用的问卷结构，快速创建新的调查。" : headerCopy[active]}
@@ -858,7 +858,7 @@ function WorkspaceShell({
                       className="h-9 gap-1.5 rounded-lg border-foreground bg-foreground px-3 text-13 text-background hover:bg-foreground/90 hover:text-background"
                     >
                       <Plus className="h-4 w-4" strokeWidth={1.6} />
-                      新建问卷模版
+                      新建问卷模板
                     </Button>
                   ) : (
                     <>
@@ -7849,7 +7849,6 @@ export default function SurveysPage() {
                 <h1 className="text-3xl font-bold text-foreground">{greeting}，Yiran</h1>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Badge variant="muted">独立咨询顾问</Badge>
-                  <Badge variant="muted">明道咨询 · 组织与 AI 转型</Badge>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -7879,51 +7878,6 @@ export default function SurveysPage() {
                     </div>
                   ))}
                 </div>
-              </div>
-            </section>
-
-            <section data-testid="survey-home-method" className="rounded-lg border border-border bg-background p-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-17 font-bold text-foreground">为什么在工作坊之前用 Survey?</h2>
-                <span className="text-12 text-muted-foreground">面向诊断的三步用法</span>
-              </div>
-              <div className="mt-5 grid gap-4 md:grid-cols-3">
-                {[
-                  { id: "templates", eyebrow: "WHY · 为什么", title: "诊断先行，带数据进场", copy: "提前 1-2 周用问卷完成诊断，现场直接从「对齐事实」跳到「共创方案」。", action: "看诊断模板 →" },
-                  { id: "create", eyebrow: "HOW · 怎么做", title: "结构化收集，可对比可聚合", copy: "把访谈中不可比的信息变成统一维度的量表与分类，几百份回答也能直接比较。", action: "新建问卷 →" },
-                  { id: "report", eyebrow: "THEN · 然后呢", title: "AI 直达洞察报告", copy: "回收完成后按报告模板自动生成诊断报告：雷达图、优先级矩阵、关键引述。", action: "查看分析报告 →" },
-                ].map((method) => (
-                  <Button
-                    key={method.id}
-                    data-testid={`survey-method-${method.id}`}
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      if (method.id === "templates") {
-                        window.location.href = "/surveys?view=templates";
-                        return;
-                      }
-                      if (method.id === "create") {
-                        openCreateChooser();
-                        return;
-                      }
-                      const reportSurvey = visibleSurveys.find((item) => item.responses > 0);
-                      if (reportSurvey) {
-                        void selectSurveyForWorkspace(reportSurvey.id, "report");
-                        return;
-                      }
-                      window.location.href = "/surveys?view=my";
-                    }}
-                    className="h-auto min-h-48 items-start justify-start whitespace-normal rounded-lg bg-card p-5 text-left font-normal transition-colors hover:border-foreground/30 hover:bg-background"
-                  >
-                    <span className="block">
-                      <span className="block text-12 font-bold text-violet-600">{method.eyebrow}</span>
-                      <span className="mt-3 block text-15 font-bold text-foreground">{method.title}</span>
-                      <span className="mt-3 block text-13 leading-6 text-muted-foreground">{method.copy}</span>
-                      <span className="mt-4 block text-13 font-semibold text-violet-600">{method.action}</span>
-                    </span>
-                  </Button>
-                ))}
               </div>
             </section>
 
@@ -7979,7 +7933,7 @@ export default function SurveysPage() {
               </div>
             ) : (
               <>
-                <section data-testid="diagnostic-template-center" className="border border-border bg-background">
+                <section data-testid="diagnostic-template-center" className="overflow-hidden rounded-lg border border-border bg-background">
                   <div className="border-b border-border px-4 py-5">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
@@ -8248,18 +8202,18 @@ export default function SurveysPage() {
           description="选择一种方式开始你的诊断问卷。"
           testId="new-survey-dialog"
         >
-          <div className="grid gap-2 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-3">
             <Button
               data-testid="new-survey-ai"
               type="button"
               variant="outline"
               onClick={createWithAiFromChooser}
-              className="h-auto justify-start gap-3 px-4 py-3 text-left transition-all duration-200 hover:bg-accent"
+              className="h-auto min-h-40 items-start justify-start gap-3 border-violet-200 bg-violet-50/40 px-5 py-5 text-left transition-all duration-200 hover:border-violet-400 hover:bg-violet-50"
             >
-              <Sparkles className="h-5 w-5 shrink-0" strokeWidth={1.6} />
+              <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" strokeWidth={1.6} />
               <span>
-                <span className="block text-14 font-semibold">AI 创建</span>
-                <span className="mt-1 block text-12 font-normal text-muted-foreground">描述目标，先生成一版待确认的问卷。</span>
+                <span className="block text-15 font-semibold">AI 对话生成</span>
+                <span className="mt-2 block text-12 font-normal leading-5 text-muted-foreground">描述目标和受访者，AI 生成第一版后继续迭代。</span>
               </span>
             </Button>
             <Button
@@ -8267,12 +8221,12 @@ export default function SurveysPage() {
               type="button"
               variant="outline"
               onClick={createFromTemplateChooser}
-              className="h-auto justify-start gap-3 px-4 py-3 text-left transition-all duration-200 hover:bg-accent"
+              className="h-auto min-h-40 items-start justify-start gap-3 px-5 py-5 text-left transition-all duration-200 hover:border-foreground/30 hover:bg-accent"
             >
               <LayoutTemplate className="h-5 w-5 shrink-0" strokeWidth={1.6} />
               <span>
-                <span className="block text-14 font-semibold">从模板开始</span>
-                <span className="mt-1 block text-12 font-normal text-muted-foreground">从诊断模板中心选择可复用的结构。</span>
+                <span className="block text-15 font-semibold">从模板开始</span>
+                <span className="mt-2 block text-12 font-normal leading-5 text-muted-foreground">从诊断模板中心选择成熟结构，再按项目调整。</span>
               </span>
             </Button>
             <Button
@@ -8280,12 +8234,12 @@ export default function SurveysPage() {
               type="button"
               variant="outline"
               onClick={createBlankFromChooser}
-              className="h-auto justify-start gap-3 px-4 py-3 text-left transition-all duration-200 hover:bg-accent"
+              className="h-auto min-h-40 items-start justify-start gap-3 px-5 py-5 text-left transition-all duration-200 hover:border-foreground/30 hover:bg-accent"
             >
               <FileText className="h-5 w-5 shrink-0" strokeWidth={1.6} />
               <span>
-                <span className="block text-14 font-semibold">空白问卷</span>
-                <span className="mt-1 block text-12 font-normal text-muted-foreground">从零开始配置标题、题目和回收设置。</span>
+                <span className="block text-15 font-semibold">空白问卷</span>
+                <span className="mt-2 block text-12 font-normal leading-5 text-muted-foreground">从零搭建题目，过程中仍可随时召唤 AI 助手。</span>
               </span>
             </Button>
           </div>
