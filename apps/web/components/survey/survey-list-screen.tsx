@@ -69,7 +69,7 @@ export function SurveyListScreen({
   };
 
   return (
-    <section data-testid="survey-list-screen" className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-10 lg:py-9">
+    <section data-testid="survey-list-screen" className="mx-auto w-full max-w-survey-dashboard px-4 py-8 sm:px-6 lg:px-10 lg:py-9">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-22 font-bold text-foreground">我的问卷</h1>
@@ -90,7 +90,7 @@ export function SurveyListScreen({
               data-testid={`create-path-${path.id}`}
               type="button"
               onClick={handlers[path.id]}
-              className="min-h-32 rounded-lg border border-dashed border-border-strong bg-background p-4 text-left transition-colors duration-200 hover:border-survey hover:bg-surface-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="min-h-survey-create-card rounded-lg border border-dashed border-border-strong bg-background p-4 text-left transition-colors duration-200 hover:border-survey hover:bg-surface-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <Icon className="h-5 w-5 text-survey" strokeWidth={1.6} />
               <h2 className="mt-3 text-13 font-bold text-foreground">{path.title}</h2>

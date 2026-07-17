@@ -20,19 +20,18 @@ export interface SurveyHomeRecentItem {
   statusLabel: string;
   responseCount: number;
   responseLimit: number | null;
+  publishedAt: string | null;
   updatedLabel: string;
 }
 
 interface SurveyHomeDashboardProps {
   greeting: string;
+  userName: string | null;
   activeSurveyCount: number;
   totalResponses: number;
   generatedReportCount: number;
   completionRate: number | null;
   organizationName: string;
-  organizationSummary: string;
-  communityTemplateName: string | null;
-  communityTemplateSummary: string;
   templates: SurveyHomeTemplate[];
   recentSurveys: SurveyHomeRecentItem[];
   onCreate: () => void;
@@ -71,16 +70,28 @@ function responseProgress(item: SurveyHomeRecentItem) {
   return Math.min(100, Math.round((item.responseCount / item.responseLimit) * 100));
 }
 
+function formatPublishedAt(value: string | null) {
+  if (!value) return "尚未发布";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "发布时间待确认";
+  return `发布时间 ${date.toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })}`;
+}
+
 export function SurveyHomeDashboard({
   greeting,
+  userName,
   activeSurveyCount,
   totalResponses,
   generatedReportCount,
   completionRate,
   organizationName,
-  organizationSummary,
-  communityTemplateName,
-  communityTemplateSummary,
   templates,
   recentSurveys,
   onCreate,
@@ -97,12 +108,11 @@ export function SurveyHomeDashboard({
   ];
 
   return (
-    <div data-testid="survey-diagnostic-home" className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-10 lg:py-9">
+    <div data-testid="survey-diagnostic-home" className="mx-auto w-full max-w-survey-dashboard px-4 py-8 sm:px-6 lg:px-10 lg:py-9">
       <section data-testid="survey-home-context" className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-26 font-bold text-foreground">{greeting}，Yiran</h1>
+          <h1 className="text-26 font-bold text-foreground">{greeting}，{userName || "欢迎回来"}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Badge variant="muted">独立咨询顾问</Badge>
             <Badge variant="muted">{organizationName} · 组织与 AI 转型</Badge>
           </div>
         </div>
@@ -113,13 +123,13 @@ export function SurveyHomeDashboard({
           </Button>
           <Button type="button" variant="outline" onClick={onBrowseTemplates} className="h-10 gap-2 px-4">
             <LayoutTemplate className="h-4 w-4" strokeWidth={1.7} />
-            浏览模板
+            浏览模版
           </Button>
         </div>
       </section>
 
-      <section className="mt-6 grid gap-4 lg:grid-cols-[1.3fr_1fr_1fr]">
-        <article data-testid="survey-home-metrics" className="rounded-lg border border-border bg-background px-5 py-5">
+      <section className="mt-6">
+        <article data-testid="survey-home-metrics" className="min-h-40 rounded-lg border border-border bg-background px-5 py-5">
           <h2 className="text-13 font-semibold text-muted-foreground">我的工作台</h2>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {metrics.map((metric) => (
@@ -129,24 +139,6 @@ export function SurveyHomeDashboard({
               </div>
             ))}
           </div>
-        </article>
-
-        <article data-testid="survey-home-organization" className="rounded-lg border border-border bg-background px-5 py-5">
-          <h2 className="text-13 font-semibold text-muted-foreground">组织</h2>
-          <p className="mt-3 text-15 font-bold text-foreground">{organizationName}</p>
-          <p className="mt-1 text-12 leading-5 text-muted-foreground">{organizationSummary}</p>
-        </article>
-
-        <article data-testid="survey-home-community" className="rounded-lg border border-border bg-background px-5 py-5">
-          <h2 className="text-13 font-semibold text-muted-foreground">顾问社区</h2>
-          <p className="mt-3 text-13 leading-5 text-foreground">
-            {communityTemplateName ? <>推荐模板：<strong>{communityTemplateName}</strong></> : "暂无可推荐模板"}
-          </p>
-          <p className="mt-1 text-12 leading-5 text-muted-foreground">{communityTemplateSummary}</p>
-          <Button type="button" variant="link" size="sm" onClick={onBrowseTemplates} className="mt-2 h-auto gap-1 px-0 text-survey">
-            去看看
-            <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.8} />
-          </Button>
         </article>
       </section>
 
@@ -184,9 +176,9 @@ export function SurveyHomeDashboard({
 
       <section data-testid="survey-home-templates" className="mt-6">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-15 font-bold text-foreground">为你推荐的诊断模板</h2>
+          <h2 className="text-15 font-bold text-foreground">为你推荐的诊断模版</h2>
           <Button type="button" variant="link" size="sm" onClick={onBrowseTemplates} className="h-auto gap-1 px-0 text-survey">
-            全部模板
+            全部模版
             <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.8} />
           </Button>
         </div>
@@ -195,6 +187,7 @@ export function SurveyHomeDashboard({
             {templates.map((template) => (
               <button
                 key={template.id}
+                data-testid={`survey-home-template-${template.id}`}
                 type="button"
                 onClick={() => onUseTemplate(template.id)}
                 className="min-h-32 rounded-lg border border-border bg-background p-4 text-left transition-colors duration-200 hover:border-survey focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -218,11 +211,17 @@ export function SurveyHomeDashboard({
           {recentSurveys.length ? recentSurveys.map((survey) => {
             const progress = responseProgress(survey);
             return (
-              <div key={survey.id} className="grid gap-3 border-b border-border px-5 py-4 last:border-b-0 md:grid-cols-[minmax(0,1fr)_auto_180px_auto] md:items-center">
+              <div key={survey.id} className="grid gap-3 border-b border-border px-5 py-4 last:border-b-0 md:grid-cols-[minmax(0,1fr)_160px_auto_180px_auto] md:items-center">
                 <div className="min-w-0">
                   <h3 className="truncate text-13 font-semibold text-foreground">{survey.title}</h3>
                   <p className="mt-1 truncate text-12 text-muted-foreground">{survey.description || survey.updatedLabel}</p>
                 </div>
+                <p
+                  data-testid={`survey-home-published-at-${survey.id}`}
+                  className="text-12 text-muted-foreground"
+                >
+                  {formatPublishedAt(survey.publishedAt)}
+                </p>
                 <Badge variant={survey.status === "active" ? "success" : "muted"} className="w-fit">{survey.statusLabel}</Badge>
                 <div>
                   <p className="text-12 text-muted-foreground">

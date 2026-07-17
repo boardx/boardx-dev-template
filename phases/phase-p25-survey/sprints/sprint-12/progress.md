@@ -1,13 +1,25 @@
 # 进度日志 — Sprint p25/12
 
 ## 当前已验证状态(唯一真相)
-- 仓库根目录: `/private/tmp/boardx-p25-f12-survey-ui-redesign`
+- 仓库根目录: `/Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f12-survey-ui-redesign`
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F12 / 重建动态报告规划与分类报告编排器
-- 当前 blocker: F12 仍需验证真实答卷报告、零/低样本限制和失败重试；组合 E2E 另发现本地 `survey_ai_sessions_status_check` 不接受代码既有的 `open` 状态
+- 当前最高优先级未完成功能: F13 / 重建专业图表、图片与多格式报告导出
+- 当前 blocker: F12 已由 Harness 门控转为 `passing`；Phase p25 仍有 F13、F14 为 `pending`，不能宣称整阶段完成
 
 ## 会话记录
+### 2026-07-17（指定 HTML 六界面重构与 F12 验收）
+- 本轮目标: 以微信目录 `AI 问卷诊断平台(1).html` 为唯一 UI 基线，完成六个界面的生产实现、同视口视觉验收和 F12 Harness 验证。
+- 已完成: 统一 Survey 导航、首页、我的问卷、编辑器、模板中心、报告模板和洞察报告；删除虚假完成率/答卷比例；用户名、模板、问卷、分类、答卷和报告均使用真实数据。
+- 视觉验收: 六个界面均在 `1280 x 720` 下生成参考/实现并排证据；最终无 P0/P1/P2，P3 差异已记录。
+- Harness 结果: `pnpm harness verify --sprint p25/12 --feature F12` 通过，Harness 自动写入 `evidence/F12.verify.log` 并将 F12 转为 `passing`。
+- 最终回归: design lint、107 个 Web tests、Web typecheck、35 条组合 Playwright、Harness doctor 0 FAIL/0 WARN、`verify:base` 58/58 tasks 和 `git diff --check` 均通过。
+- 审查修正: 默认结果接口不再下发原始开放题或内部答卷 ID，只有进入授权的单份答卷视图才按需读取；样本门槛按每个指标的唯一有效答卷数判断；未配置独立假设时不输出支持/不支持，纯开放题不生成 `0.0 / 5`；返回路径保留编辑器/工作流/列表来源；结果页补齐真实内容移动验收；生成报告数改为持久化 artifact 聚合并消除答卷 × 报告的 SQL 中间集。
+- 已记录证据: `evidence/2026-07-17-survey-html-fidelity.md`、六张当前实现截图和六张 `comparison-*.webp`。
+- 最终验证证据: `evidence/2026-07-17-survey-html-fidelity-verification.md`。
+- 状态边界: Phase p25 当前 12 个 feature passing，F13、F14 仍为 pending；本轮不关闭 Phase。
+- 下一步最佳动作: 提交并创建面向 `main` 的 follow-up PR，关联 issue #648；PR #674 已合并，后续另行认领 F13。
+
 ### 2026-07-17（统一创建界面）
 - 本轮目标: 按诊断工作台参考统一新建选择器、模板中心、问卷编辑器和 AI 助手。
 - 已完成: 三路新建选择器；标签过滤的诊断模板中心；单边界摘要和连续题目画布；AI draft/changeSet 预览确认；移动端单列响应式布局。
@@ -65,7 +77,7 @@
 ### 2026-07-15（AI 工作台 UI）
 - 本轮目标: 按已确认 UI 方案重构 Survey 五步工作流，突出 AI 创建、修改、报告模板和报告生成。
 - 已完成: 五步导航将“设计模块”改为“报告模板”；设计、发布、答卷、报告页接入可折叠目录和精简 AI 助手；报告模板新增图表/图片/文本 12 列画布、位置大小调整及模块级提示词。
-- 运行过的验证: `pnpm exec vitest run lib/survey-report-layout.test.ts`（3 passed）；`pnpm --filter @repo/web run typecheck`；`pnpm --filter @repo/web run lint`；当时聚焦 Playwright 为 4 passed，遗留 fallback 场景已在后续统一创建界面回归中闭合。
+- 运行过的验证: `pnpm exec vitest run lib/survey-report-layout.test.ts`（3 passed）；`pnpm --filter @repo/web run typecheck`；`pnpm --filter @repo/web run lint`；聚焦 Playwright（4 passed，1 个既有数据库约束失败），遗留 fallback 场景已在后续统一创建界面回归中闭合。
 - 已记录证据: `evidence/2026-07-15-survey-ai-workbench-ui.md`；F12 保持 `in_progress`。
 - 提交记录: UI 设计检查点 `f54d79c`；实现提交待本轮收尾。
 - 已知风险或未解决问题: AI 面板当前复用现有动作，预览与应用尚未引入新的差异协议；F12 的非 UI 验收边界仍未完成。

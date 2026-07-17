@@ -28,5 +28,5 @@ test("results render charts and export a protected CSV", async ({ page }) => {
   await page.goto(`/surveys/${survey.id}/results`);
   await expect(page.getByTestId("echat-summary-charts")).toBeVisible();
   await expect(page.getByTestId("export-csv")).toBeVisible();
-  await expect(page.getByTestId("export-pdf")).toContainText("Print / PDF");
+  await expect(page.getByTestId("export-pdf")).toContainText("导出 PDF");
 });

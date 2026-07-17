@@ -56,11 +56,18 @@ test("report template exposes chart image text layout and independent prompts", 
       questions: [
         { title: "你的年级？", type: "single", required: true, options: ["一年级", "二年级"], category: "基础信息" },
         { title: "你的性别？", type: "single", required: true, options: ["男", "女"], category: "基础信息" },
+        { title: "你每周投入多少时间学习？", type: "single", required: true, options: ["少于 3 小时", "3-6 小时", "6 小时以上"], category: "学习投入" },
+        { title: "你对课堂互动的满意度如何？", type: "rating", required: true, options: [], category: "课堂体验" },
+        { title: "你能否及时获得老师和同伴的支持？", type: "rating", required: true, options: [], category: "支持资源" },
+        { title: "你认为自己本学期最大的成长是什么？", type: "text", required: false, options: [], category: "成长反馈" },
+        { title: "你愿意向同学推荐这门课程吗？", type: "nps", required: true, options: [], category: "推荐意愿" },
+        { title: "你希望课程下一步优先改善什么？", type: "text", required: false, options: [], category: "开放建议" },
       ],
     },
   });
   expect(created.status()).toBe(201);
   const survey = (await created.json()).survey as { id: number };
+  expect((await page.request.post(`/api/surveys/${survey.id}/report-categories`)).status()).toBe(200);
 
   await page.goto(`/surveys?survey=${survey.id}&step=template`);
   await expect(page.getByTestId("report-template-builder")).toBeVisible();
@@ -84,6 +91,11 @@ test("report template exposes chart image text layout and independent prompts", 
   expect(moduleListBox!.width).toBeLessThanOrEqual(325);
   expect(assistantBox!.width).toBeGreaterThanOrEqual(340);
   expect(assistantBox!.width).toBeLessThanOrEqual(365);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.screenshot({
+    path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-report-template-viewport.png",
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await expect(page.getByTestId("report-layout-canvas")).toBeVisible();
   await expect(page.getByTestId("report-layout-module-chart")).toBeVisible();
   await page.getByTestId("report-layout-select-image").click();

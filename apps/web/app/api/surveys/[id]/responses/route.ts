@@ -31,6 +31,15 @@ function isEmptyAnswer(value: unknown): boolean {
 }
 
 const MAX_TEXT_LENGTH = 5000;
+const AGGREGATE_SAFE_ANSWER_TYPES = new Set(["single", "multiple", "dropdown", "rating", "linear_scale", "nps"]);
+
+function aggregateSafeAnswers(survey: SurveyWithQuestions, answers: AnswerMap): AnswerMap {
+  return Object.fromEntries(survey.questions.map((question) => {
+    const key = String(question.id);
+    const value = answers[key];
+    return [key, AGGREGATE_SAFE_ANSWER_TYPES.has(question.type) ? value : !isEmptyAnswer(value)];
+  }));
+}
 
 // review 加固：single/multiple 此前不校验值是否真的来自该题的 options，text 也没有长度上限——
 // 越权直接打 API 可以往 answers 里塞任意 payload 落库。改为按题目类型分别收敛取值范围。
@@ -115,7 +124,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 }
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
   const surveyId = parseSurveyId(params.id);
@@ -129,9 +138,12 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     listSurveyResponses(surveyId),
     ensureSurveyReportTemplate(surveyId, survey.title),
   ]);
+  const includeIndividualAnswers = new URL(req.url).searchParams.get("view") === "individual";
   return NextResponse.json({
     survey: { id: survey.id, title: survey.title, description: survey.description,
       status: survey.is_active ? "active" : "paused", questions: survey.questions, reportTemplate },
-    responses: responses.map((response) => ({ id: response.id, answers: response.answers, submittedAt: response.submitted_at })),
+    responses: responses.map((response) => includeIndividualAnswers
+      ? { id: response.id, answers: response.answers, submittedAt: response.submitted_at }
+      : { answers: aggregateSafeAnswers(survey, response.answers), submittedAt: response.submitted_at }),
   });
 }

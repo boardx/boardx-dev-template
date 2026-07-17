@@ -36,3 +36,9 @@
 ## 状态边界
 
 本轮只闭合统一创建界面和 AI 确认应用行为。F12 的真实答卷报告、零/低样本限制和失败重试仍未全部验收，因此 F12 保持 `in_progress`。
+
+## 最终补充
+
+- 上述 p25-011 mock 路由断言只证明浏览器中的预览、确认和应用 UI，不代表真实服务端、数据库或千问调用已经执行。
+- 真实失败降级由 `Qwen fallback session remains recoverable and private to its actor` 覆盖，使用确定性模型 `qwen-force-fail` 验证持久化、actor 隔离和可恢复结果。
+- F12 后续已通过完整 Harness 门控并由脚本转为 `passing`；最终状态与命令输出以 `F12.verify.log` 为准。

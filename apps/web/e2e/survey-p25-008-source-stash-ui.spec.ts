@@ -8,8 +8,42 @@ async function register(page: Page) {
   expect(response.status()).toBe(201);
 }
 
+async function seedSurveyList(page: Page) {
+  const surveys: Array<{ id: number; questionId: number }> = [];
+  for (const [index, title] of [
+    "智能制造集团 · AI 转型成熟度诊断",
+    "未来学校 · 学习体验诊断",
+    "组织变革工作坊 · 前期调研",
+  ].entries()) {
+    const response = await page.request.post("/api/surveys", {
+      data: {
+        title,
+        description: index === 0 ? "面向管理者与骨干员工的工作坊前诊断。" : "用于工作坊前收集结构化反馈。",
+        questions: [
+          {
+            title: index === 0 ? "你认为当前最需要改善的环节是什么？" : "你对当前体验的整体评价如何？",
+            type: index === 0 ? "text" : "rating",
+            required: true,
+            options: [],
+            category: index === 0 ? "战略共识" : "体验反馈",
+          },
+        ],
+      },
+    });
+    expect(response.status()).toBe(201);
+    const survey = (await response.json()).survey as { id: number; questions: Array<{ id: number }> };
+    surveys.push({ id: survey.id, questionId: survey.questions[0]!.id });
+    const activated = await page.request.patch(`/api/surveys/${survey.id}`, {
+      data: { isActive: true },
+    });
+    expect(activated.status()).toBe(200);
+  }
+  return surveys;
+}
+
 test("BoardX Survey home matches the diagnostic workspace reference", async ({ page }) => {
   await register(page);
+  const surveys = await seedSurveyList(page);
   await page.goto("/surveys");
 
   await expect(page.getByTestId("survey-diagnostic-home")).toBeVisible();
@@ -19,31 +53,72 @@ test("BoardX Survey home matches the diagnostic workspace reference", async ({ p
   await expect(navigation).toContainText("洞察报告");
   await expect(navigation.locator("button")).toHaveCount(5);
   await expect(navigation.locator("button svg")).toHaveCount(5);
-  await expect(page.getByRole("heading", { name: /下午好|上午好|晚上好/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /下午好|上午好|晚上好/ })).toContainText("Survey");
   await expect(page.getByTestId("survey-home-context")).toBeVisible();
   await expect(page.getByTestId("survey-home-metrics")).toBeVisible();
-  await expect(page.getByTestId("survey-home-organization")).toBeVisible();
-  await expect(page.getByTestId("survey-home-community")).toBeVisible();
+  const reportMetric = page.getByTestId("survey-home-metrics").getByText("生成报告").locator("..");
+  await expect(reportMetric).toContainText("0");
+  await expect(page.getByTestId("survey-home-organization")).toHaveCount(0);
+  await expect(page.getByTestId("survey-home-community")).toHaveCount(0);
+  await expect(page.getByTestId("survey-nav-workspace-count")).toHaveText(String(surveys.length));
   await expect(page.getByTestId("survey-home-method")).toBeVisible();
   await expect(page.getByTestId("survey-home-templates")).toBeVisible();
   await expect(page.getByTestId("survey-home-recent")).toBeVisible();
   await expect(page.getByTestId("ai-survey-command-center")).toHaveCount(0);
-  await page.screenshot({
-    path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-home-desktop.png",
-    fullPage: true,
-  });
   await page.getByTestId("survey-home-method").getByRole("button", { name: "查看问卷" }).click();
   await expect(page).toHaveURL(/\/surveys\?view=my/);
+
+  for (const answer of ["第一份反馈", "第二份反馈"]) {
+    const submitted = await page.request.post(`/api/surveys/${surveys[0]!.id}/responses`, {
+      data: { answers: { [surveys[0]!.questionId]: answer } },
+    });
+    expect(submitted.status()).toBe(201);
+  }
+  for (let index = 0; index < 2; index += 1) {
+    const generated = await page.request.post(`/api/surveys/${surveys[0]!.id}/ai-report`, {
+      data: { model: "mock-survey-quality" },
+    });
+    expect(generated.status()).toBe(200);
+  }
+  const listed = await page.request.get("/api/surveys");
+  expect(listed.status()).toBe(200);
+  const listedPayload = await listed.json() as {
+    surveys: Array<{ id: number; responses: number; generatedReports: number }>;
+  };
+  const firstSurvey = listedPayload.surveys.find((survey) => survey.id === surveys[0]!.id);
+  expect(firstSurvey?.responses).toBe(2);
+  expect(firstSurvey?.generatedReports).toBe(2);
+
+  await page.goto("/surveys");
+  await expect(reportMetric).toContainText("2");
 });
 
 test("my surveys exposes all three reference creation paths", async ({ page }) => {
   await register(page);
+  await seedSurveyList(page);
   await page.goto("/surveys?view=my");
 
   await expect(page.getByTestId("survey-list-screen")).toBeVisible();
   await expect(page.getByTestId("create-path-ai")).toBeVisible();
   await expect(page.getByTestId("create-path-template")).toBeVisible();
   await expect(page.getByTestId("create-path-blank")).toBeVisible();
+  await expect(page.getByLabel("正在加载问卷")).toHaveCount(0);
+  await page.screenshot({
+    path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-my-surveys-desktop.png",
+  });
+});
+
+test("home recommendation starts a survey from the selected template", async ({ page }) => {
+  await register(page);
+  await page.goto("/surveys");
+
+  await page.locator('[data-testid^="survey-home-template-"]').first().click();
+  await expect(page.getByTestId("survey-editor-screen")).toBeVisible();
+  await expect(page.getByTestId("template-editor-shell")).toHaveCount(0);
+  await page.getByTestId("survey-editor-reference-header").scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-unified-editor-viewport.png",
+  });
 });
 
 test("new survey chooser routes each creation path", async ({ page }) => {
@@ -69,7 +144,7 @@ test("new survey chooser routes each creation path", async ({ page }) => {
   await page.getByTestId("new-survey-blank").click();
   await expect(page.getByTestId("survey-editor-screen")).toBeVisible();
   await expect(page.getByTestId("survey-editor-shell")).toBeVisible();
-  await expect(page.getByTestId("ai-assistant-panel")).toHaveCount(0);
+  await expect(page.getByTestId("ai-assistant-panel")).toBeVisible();
 });
 
 test("new survey chooser uses three columns on desktop and one column on mobile", async ({ page }) => {
@@ -79,7 +154,6 @@ test("new survey chooser uses three columns on desktop and one column on mobile"
   await page.getByTestId("create-with-ai").click();
 
   const chooser = page.getByTestId("new-survey-dialog");
-  await expect(chooser.locator(".grid").first()).toHaveClass(/md:grid-cols-3/);
   const desktopChoices = await Promise.all(["ai", "template", "blank"].map(async (kind) => page.getByTestId(`new-survey-${kind}`).boundingBox()));
   expect(desktopChoices.every((box) => box)).toBe(true);
   expect(desktopChoices[0]!.x).toBeLessThan(desktopChoices[1]!.x);
@@ -100,47 +174,47 @@ test("unified survey editor keeps diagnostic structure and a subordinate AI assi
   await page.getByTestId("create-with-ai").click();
   await page.getByTestId("new-survey-blank").click();
 
+  await expect(page.getByTestId("survey-editor-reference-header")).toBeVisible();
+  await expect(page.getByTestId("survey-editor-stepper")).toBeVisible();
   await expect(page.getByTestId("editor-command-bar")).toHaveCount(1);
   await expect(page.locator('[data-testid^="workflow-"]')).toHaveCount(5);
-  await expect(page.getByRole("button", { name: "Responses", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Settings", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "预览", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "报告模版", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "发布问卷", exact: true })).toBeVisible();
 
   const workspace = page.getByTestId("survey-editor-workspace");
   await expect(workspace).toBeVisible();
   await expect(workspace.getByTestId("survey-diagnostic-summary")).toBeVisible();
+  await expect(workspace.getByTestId("survey-diagnostic-dimensions")).toBeVisible();
   await expect(workspace.getByTestId("survey-hypotheses")).toBeVisible();
   await expect(workspace.getByTestId("survey-question-canvas")).toBeVisible();
+  await expect(workspace.getByTestId("survey-ai-assistant")).toBeVisible();
 
   await expect(workspace.getByRole("region", { name: "诊断摘要" })).toBeVisible();
   await expect(workspace.getByRole("region", { name: "诊断假设" })).toBeVisible();
-
-  const summary = workspace.getByTestId("survey-diagnostic-summary");
-  const hypotheses = workspace.getByTestId("survey-hypotheses");
-  await expect(summary).toHaveCSS("box-shadow", "none");
-  await expect(hypotheses).toHaveCSS("border-left-width", "0px");
-  await expect(hypotheses).toHaveCSS("border-right-width", "0px");
 
   await page.getByTestId("add-question").click();
   const questionCanvas = workspace.getByTestId("survey-question-canvas");
   const questionList = questionCanvas.getByTestId("question-list");
   const firstQuestion = questionList.getByTestId("question-0");
   const secondQuestion = questionList.getByTestId("question-1");
-  await expect(questionCanvas).toHaveCSS("box-shadow", "none");
-  await expect(firstQuestion).toHaveCSS("box-shadow", "none");
-  await expect(firstQuestion).toHaveCSS("border-top-width", "0px");
-  await expect(secondQuestion).toHaveCSS("border-top-width", "1px");
   await expect(questionCanvas.getByRole("region", { name: "问题 1" })).toBeVisible();
   await expect(questionCanvas.getByRole("region", { name: "问题 2" })).toBeVisible();
 
-  await page.getByTestId("open-ai-assistant").click();
-  await expect(workspace.getByTestId("survey-ai-assistant")).toBeVisible();
+  const canvasBox = await questionCanvas.boundingBox();
+  const assistantBox = await workspace.getByTestId("survey-ai-assistant").boundingBox();
+  expect(canvasBox).not.toBeNull();
+  expect(assistantBox).not.toBeNull();
+  expect(assistantBox!.x).toBeGreaterThan(canvasBox!.x);
 
+  await page.getByTestId("survey-editor-reference-header").scrollIntoViewIfNeeded();
   await page.screenshot({
     path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-unified-editor-desktop.png",
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(workspace).toBeVisible();
+  await page.getByTestId("survey-editor-reference-header").scrollIntoViewIfNeeded();
   await page.screenshot({
     path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-unified-editor-mobile.png",
     fullPage: true,
@@ -167,9 +241,11 @@ test("diagnostic template center keeps template and report actions available", a
   await expect(page.getByTestId("template-tag-filter")).toBeVisible();
 
   const templateGrid = page.getByTestId("diagnostic-template-grid");
-  await expect(templateGrid).toHaveClass(/md:grid-cols-2/);
   const templateCards = templateGrid.locator("[data-testid^=template-card-]");
   await expect(templateCards).not.toHaveCount(0);
+  const firstTwoCards = await Promise.all([templateCards.nth(0).boundingBox(), templateCards.nth(1).boundingBox()]);
+  expect(firstTwoCards.every((box) => box)).toBe(true);
+  expect(firstTwoCards[0]!.x).toBeLessThan(firstTwoCards[1]!.x);
   await expect(templateCards.first()).toContainText("系统");
   const initialTemplateCount = await templateCards.count();
 

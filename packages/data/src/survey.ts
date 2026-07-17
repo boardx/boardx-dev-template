@@ -80,6 +80,7 @@ export interface SurveyTemplate {
 
 export interface SurveyListItem extends Survey {
   response_count: string;
+  generated_report_count: string;
   room_name?: string | null;
 }
 
@@ -434,10 +435,12 @@ export async function listVisibleSurveys(userId: number, currentTeamId: number |
             s.response_mode, s.publish_start_at, s.publish_end_at, s.response_limit,
             s.one_response_per_user, s.confirmation_message,
             s.owner_user_id, s.created_at, s.updated_at,
-            count(sr.id)::text AS response_count,
+            (SELECT count(*)::text FROM survey_responses sr WHERE sr.survey_id = s.id) AS response_count,
+            (SELECT count(*)::text
+             FROM survey_ai_report_artifacts sar
+             WHERE sar.survey_id = s.id AND sar.status = 'ready') AS generated_report_count,
             r.name AS room_name
      FROM surveys s
-     LEFT JOIN survey_responses sr ON sr.survey_id = s.id
      LEFT JOIN team_members tm ON tm.team_id = s.team_id AND tm.user_id = $1
      LEFT JOIN room_members rm ON rm.room_id = s.room_id AND rm.user_id = $1
      LEFT JOIN rooms r ON r.id = s.room_id
@@ -451,10 +454,6 @@ export async function listVisibleSurveys(userId: number, currentTeamId: number |
           s.scope = 'room'
           AND rm.user_id IS NOT NULL
         )
-     GROUP BY s.id, s.team_id, s.room_id, s.scope, s.title, s.description, s.is_active,
-              s.response_mode, s.publish_start_at, s.publish_end_at, s.response_limit,
-              s.one_response_per_user, s.confirmation_message,
-              s.owner_user_id, s.created_at, s.updated_at, r.name
      ORDER BY s.updated_at DESC`,
     [userId, currentTeamId]
   );
@@ -467,14 +466,12 @@ export async function listRoomSurveys(roomId: number): Promise<SurveyListItem[]>
             s.response_mode, s.publish_start_at, s.publish_end_at, s.response_limit,
             s.one_response_per_user, s.confirmation_message,
             s.owner_user_id, s.created_at, s.updated_at,
-            count(sr.id)::text AS response_count
+            (SELECT count(*)::text FROM survey_responses sr WHERE sr.survey_id = s.id) AS response_count,
+            (SELECT count(*)::text
+             FROM survey_ai_report_artifacts sar
+             WHERE sar.survey_id = s.id AND sar.status = 'ready') AS generated_report_count
      FROM surveys s
-     LEFT JOIN survey_responses sr ON sr.survey_id = s.id
      WHERE s.scope = 'room' AND s.room_id = $1
-     GROUP BY s.id, s.team_id, s.room_id, s.scope, s.title, s.description, s.is_active,
-              s.response_mode, s.publish_start_at, s.publish_end_at, s.response_limit,
-              s.one_response_per_user, s.confirmation_message,
-              s.owner_user_id, s.created_at, s.updated_at
      ORDER BY s.updated_at DESC`,
     [roomId]
   );

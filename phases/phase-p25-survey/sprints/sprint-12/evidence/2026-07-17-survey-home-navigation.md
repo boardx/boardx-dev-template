@@ -23,3 +23,7 @@ git diff --check
 ## 证据文件
 - `survey-home-desktop-legacy.png`（该轮实现截图，不是参考源截图）
 - `apps/web/e2e/survey-p25-008-source-stash-ui.spec.ts`
+
+## 最终补充
+- 本文件保留该轮导航精简的历史证据；最终首页已按指定 HTML 再次重构。
+- 当前截图、参考/实现并排对比和差异分级以 `2026-07-17-survey-html-fidelity.md` 与 `comparison-home.webp` 为准。

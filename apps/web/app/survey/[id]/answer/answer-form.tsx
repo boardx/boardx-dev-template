@@ -113,9 +113,10 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
 
   return (
     <main data-testid="answer-page" className="min-h-screen bg-secondary/30 px-4 py-8 sm:py-10">
+      {error ? <p role="alert" className="sr-only">{error}</p> : null}
       <section data-testid="answer-professional-shell" className="mx-auto max-w-6xl overflow-hidden rounded-lg border-0 bg-background shadow-sm">
         <div data-testid="answer-brand-banner" className="relative h-24 overflow-hidden">
-          <Image src="/survey/fluent-research-header.png" alt="" fill priority sizes="(max-width: 1024px) 100vw, 1024px" className="object-cover" />
+          <Image src="/survey/fluent-research-header.webp" alt="" fill sizes="(max-width: 1024px) 100vw, 1024px" className="object-cover" />
           <div className="relative flex h-full items-center justify-between px-6 text-white sm:px-8">
             <div className="flex items-center gap-3">
               <ClipboardList className="h-6 w-6" strokeWidth={1.8} />
@@ -352,12 +353,12 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
 
           <div className="hidden flex-col items-start gap-3 pb-2 pt-4 sm:flex">
             {error && (
-              <p role="alert" data-testid="err-answer" className="text-13 text-destructive">
+              <p data-testid="err-answer" className="text-13 text-destructive">
                 {error}
               </p>
             )}
 
-            <Button data-testid="submit-answer" type="button" disabled={submitting} onClick={() => void submit()} className="gap-1.5 bg-survey text-white hover:bg-survey/90">
+            <Button data-testid="submit-answer" type="button" disabled={submitting} onClick={() => void submit()} className="gap-1.5 bg-survey text-survey-foreground hover:bg-survey/90">
               <Send className="h-4 w-4" strokeWidth={1.5} />
               {submitting ? "提交中..." : "提交"}
             </Button>
@@ -367,7 +368,7 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
 
       <div data-testid="mobile-submit-answer-bar" className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 py-3 shadow-lg backdrop-blur sm:hidden">
         {error && (
-          <p role="alert" data-testid="err-answer-mobile" className="mb-2 text-13 text-destructive">
+          <p data-testid="err-answer-mobile" className="mb-2 text-13 text-destructive">
             {error}
           </p>
         )}
@@ -376,7 +377,7 @@ export default function AnswerForm({ survey }: { survey: SurveyAnswerView }) {
           type="button"
           disabled={submitting}
           onClick={() => void submit()}
-          className="w-full gap-1.5 bg-survey text-white hover:bg-survey/90"
+          className="w-full gap-1.5 bg-survey text-survey-foreground hover:bg-survey/90"
         >
           <Send className="h-4 w-4" strokeWidth={1.5} />
           {submitting ? "提交中..." : "提交"}
