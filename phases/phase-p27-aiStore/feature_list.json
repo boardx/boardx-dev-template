@@ -109,9 +109,9 @@
       "area": "ai-store-boardx-review",
       "title": "BoardX review, featured, and live approved updates",
       "user_visible_behavior": "所有者或来源 Team owner/admin 可提交 BoardX 审核，BoardX Admin 可批准、拒绝、撤回和设置 BoardX Featured；批准后所有认证用户可见，非管理员操作返回 403，approved 内容编辑不重新审核并立刻同步到之前所有 USER/TEAM 订阅，撤回后其他 Team 不能新订阅或新执行。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "03",
-      "owner": null,
+      "owner": "codex-p27-ai-store-control-plane",
       "capability": "CAP-WEB",
       "depends_on": [
         "F04",
@@ -121,7 +121,7 @@
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/admin-003-ai-store-approval.spec.ts e2e/admin-004-featured-ai-store.spec.ts e2e/ai-store-009-live-approved-updates.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F06.verify.log @ 2026-07-17T01:33:57.845Z",
       "notes": "boardxStatus=not_submitted|pending|approved|rejected；首次发布必须审核，内容版本更新不改变 approved。"
     },
     {

@@ -112,5 +112,5 @@ export function canSubscribeAiStoreItem(item: {
   status: string;
   scope: AiStoreItemScope;
 }): boolean {
-  return item.status === "published";
+  return item.status === "published" || (item.scope === "platform" && item.status === "approved");
 }

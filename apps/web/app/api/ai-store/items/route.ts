@@ -51,7 +51,14 @@ export async function GET(req: Request) {
     });
     const items = (await Promise.all(ids.map((id) => getAiStoreItemForSubscription(id)))).filter(
       (it): it is NonNullable<typeof it> => Boolean(it)
-    ).map((it) => ({ ...it, unavailable: it.archived_at != null }));
+    ).map((it) => ({
+      ...it,
+      unavailable:
+        it.archived_at != null ||
+        (it.scope === "platform"
+          ? it.status !== "approved" && it.status !== "published"
+          : it.status !== "published"),
+    }));
     return NextResponse.json({ items });
   }
 

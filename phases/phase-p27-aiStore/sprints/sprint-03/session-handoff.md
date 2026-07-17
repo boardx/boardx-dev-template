@@ -19,3 +19,10 @@
 - Team/BoardX Featured 是独立状态。
 - 首次 BoardX 发布必须审核；approved 后内容编辑免复审并立即同步。
 - BoardX 撤回后保留订阅关系，但禁止新订阅和新执行。
+
+## 完成状态
+
+- F05、F06 均已由 Harness 验证为 `passing`。
+- F06 evidence: `evidence/F06.verify.log`。
+- F06 verification: 19 个 Playwright 用例通过，随后 `pnpm -w run verify:base` 通过。
+- 本 sprint 无剩余未完成 Feature；后续从 p27/04 的 F07 开始。

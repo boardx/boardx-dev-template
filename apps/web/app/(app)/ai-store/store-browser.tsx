@@ -149,6 +149,10 @@ function statusLabel(status: StoreStatus) {
   return status.toUpperCase();
 }
 
+function isSubscribable(item: Pick<StoreItem, "scope" | "status">) {
+  return item.status === "published" || (item.scope === "platform" && item.status === "approved");
+}
+
 function configText(item: StoreItem) {
   const instructions = item.config?.instructions;
   if (typeof instructions === "string") return instructions;
@@ -620,7 +624,7 @@ export function StoreBrowser() {
 
   // uc-ai-store-003：订阅/取消订阅（个人订阅）。乐观更新按钮态，失败回滚。
   async function subscribeItem(item: StoreItem) {
-    if (item.status !== "published" || subscribing != null) return;
+    if (!isSubscribable(item) || subscribing != null) return;
     setSubscribing(item.id);
     setSubscribeError("");
     const wasSubscribed = subscribedIds.has(item.id);
@@ -1710,12 +1714,14 @@ export function StoreBrowser() {
                 <div className="mt-4.5 flex gap-2">
                   <Button
                     size="sm"
-                    disabled={detailItem.status !== "published" || subscribing === detailItem.id}
+                    disabled={!isSubscribable(detailItem) || subscribing === detailItem.id}
                     variant={subscribedIds.has(detailItem.id) ? "outline" : "default"}
                     data-testid="detail-subscribe"
                     onClick={() => subscribeItem(detailItem)}
                     className="flex-1"
-                    title={detailItem.status !== "published" ? "Unpublished items cannot be subscribed to" : undefined}
+                    title={
+                      !isSubscribable(detailItem) ? "Unpublished items cannot be subscribed to" : undefined
+                    }
                   >
                     {subscribedIds.has(detailItem.id) ? "Unsubscribe" : "Subscribe"}
                   </Button>

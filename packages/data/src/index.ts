@@ -127,13 +127,14 @@ export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
   sql: string,
   params: unknown[] = []
 ): Promise<T[]> {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  const maxAttempts = 10;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     try {
       const res = await getPool().query<T>(sql, params as never[]);
       return res.rows;
     } catch (err) {
-      if (attempt === 2 || !isTransientDbError(err)) throw err;
-      await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+      if (attempt === maxAttempts - 1 || !isTransientDbError(err)) throw err;
+      await new Promise((resolve) => setTimeout(resolve, Math.min(1000, 150 * (attempt + 1))));
     }
   }
   return [];
