@@ -53,7 +53,7 @@ test("selected survey opens the simplified AI-first design workbench", async ({ 
   await expect(page.getByTestId("survey-ai-apply")).toBeVisible();
 });
 
-test("AI additions remain visible and append to the editable question list after apply", async ({ page }) => {
+test("applies AI additions only after the preview is confirmed", async ({ page }) => {
   await register(page);
   await page.route("**/api/surveys/ai", async (route) => {
     await route.fulfill({
@@ -88,9 +88,13 @@ test("AI additions remain visible and append to the editable question list after
   await page.getByTestId("ai-input").fill("添加 2 个商品安全问题");
   await page.getByTestId("ai-send").click();
 
-  await expect(page.getByTestId("ai-draft-question-list")).toContainText("你通常在哪些场景使用该商品？");
-  await expect(page.getByTestId("ai-draft-question-list")).toContainText("你遇到过哪些安全问题？");
-  await page.getByTestId("apply-ai-draft").click();
+  const assistant = page.getByTestId("survey-ai-assistant");
+  await expect(assistant.getByTestId("survey-ai-preview")).toBeVisible();
+  await expect(assistant.getByTestId("ai-draft-preview")).toBeVisible();
+  await expect(assistant.getByTestId("ai-draft-question-list")).toContainText("你通常在哪些场景使用该商品？");
+  await expect(assistant.getByTestId("ai-draft-question-list")).toContainText("你遇到过哪些安全问题？");
+  await expect(page.getByTestId("question-title-1")).toHaveCount(0);
+  await assistant.getByTestId("apply-ai-draft").click();
 
   await expect(page.getByTestId("question-title-0")).toHaveValue("你使用过该商品吗？");
   await expect(page.getByTestId("question-title-1")).toHaveValue("你通常在哪些场景使用该商品？");

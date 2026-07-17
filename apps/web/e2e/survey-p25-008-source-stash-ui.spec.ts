@@ -73,6 +73,26 @@ test("new survey chooser routes each creation path", async ({ page }) => {
   await expect(page.getByTestId("ai-assistant-panel")).toHaveCount(0);
 });
 
+test("unified survey editor keeps diagnostic structure and a subordinate AI assistant", async ({ page }) => {
+  await register(page);
+  await page.goto("/surveys");
+  await page.getByTestId("header-create-blank").click();
+
+  await expect(page.getByTestId("editor-command-bar")).toHaveCount(1);
+  await expect(page.locator('[data-testid^="workflow-"]')).toHaveCount(5);
+  await expect(page.getByRole("button", { name: "Responses", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Settings", exact: true })).toHaveCount(0);
+
+  const workspace = page.getByTestId("survey-editor-workspace");
+  await expect(workspace).toBeVisible();
+  await expect(workspace.getByTestId("survey-diagnostic-summary")).toBeVisible();
+  await expect(workspace.getByTestId("survey-hypotheses")).toBeVisible();
+  await expect(workspace.getByTestId("survey-question-canvas")).toBeVisible();
+
+  await page.getByTestId("open-ai-assistant").click();
+  await expect(workspace.getByTestId("survey-ai-assistant")).toBeVisible();
+});
+
 test("diagnostic template center keeps template and report actions available", async ({ page }) => {
   await register(page);
   await page.route("**/api/survey-templates", async (route) => {

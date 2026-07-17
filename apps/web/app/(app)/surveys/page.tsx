@@ -6791,7 +6791,7 @@ export default function SurveysPage() {
 
         {!created && (view === "edit" || isTemplateEditor) && (
           <div
-            data-testid={isTemplateEditor ? "template-editor-workspace" : undefined}
+            data-testid={isTemplateEditor ? "template-editor-workspace" : "survey-editor-workspace"}
             className={isTemplateEditor
               ? "mx-auto grid items-start gap-4 py-0 xl:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)]"
               : `mx-auto grid gap-4 py-4 ${
@@ -7183,9 +7183,10 @@ export default function SurveysPage() {
                 </div>
               )}
 
-              {view === "edit" && editorTab === "questions" && <section className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+              {view === "edit" && editorTab === "questions" && <section data-testid={isTemplateEditor ? undefined : "survey-diagnostic-summary"} className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
                 {!isTemplateEditor && <div className="h-2 bg-primary" />}
                 <div className={isTemplateEditor ? "p-4" : "p-6"}>
+                  {!isTemplateEditor && <p className="mb-3 text-12 font-semibold text-muted-foreground">诊断摘要</p>}
                   <Input
                     id="survey-title"
                     data-testid="survey-title"
@@ -7204,10 +7205,11 @@ export default function SurveysPage() {
                     onChange={(e) => setDescription(e.target.value)}
                     className="mt-3 min-h-12 w-full resize-none rounded-none border-0 border-b border-border bg-transparent px-0 py-2 text-14 text-foreground transition-colors placeholder:text-placeholder focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
                   />
+                  <div data-testid={isTemplateEditor ? undefined : "survey-hypotheses"}>
                   <div data-testid="category-manager" className={`rounded-lg border border-border bg-secondary/30 ${isTemplateEditor ? "mt-4 p-3" : "mt-5 p-4"}`}>
                     <div className="flex flex-wrap items-end gap-3">
                       <div className="min-w-64 flex-1">
-                        <Label htmlFor="category-input">问卷分类</Label>
+                        <Label htmlFor="category-input">诊断假设</Label>
                         <Input
                           id="category-input"
                           data-testid="category-input"
@@ -7219,7 +7221,7 @@ export default function SurveysPage() {
                               addCategory();
                             }
                           }}
-                          placeholder="例如：基本信息、学习情况、心理健康"
+                          placeholder="例如：使用场景、学习情况、心理健康"
                           className="mt-1.5"
                         />
                       </div>
@@ -7236,11 +7238,12 @@ export default function SurveysPage() {
                           </Badge>
                         ))
                       ) : (
-                        <p className="text-12 text-muted-foreground">添加分类后，可在每道题中选择归类。</p>
+                        <p className="text-12 text-muted-foreground">添加假设后，可在每道题中选择归类。</p>
                       )}
                     </div>
                   </div>
-                  <div className="mt-5 flex flex-wrap items-end gap-3">
+                  </div>
+                  <div data-testid={isTemplateEditor ? undefined : "survey-diagnostic-dimensions"} className="mt-5 flex flex-wrap items-end gap-3">
                     {!isTemplateEditor && (
                       <>
                         <div className="flex flex-col gap-1.5">
@@ -7286,7 +7289,8 @@ export default function SurveysPage() {
                 </div>
               </section>}
 
-              {view === "edit" && editorTab === "questions" && <div data-testid="question-list" className="mt-3 flex flex-col gap-3">
+              {view === "edit" && editorTab === "questions" && <section data-testid={isTemplateEditor ? undefined : "survey-question-canvas"} className="mt-3">
+                <div data-testid="question-list" className="flex flex-col gap-3">
                 {questions.map((q, idx) => (
                   <section
                     key={q.id}
@@ -7419,7 +7423,8 @@ export default function SurveysPage() {
                     </div>
                   </section>
                 ))}
-              </div>}
+                </div>
+              </section>}
 
               {view === "edit" && editorTab === "questions" && (
                 <Button
@@ -7445,6 +7450,7 @@ export default function SurveysPage() {
                 data-testid={isTemplateEditor ? "template-ai-assistant" : "ai-assistant-panel"}
                 className={`sticky top-20 flex max-h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm ${isTemplateEditor ? "min-h-[38.75rem]" : ""}`}
               >
+                <div data-testid={isTemplateEditor ? undefined : "survey-ai-assistant"} className="flex min-h-0 flex-1 flex-col">
                 <div className="border-b border-border p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -7470,7 +7476,7 @@ export default function SurveysPage() {
                   <div className="mt-3 rounded-lg border border-border bg-background px-3 py-2 text-12 leading-5 text-muted-foreground">
                     {isTemplateEditor
                       ? `当前模板：${title.trim() || "未命名模板"} · ${questions.length} 题。AI 建议不会直接覆盖内容。`
-                      : "左侧始终是可编辑预览；右侧只负责生成建议和结构化变更，不直接覆盖你的问卷。"}
+                      : "AI 先生成可确认的建议，不会直接覆盖左侧问卷。"}
                   </div>
                   {editingSurvey?.status === "active" && (
                     <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-12 text-amber-900">
@@ -7491,7 +7497,8 @@ export default function SurveysPage() {
                 </div>
                 <div className="border-t border-border p-4">
                   {pendingAiDraft && (
-                    <div data-testid="ai-draft-preview" className="mb-4 rounded-lg border border-border bg-background p-3">
+                    <div data-testid="survey-ai-preview" className="mb-4">
+                    <div data-testid="ai-draft-preview" className="rounded-lg border border-border bg-background p-3">
                       <p data-testid="ai-summary" className="text-13 font-semibold text-foreground">
                         {pendingAiDraft.summary ?? pendingAiDraft.reply}
                       </p>
@@ -7562,6 +7569,7 @@ export default function SurveysPage() {
                         {aiDraftApplied ? "已应用到左侧" : isTemplateEditor ? "应用到左侧模板" : "应用到左侧问卷"}
                       </Button>
                     </div>
+                    </div>
                   )}
                   {pendingAiChangeSet && (
                     <div data-testid="ai-change-set" className="mb-4 rounded-lg border border-border bg-background p-3">
@@ -7630,6 +7638,7 @@ export default function SurveysPage() {
                     <Send className="h-4 w-4" strokeWidth={1.5} />
                     {aiBusy ? "AI 正在生成…" : isTemplateEditor ? "生成模板建议" : editingSurveyId == null ? "生成/优化问卷" : "生成待应用变更"}
                   </Button>
+                </div>
                 </div>
                 </div>
               </aside>
