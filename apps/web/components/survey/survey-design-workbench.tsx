@@ -109,7 +109,7 @@ export function SurveyDesignWorkbench({
                   size="sm"
                   variant="outline"
                   onClick={onOpenTemplate}
-                  className="gap-1.5 border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background focus-visible:ring-foreground/30"
+                  className="gap-1.5 border-foreground bg-foreground text-background transition-colors duration-200 hover:bg-foreground/90 hover:text-background focus-visible:ring-foreground/30"
                 >
                   下一步
                   <Send className="h-4 w-4" strokeWidth={1.6} />
@@ -150,7 +150,7 @@ export function SurveyDesignWorkbench({
                     <Button type="button" size="sm" variant="outline" onClick={() => moveQuestion(question.id, 1)}>
                       下移
                     </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={() => removeQuestion(question.id)} className="text-destructive hover:text-destructive">
+                    <Button type="button" size="sm" variant="outline" onClick={() => removeQuestion(question.id)} className="text-destructive transition-colors duration-200 hover:text-destructive">
                       删除
                     </Button>
                   </div>
@@ -268,4 +268,3 @@ export function SurveyDesignWorkbench({
     </div>
   );
 }
-

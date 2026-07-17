@@ -1417,6 +1417,14 @@ function WorkspaceReportComposer({
   const [chartPickerOpen, setChartPickerOpen] = useState(false);
   const [previewSyncToken, setPreviewSyncToken] = useState(0);
   const [outlineCollapsed, setOutlineCollapsed] = useState(false);
+  const [reportWorkbenchTab, setReportWorkbenchTab] = useState<"style" | "data" | "mapping">("style");
+  const [reportAssistantInput, setReportAssistantInput] = useState("");
+  const [reportAssistantMessages, setReportAssistantMessages] = useState<Array<{ role: "assistant" | "user"; text: string }>>([
+    {
+      role: "assistant",
+      text: "我会基于问卷结构推演报告模块。你也可以描述读者、用途和表达要求，我会把它写入当前章节的生成提示。",
+    },
+  ]);
   const previewSectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const composerQuestions = workspaceQuestionsForComposer(questions);
   useEffect(() => {
@@ -1552,6 +1560,26 @@ function WorkspaceReportComposer({
     });
   }
 
+  function applyReportAssistantInstruction(instruction: string) {
+    const nextInstruction = instruction.trim();
+    if (!nextInstruction || !selectedCategory) return;
+    const currentPrompt = selectedCategory.prompt.trim();
+    patchSelected({
+      prompt: currentPrompt.includes(nextInstruction)
+        ? currentPrompt
+        : [currentPrompt, nextInstruction].filter(Boolean).join("\n"),
+    });
+    setReportAssistantMessages((messages) => [
+      ...messages,
+      { role: "user", text: nextInstruction },
+      {
+        role: "assistant",
+        text: `已写入「${selectedCategory.name}」的分析提示。保存模版后，报告生成会使用这条要求。`,
+      },
+    ]);
+    setReportAssistantInput("");
+  }
+
   const modeLabels: Record<ReportInputMode, string> = {
     text: "文本",
     chat: "QA",
@@ -1607,6 +1635,27 @@ function WorkspaceReportComposer({
     { mode: "chart", label: "报表", desc: "把选择题和评分题转成可比较的数据视图。", icon: BarChart3 },
     { mode: "text", label: "文本", desc: "输出结论、证据和执行建议。", icon: FileText },
   ];
+  const mappingRows = visibleInputModes(selectedCategory?.inputModes ?? []).flatMap((mode) => {
+    if (mode === "chart") {
+      return [
+        { property: "series[].name", source: "questions[].options", description: "维度或选项名称" },
+        { property: "series[].value", source: "responses[].answers", description: "按数据约束聚合后的值" },
+        { property: "sampleSize", source: "responses.validCount", description: "有效样本量" },
+      ];
+    }
+    if (mode === "image") {
+      return [
+        { property: "image.prompt", source: "modulePrompts.image", description: "章节配图生成要求" },
+      ];
+    }
+    if (mode === "text") {
+      return [
+        { property: "text.headline", source: "category.prompt", description: "章节核心结论" },
+        { property: "text.bullets[]", source: "responses.evidence", description: "证据、限制和行动建议" },
+      ];
+    }
+    return [];
+  });
 
   function renderCategorySection(section: ReportComposerPreview["sections"][number]) {
     const hasText = section.inputModes.includes("text");
@@ -1699,39 +1748,48 @@ function WorkspaceReportComposer({
   }
 
   return (
-    <div data-testid="workspace-report-composer" className="grid gap-4">
-      <section className="rounded-lg border border-border bg-background p-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-18 font-bold leading-tight text-foreground">报告模板</h2>
-              <span className="text-12 text-muted-foreground">{completedCategoryCount}/{categories.length} 个章节已配置</span>
-            </div>
-          </div>
-          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end">
-            <Button type="button" size="sm" variant="ghost" onClick={onBackToDesign}>
-              返回问卷
-            </Button>
-            <Button type="button" size="sm" variant="outline" disabled={classifying} onClick={onClassify}>
-              <Sparkles className="h-4 w-4" strokeWidth={1.6} />
-              {classifying ? "分类中…" : "AI 重新分类"}
-            </Button>
-            <Button data-testid="save-report-plan" type="button" size="sm" disabled={saving} onClick={() => onSavePlan(draft)} className="bg-foreground text-background hover:bg-foreground/90">
-              {saving ? "保存中…" : "保存规划"}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={onOpenCollect}
-              className="gap-1.5 border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background"
-            >
-              下一步
-              <Send className="h-4 w-4" strokeWidth={1.6} />
-            </Button>
-          </div>
+    <div data-testid="workspace-report-composer" className="mx-auto grid w-full max-w-7xl gap-4 py-2">
+      <header className="flex flex-wrap items-center gap-3">
+        <Button type="button" size="sm" variant="outline" onClick={onBackToDesign}>
+          <ChevronLeft className="h-4 w-4" strokeWidth={1.7} />
+          返回模版
+        </Button>
+        <div className="min-w-0">
+          <h2 className="truncate text-18 font-bold text-foreground">报告模版 · {survey.title}</h2>
+          <p className="mt-1 text-12 text-muted-foreground">
+            每个模块包含效果预览、数据生成提示词和可视化映射，AI 可帮助推演整体结构。
+          </p>
         </div>
-      </section>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Button type="button" size="sm" variant="outline" onClick={onGenerateReport}>
+            <Eye className="h-4 w-4" strokeWidth={1.7} />
+            预览示例报告
+          </Button>
+          <Button
+            data-testid="save-report-plan"
+            type="button"
+            size="sm"
+            disabled={saving}
+            onClick={() => onSavePlan(draft)}
+          >
+            {saving ? "保存中…" : "保存模版"}
+          </Button>
+        </div>
+      </header>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 text-12 text-muted-foreground">
+        <span>{completedCategoryCount}/{categories.length} 个模块已配置</span>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" variant="outline" disabled={classifying} onClick={onClassify}>
+            <Sparkles className="h-4 w-4" strokeWidth={1.6} />
+            {classifying ? "推演中…" : "AI 重新推演"}
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={onOpenCollect}>
+            继续发布
+            <Send className="h-4 w-4" strokeWidth={1.6} />
+          </Button>
+        </div>
+      </div>
 
       {(status || error) && (
         <div
@@ -1748,7 +1806,7 @@ function WorkspaceReportComposer({
 
       <section
         data-testid="report-template-builder"
-        className={outlineCollapsed ? "grid min-w-0 gap-4 xl:grid-cols-[56px_minmax(0,1fr)_430px]" : "grid min-w-0 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_430px]"}
+        className={outlineCollapsed ? "grid min-w-0 gap-4 xl:grid-cols-[56px_minmax(0,1fr)_360px]" : "grid min-w-0 gap-4 xl:grid-cols-[320px_minmax(0,1fr)_360px]"}
       >
         {outlineCollapsed ? (
           <aside data-testid="report-module-list" className="order-2 flex min-h-96 flex-col items-center gap-3 border border-border bg-background py-3 xl:order-1">
@@ -1761,7 +1819,10 @@ function WorkspaceReportComposer({
         <aside data-testid="report-module-list" className="order-2 min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:order-1 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
           <div className="border-b border-border px-4 py-3">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-14 font-bold text-foreground">章节</h3>
+              <div>
+                <h3 className="text-14 font-bold text-foreground">报告结构模块</h3>
+                <p className="mt-1 text-11 leading-5 text-muted-foreground">点击模块查看与定制；排序决定报告章节顺序。</p>
+              </div>
               <div className="flex items-center gap-1">
                 <Badge variant="outline">{categories.length}</Badge>
                 <Button data-testid="report-outline-toggle" type="button" size="icon" variant="ghost" aria-label="收起报告章节" title="收起报告章节" onClick={() => setOutlineCollapsed(true)}>
@@ -1829,90 +1890,165 @@ function WorkspaceReportComposer({
         )}
 
         <main data-testid="report-module-preview" className="order-1 min-w-0 overflow-hidden rounded-lg border border-border bg-background xl:order-2">
-          {!canExport ? (
-            <div className="m-5 rounded-lg border border-dashed border-border bg-card p-10 text-center text-13 text-muted-foreground">
-              请先完成报告分类和输入方式设置，再预览或导出报告。
-            </div>
-          ) : (
-            <article data-testid="selected-report-section" className="grid gap-3 bg-card p-3">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
-                <div>
-                  <p className="text-12 text-muted-foreground">当前章节</p>
-                  <h3 className="mt-1 text-18 font-bold text-foreground">{selectedCategory?.name}</h3>
-                </div>
-                <Badge variant="outline">{selectedQuestions.length} 个问题 · {visibleInputModes(selectedCategory?.inputModes ?? []).length} 个模块</Badge>
-              </div>
-              <ReportLayoutCanvas
-                chartPreview={selectedPreviewChart ? <EChartsReportPreview chart={selectedPreviewChart} /> : undefined}
-                prompts={{
-                  chart: selectedCategory?.modulePrompts?.chart,
-                  image: selectedCategory?.modulePrompts?.image,
-                  text: selectedCategory?.modulePrompts?.text,
-                }}
-                onPromptChange={(type, value) => patchModulePrompt(type, value)}
-              />
-            </article>
-          )}
-        </main>
-
-        <aside data-testid="report-module-inspector" className="order-3 min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
-          <div data-testid="report-ai-assistant">
-          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-            <h3 className="text-14 font-bold text-foreground">设置</h3>
-            <span className="text-12 text-muted-foreground">
-              {categories.length ? `章节 ${selectedCategoryIndex + 1}/${categories.length}` : "暂无章节"}
-            </span>
-          </div>
           {selectedCategory ? (
-            <div className="grid gap-4 p-4">
-              <section className="grid gap-3 rounded-lg border border-border bg-background p-3">
-                <p className="text-13 font-bold text-foreground">章节信息</p>
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="report-category-name">分类标题</Label>
-                    <span className="text-11 text-muted-foreground">{selectedCategory.name.length}/50</span>
-                  </div>
-                  <Input id="report-category-name" value={selectedCategory.name} onChange={(event) => patchSelected({ name: event.target.value })} />
+            <article data-testid="selected-report-section">
+              <header className="px-5 pt-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-15 font-bold text-foreground">{selectedCategory.name}</h3>
+                  <Badge variant="muted">{chartTypeLabel}</Badge>
                 </div>
+                <p className="mt-1 text-12 leading-5 text-muted-foreground">
+                  {selectedCategory.description || "为当前模块配置展示效果、数据口径和字段映射。"}
+                </p>
+                <div role="tablist" aria-label="报告模版模块设置" className="mt-4 flex border-b border-border">
+                  {([
+                    ["style", "效果与样式"],
+                    ["data", "数据与提示词"],
+                    ["mapping", "可视化映射"],
+                  ] as const).map(([id, label]) => (
+                    <Button
+                      key={id}
+                      data-testid={`report-tab-${id}`}
+                      type="button"
+                      role="tab"
+                      aria-selected={reportWorkbenchTab === id}
+                      variant="ghost"
+                      onClick={() => setReportWorkbenchTab(id)}
+                      className={[
+                        "h-10 rounded-none border-b-2 px-4 text-12",
+                        reportWorkbenchTab === id
+                          ? "border-survey text-survey hover:bg-transparent hover:text-survey"
+                          : "border-transparent text-muted-foreground hover:bg-transparent hover:text-foreground",
+                      ].join(" ")}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+              </header>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="report-category-desc">分类说明</Label>
-                  <Textarea id="report-category-desc" value={selectedCategory.description} onChange={(event) => patchSelected({ description: event.target.value })} className="min-h-20" />
-                </div>
-              </section>
-
-              <section className="rounded-lg border border-border bg-background p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-13 font-bold text-foreground">问题来源</p>
-                  </div>
-                  <Badge variant="outline">{selectedQuestions.length}/{composerQuestions.length}</Badge>
-                </div>
-                <div className="mt-3 grid max-h-64 gap-2 overflow-auto pr-1">
-                  {selectedQuestions.length ? selectedQuestions.map((question) => {
-                    const questionIndex = composerQuestions.findIndex((item) => Number(item.id) === Number(question.id));
-                    return (
-                      <Button
-                        key={question.id}
-                        type="button"
-                        variant="outline"
-                        onClick={() => toggleQuestion(Number(question.id))}
-                        className="h-auto justify-start whitespace-normal rounded-lg border-foreground bg-card px-3 py-2 text-left"
-                      >
-                        <span className="mr-2 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-foreground text-11 font-bold text-background">✓</span>
-                        <span className="mr-2 text-11 font-bold text-muted-foreground">Q{String(questionIndex + 1).padStart(2, "0")}</span>
-                        <span className="min-w-0 flex-1 truncate text-12 text-foreground">{question.title}</span>
-                      </Button>
-                    );
-                  }) : (
-                    <div className="rounded-lg border border-dashed border-border bg-background px-3 py-3 text-12 text-muted-foreground">
-                      当前分类还没有绑定问题。
+              {reportWorkbenchTab === "style" ? (
+                <div className="grid gap-5 p-5">
+                  {!canExport ? (
+                    <div className="rounded-lg border border-dashed border-border p-8 text-center text-13 text-muted-foreground">
+                      请先完成报告分类和输入方式设置，再预览或导出报告。
                     </div>
+                  ) : (
+                    <ReportLayoutCanvas
+                      compact
+                      chartPreview={selectedPreviewChart ? <EChartsReportPreview chart={selectedPreviewChart} /> : undefined}
+                      prompts={{
+                        chart: selectedCategory.modulePrompts?.chart,
+                        image: selectedCategory.modulePrompts?.image,
+                        text: selectedCategory.modulePrompts?.text,
+                      }}
+                      onPromptChange={(type, value) => patchModulePrompt(type, value)}
+                    />
                   )}
-                  {unselectedQuestions.length ? (
-                    <>
-                      <p className="pt-2 text-12 font-semibold text-muted-foreground">可添加问题</p>
-                      {unselectedQuestions.slice(0, 8).map((question) => {
+
+                  {selectedCategory.inputModes.includes("chart") ? (
+                    <section data-testid="report-chart-design-controls" className="grid gap-4 border-t border-border pt-5">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-13 font-bold text-foreground">图表设计</p>
+                        <Button type="button" size="sm" variant="outline" onClick={() => setChartPickerOpen(true)}>
+                          更换图表类型
+                        </Button>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid gap-2">
+                          <Label htmlFor="report-chart-style">视觉风格</Label>
+                          <Select
+                            id="report-chart-style"
+                            data-testid="report-chart-style"
+                            value={selectedCategory.chartStyle ?? "auto"}
+                            onChange={(event) => patchSelected({ chartStyle: event.target.value as ReportCategoryChartStyle })}
+                          >
+                            {chartStyleOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                          </Select>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="report-chart-color">主色</Label>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {["#4f6edb", "#0f766e", "#d97706", "#be123c", "#6d28d9", "#171717"].map((color) => (
+                              <Button
+                                key={color}
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                title={color}
+                                aria-label={`使用颜色 ${color}`}
+                                className={[
+                                  "h-7 w-7 rounded-md border-2 transition-transform hover:scale-105",
+                                  (selectedCategory.chartConfig?.primaryColor ?? "#4f6edb") === color ? "border-foreground ring-2 ring-foreground/15" : "border-background",
+                                ].join(" ")}
+                                style={{ backgroundColor: color }}
+                                onClick={() => patchChartConfig({ primaryColor: color })}
+                              />
+                            ))}
+                            <Input
+                              id="report-chart-color"
+                              data-testid="report-chart-color"
+                              type="color"
+                              value={selectedCategory.chartConfig?.primaryColor ?? "#4f6edb"}
+                              onChange={(event) => patchChartConfig({ primaryColor: event.target.value })}
+                              className="h-8 w-10 cursor-pointer rounded-md border border-border bg-card p-1"
+                              title="自定义颜色"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="report-chart-dimensions">显示维度</Label>
+                          <Select id="report-chart-dimensions" data-testid="report-chart-dimensions" value={String(selectedCategory.chartConfig?.maxDimensions ?? 6)} onChange={(event) => patchChartConfig({ maxDimensions: Number(event.target.value) })}>
+                            {[3, 5, 6, 8, 10, 12].map((value) => <option key={value} value={value}>最多 {value} 个</option>)}
+                          </Select>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="report-chart-sort">排序</Label>
+                          <Select id="report-chart-sort" data-testid="report-chart-sort" value={selectedCategory.chartConfig?.sort ?? "none"} onChange={(event) => patchChartConfig({ sort: event.target.value as "none" | "asc" | "desc" })}>
+                            <option value="none">原始顺序</option>
+                            <option value="desc">从高到低</option>
+                            <option value="asc">从低到高</option>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-3">
+                        <label className="flex cursor-pointer items-center gap-2 text-12 font-semibold text-foreground">
+                          <input type="checkbox" data-testid="report-chart-labels" checked={selectedCategory.chartConfig?.showLabels !== false} onChange={(event) => patchChartConfig({ showLabels: event.target.checked })} />
+                          显示数值标签
+                        </label>
+                        <label className="flex cursor-pointer items-center gap-2 text-12 font-semibold text-foreground">
+                          <input type="checkbox" data-testid="report-chart-legend" checked={selectedCategory.chartConfig?.showLegend === true} onChange={(event) => patchChartConfig({ showLegend: event.target.checked })} />
+                          显示图例
+                        </label>
+                      </div>
+                    </section>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {reportWorkbenchTab === "data" ? (
+                <div className="divide-y divide-border px-5">
+                  <section className="grid gap-3 py-5 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="report-category-name">模块标题</Label>
+                        <span className="text-11 text-muted-foreground">{selectedCategory.name.length}/50</span>
+                      </div>
+                      <Input id="report-category-name" value={selectedCategory.name} onChange={(event) => patchSelected({ name: event.target.value })} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="report-category-desc">模块说明</Label>
+                      <Textarea id="report-category-desc" value={selectedCategory.description} onChange={(event) => patchSelected({ description: event.target.value })} className="min-h-20" />
+                    </div>
+                  </section>
+
+                  <section className="py-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-13 font-bold text-foreground">问题来源</p>
+                      <Badge variant="outline">{selectedQuestions.length}/{composerQuestions.length}</Badge>
+                    </div>
+                    <div className="mt-3 grid max-h-64 gap-2 overflow-auto pr-1">
+                      {selectedQuestions.length ? selectedQuestions.map((question) => {
                         const questionIndex = composerQuestions.findIndex((item) => Number(item.id) === Number(question.id));
                         return (
                           <Button
@@ -1920,216 +2056,246 @@ function WorkspaceReportComposer({
                             type="button"
                             variant="outline"
                             onClick={() => toggleQuestion(Number(question.id))}
-                            className="h-auto justify-start whitespace-normal rounded-lg border-border bg-background px-3 py-2 text-left"
+                            className="h-auto justify-start whitespace-normal border-foreground px-3 py-2 text-left"
                           >
-                            <span className="mr-2 text-13 font-bold">+</span>
+                            <span className="mr-2 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-foreground text-11 font-bold text-background">✓</span>
                             <span className="mr-2 text-11 font-bold text-muted-foreground">Q{String(questionIndex + 1).padStart(2, "0")}</span>
                             <span className="min-w-0 flex-1 truncate text-12 text-foreground">{question.title}</span>
                           </Button>
                         );
-                      })}
-                    </>
-                  ) : null}
-                </div>
-              </section>
-
-              <section className="rounded-lg border border-border bg-background p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <p className="text-13 font-bold text-foreground">输出模块</p>
-                  </div>
-                  <span className="text-11 text-muted-foreground">至少 1 项</span>
-                </div>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  {moduleOptions.map(({ mode, label, desc, icon: Icon }) => {
-                    const active = selectedCategory.inputModes.includes(mode);
-                    return (
-                      <Button
-                        key={mode}
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          if (mode === "chart") {
-                            setChartPickerOpen(true);
-                          } else {
-                            toggleMode(mode);
-                          }
-                        }}
-                        className={[
-                          "h-auto min-h-24 flex-col items-start justify-start whitespace-normal p-3 text-left",
-                          active ? "border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background" : "bg-card",
-                        ].join(" ")}
-                      >
-                        <span className="flex w-full items-center justify-between gap-2">
-                          <span className="flex items-center gap-2 text-13 font-bold">
-                            <Icon className="h-4 w-4" strokeWidth={1.6} />
-                            {label}
-                          </span>
-                          <span>{active ? "✓" : "+"}</span>
-                        </span>
-                        <span className={active ? "mt-2 text-11 font-normal leading-5 text-background/70" : "mt-2 text-11 font-normal leading-5 text-muted-foreground"}>
-                          {mode === "chart" && active ? chartTypeLabel : desc}
-                        </span>
-                      </Button>
-                    );
-                  })}
-                </div>
-                <div data-testid="report-module-prompts" className="mt-3 grid gap-3">
-                  {visibleInputModes(selectedCategory.inputModes).map((mode) => {
-                    const meta = modulePromptMeta[mode];
-                    if (!meta) return null;
-                    const value = selectedCategory.modulePrompts?.[mode] ?? "";
-                    return (
-                      <div key={mode} className="grid gap-1.5 rounded-lg border border-border bg-card p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <Label htmlFor={`report-module-prompt-${mode}`}>{meta.label}</Label>
-                          <span className="text-11 text-muted-foreground">{value.length}/1000</span>
+                      }) : (
+                        <div className="rounded-lg border border-dashed border-border px-3 py-3 text-12 text-muted-foreground">
+                          当前模块还没有绑定问题。
                         </div>
-                        <Textarea
-                          id={`report-module-prompt-${mode}`}
-                          data-testid={`report-module-prompt-${mode}`}
-                          maxLength={1000}
-                          value={value}
-                          onChange={(event) => patchModulePrompt(mode, event.target.value)}
-                          placeholder={meta.placeholder}
-                          className="min-h-20"
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
+                      )}
+                      {unselectedQuestions.length ? (
+                        <>
+                          <p className="pt-2 text-12 font-semibold text-muted-foreground">可添加问题</p>
+                          {unselectedQuestions.slice(0, 8).map((question) => {
+                            const questionIndex = composerQuestions.findIndex((item) => Number(item.id) === Number(question.id));
+                            return (
+                              <Button
+                                key={question.id}
+                                type="button"
+                                variant="outline"
+                                onClick={() => toggleQuestion(Number(question.id))}
+                                className="h-auto justify-start whitespace-normal px-3 py-2 text-left"
+                              >
+                                <Plus className="mr-2 h-3.5 w-3.5" strokeWidth={1.8} />
+                                <span className="mr-2 text-11 font-bold text-muted-foreground">Q{String(questionIndex + 1).padStart(2, "0")}</span>
+                                <span className="min-w-0 flex-1 truncate text-12 text-foreground">{question.title}</span>
+                              </Button>
+                            );
+                          })}
+                        </>
+                      ) : null}
+                    </div>
+                  </section>
 
-              {selectedCategory.inputModes.includes("chart") ? (
-                <div data-testid="report-chart-design-controls" className="grid gap-4 rounded-lg border border-border bg-background p-3">
-                  <div>
-                    <p className="text-13 font-bold text-foreground">图表设计</p>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="report-chart-style">视觉风格</Label>
-                  <Select
-                    id="report-chart-style"
-                    data-testid="report-chart-style"
-                    value={selectedCategory.chartStyle ?? "auto"}
-                    onChange={(event) => patchSelected({ chartStyle: event.target.value as ReportCategoryChartStyle })}
-                  >
-                    {chartStyleOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                  </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="report-chart-color">主色</Label>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {["#4f6edb", "#0f766e", "#d97706", "#be123c", "#6d28d9", "#171717"].map((color) => (
-                        <Button
-                          key={color}
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          title={color}
-                          aria-label={`使用颜色 ${color}`}
-                          className={[
-                            "h-7 w-7 rounded-md border-2 transition-transform hover:scale-105",
-                            (selectedCategory.chartConfig?.primaryColor ?? "#4f6edb") === color ? "border-foreground ring-2 ring-foreground/15" : "border-background",
-                          ].join(" ")}
-                          style={{ backgroundColor: color }}
-                          onClick={() => patchChartConfig({ primaryColor: color })}
-                        />
-                      ))}
-                      <Input
-                        id="report-chart-color"
-                        data-testid="report-chart-color"
-                        type="color"
-                        value={selectedCategory.chartConfig?.primaryColor ?? "#4f6edb"}
-                        onChange={(event) => patchChartConfig({ primaryColor: event.target.value })}
-                        className="h-8 w-10 cursor-pointer rounded-md border border-border bg-card p-1"
-                        title="自定义颜色"
+                  <section className="py-5">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-13 font-bold text-foreground">输出模块</p>
+                      <span className="text-11 text-muted-foreground">至少 1 项</span>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                      {moduleOptions.map(({ mode, label, desc, icon: Icon }) => {
+                        const active = selectedCategory.inputModes.includes(mode);
+                        return (
+                          <Button
+                            key={mode}
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              if (mode === "chart") setChartPickerOpen(true);
+                              else toggleMode(mode);
+                            }}
+                            className={[
+                              "h-auto min-h-24 flex-col items-start justify-start whitespace-normal p-3 text-left",
+                              active ? "border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background" : "",
+                            ].join(" ")}
+                          >
+                            <span className="flex w-full items-center justify-between gap-2">
+                              <span className="flex items-center gap-2 text-13 font-bold">
+                                <Icon className="h-4 w-4" strokeWidth={1.6} />
+                                {label}
+                              </span>
+                              <span>{active ? "✓" : "+"}</span>
+                            </span>
+                            <span className={active ? "mt-2 text-11 font-normal leading-5 text-background/70" : "mt-2 text-11 font-normal leading-5 text-muted-foreground"}>
+                              {mode === "chart" && active ? chartTypeLabel : desc}
+                            </span>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <div data-testid="report-module-prompts" className="mt-4 grid gap-3">
+                      {visibleInputModes(selectedCategory.inputModes).map((mode) => {
+                        const meta = modulePromptMeta[mode];
+                        if (!meta) return null;
+                        const value = selectedCategory.modulePrompts?.[mode] ?? "";
+                        return (
+                          <div key={mode} className="grid gap-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <Label htmlFor={`report-module-prompt-${mode}`}>{meta.label}</Label>
+                              <span className="text-11 text-muted-foreground">{value.length}/1000</span>
+                            </div>
+                            <Textarea
+                              id={`report-module-prompt-${mode}`}
+                              data-testid={`report-module-prompt-${mode}`}
+                              maxLength={1000}
+                              value={value}
+                              onChange={(event) => patchModulePrompt(mode, event.target.value)}
+                              placeholder={meta.placeholder}
+                              className="min-h-20"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="grid gap-3 py-5">
+                    <p className="text-13 font-bold text-foreground">数据生成提示词</p>
+                    <div className="grid gap-2">
+                      <Label htmlFor="report-category-prompt">分析提示</Label>
+                      <Textarea id="report-category-prompt" maxLength={1000} value={selectedCategory.prompt} onChange={(event) => patchSelected({ prompt: event.target.value })} placeholder="例如：先给结论，再解释关键驱动因素，语气面向管理层。" className="min-h-20" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="report-data-prompt">数据约束</Label>
+                      <Textarea
+                        id="report-data-prompt"
+                        data-testid="report-data-prompt"
+                        maxLength={1000}
+                        value={selectedCategory.dataPrompt ?? ""}
+                        onChange={(event) => patchSelected({ dataPrompt: event.target.value })}
+                        placeholder="例如：仅统计有效答卷；样本量不足时不输出百分比；所有比例保留 1 位小数。"
+                        className="min-h-24"
                       />
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="report-chart-dimensions">显示维度</Label>
-                      <Select id="report-chart-dimensions" data-testid="report-chart-dimensions" value={String(selectedCategory.chartConfig?.maxDimensions ?? 6)} onChange={(event) => patchChartConfig({ maxDimensions: Number(event.target.value) })}>
-                        {[3, 5, 6, 8, 10, 12].map((value) => <option key={value} value={value}>最多 {value} 个</option>)}
-                      </Select>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="report-chart-sort">排序</Label>
-                      <Select id="report-chart-sort" data-testid="report-chart-sort" value={selectedCategory.chartConfig?.sort ?? "none"} onChange={(event) => patchChartConfig({ sort: event.target.value as "none" | "asc" | "desc" })}>
-                        <option value="none">原始顺序</option>
-                        <option value="desc">从高到低</option>
-                        <option value="asc">从低到高</option>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>方向</Label>
-                    <div className="grid grid-cols-2 rounded-md border border-border p-1">
-                      {([['vertical', '纵向'], ['horizontal', '横向']] as const).map(([value, label]) => (
-                        <Button key={value} type="button" size="sm" variant={(selectedCategory.chartConfig?.orientation ?? "vertical") === value ? "default" : "ghost"} onClick={() => patchChartConfig({ orientation: value })}>{label}</Button>
+                    <div className="flex flex-wrap gap-1.5">
+                      {["仅使用有效答卷", "标注样本量与缺失值", "小样本分组不展示", "比例保留 1 位小数"].map((constraint) => (
+                        <Button key={constraint} type="button" size="sm" variant="outline" className="h-7 rounded-full px-2 text-11" onClick={() => appendDataConstraint(constraint)}>
+                          + {constraint}
+                        </Button>
                       ))}
                     </div>
+                    {selectedPreviewChart ? (
+                      <p data-testid="recognized-chart-constraints" className="text-11 text-muted-foreground">
+                        已应用 {selectedPreviewChart.appliedConstraints.length} 条约束 · {selectedPreviewChart.rows.length} 个维度
+                      </p>
+                    ) : null}
+                  </section>
+                </div>
+              ) : null}
+
+              {reportWorkbenchTab === "mapping" ? (
+                <div data-testid="report-mapping-panel" className="grid gap-4 p-5">
+                  <div>
+                    <h4 className="text-13 font-bold text-foreground">可视化映射</h4>
+                    <p className="mt-1 text-12 text-muted-foreground">提示词产出的数据如何绑定到当前模块的图表、文本和图片字段。</p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <label className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-12 font-semibold text-foreground">
-                      <input type="checkbox" data-testid="report-chart-labels" checked={selectedCategory.chartConfig?.showLabels !== false} onChange={(event) => patchChartConfig({ showLabels: event.target.checked })} />
-                      显示数值标签
-                    </label>
-                    <label className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-12 font-semibold text-foreground">
-                      <input type="checkbox" data-testid="report-chart-legend" checked={selectedCategory.chartConfig?.showLegend === true} onChange={(event) => patchChartConfig({ showLegend: event.target.checked })} />
-                      显示图例
-                    </label>
+                  <pre className="overflow-x-auto rounded-lg bg-surface-dark-2 p-4 text-11 leading-5 text-surface-dark-foreground">{JSON.stringify({
+                    module: selectedCategory.id,
+                    chartType: selectedCategory.chartType ?? null,
+                    inputs: selectedCategory.inputModes,
+                    questionIds: selectedCategory.questionIds,
+                  }, null, 2)}</pre>
+                  <div className="overflow-x-auto rounded-lg border border-border">
+                    <div className="grid min-w-full grid-cols-3 bg-secondary px-3 py-2 text-11 font-semibold text-muted-foreground">
+                      <span>图表属性</span>
+                      <span>数据源路径</span>
+                      <span>说明</span>
+                    </div>
+                    {mappingRows.map((row) => (
+                      <div key={`${row.property}-${row.source}`} className="grid min-w-full grid-cols-3 border-t border-border px-3 py-2 text-12">
+                        <code className="text-survey">{row.property}</code>
+                        <code className="text-muted-foreground">{row.source}</code>
+                        <span className="text-muted-foreground">{row.description}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ) : null}
 
-              <section className="grid gap-3 rounded-lg border border-border bg-background p-3">
-                <p className="text-13 font-bold text-foreground">生成要求</p>
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="report-category-prompt">分析提示</Label>
-                    <span className="text-11 text-muted-foreground">{selectedCategory.prompt.length}/1000</span>
-                  </div>
-                  <Textarea id="report-category-prompt" maxLength={1000} value={selectedCategory.prompt} onChange={(event) => patchSelected({ prompt: event.target.value })} placeholder="例如：先给结论，再解释关键驱动因素，语气面向管理层。" className="min-h-20" />
-                </div>
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label htmlFor="report-data-prompt">数据约束</Label>
-                    <span className="text-11 text-muted-foreground">{selectedCategory.dataPrompt?.length ?? 0}/1000</span>
-                  </div>
-                  <Textarea
-                    id="report-data-prompt"
-                    data-testid="report-data-prompt"
-                    maxLength={1000}
-                    value={selectedCategory.dataPrompt ?? ""}
-                    onChange={(event) => patchSelected({ dataPrompt: event.target.value })}
-                    placeholder="例如：仅统计有效答卷；样本量不足时不输出百分比；所有比例保留 1 位小数。"
-                    className="min-h-24"
-                  />
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {["仅使用有效答卷", "标注样本量与缺失值", "小样本分组不展示", "比例保留 1 位小数"].map((constraint) => (
-                    <Button key={constraint} type="button" size="sm" variant="outline" className="h-7 px-2 text-11" onClick={() => appendDataConstraint(constraint)}>
-                      + {constraint}
-                    </Button>
-                  ))}
-                </div>
-                {selectedPreviewChart ? (
-                  <p data-testid="recognized-chart-constraints" className="text-11 text-muted-foreground">
-                    已应用 {selectedPreviewChart.appliedConstraints.length} 条约束 · {selectedPreviewChart.rows.length} 个维度
-                  </p>
-                ) : null}
-              </section>
-
-              {(selectedCategory.questionIds.length === 0 || selectedCategory.inputModes.length === 0) && (
-                <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-12 text-amber-800">
-                  当前分类需要至少 1 个问题和 1 种输入方式。
+              {(selectedCategory.questionIds.length === 0 || selectedCategory.inputModes.length === 0) ? (
+                <p role="alert" className="mx-5 mb-5 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-12 text-warning-foreground">
+                  当前模块需要至少 1 个问题和 1 种输入方式。
                 </p>
-              )}
-            </div>
+              ) : null}
+            </article>
           ) : (
-            <p className="mt-3 text-13 text-muted-foreground">选择左侧分类后编辑设置。</p>
+            <p className="p-5 text-13 text-muted-foreground">选择左侧模块后进行编辑。</p>
           )}
+        </main>
+
+        <aside data-testid="report-module-inspector" className="order-3 min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4">
+          <div data-testid="report-ai-assistant" className="flex min-h-[32rem] flex-col p-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-survey" strokeWidth={1.7} />
+              <h3 className="text-14 font-bold text-foreground">AI 推演助手</h3>
+              <Badge variant="muted" className="bg-tag-purple text-survey">默认开启</Badge>
+            </div>
+            <div className="mt-4 flex min-h-56 flex-1 flex-col gap-2 overflow-y-auto">
+              {reportAssistantMessages.map((message, index) => (
+                <p
+                  key={`${message.role}-${index}`}
+                  className={[
+                    "max-w-[88%] rounded-lg px-3 py-2 text-12 leading-5",
+                    message.role === "user"
+                      ? "self-end bg-foreground text-background"
+                      : "self-start bg-secondary text-foreground",
+                  ].join(" ")}
+                >
+                  {message.text}
+                </p>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button type="button" size="sm" variant="outline" className="h-8 rounded-full text-11" onClick={() => applyReportAssistantInstruction("面向 CEO 的 10 分钟汇报，先结论后证据。")}>
+                面向 CEO 汇报
+              </Button>
+              <Button type="button" size="sm" variant="outline" className="h-8 rounded-full text-11" onClick={() => applyReportAssistantInstruction("所有结论必须标注样本量、缺失值和证据边界。")}>
+                强化证据边界
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 rounded-full text-11"
+                disabled={classifying}
+                onClick={() => {
+                  setReportAssistantMessages((messages) => [
+                    ...messages,
+                    { role: "user", text: "按当前问卷重新推演整体结构。" },
+                    { role: "assistant", text: "正在调用分类能力重新推演模块；完成后请检查左侧结构。" },
+                  ]);
+                  onClassify();
+                }}
+              >
+                重新推演结构
+              </Button>
+            </div>
+            <div className="mt-3 flex gap-2">
+              <Input
+                data-testid="report-ai-input"
+                value={reportAssistantInput}
+                onChange={(event) => setReportAssistantInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") applyReportAssistantInstruction(reportAssistantInput);
+                }}
+                placeholder="描述读者与用途"
+              />
+              <Button
+                data-testid="report-ai-send"
+                type="button"
+                size="icon"
+                aria-label="发送报告推演要求"
+                disabled={!reportAssistantInput.trim()}
+                onClick={() => applyReportAssistantInstruction(reportAssistantInput)}
+              >
+                <Send className="h-4 w-4" strokeWidth={1.7} />
+              </Button>
+            </div>
           </div>
         </aside>
       </section>
@@ -4628,6 +4794,7 @@ export default function SurveysPage() {
   const [workspaceView, setWorkspaceView] = useState<WorkspaceTarget>(initialWorkspaceView);
   const [workspaceSurvey, setWorkspaceSurvey] = useState<Survey | null>(null);
   const [createChooserOpen, setCreateChooserOpen] = useState(false);
+  const [templateTagManagerOpen, setTemplateTagManagerOpen] = useState(false);
 
   // editor state
   const [editingSurveyId, setEditingSurveyId] = useState<number | null>(initialSurveyId);
@@ -4946,7 +5113,7 @@ export default function SurveysPage() {
     await selectSurveyForWorkspace(survey.id, "template");
   }
 
-  function openTemplateEditor(template?: SurveyTemplate) {
+  function openTemplateEditor(template?: SurveyTemplate, options: { withAi?: boolean } = {}) {
     setEditingSurveyId(null);
     setEditingTemplateId(template?.source === "saved" ? template.id : null);
     setTitle(template?.title ?? "");
@@ -4979,7 +5146,7 @@ export default function SurveysPage() {
     setMode("template");
     setAiCreateFlow(false);
     rememberAiCreateFlow(false);
-    resetAiState(true);
+    resetAiState(options.withAi === true);
     setAiMessages([
       {
         role: "assistant",
@@ -7501,7 +7668,7 @@ export default function SurveysPage() {
       currentSurvey={currentSurveyForNavigation}
       workflowMode={workspaceView !== "workspace"}
       templateLibraryMode={workbenchTab === "templates"}
-      hideHeader={workspaceView === "workspace"}
+      hideHeader={workspaceView === "workspace" || workspaceView === "template"}
       onCreateWithAi={openCreateChooser}
       onCreateFromScene={() => void navigateWorkspace("template")}
       onCreateBlank={() => (workbenchTab === "templates" ? openTemplateEditor() : openCreateChooser())}
@@ -7558,7 +7725,9 @@ export default function SurveysPage() {
                   onClassify={() => void classifyWorkspaceReportCategories(currentSurveyForNavigation.id)}
                   onSavePlan={(plan) => void saveWorkspaceReportCategoryPlan(currentSurveyForNavigation.id, plan)}
                   onGenerateReport={() => void generateWorkspaceCategoryReport(currentSurveyForNavigation.id)}
-                  onBackToDesign={() => void navigateWorkspace("design")}
+                  onBackToDesign={() => {
+                    window.location.href = "/surveys?view=templates";
+                  }}
                   onOpenCollect={() => void navigateWorkspace("collect")}
                 />
               </div>
@@ -7675,26 +7844,44 @@ export default function SurveysPage() {
               </div>
             ) : (
               <>
-                <section data-testid="survey-template-center" className="overflow-hidden">
-                <section data-testid="diagnostic-template-center" className="overflow-hidden rounded-lg border border-border bg-background">
-                  <div className="border-b border-border px-7 py-7">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
+                <section data-testid="survey-template-center">
+                  <div data-testid="diagnostic-template-center">
+                    <header className="flex flex-wrap items-start justify-between gap-4">
                       <div>
-                        <h2 className="text-22 font-bold text-foreground">诊断模板中心</h2>
-                        <p className="mt-2 max-w-2xl text-13 leading-6 text-muted-foreground">
-                          问卷模板与配套报告模板成对管理，回收完成后可自动生成洞察。
+                        <h1 className="text-22 font-bold text-foreground">诊断模版中心</h1>
+                        <p className="mt-1.5 max-w-3xl text-13 leading-6 text-muted-foreground">
+                          问卷模版与配套报告模版成对管理：回收完成后按报告模版自动生成洞察。
                         </p>
                       </div>
-                      <Button type="button" size="sm" onClick={() => openTemplateEditor()} className="h-10 px-4">
-                        <Plus className="h-4 w-4" strokeWidth={1.7} />
-                        手工新建
-                      </Button>
-                    </div>
-                    <div data-testid="template-tag-filter" className="mt-6 flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          data-testid="template-create-ai"
+                          type="button"
+                          onClick={() => openTemplateEditor(undefined, { withAi: true })}
+                          className="h-10 gap-2 bg-survey px-4 text-primary-foreground hover:bg-survey/90"
+                        >
+                          <Sparkles className="h-4 w-4" strokeWidth={1.7} />
+                          用 AI 生成模版
+                        </Button>
+                        <Button
+                          data-testid="template-create-manual"
+                          type="button"
+                          variant="outline"
+                          onClick={() => openTemplateEditor()}
+                          className="h-10 gap-2 px-4"
+                        >
+                          <Plus className="h-4 w-4" strokeWidth={1.7} />
+                          手工新建
+                        </Button>
+                      </div>
+                    </header>
+
+                    <div data-testid="template-tag-filter" className="my-5 flex flex-wrap items-center gap-2">
                       <Button
                         type="button"
                         size="sm"
                         variant={templateListTag === "all" ? "default" : "outline"}
+                        className="rounded-full"
                         aria-pressed={templateListTag === "all"}
                         onClick={() => setTemplateListTag("all")}
                       >
@@ -7706,112 +7893,138 @@ export default function SurveysPage() {
                           type="button"
                           size="sm"
                           variant={templateListTag === tag ? "default" : "outline"}
+                          className="rounded-full"
                           aria-pressed={templateListTag === tag}
                           onClick={() => setTemplateListTag(tag)}
                         >
                           {tag}
                         </Button>
                       ))}
-                    </div>
-                  </div>
-
-                  {templateLoadError && (
-                    <p role="alert" data-testid="err-template" className="border-b border-border px-4 py-3 text-13 text-destructive">
-                      {templateLoadError}
-                    </p>
-                  )}
-
-                  {visibleTemplateList.length ? (
-                    <div data-testid="diagnostic-template-grid" className="grid gap-5 p-6 md:grid-cols-2">
-                      {visibleTemplateList.map((template, idx) => (
-                        <section
-                          key={`${template.source}-${template.id}`}
-                          data-testid={`template-card-${template.id}`}
-                          className="flex min-h-64 flex-col rounded-lg border border-border bg-background p-6 transition-colors duration-200 hover:border-survey"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex flex-wrap gap-2">
-                              <Badge data-testid={`template-category-${template.id}`} variant="muted">
-                                {template.category ?? "通用"}
-                              </Badge>
-                              <Badge variant={template.source === "saved" ? "outline" : "muted"}>
-                                {template.source === "saved" ? "自定义" : "系统"}
-                              </Badge>
-                            </div>
-                            <span className="shrink-0 text-12 text-muted-foreground">{template.estimatedMinutes ?? 3} min</span>
-                          </div>
-                          <h3 className="mt-4 text-17 font-bold text-foreground">{template.name}</h3>
-                          <p className="mt-2 line-clamp-2 text-13 leading-6 text-muted-foreground">
-                            {template.description || "暂无模板说明。"}
-                          </p>
-                          {(template.tags?.length ?? 0) > 0 && (
-                            <div className="mt-3 flex flex-wrap gap-1.5">
-                              {template.tags!.map((tag) => (
-                                <Badge key={tag} variant="outline">{tag}</Badge>
-                              ))}
-                            </div>
-                          )}
-                          <p className="mt-4 rounded-lg bg-secondary p-4 text-12 leading-5 text-muted-foreground">
-                            {template.reportTemplate
-                              ? `${template.reportTemplate.title} · ${template.reportTemplate.sections.length} 个报告章节`
-                              : "使用后可在报告模板中配置诊断章节。"}
-                          </p>
-                          <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-5">
-                            <span className="text-13 text-muted-foreground">{template.questions.length} 个问题</span>
-                            <div className="flex flex-wrap gap-2">
-                              <Button data-testid={`use-template-${template.id}`} type="button" size="sm" onClick={() => openEditor({ template })}>
-                                使用模板
-                              </Button>
-                              <Button
-                                data-testid={`view-report-template-${template.id}`}
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => void openReportTemplateWorkflow(template)}
-                              >
-                                <FileText className="h-4 w-4" />
-                                报告模板
-                              </Button>
-                              {template.source === "saved" && (
-                                <>
-                                  <Button
-                                    data-testid={`template-edit-${idx}`}
-                                    type="button"
-                                    size="icon"
-                                    variant="ghost"
-                                    aria-label={`编辑模板 ${template.name}`}
-                                    title="编辑模板"
-                                    onClick={() => openTemplateEditor(template)}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    data-testid={`template-delete-${idx}`}
-                                    type="button"
-                                    size="icon"
-                                    variant="ghost"
-                                    aria-label={`删除模板 ${template.name}`}
-                                    title="删除模板"
-                                    onClick={() => void deleteTemplate(template)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </section>
-                      ))}
-                    </div>
-                  ) : (
-                    <div data-testid="empty" className="flex flex-col items-center gap-4 px-4 py-12 text-center">
-                      <p className="text-13 text-muted-foreground">没有匹配此标签的诊断模板。</p>
-                      <Button type="button" size="sm" variant="outline" onClick={() => setTemplateListTag("all")}>
-                        重置筛选
+                      <Button
+                        data-testid="template-manage-tags"
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full border-dashed text-muted-foreground"
+                        onClick={() => setTemplateTagManagerOpen(true)}
+                      >
+                        <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={1.7} />
+                        管理标签
                       </Button>
                     </div>
-                  )}
-                </section>
+
+                    {templateLoadError ? (
+                      <p role="alert" data-testid="err-template" className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-13 text-destructive">
+                        {templateLoadError}
+                      </p>
+                    ) : null}
+
+                    {visibleTemplateList.length ? (
+                      <div data-testid="diagnostic-template-grid" className="grid gap-4 md:grid-cols-2">
+                        {visibleTemplateList.map((template, idx) => {
+                          const dimensions = Array.from(new Set(
+                            template.questions
+                              .map((question) => question.category?.trim())
+                              .filter((category): category is string => Boolean(category))
+                          ));
+                          const cardTags = template.tags?.length
+                            ? template.tags
+                            : [template.category ?? "通用"];
+                          return (
+                            <article
+                              key={`${template.source}-${template.id}`}
+                              data-testid={`template-card-${template.id}`}
+                              className="flex min-h-64 flex-col rounded-lg border border-border bg-background p-5 transition-colors duration-200 hover:border-border-strong"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex flex-wrap gap-1.5">
+                                  {cardTags.map((tag) => (
+                                    <Badge
+                                      key={tag}
+                                      data-testid={tag === (template.category ?? "通用") ? `template-category-${template.id}` : undefined}
+                                      variant="muted"
+                                    >
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                  <Badge
+                                    variant={template.source === "saved" ? "outline" : "muted"}
+                                    className={template.source === "saved" ? undefined : "bg-tag-purple text-survey"}
+                                  >
+                                    {template.source === "saved" ? "自定义" : "系统"}
+                                  </Badge>
+                                </div>
+                                <span className="shrink-0 text-12 text-muted-foreground">
+                                  {template.questions.length} 题 · {template.estimatedMinutes ?? 3} min
+                                </span>
+                              </div>
+                              <h2 className="mt-3 text-15 font-bold text-foreground">{template.name}</h2>
+                              <p className="mt-2 min-h-11 text-13 leading-6 text-muted-foreground">
+                                {template.description || "暂无模版说明。"}
+                              </p>
+                              <div className="mt-3 rounded-lg bg-secondary px-3 py-2.5 text-12 leading-5 text-muted-foreground">
+                                <p>三级框架：维度 → 指标 → 题目</p>
+                                <p>诊断维度：{dimensions.length ? dimensions.join("、") : "按题目分类自动生成"}</p>
+                                <p>
+                                  配套报告：
+                                  {template.reportTemplate
+                                    ? `${template.reportTemplate.title} · ${template.reportTemplate.sections.length} 个章节`
+                                    : "使用后配置报告章节"}
+                                </p>
+                              </div>
+                              <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
+                                <Button data-testid={`use-template-${template.id}`} type="button" size="sm" onClick={() => openEditor({ template })}>
+                                  用此模版建问卷
+                                </Button>
+                                <Button
+                                  data-testid={`view-report-template-${template.id}`}
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => void openReportTemplateWorkflow(template)}
+                                >
+                                  查看报告模版
+                                </Button>
+                                {template.source === "saved" ? (
+                                  <div className="ml-auto flex items-center gap-1">
+                                    <Button
+                                      data-testid={`template-edit-${idx}`}
+                                      type="button"
+                                      size="icon"
+                                      variant="ghost"
+                                      aria-label={`编辑模版 ${template.name}`}
+                                      title="编辑模版"
+                                      onClick={() => openTemplateEditor(template)}
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      data-testid={`template-delete-${idx}`}
+                                      type="button"
+                                      size="icon"
+                                      variant="ghost"
+                                      aria-label={`删除模版 ${template.name}`}
+                                      title="删除模版"
+                                      onClick={() => void deleteTemplate(template)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div data-testid="empty" className="flex flex-col items-center gap-4 rounded-lg border border-dashed border-border-strong px-4 py-12 text-center">
+                        <p className="text-13 text-muted-foreground">没有匹配此标签的诊断模版。</p>
+                        <Button type="button" size="sm" variant="outline" onClick={() => setTemplateListTag("all")}>
+                          重置筛选
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </section>
 
                 {templateMessage && (
@@ -7846,6 +8059,38 @@ export default function SurveysPage() {
             }}
           />
         )}
+
+        <Dialog
+          open={templateTagManagerOpen}
+          onClose={() => setTemplateTagManagerOpen(false)}
+          title="管理标签"
+          description="选择标签筛选模版；标签随自定义模版保存。"
+          testId="template-tag-manager-dialog"
+          className="max-w-xl rounded-lg"
+        >
+          <div className="grid gap-2 sm:grid-cols-2">
+            {Array.from(new Set([...templateCategories, ...templateListTags])).map((tag) => {
+              const count = allTemplates.filter((template) =>
+                (template.category ?? "通用") === tag || template.tags?.includes(tag)
+              ).length;
+              return (
+                <Button
+                  key={tag}
+                  type="button"
+                  variant="outline"
+                  className="h-auto justify-between px-3 py-2"
+                  onClick={() => {
+                    setTemplateListTag(tag);
+                    setTemplateTagManagerOpen(false);
+                  }}
+                >
+                  <span>{tag}</span>
+                  <Badge variant="muted">{count}</Badge>
+                </Button>
+              );
+            })}
+          </div>
+        </Dialog>
 
         <Dialog
           open={createChooserOpen}

@@ -45,15 +45,15 @@ test("survey workspace restores every source workflow step from the URL", async 
     ["answer", "workspace-answer-workbench"],
     ["report", "workspace-report-workbench"],
   ] as const) {
-    await page.getByTestId(`workflow-${step}`).click();
+    await page.goto(`/surveys?survey=${survey.id}&step=${step}`);
     await expect(page).toHaveURL(new RegExp(`step=${step}`));
     await page.reload();
     await expect(page.getByTestId(testId)).toBeVisible();
   }
 
-  await page.getByTestId("workflow-answer").click();
+  await page.goto(`/surveys?survey=${survey.id}&step=answer`);
   await expect(page.getByTestId("workspace-answer-link")).toHaveAttribute("href", `/survey/${survey.id}/answer`);
-  await page.getByTestId("workflow-report").click();
+  await page.goto(`/surveys?survey=${survey.id}&step=report`);
   await expect(page.getByTestId("workspace-report-link")).toHaveAttribute("href", `/surveys/${survey.id}/results`);
 });
 

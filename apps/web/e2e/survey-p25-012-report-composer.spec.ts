@@ -48,6 +48,7 @@ test("report categories fall back deterministically and remain owner-only", asyn
 });
 
 test("report template exposes chart image text layout and independent prompts", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await register(page, "p25_f12_layout");
   const created = await page.request.post("/api/surveys", {
     data: {
@@ -67,13 +68,46 @@ test("report template exposes chart image text layout and independent prompts", 
   await expect(page.getByTestId("report-module-preview")).toBeVisible();
   await expect(page.getByTestId("report-module-inspector")).toBeVisible();
   await expect(page.getByTestId("report-ai-assistant")).toBeVisible();
-  await expect(page.getByTestId("report-template-builder")).toHaveClass(/xl:grid-cols-/);
+  await expect(page.getByRole("heading", { name: "报告模版 · 学生成长调研" })).toBeVisible();
+  await expect(page.getByTestId("workflow-design")).toHaveCount(0);
+  const [moduleListBox, modulePreviewBox, assistantBox] = await Promise.all([
+    page.getByTestId("report-module-list").boundingBox(),
+    page.getByTestId("report-module-preview").boundingBox(),
+    page.getByTestId("report-module-inspector").boundingBox(),
+  ]);
+  expect(moduleListBox).not.toBeNull();
+  expect(modulePreviewBox).not.toBeNull();
+  expect(assistantBox).not.toBeNull();
+  expect(moduleListBox!.x).toBeLessThan(modulePreviewBox!.x);
+  expect(modulePreviewBox!.x).toBeLessThan(assistantBox!.x);
+  expect(moduleListBox!.width).toBeGreaterThanOrEqual(300);
+  expect(moduleListBox!.width).toBeLessThanOrEqual(325);
+  expect(assistantBox!.width).toBeGreaterThanOrEqual(340);
+  expect(assistantBox!.width).toBeLessThanOrEqual(365);
   await expect(page.getByTestId("report-layout-canvas")).toBeVisible();
   await expect(page.getByTestId("report-layout-module-chart")).toBeVisible();
+  await page.getByTestId("report-layout-select-image").click();
   await expect(page.getByTestId("report-layout-module-image")).toBeVisible();
+  await page.getByTestId("report-layout-select-text").click();
   await expect(page.getByTestId("report-layout-module-text")).toBeVisible();
+  await page.getByTestId("report-layout-select-chart").click();
   await expect(page.getByTestId("report-layout-prompt-chart")).toBeVisible();
   await expect(page.getByTestId("report-module-resize-larger")).toBeVisible();
+  await page.screenshot({
+    path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-report-template-desktop.png",
+    fullPage: true,
+  });
+
+  await page.getByTestId("report-tab-data").click();
+  await expect(page.getByTestId("report-data-prompt")).toBeVisible();
+  await expect(page.getByTestId("report-module-prompts")).toBeVisible();
+
+  await page.getByTestId("report-ai-input").fill("面向董事会，先结论后证据。");
+  await page.getByTestId("report-ai-send").click();
+  await expect(page.locator("#report-category-prompt")).toHaveValue(/面向董事会，先结论后证据。/);
+
+  await page.getByTestId("report-tab-mapping").click();
+  await expect(page.getByTestId("report-mapping-panel")).toBeVisible();
 });
 
 test("report composer keeps preview first on tablet and mobile", async ({ page }) => {

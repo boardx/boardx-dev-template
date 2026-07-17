@@ -163,7 +163,7 @@ test("diagnostic template center keeps template and report actions available", a
   await expect(page.getByTestId("survey-source-sidebar")).toBeVisible();
   await expect(page.getByTestId("survey-template-center")).toBeVisible();
   await expect(page.getByTestId("diagnostic-template-center")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "诊断模板中心" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "诊断模版中心" })).toBeVisible();
   await expect(page.getByTestId("template-tag-filter")).toBeVisible();
 
   const templateGrid = page.getByTestId("diagnostic-template-grid");
@@ -199,6 +199,30 @@ test("diagnostic template center keeps template and report actions available", a
   await expect(page).toHaveURL(/\/surveys\?survey=\d+&step=template/);
   await expect(page.getByTestId("report-template-builder")).toBeVisible();
   await expect(page.getByTestId("template-editor-shell")).toHaveCount(0);
+});
+
+test("template center separates AI generation, manual creation, and tag management", async ({ page }) => {
+  await register(page);
+  await page.goto("/surveys?view=templates");
+
+  await expect(page.getByTestId("template-create-ai")).toBeVisible();
+  await expect(page.getByTestId("template-create-manual")).toBeVisible();
+  await page.screenshot({
+    path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-template-center-desktop.png",
+    fullPage: true,
+  });
+  await page.getByTestId("template-manage-tags").click();
+  await expect(page.getByTestId("template-tag-manager-dialog")).toBeVisible();
+
+  await page.goto("/surveys?view=templates");
+  await page.getByTestId("template-create-ai").click();
+  await expect(page.getByTestId("template-editor-shell")).toBeVisible();
+  await expect(page.getByTestId("template-ai-assistant")).toBeVisible();
+
+  await page.goto("/surveys?view=templates");
+  await page.getByTestId("template-create-manual").click();
+  await expect(page.getByTestId("template-editor-shell")).toBeVisible();
+  await expect(page.getByTestId("template-ai-assistant")).toHaveCount(0);
 });
 
 test("sidebar report templates opens a selected survey's report template workflow", async ({ page }) => {
