@@ -91,7 +91,7 @@ interface EditableBoard {
   id: number;
   name: string;
 }
-type ComposerMode = "chat" | "research";
+type ComposerMode = "chat" | "research" | "deep-agent";
 // p18-F04：新增 'clarified' 中间态——draft（待确认澄清问题）→ clarified（待确认计划）→
 // running（后端真实推进执行阶段）→ complete/error。两步确认缺一不可，不能从 draft
 // 直接跳到 running。
@@ -151,11 +151,18 @@ interface CapabilityOption {
   description: string;
   disabled?: boolean;
   disabledReason?: string;
+  deepAgentEnabled?: boolean;
+  storeId?: number;
 }
 interface AvaCapabilities {
   models: CapabilityOption[];
   agents: CapabilityOption[];
   tools: CapabilityOption[];
+  teamId?: number | null;
+  deepAgent?: {
+    enabled: boolean;
+    backendConfigured: boolean;
+  };
   defaults: {
     modelId: string;
     agentId: string;
@@ -209,6 +216,25 @@ const FOLLOW_UP_SUGGESTED_ACTIONS: SuggestedAction[] = [
 ];
 
 const THREAD_PAGE_SIZE = 20;
+const INITIAL_AVA_MODEL_ID = process.env.NEXT_PUBLIC_AVA_DEFAULT_MODEL_ID || "qwen3.7-max";
+
+function getLegacyBackendAuthHeader(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const raw = window.localStorage.getItem("auth-token-data");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed?.token === "string" && parsed.token.trim()) {
+        return `Bearer ${parsed.token.trim()}`;
+      }
+    }
+    const loginToken = window.localStorage.getItem("loginToken");
+    if (loginToken?.trim()) return `Bearer ${loginToken.trim()}`;
+  } catch {
+    // localStorage can be unavailable or contain older malformed auth state.
+  }
+  return undefined;
+}
 
 export default function AvaPage() {
   const router = useRouter();
@@ -237,7 +263,7 @@ export default function AvaPage() {
   const [billingOpen, setBillingOpen] = useState(false);
   const [capabilities, setCapabilities] = useState<AvaCapabilities | null>(null);
   const [settingsError, setSettingsError] = useState("");
-  const [modelId, setModelId] = useState("stub:default");
+  const [modelId, setModelId] = useState(INITIAL_AVA_MODEL_ID);
   const [agentId, setAgentId] = useState("default");
   const [toolIds, setToolIds] = useState<string[]>(["web-search"]);
   const [storeRecommendations, setStoreRecommendations] = useState<Array<{ id: number; name: string; description: string }>>([]);
@@ -289,8 +315,11 @@ export default function AvaPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeReport = researchRun?.research?.report;
   const isResearchMode = composerMode === "research";
+  const isDeepAgentMode = composerMode === "deep-agent";
   const composerPlaceholder = isResearchMode
     ? "Describe the research topic, audience, and decision…"
+    : isDeepAgentMode
+      ? "Ask Deep Agent to plan, use tools, and synthesize a result…"
     : "Message AVA…";
   const canSend = Boolean(draft.trim()) && !sending && researchRun?.status !== "running";
   const researchStatusLabel = useMemo(() => {
@@ -303,6 +332,7 @@ export default function AvaPage() {
     return "";
   }, [researchRun]);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const settingsInitializedRef = useRef(false);
   // P18 F02：停止生成用的 AbortController，跨真实/stub provider 通用。
   // 只在一次流式请求生命周期内存在；stop() 触发后 fetch 的底层 TCP 连接被真实中断
   // （服务端 request signal abort → reply-stream 的 for-await 循环停止 → 不再写入消息）。
@@ -341,9 +371,13 @@ export default function AvaPage() {
     if (!res.ok) throw new Error("加载能力失败");
     const data = (await res.json()) as AvaCapabilities;
     setCapabilities(data);
-    setModelId((prev) =>
-      data.models.some((m) => m.id === prev && !m.disabled) ? prev : data.defaults.modelId
-    );
+    setModelId((prev) => {
+      if (!settingsInitializedRef.current) {
+        settingsInitializedRef.current = true;
+        return data.defaults.modelId;
+      }
+      return data.models.some((m) => m.id === prev && !m.disabled) ? prev : data.defaults.modelId;
+    });
     setAgentId((prev) => (data.agents.some((a) => a.id === prev) ? prev : data.defaults.agentId));
     setToolIds((prev) => {
       const allowed = new Set(data.tools.map((tool) => tool.id));
@@ -530,6 +564,11 @@ export default function AvaPage() {
     setDraft("");
     setResearchRun(null);
     setReportOpen(false);
+    if (capabilities) {
+      setModelId(capabilities.defaults.modelId);
+      setAgentId(capabilities.defaults.agentId);
+      setToolIds(capabilities.defaults.toolIds);
+    }
     setMobileView("chat");
     setMsgCopiedId(null);
     setMsgCopyError(null);
@@ -616,6 +655,10 @@ export default function AvaPage() {
   async function send() {
     if (composerMode === "research") {
       await startResearch();
+      return;
+    }
+    if (composerMode === "deep-agent") {
+      await sendDeepAgent();
       return;
     }
     const text = draft.trim();
@@ -706,6 +749,79 @@ export default function AvaPage() {
         });
       } else {
         setSendError("Send failed — please try again (your input is preserved)");
+      }
+    } finally {
+      setSending(false);
+      streamAbortRef.current = null;
+    }
+  }
+
+  async function sendDeepAgent() {
+    const text = draft.trim();
+    if (!text || sending) return;
+    setSending(true);
+    setSendError("");
+    setStreamingText("");
+    setReportOpen(false);
+    setResearchTypeMenuOpen(false);
+    const abortController = new AbortController();
+    streamAbortRef.current = abortController;
+
+    try {
+      const threadId = await ensureThread();
+      if (threadId == null) return;
+
+      const res = await fetch("/api/v1/deep-agent/execute", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "text/event-stream",
+          "X-Chat-Thread-Id": String(threadId),
+          ...(getLegacyBackendAuthHeader() ? { Authorization: getLegacyBackendAuthHeader()! } : {}),
+        },
+        body: JSON.stringify({
+          input: text,
+          chatId: String(threadId),
+          chatThreadId: String(threadId),
+          teamId: capabilities?.teamId == null ? "" : String(capabilities.teamId),
+          userId: "current",
+          model: modelId,
+          storeId: activeAgent?.storeId ? String(activeAgent.storeId) : undefined,
+          executionMode: "tool-auto",
+          toolScope: activeAgent?.storeId ? "agent" : "global",
+          responseFormat: "markdown",
+        }),
+        signal: abortController.signal,
+      });
+      if (guard(res.status)) return;
+      if (!res.ok || !res.body) {
+        const errBody = await res.json().catch(() => ({}));
+        setSendError(errBody?.error ?? "Deep Agent failed to start — please try again");
+        return;
+      }
+
+      setDraft("");
+      await consumeSse(res.body, {
+        onUser: (msg: Message, msgAttachments?: MessageAttachment[]) => {
+          setMessages((prev) => [...prev, { ...msg, attachments: msgAttachments }]);
+        },
+        onToken: (token: string) => {
+          setStreamingText((prev) => prev + token);
+        },
+        onDone: (msg: Message) => {
+          setMessages((prev) => [...prev, msg]);
+          setStreamingText("");
+        },
+        onError: (msg: Message) => {
+          setMessages((prev) => [...prev, msg]);
+          setStreamingText("");
+          setSendError("Deep Agent failed — please try again.");
+        },
+      });
+      await refreshThreads();
+    } catch (err) {
+      if (!(err instanceof DOMException && err.name === "AbortError")) {
+        setSendError("Deep Agent failed — please try again (your input is preserved)");
       }
     } finally {
       setSending(false);
@@ -1029,7 +1145,6 @@ export default function AvaPage() {
 
       // 重新生成中：从消息列表移除旧回复，展示"生成中"，原问题（前一条 user 消息）不受影响。
       setMessages((prev) => prev.filter((m) => m.id !== message.id));
-      setSending(true);
       await consumeSse(res.body, {
         onUser: () => {},
         onToken: (token: string) => setStreamingText((prev) => prev + token),
@@ -1047,7 +1162,6 @@ export default function AvaPage() {
     } catch {
       setRegenerateErrorId(message.id);
     } finally {
-      setSending(false);
       setRegeneratingId(null);
     }
   }
@@ -1413,7 +1527,7 @@ export default function AvaPage() {
 
       {/* chat：移动端 chat 视图或桌面端常驻 */}
       <section
-        className={`min-w-0 flex-1 flex-col md:flex ${mobileView === "chat" ? "flex" : "hidden"}`}
+        className={`min-w-0 flex-1 flex-col bg-background md:flex ${mobileView === "chat" ? "flex" : "hidden"}`}
       >
         {error ? (
           <div className="flex flex-1 items-center justify-center px-6">
@@ -1587,12 +1701,12 @@ export default function AvaPage() {
               )}
             </div>
 
-            <div ref={scrollRef} className="flex-1 overflow-auto py-6">
-              <div className="mx-auto flex max-w-2xl flex-col gap-5 px-6">
+            <div ref={scrollRef} className="flex-1 overflow-auto bg-background px-4 py-6 md:px-8">
+              <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
                 {/* p18-F13：AI credits 横幅按 prototype 视觉收敛为一行浅提示（保留功能）。 */}
                 <div
                   data-testid="ai-low-credits-prompt"
-                  className="flex items-center justify-between gap-3 rounded-9 border border-border bg-surface-1 px-3 py-1.5"
+                  className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 rounded-12 border border-border bg-card px-4 py-2 shadow-sm"
                 >
                   <span className="text-11 text-muted-foreground">
                     AI credits — buy credits or upgrade your plan before a heavy AVA run.
@@ -1608,12 +1722,14 @@ export default function AvaPage() {
                   </Button>
                 </div>
                 {isEmptyThread ? (
-                  <div data-testid="empty" className="pt-10 text-center">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-12 bg-primary text-primary-foreground">
+                  <div data-testid="empty" className="mx-auto flex max-w-2xl flex-col items-center pt-16 text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-12 bg-primary text-primary-foreground shadow-sm">
                       <Sparkles className="h-5 w-5" strokeWidth={1.5} />
                     </div>
-                    <h1 className="mt-3.5 text-17 font-semibold text-foreground">How can I help?</h1>
-                    <p className="mt-1 text-13 text-muted-foreground">Pick a starting point, or just type below.</p>
+                    <h1 className="mt-4 text-xl font-semibold text-foreground">How can I help?</h1>
+                    <p className="mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
+                      Ask a question, attach context, or start a structured research run.
+                    </p>
                     <SuggestedActions
                       actions={EMPTY_SUGGESTED_ACTIONS}
                       align="center"
@@ -1622,7 +1738,7 @@ export default function AvaPage() {
                     />
                   </div>
                 ) : (
-                  <ul data-testid="messages" className="flex flex-col gap-5">
+                  <ul data-testid="messages" className="flex flex-col gap-6">
                     {messages.map((m) => {
                       const showReplySuggestions =
                         m.id === latestMessage?.id && replySuggestedActions.length > 0;
@@ -1634,15 +1750,20 @@ export default function AvaPage() {
                             data-testid={`msg-${m.role}`}
                             data-status={m.status}
                             data-align={m.role === "user" ? "end" : "start"}
-                            className={`group flex items-start gap-2.5 ${m.role === "user" ? "justify-end" : ""}`}
+                            className={`group flex items-start gap-3 ${m.role === "user" ? "justify-end" : ""}`}
                           >
                             {m.role === "assistant" && (
-                              <span className="flex h-7 w-7 flex-none items-center justify-center rounded-7 bg-primary text-11 font-bold text-primary-foreground">
-                                AI
+                              <span className="flex h-8 w-8 flex-none items-center justify-center rounded-9 bg-primary text-11 font-bold text-primary-foreground shadow-sm">
+                                A
                               </span>
                             )}
                             {m.role === "user" ? (
-                              <div className="flex max-w-[85%] flex-col items-end gap-2">
+                              <div
+                                className={cn(
+                                  "flex max-w-2xl flex-col items-end gap-2",
+                                  editingId === m.id ? "w-full" : "w-fit"
+                                )}
+                              >
                                 {m.attachments && m.attachments.length > 0 && (
                                   <ul
                                     data-testid="msg-attachments"
@@ -1661,14 +1782,8 @@ export default function AvaPage() {
                                 {editingId === m.id ? (
                                   <div
                                     data-testid="msg-edit-panel"
-                                    className="w-full rounded-12 border border-border bg-background p-3"
+                                    className="w-full rounded-14 border border-input bg-muted px-3 py-2.5 shadow-sm transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-ring"
                                   >
-                                    <div
-                                      data-testid={`msg-user-content-${m.id}`}
-                                      className="mb-2 whitespace-pre-wrap rounded-12 bg-surface-1 px-4 py-2.5 text-sm leading-relaxed text-foreground"
-                                    >
-                                      {m.content}
-                                    </div>
                                     <label htmlFor={`msg-edit-${m.id}`} className="sr-only">
                                       Edit message
                                     </label>
@@ -1680,7 +1795,7 @@ export default function AvaPage() {
                                         setEditText(e.target.value);
                                         if (editError) setEditError("");
                                       }}
-                                      className="min-h-20 resize-none"
+                                      className="min-h-20 resize-none border-0 bg-transparent px-0 py-0 text-sm leading-relaxed shadow-none outline-none placeholder:text-placeholder focus:border-0 focus:outline-none focus:ring-0 focus-visible:border-0 focus-visible:ring-0"
                                       disabled={sending}
                                     />
                                     {editError && (
@@ -1692,7 +1807,7 @@ export default function AvaPage() {
                                         {editError}
                                       </p>
                                     )}
-                                    <div className="mt-2 flex justify-end gap-2">
+                                    <div className="mt-3 flex items-center justify-end gap-2">
                                       <Button
                                         type="button"
                                         variant="outline"
@@ -1700,6 +1815,7 @@ export default function AvaPage() {
                                         data-testid="msg-edit-cancel"
                                         onClick={cancelEdit}
                                         disabled={sending}
+                                        className="h-8 rounded-9 px-3 text-12"
                                       >
                                         Cancel
                                       </Button>
@@ -1709,6 +1825,7 @@ export default function AvaPage() {
                                         data-testid="msg-edit-save"
                                         onClick={() => void saveEdit(m.id)}
                                         disabled={sending}
+                                        className="h-8 rounded-9 px-3 text-12"
                                       >
                                         {sending ? "Saving…" : "Save"}
                                       </Button>
@@ -1717,7 +1834,7 @@ export default function AvaPage() {
                                 ) : (
                                   <div
                                     data-testid={`msg-user-content-${m.id}`}
-                                    className="whitespace-pre-wrap rounded-12 bg-surface-1 px-4 py-2.5 text-sm leading-relaxed text-foreground"
+                                    className="whitespace-pre-wrap rounded-14 bg-muted px-4 py-2.5 text-sm leading-relaxed text-foreground shadow-sm"
                                   >
                                     {m.content}
                                   </div>
@@ -1759,7 +1876,7 @@ export default function AvaPage() {
                                         disabled={sending || deletingId != null}
                                       >
                                         <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
-                                        Delete last request
+                                        Delete
                                       </Button>
                                     </div>
                                     {deleteConfirmId === m.id && (
@@ -1799,7 +1916,7 @@ export default function AvaPage() {
                                 {m.content}
                               </div>
                             ) : (
-                              <div className="flex max-w-[85%] flex-col gap-1.5">
+                              <div className="flex w-full max-w-3xl flex-col gap-2">
                                 <MarkdownMessage content={m.content} />
                                 <MessageActionsBar
                                   message={m}
@@ -1845,8 +1962,8 @@ export default function AvaPage() {
                 )}
                 {regeneratingId != null && (
                   <div data-testid="regenerating" className="flex items-start gap-2.5">
-                    <span className="flex h-7 w-7 flex-none items-center justify-center rounded-7 bg-primary text-11 font-bold text-primary-foreground">
-                      AI
+                    <span className="flex h-8 w-8 flex-none items-center justify-center rounded-9 bg-primary text-11 font-bold text-primary-foreground shadow-sm">
+                      A
                     </span>
                     {streamingText ? (
                       <div data-testid="msg-assistant-streaming">
@@ -1859,8 +1976,8 @@ export default function AvaPage() {
                 )}
                 {sending && regeneratingId == null && (
                   <div data-testid="sending" className="flex items-start gap-2.5">
-                    <span className="flex h-7 w-7 flex-none items-center justify-center rounded-7 bg-primary text-11 font-bold text-primary-foreground">
-                      AI
+                    <span className="flex h-8 w-8 flex-none items-center justify-center rounded-9 bg-primary text-11 font-bold text-primary-foreground shadow-sm">
+                      A
                     </span>
                     {streamingText ? (
                       <div data-testid="msg-assistant-streaming">
@@ -1888,11 +2005,11 @@ export default function AvaPage() {
             )}
 
             {/* composer */}
-            <div className="flex-none px-6 pb-5">
+            <div className="flex-none border-t border-border bg-background/95 px-4 py-4 shadow-sm backdrop-blur md:px-8">
               <div
                 data-testid="composer-dropzone"
                 data-drag-over={dragOver}
-                className={`mx-auto max-w-2xl rounded-14 border p-3 transition-colors focus-within:border-foreground ${
+                className={`mx-auto w-full max-w-4xl rounded-14 border bg-card p-3 shadow-lg transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-ring ${
                   dragOver ? "border-primary bg-surface-1" : "border-border"
                 }`}
                 onDragOver={(e) => {
@@ -1919,7 +2036,7 @@ export default function AvaPage() {
                 <label htmlFor="ava-composer" className="sr-only">
                   {isResearchMode ? "Deep Research topic" : "Message AVA"}
                 </label>
-                <textarea
+                <Textarea
                   id="ava-composer"
                   ref={composerRef}
                   data-testid="composer"
@@ -1937,7 +2054,7 @@ export default function AvaPage() {
                   // 默认轮廓（Chrome 下为橙色 auto ring）叠在设计系统样式之上；对齐
                   // components/ui/textarea.tsx 的口径显式关掉默认轮廓，焦点高亮保留
                   // focus-visible:ring（外层 composer 容器另有 focus-within 边框反馈）。
-                  className="min-h-10 max-h-40 resize-none border-0 bg-transparent px-0 py-0 text-sm shadow-none transition-colors placeholder:text-placeholder focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="block w-full min-h-16 max-h-40 appearance-none resize-none !border-0 bg-transparent px-0 py-1 text-sm leading-relaxed !shadow-none !outline-none !ring-0 transition-colors placeholder:text-placeholder focus:!border-0 focus:!outline-none focus:!ring-0 focus-visible:!border-0 focus-visible:!outline-none focus-visible:ring-1 focus-visible:ring-transparent"
                 />
                 {sendError && (
                   <p role="alert" data-testid="send-error" className="mt-2 text-xs text-destructive">
@@ -1950,7 +2067,7 @@ export default function AvaPage() {
                     Deep Research pill 上（点击进入/退出研究模式），研究模式下旁边出现
                     mode-chat（✕ 返回聊天）。ai-settings 区域即这一行（模型选择在线程
                     头部，agent/工具入口在这里）。 */}
-                <div data-testid="ai-settings" className="mt-2 flex flex-wrap items-center gap-1.5">
+                <div data-testid="ai-settings" className="mt-3 flex flex-wrap items-center gap-2">
                   <AttachmentTrigger onFiles={(files) => void attachments.addFiles(files)} />
                   <VoiceInputControl
                     disabled={sending}
@@ -1965,7 +2082,7 @@ export default function AvaPage() {
                         data-testid="composer-agent-pill"
                         className={cn(
                           "flex h-8 items-center gap-0.5 rounded-full border border-border bg-background pl-2.5 pr-1 text-12 font-medium transition-colors",
-                          canSwitchAgent ? "text-foreground hover:bg-surface-1" : "text-muted-foreground"
+                          canSwitchAgent ? "text-foreground hover:bg-accent" : "text-muted-foreground"
                         )}
                       >
                         <span aria-hidden>@</span>
@@ -1980,7 +2097,13 @@ export default function AvaPage() {
                               return;
                             }
                             setSettingsError("");
-                            setAgentId(e.target.value);
+                            const nextAgentId = e.target.value;
+                            setAgentId(nextAgentId);
+                            const nextAgent = capabilities.agents.find((agent) => agent.id === nextAgentId);
+                            if (nextAgent?.deepAgentEnabled) {
+                              setComposerMode("deep-agent");
+                              setResearchTypeMenuOpen(false);
+                            }
                           }}
                           className="h-7 w-auto rounded-full border-0 bg-transparent px-1 text-12 shadow-none"
                         >
@@ -2000,7 +2123,7 @@ export default function AvaPage() {
                           aria-expanded={skillMenuOpen}
                           aria-haspopup="menu"
                           onClick={() => setSkillMenuOpen((open) => !open)}
-                          className="h-8 gap-1 rounded-full px-3 text-12 font-medium transition-colors"
+                          className="h-8 gap-1 rounded-full px-3 text-12 font-medium transition-colors hover:bg-accent"
                         >
                           <span aria-hidden>#</span>
                           Skill
@@ -2134,12 +2257,40 @@ export default function AvaPage() {
                           setComposerMode("chat");
                           setResearchTypeMenuOpen(false);
                         }}
-                        className="h-7 w-7 rounded-full transition-colors"
+                        className="h-7 w-7 rounded-full transition-colors hover:bg-accent"
                       >
                         <X className="h-3.5 w-3.5" strokeWidth={1.5} />
                       </Button>
                     )}
                   </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={isDeepAgentMode ? "default" : "outline"}
+                    data-testid="mode-deep-agent"
+                    aria-pressed={isDeepAgentMode}
+                    onClick={() => {
+                      setComposerMode(isDeepAgentMode ? "chat" : "deep-agent");
+                      setResearchTypeMenuOpen(false);
+                    }}
+                    className="h-8 gap-1 rounded-full px-3 text-12 font-medium transition-colors"
+                  >
+                    <Bot className="h-3.5 w-3.5" strokeWidth={1.5} />
+                    Deep Agent
+                  </Button>
+                  {isDeepAgentMode && (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      data-testid="mode-chat"
+                      aria-label="Back to chat"
+                      onClick={() => setComposerMode("chat")}
+                      className="h-7 w-7 rounded-full transition-colors hover:bg-accent"
+                    >
+                      <X className="h-3.5 w-3.5" strokeWidth={1.5} />
+                    </Button>
+                  )}
                   <div className="ml-auto">
                     {sending && !isResearchMode ? (
                       // P18 F02：流式回复进行中，Send 变成 Stop——点击真实中断请求
@@ -2148,7 +2299,7 @@ export default function AvaPage() {
                         data-testid="stop"
                         size="icon"
                         variant="outline"
-                        className="h-8 w-8 rounded-full"
+                        className="h-9 w-9 rounded-full transition-colors hover:bg-accent"
                         onClick={stop}
                         aria-label="Stop generating"
                       >
@@ -2158,7 +2309,7 @@ export default function AvaPage() {
                       <Button
                         data-testid="send"
                         size="icon"
-                        className="h-8 w-8 rounded-full"
+                        className="h-9 w-9 rounded-full shadow-sm transition-colors"
                         onClick={() => void send()}
                         disabled={
                           (!draft.trim() && attachments.uploadedIds.length === 0) ||
@@ -2166,10 +2317,18 @@ export default function AvaPage() {
                           attachments.hasPending ||
                           researchRun?.status === "running"
                         }
-                        aria-label={isResearchMode ? "Start Deep Research" : "Send message"}
+                        aria-label={
+                          isResearchMode
+                            ? "Start Deep Research"
+                            : isDeepAgentMode
+                              ? "Run Deep Agent"
+                              : "Send message"
+                        }
                       >
                         {isResearchMode ? (
                           <Search className="h-4 w-4" strokeWidth={2} />
+                        ) : isDeepAgentMode ? (
+                          <Bot className="h-4 w-4" strokeWidth={2} />
                         ) : (
                           <ArrowUp className="h-4 w-4" strokeWidth={2} />
                         )}
@@ -2779,8 +2938,37 @@ function dispatchSseEvent(raw: string, handlers: SseHandlers): void {
   if (event === "user") handlers.onUser(parsed.message, parsed.attachments);
   else if (event === "updated") handlers.onUpdated?.(parsed.message);
   else if (event === "token") handlers.onToken(parsed.token);
-  else if (event === "done") handlers.onDone(parsed.message);
-  else if (event === "error") handlers.onError(parsed.message);
+  else if (event === "chunk") {
+    const token =
+      typeof parsed.content === "string"
+        ? parsed.content
+        : typeof parsed.token === "string"
+          ? parsed.token
+          : typeof parsed.data === "string"
+            ? parsed.data
+            : typeof parsed.data?.content === "string"
+              ? parsed.data.content
+              : "";
+    if (token) handlers.onToken(token);
+  } else if (event === "result") {
+    const content =
+      typeof parsed.data?.content === "string"
+        ? parsed.data.content
+        : typeof parsed.content === "string"
+          ? parsed.content
+          : "";
+    if (parsed.message) {
+      handlers.onDone(parsed.message);
+    } else if (content) {
+      handlers.onDone({
+        id: -Date.now(),
+        role: "assistant",
+        content,
+        status: "complete",
+      });
+    }
+  } else if (event === "done" && parsed.message) handlers.onDone(parsed.message);
+  else if (event === "error" && parsed.message) handlers.onError(parsed.message);
 }
 
 interface ThreadGroup {

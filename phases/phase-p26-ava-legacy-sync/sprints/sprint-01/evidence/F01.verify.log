@@ -1,0 +1,26 @@
+$ pnpm --filter @repo/web test -- lib/ava-legacy-compat.test.ts app/api/v1/chat/handleRequestAIChat/route.test.ts
+[exit 0]
+
+> @repo/web@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/web
+> vitest run "lib/ava-legacy-compat.test.ts" "app/api/v1/chat/handleRequestAIChat/route.test.ts"
+
+
+ RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/web
+
+ ✓ lib/ava-legacy-compat.test.ts  (6 tests) 12ms
+ ✓ app/api/v1/chat/handleRequestAIChat/route.test.ts  (2 tests) 113ms
+
+ Test Files  2 passed (2)
+      Tests  8 passed (8)
+   Start at  17:37:53
+   Duration  6.11s (transform 718ms, setup 0ms, collect 1.48s, tests 125ms, environment 1ms, prepare 1.44s)
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+
+$ pnpm --filter @repo/web typecheck
+[exit 0]
+
+> @repo/web@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/phase-p26-ava/apps/web
+> tsc --noEmit
+

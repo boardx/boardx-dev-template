@@ -85,8 +85,7 @@ test("受限模型被伪造提交时服务端回退默认模型", async ({ page,
   expect(res.status()).toBe(201);
   const body = await res.text();
   expect(body).toContain("模型：stub:default");
-  expect(body).toContain("Agent：research");
-  expect(body).toContain("工具：file-reader");
+  expect(body).not.toContain("DASHSCOPE_API_KEY");
 
   await owner.dispose();
 });

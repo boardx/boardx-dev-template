@@ -16,11 +16,21 @@ on:
     - cron: "0 * * * *"
     # 全量浏览器 e2e 每 3 小时跑一次。
     - cron: "30 */3 * * *"
+  # 手动触发 e2e-full（#665）：它此前只在 `30 */3` 那个 cron 跑，改动它的人要等最多
+  # 3 小时才知道结果，验证成本高到没人验证——这正是它连红 12 次无人察觉的一环。
+  workflow_dispatch:
+    inputs:
+      run_e2e_full:
+        description: "跑全量浏览器 e2e（e2e-full）"
+        type: boolean
+        default: true
 
 jobs:
   verify:
     # 轻量门控：每个 PR/push 都跑，只测受本次改动影响的模块；定时(daily)不重复跑。
-    if: github.event_name != 'schedule'
+    # 也排除 workflow_dispatch：dispatch 是专门用来手动跑 e2e-full 的，payload 里没有
+    # `before` 字段 → TURBO_SCM_BASE 会解析成空串 → `turbo --affected` 基线为空。
+    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -143,8 +153,26 @@ jobs:
   # 全量 Playwright e2e 回归（真浏览器，覆盖 auth/team/room/canvas/board 等全部模块）。
   # 较重，不随每个 PR/push 跑；每 3 小时定时执行一次（错开半小时，避开整点的烟测检查）。
   e2e-full:
-    if: github.event_name == 'schedule' && github.event.schedule == '30 */3 * * *'
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '30 */3 * * *') ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_e2e_full)
     runs-on: ubuntu-latest
+    # 止血用的硬上限（#665 / 根因见 #675）：最近 13 次 e2e-full 全部跑了 **328–345
+    # 分钟**才失败（conclusion 均为 failure，从未真撞到 GitHub 的 6h 默认上限）——
+    # 绝大部分时间是在对着第 8 分钟就死掉的 dev server 等超时。90 分钟纯粹是止血：
+    # 把"默默烧 5.7 小时"压到"1.5 小时内失败且有人被叫醒"。
+    #
+    # ⚠️ 90 这个值**没有实测支撑**：本仓至今没有一次健康的全量绿跑，所以"正常耗时是
+    # 多少"是未知数。它严格优于现状（现状 100% 在 ~340 分钟失败），但**根因（#675）
+    # 修好、拿到第一次绿跑之后必须回来校准**——否则健康跑若真需要 95 分钟，这里会
+    # 误杀并开假告警，而且因为被取消，你永远测不到真实耗时。
+    timeout-minutes: 90
+    # 失败时要开 issue 叫醒人类（见末尾步骤）——默认 GITHUB_TOKEN 只读，不显式声明
+    # 告警会静默失败，等于没有告警。按最小权限只给这个 job（`sync-projection.yml`
+    # 用的是 workflow 级顶层 permissions；这里用 job 级，权限内容相同但范围更窄）。
+    permissions:
+      issues: write
+      contents: read
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -188,3 +216,41 @@ jobs:
           set -euo pipefail
           pnpm --filter @repo/workflow-worker start &
           pnpm --filter @repo/web exec playwright test
+
+      # 拉停线绳（#665）：e2e-full 曾连红 12 次、每次烧 5.7h 而无人察觉——因为它只在
+      # 定时任务跑、PR 上永远 skipping，没有任何人被叫醒。红了就必须有人知道：开一个
+      # issue（同一根因只留一个，已存在则追加评论），而不是静静地红下去。
+      - name: 全量回归失败 → 开 issue 叫醒人类
+        # `|| cancelled()` 不可省：撞 timeout-minutes 时 job 是被**取消**而非 failure，
+        # 只写 failure() 会让告警在"跑挂了 90 分钟"这个最该报的场景哑火。
+        if: failure() || cancelled()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 显式给仓库上下文：不给的话 gh 靠 checkout 出来的 git remote 解析仓库，
+          # 若 job 在 checkout 期间就被取消，gh 无上下文 → issue list/create 双双失败
+          # → `|| true` 吞掉 → 告警静默丢失。一行 env 解耦。
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          TITLE="🚨 e2e-full 全量回归失败"
+          EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number -q '.[0].number' || true)
+          BODY=$(printf '%s\n' \
+            "全量浏览器 e2e 回归失败。**这是唯一跑完整浏览器套件的门禁，PR 上不跑，红了只有本告警会说话。**" \
+            "" \
+            "- 运行：$RUN_URL" \
+            "- commit：\`${{ github.sha }}\`" \
+            "- 触发：\`${{ github.event_name }}\`" \
+            "" \
+            "**先查是不是已知根因 #675**：如果日志里有大量 \`Cannot find module './vendor-chunks/*.js'\` + \`Unexpected token '<', \\\"<!DOCTYPE\\\"\`，那就是 #675（next dev 的 static-paths-worker 在第 8 分钟起读不到 vendor chunk，此后所有碰 DB 的路由 500），**不是新问题、也不是 worker 的锅**，别退回给写代码的人。" \
+            "" \
+            "⚠️ **#675 明确排除了两条死路**：(1) 加 \`serverExternalPackages\` 是 no-op（\`pg\` 本就在 Next 14 默认外部化列表里）；(2) 改用 \`next build && next start\` 会被人类否决——生产构建的构建期 DCE 会剃光 e2e 测试后门（\`/api/dev/*\`、\`__canvasTestApi\`），而把后门改成 env 守门放进生产包**已被明确禁止**（\`grant-sysadmin\` 是一键提权）。动手前先读 #675。" \
+            "" \
+            "如果不是上述形态，再读失败日志归因到代码。" \
+            "" \
+            "> 注：本告警只在 job 真的跑到了这一步时才会发出。job 压根起不来（runner/billing 类基础设施故障）时它自己也不会跑——那种情况下这条 issue 不会存在，属于已知盲区。")
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY"
+          fi

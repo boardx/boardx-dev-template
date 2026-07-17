@@ -80,6 +80,8 @@ describe("listAvaAgentOptions", () => {
         description: "a subscribed agent",
         version: 1,
         config: {},
+        deepAgentEnabled: false,
+        storeId: 7,
       },
     ]);
   });
