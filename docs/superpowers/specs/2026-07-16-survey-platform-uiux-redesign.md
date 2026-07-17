@@ -114,6 +114,8 @@ Capabilities:
 - AI-generated template;
 - manual template creation.
 
+The template center must use the same Survey workspace sidebar as Home and My Surveys. Tags are compact filter controls above a two-column result grid. Template cards use one hierarchy: ownership and tags, title and description, framework/report summary, then primary and secondary actions. They must not fall back to the legacy template-manager summary panel or an expanded inline list inside the survey editor.
+
 ### 5.4 Report Template Center
 
 Report templates define how collected evidence becomes a professional report.
@@ -145,6 +147,8 @@ The Design Survey screen contains:
 - simplified AI assistant;
 - preview, save, and next-step actions.
 
+The editor follows the same neutral diagnostic-workspace visual language as the management pages. Its command bar contains Back, Preview, Report Template, and Publish actions once; the five workflow steps remain the only page-level navigation. The survey title, description, diagnostic dimensions, hypotheses, questions, and AI assistant use aligned single-boundary sections rather than nested decorative cards.
+
 The editor must not contain separate Responses or Settings tabs. Those responsibilities belong to the workflow steps.
 
 AI behavior:
@@ -153,6 +157,18 @@ AI behavior:
 - AI returns a structured preview of additions, removals, rewrites, or reordering;
 - user applies all or selected changes;
 - applied questions immediately appear in the editor.
+
+The assistant remains visually subordinate to the editable survey. It shows a concise conversation, quick commands, a structured change preview, and explicit Apply or Dismiss actions. Generated content never replaces the current survey before confirmation.
+
+### 5.5.1 New Survey Chooser
+
+The New Survey action opens one focused dialog with three mutually exclusive paths:
+
+- AI conversation;
+- start from a template;
+- blank survey.
+
+Each path uses the same Lucide icon family, title, one-sentence description, and one explicit action. Selecting a path immediately enters the corresponding real workflow. The dialog contains no duplicate creation controls, promotional copy, or unavailable actions. On mobile the three choices stack vertically; on desktop they form one row.
 
 ### 5.6 Report Template Builder
 
@@ -321,6 +337,8 @@ The redesign is complete only when:
 - desktop and mobile screenshots show no overlap, clipping, or blank chart canvases;
 - Survey Playwright suites, typecheck, unit tests, design lint, and harness verification pass;
 - screenshots and command output are stored in phase evidence.
+
+The refinement covering the New Survey chooser, Survey Editor, and Survey Template Center additionally requires stable E2E anchors for all three creation paths, template filtering and use-template actions, the five workflow steps, and AI preview/application. Existing data, authorization, publish, and report behavior must remain unchanged.
 
 ## 11. Delivery Strategy
 
