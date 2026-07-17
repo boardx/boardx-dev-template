@@ -35,6 +35,7 @@ import {
 import { currentTeamId, currentUser } from "@/lib/session";
 import { isThreadInCurrentContext } from "@/lib/ava-thread-auth";
 import { listAvaAgentOptions } from "@/lib/ava-agents";
+import { listAvaSkillOptions } from "@/lib/ava-store-skills";
 import { createAvaReplyStreamResponse } from "./reply-stream";
 
 export const runtime = "nodejs";
@@ -73,7 +74,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
   const teamId = currentTeamId();
   const role = teamId == null ? undefined : await getMembership(teamId, user.id);
-  const agentOptions = await listAvaAgentOptions(user.id, teamId);
+  const [agentOptions, toolOptions] = await Promise.all([
+    listAvaAgentOptions(user.id, teamId),
+    listAvaSkillOptions(user.id, teamId),
+  ]);
   const settings = normalizeAvaAiSettings(
     {
       modelId: typeof body.modelId === "string" ? body.modelId : DEFAULT_MODEL_ID,
@@ -85,8 +89,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     role === "owner" || role === "admin",
     // p18-F09：agentId 的合法集合 = 内置默认 + 已订阅的 AI Store Agent（store-<id>），
     // 与 /api/ava/capabilities 下发给 agent-select 的选项同一来源；不在集合内则归一化为默认。
-    agentOptions
+    agentOptions,
+    toolOptions,
   );
+  const runtimeInstructions = [
+    agentOptions.find((option) => option.id === settings.agentId)?.config?.instructions,
+    ...toolOptions
+      .filter((option) => settings.toolIds.includes(option.id))
+      .map((option) => option.config?.instructions),
+  ].filter((instruction): instruction is string => typeof instruction === "string" && instruction.trim().length > 0);
 
   const selectedAgent = agentOptions.find((agent) => agent.id === settings.agentId);
   const shouldUseDeepAgent =
@@ -194,6 +205,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     modelId: settings.modelId,
     agentId: settings.agentId,
     toolIds: settings.toolIds,
+    systemPrompt: runtimeInstructions.join("\n\n"),
     status: 201,
     // P18 F02：客户端点击停止/断开连接时 Next.js 会 abort 这个 signal；透传给流式生成，
     // 使真实 provider 的底层 fetch 被真实中断，而非等它自然结束后再丢弃结果。

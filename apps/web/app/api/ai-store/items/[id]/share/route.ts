@@ -3,11 +3,14 @@
 // POST 生成/重新开启管理授权链接（owner-only；已开启时复用同一 token，见 enableAiStoreItemShare）。
 // DELETE 关闭分享链接，使旧链接立即失效（owner-only；不清空已授权用户列表）。
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { CURRENT_TEAM_COOKIE } from "@repo/auth";
 import {
   disableAiStoreItemShare,
   enableAiStoreItemShare,
   getAiStoreItem,
   getAiStoreItemShare,
+  getMembership,
   listAiStoreItemGrantees,
 } from "@repo/data";
 import { currentUser } from "@/lib/session";
@@ -38,7 +41,17 @@ async function requireOwnedItem(rawId: string): Promise<OwnedItemResult> {
   }
 
   const item = await getAiStoreItem(itemId);
-  if (!item || item.owner_user_id == null || String(item.owner_user_id) !== String(user.id)) {
+  const teamIdRaw = cookies().get(CURRENT_TEAM_COOKIE)?.value;
+  const teamId = teamIdRaw ? Number(teamIdRaw) : null;
+  if (
+    teamId == null ||
+    !Number.isFinite(teamId) ||
+    !(await getMembership(teamId, user.id)) ||
+    !item ||
+    item.owner_user_id == null ||
+    String(item.owner_user_id) !== String(user.id) ||
+    String(item.origin_team_id) !== String(teamId)
+  ) {
     return { ok: false, response: NextResponse.json({ error: "项目不存在或无权限" }, { status: 404 }) };
   }
   return { ok: true, itemId };

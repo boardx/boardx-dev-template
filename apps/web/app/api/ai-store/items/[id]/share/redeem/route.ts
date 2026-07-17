@@ -4,7 +4,9 @@
 // 开启状态，否则一律 404（E3：分享链接无效或项目已下架，访问者只看到不可访问提示，
 // 不暴露项目是否存在，避免用可枚举 id + 猜测状态探测私有项目)。
 import { NextResponse } from "next/server";
-import { redeemAiStoreItemShare } from "@repo/data";
+import { cookies } from "next/headers";
+import { CURRENT_TEAM_COOKIE } from "@repo/auth";
+import { getMembership, redeemAiStoreItemShare } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -29,7 +31,16 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
   if (!shareToken) return NextResponse.json({ error: "缺少授权链接 token" }, { status: 400 });
 
-  const item = await redeemAiStoreItemShare(itemId, shareToken, user.id);
+  const teamIdRaw = cookies().get(CURRENT_TEAM_COOKIE)?.value;
+  const teamId = teamIdRaw ? Number(teamIdRaw) : null;
+  if (teamId == null || !Number.isFinite(teamId)) {
+    return NextResponse.json({ error: "请先选择团队" }, { status: 400 });
+  }
+  if (!(await getMembership(teamId, user.id))) {
+    return NextResponse.json({ error: "当前团队不可用" }, { status: 403 });
+  }
+
+  const item = await redeemAiStoreItemShare(itemId, shareToken, user.id, teamId);
   if (!item) return NextResponse.json({ error: "分享链接无效或已关闭" }, { status: 404 });
 
   return NextResponse.json({ item });

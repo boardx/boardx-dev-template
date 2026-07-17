@@ -20,10 +20,15 @@
 | 6 | 在整体里的位置 | 元数据表 | phase / sprint / capability / priority / wave / area |
 | 7 | 按什么流程干活 | 开工流程 | claim → 读上下文 → 实现 → verify 门控 → PR 规范 |
 | 8 | 规则的权威在哪 | 各处链接 | feature_list.json / requirements/ / ui-signoff.md / session-handoff.md / AGENTS.md |
+| 9 | 属于哪个总追踪 Issue | Parent Tracking Issue | roadmap phase 的可选 `tracking_issue` |
 
 ## Body 结构（生成顺序）
 
 ```markdown
+## Parent Tracking Issue
+Parent: #<tracking_issue>
+https://github.com/<repo>/issues/<tracking_issue>
+
 ## 交付契约（user_visible_behavior）
 <user_visible_behavior 原文>
 
@@ -54,6 +59,8 @@
 5. 逐条跑 verification → 证据落盘 → pnpm harness verify 门控（禁止手改 status）
 6. 分支/PR 规范（Closes #issue）+ 收尾 progress/handoff
 ```
+
+未配置 `tracking_issue` 的 Phase 省略 `Parent Tracking Issue` section。
 
 ## 更新语义（幂等 + 收敛）
 

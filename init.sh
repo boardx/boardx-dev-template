@@ -167,7 +167,9 @@ pnpm harness gen-subagents
 # 可选：起本地依赖服务（Postgres + Redis）。默认不起，保证基础验证无 docker 也能跑。
 if [ "${RUN_INFRA:-0}" = "1" ]; then
   echo "==> RUN_INFRA=1，起本地依赖服务（infra/docker-compose.yml）"
-  docker compose -f infra/docker-compose.yml up -d
+  docker compose -f infra/docker-compose.yml up -d --wait
+  echo "==> 应用数据库 migrations"
+  pnpm --filter @repo/data run migrate
 fi
 
 echo "==> 基础验证: ${VERIFY_CMD}"

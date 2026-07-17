@@ -28,7 +28,13 @@ export async function GET(req: Request) {
   }
 
   if (scope === "editable") {
-    return NextResponse.json({ boards: await listEditableBoardsForUser(user.id, q) });
+    const boards = await listEditableBoardsForUser(user.id, q);
+    return NextResponse.json({
+      boards: boards.map((board) => ({
+        ...board,
+        ownedByMe: Number(board.owner_user_id) === Number(user.id),
+      })),
+    });
   }
 
   if (roomIdParam) {

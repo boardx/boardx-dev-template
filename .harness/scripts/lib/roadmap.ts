@@ -29,7 +29,7 @@ function readExistingHeader(): string {
   return header.length > 0 ? header : DEFAULT_HEADER;
 }
 
-function dumpPhase(p: RoadmapPhase): string {
+export function renderRoadmapPhase(p: RoadmapPhase): string {
   const dep = p.depends_on.length ? `[${p.depends_on.map((d) => `"${d}"`).join(", ")}]` : "[]";
   const lines = [
     `  - id: "${p.id}"`,
@@ -41,12 +41,15 @@ function dumpPhase(p: RoadmapPhase): string {
   ];
   // has_ui 仅在 true 时落盘（默认 false 的后端/逻辑阶段保持干净）。
   if (p.has_ui) lines.push(`    has_ui: true`);
+  if (p.tracking_issue != null) {
+    lines.push(`    tracking_issue: ${p.tracking_issue}`);
+  }
   return lines.join("\n");
 }
 
 export function saveRoadmap(r: Roadmap): void {
   const header = readExistingHeader();
   const head = [header, `project: ${r.project}`, "phases:"].join("\n");
-  const body = r.phases.map(dumpPhase).join("\n");
+  const body = r.phases.map(renderRoadmapPhase).join("\n");
   writeFileSync(ROADMAP_PATH, head + "\n" + body + "\n", "utf8");
 }

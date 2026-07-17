@@ -6,13 +6,14 @@
 // 安全加固对齐 F02/F03（AGENTS.md 提醒过 #173 手动上分双花问题，审核状态转移同理要防重复提交/越权）：
 // 状态转移在服务端用乐观锁 `UPDATE ... WHERE status = 期望值` 完成，重复点击视为幂等，
 // 竞态覆盖返回 409 并提示刷新，不允许客户端乐观地"假装成功"。
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, ShieldCheck, ShieldX, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { ReviewWorkspace } from "../../../ai-store/_components/review-workspace";
 
 type ReviewStatus = "pending" | "approved";
 type ReviewAction = "approve" | "reject" | "revoke";
@@ -184,11 +185,13 @@ export default function AdminAiStoreReviewPage() {
   const [query, setQuery] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ReviewStatus | "">("");
+  const loadRequestId = useRef(0);
 
   const [pending, setPending] = useState<{ item: ReviewItem; action: ReviewAction } | null>(null);
 
   const load = useCallback(
     async (p: number, q: string, status: ReviewStatus | "") => {
+      const requestId = ++loadRequestId.current;
       setLoading(true);
       setError("");
       const params = new URLSearchParams({ page: String(p), pageSize: String(PAGE_SIZE) });
@@ -196,6 +199,7 @@ export default function AdminAiStoreReviewPage() {
       if (status) params.set("status", status);
       try {
         const res = await fetch(`/api/admin/ai-store?${params.toString()}`);
+        if (requestId !== loadRequestId.current) return;
         if (res.status === 401) {
           router.push("/login");
           return;
@@ -211,13 +215,15 @@ export default function AdminAiStoreReviewPage() {
           return;
         }
         const data = (await res.json()) as { items: ReviewItem[]; total: number };
+        if (requestId !== loadRequestId.current) return;
         setAuthState("ok");
         setItems(data.items ?? []);
         setTotal(data.total ?? 0);
       } catch {
+        if (requestId !== loadRequestId.current) return;
         setError("Failed to load, please try again later");
       } finally {
-        setLoading(false);
+        if (requestId === loadRequestId.current) setLoading(false);
       }
     },
     [router],
@@ -289,16 +295,12 @@ export default function AdminAiStoreReviewPage() {
   }
 
   return (
-    <div className="mx-auto max-w-content px-9 pb-14 pt-7">
-      {/* 标题 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-26 font-bold tracking-tight text-foreground">Store Approval</h1>
-          <p className="mt-1 text-13 text-muted-foreground">
-            View AI Store items submitted for platform review; approve, reject, or revoke previously approved items
-          </p>
-        </div>
-      </div>
+    <ReviewWorkspace
+      scope="BoardX review"
+      title="Store approval"
+      description="Review BoardX submissions, decisions, and availability."
+      onBack={() => router.push("/ai-store")}
+    >
 
       {/* 状态 Tab */}
       <div data-testid="status-tabs" className="mt-5 flex flex-wrap gap-2">
@@ -472,6 +474,6 @@ export default function AdminAiStoreReviewPage() {
           onConfirmed={onReviewed}
         />
       )}
-    </div>
+    </ReviewWorkspace>
   );
 }
