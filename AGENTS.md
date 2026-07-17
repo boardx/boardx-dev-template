@@ -36,6 +36,7 @@
 - **状态不能自己改**:你不能把 feature 直接标成 `passing`。只能跑
   `pnpm harness verify`,由验证脚本门控转移。`passing` 不可逆。
 - **范围纪律**:只动当前 feature 涉及的代码,别顺手重构无关区域。
+- **文件规模**:业务源文件原则上不超过 2000 行;接近上限时必须按领域职责拆分。超过 2000 行仅允许有明确豁免、拆分计划和验证证据,禁止继续在超限文件中堆功能。
 - **UI 先行(仅 has_ui 阶段)**:UI 相关阶段的 `feature_list` 必须在真实 UI 经**人类**确认
   (`ui-signoff.md` status: confirmed)之后才定稿;`new-sprint` 对未确认的 UI 阶段直接拒绝。见 ADR-003。
 
