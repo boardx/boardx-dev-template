@@ -31,6 +31,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -1415,7 +1416,7 @@ function WorkspaceDesignWorkbench({
                       添加选项
                     </Button>
                   </div>
-                ) : (
+              ) : (
                   <div className="mt-3 rounded-lg border border-dashed border-border-strong bg-card px-3 py-2 text-13 text-muted-foreground">
                     {TYPE_LABEL[question.type]}回答
                   </div>
@@ -4855,6 +4856,7 @@ export default function SurveysPage() {
   const [workbenchTab, setWorkbenchTab] = useState<"home" | "my" | "team" | "templates" | "ai">(initialWorkbenchTab);
   const [workspaceView, setWorkspaceView] = useState<WorkspaceTarget>(initialWorkspaceView);
   const [workspaceSurvey, setWorkspaceSurvey] = useState<Survey | null>(null);
+  const [createChooserOpen, setCreateChooserOpen] = useState(false);
 
   // editor state
   const [editingSurveyId, setEditingSurveyId] = useState<number | null>(initialSurveyId);
@@ -5124,6 +5126,25 @@ export default function SurveysPage() {
     resetAiState(withAi);
     void loadTeams();
     void loadTemplates();
+  }
+
+  function openCreateChooser() {
+    setCreateChooserOpen(true);
+  }
+
+  function createWithAiFromChooser() {
+    setCreateChooserOpen(false);
+    openEditor({ withAi: true });
+  }
+
+  function createFromTemplateChooser() {
+    setCreateChooserOpen(false);
+    window.location.href = "/surveys?view=templates";
+  }
+
+  function createBlankFromChooser() {
+    setCreateChooserOpen(false);
+    openEditor();
   }
 
   function openTemplateEditor(template?: SurveyTemplate) {
@@ -7645,9 +7666,9 @@ export default function SurveysPage() {
       workflowMode={workspaceView !== "workspace"}
       templateLibraryMode={workbenchTab === "templates"}
       hideHeader={workbenchTab === "home"}
-      onCreateWithAi={() => openEditor({ withAi: true })}
+      onCreateWithAi={openCreateChooser}
       onCreateFromScene={() => void navigateWorkspace("template")}
-      onCreateBlank={() => (workbenchTab === "templates" ? openTemplateEditor() : openEditor())}
+      onCreateBlank={() => (workbenchTab === "templates" ? openTemplateEditor() : openCreateChooser())}
       onNavigate={(target) => void navigateWorkspace(target)}
     >
       {workspaceView !== "workspace" ? (
@@ -7773,7 +7794,7 @@ export default function SurveysPage() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button data-testid="create-with-ai" type="button" onClick={() => openEditor({ withAi: true })} className="gap-2 bg-foreground text-background hover:bg-foreground/90">
+                <Button data-testid="create-with-ai" type="button" onClick={openCreateChooser} className="gap-2 bg-foreground text-background hover:bg-foreground/90">
                   <Plus className="h-4 w-4" />
                   新建问卷
                 </Button>
@@ -7824,7 +7845,7 @@ export default function SurveysPage() {
                         return;
                       }
                       if (method.id === "create") {
-                        openEditor({ withAi: true });
+                        openCreateChooser();
                         return;
                       }
                       const reportSurvey = visibleSurveys.find((item) => item.responses > 0);
@@ -8028,13 +8049,13 @@ export default function SurveysPage() {
                     <Button
                       data-testid="empty-new-survey"
                       size="sm"
-                      onClick={() => openEditor()}
+                      onClick={openCreateChooser}
                       className="gap-1.5 bg-foreground text-background hover:bg-foreground/90 hover:text-background"
                     >
                       <Plus className="h-4 w-4" strokeWidth={1.5} />
                       创建问卷
                     </Button>
-                    <Button data-testid="empty-create-with-ai" size="sm" variant="outline" onClick={() => openEditor({ withAi: true })} className="gap-1.5">
+                    <Button data-testid="empty-create-with-ai" size="sm" variant="outline" onClick={openCreateChooser} className="gap-1.5">
                       <Sparkles className="h-4 w-4" strokeWidth={1.5} />
                       AI 创建
                     </Button>
@@ -8106,6 +8127,56 @@ export default function SurveysPage() {
             </section>
           </>
         )}
+
+        <Dialog
+          open={createChooserOpen}
+          onClose={() => setCreateChooserOpen(false)}
+          title="新建问卷"
+          description="选择一种方式开始你的诊断问卷。"
+          testId="new-survey-dialog"
+        >
+          <div className="grid gap-2">
+            <Button
+              data-testid="new-survey-ai"
+              type="button"
+              variant="outline"
+              onClick={createWithAiFromChooser}
+              className="h-auto justify-start gap-3 px-4 py-3 text-left transition-all duration-200 hover:bg-accent"
+            >
+              <Sparkles className="h-5 w-5 shrink-0" strokeWidth={1.6} />
+              <span>
+                <span className="block text-14 font-semibold">AI 创建</span>
+                <span className="mt-1 block text-12 font-normal text-muted-foreground">描述目标，先生成一版待确认的问卷。</span>
+              </span>
+            </Button>
+            <Button
+              data-testid="new-survey-template"
+              type="button"
+              variant="outline"
+              onClick={createFromTemplateChooser}
+              className="h-auto justify-start gap-3 px-4 py-3 text-left transition-all duration-200 hover:bg-accent"
+            >
+              <LayoutTemplate className="h-5 w-5 shrink-0" strokeWidth={1.6} />
+              <span>
+                <span className="block text-14 font-semibold">从模板开始</span>
+                <span className="mt-1 block text-12 font-normal text-muted-foreground">从诊断模板中心选择可复用的结构。</span>
+              </span>
+            </Button>
+            <Button
+              data-testid="new-survey-blank"
+              type="button"
+              variant="outline"
+              onClick={createBlankFromChooser}
+              className="h-auto justify-start gap-3 px-4 py-3 text-left transition-all duration-200 hover:bg-accent"
+            >
+              <FileText className="h-5 w-5 shrink-0" strokeWidth={1.6} />
+              <span>
+                <span className="block text-14 font-semibold">空白问卷</span>
+                <span className="mt-1 block text-12 font-normal text-muted-foreground">从零开始配置标题、题目和回收设置。</span>
+              </span>
+            </Button>
+          </div>
+        </Dialog>
       </div>
       )}
     </WorkspaceShell>

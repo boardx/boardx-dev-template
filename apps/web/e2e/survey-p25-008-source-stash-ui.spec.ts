@@ -40,11 +40,37 @@ test("home method cards navigate to real survey workflows", async ({ page }) => 
 
   await page.goto("/surveys");
   await page.getByTestId("survey-method-create").click();
+  await page.getByTestId("new-survey-ai").click();
   await expect(page.getByTestId("editor-command-bar")).toBeVisible();
 
   await page.goto("/surveys");
   await page.getByTestId("survey-method-report").click();
   await expect(page).toHaveURL(/\/surveys\?view=my/);
+});
+
+test("new survey chooser routes each creation path", async ({ page }) => {
+  await register(page);
+  await page.goto("/surveys");
+
+  await page.getByTestId("create-with-ai").click();
+  await expect(page.getByTestId("new-survey-dialog")).toBeVisible();
+  await expect(page.getByTestId("new-survey-ai")).toBeVisible();
+  await expect(page.getByTestId("new-survey-template")).toBeVisible();
+  await expect(page.getByTestId("new-survey-blank")).toBeVisible();
+
+  await page.getByTestId("new-survey-template").click();
+  await expect(page).toHaveURL(/\/surveys\?view=templates/);
+
+  await page.goto("/surveys");
+  await page.getByTestId("create-with-ai").click();
+  await page.getByTestId("new-survey-ai").click();
+  await expect(page.getByTestId("editor-command-bar")).toBeVisible();
+
+  await page.goto("/surveys");
+  await page.getByTestId("create-with-ai").click();
+  await page.getByTestId("new-survey-blank").click();
+  await expect(page.getByTestId("survey-editor-shell")).toBeVisible();
+  await expect(page.getByTestId("ai-assistant-panel")).toHaveCount(0);
 });
 
 test("template URL restores the source stash template manager", async ({ page }) => {
