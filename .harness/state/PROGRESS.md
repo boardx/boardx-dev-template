@@ -30,6 +30,6 @@
 | p23 | developer-portal | in_progress | 0 | 0 | 0 | 10 |
 | p24 | room-board-management | not_started | 0 | 0 | 0 | 0 |
 | p25 | Survey System | in_progress | 0 | 1 | 0 | 11 |
-| p26 | ava-legacy-sync | not_started | 3 | 0 | 0 | 1 |
+| p26 | ava-legacy-sync | not_started | 2 | 0 | 0 | 2 |
 
-_最近聚合:2026-07-15T09:38:21.524Z_
+_最近聚合:2026-07-16T11:00:07.694Z_

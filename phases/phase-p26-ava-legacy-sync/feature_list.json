@@ -24,15 +24,15 @@
       "area": "web",
       "title": "迁移旧 AVA composer 与消息动作能力",
       "user_visible_behavior": "用户进入当前 AVA 页面时，旧 boardx-web 中的文件/图片/语音输入、消息复制/编辑/重试/发送到白板等核心交互在当前页面有等价入口，并保留现有 `data-testid` 回归测试可定位。",
-      "status": "not_started",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "02",
+      "owner": "codex-ava",
       "capability": "CAP-WEB",
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/ava-chat-basic.spec.ts e2e/ava-message-actions.spec.ts e2e/ava-message-send-actions.spec.ts e2e/ava-attach-files.spec.ts e2e/ava-voice-input.spec.ts"
       ],
-      "evidence": "",
-      "notes": "来源：boardx-web/src/components/ava/ChatUIComponent/MessageEditor 与 ChatItem。会改 `apps/web/app/(app)/ava/page.tsx`、`voice-input.tsx`、`attachments.tsx`，必须串行在 F01 后。"
+      "evidence": "evidence/F02.verify.log @ 2026-07-16T11:00:07.480Z",
+      "notes": "来源：boardx-web/src/components/ava/ChatUIComponent/MessageEditor 与 ChatItem。会改 `apps/web/app/(app)/ava/page.tsx`、`voice-input.tsx`、`attachments.tsx`，必须串行在 F01 后。增量验收：普通本地 dev 必须通过 Next 转译 `@repo/ai` 读取当前 Qwen 默认模型，`/api/ava/capabilities` 返回 `qwen3.7-max`，composer textarea 不出现原生黑色内层边框。"
     },
     {
       "id": "F03",

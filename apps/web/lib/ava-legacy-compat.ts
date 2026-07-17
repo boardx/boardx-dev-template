@@ -1,6 +1,7 @@
-import { DEFAULT_AVA_MODEL_ID, defaultGateway } from "@repo/ai";
+import { defaultGateway } from "@repo/ai";
 
 export const LEGACY_AVA_MODEL_ID = "stub:legacy-ava";
+export const LEGACY_SAFE_MODEL_ID = "stub:default";
 
 export interface LegacyAvaWidgetRequest {
   prompt?: string;
@@ -53,7 +54,8 @@ export function getLegacyAvaModel(user: string): string {
 
 export function normalizeLegacyAvaModel(model: string | undefined): string {
   if (model?.startsWith("stub:")) return model;
-  return DEFAULT_AVA_MODEL_ID;
+  if (model?.startsWith("qwen")) return model;
+  return LEGACY_SAFE_MODEL_ID;
 }
 
 export function buildLegacyWidgetPrompt(data: LegacyAvaWidgetRequest): string {
@@ -187,7 +189,7 @@ export function legacyErrorResponse(message: string, status = 500): Response {
 export async function runLegacyTranslation(data: LegacyAvaTranslateRequest): Promise<string> {
   const targetLanguage = data.targetLanguage?.trim() || "en";
   const text = data.text?.trim() || "";
-  return runLegacyAvaText(DEFAULT_AVA_MODEL_ID, `Translate this text to ${targetLanguage}:\n${text}`);
+  return runLegacyAvaText(LEGACY_SAFE_MODEL_ID, `Translate this text to ${targetLanguage}:\n${text}`);
 }
 
 export async function runLegacyDigitize(data: LegacyAvaDigitizeRequest): Promise<{
@@ -196,7 +198,7 @@ export async function runLegacyDigitize(data: LegacyAvaDigitizeRequest): Promise
 }> {
   const imageUrl = data.imageUrl?.trim() || "";
   const summary = await runLegacyAvaText(
-    DEFAULT_AVA_MODEL_ID,
+    LEGACY_SAFE_MODEL_ID,
     `Digitize this whiteboard image into concise sticky-note widgets:\n${imageUrl}`
   );
   return {
