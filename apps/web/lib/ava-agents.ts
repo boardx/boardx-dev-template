@@ -39,6 +39,8 @@ export async function listAvaAgentOptions(
         id: `${STORE_AGENT_ID_PREFIX}${it.id}`,
         label: it.name,
         description: it.description,
+        version: it.version,
+        config: it.config,
       }));
     return [...AVA_AGENT_OPTIONS, ...storeAgents];
   } catch (err) {

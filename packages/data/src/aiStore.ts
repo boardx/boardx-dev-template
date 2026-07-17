@@ -4,6 +4,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { getPool, query } from "./index";
 import { generateId } from "./ids";
 import type { Board } from "./board";
+import { getAiStoreSubscription } from "./aiStoreSubscriptions";
 
 export type AiStoreItemType = "agent" | "skill" | "template";
 export type AiStoreLegacyItemType = "ai-tool" | "image-tool" | "AI_TOOL" | "AI_IMAGE_TOOL";
@@ -312,6 +313,117 @@ export interface CopyAiStoreItemResult {
   item: AiStoreItem;
   board?: Board;
   idempotent: boolean;
+}
+
+export async function getUsableSubscribedAiStoreItem(params: {
+  itemId: number;
+  userId: number;
+  consumerTeamId: number;
+}): Promise<{ item?: AiStoreItem; reason?: "forbidden" | "unavailable" }> {
+  const subscription = await getAiStoreSubscription({
+    itemId: params.itemId,
+    subscriberUserId: params.userId,
+    consumerTeamId: params.consumerTeamId,
+  });
+  if (!subscription) return { reason: "forbidden" };
+  const item = await getAiStoreItemForSubscription(params.itemId);
+  if (!item || item.archived_at != null) return { reason: "unavailable" };
+  const available = item.status === "published" || (item.scope === "platform" && item.status === "approved");
+  return available ? { item } : { reason: "unavailable" };
+}
+
+export async function listUsableSubscribedAiStoreItems(
+  userId: number,
+  consumerTeamId: number,
+): Promise<AiStoreItem[]> {
+  const { listSubscribedAiStoreItemIds } = await import("./aiStoreSubscriptions");
+  const ids = await listSubscribedAiStoreItemIds({ subscriberUserId: userId, consumerTeamId });
+  const items = await getAiStoreItems(ids);
+  return items.filter(
+    (item) => item.status === "published" || (item.scope === "platform" && item.status === "approved"),
+  );
+}
+
+export async function listAiStoreAgentRecommendations(
+  skillId: number,
+  userId: number,
+  consumerTeamId: number,
+): Promise<AiStoreItem[]> {
+  const available = await listUsableSubscribedAiStoreItems(userId, consumerTeamId);
+  return available.filter((item) =>
+    item.type === "agent" &&
+    Array.isArray(item.config.relatedSkillIds) &&
+    item.config.relatedSkillIds.some((id) => Number(id) === Number(skillId)),
+  );
+}
+
+export async function instantiateAiStoreTemplate(params: {
+  source: AiStoreItem;
+  userId: number;
+  consumerTeamId: number;
+  idempotencyKey: string;
+}): Promise<{ board: Board; idempotent: boolean }> {
+  const templateBoardId = Number(params.source.config.templateBoardId);
+  if (!Number.isFinite(templateBoardId)) throw new Error("AI_STORE_TEMPLATE_BOARD_NOT_FOUND");
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))", [
+      `${params.source.id}:${params.consumerTeamId}:${params.userId}`,
+      params.idempotencyKey,
+    ]);
+    const previous = await client.query<{ board_id: number }>(
+      `SELECT board_id FROM ai_store_template_instances
+       WHERE template_item_id = $1 AND consumer_team_id = $2 AND user_id = $3 AND idempotency_key = $4`,
+      [params.source.id, params.consumerTeamId, params.userId, params.idempotencyKey],
+    );
+    if (previous.rows[0]) {
+      const board = (await client.query<Board>("SELECT * FROM boards WHERE id = $1", [previous.rows[0].board_id])).rows[0]!;
+      await client.query("COMMIT");
+      return { board, idempotent: true };
+    }
+    const sourceBoard = (await client.query<Board>(
+      "SELECT * FROM boards WHERE id = $1 AND team_id = $2 AND owner_user_id = $3",
+      [templateBoardId, params.source.origin_team_id, params.source.owner_user_id],
+    )).rows[0];
+    if (!sourceBoard) throw new Error("AI_STORE_TEMPLATE_BOARD_NOT_FOUND");
+    const roomId = (await client.query<{ id: number }>(
+      `INSERT INTO rooms (name, owner_user_id, team_id, visibility, public_id)
+       VALUES ($1, $2, $3, 'team', $4) RETURNING id`,
+      [`${params.source.name} Workspace`, params.userId, params.consumerTeamId, generateId("rm")],
+    )).rows[0]!.id;
+    await client.query("INSERT INTO room_members (room_id, user_id, role) VALUES ($1, $2, 'owner')", [roomId, params.userId]);
+    const board = (await client.query<Board>(
+      `INSERT INTO boards
+         (room_id, team_id, name, cover, category, description, visibility, owner_user_id, settings, tags, public_id)
+       VALUES ($1, $2, $3, $4, $5, $6, 'room', $7, $8::jsonb, $9, $10) RETURNING *`,
+      [roomId, params.consumerTeamId, sourceBoard.name, sourceBoard.cover, sourceBoard.category,
+        sourceBoard.description, params.userId, JSON.stringify(sourceBoard.settings ?? {}), sourceBoard.tags ?? [], generateId("brd")],
+    )).rows[0]!;
+    const sourceItems = await client.query<{
+      type: string; x: number; y: number; w: number; h: number; text: string; color: string | null;
+    }>("SELECT type, x, y, w, h, text, color FROM board_items WHERE board_id = $1", [templateBoardId]);
+    for (const item of sourceItems.rows) {
+      await client.query(
+        `INSERT INTO board_items (id, room_id, board_id, type, x, y, w, h, text, color)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [randomUUID(), roomId, board.id, item.type, item.x, item.y, item.w, item.h, item.text, item.color],
+      );
+    }
+    await client.query(
+      `INSERT INTO ai_store_template_instances
+         (template_item_id, consumer_team_id, user_id, idempotency_key, board_id)
+       VALUES ($1,$2,$3,$4,$5)`,
+      [params.source.id, params.consumerTeamId, params.userId, params.idempotencyKey, board.id],
+    );
+    await client.query("COMMIT");
+    return { board, idempotent: false };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 /** Create an independent private draft in the receiving Team, including Template canvas data. */

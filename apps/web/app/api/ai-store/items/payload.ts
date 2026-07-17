@@ -126,6 +126,14 @@ export function parseAiStorePayload(body: Record<string, unknown>, currentTeamId
         instructions: configText,
         ...(type === "skill" ? { skillKind } : {}),
         ...(type === "template" && templateBoardId != null ? { templateBoardId } : {}),
+        ...(type === "agent" && Array.isArray(body.relatedSkillIds)
+          ? {
+              relatedSkillIds: body.relatedSkillIds
+                .map(Number)
+                .filter((id) => Number.isInteger(id) && id > 0)
+                .slice(0, 50),
+            }
+          : {}),
       },
       allowCopy: body.allowCopy === true,
       expectedVersion,

@@ -201,6 +201,9 @@ export function StoreBrowser() {
   const [submitting, setSubmitting] = useState<SubmitAction | null>(null);
   const [archiving, setArchiving] = useState<number | null>(null);
   const [copying, setCopying] = useState<number | null>(null);
+  const [usingItem, setUsingItem] = useState<number | null>(null);
+  const [builderIdea, setBuilderIdea] = useState("");
+  const [builderBusy, setBuilderBusy] = useState(false);
 
   // P11 F05：分享管理弹窗状态。shareItemId != null 时弹窗打开，对应 owned 项目的 id。
   const [shareItemId, setShareItemId] = useState<number | null>(null);
@@ -721,18 +724,59 @@ export function StoreBrowser() {
   // uc-ai-store-003：使用入口——按项目类型带入对应场景。
   // agent → 打开带该 Agent 上下文的新 AVA 会话；ai-tool → 打开 AVA 并预选该工具；
   // template → 目前 boards 尚无「按模板建板」入口（超出本 feature 范围），先给出明确的下一步提示。
-  function useItem(item: StoreItem) {
-    if (item.type === "agent") {
-      router.push(`/ava?agentItemId=${item.id}`);
-      return;
+  async function useItem(item: StoreItem) {
+    if (usingItem != null) return;
+    setUsingItem(item.id);
+    setSubscribeError("");
+    try {
+      const res = await fetch(`/api/ai-store/items/${item.id}/use`, {
+        method: "POST",
+        headers: item.type === "template" ? { "Idempotency-Key": crypto.randomUUID() } : undefined,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSubscribeError(data.error ?? "Unable to use this resource.");
+        return;
+      }
+      setDetailId(null);
+      if (item.type === "agent") router.push(`/ava?agentItemId=${item.id}`);
+      else if (item.type === "skill") router.push(`/ava?toolItemId=${item.id}`);
+      else router.push(`/boards/${data.board.public_id}`);
+    } catch {
+      setSubscribeError("Unable to use this resource.");
+    } finally {
+      setUsingItem(null);
     }
-    if (item.type === "skill") {
-      router.push(`/ava?toolItemId=${item.id}`);
-      return;
+  }
+
+  async function buildAgentDraft() {
+    if (!builderIdea.trim() || builderBusy) return;
+    setBuilderBusy(true);
+    setFormErrors({});
+    try {
+      const res = await fetch("/api/ai-store/agent-builder/turn", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ latestUserInput: builderIdea, answers: {}, currentQuestionKey: null, availableModels: ["stub:default"] }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFormErrors(data.errors ?? { form: data.error ?? "Agent Builder failed. Please try again." });
+        return;
+      }
+      setForm((previous) => ({
+        ...previous,
+        type: "agent",
+        name: data.draft.name,
+        description: data.draft.description,
+        config: data.draft.config.instructions,
+      }));
+      setFormMessage("Agent draft generated. Review and edit it before saving.");
+    } catch {
+      setFormErrors({ form: "Agent Builder failed. Please try again." });
+    } finally {
+      setBuilderBusy(false);
     }
-    setFormMessage("");
-    setDetailId(null);
-    router.push(`/boards?template=${item.id}`);
   }
 
   const filtersActive = activeTags.length > 0 || q.trim().length > 0 || type !== "all";
@@ -1212,6 +1256,26 @@ export function StoreBrowser() {
                       {kind === "text" ? "Text Skill" : "Image Skill"}
                     </Button>
                   ))}
+                </div>
+              )}
+
+              {form.type === "agent" && !editingAuthorized && (
+                <div className="mt-4 flex flex-col gap-2 rounded-8 border border-border p-3 sm:flex-row">
+                  <Input
+                    data-testid="agent-builder-idea"
+                    value={builderIdea}
+                    onChange={(event) => setBuilderIdea(event.target.value)}
+                    placeholder="Describe the Agent you need"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    data-testid="agent-builder-generate"
+                    disabled={!builderIdea.trim() || builderBusy}
+                    onClick={() => void buildAgentDraft()}
+                  >
+                    {builderBusy ? "Generating..." : "Generate draft"}
+                  </Button>
                 </div>
               )}
 
@@ -1908,10 +1972,11 @@ export function StoreBrowser() {
                       size="sm"
                       variant="secondary"
                       data-testid="detail-use"
-                      onClick={() => useItem(detailItem)}
+                      onClick={() => void useItem(detailItem)}
+                      disabled={usingItem === detailItem.id}
                       className="flex-1"
                     >
-                      Use
+                      {usingItem === detailItem.id ? "Opening..." : "Use"}
                     </Button>
                   )}
                   {detailItem.allow_copy && (

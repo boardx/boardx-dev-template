@@ -78,6 +78,8 @@ describe("listAvaAgentOptions", () => {
         id: `${STORE_AGENT_ID_PREFIX}7`,
         label: "Store Agent",
         description: "a subscribed agent",
+        version: 1,
+        config: {},
       },
     ]);
   });

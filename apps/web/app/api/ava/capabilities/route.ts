@@ -10,6 +10,7 @@ import {
 import { getMembership } from "@repo/data";
 import { currentTeamId, currentUser } from "@/lib/session";
 import { listAvaAgentOptions } from "@/lib/ava-agents";
+import { listAvaSkillOptions } from "@/lib/ava-store-skills";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,7 +40,7 @@ export async function GET() {
     })),
     // p18-F09：内置默认 Agent + 当前用户/团队已订阅的 AI Store Agent（真实订阅数据）。
     agents: await listAvaAgentOptions(user.id, teamId),
-    tools: AVA_TOOL_OPTIONS,
+    tools: await listAvaSkillOptions(user.id, teamId),
     defaults: {
       modelId: DEFAULT_AVA_MODEL_ID,
       agentId: DEFAULT_AVA_AGENT_ID,

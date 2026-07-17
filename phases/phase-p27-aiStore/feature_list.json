@@ -212,9 +212,9 @@
       "area": "ai-store-integrations",
       "title": "AVA, Template, Agent Builder, and recommendations",
       "user_visible_behavior": "已订阅用户可在当前 Team 的 AVA 使用最新 Agent 和 text/image Skills，在当前 Team 打开或创建 Template 内容；Agent Builder 生成可编辑 Agent 草案并保存到当前 Team，Skill 完成后只推荐当前 Team 可用 Agent，无订阅或跨 Team 越权返回 403，切换 Team 清空旧会话选择。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "06",
-      "owner": null,
+      "owner": "codex-p27-ai-store-control-plane",
       "capability": "CAP-WEB",
       "depends_on": [
         "F07"
@@ -223,7 +223,7 @@
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/ava-ai-store-skills.spec.ts e2e/ai-store-013-agent-builder-recommendations.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F11.verify.log @ 2026-07-17T03:20:19.502Z",
       "notes": "保留真实 text/image 执行链；Template 内容写入 consumer Team；推荐空结果不影响 Skill 主流程。"
     },
     {

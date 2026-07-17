@@ -11,12 +11,17 @@ export interface AvaAgentOption {
   id: string;
   label: string;
   description: string;
+  version?: number;
+  config?: Record<string, unknown>;
 }
 
 export interface AvaToolOption {
   id: string;
   label: string;
   description: string;
+  version?: number;
+  skillKind?: "text" | "image";
+  config?: Record<string, unknown>;
 }
 
 export interface AvaAiSettings {
@@ -98,7 +103,8 @@ export function normalizeAvaAiSettings(
   // p18-F09：agent 选项不再只有内置常量——调用方（如消息路由）可传入
   // 「内置 + 当前用户/团队已订阅的 AI Store Agent」的完整可选集；
   // 不传时退化为内置常量（与历史行为一致）。
-  agentOptions: ReadonlyArray<Pick<AvaAgentOption, "id">> = AVA_AGENT_OPTIONS
+  agentOptions: ReadonlyArray<Pick<AvaAgentOption, "id">> = AVA_AGENT_OPTIONS,
+  toolOptions: ReadonlyArray<Pick<AvaToolOption, "id">> = AVA_TOOL_OPTIONS,
 ): AvaAiSettings {
   const modelId = isModelSelectable(input.modelId ?? "", canUseTeamRestrictedModels)
     ? input.modelId!
@@ -108,7 +114,7 @@ export function normalizeAvaAiSettings(
     ? input.agentId!
     : DEFAULT_AVA_AGENT_ID;
 
-  const allowedTools = new Set(AVA_TOOL_OPTIONS.map((t) => t.id));
+  const allowedTools = new Set(toolOptions.map((t) => t.id));
   const requestedTools = Array.isArray(input.toolIds) ? input.toolIds : DEFAULT_AVA_TOOL_IDS;
   const toolIds = requestedTools.filter((id) => allowedTools.has(id));
 
