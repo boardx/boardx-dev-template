@@ -3,9 +3,9 @@
 ## 当前状态
 
 - Parent Issue: [#662](https://github.com/boardx/boardx-dev-template/issues/662)
-- 当前最高优先级: F08 Favorites and view statistics
-- 计划规模: 14 Features / 7 Sprints / F01-F07 `passing`，F08-F14 `not_started`
-- Runtime 实现: Team 与 BoardX 审核/精选、approved 实时更新、USER/TEAM 订阅和三类资源使用已完成；F08-F14 尚未开始。
+- 当前最高优先级: F09 Cross-Team edit sharing and Authorized/Shared
+- 计划规模: 14 Features / 7 Sprints / F01-F08 `passing`，F09-F14 `not_started`
+- Runtime 实现: 审核发布、approved 实时更新、USER/TEAM 订阅、三类资源使用、收藏与浏览统计已完成；F09-F14 尚未开始。
 - UI 签核: Resource Library Option 1 已由用户确认，见 `ui-signoff.md`。
 - 基线门禁: F06 verification 与 `pnpm -w run verify:base` 已通过。
 
@@ -23,18 +23,19 @@
 - F05 已完成 Team owner/admin 审核、撤回、精选、权限隔离、非法状态 409 和免复审内容更新。
 - F06 已完成 BoardX 审核/精选、approved 实时更新、既有订阅最新版本读取与撤回可用性限制。
 - F07 已完成个人/团队订阅、管理员权限、团队继承、Team 隔离、独立取消及 Agent/Skill/Template 使用。
+- F08 已完成 Team-scoped 收藏、服务端原子喜欢数、授权详情浏览统计、失败回滚和并发不漂移。
 - F13/F14 已记录已确认的 Resource Library UIUX，并依赖对应运行时 Feature 后实施。
 
 ## 未开始边界
 
 - F01/F02 evidence 位于 `sprints/sprint-01/evidence/`，F03/F04 evidence 位于 Sprint 02。
-- F06 evidence 位于 `sprints/sprint-03/evidence/F06.verify.log`；F07 evidence 位于 `sprints/sprint-04/evidence/F07.verify.log`。
-- F08-F14 不存在 passing 声明或成功 evidence。
+- F06 evidence 位于 `sprints/sprint-03/evidence/F06.verify.log`；F07/F08 evidence 位于 Sprint 04。
+- F09-F14 不存在 passing 声明或成功 evidence。
 - 远程 GitHub `--apply` 未执行；当前环境没有可用的 `gh` CLI/认证。
 
 ## 下一步
 
-1. 认领 F08: `pnpm harness claim --phase p27 --feature F08 --owner <agent-id>`。
-2. 运行并扩充 `apps/web/e2e/ai-store-004-favorite-item.spec.ts` 的失败测试。
-3. 完成 favorite 的 user + Team + item 隔离、计数、幂等与失败回滚。
-4. 运行 `pnpm harness verify --sprint p27/04 --feature F08`。
+1. 认领 F09: `pnpm harness claim --phase p27 --feature F09 --owner <agent-id>`。
+2. 编写 `apps/web/e2e/ai-store-011-cross-team-edit-share.spec.ts` 的失败测试。
+3. 完成跨 Team 编辑授权、Authorized/Shared、撤销和不可变所有权边界。
+4. 运行 `pnpm harness verify --sprint p27/05 --feature F09`。

@@ -98,6 +98,7 @@ export async function GET(req: Request) {
   const likedIds = await listFavoritedAiStoreItemIds(
     result.items.map((it) => Number(it.id)),
     user.id,
+    teamId,
   );
   const items = result.items.map((it) => ({ ...it, liked: likedIds.has(Number(it.id)) }));
 

@@ -1,20 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "./route";
 import { currentUser } from "@/lib/session";
-import { canAccessAiStoreItem, getAiStoreItem, isAiStoreItemFavorited } from "@repo/data";
+import {
+  canAccessAiStoreItem,
+  getAiStoreItem,
+  getMembership,
+  incrementAiStoreItemViews,
+  isAiStoreItemFavorited,
+} from "@repo/data";
 
 vi.mock("@/lib/session", () => ({
   currentUser: vi.fn(),
 }));
 
 vi.mock("next/headers", () => ({
-  cookies: vi.fn(() => ({ get: vi.fn(() => undefined) })),
+  cookies: vi.fn(() => ({ get: vi.fn(() => ({ value: "7" })) })),
 }));
 
 vi.mock("@repo/data", () => ({
   canAccessAiStoreItem: vi.fn(),
   getAiStoreItem: vi.fn(),
   getMembership: vi.fn(),
+  incrementAiStoreItemViews: vi.fn(),
   isAiStoreItemFavorited: vi.fn(),
   updateAiStoreItem: vi.fn(),
 }));
@@ -22,6 +29,8 @@ vi.mock("@repo/data", () => ({
 const mockCurrentUser = vi.mocked(currentUser);
 const mockCanAccessAiStoreItem = vi.mocked(canAccessAiStoreItem);
 const mockGetAiStoreItem = vi.mocked(getAiStoreItem);
+const mockGetMembership = vi.mocked(getMembership);
+const mockIncrementAiStoreItemViews = vi.mocked(incrementAiStoreItemViews);
 const mockIsAiStoreItemFavorited = vi.mocked(isAiStoreItemFavorited);
 
 const params = { params: { id: "42" } };
@@ -57,6 +66,8 @@ describe("GET /api/ai-store/items/[id] — grantee access", () => {
     vi.clearAllMocks();
     mockCurrentUser.mockResolvedValue(grantee as Awaited<ReturnType<typeof currentUser>>);
     mockGetAiStoreItem.mockResolvedValue(personalItem);
+    mockGetMembership.mockResolvedValue("member");
+    mockIncrementAiStoreItemViews.mockResolvedValue({ ...personalItem, views: 1 });
     mockIsAiStoreItemFavorited.mockResolvedValue(false);
   });
 
@@ -66,7 +77,9 @@ describe("GET /api/ai-store/items/[id] — grantee access", () => {
     const res = await GET(new Request("http://test.local/api/ai-store/items/42"), params);
 
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toMatchObject({ item: { id: 42, liked: false } });
+    await expect(res.json()).resolves.toMatchObject({ item: { id: 42, liked: false, views: 1 } });
+    expect(mockIncrementAiStoreItemViews).toHaveBeenCalledWith(42);
+    expect(mockIsAiStoreItemFavorited).toHaveBeenCalledWith(42, 6, 7);
   });
 
   it("被移除授权后（grant 已撤销）再次访问返回 404", async () => {
@@ -75,6 +88,7 @@ describe("GET /api/ai-store/items/[id] — grantee access", () => {
     const res = await GET(new Request("http://test.local/api/ai-store/items/42"), params);
 
     expect(res.status).toBe(404);
+    expect(mockIncrementAiStoreItemViews).not.toHaveBeenCalled();
     expect(mockIsAiStoreItemFavorited).not.toHaveBeenCalled();
   });
 });

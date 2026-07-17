@@ -6,6 +6,7 @@ import {
   canAccessAiStoreItem,
   getAiStoreItem,
   getMembership,
+  incrementAiStoreItemViews,
   isAiStoreItemGrantee,
   isAiStoreItemFavorited,
   updateAiStoreItem,
@@ -29,14 +30,22 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
   const teamIdCookie = cookies().get(CURRENT_TEAM_COOKIE)?.value;
   const teamId = teamIdCookie ? Number(teamIdCookie) : null;
+  if (teamId == null || !Number.isFinite(teamId)) {
+    return NextResponse.json({ error: "请先选择团队" }, { status: 400 });
+  }
+  if (!(await getMembership(teamId, user.id))) {
+    return NextResponse.json({ error: "当前团队不可用" }, { status: 403 });
+  }
   if (!(await canAccessAiStoreItem(item, user.id, teamId))) {
     return NextResponse.json({ error: "未找到" }, { status: 404 });
   }
 
   // uc-ai-store-004：详情弹窗统计区也要展示当前用户的喜欢/收藏状态。
-  const liked = await isAiStoreItemFavorited(id, user.id);
+  const viewedItem = await incrementAiStoreItemViews(id);
+  if (!viewedItem) return NextResponse.json({ error: "未找到" }, { status: 404 });
+  const liked = await isAiStoreItemFavorited(id, user.id, teamId);
 
-  return NextResponse.json({ item: { ...item, liked } });
+  return NextResponse.json({ item: { ...viewedItem, liked } });
 }
 
 // uc-ai-store-002：属主更新自己的 AI Store 项目（编辑草稿/已发布/审核中项）。

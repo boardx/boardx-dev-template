@@ -151,9 +151,9 @@
       "area": "ai-store-engagement",
       "title": "Favorites and view statistics",
       "user_visible_behavior": "用户可在当前 Team 对可见资源收藏、取消收藏并查看真实喜欢数和浏览统计；同一用户在不同 Team 的收藏独立，不可见资源不能计数或收藏，乐观更新失败会回滚，切换 Team 后卡片和详情显示当前 Team 的正确状态。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "04",
-      "owner": null,
+      "owner": "codex-p27-ai-store-control-plane",
       "capability": "CAP-WEB",
       "depends_on": [
         "F03"
@@ -162,7 +162,7 @@
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/ai-store-004-favorite-item.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F08.verify.log @ 2026-07-17T02:25:50.732Z",
       "notes": "收藏关系键包含 user、consumer Team 和 item；重复操作幂等，聚合数以服务端为准。"
     },
     {

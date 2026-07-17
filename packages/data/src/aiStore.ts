@@ -565,26 +565,39 @@ export async function setAiStoreItemFeatured(
 }
 
 // ---------------------------------------------------------------------------
-// 喜欢/收藏（P11 F04，uc-ai-store-004）：ai_store_favorites 记录 (user_id, item_id)，
+// 喜欢/收藏（P11 F04，uc-ai-store-004）：ai_store_favorites 记录
+// (user_id, consumer_team_id, item_id)，
 // ai_store_items.likes 是聚合计数缓存；toggle 时同步更新计数，避免和明细表漂移。
 // ---------------------------------------------------------------------------
 
 /** 某用户是否已喜欢/收藏该项目。 */
-export async function isAiStoreItemFavorited(itemId: number, userId: number): Promise<boolean> {
+export async function isAiStoreItemFavorited(
+  itemId: number,
+  userId: number,
+  consumerTeamId: number,
+): Promise<boolean> {
   const rows = await query<{ one: number }>(
-    `SELECT 1 AS one FROM ai_store_favorites WHERE item_id = $1 AND user_id = $2`,
-    [itemId, userId]
+    `SELECT 1 AS one
+     FROM ai_store_favorites
+     WHERE item_id = $1 AND user_id = $2 AND consumer_team_id = $3`,
+    [itemId, userId, consumerTeamId]
   );
   return rows.length > 0;
 }
 
 /** 该用户在给定项目集合中已喜欢的 id 集合（供列表页批量标注 liked 状态）。 */
-export async function listFavoritedAiStoreItemIds(itemIds: number[], userId: number): Promise<Set<number>> {
+export async function listFavoritedAiStoreItemIds(
+  itemIds: number[],
+  userId: number,
+  consumerTeamId: number,
+): Promise<Set<number>> {
   if (itemIds.length === 0) return new Set();
   // item_id 是 bigint，pg 默认把 INT8 当字符串返回；显式 ::int 转换，保证 Set<number> 与类型注解一致。
   const rows = await query<{ item_id: number }>(
-    `SELECT item_id::int AS item_id FROM ai_store_favorites WHERE user_id = $1 AND item_id = ANY($2)`,
-    [userId, itemIds]
+    `SELECT item_id::int AS item_id
+     FROM ai_store_favorites
+     WHERE user_id = $1 AND consumer_team_id = $2 AND item_id = ANY($3)`,
+    [userId, consumerTeamId, itemIds]
   );
   return new Set(rows.map((r) => r.item_id));
 }
@@ -607,38 +620,53 @@ export interface ToggleAiStoreFavoriteResult {
  */
 export async function toggleAiStoreFavorite(
   itemId: number,
-  userId: number
+  userId: number,
+  consumerTeamId: number,
 ): Promise<ToggleAiStoreFavoriteResult | undefined> {
   const existing = await getAiStoreItem(itemId);
   if (!existing) return undefined;
 
-  const already = await isAiStoreItemFavorited(itemId, userId);
+  const already = await isAiStoreItemFavorited(itemId, userId, consumerTeamId);
   if (already) {
     const rows = await query<{ likes: number }>(
       `WITH del AS (
-         DELETE FROM ai_store_favorites WHERE item_id = $1 AND user_id = $2 RETURNING 1
+         DELETE FROM ai_store_favorites
+         WHERE item_id = $1 AND user_id = $2 AND consumer_team_id = $3
+         RETURNING 1
        )
        UPDATE ai_store_items
           SET likes = GREATEST(0, likes - (SELECT count(*) FROM del))
         WHERE id = $1
         RETURNING likes`,
-      [itemId, userId]
+      [itemId, userId, consumerTeamId]
     );
     return { favorited: false, likes: rows[0]?.likes ?? 0 };
   }
 
   const rows = await query<{ likes: number }>(
     `WITH ins AS (
-       INSERT INTO ai_store_favorites (item_id, user_id) VALUES ($1, $2)
+       INSERT INTO ai_store_favorites (item_id, user_id, consumer_team_id) VALUES ($1, $2, $3)
        ON CONFLICT DO NOTHING RETURNING 1
      )
      UPDATE ai_store_items
         SET likes = likes + (SELECT count(*) FROM ins)
       WHERE id = $1
       RETURNING likes`,
-    [itemId, userId]
+    [itemId, userId, consumerTeamId]
   );
   return { favorited: true, likes: rows[0]?.likes ?? 0 };
+}
+
+/** Record one successful, authorized detail view without affecting content ordering. */
+export async function incrementAiStoreItemViews(id: number): Promise<AiStoreItem | undefined> {
+  const rows = await query<AiStoreItem>(
+    `UPDATE ai_store_items
+     SET views = views + 1
+     WHERE id = $1 AND migration_quarantined_at IS NULL AND archived_at IS NULL
+     RETURNING ${ITEM_COLS}`,
+    [id],
+  );
+  return rows[0];
 }
 
 // ---------------------------------------------------------------------------
