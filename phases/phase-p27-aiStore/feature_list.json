@@ -287,9 +287,9 @@
       "area": "ai-store-ui",
       "title": "Resource Library authoring, sharing, copy, and review UX",
       "user_visible_behavior": "用户在统一 Resource Library 编辑器和详情中创建、预览、编辑、订阅、使用、分享与复制 Agent/Skills/Template，Team 管理员和 BoardX 管理员在同一视觉语言下审核；所有动作由真实服务端权限裁决，成功等待持久化响应，失败保留上下文和未保存内容。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "07",
-      "owner": null,
+      "owner": "codex-p27-ai-store-control-plane",
       "capability": "CAP-WEB",
       "depends_on": [
         "F04",
@@ -304,7 +304,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/ai-store-016-resource-library-workflows.spec.ts",
         "pnpm --filter @repo/web lint"
       ],
-      "evidence": "",
+      "evidence": "evidence/F14.verify.log @ 2026-07-17T07:27:16.882Z",
       "notes": "统一编辑、详情、分享、复制与审核交互；approved/published 编辑免复审并立即同步订阅者。"
     }
   ]

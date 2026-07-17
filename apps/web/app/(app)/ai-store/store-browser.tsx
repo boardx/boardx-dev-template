@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Bookmark, Plus, Share2, LayoutGrid, Pencil, Heart, Link2, Trash2, X, Copy, SlidersHorizontal, Check } from "lucide-react";
+import { Search, Bookmark, Plus, Share2, LayoutGrid, Pencil, Heart, Link2, Trash2, X, SlidersHorizontal, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { ResourceCatalog } from "./_components/resource-catalog";
 import { StoreNavigation } from "./_components/store-navigation";
+import { CopyResourceDialog } from "./_components/copy-resource-dialog";
+import { ResourcePreview, ResourceTypeSelector } from "./_components/resource-editor";
 import type {
   SkillKind,
   StoreDestination,
@@ -68,12 +70,6 @@ const TYPE_TABS: { key: "all" | StoreType; name: string }[] = [
   { key: "agent", name: "Agent" },
   { key: "skill", name: "Skills" },
   { key: "template", name: "Template" },
-];
-
-const CREATOR_TYPES: { key: StoreType; name: string; help: string }[] = [
-  { key: "agent", name: "Agent", help: "Reusable AI teammate for AVA and board workflows." },
-  { key: "skill", name: "Skill", help: "Focused text, workflow, or image capability." },
-  { key: "template", name: "Template", help: "Reusable board, room, or work canvas template." },
 ];
 
 const EMPTY_FORM = {
@@ -161,11 +157,15 @@ export function StoreBrowser({
   const [detailRequestVersion, setDetailRequestVersion] = useState(0);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingAuthorized, setEditingAuthorized] = useState(false);
+  const [editingStatus, setEditingStatus] = useState<StoreStatus | null>(null);
+  const [editorErrorStatus, setEditorErrorStatus] = useState<number | null>(null);
+  const [editorDirty, setEditorDirty] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formMessage, setFormMessage] = useState("");
   const [submitting, setSubmitting] = useState<SubmitAction | null>(null);
   const [archiving, setArchiving] = useState<number | null>(null);
   const [copying, setCopying] = useState<number | null>(null);
+  const [copyCandidate, setCopyCandidate] = useState<StoreItem | null>(null);
   const [usingItem, setUsingItem] = useState<number | null>(null);
   const [builderIdea, setBuilderIdea] = useState("");
   const [builderBusy, setBuilderBusy] = useState(false);
@@ -592,6 +592,14 @@ export function StoreBrowser({
 
   function selectDestination(destination: StoreDestination) {
     setDetailId(null);
+    if (destination === "team-review" && currentTeam) {
+      router.push(`/teams/${currentTeam.id}/ai-store-review`);
+      return;
+    }
+    if (destination === "boardx-review" && isSysAdmin) {
+      router.push("/admin/ai-store/review");
+      return;
+    }
     setNav(destination);
     syncUrl({ nav: destination, page: 1 });
   }
@@ -601,6 +609,17 @@ export function StoreBrowser({
     setQ("");
     setType("all");
     syncUrl({ type: "all", q: "", tags: [], page: 1 });
+  }
+
+  function startNewItem() {
+    setForm(EMPTY_FORM);
+    setEditingAuthorized(false);
+    setEditingStatus(null);
+    setEditorErrorStatus(null);
+    setEditorDirty(false);
+    setFormErrors({});
+    setFormMessage("");
+    selectDestination("create");
   }
 
   function searchExplore(nextQ: string) {
@@ -619,6 +638,8 @@ export function StoreBrowser({
 
   function updateForm<K extends keyof typeof EMPTY_FORM>(key: K, value: (typeof EMPTY_FORM)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+    setEditorDirty(true);
+    setEditorErrorStatus(null);
     setFormErrors((prev) => {
       if (!prev[key]) return prev;
       const next = { ...prev };
@@ -649,6 +670,9 @@ export function StoreBrowser({
     setFormErrors({});
     setFormMessage("");
     setEditingAuthorized(authorized);
+    setEditingStatus(item.status);
+    setEditorErrorStatus(null);
+    setEditorDirty(false);
     setNav("create");
   }
 
@@ -656,6 +680,7 @@ export function StoreBrowser({
     setSubmitting(action);
     setFormErrors({});
     setFormMessage("");
+    setEditorErrorStatus(null);
     try {
       const res = await fetch(form.id ? `/api/ai-store/items/${form.id}` : "/api/ai-store/items", {
         method: form.id ? "PATCH" : "POST",
@@ -664,6 +689,7 @@ export function StoreBrowser({
       });
       const data = (await res.json()) as { item?: StoreItem; errors?: Record<string, string>; error?: string };
       if (!res.ok) {
+        setEditorErrorStatus(res.status);
         setFormErrors(data.errors ?? { form: data.error ?? "Failed to save. Please try again." });
         return;
       }
@@ -671,15 +697,19 @@ export function StoreBrowser({
         editItem(data.item, editingAuthorized);
         setFormMessage(
           action === "submit_review"
-            ? "已提交审核，状态为 PENDING"
+            ? "Submitted for review · PENDING. 已提交审核"
             : action === "publish"
-              ? "已发布"
-              : "草稿已保存"
+              ? "Published. 已发布"
+              : data.item.status === "published" || data.item.status === "approved"
+                ? "Changes are live for existing subscribers. 草稿已保存"
+                : "Draft saved. 草稿已保存"
         );
+        setEditorDirty(false);
       }
       await loadOwned();
     } catch {
       setFormErrors({ form: "Failed to save. Please try again." });
+      setEditorErrorStatus(500);
     } finally {
       setSubmitting(null);
     }
@@ -721,9 +751,10 @@ export function StoreBrowser({
         setSubscribeError(data.error ?? "Failed to copy. Please try again.");
         return;
       }
+      setCopyCandidate(null);
       setDetailId(null);
       editItem(data.item);
-      setFormMessage("Copied as a private draft in the current Team");
+      setFormMessage("Created as an independent draft in the current Team.");
       await loadOwned();
     } catch {
       setSubscribeError("Failed to copy. Please try again.");
@@ -943,6 +974,7 @@ export function StoreBrowser({
     <div className="flex h-full min-w-0 flex-col overflow-hidden lg:flex-row" data-testid="ai-store">
       <StoreNavigation
         active={nav}
+        currentTeamId={currentTeam?.id ?? null}
         currentTeamName={currentTeam?.name ?? "Current Team"}
         canReviewTeam={currentTeam?.role === "owner" || currentTeam?.role === "admin" || canManageTeamSubscriptions}
         isSysAdmin={isSysAdmin}
@@ -964,7 +996,7 @@ export function StoreBrowser({
             </span>
           )}
           <div className="flex-1" />
-          <Button size="sm" data-testid="create-item" onClick={() => selectDestination("create")}>
+          <Button size="sm" data-testid="create-item" onClick={startNewItem}>
             <Plus className="h-4 w-4" />
             <span data-testid="create-resource">Create resource</span>
           </Button>
@@ -1348,47 +1380,17 @@ export function StoreBrowser({
             </div>
           </>
         ) : isCreate ? (
-          <div data-testid="create-view" className="mt-5 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)]">
-            <div>
-              <div data-testid="creator-types" className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                {CREATOR_TYPES.map((creator) => (
-                  <Button
-                    key={creator.key}
-                    type="button"
-                    variant={form.type === creator.key ? "default" : "outline"}
-                    data-testid={`creator-type-${creator.key}`}
-                    aria-pressed={form.type === creator.key}
-                    onClick={() => updateForm("type", creator.key)}
-                    disabled={editingAuthorized}
-                    className="h-auto justify-start rounded-12 p-4 text-left transition-all duration-200"
-                  >
-                    <span className="flex flex-col items-start gap-1">
-                      <span className="text-13 font-bold">{creator.name}</span>
-                      <span className="whitespace-normal text-11 font-medium opacity-80">{creator.help}</span>
-                    </span>
-                  </Button>
-                ))}
-              </div>
-
-              {form.type === "skill" && (
-                <div data-testid="skill-kind-selector" className="mt-4 flex w-fit rounded-8 border border-border p-1">
-                  {(["text", "image"] as const).map((kind) => (
-                    <Button
-                      key={kind}
-                      type="button"
-                      size="sm"
-                      variant={form.skillKind === kind ? "secondary" : "ghost"}
-                      data-testid={`skill-kind-${kind}`}
-                      aria-pressed={form.skillKind === kind}
-                      onClick={() => updateForm("skillKind", kind)}
-                      disabled={editingAuthorized}
-                      className="h-7"
-                    >
-                      {kind === "text" ? "Text Skill" : "Image Skill"}
-                    </Button>
-                  ))}
-                </div>
-              )}
+          <div data-testid="create-view" className="mt-5">
+            <div data-testid="resource-editor" className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+              <div className="min-w-0">
+              <span data-testid="editor-item-id" data-item-id={form.id ?? ""} className="sr-only" />
+              <ResourceTypeSelector
+                type={form.type}
+                skillKind={form.skillKind}
+                locked={editingAuthorized}
+                onTypeChange={(nextType) => updateForm("type", nextType)}
+                onSkillKindChange={(kind) => updateForm("skillKind", kind)}
+              />
 
               {form.type === "agent" && !editingAuthorized && (
                 <div className="mt-4 flex flex-col gap-2 rounded-8 border border-border p-3 sm:flex-row">
@@ -1412,7 +1414,7 @@ export function StoreBrowser({
 
               <form
                 data-testid="creator-form"
-                className="mt-5 rounded-12 border border-border p-5"
+                className="mt-5 rounded-8 border border-border p-4 sm:p-5"
                 onSubmit={(e) => {
                   e.preventDefault();
                   void submitItem("draft");
@@ -1438,12 +1440,7 @@ export function StoreBrowser({
                       size="sm"
                       variant="ghost"
                       data-testid="new-item"
-                      onClick={() => {
-                        setForm(EMPTY_FORM);
-                        setEditingAuthorized(false);
-                        setFormErrors({});
-                        setFormMessage("");
-                      }}
+                      onClick={startNewItem}
                     >
                       New
                     </Button>
@@ -1570,58 +1567,49 @@ export function StoreBrowser({
                   </div>
                 </div>
 
-                <div
-                  data-testid="creator-preview"
-                  className="mt-5 border-t border-border pt-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={cn(
-                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-8 text-15 font-bold text-foreground/50",
-                        fillFor(form.name || form.type),
-                      )}
-                    >
-                      {(form.cover || form.name.charAt(0) || form.type.charAt(0)).slice(0, 1).toUpperCase()}
-                    </span>
-                    <div className="min-w-0">
-                      <p data-testid="preview-name" className="truncate text-13 font-semibold text-foreground">
-                        {form.name || "Untitled resource"}
-                      </p>
-                      <p data-testid="preview-type" className="text-11 text-placeholder">
-                        {form.type === "skill"
-                          ? `${form.skillKind === "image" ? "Image" : "Text"} Skill`
-                          : form.type === "agent"
-                            ? "Agent"
-                            : "Template"}
-                      </p>
-                    </div>
-                  </div>
-                  <p data-testid="preview-description" className="mt-3 text-12 leading-relaxed text-muted-foreground">
-                    {form.description || "Add a description to preview how this resource will appear."}
-                  </p>
-                </div>
-
                 {formErrors.form && (
                   <p role="alert" data-testid="err-form" className="mt-4 text-13 text-destructive">
                     {formErrors.form}
                   </p>
                 )}
+                {editorErrorStatus != null && (
+                  <div
+                    data-testid={`editor-state-${editorErrorStatus}`}
+                    role="alert"
+                    className="mt-4 border-l-2 border-destructive pl-3"
+                  >
+                    <p className="text-13 font-semibold text-foreground">
+                      {editorErrorStatus === 403
+                        ? "Your edit access is no longer available."
+                        : editorErrorStatus === 409
+                          ? "A newer version exists. Your changes are still here."
+                          : editorErrorStatus === 404
+                            ? "This resource could not be found."
+                            : editorErrorStatus === 410
+                              ? "This resource is no longer available."
+                              : "The resource could not be saved."}
+                    </p>
+                    <p className="mt-1 text-11 text-muted-foreground">
+                      Review or copy your unsaved content before refreshing.
+                    </p>
+                  </div>
+                )}
                 {formMessage && (
-                  <p data-testid="saved" className="mt-4 text-13 font-semibold text-success transition-opacity duration-300">
+                  <p data-testid="saved" role="status" className="mt-4 text-13 font-semibold text-success transition-opacity duration-300">
                     {formMessage}
                   </p>
                 )}
 
-                <div className="mt-5 flex flex-wrap gap-2">
+                <div className="mt-5 flex flex-wrap items-center gap-2">
                   <Button
                     type="submit"
                     variant="outline"
                     data-testid="action-save-draft"
                     disabled={submitting != null}
                   >
-                    {editingAuthorized ? "Save changes" : "Save draft"}
+                    {form.id ? "Save changes" : "Save draft"}
                   </Button>
-                  {!editingAuthorized && (
+                  {!editingAuthorized && editingStatus !== "published" && editingStatus !== "approved" && (
                     <>
                       <Button
                         type="button"
@@ -1642,12 +1630,27 @@ export function StoreBrowser({
                       </Button>
                     </>
                   )}
+                  {editorDirty && (
+                    <span data-testid="editor-unsaved" role="status" className="text-11 font-medium text-muted-foreground">
+                      Unsaved changes
+                    </span>
+                  )}
                 </div>
               </form>
             </div>
 
-            <aside className="xl:border-l xl:border-border xl:pl-6">
-              <div className="flex items-center justify-between">
+            <aside className="min-w-0 xl:sticky xl:top-0 xl:self-start xl:border-l xl:border-border xl:pl-6">
+              <ResourcePreview
+                currentTeamName={currentTeam?.name ?? "Current Team"}
+                name={form.name}
+                description={form.description}
+                type={form.type}
+                skillKind={form.skillKind}
+                cover={form.cover}
+                status={editingStatus}
+                fillClass={fillFor(form.name || form.type)}
+              />
+              <div className="mt-5 flex items-center justify-between">
                 <h2 className="text-15 font-bold text-foreground">Your items</h2>
                 <Button type="button" size="sm" variant="ghost" data-testid="refresh-owned" onClick={loadOwned}>
                   Refresh
@@ -1655,6 +1658,7 @@ export function StoreBrowser({
               </div>
               {ownedList}
             </aside>
+          </div>
           </div>
         ) : isAuthorized ? (
           <div data-testid="authorized-view" className="mt-5">
@@ -2129,10 +2133,9 @@ export function StoreBrowser({
                       variant="outline"
                       data-testid="detail-copy"
                       disabled={copying === detailItem.id}
-                      onClick={() => void copyItem(detailItem)}
+                      onClick={() => setCopyCandidate(detailItem)}
                       className="flex-1"
                     >
-                      <Copy className="mr-1.5 h-4 w-4" />
                       {copying === detailItem.id ? "Copying..." : "Copy to Team"}
                     </Button>
                   )}
@@ -2142,6 +2145,18 @@ export function StoreBrowser({
           </div>
         </aside>
       )}
+
+      <CopyResourceDialog
+        item={copyCandidate}
+        targetTeamName={currentTeam?.name ?? "Current Team"}
+        busy={copying != null}
+        onClose={() => {
+          if (copying == null) setCopyCandidate(null);
+        }}
+        onConfirm={() => {
+          if (copyCandidate) void copyItem(copyCandidate);
+        }}
+      />
 
       {/* 分享管理弹窗（P11 F05，uc-ai-store-005）：复制授权链接 / 关闭分享链接 / 已授权用户列表。 */}
       {shareItemId != null && (

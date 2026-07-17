@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { ReviewWorkspace } from "../../../ai-store/_components/review-workspace";
 
 type ReviewStatus = "pending" | "approved";
 type ReviewAction = "approve" | "reject" | "revoke";
@@ -294,16 +295,12 @@ export default function AdminAiStoreReviewPage() {
   }
 
   return (
-    <div className="mx-auto max-w-content px-9 pb-14 pt-7">
-      {/* 标题 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-26 font-bold tracking-tight text-foreground">Store Approval</h1>
-          <p className="mt-1 text-13 text-muted-foreground">
-            View AI Store items submitted for platform review; approve, reject, or revoke previously approved items
-          </p>
-        </div>
-      </div>
+    <ReviewWorkspace
+      scope="BoardX review"
+      title="Store approval"
+      description="Review BoardX submissions, decisions, and availability."
+      onBack={() => router.push("/ai-store")}
+    >
 
       {/* 状态 Tab */}
       <div data-testid="status-tabs" className="mt-5 flex flex-wrap gap-2">
@@ -477,6 +474,6 @@ export default function AdminAiStoreReviewPage() {
           onConfirmed={onReviewed}
         />
       )}
-    </div>
+    </ReviewWorkspace>
   );
 }

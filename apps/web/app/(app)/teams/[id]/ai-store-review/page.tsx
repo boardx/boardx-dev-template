@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ReviewWorkspace } from "../../../ai-store/_components/review-workspace";
 
 type StoreStatus = "draft" | "published" | "pending" | "approved" | "rejected";
 type ReviewAction = "approve" | "reject" | "withdraw";
@@ -186,12 +187,14 @@ export default function TeamAiStoreReviewPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 px-9 py-7" data-testid="team-ai-store-review-page">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-22 font-bold tracking-tight text-foreground">AI Store Approval</h1>
-        <p className="text-13 text-muted-foreground">团队 AI Store 项目审核与精选。</p>
-      </div>
-
+    <ReviewWorkspace
+      scope="Team review"
+      title="Team approval"
+      description="Review Team publishing requests and manage Team featured resources."
+      onBack={() => router.push("/ai-store")}
+      className="max-w-4xl"
+    >
+      <div className="mt-5 flex flex-col gap-6" data-testid="team-ai-store-review-page">
       {message && (
         <p data-testid="action-message" role="status" className="text-13 font-semibold text-success">
           {message}
@@ -384,6 +387,7 @@ export default function TeamAiStoreReviewPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </ReviewWorkspace>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Bookmark,
   Compass,
@@ -10,7 +11,7 @@ import {
   Star,
   UsersRound,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { StoreDestination } from "./store-types";
 
@@ -35,6 +36,7 @@ const GROUPS = [
 
 interface Props {
   active: StoreDestination;
+  currentTeamId: number | null;
   currentTeamName: string;
   canReviewTeam: boolean;
   isSysAdmin: boolean;
@@ -47,6 +49,7 @@ function NavigationButton({
   alias,
   icon: Icon,
   active,
+  href,
   onSelect,
 }: {
   destination: StoreDestination;
@@ -54,8 +57,36 @@ function NavigationButton({
   alias?: string;
   icon: typeof Compass;
   active: boolean;
+  href?: string;
   onSelect: (destination: StoreDestination) => void;
 }) {
+  const className = cn(
+    buttonVariants({ variant: "ghost" }),
+    "h-9 w-auto shrink-0 justify-start gap-2 px-2.5 text-13 font-medium transition-colors lg:w-full",
+    active ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+  );
+  const content = (
+    <>
+      <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+      <span data-testid={alias ? `nav-${alias}` : undefined} className="whitespace-nowrap">
+        {label}
+      </span>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        data-testid={`nav-${destination}`}
+        aria-current={active ? "page" : undefined}
+        className={className}
+      >
+        {content}
+      </Link>
+    );
+  }
+
   return (
     <Button
       type="button"
@@ -63,20 +94,14 @@ function NavigationButton({
       data-testid={`nav-${destination}`}
       aria-pressed={active}
       onClick={() => onSelect(destination)}
-      className={cn(
-        "h-9 w-auto shrink-0 justify-start gap-2 px-2.5 text-13 font-medium transition-colors lg:w-full",
-        active ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
-      )}
+      className={className}
     >
-      <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-      <span data-testid={alias ? `nav-${alias}` : undefined} className="whitespace-nowrap">
-        {label}
-      </span>
+      {content}
     </Button>
   );
 }
 
-export function StoreNavigation({ active, currentTeamName, canReviewTeam, isSysAdmin, onSelect }: Props) {
+export function StoreNavigation({ active, currentTeamId, currentTeamName, canReviewTeam, isSysAdmin, onSelect }: Props) {
   const content = (
     <>
       {GROUPS.map((group) => (
@@ -109,6 +134,7 @@ export function StoreNavigation({ active, currentTeamName, canReviewTeam, isSysA
             label="Team review"
             icon={FileCheck2}
             active={active === "team-review"}
+            href={currentTeamId ? `/teams/${currentTeamId}/ai-store-review` : undefined}
             onSelect={onSelect}
           />
         </div>
@@ -119,6 +145,7 @@ export function StoreNavigation({ active, currentTeamName, canReviewTeam, isSysA
           label="BoardX review"
           icon={Sparkles}
           active={active === "boardx-review"}
+          href="/admin/ai-store/review"
           onSelect={onSelect}
         />
       )}
