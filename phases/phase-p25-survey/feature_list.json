@@ -346,9 +346,9 @@
       "id": "F15",
       "priority": 1,
       "area": "survey",
-      "title": "精简 Survey 首页并补充问卷数量与发布时间",
-      "user_visible_behavior": "用户进入 /surveys 时不再看到组织和顾问社区卡片，工作台指标占满该行；左侧“我的问卷”显示与 owner 列表一致的真实数量；最近问卷每行在问卷信息与回收状态之间显示真实发布时间，未发布明确显示“尚未发布”，桌面与移动端均无横向溢出。",
-      "design_ref": "requirements/13-home-dashboard-information-adjustments.md；2026-07-18 用户标注截图",
+      "title": "精简 Survey 首页并优化新建问卷入口",
+      "user_visible_behavior": "用户进入 /surveys 时不再看到组织和顾问社区卡片，工作台指标占满该行；左侧“我的问卷”显示与 owner 列表一致的真实数量；最近问卷每行显示真实发布时间或“尚未发布”。用户点击“新建问卷”时看到可完整阅读的三种创建方式、明确行动文案与 AI 推荐标记，桌面三列和移动单列均无文字重叠或横向溢出。",
+      "design_ref": "requirements/13-home-dashboard-information-adjustments.md、14-create-dialog-usability-review.md；2026-07-18 用户标注截图",
       "status": "passing",
       "sprint": "13",
       "owner": "wrk-survey-1",
@@ -361,11 +361,11 @@
       "verification": [
         "pnpm --filter @repo/web run lint",
         "pnpm --filter @repo/web run typecheck",
-        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-015-home-information.spec.ts",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-015-home-information.spec.ts e2e/survey-p25-015-create-dialog.spec.ts",
         "pnpm harness doctor --phase p25"
       ],
       "evidence": "evidence/F15.verify.log @ 2026-07-17T16:54:37.992Z",
-      "notes": "仅调整首页信息层级和真实状态展示；立即发布的活跃问卷沿用现有生命周期更新时间，计划发布优先使用 publishStartAt，不新增伪造字段。"
+      "notes": "调整首页信息层级、真实状态展示与新建入口可读性；立即发布的活跃问卷沿用现有生命周期更新时间，计划发布优先使用 publishStartAt，不新增伪造字段。弹窗优化属于 PR #693 合并前的 review 返工，按 coding-standards 继续在原 Delivery PR 交付。"
     }
   ]
 }

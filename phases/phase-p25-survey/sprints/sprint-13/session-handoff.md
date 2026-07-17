@@ -19,10 +19,11 @@
 - 当前数据模型没有独立 `publishedAt`；F15 不新增伪造字段，沿用已确认的显示优先级。
 
 ## 下一步最佳动作
-- 推送 `codex/p25-f12-survey-html-followup` 并创建面向 `main` 的 ready PR，关联 issue #648 和已合并 PR #674。
+- 按 `requirements/14-create-dialog-usability-review.md` 完成 PR #693 的弹窗 review 返工：先写失败测试，再改现有 chooser。
+- 完成后用 `--backfill-evidence` 重跑 F15 全部 verification，并额外执行 `verify:base`。
 - F13 需另行认领；F13 `passing` 前不得开始依赖它的 F14。
 
 ## 命令
 - 启动: `pnpm --filter @repo/web exec next dev -p 3001`
-- 验证: `pnpm harness verify --sprint p25/13 --feature F15`
-- 调试: `pnpm --filter @repo/web exec playwright test e2e/survey-p25-015-home-information.spec.ts --reporter=line`
+- 验证: `pnpm harness verify --sprint p25/13 --feature F15 --backfill-evidence`
+- 调试: `pnpm --filter @repo/web exec playwright test e2e/survey-p25-015-create-dialog.spec.ts --reporter=line`

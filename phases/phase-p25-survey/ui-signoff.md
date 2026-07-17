@@ -55,6 +55,9 @@ confirmed_at: 2026-07-14T00:00:00+08:00
 - 2026-07-18 增量确认：用户在当前 `/surveys` 页面截图中标注并要求删除“组织”和“顾问社区”
   两张卡片，在左侧“我的问卷”后显示真实问卷数量，并在“最近问卷”每行中部增加发布时间。
   该标注是 `requirements/13-home-dashboard-information-adjustments.md` 的人类 UI 确认依据。
+- 2026-07-18 弹窗 review 再确认：用户指出当前“新建问卷”弹窗不够友好，并确认采用更宽的三入口卡片方案；
+  三张卡片必须显示完整说明与行动文案，AI 入口标记为推荐，移动端改为单列且不得溢出。
+  该确认是 `requirements/14-create-dialog-usability-review.md` 的人类 UI 依据。
 
 ---
 **确认动作**：核对无误后，把顶部 frontmatter 的 `status` 改为 `confirmed`，填 `confirmed_by` / `confirmed_at`，提交。之后才可调 requirement-author 生成 feature_list、跑 new-sprint。
