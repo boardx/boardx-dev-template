@@ -75,6 +75,36 @@ test("report template exposes chart image text layout and independent prompts", 
   await expect(page.getByTestId("report-module-resize-larger")).toBeVisible();
 });
 
+test("report composer keeps preview first on tablet and mobile", async ({ page }) => {
+  await register(page, "p25_f12_preview_first");
+  const created = await page.request.post("/api/surveys", {
+    data: {
+      title: "移动端报告编排问卷",
+      questions: [{ title: "你对本次服务满意吗？", type: "rating", required: true, options: [] }],
+    },
+  });
+  expect(created.status()).toBe(201);
+  const survey = (await created.json()).survey as { id: number };
+
+  await page.goto(`/surveys?survey=${survey.id}&step=template`);
+  const builder = page.getByTestId("report-template-builder");
+  const preview = page.getByTestId("report-module-preview");
+  const outline = page.getByTestId("report-module-list");
+  const inspector = page.getByTestId("report-ai-assistant");
+
+  for (const viewport of [{ width: 768, height: 900 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    await expect(builder).toBeVisible();
+    const [previewBox, outlineBox, inspectorBox] = await Promise.all([preview.boundingBox(), outline.boundingBox(), inspector.boundingBox()]);
+    expect(previewBox).not.toBeNull();
+    expect(outlineBox).not.toBeNull();
+    expect(inspectorBox).not.toBeNull();
+    expect(previewBox!.y).toBeLessThan(outlineBox!.y);
+    expect(outlineBox!.y).toBeLessThan(inspectorBox!.y);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  }
+});
+
 test("professional report never invents evidence for an empty survey", async ({ page }) => {
   await register(page, "p25_f12_professional");
   const created = await page.request.post("/api/surveys", {

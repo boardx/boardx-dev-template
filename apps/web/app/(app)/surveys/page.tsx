@@ -745,7 +745,7 @@ function WorkspaceShell({
                         return;
                       }
                       if (item.id === "reports") {
-                        window.location.href = "/surveys?view=templates";
+                        onNavigate("template");
                         return;
                       }
                       onNavigate("workspace");
@@ -1982,14 +1982,14 @@ function WorkspaceReportComposer({
         className={outlineCollapsed ? "grid min-w-0 gap-4 xl:grid-cols-[56px_minmax(0,1fr)_430px]" : "grid min-w-0 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_430px]"}
       >
         {outlineCollapsed ? (
-          <aside data-testid="report-module-list" className="flex min-h-96 flex-col items-center gap-3 border border-border bg-background py-3">
+          <aside data-testid="report-module-list" className="order-2 flex min-h-96 flex-col items-center gap-3 border border-border bg-background py-3 xl:order-1">
             <Button data-testid="report-outline-toggle" type="button" size="icon" variant="ghost" aria-label="展开报告章节" title="展开报告章节" onClick={() => setOutlineCollapsed(false)}>
               <ChevronLeft className="h-4 w-4 rotate-180" />
             </Button>
             <Badge variant="muted">{categories.length}</Badge>
           </aside>
         ) : (
-        <aside data-testid="report-module-list" className="min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
+        <aside data-testid="report-module-list" className="order-2 min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:order-1 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
           <div className="border-b border-border px-4 py-3">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-14 font-bold text-foreground">章节</h3>
@@ -2059,7 +2059,7 @@ function WorkspaceReportComposer({
         </aside>
         )}
 
-        <main data-testid="report-module-preview" className="min-w-0 overflow-hidden rounded-lg border border-border bg-background">
+        <main data-testid="report-module-preview" className="order-1 min-w-0 overflow-hidden rounded-lg border border-border bg-background xl:order-2">
           {!canExport ? (
             <div className="m-5 rounded-lg border border-dashed border-border bg-card p-10 text-center text-13 text-muted-foreground">
               请先完成报告分类和输入方式设置，再预览或导出报告。
@@ -2086,7 +2086,7 @@ function WorkspaceReportComposer({
           )}
         </main>
 
-        <aside data-testid="report-ai-assistant" className="min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
+        <aside data-testid="report-ai-assistant" className="order-3 min-w-0 self-start overflow-hidden rounded-lg border border-border bg-background xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
           <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
             <h3 className="text-14 font-bold text-foreground">设置</h3>
             <span className="text-12 text-muted-foreground">
@@ -5153,6 +5153,28 @@ export default function SurveysPage() {
     openEditor();
   }
 
+  async function openReportTemplateWorkflow(template: SurveyTemplate) {
+    setTemplateMessage("");
+    const res = await fetch("/api/surveys", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        title: template.title,
+        description: template.description,
+        scope: "private",
+        questions: template.questions,
+        reportTemplate: template.reportTemplate,
+      }),
+    });
+    if (!res.ok) {
+      setTemplateMessage("无法创建问卷以配置报告模板，请稍后重试。");
+      return;
+    }
+    const { survey } = await res.json();
+    setSurveys((items) => [survey, ...items.filter((item) => item.id !== survey.id)]);
+    await selectSurveyForWorkspace(survey.id, "template");
+  }
+
   function openTemplateEditor(template?: SurveyTemplate) {
     setEditingSurveyId(null);
     setEditingTemplateId(template?.source === "saved" ? template.id : null);
@@ -5709,7 +5731,7 @@ export default function SurveysPage() {
 
   function applyPendingAiDraft() {
     if (!pendingAiDraft || aiDraftApplied) return;
-    const append = /添加|新增|补充|增加/.test(pendingAiCommand);
+    const append = questions.some((question) => question.title.trim().length > 0);
     applyAiDraft(pendingAiDraft, { append });
     setAiDraftApplied(true);
     setAiCreateFlow(false);
@@ -8053,7 +8075,7 @@ export default function SurveysPage() {
                                 type="button"
                                 size="sm"
                                 variant="outline"
-                                onClick={() => openTemplateEditor(template)}
+                                onClick={() => void openReportTemplateWorkflow(template)}
                               >
                                 <FileText className="h-4 w-4" />
                                 报告模板
@@ -8226,7 +8248,7 @@ export default function SurveysPage() {
           description="选择一种方式开始你的诊断问卷。"
           testId="new-survey-dialog"
         >
-          <div className="grid gap-2">
+          <div className="grid gap-2 md:grid-cols-3">
             <Button
               data-testid="new-survey-ai"
               type="button"

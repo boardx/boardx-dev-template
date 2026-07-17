@@ -73,6 +73,28 @@ test("new survey chooser routes each creation path", async ({ page }) => {
   await expect(page.getByTestId("ai-assistant-panel")).toHaveCount(0);
 });
 
+test("new survey chooser uses three columns on desktop and one column on mobile", async ({ page }) => {
+  await register(page);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/surveys");
+  await page.getByTestId("create-with-ai").click();
+
+  const chooser = page.getByTestId("new-survey-dialog");
+  await expect(chooser.locator(".grid").first()).toHaveClass(/md:grid-cols-3/);
+  const desktopChoices = await Promise.all(["ai", "template", "blank"].map(async (kind) => page.getByTestId(`new-survey-${kind}`).boundingBox()));
+  expect(desktopChoices.every((box) => box)).toBe(true);
+  expect(desktopChoices[0]!.x).toBeLessThan(desktopChoices[1]!.x);
+  expect(desktopChoices[1]!.x).toBeLessThan(desktopChoices[2]!.x);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileChoices = await Promise.all(["ai", "template", "blank"].map(async (kind) => page.getByTestId(`new-survey-${kind}`).boundingBox()));
+  expect(mobileChoices.every((box) => box)).toBe(true);
+  expect(mobileChoices[0]!.x).toBe(mobileChoices[1]!.x);
+  expect(mobileChoices[1]!.x).toBe(mobileChoices[2]!.x);
+  expect(mobileChoices[0]!.y).toBeLessThan(mobileChoices[1]!.y);
+  expect(mobileChoices[1]!.y).toBeLessThan(mobileChoices[2]!.y);
+});
+
 test("unified survey editor keeps diagnostic structure and a subordinate AI assistant", async ({ page }) => {
   await register(page);
   await page.goto("/surveys");
@@ -174,5 +196,26 @@ test("diagnostic template center keeps template and report actions available", a
 
   await page.goto("/surveys?view=templates");
   await page.getByTestId(`view-report-template-${templateId}`).click();
-  await expect(page.getByTestId("template-editor-shell")).toBeVisible();
+  await expect(page).toHaveURL(/\/surveys\?survey=\d+&step=template/);
+  await expect(page.getByTestId("report-template-builder")).toBeVisible();
+  await expect(page.getByTestId("template-editor-shell")).toHaveCount(0);
+});
+
+test("sidebar report templates opens a selected survey's report template workflow", async ({ page }) => {
+  await register(page);
+  const created = await page.request.post("/api/surveys", {
+    data: {
+      title: "报告模板入口问卷",
+      questions: [{ title: "目前最需要解决的问题是什么？", type: "text", required: true, options: [] }],
+    },
+  });
+  expect(created.status()).toBe(201);
+  const survey = (await created.json()).survey as { id: number };
+
+  await page.goto("/surveys");
+  await expect(page.getByTestId("survey-home-recent")).toContainText("报告模板入口问卷");
+  await page.getByTestId("survey-nav-reports").click();
+  await expect(page).toHaveURL(new RegExp(`/surveys\\?survey=${survey.id}&step=template`));
+  await expect(page.getByTestId("report-template-builder")).toBeVisible();
+  await expect(page.getByTestId("template-editor-shell")).toHaveCount(0);
 });

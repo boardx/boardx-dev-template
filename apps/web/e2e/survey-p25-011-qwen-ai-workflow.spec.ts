@@ -59,7 +59,8 @@ test("selected survey opens the simplified AI-first design workbench", async ({ 
   await expect(page.getByTestId("survey-ai-apply")).toBeVisible();
 });
 
-test("applies AI additions only after the preview is confirmed", async ({ page }) => {
+for (const appendPrompt of ["再来两题", "Add two more questions"]) {
+test(`applies AI additions after confirming an ${appendPrompt} draft without replacing existing questions`, async ({ page }) => {
   await register(page);
   await page.route("**/api/surveys/ai", async (route) => {
     await route.fulfill({
@@ -90,7 +91,7 @@ test("applies AI additions only after the preview is confirmed", async ({ page }
   await openBlankEditor(page);
   await page.getByTestId("question-title-0").fill("你使用过该商品吗？");
   if (!(await page.getByTestId("ai-input").isVisible())) await page.getByTestId("open-ai-assistant").click();
-  await page.getByTestId("ai-input").fill("添加 2 个商品安全问题");
+  await page.getByTestId("ai-input").fill(appendPrompt);
   await page.getByTestId("ai-send").click();
 
   const assistant = page.getByTestId("survey-ai-assistant");
@@ -106,6 +107,7 @@ test("applies AI additions only after the preview is confirmed", async ({ page }
   await expect(page.getByTestId("question-title-2")).toHaveValue("你遇到过哪些安全问题？");
   await expect(page.getByTestId("ai-draft-question-list")).toBeVisible();
 });
+}
 
 test("existing survey applies only confirmed AI changes once", async ({ page }) => {
   await register(page);
