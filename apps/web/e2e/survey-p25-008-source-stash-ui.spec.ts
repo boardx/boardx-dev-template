@@ -76,7 +76,8 @@ test("new survey chooser routes each creation path", async ({ page }) => {
 test("unified survey editor keeps diagnostic structure and a subordinate AI assistant", async ({ page }) => {
   await register(page);
   await page.goto("/surveys");
-  await page.getByTestId("header-create-blank").click();
+  await page.getByTestId("create-with-ai").click();
+  await page.getByTestId("new-survey-blank").click();
 
   await expect(page.getByTestId("editor-command-bar")).toHaveCount(1);
   await expect(page.locator('[data-testid^="workflow-"]')).toHaveCount(5);
@@ -88,6 +89,27 @@ test("unified survey editor keeps diagnostic structure and a subordinate AI assi
   await expect(workspace.getByTestId("survey-diagnostic-summary")).toBeVisible();
   await expect(workspace.getByTestId("survey-hypotheses")).toBeVisible();
   await expect(workspace.getByTestId("survey-question-canvas")).toBeVisible();
+
+  await expect(workspace.getByRole("region", { name: "诊断摘要" })).toBeVisible();
+  await expect(workspace.getByRole("region", { name: "诊断假设" })).toBeVisible();
+
+  const summary = workspace.getByTestId("survey-diagnostic-summary");
+  const hypotheses = workspace.getByTestId("survey-hypotheses");
+  await expect(summary).toHaveCSS("box-shadow", "none");
+  await expect(hypotheses).toHaveCSS("border-left-width", "0px");
+  await expect(hypotheses).toHaveCSS("border-right-width", "0px");
+
+  await page.getByTestId("add-question").click();
+  const questionCanvas = workspace.getByTestId("survey-question-canvas");
+  const questionList = questionCanvas.getByTestId("question-list");
+  const firstQuestion = questionList.getByTestId("question-0");
+  const secondQuestion = questionList.getByTestId("question-1");
+  await expect(questionCanvas).toHaveCSS("box-shadow", "none");
+  await expect(firstQuestion).toHaveCSS("box-shadow", "none");
+  await expect(firstQuestion).toHaveCSS("border-top-width", "0px");
+  await expect(secondQuestion).toHaveCSS("border-top-width", "1px");
+  await expect(questionCanvas.getByRole("region", { name: "问题 1" })).toBeVisible();
+  await expect(questionCanvas.getByRole("region", { name: "问题 2" })).toBeVisible();
 
   await page.getByTestId("open-ai-assistant").click();
   await expect(workspace.getByTestId("survey-ai-assistant")).toBeVisible();

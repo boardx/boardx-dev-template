@@ -13,10 +13,15 @@ async function register(page: Page) {
   expect(response.status()).toBe(201);
 }
 
+async function openBlankEditor(page: Page) {
+  await page.goto("/surveys");
+  await page.getByTestId("create-with-ai").click();
+  await page.getByTestId("new-survey-blank").click();
+}
+
 test("blank creation uses the latest boardx-survey workflow editor", async ({ page }) => {
   await register(page);
-  await page.goto("/surveys");
-  await page.getByTestId("header-create-blank").click();
+  await openBlankEditor(page);
 
   await expect(page.getByRole("button", { name: /设计问卷/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /报告模板/ })).toBeVisible();
@@ -81,8 +86,7 @@ test("applies AI additions only after the preview is confirmed", async ({ page }
     });
   });
 
-  await page.goto("/surveys");
-  await page.getByTestId("header-create-blank").click();
+  await openBlankEditor(page);
   await page.getByTestId("question-title-0").fill("你使用过该商品吗？");
   if (!(await page.getByTestId("ai-input").isVisible())) await page.getByTestId("open-ai-assistant").click();
   await page.getByTestId("ai-input").fill("添加 2 个商品安全问题");
@@ -100,6 +104,70 @@ test("applies AI additions only after the preview is confirmed", async ({ page }
   await expect(page.getByTestId("question-title-1")).toHaveValue("你通常在哪些场景使用该商品？");
   await expect(page.getByTestId("question-title-2")).toHaveValue("你遇到过哪些安全问题？");
   await expect(page.getByTestId("ai-draft-question-list")).toBeVisible();
+});
+
+test("existing survey applies only confirmed AI changes once", async ({ page }) => {
+  await register(page);
+  const created = await page.request.post("/api/surveys", {
+    data: {
+      title: "既有问卷",
+      description: "验证逐项 AI 变更",
+      questions: [{ title: "既有基础问题", type: "text", required: true, options: [] }],
+    },
+  });
+  expect(created.status()).toBe(201);
+  const survey = (await created.json()).survey as { id: number };
+
+  await page.route("**/api/surveys/ai", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        sessionId: "22222222-2222-4222-8222-222222222222",
+        model: "qwen3.7-max",
+        changeSet: {
+          id: "change-set-1",
+          reply: "已整理两项待确认变更。",
+          summary: "改写既有问题并补充一道后续问题。",
+          operations: [
+            {
+              id: "rewrite-existing",
+              action: "rewrite_question",
+              targetIndex: 0,
+              after: { title: "不应被应用的改写", type: "text", required: true, options: [] },
+              rationale: "验证取消后不会修改既有问题。",
+            },
+            {
+              id: "add-follow-up",
+              action: "add_question",
+              position: 1,
+              after: { title: "已确认的后续问题", type: "rating", required: false, options: [] },
+              rationale: "验证只应用选中的变更。",
+            },
+          ],
+          checks: [],
+        },
+      }),
+    });
+  });
+
+  await page.goto(`/surveys?edit=${survey.id}`);
+  await page.getByTestId("open-ai-assistant").click();
+  await page.getByTestId("ai-input").fill("补充一项后续问题");
+  await page.getByTestId("ai-send").click();
+
+  await expect(page.getByTestId("ai-change-set")).toBeVisible();
+  await expect(page.getByTestId("question-title-0")).toHaveValue("既有基础问题");
+  await expect(page.getByTestId("question-title-1")).toHaveCount(0);
+
+  await page.getByTestId("ai-change-confirm-0").uncheck();
+  await page.getByTestId("apply-ai-change-set").click();
+
+  await expect(page.getByTestId("question-title-0")).toHaveValue("既有基础问题");
+  await expect(page.getByTestId("question-title-1")).toHaveValue("已确认的后续问题");
+  await expect(page.getByTestId("ai-change-set")).toHaveCount(0);
+  await expect(page.getByTestId("apply-ai-change-set")).toHaveCount(0);
+  await expect(page.locator('[data-testid^="question-title-"]')).toHaveCount(2);
 });
 
 test("Qwen fallback session remains recoverable and private to its actor", async ({ page }) => {

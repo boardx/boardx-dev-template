@@ -5797,6 +5797,8 @@ export default function SurveysPage() {
         ? `已应用 ${selected.length} 项变更到模板，请预览并保存。`
         : `已应用 ${selected.length} 项变更到 Builder，请预览并保存。`,
     }]);
+    setPendingAiChangeSet(null);
+    setConfirmedAiOps([]);
     if (aiSessionId && pendingAiChangeSet.id) {
       void fetch(`/api/surveys/ai/sessions/${aiSessionId}`, {
         method: "PATCH",
@@ -7183,10 +7185,14 @@ export default function SurveysPage() {
                 </div>
               )}
 
-              {view === "edit" && editorTab === "questions" && <section data-testid={isTemplateEditor ? undefined : "survey-diagnostic-summary"} className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+              {view === "edit" && editorTab === "questions" && <section
+                data-testid={isTemplateEditor ? undefined : "survey-diagnostic-summary"}
+                aria-labelledby={isTemplateEditor ? undefined : "survey-diagnostic-summary-title"}
+                className={isTemplateEditor ? "overflow-hidden rounded-lg border border-border bg-card shadow-sm" : "border border-border bg-background"}
+              >
                 {!isTemplateEditor && <div className="h-2 bg-primary" />}
                 <div className={isTemplateEditor ? "p-4" : "p-6"}>
-                  {!isTemplateEditor && <p className="mb-3 text-12 font-semibold text-muted-foreground">诊断摘要</p>}
+                  {!isTemplateEditor && <h2 id="survey-diagnostic-summary-title" className="mb-3 text-12 font-semibold text-muted-foreground">诊断摘要</h2>}
                   <Input
                     id="survey-title"
                     data-testid="survey-title"
@@ -7205,11 +7211,15 @@ export default function SurveysPage() {
                     onChange={(e) => setDescription(e.target.value)}
                     className="mt-3 min-h-12 w-full resize-none rounded-none border-0 border-b border-border bg-transparent px-0 py-2 text-14 text-foreground transition-colors placeholder:text-placeholder focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
                   />
-                  <div data-testid={isTemplateEditor ? undefined : "survey-hypotheses"}>
-                  <div data-testid="category-manager" className={`rounded-lg border border-border bg-secondary/30 ${isTemplateEditor ? "mt-4 p-3" : "mt-5 p-4"}`}>
+                  <section
+                    data-testid={isTemplateEditor ? undefined : "survey-hypotheses"}
+                    aria-labelledby={isTemplateEditor ? undefined : "survey-hypotheses-label"}
+                    className={isTemplateEditor ? undefined : "mt-5 border-t border-border pt-5"}
+                  >
+                  <div data-testid="category-manager" className={isTemplateEditor ? "mt-4 rounded-lg border border-border bg-secondary/30 p-3" : ""}>
                     <div className="flex flex-wrap items-end gap-3">
                       <div className="min-w-64 flex-1">
-                        <Label htmlFor="category-input">诊断假设</Label>
+                        <Label id={isTemplateEditor ? undefined : "survey-hypotheses-label"} htmlFor="category-input">诊断假设</Label>
                         <Input
                           id="category-input"
                           data-testid="category-input"
@@ -7242,8 +7252,12 @@ export default function SurveysPage() {
                       )}
                     </div>
                   </div>
-                  </div>
-                  <div data-testid={isTemplateEditor ? undefined : "survey-diagnostic-dimensions"} className="mt-5 flex flex-wrap items-end gap-3">
+                  </section>
+                  <section
+                    data-testid={isTemplateEditor ? undefined : "survey-diagnostic-dimensions"}
+                    aria-label={isTemplateEditor ? undefined : "问卷设置"}
+                    className={isTemplateEditor ? "mt-5 flex flex-wrap items-end gap-3" : "mt-5 flex flex-wrap items-end gap-3 border-t border-border pt-5"}
+                  >
                     {!isTemplateEditor && (
                       <>
                         <div className="flex flex-col gap-1.5">
@@ -7280,7 +7294,7 @@ export default function SurveysPage() {
                     )}
                     <Badge variant="muted">{questions.length} 题</Badge>
                     <Badge variant="muted">{isTemplateEditor ? "模版草稿" : "草稿"}</Badge>
-                  </div>
+                  </section>
                   {!isTemplateEditor && scope === "team" && teams.length === 0 && (
                     <p className="mt-2 text-12 text-muted-foreground">
                       当前还没有团队。先到 Teams 创建团队后，就可以发布为团队问卷。
@@ -7289,15 +7303,22 @@ export default function SurveysPage() {
                 </div>
               </section>}
 
-              {view === "edit" && editorTab === "questions" && <section data-testid={isTemplateEditor ? undefined : "survey-question-canvas"} className="mt-3">
-                <div data-testid="question-list" className="flex flex-col gap-3">
+              {view === "edit" && editorTab === "questions" && <section
+                data-testid={isTemplateEditor ? undefined : "survey-question-canvas"}
+                aria-labelledby={isTemplateEditor ? undefined : "survey-question-canvas-title"}
+                className={isTemplateEditor ? "mt-3" : "mt-4 overflow-hidden border border-border bg-background"}
+              >
+                {!isTemplateEditor && <h2 id="survey-question-canvas-title" className="sr-only">问卷题目</h2>}
+                <div data-testid="question-list" className={isTemplateEditor ? "flex flex-col gap-3" : "divide-y divide-border"}>
                 {questions.map((q, idx) => (
                   <section
                     key={q.id}
                     data-testid={`question-${idx}`}
-                    className="rounded-lg border border-border bg-card shadow-sm transition-colors hover:border-border-strong"
+                    aria-labelledby={isTemplateEditor ? undefined : `survey-question-heading-${q.id}`}
+                    className={isTemplateEditor ? "rounded-lg border border-border bg-card shadow-sm transition-colors hover:border-border-strong" : "p-5"}
                   >
-                    <div className="border-l-4 border-primary p-5">
+                    {!isTemplateEditor && <h3 id={`survey-question-heading-${q.id}`} className="sr-only">问题 {idx + 1}</h3>}
+                    <div className={isTemplateEditor ? "border-l-4 border-primary p-5" : ""}>
                       <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_176px_176px]">
                         <Input
                           data-testid={`question-title-${idx}`}
