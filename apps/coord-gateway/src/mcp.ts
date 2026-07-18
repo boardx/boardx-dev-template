@@ -3,6 +3,7 @@
 // 不引第三方 SDK：约束是①保持零运行时依赖纪律②工具全部是 RepoHub DO 的薄封装，
 // 引 SDK 的复杂度大于收益。协议语义来源：docs/coord-platform/protocol/*.md。
 import type { Env } from "./index";
+import { authorizeRepoAccess } from "./auth";
 
 interface JsonRpcRequest {
   jsonrpc?: string;
@@ -280,14 +281,10 @@ export async function handleMcp(
   owner: string,
   repo: string,
 ): Promise<Response> {
-  // 鉴权同 REST：缺配置 fail-closed 503（禁止静默 fail-open），坏 token 401
-  if (!env.COORD_API_TOKEN) {
-    return new Response(JSON.stringify({ error: "api_token_not_configured" }), { status: 503 });
-  }
-  const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${env.COORD_API_TOKEN}`) {
-    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
-  }
+  // 鉴权同 REST（auth.ts 共用矩阵）：缺配置 fail-closed 503，坏 token 401，
+  // scoped token（F08）经该仓 DO 实时 verify——跨仓 403，已吊销 401
+  const denied = await authorizeRepoAccess(req, env, `${owner}/${repo}`);
+  if (denied) return denied;
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "method_not_allowed" }), { status: 405 });
   }

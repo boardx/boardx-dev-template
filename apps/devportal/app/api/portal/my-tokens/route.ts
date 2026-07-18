@@ -48,22 +48,24 @@ export async function GET(req: Request) {
   if (!agents) return NextResponse.json({ error: "registry_unavailable" }, { status: 502 });
   return NextResponse.json({
     broker_configured: Boolean(process.env["COORD_BROKER_TOKEN"] && process.env["COORD_SERVICE_URL"]),
+    // F08：coord-gateway 按仓 scoped token 的发放通道是否接通（独立于 coord-service broker）
+    gateway_configured: Boolean(process.env["COORD_GATEWAY_ADMIN_TOKEN"] && process.env["COORD_GATEWAY_URL"]),
     agents: agents.map((a) => ({ id: a.id, kind: a.kind })),
   });
 }
 
-/** POST {agent_id} — 领取/轮换该身份的 token（轮换使旧 token 立即失效）。 */
+/** POST {agent_id, target?} — 领取/轮换该身份的 token（明文只返回这一次）。
+ *  target 缺省 "coord-service"（既有 D1 broker 链路）；"coord-gateway"（F08）经
+ *  COORD_ADMIN_TOKEN（服务端 secret，永不下发浏览器）调 gateway 的按仓 mint 路由，
+ *  owner 绑定当前 Access 登录身份——token 权威在该仓的 RepoHub DO。 */
 export async function POST(req: Request) {
   const user = await accessUser(req.headers);
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
 
-  const brokerToken = process.env["COORD_BROKER_TOKEN"];
-  const baseUrl = process.env["COORD_SERVICE_URL"];
-  if (!brokerToken || !baseUrl) return NextResponse.json({ error: "broker_not_configured" }, { status: 503 });
-
-  const body = (await req.json().catch(() => ({}))) as { agent_id?: unknown };
+  const body = (await req.json().catch(() => ({}))) as { agent_id?: unknown; target?: unknown };
   const agentId = typeof body.agent_id === "string" ? body.agent_id : "";
   if (!agentId) return NextResponse.json({ error: "missing_agent_id" }, { status: 400 });
+  const target = body.target === "coord-gateway" ? "coord-gateway" : "coord-service";
 
   const agents = await myAgents(user.email);
   if (!agents) return NextResponse.json({ error: "registry_unavailable" }, { status: 502 });
@@ -71,6 +73,34 @@ export async function POST(req: Request) {
     // registry 归属是唯一授权依据：不属于你（或不可自助）的身份一律 403，不区分存在性
     return NextResponse.json({ error: "not_your_agent" }, { status: 403 });
   }
+
+  if (target === "coord-gateway") {
+    const adminToken = process.env["COORD_GATEWAY_ADMIN_TOKEN"];
+    const gatewayUrl = process.env["COORD_GATEWAY_URL"];
+    const repo = process.env["GITHUB_REPO"];
+    if (!adminToken || !gatewayUrl || !repo)
+      return NextResponse.json({ error: "gateway_broker_not_configured" }, { status: 503 });
+    const res = await fetch(`${gatewayUrl}/api/coord/repos/${repo}/tokens/mint`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ agent_id: agentId, owner: user.email }),
+      signal: AbortSignal.timeout(8_000),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      return NextResponse.json({ error: "mint_failed", upstream_status: res.status }, { status: 502 });
+    }
+    const minted = (await res.json()) as { agent_id: string; token: string; created_at: string };
+    // 明文只经过这一跳：gateway → 本路由 → 浏览器。不写日志、不进缓存。
+    return NextResponse.json(
+      { agent_id: minted.agent_id, token: minted.token, target, repo },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const brokerToken = process.env["COORD_BROKER_TOKEN"];
+  const baseUrl = process.env["COORD_SERVICE_URL"];
+  if (!brokerToken || !baseUrl) return NextResponse.json({ error: "broker_not_configured" }, { status: 503 });
 
   const res = await fetch(`${baseUrl}/agents/${encodeURIComponent(agentId)}/mint-token`, {
     method: "POST",
@@ -84,5 +114,5 @@ export async function POST(req: Request) {
   }
   const minted = (await res.json()) as { agent_id: string; token: string; minted_at: string };
   // 明文只经过这一跳：coord-service → 本路由 → 浏览器。不写日志、不进缓存。
-  return NextResponse.json(minted, { headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json({ ...minted, target }, { headers: { "Cache-Control": "no-store" } });
 }

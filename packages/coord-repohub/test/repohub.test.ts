@@ -271,6 +271,52 @@ describe("F07 evidence 提交", () => {
   });
 });
 
+describe("F08 agent tokens（按仓 scoped token 权威表）", () => {
+  async function sha256Hex(s: string): Promise<string> {
+    const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+    return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  it("mint → verify 生命周期：明文只出现在 mint 响应；hash 可验证；revoke 后 401", async () => {
+    const minted = await (
+      await post("/tokens/mint", { agent_id: "wrk-tok-1", owner: "usam.shen@gmail.com" })
+    ).json<Record<string, string>>();
+    expect(minted["token"]).toMatch(/^coordtk_[0-9a-f]{64}$/);
+    const hash = await sha256Hex(minted["token"]!);
+    expect(minted["token_hash_prefix"]).toBe(hash.slice(0, 8));
+
+    // verify：在册未吊销 → 200 + 身份回传
+    const ok = await post("/tokens/verify", { token_hash: hash });
+    expect(ok.status).toBe(200);
+    expect(await ok.json()).toEqual({ ok: true, agent_id: "wrk-tok-1", owner: "usam.shen@gmail.com" });
+
+    // 列表：不含明文、不含完整 hash（只露前 8 位）
+    const list = await (await SELF.fetch(`${BASE}/tokens`)).json<{ tokens: Array<Record<string, unknown>> }>();
+    const row = list.tokens.find((t) => t["agent_id"] === "wrk-tok-1")!;
+    expect(JSON.stringify(list)).not.toContain(minted["token"]);
+    expect(JSON.stringify(list)).not.toContain(hash);
+    expect(row["token_hash_prefix"]).toBe(hash.slice(0, 8));
+    expect(row["revoked_at"]).toBeNull();
+
+    // revoke（前缀定位）→ verify 立即 401（无缓存），revoke 幂等
+    expect((await post("/tokens/revoke", { token_hash_prefix: hash.slice(0, 8) })).status).toBe(200);
+    const revoked = await post("/tokens/verify", { token_hash: hash });
+    expect(revoked.status).toBe(401);
+    expect((await revoked.json<Record<string, unknown>>())["reason"]).toBe("revoked");
+    const again = await post("/tokens/revoke", { token_hash: hash });
+    expect(again.status).toBe(200);
+    expect((await again.json<Record<string, unknown>>())["already_revoked"]).toBe(true);
+  });
+
+  it("verify 查无 hash → 404（跨仓/伪造 token 的判定基础）；坏参数 422", async () => {
+    expect((await post("/tokens/verify", { token_hash: "f".repeat(64) })).status).toBe(404);
+    expect((await post("/tokens/verify", { token_hash: "短的" })).status).toBe(422);
+    expect((await post("/tokens/revoke", {})).status).toBe(422);
+    expect((await post("/tokens/revoke", { token_hash: "e".repeat(64) })).status).toBe(404);
+    expect((await post("/tokens/mint", { agent_id: "", owner: "" })).status).toBe(422);
+  });
+});
+
 async function fetchClaim(base: string, agent: string, resource: string): Promise<Response> {
   return SELF.fetch(`${base}/claims`, {
     method: "POST",

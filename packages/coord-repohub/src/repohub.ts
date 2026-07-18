@@ -87,6 +87,10 @@ export class RepoHub extends DurableObject {
       if (req.method === "GET" && p === "/evidence") return this.listEvidence(url);
       if (req.method === "POST" && p === "/mirror/upsert") return this.mirrorUpsert(await req.json());
       if (req.method === "POST" && p === "/webhook/ingest") return this.webhookIngest(await req.json());
+      if (req.method === "POST" && p === "/tokens/mint") return this.tokenMint(await req.json());
+      if (req.method === "POST" && p === "/tokens/revoke") return this.tokenRevoke(await req.json());
+      if (req.method === "POST" && p === "/tokens/verify") return this.tokenVerify(await req.json());
+      if (req.method === "GET" && p === "/tokens") return this.tokenList();
       const rt = p.match(/^\/realtime\/(issues|prs)$/);
       if (req.method === "GET" && rt) return this.realtimeList(rt[1] === "prs" ? "pr" : "issue", url);
       const one = p.match(/^\/realtime\/prs\/(\d+)$/);
@@ -415,6 +419,88 @@ export class RepoHub extends DurableObject {
     return json(200, rowToItem(row));
   }
 
+  // ---------- Agent tokens（F08：按仓 scoped token，DO 是唯一权威） ----------
+  // 安全不变量：①明文只在 mint 响应出现一次，DO 只存 sha256 hex；②verify 每次
+  // 实时查表（吊销即时生效，无任何缓存层）；③跨仓 scope 由存储位置天然保证——
+  // token 只在所属仓的 DO 有记录，别仓 verify 查无即拒。调用方权限（mint/revoke
+  // 是 COORD_ADMIN_TOKEN 特权）在 gateway 层把守，DO 只管数据与判定。
+
+  private async tokenMint(body: unknown): Promise<Response> {
+    const b = body as Record<string, unknown> | null;
+    const agentId = b?.["agent_id"];
+    const owner = b?.["owner"];
+    const errors: string[] = [];
+    if (typeof agentId !== "string" || agentId.length === 0) errors.push("agent_id 必须是非空字符串");
+    if (typeof owner !== "string" || owner.length === 0) errors.push("owner 必须是非空字符串（问责锚点）");
+    if (errors.length > 0) return json(422, { error: "invalid_token_mint_request", details: errors });
+
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes); // CSPRNG，256-bit 熵
+    const token = `coordtk_${toHex(bytes)}`;
+    const hash = await sha256Hex(token);
+    const now = iso(Date.now());
+    this.sql.exec(
+      `INSERT INTO agent_tokens (token_hash,owner,agent_id,created_at,revoked_at) VALUES (?,?,?,?,NULL)`,
+      hash, owner as string, agentId as string, now,
+    );
+    // 明文 token 只在这个响应里出现一次，之后任何接口都拿不回它
+    return json(201, {
+      token,
+      token_hash_prefix: hash.slice(0, 8),
+      agent_id: agentId,
+      owner,
+      created_at: now,
+    });
+  }
+
+  private tokenVerify(body: unknown): Response {
+    const hash = (body as Record<string, unknown> | null)?.["token_hash"];
+    if (typeof hash !== "string" || !/^[0-9a-f]{64}$/.test(hash))
+      return json(422, { error: "invalid_token_hash" });
+    const row = [...this.sql.exec(`SELECT * FROM agent_tokens WHERE token_hash=?`, hash)][0];
+    if (!row) return json(404, { ok: false, reason: "unknown_token" }); // 含跨仓 token：本仓查无
+    if (row["revoked_at"]) return json(401, { ok: false, reason: "revoked" });
+    return json(200, { ok: true, agent_id: row["agent_id"], owner: row["owner"] });
+  }
+
+  private tokenRevoke(body: unknown): Response {
+    const b = body as Record<string, unknown> | null;
+    const full = b?.["token_hash"];
+    const prefix = b?.["token_hash_prefix"];
+    let where: string; let arg: string;
+    if (typeof full === "string" && /^[0-9a-f]{64}$/.test(full)) {
+      where = "token_hash=?"; arg = full;
+    } else if (typeof prefix === "string" && /^[0-9a-f]{8,64}$/.test(prefix)) {
+      where = "token_hash LIKE ?"; arg = `${prefix}%`; // 前缀吊销（列表接口只露前 8 位）
+    } else {
+      return json(422, { error: "invalid_token_revoke_request", details: ["需要 token_hash（64 hex）或 token_hash_prefix（≥8 hex）"] });
+    }
+    const rows = [...this.sql.exec(`SELECT token_hash, revoked_at FROM agent_tokens WHERE ${where}`, arg)];
+    if (rows.length === 0) return json(404, { error: "token_not_found" });
+    if (rows.length > 1) return json(409, { error: "ambiguous_prefix", matches: rows.length });
+    const target = rows[0]!;
+    if (target["revoked_at"]) {
+      return json(200, { ok: true, already_revoked: true, revoked_at: target["revoked_at"] }); // 幂等
+    }
+    const now = iso(Date.now());
+    this.sql.exec(`UPDATE agent_tokens SET revoked_at=? WHERE token_hash=?`, now, target["token_hash"]);
+    return json(200, { ok: true, already_revoked: false, revoked_at: now });
+  }
+
+  // 列表绝不含明文（拿不回）也不含完整 hash（防离线撞库比对），只露前 8 位定位用
+  private tokenList(): Response {
+    const rows = [...this.sql.exec(`SELECT * FROM agent_tokens ORDER BY created_at`)];
+    return json(200, {
+      tokens: rows.map((r) => ({
+        token_hash_prefix: (r["token_hash"] as string).slice(0, 8),
+        agent_id: r["agent_id"],
+        owner: r["owner"],
+        created_at: r["created_at"],
+        revoked_at: r["revoked_at"],
+      })),
+    });
+  }
+
   // ---------- helpers ----------
 
   private activeLease(resourceId: string): LeaseRow | undefined {
@@ -442,6 +528,15 @@ export class RepoHub extends DurableObject {
       ...(row.handoff_note ? { handoff_note: row.handoff_note } : {}),
     };
   }
+}
+
+function toHex(bytes: Uint8Array): string {
+  return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function sha256Hex(s: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return toHex(new Uint8Array(digest));
 }
 
 function rowToItem(row: MirrorRow): Record<string, unknown> {
