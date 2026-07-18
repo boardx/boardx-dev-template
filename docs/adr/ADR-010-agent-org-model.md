@@ -1,6 +1,7 @@
 # ADR 010: Agent 组织模型——多级 coordinator + 角色子 agent + 全员注册与性能管理
 
 - 状态: Accepted（人类直接决定，2026-07-09）
+- 适用层：方法论（可移植：随模板打包）
 - 日期: 2026-07-09
 - 关联: 建立在 ADR-004（协调总线，协调面已由 ADR-009 迁到 coord-service）、
   ADR-009（coord-service 是唯一协调权威）之上；把此前散落在 registry.yaml 注释、

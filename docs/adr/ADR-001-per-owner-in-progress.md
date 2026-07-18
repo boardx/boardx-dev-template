@@ -1,6 +1,7 @@
 # ADR 001: 从「全局单 in_progress」放宽到「每 owner 单 in_progress」
 
 - 状态: Accepted
+- 适用层：方法论（可移植：随模板打包）
 - 日期: 2026-06-29
 
 ## 背景

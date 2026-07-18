@@ -1,8 +1,8 @@
 # p29 需求：协调层按 RepoHub DO 重建并开源产品化（coord-platform）
 
 > 原始需求来源：人类发起（2026-07-18 会话拍板）。本文件是输入，权威是 feature_list.json。
-> 关联：ADR-017（本阶段的架构决策）、product-vision-github-agent-layer.md（北极星）、
-> postmortem-p23-false-passing.md、agent-scaleup-2026-07.md §4（coord-service 暂停背景）。
+> 关联：ADR-017（本阶段的架构决策）、docs/design/product-vision-github-agent-layer.md（北极星）、
+> docs/postmortems/postmortem-p23-false-passing.md、docs/proposals/agent-scaleup-2026-07.md §4（coord-service 暂停背景）。
 
 ## 一、要解决的问题（全部有事故出处，不是推演）
 

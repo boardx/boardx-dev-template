@@ -1,6 +1,7 @@
 # ADR-014: 统一时钟与分级 loop 纪律
 
 - 状态：Accepted（人类拍板 2026-07-16：每个 agent 需要知道时间、用统一时钟协调；
+- 适用层：方法论（可移植：随模板打包）
   main/module/sub 各级都要有合适的 loop 策略与 SOP）
 - 日期：2026-07-16
 - 作者：coord-architecture

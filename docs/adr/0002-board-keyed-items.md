@@ -1,6 +1,7 @@
 # ADR 0002: 画布 item 归属从 room-keyed 演进为 board-keyed（加法过渡）
 
 - 状态: Accepted
+- 适用层：项目实现（BoardX 专属：模板只带模式引用）
 - 日期: 2026-06-30
 - 相关: [[ADR-0001]]（ADR 实践）；phases/phase-p5-board、phases/phase-p6-canvas
 

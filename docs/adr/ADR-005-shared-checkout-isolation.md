@@ -1,6 +1,7 @@
 # ADR 005: 共享主 checkout 隔离——任何 agent 一律用独立 worktree
 
 - 状态: Accepted
+- 适用层：方法论（可移植：随模板打包）
 - 日期: 2026-07-04
 - 关联: 接续 ADR-004（issue 为协调总线）；细化 `parallel-dev-workflow.md` §5 的
   worktree 隔离到「所有角色」，不只是 feature worker。

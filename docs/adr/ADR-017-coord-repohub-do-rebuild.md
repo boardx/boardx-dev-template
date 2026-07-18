@@ -1,10 +1,11 @@
 # ADR ADR-017: 协调层按 RepoHub Durable Object 重建，以仓内开源子项目形态产品化
 
 - 状态: Accepted（人类拍板 2026-07-18）
+- 适用层：项目实现（BoardX 专属：模板只带模式引用）
 - 日期: 2026-07-18
 - 关联: ADR-009（协调权威语义，本 ADR 换其载体）、ADR-011（身份/token，被 F08 继承扩展）、
   ADR-016（应用端 AI provider，与本 ADR 的平台侧 AI 互不冲突）、
-  `.harness/instructions/product-vision-github-agent-layer.md`（北极星）、
+  `docs/design/product-vision-github-agent-layer.md`（北极星）、
   `phases/phase-p29-coord-platform/`（执行载体）
 
 ## 背景

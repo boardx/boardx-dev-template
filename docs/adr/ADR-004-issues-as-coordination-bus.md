@@ -1,6 +1,7 @@
 # ADR 004: GitHub issues + labels 作为多 Agent 运行时协调总线
 
 - 状态: Accepted
+- 适用层：方法论（可移植：随模板打包）
 - 日期: 2026-07-01
 - 关联: 接续 ADR-001（per-owner 单 in_progress）；规范化 `parallel-dev-workflow.md`
 

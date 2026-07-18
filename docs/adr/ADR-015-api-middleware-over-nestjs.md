@@ -1,6 +1,7 @@
 # ADR-015: API 中间件层（而非改用 NestJS）
 
 - 状态：Accepted（人类 2026-07-16 问"后台是否该用 NestJS 而不是 Next.js"，评估后拍板走本方案）
+- 适用层：项目实现（BoardX 专属：模板只带模式引用）
 - 日期：2026-07-16
 - 作者：coord-architecture
 - 关联：ADR-009（Cloudflare 协作面）、ADR-012/013/014（能机器判定的绝不交给人肉）、#539（String(err) 泄漏事故）

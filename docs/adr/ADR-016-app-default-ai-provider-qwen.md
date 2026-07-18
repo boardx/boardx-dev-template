@@ -1,6 +1,7 @@
 # ADR 016: 应用端默认 AI provider 用 Qwen
 
 - 状态: Accepted
+- 适用层：项目实现（BoardX 专属：模板只带模式引用）
 - 日期: 2026-07-17
 
 ## 背景

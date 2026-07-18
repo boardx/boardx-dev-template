@@ -25,3 +25,15 @@
 | ADR-015 | api-middleware-over-nestjs（API 三层中间件，不换 NestJS） | Accepted |
 | ADR-016 | app-default-ai-provider-qwen（应用端默认 AI 用 Qwen） | Accepted |
 | ADR-017 | coord-repohub-do-rebuild（协调层按 RepoHub DO 重建 + 仓内开源子项目） | Accepted |
+
+## 适用层（2026-07-18 起，为模板化打包分层）
+
+每份 ADR 头部标注了 `适用层`，两类：
+
+- **方法论（可移植）**：与具体业务无关的工程过程决策，随
+  [agentic-harness 模板](https://github.com/boardx) 打包给任何项目复用：
+  0001、ADR-001、002、003、004、005、010、011、012、014。
+- **项目实现（BoardX 专属）**：本仓的具体技术选型与基础设施决策，模板只带
+  模式引用不带结论：0002、ADR-006、007、008、009、013、015、016、017。
+
+新 ADR 落笔时必须标注适用层（模板 `adr.template.md` 已含该字段）。

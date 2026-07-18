@@ -1,6 +1,7 @@
 # ADR 006: coord-service（Cloudflare D1）作为可选的原子认领权威，GitHub 保留为默认与兜底
 
 - 状态: Accepted
+- 适用层：项目实现（BoardX 专属：模板只带模式引用）
 - 日期: 2026-07-05
 - 关联: 接续 ADR-004（issues as coordination bus）；不推翻它对"GitHub issue+label
   是协调平面权威"的定位，而是给最容易发生真实竞态的那一小块（认领/心跳/交还）
