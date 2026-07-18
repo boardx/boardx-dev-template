@@ -83,7 +83,7 @@
 
 ## 常用 harness 命令
 ```bash
-pnpm harness new-phase  --id 02 --name agent-runtime --goal "..."   # scaffold requirements/；加 --ui 走 UI 先行关卡
+pnpm harness new-phase  --name agent-runtime --goal "..."   # 缺省 --id 从 roadmap 自动取号(#660)；加 --ui 走 UI 先行关卡
 pnpm harness new-sprint --phase 02 --id 01 --goal "..." --features F01,F02
 pnpm harness verify     --sprint 02/01
 pnpm harness sync       --phase 02 --apply

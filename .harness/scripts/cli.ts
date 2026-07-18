@@ -50,7 +50,8 @@ async function main(): Promise<void> {
     case "module-lock-release":   await moduleLockRelease(args); break;
     default:
       log.info("用法:");
-      log.info("  pnpm harness new-phase     --id NN --name <name> [--slug <s>] [--goal <g>] [--ui]");
+      log.info("  pnpm harness new-phase     --name <name> [--id pN] [--slug <s>] [--goal <g>] [--ui]");
+      log.info("                             --id 缺省时从 roadmap.yaml 自动取号（max+1，issue #660）；显式传号撞已占用即报错");
       log.info("                             --ui：有界面的阶段，scaffold UI 先行确认关卡（ADR-003）");
       log.info("  pnpm harness new-sprint    --phase NN --id MM [--goal <g>] [--features F01,F02]");
       log.info("  pnpm harness verify        --sprint NN/MM | --phase NN [--feature F01] [--owner <id>]");
