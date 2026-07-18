@@ -129,6 +129,17 @@ agents:
     model: opus-4.8
     areas: [auth, team, home-page, profile, common, billing, credits]
     reports_to: coord-main
+  - id: coord-devportal
+    active: true
+    owner: usamshen
+    kind: module-coordinator
+    model: opus-4.8
+    areas: [devportal]
+    reports_to: coord-main
+    responsibilities:
+      - 统筹 devportal 应用（develop.boardx.us）本身的开发分派、首轮初审与返工裁决
+      - 在 devportal area 内分派 worker，并按 Harness 验证证据完成首轮 review
+      - 无独立合并权：PR 全绿后转交 coord-main 做最终合并，跨模块冲突升级给 coord-main
 
   # ── 子 agent（ADR-010：module/architecture coordinator 运行时派出，必须登记）────
   - id: coord-architecture.portal-dev-1
