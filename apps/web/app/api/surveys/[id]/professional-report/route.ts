@@ -27,6 +27,7 @@ import {
 } from "@/lib/survey-report-generation";
 import { buildProfessionalReportDocument } from "@/lib/survey-professional-report";
 import { buildSurveyReportRequirementPayload } from "@/lib/survey-report-requirement";
+import { selectExactReportVersion } from "@/lib/survey-report-version-navigation";
 import type { AiEvidenceClaimCandidate } from "@/lib/survey-professional-report";
 import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
 import { callQwenJson } from "@/lib/qwen";
@@ -150,30 +151,25 @@ function artifactReport(
   return artifact?.report as unknown as ProfessionalSurveyReportDocument | undefined;
 }
 
-function selectedArtifact(
-  artifacts: SurveyReportArtifactVersion[],
-  artifactId: string | null
-): SurveyReportArtifactVersion | undefined {
-  if (!artifactId) return undefined;
-  return artifacts.find((artifact) => artifact.id === artifactId);
-}
-
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const context = await loadReportContext(params.id, false);
     if ("response" in context) return context.response;
     const status = generationStatus(context);
-    const requestedArtifact = selectedArtifact(
+    const requestedArtifact = selectExactReportVersion(
       context.artifacts,
       new URL(request.url).searchParams.get("artifactId")
     );
+    if (requestedArtifact.isExplicitRequest && !requestedArtifact.artifact) {
+      return NextResponse.json({ error: "report_version_not_found" }, { status: 404 });
+    }
     const currentArtifact = await findReadySurveyReportArtifact({
       surveyId: context.survey.id,
       sourceRevision: context.sourceSnapshot.sourceRevision,
       requirementHash: context.requirementHash,
       templateVersion: SURVEY_REPORT_TEMPLATE_VERSION,
     });
-    const artifact = requestedArtifact ?? currentArtifact ?? context.artifacts[0];
+    const artifact = requestedArtifact.artifact ?? currentArtifact ?? context.artifacts[0];
     const report = artifactReport(artifact) ?? buildProfessionalReportDocument({
       evidence: context.evidence,
       generatedAt: new Date().toISOString(),

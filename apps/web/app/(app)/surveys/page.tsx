@@ -59,6 +59,7 @@ import {
 import type { SurveyReportGenerationStatus } from "@/lib/survey-report-generation";
 import type { PlannedReportBlock } from "@/lib/survey-report-planner";
 import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
+import { isExactReportVersionResponse } from "@/lib/survey-report-version-navigation";
 
 echarts.use([
   BarChart,
@@ -4544,7 +4545,7 @@ export default function SurveysPage() {
         setWorkspaceTemplateError(payload?.error ?? "报告版本加载失败");
         return false;
       }
-      if (!payload.report) {
+      if (!isExactReportVersionResponse(payload, artifactId)) {
         setWorkspaceTemplateError("报告版本加载失败");
         return false;
       }
