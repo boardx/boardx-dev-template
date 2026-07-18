@@ -1,15 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Clock3, History, LoaderCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Check, ChevronDown, Clock3, History, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import type { SurveyReportGenerationStatus } from "@/lib/survey-report-generation";
-import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
+import {
+  isTemplateDrivenSurveyReport,
+  type SurveyReportDocument,
+} from "@/lib/survey-report-document";
 
 interface SurveyReportVersionHistoryProps {
   generation?: SurveyReportGenerationStatus;
-  report?: ProfessionalSurveyReportDocument;
+  report?: SurveyReportDocument;
   disabled?: boolean;
   onSelectVersion: (artifactId: string) => Promise<boolean>;
   onLoadMore: () => Promise<boolean>;
@@ -59,7 +66,11 @@ export function SurveyReportVersionHistory({
     ? `版本 ${versions.length - selectedIndex}`
     : "报告预览";
   const selectedTime = report?.generatedAt ?? selectedVersion?.createdAt;
-  const selectedSampleSize = report?.methodology.sampleSize ?? selectedVersion?.responseCount ?? 0;
+  const selectedSampleSize = report
+    ? isTemplateDrivenSurveyReport(report)
+      ? report.sample.responseCount
+      : report.methodology.sampleSize
+    : selectedVersion?.responseCount ?? 0;
 
   async function selectVersion(artifactId: string) {
     if (disabled || artifactId === selectedVersionId || selectingVersionId) return;
@@ -83,79 +94,77 @@ export function SurveyReportVersionHistory({
   }
 
   return (
-    <section data-testid="report-version-history" className="border border-border bg-background">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
-        <div className="flex items-center gap-2">
-          <History className="h-4 w-4 text-muted-foreground" strokeWidth={1.6} />
-          <div>
-            <h3 className="text-13 font-semibold text-foreground">报告版本</h3>
-            <p className="mt-0.5 text-11 text-muted-foreground">选择后在当前分析报告中原样加载。</p>
-          </div>
+    <div data-testid="report-version-history">
+      <DropdownMenu
+        align="end"
+        testId="report-version-menu"
+        trigger={({ open, onClick }) => (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            aria-expanded={open}
+            onClick={onClick}
+            className="h-9 gap-2 px-3"
+          >
+            <History className="h-4 w-4" strokeWidth={1.6} />
+            <span>{selectedLabel}</span>
+            <ChevronDown className="h-3.5 w-3.5" strokeWidth={1.6} />
+          </Button>
+        )}
+      >
+        <div className="min-w-72 px-2 py-2">
+          <p className="text-12 font-semibold text-foreground">{selectedLabel}</p>
+          <p className="mt-1 flex items-center gap-1 text-11 text-muted-foreground">
+            <Clock3 className="h-3.5 w-3.5" strokeWidth={1.6} />
+            {selectedTime ? formatVersionTime(selectedTime) : "尚未生成"}
+            <span>· {selectedSampleSize} 份样本</span>
+          </p>
         </div>
-        <div role="status" aria-live="polite" className="flex flex-wrap items-center justify-end gap-2 text-11 text-muted-foreground">
-          <Badge variant="success">当前查看</Badge>
-          <span className="font-semibold text-foreground">{selectedLabel}</span>
-          {selectedTime ? (
-            <span className="flex items-center gap-1">
-              <Clock3 className="h-3.5 w-3.5" strokeWidth={1.6} />
-              {formatVersionTime(selectedTime)}
-            </span>
-          ) : null}
-          <span>{selectedSampleSize} 份样本</span>
-        </div>
-      </div>
-
-      <div className="max-h-56 overflow-y-auto bg-border">
-        {versions.length ? versions.map((version, index) => {
+        <DropdownMenuSeparator />
+        {versions.map((version, index) => {
           const selected = version.id === selectedVersion?.id;
           const selecting = version.id === selectingVersionId;
           return (
-            <button
+            <DropdownMenuItem
               key={version.id}
-              type="button"
-              aria-current={selected ? "true" : undefined}
-              disabled={disabled || Boolean(selectingVersionId)}
-              className="flex w-full items-center justify-between gap-3 border-b border-border bg-background px-5 py-3 text-left transition-colors last:border-b-0 hover:bg-secondary disabled:cursor-wait disabled:bg-disabled disabled:text-disabled-foreground"
-              onClick={() => void selectVersion(version.id)}
+              onSelect={() => void selectVersion(version.id)}
+              icon={
+                selecting
+                  ? <LoaderCircle className="h-4 w-4 animate-spin" />
+                  : selected
+                    ? <Check className="h-4 w-4 text-success" />
+                    : <Clock3 className="h-4 w-4 text-muted-foreground" />
+              }
             >
               <span>
-                <span className="block text-12 font-semibold text-foreground">
+                <span className="block font-semibold">
                   版本 {versions.length - index}
                 </span>
-                <span className="mt-0.5 block text-11 text-muted-foreground">
-                  {formatVersionTime(version.createdAt)} · {version.responseCount} 份样本
+                <span className="block text-11 text-muted-foreground">
+                  {formatVersionTime(version.createdAt)} · {version.responseCount} 份
                 </span>
               </span>
-              {selecting ? (
-                <LoaderCircle className="h-4 w-4 animate-spin text-muted-foreground" aria-label="正在加载版本" />
-              ) : selected ? (
-                <span className="flex items-center gap-1 text-11 font-semibold text-success">
-                  <Check className="h-4 w-4" strokeWidth={1.8} />
-                  当前
-                </span>
-              ) : null}
-            </button>
+            </DropdownMenuItem>
           );
-        }) : (
-          <p className="bg-background px-5 py-4 text-12 text-muted-foreground">生成报告后可在这里切换不可变版本。</p>
-        )}
+        })}
         {generation?.nextHistoryCursor ? (
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={disabled || Boolean(selectingVersionId) || loadingMore}
-            className="h-11 w-full rounded-none border-t border-border bg-background text-12"
-            onClick={() => void loadMore()}
-          >
-            {loadingMore ? (
-              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <History className="mr-2 h-4 w-4" />
-            )}
-            {loadingMore ? "正在加载" : "加载更早版本"}
-          </Button>
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={() => void loadMore()}
+              icon={
+                loadingMore
+                  ? <LoaderCircle className="h-4 w-4 animate-spin" />
+                  : <History className="h-4 w-4" />
+              }
+            >
+              {loadingMore ? "正在加载" : "加载更早版本"}
+            </DropdownMenuItem>
+          </>
         ) : null}
-      </div>
-    </section>
+      </DropdownMenu>
+    </div>
   );
 }

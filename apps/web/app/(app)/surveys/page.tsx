@@ -46,6 +46,7 @@ import { SurveyNavigationSidebar, type SurveyNavigationTarget } from "@/componen
 import { SurveyOutlinePanel } from "@/components/survey/survey-outline-panel";
 import { SurveyDesignWorkbench } from "@/components/survey/survey-design-workbench";
 import { SurveyReportVersionHistory } from "@/components/survey/survey-report-version-history";
+import { SurveyProfessionalReportWorkbench } from "@/components/survey/survey-professional-report-workbench";
 import { SurveyVersionedReportComposer } from "@/components/survey/survey-versioned-report-composer";
 import {
   downloadProfessionalWordReport,
@@ -69,7 +70,10 @@ import {
   type SurveyReportGenerationStatus,
 } from "@/lib/survey-report-generation";
 import type { PlannedReportBlock } from "@/lib/survey-report-planner";
-import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
+import {
+  isTemplateDrivenSurveyReport,
+  type SurveyReportDocument,
+} from "@/lib/survey-report-document";
 import { isExactReportVersionResponse } from "@/lib/survey-report-version-navigation";
 
 echarts.use([
@@ -2760,7 +2764,7 @@ function WorkspaceReportWorkbench({
   questions: Question[];
   categoryPlan?: ReportCategoryPlanDraft;
   generatedReport?: unknown;
-  professionalReport?: ProfessionalSurveyReportDocument;
+  professionalReport?: SurveyReportDocument;
   generation?: SurveyReportGenerationStatus;
   generating: boolean;
   error: string;
@@ -2927,6 +2931,30 @@ function WorkspaceReportWorkbench({
     }
     downloadProfessionalWordReport(professionalReport);
     setExportStatus("Word 专业报告已开始下载。");
+  }
+
+  if (
+    professionalReport
+    && isTemplateDrivenSurveyReport(professionalReport)
+  ) {
+    return (
+      <SurveyProfessionalReportWorkbench
+        report={professionalReport}
+        generation={generation}
+        generating={generating}
+        error={error}
+        onGenerateReport={() =>
+          onGenerateReport(
+            reportGenerationInstruction(),
+            effectiveCategoryPlan
+          )
+        }
+        onSelectVersion={onSelectVersion}
+        onLoadMoreVersions={onLoadMoreVersions}
+        onExportPdf={exportPdf}
+        onExportWord={exportWord}
+      />
+    );
   }
 
   if (!professionalReport) {
@@ -3232,7 +3260,7 @@ export default function SurveysPage() {
   const [reportTemplatesBySurveyId, setReportTemplatesBySurveyId] = useState<Record<number, ReportTemplateDraft>>({});
   const [reportCategoryPlansBySurveyId, setReportCategoryPlansBySurveyId] = useState<Record<number, ReportCategoryPlanDraft>>({});
   const [generatedReportsBySurveyId, setGeneratedReportsBySurveyId] = useState<Record<number, unknown>>({});
-  const [professionalReportsBySurveyId, setProfessionalReportsBySurveyId] = useState<Record<number, ProfessionalSurveyReportDocument>>({});
+  const [professionalReportsBySurveyId, setProfessionalReportsBySurveyId] = useState<Record<number, SurveyReportDocument>>({});
   const [professionalReportGenerationBySurveyId, setProfessionalReportGenerationBySurveyId] = useState<Record<number, SurveyReportGenerationStatus>>({});
   const professionalReportRequestStateRef = useRef<Record<number, SurveyReportRequestState>>({});
   const [professionalReportRequestStateBySurveyId, setProfessionalReportRequestStateBySurveyId] =
@@ -4367,7 +4395,7 @@ export default function SurveysPage() {
         if (!resolution.accepted) return;
         setProfessionalReportRequestState(currentSurveyId, resolution.state);
         if (payload.report) {
-          setProfessionalReportsBySurveyId((items) => ({ ...items, [currentSurveyId]: payload.report as ProfessionalSurveyReportDocument }));
+          setProfessionalReportsBySurveyId((items) => ({ ...items, [currentSurveyId]: payload.report as SurveyReportDocument }));
         }
         setProfessionalReportGenerationBySurveyId((items) => ({
           ...items,
@@ -4525,7 +4553,7 @@ export default function SurveysPage() {
       if (payload.report) {
         setProfessionalReportsBySurveyId((items) => ({
           ...items,
-          [surveyId]: payload.report as ProfessionalSurveyReportDocument,
+          [surveyId]: payload.report as SurveyReportDocument,
         }));
       }
       setProfessionalReportGenerationBySurveyId((items) => ({
@@ -4696,7 +4724,7 @@ export default function SurveysPage() {
       setProfessionalReportRequestState(surveyId, resolution.state);
       setProfessionalReportsBySurveyId((items) => ({
         ...items,
-        [surveyId]: payload.report as ProfessionalSurveyReportDocument,
+        [surveyId]: payload.report as SurveyReportDocument,
       }));
       setProfessionalReportGenerationBySurveyId((items) => ({
         ...items,
@@ -4752,7 +4780,7 @@ export default function SurveysPage() {
       }
       setProfessionalReportsBySurveyId((items) => ({
         ...items,
-        [surveyId]: payload.report as ProfessionalSurveyReportDocument,
+        [surveyId]: payload.report as SurveyReportDocument,
       }));
       if (payload.generation) {
         setProfessionalReportGenerationBySurveyId((items) => ({
