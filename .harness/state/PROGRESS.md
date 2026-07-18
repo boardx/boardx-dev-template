@@ -33,7 +33,7 @@
 | p26 | ava-legacy-sync | not_started | 2 | 0 | 0 | 2 |
 | p27 | AI Store | in_progress | 0 | 0 | 0 | 17 |
 | p28 | platform-accounts-gap2 | not_started | 1 | 0 | 0 | 0 |
-| p29 | coord-platform | not_started | 1 | 0 | 0 | 9 |
+| p29 | coord-platform | not_started | 0 | 0 | 0 | 10 |
 | p30 | devportal-platform | not_started | 1 | 0 | 0 | 0 |
 
-_最近聚合:2026-07-18T11:32:54.248Z_
+_最近聚合:2026-07-18T14:33:55.206Z_

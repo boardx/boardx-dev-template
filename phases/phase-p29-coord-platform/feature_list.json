@@ -162,8 +162,8 @@
       "area": "harness",
       "title": "本仓割接租户 #1 + coord-service 存量退役",
       "user_visible_behavior": "pnpm harness lock-*/module-lock-* 全部指向 coord-gateway 新端点且行为不变（认领/心跳/退位/状态查询）；packages/coord-service 从仓库删除，coord-dashboard 中被 RepoHub 取代的读路径切换；AGENTS.md/相关 instructions 中的协调层描述已更新；一个完整工作周期内零 stale-fetch 误判、零重复认领（以事件日志为证）。",
-      "status": "not_started",
-      "sprint": null,
+      "status": "passing",
+      "sprint": "05",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
@@ -171,7 +171,7 @@
         "! test -d packages/coord-service",
         "pnpm harness doctor --phase p29"
       ],
-      "evidence": "",
+      "evidence": "evidence/F10.verify.log @ 2026-07-18T14:33:55.187Z",
       "notes": "割接前 D1 存量 claims/events 导出归档到 R2 + evidence/（审计史不丢，ADR-011 派生快照模式）。这是唯一动 harness 脚本与全仓文档的 feature，范围纪律见 requirements §五。【2026-07-18 接管补充】#706（P3 派工 UI）已合并且依赖 coord-service 的 tasks 收件箱（#614）——F10 删除 coord-service 前必须先把 tasks/派工 broker 迁到 RepoHub/gateway（或另立 feature），否则派工链路断供；#706 的三步激活（mint broker token/Pages secret/部署）由人类拍板时机。"
     }
   ]
