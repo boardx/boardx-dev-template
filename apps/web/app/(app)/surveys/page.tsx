@@ -57,7 +57,10 @@ import {
   type ComposerQuestion,
   type ReportComposerPreview,
 } from "@/lib/survey-report-category-plan";
-import type { SurveyReportGenerationStatus } from "@/lib/survey-report-generation";
+import {
+  markSurveyReportGenerationRequirementsChanged,
+  type SurveyReportGenerationStatus,
+} from "@/lib/survey-report-generation";
 import type { PlannedReportBlock } from "@/lib/survey-report-planner";
 import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
 import { isExactReportVersionResponse } from "@/lib/survey-report-version-navigation";
@@ -3214,6 +3217,7 @@ export default function SurveysPage() {
   const [workspaceReportGenerating, setWorkspaceReportGenerating] = useState(false);
   const [workspaceTemplateStatus, setWorkspaceTemplateStatus] = useState("");
   const [workspaceTemplateError, setWorkspaceTemplateError] = useState("");
+  const reportCategoryPlanRequestVersion = useRef(0);
   const [reportTemplatesBySurveyId, setReportTemplatesBySurveyId] = useState<Record<number, ReportTemplateDraft>>({});
   const [reportCategoryPlansBySurveyId, setReportCategoryPlansBySurveyId] = useState<Record<number, ReportCategoryPlanDraft>>({});
   const [generatedReportsBySurveyId, setGeneratedReportsBySurveyId] = useState<Record<number, unknown>>({});
@@ -4441,10 +4445,12 @@ export default function SurveysPage() {
   }
 
   async function loadWorkspaceReportCategoryPlan(surveyId: number) {
+    const requestVersion = ++reportCategoryPlanRequestVersion.current;
     setWorkspaceTemplateError("");
     try {
       const res = await fetch(`/api/surveys/${surveyId}/report-categories`);
       const payload = await res.json().catch(() => ({}));
+      if (requestVersion !== reportCategoryPlanRequestVersion.current) return;
       if (!res.ok) {
         setWorkspaceTemplateError(payload?.error ?? "报告结构加载失败");
         return;
@@ -4453,6 +4459,7 @@ export default function SurveysPage() {
         setReportCategoryPlansBySurveyId((items) => ({ ...items, [surveyId]: payload.reportCategoryPlan as ReportCategoryPlanDraft }));
       }
     } catch {
+      if (requestVersion !== reportCategoryPlanRequestVersion.current) return;
       setWorkspaceTemplateError("报告结构加载失败，请稍后重试。");
     }
   }
@@ -4479,6 +4486,7 @@ export default function SurveysPage() {
   }
 
   async function classifyWorkspaceReportCategories(surveyId: number) {
+    if (workspaceTemplateSaving) return;
     setWorkspaceReportClassifying(true);
     setWorkspaceTemplateStatus("");
     setWorkspaceTemplateError("");
@@ -4499,6 +4507,8 @@ export default function SurveysPage() {
   }
 
   async function saveWorkspaceReportCategoryPlan(surveyId: number, plan: ReportCategoryPlanDraft) {
+    if (workspaceTemplateSaving || workspaceReportClassifying) return;
+    reportCategoryPlanRequestVersion.current += 1;
     setWorkspaceTemplateSaving(true);
     setWorkspaceTemplateStatus("");
     setWorkspaceTemplateError("");
@@ -4515,6 +4525,10 @@ export default function SurveysPage() {
       }
       const saved = payload.reportCategoryPlan as ReportCategoryPlanDraft;
       setReportCategoryPlansBySurveyId((items) => ({ ...items, [surveyId]: saved }));
+      setProfessionalReportGenerationBySurveyId((items) => {
+        const generation = markSurveyReportGenerationRequirementsChanged(items[surveyId]);
+        return generation ? { ...items, [surveyId]: generation } : items;
+      });
       const refreshed = await refreshWorkspaceProfessionalReport(surveyId);
       setWorkspaceTemplateStatus(
         refreshed

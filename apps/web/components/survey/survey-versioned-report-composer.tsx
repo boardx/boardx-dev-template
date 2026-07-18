@@ -130,22 +130,24 @@ export function SurveyVersionedReportComposer({
     generating,
   });
   const reportState = getReportGenerationStatus(generation, draftDirty);
+  const draftEditingDisabled = saving;
 
   function patchSelected(patch: Partial<SurveyReportCategoryInput>) {
-    if (!selectedCategory) return;
+    if (draftEditingDisabled || !selectedCategory) return;
     setDraft((current) =>
       updateReportCategory(current, selectedCategory.id, patch)
     );
   }
 
   function addCategory() {
+    if (draftEditingDisabled) return;
     const next = addCustomReportCategory(draft, "新增章节");
     setDraft(next);
     setSelectedCategoryId(next.categories.at(-1)?.id ?? "");
   }
 
   function removeSelectedCategory() {
-    if (!selectedCategory || categories.length <= 1) return;
+    if (draftEditingDisabled || !selectedCategory || categories.length <= 1) return;
     const nextCategories = normalizeCategoryOrder(
       categories.filter((category) => category.id !== selectedCategory.id)
     );
@@ -153,8 +155,22 @@ export function SurveyVersionedReportComposer({
     setSelectedCategoryId(nextCategories[0]?.id ?? "");
   }
 
+  function moveSelectedCategory(direction: -1 | 1) {
+    if (draftEditingDisabled || !selectedCategory) return;
+    setDraft(moveReportCategory(draft, selectedCategory.id, direction));
+  }
+
+  function saveDraft() {
+    if (saving || generating || classifying) return;
+    onSavePlan(draft);
+  }
+
   return (
-    <div data-testid="workspace-report-composer" className="mx-auto grid w-full max-w-screen-2xl gap-5 px-4 pb-8 pt-2 md:px-7">
+    <div
+      data-testid="workspace-report-composer"
+      aria-busy={saving}
+      className="mx-auto grid w-full max-w-screen-2xl gap-5 px-4 pb-8 pt-2 md:px-7"
+    >
       <header className="flex flex-wrap items-center gap-3">
         <Button type="button" size="sm" variant="outline" onClick={onBackToDesign}>
           <ChevronLeft className="h-4 w-4" strokeWidth={1.7} />
@@ -167,7 +183,15 @@ export function SurveyVersionedReportComposer({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" size="sm" variant="outline" disabled={classifying} onClick={onClassify}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={classifying || saving}
+            onClick={() => {
+              if (!saving) onClassify();
+            }}
+          >
             <Sparkles className="h-4 w-4" strokeWidth={1.6} />
             {classifying ? "推演中..." : "AI 重新推演"}
           </Button>
@@ -188,6 +212,11 @@ export function SurveyVersionedReportComposer({
           {error || status}
         </div>
       )}
+      {saving ? (
+        <p data-testid="report-plan-saving" role="status" className="text-12 text-muted-foreground">
+          正在保存报告要求，编辑已暂时锁定。
+        </p>
+      ) : null}
 
       <section
         data-testid="report-template-builder"
@@ -203,7 +232,7 @@ export function SurveyVersionedReportComposer({
                 <h3 className="text-14 font-bold text-foreground">报告章节</h3>
                 <p className="mt-1 text-11 text-muted-foreground">{categories.length} 个章节</p>
               </div>
-              <Button type="button" size="icon" variant="ghost" className="h-8 w-8" aria-label="添加章节" onClick={addCategory}>
+              <Button type="button" size="icon" variant="ghost" className="h-8 w-8" aria-label="添加章节" disabled={saving} onClick={addCategory}>
                 <Plus className="h-4 w-4" strokeWidth={1.7} />
               </Button>
             </div>
@@ -238,7 +267,7 @@ export function SurveyVersionedReportComposer({
               );
             })}
           </div>
-          <Button type="button" variant="ghost" className="h-11 w-full rounded-none border-t border-border" onClick={addCategory}>
+          <Button type="button" variant="ghost" className="h-11 w-full rounded-none border-t border-border" disabled={saving} onClick={addCategory}>
             <Plus className="h-4 w-4" strokeWidth={1.7} />
             添加章节
           </Button>
@@ -263,8 +292,8 @@ export function SurveyVersionedReportComposer({
                       variant="ghost"
                       className="h-8 w-8"
                       aria-label="章节上移"
-                      disabled={selectedCategory.order === 1}
-                      onClick={() => setDraft(moveReportCategory(draft, selectedCategory.id, -1))}
+                      disabled={saving || selectedCategory.order === 1}
+                      onClick={() => moveSelectedCategory(-1)}
                     >
                       <ArrowUp className="h-4 w-4" strokeWidth={1.7} />
                     </Button>
@@ -274,8 +303,8 @@ export function SurveyVersionedReportComposer({
                       variant="ghost"
                       className="h-8 w-8"
                       aria-label="章节下移"
-                      disabled={selectedCategory.order === categories.length}
-                      onClick={() => setDraft(moveReportCategory(draft, selectedCategory.id, 1))}
+                      disabled={saving || selectedCategory.order === categories.length}
+                      onClick={() => moveSelectedCategory(1)}
                     >
                       <ArrowDown className="h-4 w-4" strokeWidth={1.7} />
                     </Button>
@@ -285,7 +314,7 @@ export function SurveyVersionedReportComposer({
                       variant="ghost"
                       className="h-8 w-8"
                       aria-label="删除章节"
-                      disabled={categories.length <= 1}
+                      disabled={saving || categories.length <= 1}
                       onClick={removeSelectedCategory}
                     >
                       <Trash2 className="h-4 w-4" strokeWidth={1.7} />
@@ -301,6 +330,7 @@ export function SurveyVersionedReportComposer({
                     id="report-category-name"
                     value={selectedCategory.name}
                     maxLength={48}
+                    disabled={saving}
                     onChange={(event) => patchSelected({ name: event.target.value })}
                   />
                 </div>
@@ -323,6 +353,7 @@ export function SurveyVersionedReportComposer({
                           size="sm"
                           variant={active ? "default" : "ghost"}
                           aria-pressed={active}
+                          disabled={saving}
                           className="min-w-0 rounded-md px-2"
                           onClick={() => patchSelected({
                             outputType: option.value,
@@ -359,6 +390,7 @@ export function SurveyVersionedReportComposer({
                             type="button"
                             variant={active ? "default" : "outline"}
                             aria-pressed={active}
+                            disabled={saving}
                             className="h-auto min-w-0 justify-between whitespace-normal px-3 py-2 text-left"
                             onClick={() => patchSelected({ chartTemplateId: template.id })}
                           >
@@ -404,6 +436,7 @@ export function SurveyVersionedReportComposer({
                     className="min-h-48 resize-y text-13 leading-6"
                     maxLength={2000}
                     value={selectedCategory.requirement ?? selectedCategory.prompt}
+                    disabled={saving}
                     onChange={(event) => patchSelected({
                       requirement: event.target.value,
                       prompt: event.target.value,
@@ -420,8 +453,8 @@ export function SurveyVersionedReportComposer({
                     data-testid="save-report-plan"
                     type="button"
                     variant="outline"
-                    disabled={saving || generating}
-                    onClick={() => onSavePlan(draft)}
+                    disabled={saving || generating || classifying}
+                    onClick={saveDraft}
                   >
                     <Save className="h-4 w-4" strokeWidth={1.7} />
                     {saving ? "保存中..." : "保存要求"}

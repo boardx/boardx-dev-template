@@ -24,6 +24,13 @@ export interface SurveyReportGenerationStatus {
   versions: SurveyReportArtifactSummary[];
 }
 
+export function markSurveyReportGenerationRequirementsChanged(
+  generation: SurveyReportGenerationStatus | undefined
+): SurveyReportGenerationStatus | undefined {
+  if (!generation) return undefined;
+  return { ...generation, requirementChanged: true };
+}
+
 function summarizeArtifact(
   artifact: SurveyReportArtifactVersion,
   currentResponseCount: number

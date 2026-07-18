@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { SurveyReportArtifactVersion } from "@repo/data";
-import { resolveSurveyReportGenerationStatus } from "./survey-report-generation";
+import {
+  markSurveyReportGenerationRequirementsChanged,
+  resolveSurveyReportGenerationStatus,
+} from "./survey-report-generation";
 
 function artifact(
   overrides: Partial<SurveyReportArtifactVersion> = {}
@@ -67,5 +70,26 @@ describe("resolveSurveyReportGenerationStatus", () => {
     expect(status.requirementChanged).toBe(false);
     expect(status.currentArtifact?.id).toBe("artifact-current");
     expect(status.versions).toHaveLength(2);
+  });
+});
+
+describe("markSurveyReportGenerationRequirementsChanged", () => {
+  it("keeps an unavailable generation unavailable", () => {
+    expect(markSurveyReportGenerationRequirementsChanged(undefined)).toBeUndefined();
+  });
+
+  it("marks an existing generation as changed while retaining report history", () => {
+    const generation = resolveSurveyReportGenerationStatus({
+      currentSourceRevision: "rev-1",
+      currentRequirementHash: "req-1",
+      currentResponseCount: 10,
+      artifacts: [artifact()],
+    });
+
+    const changed = markSurveyReportGenerationRequirementsChanged(generation);
+
+    expect(changed).toMatchObject({ requirementChanged: true });
+    expect(changed?.latestArtifact).toEqual(generation.latestArtifact);
+    expect(changed?.versions).toEqual(generation.versions);
   });
 });
