@@ -68,6 +68,11 @@ confirmed_at: 2026-07-14T00:00:00+08:00
   图表使用白名单 Apache ECharts 官方模板，右栏提供效果预览和只读 Option JSON。
   图表模板参考 Apache ECharts `line-simple` 页面：
   `https://echarts.apache.org/examples/zh/editor.html?c=line-simple`。
+- 2026-07-19 分析报告增量确认：用户确认最终报告框架完全来自已保存的报告模板，
+  不预设执行摘要、样本质量、假设验证或方法论等业务章节。每个模板章节必须独立生成
+  唯一的图片、图表或文本产物，全部通过类型和证据校验后再按模板顺序原子组装。
+  分析报告阅读界面以
+  `ui-preview/2026-07-19-professional-report-reference.png` 为视觉参考。
 
 ---
 **确认动作**：核对无误后，把顶部 frontmatter 的 `status` 改为 `confirmed`，填 `confirmed_by` / `confirmed_at`，提交。之后才可调 requirement-author 生成 feature_list、跑 new-sprint。
