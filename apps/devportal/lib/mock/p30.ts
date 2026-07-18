@@ -536,3 +536,185 @@ export const MOCK_TOKEN_AUDIT: readonly MockTokenAudit[] = [
   { id: "t3", at: "2026-07-16T11:05:00Z", action: "revoke", agentId: "@usamshen/legacy-syncer", actor: "@usamshen", note: "agent 退役，吊销即时生效" },
   { id: "t4", at: "2026-07-15T09:30:00Z", action: "mint", agentId: "@kaiwei/starter", actor: "@kaiwei", note: "onboarding 第 2 步 enroll" },
 ] as const;
+
+// ================= 批次 3（P1 目录·探索页 + P3 项目接入向导）=================
+// ⚠️ 同头部声明：p30 UI 先行 mock，feature 实现时替换；不得被真实数据路径 import。
+
+// ---------------- P1 /explore 项目目录·探索页（UC-03 目录侧，访客可见，D3） ----------------
+// 公开层：零身份读取、零 Access header 依赖——任何访客看到的都一样。
+
+export type ExploreActivity = "high" | "medium" | "low";
+
+export interface MockExploreProject {
+  slug: string;
+  name: string;
+  tagline: string;
+  /** 语言徽章（来自 GitHub linguist，mock） */
+  languages: readonly string[];
+  /** 活跃度档（由合并火花线自动分档，不可自填） */
+  activity: ExploreActivity;
+  /** 近 12 周合并火花线数据（自动生成自 GitHub） */
+  sparkline: readonly number[];
+  /** 是否开放招募（UC-03） */
+  recruiting: boolean;
+  /** 需要帮助的模块 chips */
+  helpModules: readonly string[];
+  /** 👤/🤖 分开计数（UC-03） */
+  humans: number;
+  agents: number;
+}
+
+export const EXPLORE_ACTIVITY_LABEL: Record<ExploreActivity, string> = {
+  high: "高活跃",
+  medium: "中活跃",
+  low: "低活跃",
+};
+
+export const MOCK_EXPLORE_PROJECTS: readonly MockExploreProject[] = [
+  {
+    slug: "boardx",
+    name: "BoardX",
+    tagline: "AI 协作白板——人与 agent 车队在同一块板上交付软件",
+    languages: ["TypeScript"],
+    activity: "high",
+    sparkline: [4, 7, 5, 9, 12, 8, 11, 14, 10, 16, 13, 18],
+    recruiting: true,
+    helpModules: ["collab", "survey", "devportal"],
+    humans: 3,
+    agents: 9,
+  },
+  {
+    slug: "acme-crm",
+    name: "Acme CRM",
+    tagline: "中小团队销售流水线——商机、报表与自动跟进",
+    languages: ["TypeScript", "Python"],
+    activity: "medium",
+    sparkline: [3, 5, 4, 6, 2, 5, 7, 4, 6, 3, 5, 4],
+    recruiting: true,
+    helpModules: ["pipeline", "reports"],
+    humans: 2,
+    agents: 5,
+  },
+  {
+    slug: "pixel-forge",
+    name: "Pixel Forge",
+    tagline: "浏览器端 2D 渲染引擎——WebGL 批渲染与素材管线",
+    languages: ["TypeScript", "Go"],
+    activity: "high",
+    sparkline: [8, 11, 9, 13, 15, 12, 14, 17, 13, 16, 19, 21],
+    recruiting: true,
+    helpModules: ["renderer", "assets"],
+    humans: 4,
+    agents: 11,
+  },
+  {
+    slug: "ledgerly",
+    name: "Ledgerly",
+    tagline: "开源复式记账内核——面向 SaaS 的可嵌入账本",
+    languages: ["Python"],
+    activity: "medium",
+    sparkline: [2, 4, 3, 5, 4, 6, 3, 4, 5, 3, 4, 6],
+    recruiting: false,
+    helpModules: [],
+    humans: 2,
+    agents: 3,
+  },
+  {
+    slug: "orbit-docs",
+    name: "Orbit Docs",
+    tagline: "从代码注释生成可交互 API 文档站",
+    languages: ["Rust"],
+    activity: "low",
+    sparkline: [1, 0, 2, 1, 0, 1, 2, 0, 1, 1, 0, 1],
+    recruiting: false,
+    helpModules: [],
+    humans: 1,
+    agents: 2,
+  },
+] as const;
+
+/** 目录筛选项（本地过滤即可） */
+export const EXPLORE_LANGUAGES = ["TypeScript", "Python", "Go", "Rust"] as const;
+
+// ---------------- P3 /onboard 项目接入向导（UC-01，发起人 = repo admin 视角） ----------------
+// 三步：① 安装 GitHub App → ② 选 repo → ③ 自动体检（警告不阻塞）。目标耗时 ≤5 分钟。
+
+/** ① 安装回执（mock）：GitHub App 安装成功后的确认信息 */
+export const MOCK_GH_INSTALL = {
+  installationId: 4821,
+  account: "usamshen",
+  permissions: ["仓库只读镜像", "webhook 事件", "commit status 写入"],
+  installedAt: "2026-07-18T09:12:00Z",
+} as const;
+
+export interface MockOnboardRepo {
+  fullName: string;
+  slug: string;
+  description: string;
+  language: string;
+  /** 发起人是否 GitHub admin（UC-01 前置；非 admin 禁用） */
+  isAdmin: boolean;
+  private: boolean;
+}
+
+export const MOCK_ONBOARD_REPOS: readonly MockOnboardRepo[] = [
+  { fullName: "usamshen/pixel-forge", slug: "pixel-forge", description: "浏览器端 2D 渲染引擎", language: "TypeScript", isAdmin: true, private: false },
+  { fullName: "usamshen/ledgerly", slug: "ledgerly", description: "开源复式记账内核", language: "Python", isAdmin: true, private: false },
+  { fullName: "usamshen/home-lab", slug: "home-lab", description: "个人 homelab 配置（私有）", language: "Shell", isAdmin: true, private: true },
+  { fullName: "acme-inc/crm-core", slug: "crm-core", description: "Acme CRM 主仓（你是 write，非 admin）", language: "TypeScript", isAdmin: false, private: true },
+  { fullName: "oss-guild/orbit-docs", slug: "orbit-docs", description: "API 文档生成器（你是 read，非 admin）", language: "Rust", isAdmin: false, private: false },
+] as const;
+
+/** ③ 自动体检项（UC-01：webhook / 镜像种子 / CODEOWNERS·CONTRIBUTING / 分支保护；警告不阻塞） */
+export interface MockCheckupItem {
+  id: string;
+  label: string;
+  /** 校验结果：ok = ✅；warn = ⚠️ 琥珀（不阻塞） */
+  result: "ok" | "warn";
+  /** 完成后的明细行（ok 的证据 / warn 的说明） */
+  detail: string;
+  /** warn 项的补救指引（「稍后在治理台补」） */
+  remedy?: string;
+  /** mock 动画时长（ms）：逐项实时校验的节奏 */
+  durationMs: number;
+}
+
+export const MOCK_CHECKUP_ITEMS: readonly MockCheckupItem[] = [
+  {
+    id: "webhook",
+    label: "webhook 连通",
+    result: "ok",
+    detail: "PING → 回执 214ms · push / pull_request / issues / status 四类事件已订阅",
+    durationMs: 1400,
+  },
+  {
+    id: "mirror-seed",
+    label: "issues · PR 镜像种子",
+    result: "ok",
+    detail: "已灌入 128 条 issues + 37 条 PR（含 CI·review·mergeable 快照）",
+    durationMs: 2600,
+  },
+  {
+    id: "modules-init",
+    label: "CODEOWNERS · CONTRIBUTING 模块划分初始化",
+    result: "warn",
+    detail: "未找到 CODEOWNERS——模块划分暂以顶层目录代替（renderer/assets/docs）",
+    remedy: "稍后在治理台补：settings → 模块划分，补文件后自动重扫",
+    durationMs: 1800,
+  },
+  {
+    id: "branch-protection",
+    label: "分支保护检查",
+    result: "warn",
+    detail: "main 未开启 required reviews——agent PR 将无人工门禁",
+    remedy: "稍后在治理台补：一键生成推荐保护规则（需 repo admin 在 GitHub 确认）",
+    durationMs: 1200,
+  },
+] as const;
+
+/** 完成横幅（mock）：目标耗时 ≤5 分钟（UC-01） */
+export const MOCK_ONBOARD_DONE = {
+  banner: "项目已成为租户，coord-agent 归属已确立",
+  elapsed: "3m42s",
+  target: "≤5 分钟",
+} as const;
