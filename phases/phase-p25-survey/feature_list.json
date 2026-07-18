@@ -469,7 +469,7 @@
       "verification": [
         "pnpm --filter @repo/web run lint",
         "pnpm --filter @repo/web run typecheck",
-        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-020-unified-design-entry.spec.ts",
+        "E2E_PORT=62628 COLLAB_WS_PORT=62629 pnpm --filter @repo/web exec playwright test e2e/survey-p25-020-unified-design-entry.spec.ts",
         "pnpm harness doctor --phase p25",
         "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-20/evidence/F20.verify.log"
       ],

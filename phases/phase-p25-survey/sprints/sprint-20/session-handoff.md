@@ -17,4 +17,4 @@
 ## 命令
 - 启动:`pnpm -w run dev`
 - 验证:`pnpm harness verify --sprint p25/20 --feature F20`
-- 调试:`pnpm --filter @repo/web exec playwright test e2e/survey-p25-020-unified-design-entry.spec.ts`
+- 调试:`E2E_PORT=62628 COLLAB_WS_PORT=62629 pnpm --filter @repo/web exec playwright test e2e/survey-p25-020-unified-design-entry.spec.ts`
