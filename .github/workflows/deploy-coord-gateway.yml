@@ -54,9 +54,11 @@ jobs:
           pnpm --filter @repo/coord-gateway typecheck
           pnpm --filter @repo/coord-gateway test
 
-      - name: Ensure queue exists (idempotent)
+      - name: Ensure queues exist (idempotent, incl. DLQ #712)
         working-directory: apps/coord-gateway
-        run: pnpm exec wrangler queues create coord-webhook-events || true
+        run: |
+          pnpm exec wrangler queues create coord-webhook-events || true
+          pnpm exec wrangler queues create coord-webhook-dlq || true
 
       - name: Deploy Worker (from main only)
         working-directory: apps/coord-gateway

@@ -154,6 +154,8 @@ export default {
 
   // Queues 消费者：逐条转发对应仓库的 DO 幂等入口。DO 侧按 delivery GUID 去重，
   // 因此 Queues 的 at-least-once 重投递不会产生重复镜像事件。
+  // 毒消息（持续非 ok/非 422）重试 max_retries 次后进 coord-webhook-dlq（#712，
+  // wrangler.toml dead_letter_queue）。DLQ 处置约定：人工重放，暂无自动消费者。
   async queue(batch: MessageBatch<QueuedWebhook>, env: Env): Promise<void> {
     for (const msg of batch.messages) {
       const res = await repoStub(env, msg.body.repo).fetch("https://repohub/webhook/ingest", {

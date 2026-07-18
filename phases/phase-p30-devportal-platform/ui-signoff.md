@@ -1,8 +1,8 @@
 ---
 phase: "p30"
-status: pending          # pending | confirmed —— 人类工程师确认 UI 后，把这里改成 confirmed
-confirmed_by:            # 确认人（姓名/邮箱）
-confirmed_at:            # 确认时间（ISO，如 2026-07-01T10:00:00Z）
+status: confirmed          # pending | confirmed —— 人类工程师确认 UI 后，把这里改成 confirmed
+confirmed_by:   yanbin shen
+confirmed_at:   2026-07-19T10:00:00Z
 ---
 
 # UI 先行确认 — devportal-platform（Phase p30）
@@ -138,6 +138,152 @@ confirmed_at:            # 确认时间（ISO，如 2026-07-01T10:00:00Z）
   切换开关的说明文案已描述行为，需要人类拍板是否要独立队列视图。
 - andon 解除后本批不提供「重新拉停」入口（拉停发生在工作区/协议侧，不在治理台）——如需演示可刷新页面。
 - token 审计表仅最近 4 条 mock；分页/过滤留给 feature 实现。
+
+---
+
+## UI 范围清单（第三批，P1 项目目录 + P3 接入向导）
+
+- [ ] **P1 `/explore` 项目目录·探索页**（UC-03 目录侧，访客可见，D3）—
+  `apps/devportal/components/p30/explore-directory.tsx`
+  - 5 个 mock 项目卡：名称 + 项目 chip / 语言徽章 / 活跃度火花线（SVG，标注「自动生成自
+    GitHub，不可自填」）/「招募中」徽章（tag-green，未开放招募为灰）/ 需要帮助的模块 chips
+    （tag-yellow）/ 👤🤖 分开计数；点击卡进 `/projects/:slug`（boardx 链到批次 2 真页，
+    其余 mock 卡走同页模板）。
+  - 筛选（语言 / 活跃度 / 招募状态，radiogroup chip）+ 搜索框（可搜项目名/简介/模块），
+    全部本地过滤；空搜索结果空态（`explore-no-match`）+ 目录空态（演示空态开关）。
+  - 顶部「＋ 接入你的项目 →」入口条 → `/onboard`（P3，owner 旅程起点）。
+  - **D3 落实**：公开层组件零身份读取、零 cookie/header 分支——零 Access header 依赖。
+  - 截图：`ui-preview/p1-explore.png`、`ui-preview/p1-explore-filtered.png`
+- [ ] **P3 `/onboard` 项目接入向导**（UC-01，发起人 = repo admin 视角）—
+  `apps/devportal/components/p30/onboard-wizard.tsx`
+  - 三步（步骤轨复用 enroll 向导样式）：
+    ① 安装 GitHub App——零侵入说明（只读镜像 + webhook + commit status 三项权限）+
+    mock「跳转 GitHub 安装」按钮（1.2s 后返回已安装回执态：installation # + 账户 + 权限清单）；
+    ② 选 repo——5 个 mock 仓库，admin 权限徽章（tag-green），非 admin 项禁用并说明前置
+    （发起人必须是仓库 GitHub admin）；
+    ③ **自动体检**——逐项实时校验动画（mock 定时器链，约 7s）：webhook 连通 ✅ /
+    issues·PR 镜像种子 ✅（显示灌入 128 issues + 37 PR）/ CODEOWNERS·CONTRIBUTING
+    模块划分初始化 ⚠️（缺文件警告不阻塞，附「稍后在治理台补」）/ 分支保护检查 ⚠️；
+    全部完成 → 「项目已成为租户，coord-agent 归属已确立」+ 耗时 3m42s（呼应 ≤5 分钟目标）+
+    「进入工作区」CTA → `/p/:slug/settings`（批次 2 治理台，警告项补救落点）。
+  - 体检状态点沿用批次 1 状态点（HeartbeatDot）语义色：成功绿 `bg-success`、警告琥珀
+    `bg-tag-yellow`（与 andon 红严格区分）、校验中脉冲、等待灰。
+  - 截图：`ui-preview/p3-onboard-step2.png`、`ui-preview/p3-onboard-checkup-running.png`、
+    `ui-preview/p3-onboard-done.png`
+
+### 组件落点（第三批）
+- 路由页：`apps/devportal/app/explore/page.tsx`、`apps/devportal/app/onboard/page.tsx`（edge runtime）
+- 组件：`apps/devportal/components/p30/{explore-directory,onboard-wizard}.tsx`
+  （复用批次 1 的 `shared.tsx`：PrototypeHeader / IdentityChip / LoadingSkeleton / EmptyState）
+- mock：`apps/devportal/lib/mock/p30.ts`（追加批次 3 段，同头部声明）
+- 关键 `data-testid`（供 requirement-author 锚定 verification）：
+  P1：`explore-directory` / `explore-onboard-cta` / `explore-filters` / `explore-search` /
+  `filter-lang-{all,<语言>}` / `filter-activity-{all,high,medium,low}` /
+  `filter-recruit-{all,recruiting}` / `explore-result-count` / `explore-grid` /
+  `explore-card-<slug>` / `recruiting-badge-<slug>` / `lang-badge-<slug>-<语言>` /
+  `explore-sparkline-<slug>` / `help-chips-<slug>` / `explore-counts-<slug>` /
+  `explore-no-match` / `explore-empty`；
+  P3：`onboard-wizard` / `onboard-step-{1,2,3}` / `install-github-app` / `install-receipt` /
+  `onboard-next-{1,2}` / `onboard-repo-list` / `repo-row-<slug>` / `admin-badge-<slug>` /
+  `not-admin-<slug>` / `onboard-repos-empty` / `checkup-progress` / `checkup-list` /
+  `checkup-item-<id>`（`data-state` = pending/running/done）/ `checkup-remedy-<id>` /
+  `onboard-done` / `onboard-elapsed` / `enter-workspace`；
+  各页 `toggle-empty-demo` 与 `*-empty` 空态。
+
+### 截图证据（第三批）
+- [P1 目录整页](ui-preview/p1-explore.png) ·
+  [P1 筛选+搜索命中](ui-preview/p1-explore-filtered.png)
+- [P3 ② 选 repo（admin 前置）](ui-preview/p3-onboard-step2.png) ·
+  [P3 ③ 体检进行中](ui-preview/p3-onboard-checkup-running.png) ·
+  [P3 完成（租户确立 + 耗时计）](ui-preview/p3-onboard-done.png)
+
+浏览路径（本地核对）：`pnpm --filter devportal dev` → `http://localhost:3400/explore`、`/onboard`。
+
+### 已知偏差与待人类拍板点（第三批）
+- P1 非 boardx 的项目卡点进 `/projects/:slug` 后显示的是批次 2 的 mock 模板数据
+  （`MOCK_PUBLIC_PROJECT` 固定为 boardx 内容）——原型阶段按约定复用同页模板，
+  真实实现按 slug 取数。
+- P1 排序为 mock 静态序（标注「活跃度自动排序，不可购买位次」）；活跃度分档（高/中/低）
+  由火花线自动分档的规则留给 feature 实现定义。
+- P3 ①「跳转 GitHub 安装」不发起真实 GitHub App 安装（本地状态 + 1.2s 定时器模拟回执）；
+  ③ 体检为前端定时器动画，真实实现由后端逐项回报事件（WS/轮询）；耗时 3m42s 为静态 mock。
+- P3 完成后「进入工作区」CTA 指向 `/p/:slug/settings`（治理台，两条 ⚠️ 的补救落点）——
+  若人类认为应落 pulse/work 等其他工作区页，请拍板。
+- 需求 §5 提到的侧栏「＋ 新建项目」入口本批以 P1 页顶入口条承载（`explore-onboard-cta`）；
+  全局侧栏/导航壳是后续批次（P6/P7、导航整合）范围。
+- 体检状态点未直接复用 `HeartbeatDot` 组件（其入参是「分钟数」语义），而是沿用其视觉语言
+  （同色 token、同尺寸点）实现体检四态点——如需强制同一组件请拍板。
+## UI 范围清单（第四批·最后一批，P4 + P5 + UC-17 调度中心）
+
+- [ ] **P4 `/u/:handle` 工程师公开档案**（UC-16，D1）— `apps/devportal/components/p30/public-profile.tsx`
+  - 分区语义（D1）：① 贡献事实区**默认公开**——参与项目卡（角色/起始/PR 合并数/模块）+
+    PR 合并时间线（mock，自动生成不可自填）；② 聚合指标区 **opt-in 且区间化**
+    （flow-time "6-12h" / 拍板响应 "1-4h" / 月吞吐 "40-60 PR" / andon "<30min"），
+    整区带「已 opt-in 公开」标注，未 opt-in 时整区隐藏为占位说明；
+    ③ 🤖 名下 agents 缩略行（心跳点 + 在做什么）链到 P5 分身页。
+  - 页内演示「档案公开开关 + 预览模式」：本人视角可切 opt-in 开/关并「以访客身份预览」
+    当前设置的效果（mock；真实实现由服务端判定 viewer，公开层组件零身份读取 D3）。
+  - 截图：`ui-preview/p4-profile.png`（本人视角，opt-in 开）、
+    `ui-preview/p4-optin-toggle.png`（opt-in 关 + 访客预览模式，指标区整区隐藏）
+- [ ] **P5 `/a/:handle/:agent` Agent 数字分身页**（UC-16，D1/D6）— `apps/devportal/components/p30/agent-twin.tsx`
+  - 默认**全公开**，无任何视角开关（D1：软件资产无隐私权——页头角标注明）；顶部完整
+    `@usamshen/portal-dev-1` 标识 + 不可变 ULID（D6：改名不断链）+ 运行时/生命周期徽章。
+  - 板块：归属 owner 卡（👤 蓝，链回 P4；「一切行为归因到人」）｜parent 派生树
+    （本页高亮 + 点号 sub 逐级缩进，紫色左边条）｜授权项目列表（scope + token 状态徽章）｜
+    性能三格（达成率 92% / 吞吐 11 PR·周 / 异常 1）｜最近事件时间线
+    （lease 🔒 / evidence 📎 / andon 🅰️ / heartbeat 💓 / enroll 🪪 图标化）。
+  - 截图：`ui-preview/p5-agent-twin.png`
+- [ ] **调度中心 `/platform/dispatcher`**（UC-17，平台 admin 视角）— `apps/devportal/components/p30/dispatcher-center.tsx`
+  - 五个固定 loop 卡：1m 心跳&租约 / 5m PR·CI / 15m stale 处置 / 1h SLA+快照 / 24h C-cycle，
+    各带上次运行时间、下次运行倒计时（mock 本地递减演示循环感）、上轮扫描/定位计数。
+  - 「当前定位到的问题」列表：严重度徽章（严重红 / 警示琥珀 / 记录灰）+ 「已采取动作」——
+    全部为**起草/通知/路由类**文案并标注路由目标 coord-agent（呼应「dispatcher 永不直接改
+    项目内状态」；页脚有动作边界说明）。
+  - 非 admin 无权限态（N1 第四态）：页内 mock 视角开关切「普通成员」→ 整页拒绝态
+    （说明 dispatcher 会主动通知到 /me，平台角色见 UC-19）。
+  - 截图：`ui-preview/dispatcher-loops.png`（五 loop 卡）、`ui-preview/dispatcher-issues.png`（问题列表整页）
+
+### 组件落点（第四批）
+- 路由页：`apps/devportal/app/u/[handle]/page.tsx`、`apps/devportal/app/a/[handle]/[agent]/page.tsx`、
+  `apps/devportal/app/platform/dispatcher/page.tsx`（均 edge runtime）
+- 组件：`apps/devportal/components/p30/{public-profile,agent-twin,dispatcher-center}.tsx`
+  （复用 `shared.tsx` / `PortalCard` / `HeartbeatDot` / `IdentityChip` 三色体系）
+- mock：`apps/devportal/lib/mock/p30.ts`（追加批次 4 段，同头部声明）
+- 关键 `data-testid`（供 requirement-author 锚定 verification）：
+  P4：`public-profile` / `profile-view-{self,visitor}` / `profile-owner-controls` / `optin-toggle` /
+  `profile-preview-toggle` / `profile-preview-banner` / `profile-facts` / `profile-projects` /
+  `profile-project-<slug>` / `profile-merge-timeline` / `merge-event-*` / `profile-metrics` /
+  `metrics-optin-note` / `metric-*` / `profile-metrics-hidden` / `profile-agents` / `profile-agent-*`；
+  P5：`agent-twin` / `twin-full-id` / `twin-public-badge` / `twin-owner-card` / `twin-tree` /
+  `twin-tree-self` / `twin-tree-*` / `twin-enrollments` / `twin-enrollment-<slug>` / `twin-perf` /
+  `twin-perf-{attainment,throughput,anomalies}` / `twin-events` / `twin-event-*`；
+  调度中心：`dispatcher-center` / `view-as-{admin,member}` / `dispatcher-no-access` /
+  `dispatcher-readonly-note` / `dispatcher-loops` / `loop-card-loop-{1m,5m,15m,1h,24h}` /
+  `loop-{last,next}-*` / `dispatcher-issues` / `dispatcher-issue-*` / `issue-severity-*` / `issue-action-*`；
+  各页 `toggle-empty-demo` 与 `*-empty` 空态。
+
+### 截图证据（第四批）
+- [P4 公开档案（本人视角，opt-in 开）](ui-preview/p4-profile.png) ·
+  [P4 opt-in 关 + 访客预览](ui-preview/p4-optin-toggle.png)
+- [P5 Agent 数字分身页](ui-preview/p5-agent-twin.png)
+- [调度中心五 loop 卡](ui-preview/dispatcher-loops.png) ·
+  [当前定位到的问题列表](ui-preview/dispatcher-issues.png)
+
+浏览路径（本地核对）：`pnpm --filter devportal dev` → `http://localhost:3400/u/usamshen`、
+`/a/usamshen/portal-dev-1`、`/platform/dispatcher`。
+
+### 已知偏差与待人类拍板点（第四批）
+- P4 的「本人视角/访客视角」开关是原型演示；真实实现由服务端判定 viewer 是否本人，
+  公开层组件零身份读取（D3）。opt-in 开关与预览模式只改本地状态，不落库。
+- P4 聚合指标的区间分档（如 "6-12h"）是 mock 拍脑袋值；真实分档规则（对数档/固定档）需拍板。
+- P5 授权项目列表的 `scope` 采用空格分隔的能力串（`coord.read work.claim evidence.write`）——
+  这是 mock 提议的展示形态，真实 scope 词表以 p29 scoped token（F08）实现为准。
+- 调度中心 loop 卡的倒计时是静态起点的本地递减（归零后按周期重置演示循环感），
+  不代表真实调度；真实实现由 @platform/dispatcher（Cloudflare 常驻，coord-resident.md）驱动。
+- 调度中心「当前定位到的问题」未提供操作按钮（如手动重跑 loop / 忽略问题）——UC-17 只定义
+  展示语义；是否给平台 admin 手动干预入口需人类拍板。
+- 本批基于 main（批次 1-2 已合并）开发；**批次 3（PR #750）尚未合并**，`p30.ts` 与本文件
+  两处追加可能与 #750 产生纯追加型冲突，合并时保留双方即可。
 
 ## 已知偏差与待人类拍板点（第一批）
 - D4「记住上次停留」「登录默认落点切到 /me」是行为逻辑，不在本批 mock 界面内，feature 实现时做。
