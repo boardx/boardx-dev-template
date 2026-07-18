@@ -20,6 +20,12 @@
 # 本脚本按库名直连 D1（不再依赖 coord-service 的 wrangler.toml）。本仓存量已灌入并
 # 对账通过（6/6）；保留脚本供未来接入仓复用/审计复现。D1 库本体的最终下线由人类
 # 在归档确认后于 Cloudflare 侧执行。
+# ── 残余风险决策（#732 复核三件套第 3 项收口，coord-main review 2026-07-18）──
+# import 端点在割接后【刻意保留】，不禁用。
+#   理由：未来接入仓的割接复用同一路径（北极星"任何仓 5 分钟接入"）。
+#   门控：仅 COORD_ADMIN_TOKEN 管理面可达（scoped/ops token 401，tasks.test.ts 有防绕过测试）。
+#   残余风险：admin token 持有者可重放 import——内容不一致由 409 import_conflict 拦截，
+#   同 id 同内容重放为幂等 skip，不产生事件不污染审计。风险已评估，接受。
 set -euo pipefail
 
 : "${COORD_GATEWAY_URL:?需要 COORD_GATEWAY_URL}"
