@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildProfessionalReportHtml } from "./report-export";
 import type { ProfessionalSurveyReportDocument } from "./survey-professional-report";
+import type { PublicTemplateDrivenSurveyReport } from "./survey-template-report";
 
 const report: ProfessionalSurveyReportDocument = {
   title: "学生成长调查分析报告",
@@ -62,5 +63,74 @@ describe("buildProfessionalReportHtml", () => {
     expect(html).not.toContain("模拟数据");
     expect(html).not.toContain("预览维度");
     expect(html).not.toContain("AI 助手");
+  });
+
+  it("exports only template chapters in their saved order", () => {
+    const templateReport: PublicTemplateDrivenSurveyReport = {
+      schemaVersion: "template-driven-report-v1",
+      title: "模板驱动报告",
+      generatedAt: "2026-07-19T00:00:00.000Z",
+      sourceRevision: "source-revision-1",
+      status: "ready",
+      templateSnapshot: {
+        title: "模板驱动报告",
+        description: "管理层阅读版",
+        chapters: [
+          { id: "summary", order: 1, title: "管理层摘要", outputType: "text", requirement: "先结论" },
+          { id: "trend", order: 2, title: "趋势对比", outputType: "chart", chartTemplateId: "line-simple", requirement: "给图表" },
+          { id: "visual", order: 3, title: "场景视觉", outputType: "image", requirement: "给图片" },
+        ],
+      },
+      sample: { responseCount: 13, questionCount: 8, confidence: "medium" },
+      chapters: [
+        {
+          chapterId: "summary",
+          order: 1,
+          title: "管理层摘要",
+          requirement: "先结论",
+          outputType: "text",
+          headline: "关键结论",
+          body: "证据化分析",
+          claims: [],
+          evidenceRefs: [],
+          limitations: [],
+        },
+        {
+          chapterId: "trend",
+          order: 2,
+          title: "趋势对比",
+          requirement: "给图表",
+          outputType: "chart",
+          chartTemplateId: "line-simple",
+          option: {},
+          interpretation: "趋势解释",
+          sampleSize: 13,
+          evidenceRefs: [],
+          limitations: [],
+        },
+        {
+          chapterId: "visual",
+          order: 3,
+          title: "场景视觉",
+          requirement: "给图片",
+          outputType: "image",
+          assetId: "visual",
+          assetUrl: "/api/surveys/1/professional-report/a/images/visual",
+          altText: "核心场景",
+          caption: "根据聚合洞察生成",
+          evidenceRefs: [],
+          limitations: [],
+        },
+      ],
+    };
+
+    const html = buildProfessionalReportHtml(templateReport);
+
+    expect(html.indexOf("管理层摘要")).toBeLessThan(html.indexOf("趋势对比"));
+    expect(html.indexOf("趋势对比")).toBeLessThan(html.indexOf("场景视觉"));
+    expect(html).toContain("趋势解释");
+    expect(html).toContain("根据聚合洞察生成");
+    expect(html).not.toContain("执行摘要");
+    expect(html).not.toContain("方法与限制");
   });
 });
