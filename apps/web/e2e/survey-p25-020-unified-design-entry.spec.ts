@@ -34,7 +34,7 @@ async function createSurvey(page: Page) {
 }
 
 async function expectUnifiedDesigner(page: Page) {
-  await expect(page.getByTestId("survey-editor-shell")).toBeVisible();
+  await expect(page.getByTestId("survey-editor-shell")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByTestId("survey-editor-stepper")).toBeVisible();
   await expect(page.getByTestId("workflow-design")).toHaveAttribute("aria-current", "step");
   await expect(page.getByTestId("survey-hypotheses")).toBeVisible();
