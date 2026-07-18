@@ -28,6 +28,17 @@ agents:
     areas: [portal]
     responsibilities:
       - devportal 自助 token 领取/轮换的唯一服务端入口（mint 经它代调）
+  # 门户派工的 broker（#594 P3）：kind=module-coordinator 只为满足 coord-service
+  # POST /tasks 的 COORDINATOR_KINDS 门——它有派工权，但不 claim role:coord-main、
+  # 不参与 coordinator 唯一性。bearer 是 devportal Pages secret（COORD_DISPATCH_TOKEN）。
+  # 真实派工人由 devportal 从 Access 身份注入 note 做审计（created_by 记的是本 broker）。
+  - id: portal-dispatch-broker
+    active: true
+    kind: module-coordinator
+    model: service
+    areas: [portal]
+    responsibilities:
+      - devportal 门户派工的唯一服务端入口（POST /tasks / recall 经它代调，#594 P3）
   # ── 主 Agent：编排者（唯一）────────────────────────────────────────────────
   - id: coord-main
     active: true
