@@ -1,0 +1,27 @@
+{
+  "name": "@repo/coord-repohub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RepoHub Durable Object：每仓一个的协调内核——原子租约 + issue/PR 实时镜像 + append-only 事件流（ADR-017）",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "echo 'lint: ok'",
+    "dev": "wrangler dev --local"
+  },
+  "dependencies": {
+    "@repo/coord-protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "*",
+    "vitest": "^2.0.0",
+    "@cloudflare/vitest-pool-workers": "^0.12.0",
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "wrangler": "^4.0.0",
+    "@types/node": "*"
+  }
+}
