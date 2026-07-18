@@ -65,10 +65,36 @@ jobs:
       - name: Public smoke check
         run: |
           base=https://coord-gateway.boardx.workers.dev
-          h=$(curl -s -m 20 "$base/api/coord/healthz")
-          echo "GET /api/coord/healthz -> $h"
-          echo "$h" | grep -q '"ok":true' || { echo "::error::healthz not ok"; exit 1; }
+
+          # 带退避的重试（#714）：新 Worker 首次部署后 workers.dev 路由到各边缘
+          # PoP 是最终一致的，smoke 立即打可能命中未加载新 Worker 的 PoP 返回
+          # 边缘 404（#710 事件）。5 次尝试、间隔 5/10/20/30/30s，总窗口 ≥95s
+          # 覆盖路由传播；真正的路由 bug 每次都失败，重试耗尽后仍然红。
+          retry_with_backoff() {
+            desc="$1"; shift
+            for delay in 5 10 20 30 30; do
+              if "$@"; then return 0; fi
+              echo "smoke [$desc] not passing yet; retrying in ${delay}s (route propagation window, #714)"
+              sleep "$delay"
+            done
+            return 1
+          }
+
+          check_healthz() {
+            h=$(curl -s -m 20 "$base/api/coord/healthz")
+            echo "GET /api/coord/healthz -> $h"
+            echo "$h" | grep -q '"ok":true'
+          }
+
           # 未带签名的 webhook 必须被拒（401/503），绝不能 2xx——fail-closed 回归检测
-          s=$(curl -s -o /dev/null -w '%{http_code}' -m 20 -X POST "$base/api/coord/webhooks/github" -d '{}')
-          echo "POST /webhooks/github (unsigned) -> $s"
-          case "$s" in 401|503) ;; *) echo "::error::unsigned webhook not rejected ($s)"; exit 1;; esac
+          check_unsigned_webhook_rejected() {
+            s=$(curl -s -o /dev/null -w '%{http_code}' -m 20 -X POST "$base/api/coord/webhooks/github" -d '{}')
+            echo "POST /webhooks/github (unsigned) -> $s"
+            case "$s" in 401|503) return 0;; esac
+            return 1
+          }
+
+          retry_with_backoff "healthz ok" check_healthz \
+            || { echo "::error::healthz not ok (after retries)"; exit 1; }
+          retry_with_backoff "unsigned webhook rejected" check_unsigned_webhook_rejected \
+            || { echo "::error::unsigned webhook not rejected (last status $s, after retries)"; exit 1; }

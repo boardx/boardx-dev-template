@@ -67,17 +67,47 @@ jobs:
       - name: Public smoke check (endpoints present + clock live)
         run: |
           base=https://coord-service-staging.boardx.workers.dev
+
+          # 带退避的重试（#714）：部署后 workers.dev 路由到各边缘 PoP 是最终一致
+          # 的，smoke 立即打可能命中未加载新 Worker 的 PoP 返回边缘 404（#710
+          # 事件，gateway 首次部署实测）。5 次尝试、间隔 5/10/20/30/30s，总窗口
+          # ≥95s 覆盖路由传播；真正的路由缺失/漂移每次都失败，重试耗尽后仍然红。
+          retry_with_backoff() {
+            desc="$1"; shift
+            for delay in 5 10 20 30 30; do
+              if "$@"; then return 0; fi
+              echo "smoke [$desc] not passing yet; retrying in ${delay}s (route propagation window, #714)"
+              sleep "$delay"
+            done
+            return 1
+          }
+
           # /status 公开只读，必须 200
-          s=$(curl -s -o /dev/null -w '%{http_code}' -m 20 "$base/status")
-          echo "GET /status -> $s"
-          [ "$s" = "200" ] || { echo "::error::status not 200 ($s)"; exit 1; }
+          check_status() {
+            s=$(curl -s -o /dev/null -w '%{http_code}' -m 20 "$base/status")
+            echo "GET /status -> $s"
+            [ "$s" = "200" ]
+          }
+
           # /time 权威时钟（ADR-014），必须 200 且带 cycle.id——回归检测：
           # 若某次部署从缺 /time 的旧 checkout 出去，这里当场红（正是要防的漂移）
-          t=$(curl -s -m 20 "$base/time")
-          echo "GET /time -> $t"
-          echo "$t" | grep -q '"cycle"' || { echo "::error::/time missing or malformed (deploy drift?)"; exit 1; }
+          check_time() {
+            t=$(curl -s -m 20 "$base/time")
+            echo "GET /time -> $t"
+            echo "$t" | grep -q '"cycle"'
+          }
+
           # /tasks 路由存在性——POST 无 token 应 401（有路由），而非 404（无路由）。
           # #290 的回归就是这里从 401 退成了 404（Worker 落后于 main）。
-          code=$(curl -s -o /dev/null -w '%{http_code}' -m 20 -X POST "$base/tasks" -H 'Content-Type: application/json' -d '{}')
-          echo "POST /tasks (no token) -> $code"
-          [ "$code" = "401" ] || { echo "::error::/tasks route missing (got $code, expected 401) — deploy drift"; exit 1; }
+          check_tasks_route() {
+            code=$(curl -s -o /dev/null -w '%{http_code}' -m 20 -X POST "$base/tasks" -H 'Content-Type: application/json' -d '{}')
+            echo "POST /tasks (no token) -> $code"
+            [ "$code" = "401" ]
+          }
+
+          retry_with_backoff "/status 200" check_status \
+            || { echo "::error::status not 200 (last $s, after retries)"; exit 1; }
+          retry_with_backoff "/time has cycle" check_time \
+            || { echo "::error::/time missing or malformed (deploy drift?) after retries"; exit 1; }
+          retry_with_backoff "/tasks route present" check_tasks_route \
+            || { echo "::error::/tasks route missing (last $code, expected 401) — deploy drift, after retries"; exit 1; }
