@@ -465,7 +465,7 @@ export function SurveyVersionedReportComposer({
 
         <aside
           data-testid="report-preview-panel"
-          className="flex min-w-0 flex-col self-start overflow-hidden border border-border bg-background xl:h-full"
+          className="flex min-w-0 flex-col self-start border border-border bg-background xl:h-full xl:min-h-0"
         >
           <div
             data-testid="report-generation-status"
@@ -488,7 +488,7 @@ export function SurveyVersionedReportComposer({
             ) : null}
           </div>
 
-          <div className="min-h-96 min-w-0 overflow-y-auto bg-secondary/20 p-5 xl:min-h-0 xl:flex-1">
+          <div className="min-h-96 min-w-0 overflow-y-auto bg-secondary/20 p-5 xl:min-h-0 xl:max-h-full xl:flex-1">
             {selectedCategory ? (
               <SurveyReportOutputPreview
                 category={selectedCategory}
@@ -507,7 +507,10 @@ export function SurveyVersionedReportComposer({
             )}
           </div>
 
-          <details data-testid="report-version-history" className="border-t border-border bg-background">
+          <details
+            data-testid="report-version-history"
+            className="border-t border-border bg-background xl:shrink-0 xl:open:grid xl:open:min-h-0 xl:open:max-h-[45%] xl:open:grid-rows-[auto_minmax(0,1fr)]"
+          >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4">
               <span className="flex items-center gap-2 text-13 font-semibold text-foreground">
                 <History className="h-4 w-4" strokeWidth={1.6} />
@@ -515,7 +518,7 @@ export function SurveyVersionedReportComposer({
               </span>
               <span className="text-11 text-muted-foreground">{generation?.versions.length ?? 0} 个版本</span>
             </summary>
-            <div className="grid gap-px border-t border-border bg-border">
+            <div className="grid gap-px border-t border-border bg-border xl:min-h-0 xl:overflow-y-auto">
               {generation?.versions.length ? generation.versions.map((version, index) => (
                 <button
                   key={version.id}

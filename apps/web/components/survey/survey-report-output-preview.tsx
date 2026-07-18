@@ -102,6 +102,11 @@ function ChartOutputPreview({
   );
   const optionJson = JSON.stringify(template.option, null, 2);
 
+  useEffect(() => {
+    setCopied(false);
+    setCopyError("");
+  }, [optionJson, template.id]);
+
   async function copyOption() {
     try {
       if (!navigator.clipboard) throw new Error("clipboard unavailable");
