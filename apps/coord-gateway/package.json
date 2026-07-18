@@ -1,0 +1,28 @@
+{
+  "name": "@repo/coord-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "description": "coord-platform 网关 Worker：GitHub webhook ingest（签名校验 + Queues 幂等）+ REST 路由到 RepoHub DO（F03）",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "echo 'lint: ok'",
+    "dev": "wrangler dev --local",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@repo/coord-protocol": "workspace:*",
+    "@repo/coord-repohub": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "*",
+    "vitest": "^2.0.0",
+    "@cloudflare/vitest-pool-workers": "^0.12.0",
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "wrangler": "^4.0.0",
+    "@types/node": "*"
+  }
+}

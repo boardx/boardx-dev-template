@@ -78,6 +78,7 @@ export class RepoHub extends DurableObject {
       if (req.method === "GET" && p === "/claims") return this.listActiveLeases();
       if (req.method === "GET" && p === "/events") return this.listEvents(url);
       if (req.method === "POST" && p === "/mirror/upsert") return this.mirrorUpsert(await req.json());
+      if (req.method === "POST" && p === "/webhook/ingest") return this.webhookIngest(await req.json());
       const rt = p.match(/^\/realtime\/(issues|prs)$/);
       if (req.method === "GET" && rt) return this.realtimeList(rt[1] === "prs" ? "pr" : "issue", url);
       const one = p.match(/^\/realtime\/prs\/(\d+)$/);
@@ -254,6 +255,24 @@ export class RepoHub extends DurableObject {
     );
     this.emit("mirror.updated", `${kind}:${data["number"]}`, "system", { kind, number: data["number"] });
     return json(200, { ok: true, mirrored_at: now });
+  }
+
+  // webhook 幂等入口（F03）：delivery GUID 去重后应用镜像增量。
+  // 去重判定在 DO 单线程内完成——重复投递（GitHub redelivery/重试）不产生重复事件。
+  private webhookIngest(body: unknown): Response {
+    const b = body as Record<string, unknown> | null;
+    const deliveryId = b?.["delivery_id"];
+    if (typeof deliveryId !== "string" || deliveryId.length === 0)
+      return json(422, { error: "missing_delivery_id" });
+    const seen = [...this.sql.exec(`SELECT 1 FROM deliveries WHERE delivery_id=?`, deliveryId)][0];
+    if (seen) return json(200, { ok: true, duplicate: true });
+    this.sql.exec(`INSERT INTO deliveries (delivery_id, at) VALUES (?,?)`, deliveryId, iso(Date.now()));
+    const mirror = b?.["mirror"] as Record<string, unknown> | undefined;
+    if (mirror) {
+      const r = this.mirrorUpsert(mirror);
+      if (r.status !== 200) return r;
+    }
+    return json(200, { ok: true, duplicate: false });
   }
 
   private realtimeList(kind: "issue" | "pr", url: URL): Response {

@@ -49,10 +49,10 @@
       "capability": "CAP-DATA",
       "verification": [
         "pnpm --filter coord-gateway test",
-        "curl -sf https://develop.boardx.us/api/coord/healthz | jq -e '.ok == true'"
+        "curl -sf https://coord-gateway.boardx.workers.dev/api/coord/healthz | jq -e '.ok == true and .webhook_configured == true'"
       ],
       "evidence": "",
-      "notes": "GitHub App 注册是人类动作（我们产出 manifest + 权限/事件清单 + 回调地址）；webhook secret/private key 入 Cloudflare secrets，遵守 env 原子变更纪律（mod-devportal 事故）。"
+      "notes": "GitHub App 已建（4328933，webhook 待激活）。网关部署在 workers.dev 而非 develop.boardx.us：后者整站在 Cloudflare Access 门禁后，GitHub webhook 与 agent API 客户端过不了交互式 SSO——人类门户与 agent API 分域是有意设计（2026-07-18 实现期修正）。webhook secret/COORD_API_TOKEN 入 Cloudflare secrets，遵守 env 原子变更纪律（mod-devportal 事故）。"
     },
     {
       "id": "F04",

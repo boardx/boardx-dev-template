@@ -1,0 +1,27 @@
+# coord-gateway — 生产宿主：webhook ingest + REST + RepoHub DO（ADR-017）。
+# 部署到 workers.dev（不上 develop.boardx.us 路由：该域名整站在 Cloudflare Access
+# 门禁后，GitHub webhook 与 agent API 客户端过不了交互式 SSO；人类门户与 agent
+# API 分域是有意设计）。
+# ⚠️ compatibility_date 沿用本仓现值纪律（mod-devportal 2026-07-12 事故）。
+# ⚠️ secrets（wrangler secret put）：GITHUB_WEBHOOK_SECRET / COORD_API_TOKEN。
+#    变更遵守 env 原子纪律：先 put 新值再合代码，禁止先删后合。
+name = "coord-gateway"
+main = "src/index.ts"
+compatibility_date = "2026-07-01"
+
+[[queues.producers]]
+queue = "coord-webhook-events"
+binding = "WEBHOOK_QUEUE"
+
+[[queues.consumers]]
+queue = "coord-webhook-events"
+max_batch_size = 25
+max_retries = 5
+
+[[durable_objects.bindings]]
+name = "REPOHUB"
+class_name = "RepoHub"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RepoHub"]
