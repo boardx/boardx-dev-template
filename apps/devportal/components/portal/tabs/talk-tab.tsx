@@ -51,6 +51,7 @@ function relTime(iso: string): string {
 export function TalkTab() {
   const [state, setState] = useState<PortalCardState>("loading");
   const [items, setItems] = useState<DiscussionItem[]>([]);
+  const [freshAt, setFreshAt] = useState<string | null>(null); // F09 数据新鲜度时间戳
   const [filter, setFilter] = useState<Filter>("all");
   const [showPatrol, setShowPatrol] = useState(false);
 
@@ -72,6 +73,7 @@ export function TalkTab() {
           return;
         }
         setItems(body.items ?? []);
+        setFreshAt(new Date().toISOString());
         setState("ready");
       } catch {
         if (!cancelled) setState("degraded");
@@ -98,6 +100,7 @@ export function TalkTab() {
       title="讨论流（人类 + AI · 权威在 GitHub，此处聚合）"
       state={state}
       wide
+      freshAt={freshAt}
       unconfiguredHint="讨论流数据源尚未接线（GITHUB_TOKEN/GITHUB_REPO 未配置）——这是部署中间态，不是故障。"
     >
       <div className="mb-3 flex flex-wrap items-center gap-2" data-testid="talk-filters">

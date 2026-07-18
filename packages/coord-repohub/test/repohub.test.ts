@@ -317,6 +317,83 @@ describe("F08 agent tokens（按仓 scoped token 权威表）", () => {
   });
 });
 
+describe("F09 WS 实时流", () => {
+  type WireEvent = { protocol: string; event_id: string; type: string; resource_id: string; payload: Record<string, unknown> };
+
+  function openWs(query = "", headers: Record<string, string> = { "x-coord-stream-auth": "bearer" }) {
+    return SELF.fetch(`${BASE}/stream${query}`, { headers: { upgrade: "websocket", ...headers } });
+  }
+
+  function collect(ws: WebSocket): WireEvent[] {
+    const msgs: WireEvent[] = [];
+    ws.accept();
+    ws.addEventListener("message", (m) => msgs.push(JSON.parse(m.data as string) as WireEvent));
+    return msgs;
+  }
+
+  async function waitFor(pred: () => boolean, ms = 2000): Promise<void> {
+    const deadline = Date.now() + ms;
+    while (!pred()) {
+      if (Date.now() > deadline) throw new Error("waitFor 超时");
+      await new Promise((r) => setTimeout(r, 20));
+    }
+  }
+
+  it("连接先补发积压再进实时；广播信封与 events.md 一致", async () => {
+    await post("/claims", claimBody("wrk-ws-1", "issue:200"));
+    const res = await openWs();
+    expect(res.status).toBe(101);
+    const msgs = collect(res.webSocket!);
+    await waitFor(() => msgs.some((e) => e.resource_id === "issue:200")); // 积压补发
+    // 实时：新 emit 立即推给活跃连接
+    await post("/claims", claimBody("wrk-ws-2", "issue:201"));
+    await waitFor(() => msgs.some((e) => e.type === "lease.claimed" && e.resource_id === "issue:201"));
+    const live = msgs.find((e) => e.resource_id === "issue:201")!;
+    expect(live.protocol).toBe(PROTOCOL);
+    expect(live.event_id).toMatch(/^evt_/);
+    expect((live.payload as { ttl_seconds?: number }).ttl_seconds).toBe(3600);
+    res.webSocket!.close();
+  });
+
+  it("since 续传：只补发 since 之后的事件，不重不漏", async () => {
+    await post("/claims", claimBody("wrk-ws-3", "issue:202"));
+    const full = await openWs();
+    const all = collect(full.webSocket!);
+    await waitFor(() => all.some((e) => e.resource_id === "issue:202"));
+    full.webSocket!.close();
+    const ids = all.map((e) => e.event_id);
+    const mid = ids[Math.floor(ids.length / 2)]!;
+    const tail = await openWs(`?since=${mid}`);
+    const tailMsgs = collect(tail.webSocket!);
+    await waitFor(() => tailMsgs.length >= ids.length - ids.indexOf(mid) - 1);
+    expect(tailMsgs.map((e) => e.event_id)).toEqual(ids.slice(ids.indexOf(mid) + 1));
+    tail.webSocket!.close();
+  });
+
+  it("ticket 鉴权：一次性 + 过期即废；无凭证 401；非 upgrade 426", async () => {
+    expect((await openWs("", {})).status).toBe(401); // 无 ticket 无 bearer 标
+    expect((await SELF.fetch(`${BASE}/stream`)).status).toBe(426); // 非 WS 升级
+
+    const minted = await (await SELF.fetch(`${BASE}/stream/ticket`, { method: "POST" })).json<{ ticket: string; expires_at: string }>();
+    expect(minted.ticket).toMatch(/^stk_/);
+    expect(Date.parse(minted.expires_at)).toBeGreaterThan(Date.now());
+    const ok = await openWs(`?ticket=${minted.ticket}`, {});
+    expect(ok.status).toBe(101);
+    ok.webSocket!.accept();
+    ok.webSocket!.close();
+    // 一次性：同 ticket 复用 → 401
+    expect((await openWs(`?ticket=${minted.ticket}`, {})).status).toBe(401);
+
+    // 过期即废：mint 后把 expires_at 拨回过去
+    const stale = await (await SELF.fetch(`${BASE}/stream/ticket`, { method: "POST" })).json<{ ticket: string }>();
+    const stub = env.REPOHUB.get(env.REPOHUB.idFromName("boardx/boardx-dev-template"));
+    await runInDurableObject(stub, async (_i: unknown, state: DurableObjectState) => {
+      state.storage.sql.exec(`UPDATE stream_tickets SET expires_at='2000-01-01T00:00:00Z' WHERE ticket=?`, stale.ticket);
+    });
+    expect((await openWs(`?ticket=${stale.ticket}`, {})).status).toBe(401);
+  });
+});
+
 async function fetchClaim(base: string, agent: string, resource: string): Promise<Response> {
   return SELF.fetch(`${base}/claims`, {
     method: "POST",

@@ -5,7 +5,8 @@
 // expire 事件 destructive 徽章，cycle-plan/cycle-result/andon 叙述层事件 secondary 徽章。
 // 三态诚实降级：未配置（unconfigured）≠ 不可达（degraded），语义沿用 PortalCard。
 import { portalFetch } from "@/lib/portal-fetch";
-import { useEffect, useState } from "react";
+import { debounceTrailing, useCoordStream } from "@/lib/coord-stream";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { PortalCard, type PortalCardState } from "@/components/portal/portal-card";
 import { DispatchPanel } from "@/components/portal/dispatch-panel";
@@ -70,38 +71,46 @@ export function CoordTab() {
   const [state, setState] = useState<PortalCardState>("loading");
   const [claims, setClaims] = useState<Claim[]>([]);
   const [events, setEvents] = useState<CoordEvent[]>([]);
+  const [freshAt, setFreshAt] = useState<string | null>(null); // F09 数据新鲜度时间戳
+  const cancelledRef = useRef(false);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await portalFetch("/api/portal/coordination");
+      if (!res) return; // 401 → 正在整页重新认证（portal-fetch.ts）
+      if (cancelledRef.current) return;
+      if (!res.ok) {
+        setState("degraded");
+        return;
+      }
+      const body = (await res.json()) as CoordPayload;
+      if (cancelledRef.current) return;
+      if (!body.configured) {
+        setState("unconfigured");
+        return;
+      }
+      setClaims(body.active_claims ?? []);
+      setEvents(body.recent_events ?? []);
+      setFreshAt(new Date().toISOString());
+      setState("ready");
+    } catch {
+      if (!cancelledRef.current) setState("degraded");
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await portalFetch("/api/portal/coordination");
-        if (!res) return; // 401 → 正在整页重新认证（portal-fetch.ts）
-        if (cancelled) return;
-        if (!res.ok) {
-          setState("degraded");
-          return;
-        }
-        const body = (await res.json()) as CoordPayload;
-        if (cancelled) return;
-        if (!body.configured) {
-          setState("unconfigured");
-          return;
-        }
-        setClaims(body.active_claims ?? []);
-        setEvents(body.recent_events ?? []);
-        setState("ready");
-      } catch {
-        if (!cancelled) setState("degraded");
-      }
-    }
+    cancelledRef.current = false;
     void load();
-    const timer = setInterval(() => void load(), REFRESH_MS);
+    const timer = setInterval(() => void load(), REFRESH_MS); // 轮询保留 = WS 断供时的兜底
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
       clearInterval(timer);
     };
-  }, []);
+  }, [load]);
+
+  // F09：RepoHub WS 上的 lease.*/andon.* 事件 → 秒级重拉本板块（去抖吸收突发）
+  const reload = useMemo(() => debounceTrailing(() => void load()), [load]);
+  useCoordStream(["lease.*", "andon.*"], reload);
 
   const unconfiguredHint = "协调服务尚未接线（COORD_SERVICE_URL 未配置）——这是部署中间态，不是故障。";
 
@@ -109,7 +118,7 @@ export function CoordTab() {
     <div className="space-y-4">
       <DispatchPanel />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <PortalCard title="活跃租约（Active Claims）" state={state} unconfiguredHint={unconfiguredHint}>
+      <PortalCard title="活跃租约（Active Claims）" state={state} unconfiguredHint={unconfiguredHint} freshAt={freshAt}>
         {claims.length === 0 ? (
           <p className="text-13 text-muted-foreground">当前没有活跃租约。</p>
         ) : (
@@ -135,7 +144,7 @@ export function CoordTab() {
           </ul>
         )}
       </PortalCard>
-      <PortalCard title="协调事件（Recent Events）" state={state} unconfiguredHint={unconfiguredHint}>
+      <PortalCard title="协调事件（Recent Events）" state={state} unconfiguredHint={unconfiguredHint} freshAt={freshAt}>
         {events.length === 0 ? (
           <p className="text-13 text-muted-foreground">暂无协调事件。</p>
         ) : (

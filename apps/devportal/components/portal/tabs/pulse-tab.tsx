@@ -6,7 +6,8 @@
 //  - phase 下钻的 进行中/受阻 细分与 feature 明细同理，先展示 API 已有的 通过/未通过 状态计数；
 //  - github 未配置（configured:false）→ 流动时长卡走 PortalCard unconfigured 态（部署中间态非故障）。
 import { portalFetch } from "@/lib/portal-fetch";
-import { useEffect, useState } from "react";
+import { debounceTrailing, useCoordStream } from "@/lib/coord-stream";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PortalCard, type PortalCardState } from "@/components/portal/portal-card";
@@ -50,29 +51,35 @@ export function PulseTab() {
   const [failed, setFailed] = useState(false);
   const [drill, setDrill] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await portalFetch("/api/portal/pulse");
-        if (!res) return; // 401 → 正在整页重新认证（portal-fetch.ts）
-        if (!res.ok) throw new Error(`status ${res.status}`);
-        const body = (await res.json()) as PulsePayload;
-        if (!cancelled) {
-          setPulse(body);
-          setFailed(false);
-        }
-      } catch {
-        if (!cancelled) setFailed(true);
+  const cancelledRef = useRef(false);
+  const load = useCallback(async () => {
+    try {
+      const res = await portalFetch("/api/portal/pulse");
+      if (!res) return; // 401 → 正在整页重新认证（portal-fetch.ts）
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      const body = (await res.json()) as PulsePayload;
+      if (!cancelledRef.current) {
+        setPulse(body);
+        setFailed(false);
       }
+    } catch {
+      if (!cancelledRef.current) setFailed(true);
     }
+  }, []);
+
+  useEffect(() => {
+    cancelledRef.current = false;
     void load();
-    const timer = setInterval(() => void load(), 60_000);
+    const timer = setInterval(() => void load(), 60_000); // 轮询保留 = WS 断供兜底
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
       clearInterval(timer);
     };
-  }, []);
+  }, [load]);
+
+  // F09：镜像/租约变更 → 秒级重拉脉搏（进度、flow、谁在干活共用一个数据源）
+  const reload = useMemo(() => debounceTrailing(() => void load()), [load]);
+  useCoordStream(["mirror.updated", "lease.*"], reload);
 
   const phasesState: PortalCardState = failed ? "degraded" : !pulse ? "loading" : "ready";
   const github = pulse?.github ?? null;
@@ -90,7 +97,7 @@ export function PulseTab() {
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <PortalCard title="整体进度" state={phasesState}>
+      <PortalCard title="整体进度" state={phasesState} freshAt={pulse?.generated_at ?? null}>
         <div className="flex items-end justify-between">
           <p className="text-26 font-bold text-foreground">
             <span data-testid="totals-passing">{totals.passing}</span>
@@ -138,6 +145,7 @@ export function PulseTab() {
           title="流动时长 flow time（PR 开出→合并 中位）"
           state={flowState}
           unconfiguredHint="GitHub 数据源未配置（GITHUB_TOKEN/GITHUB_REPO）——接线后此卡显示流动时长中位值与基线对比。"
+          freshAt={pulse?.generated_at ?? null}
         >
           <div data-testid="flow-time">
             <div className="flex items-end justify-between">
@@ -156,7 +164,7 @@ export function PulseTab() {
           </div>
         </PortalCard>
         {/* p23/F04：谁在干活（pulse.coord）+ PR 队列（/api/portal/prs，卡内自取） */}
-        <ActiveAgentsCard state={coordState} coord={coord} />
+        <ActiveAgentsCard state={coordState} coord={coord} freshAt={pulse?.generated_at ?? null} />
         <PrQueueCard />
       </div>
     </div>

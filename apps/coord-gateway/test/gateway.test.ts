@@ -188,6 +188,70 @@ describe("andon 管理路由（F06：maintainer 特权，独立 secret）", () =
   });
 });
 
+describe("F09 实时流：stream-ticket 签发 + WS 转发", () => {
+  const base = "https://gw.test/api/coord/repos/boardx/boardx-dev-template";
+  const bearer = { authorization: "Bearer test-api-token" };
+
+  it("stream-ticket：无 token 401；bearer 签发 60s ticket；缺 COORD_API_TOKEN 503 fail-closed", async () => {
+    expect((await SELF.fetch(`${base}/stream-ticket`, { method: "POST" })).status).toBe(401);
+    const r = await SELF.fetch(`${base}/stream-ticket`, { method: "POST", headers: bearer });
+    expect(r.status).toBe(201);
+    const t = await r.json<{ ticket: string; expires_at: string }>();
+    expect(t.ticket).toMatch(/^stk_/);
+    const ttlMs = Date.parse(t.expires_at) - Date.now();
+    expect(ttlMs).toBeGreaterThan(0);
+    expect(ttlMs).toBeLessThanOrEqual(60_000);
+    const noCfg = await worker.fetch(
+      new Request(`${base}/stream-ticket`, { method: "POST", headers: bearer }),
+      { ...env, COORD_API_TOKEN: undefined },
+    );
+    expect(noCfg.status).toBe(503);
+  });
+
+  it("WS：ticket 一次性可连（浏览器路径）；bearer 直连（agent 路径）；无凭证 401", async () => {
+    const t = await (
+      await SELF.fetch(`${base}/stream-ticket`, { method: "POST", headers: bearer })
+    ).json<{ ticket: string }>();
+    const viaTicket = await SELF.fetch(`${base}/stream?ticket=${t.ticket}`, { headers: { upgrade: "websocket" } });
+    expect(viaTicket.status).toBe(101);
+    viaTicket.webSocket!.accept();
+    viaTicket.webSocket!.close();
+    // 一次性：复用同 ticket → 401
+    expect((await SELF.fetch(`${base}/stream?ticket=${t.ticket}`, { headers: { upgrade: "websocket" } })).status).toBe(401);
+    // agent 路径：bearer 直连
+    const viaBearer = await SELF.fetch(`${base}/stream`, { headers: { upgrade: "websocket", ...bearer } });
+    expect(viaBearer.status).toBe(101);
+    viaBearer.webSocket!.accept();
+    viaBearer.webSocket!.close();
+    // 无凭证 401；伪造 x-coord-stream-auth 头无效（gateway 强制重写）
+    expect((await SELF.fetch(`${base}/stream`, { headers: { upgrade: "websocket" } })).status).toBe(401);
+    expect((await SELF.fetch(`${base}/stream`, { headers: { upgrade: "websocket", "x-coord-stream-auth": "bearer" } })).status).toBe(401);
+    // 非 upgrade 请求 426
+    expect((await SELF.fetch(`${base}/stream`, { headers: bearer })).status).toBe(426);
+  });
+
+  it("端到端实时：webhook 消费 → mirror.updated 推到活跃 WS 连接", async () => {
+    const res = await SELF.fetch(`${base}/stream`, { headers: { upgrade: "websocket", ...bearer } });
+    expect(res.status).toBe(101);
+    const ws = res.webSocket!;
+    const msgs: Array<{ type: string; resource_id: string }> = [];
+    ws.accept();
+    ws.addEventListener("message", (m) => msgs.push(JSON.parse(m.data as string) as { type: string; resource_id: string }));
+    await consume({
+      delivery_id: "dlv-ws-1",
+      event: "issues",
+      repo: "boardx/boardx-dev-template",
+      payload: JSON.parse(issuePayload(77)),
+    });
+    const deadline = Date.now() + 2000;
+    while (!msgs.some((e) => e.type === "mirror.updated" && e.resource_id === "issue:77")) {
+      if (Date.now() > deadline) throw new Error("2s 内未收到 mirror.updated 广播");
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    ws.close();
+  });
+});
+
 describe("REST 网关鉴权", () => {
   it("无 token 401；带 token 全链路 claim 201", async () => {
     const path = "https://gw.test/api/coord/repos/boardx/boardx-dev-template/claims";

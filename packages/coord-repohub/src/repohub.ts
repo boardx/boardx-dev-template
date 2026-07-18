@@ -53,6 +53,9 @@ function json(status: number, body: unknown): Response {
   });
 }
 
+// WS 一次性 ticket 有效期（F09）：只够浏览器完成一次握手，泄露也无长期价值
+const STREAM_TICKET_TTL_MS = 60_000;
+
 function iso(ms: number): string {
   return new Date(ms).toISOString().replace(/\.\d{3}Z$/, "Z");
 }
@@ -64,6 +67,9 @@ export class RepoHub extends DurableObject {
     super(ctx, env as never);
     this.sql = ctx.storage.sql;
     this.sql.exec(SCHEMA);
+    // WS 心跳走 Hibernation 自带的自动应答：客户端发 "ping" → 运行时直接回 "pong"，
+    // 不唤醒 DO（F09）。
+    this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
   }
 
   // ---------- HTTP 入口（gateway 经 stub.fetch 调用） ----------
@@ -91,6 +97,8 @@ export class RepoHub extends DurableObject {
       if (req.method === "POST" && p === "/tokens/revoke") return this.tokenRevoke(await req.json());
       if (req.method === "POST" && p === "/tokens/verify") return this.tokenVerify(await req.json());
       if (req.method === "GET" && p === "/tokens") return this.tokenList();
+      if (req.method === "POST" && p === "/stream/ticket") return this.mintStreamTicket();
+      if (req.method === "GET" && p === "/stream") return this.streamUpgrade(req, url);
       const rt = p.match(/^\/realtime\/(issues|prs)$/);
       if (req.method === "GET" && rt) return this.realtimeList(rt[1] === "prs" ? "pr" : "issue", url);
       const one = p.match(/^\/realtime\/prs\/(\d+)$/);
@@ -224,10 +232,25 @@ export class RepoHub extends DurableObject {
   // ---------- Events ----------
 
   private emit(type: EventType, resourceId: string, agentId: string, payload: Record<string, unknown>): void {
+    const event = {
+      protocol: PROTOCOL,
+      event_id: `evt_${ulid()}`,
+      type,
+      resource_id: resourceId,
+      agent_id: agentId,
+      at: iso(Date.now()),
+      payload,
+    };
     this.sql.exec(
       `INSERT INTO events (event_id,type,resource_id,agent_id,at,payload) VALUES (?,?,?,?,?,?)`,
-      `evt_${ulid()}`, type, resourceId, agentId, iso(Date.now()), JSON.stringify(payload),
+      event.event_id, type, resourceId, agentId, event.at, JSON.stringify(payload),
     );
+    // F09：入库后向所有活跃 WS 连接广播同一信封（events.md wire format）。
+    // send 失败 = 连接已死，由运行时的 close 流程回收，不影响事件落库。
+    const wire = JSON.stringify(event);
+    for (const ws of this.ctx.getWebSockets()) {
+      try { ws.send(wire); } catch { /* 死连接，忽略 */ }
+    }
   }
 
   private listEvents(url: URL): Response {
@@ -239,6 +262,66 @@ export class RepoHub extends DurableObject {
     return json(200, {
       events: rows.map((r) => ({ ...r, payload: JSON.parse(r["payload"] as string) })),
     });
+  }
+
+  // ---------- WS 实时流（F09） ----------
+  // 订阅语义（events.md §订阅）：连接后先按 ?since=<event_id> 补发积压，再进实时；
+  // 断线重连用最后收到的 event_id 续传。鉴权两条路：
+  //   1) gateway 已验 bearer → 转发时带 x-coord-stream-auth: bearer（DO 仅 gateway 可达）；
+  //   2) 浏览器路径 → ?ticket=<一次性 60s ticket>（WebSocket 无法带 Authorization header）。
+
+  private mintStreamTicket(): Response {
+    const now = Date.now();
+    // 顺手清理过期 ticket（量极小，无需独立 alarm）
+    this.sql.exec(`DELETE FROM stream_tickets WHERE expires_at <= ?`, iso(now));
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    const ticket = "stk_" + [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+    const expiresAt = iso(now + STREAM_TICKET_TTL_MS);
+    this.sql.exec(`INSERT INTO stream_tickets (ticket, expires_at) VALUES (?,?)`, ticket, expiresAt);
+    return json(201, { ticket, expires_at: expiresAt });
+  }
+
+  /** 一次性消费：查到即销（无论过期与否），再判有效期——重放窗口为零。 */
+  private consumeStreamTicket(ticket: string): boolean {
+    const row = [...this.sql.exec<{ expires_at: string }>(
+      `SELECT expires_at FROM stream_tickets WHERE ticket=?`, ticket,
+    )][0];
+    if (!row) return false;
+    this.sql.exec(`DELETE FROM stream_tickets WHERE ticket=?`, ticket);
+    return Date.parse(row.expires_at) > Date.now();
+  }
+
+  private streamUpgrade(req: Request, url: URL): Response {
+    if (req.headers.get("upgrade")?.toLowerCase() !== "websocket")
+      return json(426, { error: "upgrade_required" });
+    if (req.headers.get("x-coord-stream-auth") !== "bearer") {
+      const ticket = url.searchParams.get("ticket");
+      if (!ticket || !this.consumeStreamTicket(ticket))
+        return json(401, { error: "invalid_or_expired_ticket" });
+    }
+    const pair = new WebSocketPair();
+    const client = pair[0];
+    const server = pair[1];
+    this.ctx.acceptWebSocket(server); // Hibernation API：连接可在 DO 休眠后存活
+    // 先补发积压再进实时：acceptWebSocket 之后、返回 101 之前发送，与后续 emit
+    // 广播同在 DO 单线程内串行，不会乱序或丢事件。
+    const since = url.searchParams.get("since");
+    const backlog = since
+      ? [...this.sql.exec(`SELECT * FROM events WHERE event_id > ? ORDER BY event_id LIMIT 500`, since)]
+      : [...this.sql.exec(`SELECT * FROM events ORDER BY event_id LIMIT 500`)];
+    for (const r of backlog) {
+      server.send(JSON.stringify({ protocol: PROTOCOL, ...r, payload: JSON.parse(r["payload"] as string) }));
+    }
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  override async webSocketMessage(_ws: WebSocket, _message: string | ArrayBuffer): Promise<void> {
+    // 客户端不上行业务消息；心跳 ping/pong 由 setWebSocketAutoResponse 处理，不到这里
+  }
+
+  override async webSocketClose(ws: WebSocket, code: number, _reason: string, _clean: boolean): Promise<void> {
+    try { ws.close(code === 1005 ? 1000 : code); } catch { /* 已关闭 */ }
   }
 
   // ---------- Andon（F06） ----------
