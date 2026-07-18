@@ -2,6 +2,10 @@
 // 核心推理循环接口：plan → act → observe
 // 实现必须与 .harness/instructions/architecture.md 的不变量一致。
 
+// V2 contracts are exposed here during the migration window so existing
+// consumers can adopt them without changing package boundaries in one jump.
+export * from "@repo/harness-core";
+
 export type TaskStatus = "pending" | "running" | "done" | "failed";
 
 /** Task — 进入推理循环的唯一入口 */

@@ -288,6 +288,10 @@ importers:
         version: 2.0.0(@types/node@22.0.0)(jsdom@26.1.0(canvas@3.2.3))
 
   packages/agent-core:
+    dependencies:
+      '@repo/harness-core':
+        specifier: workspace:*
+        version: link:../harness-core
     devDependencies:
       '@types/node':
         specifier: '*'
@@ -500,6 +504,18 @@ importers:
         version: 5.6.2
       vitest:
         specifier: ^2.0.5
+        version: 2.1.9(@types/node@22.20.1)(jsdom@26.1.0(canvas@3.2.3))
+
+  packages/harness-core:
+    devDependencies:
+      '@types/node':
+        specifier: '*'
+        version: 22.20.1
+      typescript:
+        specifier: '*'
+        version: 5.6.2
+      vitest:
+        specifier: '*'
         version: 2.1.9(@types/node@22.20.1)(jsdom@26.1.0(canvas@3.2.3))
 
   packages/memory:

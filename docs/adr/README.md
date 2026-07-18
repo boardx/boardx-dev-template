@@ -25,3 +25,4 @@
 | ADR-015 | api-middleware-over-nestjs（API 三层中间件，不换 NestJS） | Accepted |
 | ADR-016 | app-default-ai-provider-qwen（应用端默认 AI 用 Qwen） | Accepted |
 | ADR-017 | coord-repohub-do-rebuild（协调层按 RepoHub DO 重建 + 仓内开源子项目） | Accepted |
+| ADR-018 | harness-v2-product-boundary-and-core-contracts（V2 分层、权威边界与迁移基线） | Accepted |

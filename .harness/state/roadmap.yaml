@@ -212,3 +212,9 @@ phases:
     goal: "协调层按 RepoHub Durable Object 重建并开源产品化：GitHub webhook 实时镜像 + 原子租约 + agent MCP 接入；本仓作为租户 #1 在 develop.boardx.us 跑通全链路"
     status: not_started
     depends_on: []
+  - id: "p30"
+    slug: harness-v2
+    name: Harness V2
+    goal: "建立供应商中立、可持久恢复、可评估且可渐进迁移的长期 Agent Harness 产品"
+    status: not_started
+    depends_on: []

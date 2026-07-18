@@ -1,0 +1,128 @@
+{
+  "phase": "p30",
+  "features": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "area": "harness",
+      "title": "Harness V2 核心协议与产品边界",
+      "user_visible_behavior": "@repo/harness-core 提供版本化且供应商中立的 FeatureRef、TaskSpec、Run、Step、RunEvent、Artifact、Evaluation 与 Attestation 类型和运行时校验；@repo/agent-core 通过兼容外观保持现有调用方可用；ADR 明确 Runtime、Control Plane、Eval 和 Delivery Adapter 的权威边界。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": "codex-harness-v2",
+      "capability": "CAP-AI",
+      "verification": [
+        "pnpm --filter @repo/harness-core test",
+        "pnpm --filter @repo/agent-core test",
+        "pnpm --filter @repo/orchestrator test",
+        "pnpm -w run verify:base"
+      ],
+      "evidence": "evidence/F01.verify.log @ 2026-07-18T07:29:10.718Z",
+      "notes": "Closes #729。仅建立协议和兼容边界，不实现 checkpoint store，不修改 p29 coord 协议或线上服务。"
+    },
+    {
+      "id": "F02",
+      "priority": 2,
+      "area": "harness",
+      "title": "事件溯源 Run Runtime 与 checkpoint 恢复",
+      "user_visible_behavior": "Runtime 以 append-only RunEvent 为事实源，支持幂等事件、状态投影、失败重试、暂停、取消以及从最近 checkpoint 恢复；进程退出后可以继续同一个 Run。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AI",
+      "verification": [
+        "pnpm --filter @repo/harness-runtime test",
+        "pnpm --filter @repo/harness-runtime typecheck"
+      ],
+      "evidence": "",
+      "notes": "依赖 F01。首版提供内存与文件 event store；持久服务适配器后续接 Control Plane。"
+    },
+    {
+      "id": "F03",
+      "priority": 3,
+      "area": "harness",
+      "title": "Workspace Manifest 与 Sandbox 生命周期",
+      "user_visible_behavior": "Runtime 可通过 WorkspaceProvider 创建、恢复和销毁隔离 workspace；Manifest 锚定仓库、base commit、依赖摘要、权限和缓存键；默认实现支持现有 worktree，并为远程 sandbox 保留适配接口。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-QUALITY",
+      "verification": [
+        "pnpm --filter @repo/harness-workspace test",
+        "pnpm --filter @repo/harness-workspace typecheck"
+      ],
+      "evidence": "",
+      "notes": "依赖 F01/F02。不在首版自行实现容器编排。"
+    },
+    {
+      "id": "F04",
+      "priority": 3,
+      "area": "orchestrator",
+      "title": "Model、Tool 与 Agent Runtime 适配器",
+      "user_visible_behavior": "Harness Runner 只依赖 ModelProvider、ToolRegistry 和 WorkspaceProvider 接口；至少一个现有本地执行兼容适配器跑通，模型或 Agent 供应商可以替换而不修改核心 Runtime。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AI",
+      "verification": [
+        "pnpm --filter @repo/harness-runtime test",
+        "pnpm --filter @repo/orchestrator test"
+      ],
+      "evidence": "",
+      "notes": "依赖 F02/F03。OpenAI、Codex、Claude 适配器不得进入核心包依赖。"
+    },
+    {
+      "id": "F05",
+      "priority": 4,
+      "area": "harness",
+      "title": "Evaluation、Artifact 与 commit Attestation",
+      "user_visible_behavior": "Evaluation Runner 支持 L0/L1/L2 验证计划、受影响检查和缓存；Artifact 内容寻址；Attestation 锚定 feature revision、commit、环境与 verifier 版本，旧证明不可变但当前 HEAD 状态可派生为 stale。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-QUALITY",
+      "verification": [
+        "pnpm --filter @repo/harness-evals test",
+        "pnpm --filter @repo/harness-evals typecheck"
+      ],
+      "evidence": "",
+      "notes": "依赖 F01/F02。现有 verify.ts 在此阶段通过兼容 adapter 调用新 Eval Plane。"
+    },
+    {
+      "id": "F06",
+      "priority": 5,
+      "area": "coord",
+      "title": "Harness Runtime 接入 coord-platform Control Plane",
+      "user_visible_behavior": "Task、Run 和 checkpoint 元数据通过供应商中立 API 接入 p29 RepoHub；coord-platform 继续负责 claim/lease/dispatch，Runtime 负责执行事件；GitHub 仅为 Delivery 投影，任一平面不可双写同一权威状态。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "pnpm --filter @repo/coord-protocol test",
+        "pnpm --filter @repo/coord-repohub test",
+        "pnpm --filter @repo/harness-runtime test"
+      ],
+      "evidence": "",
+      "notes": "依赖 p29 F10 与本阶段 F02/F05。通过 adapter 扩展，不把 Harness Run 事件塞进 coord/0.1 协议。"
+    },
+    {
+      "id": "F07",
+      "priority": 6,
+      "area": "harness",
+      "title": "V1 渐进迁移、CLI 与可观测性收口",
+      "user_visible_behavior": "现有 agent-core/orchestrator/memory/verify 调用方迁移到 V2 公开 API；CLI 可查询 Task/Run/Step/Evaluation/Artifact；结构化 trace 提供耗时、工具调用、失败原因和恢复次数；废弃接口有版本化迁移说明。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-QUALITY",
+      "verification": [
+        "pnpm -w run verify:base",
+        "pnpm --filter @repo/harness-cli test",
+        "! git grep -n '@repo/agent-core' -- ':!packages/agent-core/**'"
+      ],
+      "evidence": "",
+      "notes": "依赖 F01-F06。删除兼容层必须单独经过 breaking-change review。"
+    }
+  ]
+}

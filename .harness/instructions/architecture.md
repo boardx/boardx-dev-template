@@ -31,25 +31,45 @@ users ──< team_members >── teams
 页面在 `apps/web/app/(app)/**`，必须实现 loading/empty/error 三态、禁原生 `<button>`（用 `@/components/ui/*`），
 过 `apps/web/scripts/lint-design.sh` 门控（见 `uiux-standards.md`）。
 
-> 下方「智能体编排架构」是 CAP-AI 的**规划态**（apps/orchestrator / packages/agent-core / tools 尚未建），
-> 待 p9 AVA 阶段落地。当前 `packages/memory` 已存在（三层+wikilink），演进为 Personal Ontology。
+## Harness 与智能体运行时
 
-## 平面划分（CAP-AI 规划态，未建）
-- `apps/orchestrator`:智能体编排器,负责接收任务、规划、调度子能力、汇总结果。
-- `packages/agent-core`:智能体内核——推理循环(plan→act→observe)、会话与回合管理。
-- `packages/tools`:工具子系统,按最小权限暴露能力(shell、检索、外部 API 适配)。
-- `packages/memory`:状态与记忆——短期工作记忆、长期持久化、跨会话恢复。
+当前实现分为两个产品边界：
 
-## 数据流(高层)
-任务 → orchestrator 规划 → agent-core 推理循环 → 经 tools 执行动作 →
-observation 回灌 → memory 记录 → 直到达成验证标准 → 汇总交付。
+- p29 coord-platform：跨 Agent 协调层，负责 dispatch、claim、lease、身份和 GitHub 投影。
+- p30 Harness V2：Agent 执行层，负责 Task、Run、Step、checkpoint、Workspace 和 Evaluation。
 
-## 不变量(实现必须遵守)
-- 工具调用最小权限,默认拒绝;新增能力需在 `agentic-patterns.md` 登记。
-- 任何跨会话状态都落 `memory`,不依赖进程内内存。
-- 推理循环每一步可观测(见 `observability.md`),便于事后归因。
+早期 `apps/orchestrator`、`packages/agent-core`、`packages/tools`、`packages/memory`
+在迁移期继续工作；`packages/harness-core` 是 V2 协议入口。完整决策见 ADR-018。
+
+### 权威边界
+
+| 对象 | 权威 |
+|---|---|
+| Feature 规格和代码 | Git |
+| Task dispatch、claim、lease | coord-platform |
+| Run、Step、checkpoint | Harness Run event store |
+| Evaluation、Artifact、Attestation | Eval Plane |
+| Delivery PR、review、CI 投影 | GitHub |
+
+Feature、Task、Run、Pull Request 和 Evaluation 不得合并为一个状态对象。
+
+### 数据流
+
+Feature → Control Plane 创建 Task → Runtime 创建 Run → Workspace/Tools 执行 →
+RunEvent 持久化 → Evaluation 产出 Artifact/Attestation → Delivery Adapter 更新 PR。
+
+### 不变量
+
+- Core Protocol 不依赖模型供应商、GitHub、具体数据库或 sandbox 实现。
+- RunEvent append-only，带协议版本、单调 sequence 和 idempotency key。
+- 跨会话执行状态必须可 checkpoint 和恢复，不能只存在进程内存。
+- 工具调用最小权限，默认拒绝；新增能力需在 `agentic-patterns.md` 登记。
+- 每一步可观测，Evaluation 必须锚定 Feature revision、commit、环境和 verifier 版本。
+- coord-platform 与 Harness Runtime 各自只有一个权威，不双写租约或 Run 状态。
 
 ## 与 ADR 的关系
 重大架构选择(编排模型、记忆后端、工具协议等)必须落 `docs/adr/`,并在此处链接。
 - `docs/adr/0001-record-architecture-decisions.md` — 采用 ADR 实践。
 - `docs/adr/0002-board-keyed-items.md` — 画布 item 从 room-keyed 演进为 board-keyed（加法过渡）。
+- `docs/adr/ADR-017-coord-repohub-do-rebuild.md` — coord-platform 产品边界。
+- `docs/adr/ADR-018-harness-v2-product-boundary-and-core-contracts.md` — Harness V2 分层与核心协议。

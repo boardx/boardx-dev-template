@@ -1,7 +1,8 @@
 {
-  "name": "@repo/agent-core",
+  "name": "@repo/harness-core",
   "version": "0.1.0",
   "private": true,
+  "description": "Harness V2 provider-neutral core contracts and runtime validation",
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
@@ -13,12 +14,9 @@
     "test": "vitest run",
     "lint": "echo 'lint: ok'"
   },
-  "dependencies": {
-    "@repo/harness-core": "workspace:*"
-  },
   "devDependencies": {
+    "@types/node": "*",
     "typescript": "*",
-    "vitest": "*",
-    "@types/node": "*"
+    "vitest": "*"
   }
 }
