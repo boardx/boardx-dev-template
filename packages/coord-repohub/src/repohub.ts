@@ -734,8 +734,12 @@ export class RepoHub extends DurableObject {
   }
 
   /** POST /tasks/import — D1 → DO 割接导入（admin 面，不走 REST allowlist）。
-   *  幂等：INSERT OR IGNORE 按原 id 保留，重跑不产生重复；**不 emit 事件**——
-   *  这是审计回填，不是活跃协调信号（events.md §Tasks）；历史事件留在 D1 归档。 */
+   *  幂等：按原 id 保留，重跑不产生重复；**不 emit 事件**——这是审计回填，不是
+   *  活跃协调信号（events.md §Tasks）；历史事件留在 D1 归档。
+   *  内容一致性（coord-main #732 复核）：「id 已存在」只有在关键字段完全一致时才算
+   *  幂等 skipped；不一致 = 两个来源在讲不同的历史 → 409 大声失败并列出冲突字段，
+   *  绝不静默保留旧行假装导入成功（本仓割接 D1/DO 1:1 未触发，但 import 入口会被
+   *  未来接入仓复用，必须结构化防住）。 */
   private taskImport(body: unknown): Response {
     const rows = (body as Record<string, unknown> | null)?.["tasks"];
     if (!Array.isArray(rows)) return json(422, { error: "invalid_import", details: ["tasks 必须是数组"] });
@@ -755,8 +759,34 @@ export class RepoHub extends DurableObject {
       const priority = typeof r["priority"] === "string" && TASK_PRIORITIES.has(r["priority"])
         ? (r["priority"] as string) : "normal";
       // DO 单线程：existence check 与 INSERT 之间没有并发窗口，幂等判定安全
-      const exists = [...this.sql.exec(`SELECT 1 FROM tasks WHERE id=?`, r["id"])][0];
-      if (exists) {
+      const existing = [...this.sql.exec<TaskRow>(`SELECT * FROM tasks WHERE id=?`, r["id"])][0];
+      if (existing) {
+        // 内容比对：同 id 必须同内容才是幂等重跑；任何关键字段不一致 → 409
+        const incoming: Record<string, unknown> = {
+          issue: r["issue"],
+          assignee: r["assignee"],
+          priority,
+          deadline: (r["deadline"] as string | null | undefined) ?? null,
+          note: (r["note"] as string | null | undefined) ?? null,
+          status: r["status"],
+          created_by: r["created_by"],
+          created_at: r["created_at"],
+          acked_at: (r["acked_at"] as string | null | undefined) ?? null,
+          updated_at: r["updated_at"],
+        };
+        const mismatched = Object.keys(incoming).filter(
+          (k) => (existing as unknown as Record<string, unknown>)[k] !== incoming[k],
+        );
+        if (mismatched.length > 0) {
+          return json(409, {
+            error: "import_conflict",
+            task_id: r["id"],
+            mismatched_fields: mismatched,
+            details: mismatched.map(
+              (k) => `tasks[${i}].${k}: existing=${JSON.stringify((existing as unknown as Record<string, unknown>)[k])} incoming=${JSON.stringify(incoming[k])}`,
+            ),
+          });
+        }
         skipped++;
         continue;
       }

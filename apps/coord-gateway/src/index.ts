@@ -2,6 +2,7 @@
 // + REST 网关（bearer 鉴权 → 转发 RepoHub DO）。F08：按仓 scoped token 优先，
 // COORD_API_TOKEN 保留为 ops 万能钥匙；mint/revoke 走 COORD_ADMIN_TOKEN 管理面（auth.ts）。
 import { RepoHub } from "@repo/coord-repohub";
+import { describeCycle } from "./cycle";
 import { verifyWebhookSignature } from "./signature";
 import { toIngestBody, type QueuedWebhook } from "./mapping";
 import { runProjectionTick } from "./projection";
@@ -104,6 +105,12 @@ export default {
         webhook_configured: Boolean(env.GITHUB_WEBHOOK_SECRET),
         api_configured: Boolean(env.COORD_API_TOKEN),
       });
+    // 权威时钟（ADR-014，迁自 coord-service GET /time，语义零变更）：公开只读、
+    // 不接受入参、不写库——任何 runtime（CC/Codex/裸脚本/CI）都能读，无需 token。
+    if (req.method === "GET" && url.pathname === "/api/coord/time") {
+      const now = new Date();
+      return json(200, { now: now.toISOString(), epoch_ms: now.getTime(), cycle: describeCycle(now) });
+    }
     if (req.method === "POST" && url.pathname === "/api/coord/webhooks/github")
       return handleWebhook(req, env);
     const andon = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)(\/andon)$/);
