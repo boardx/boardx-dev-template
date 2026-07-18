@@ -8,7 +8,8 @@
 2. 调 **requirement-author** 智能体：读取本文件夹**全部** `*.md` → 生成/更新 `../feature_list.json`。
 3. 本文件夹是**输入/上下文，不是权威**；权威永远是 `../feature_list.json`（带可执行 `verification`）。
 
-## p30 状态（2026-07-19）
-- requirement-author 已产出提案：[feature-list-draft.md](feature-list-draft.md)（24 features / 5 waves）。
-- 依 ADR-003，`../ui-signoff.md` 仍 `pending`，故只出提案不出权威 JSON；
-  签核后按提案文末「转正步骤」由 coordinator 生成 `../feature_list.json`。
+## p30 状态（2026-07-19，转正后更新）
+- `../ui-signoff.md` 已 `confirmed`（批 1-3 经 #752；批 4 于 2026-07-19 人类补签）。
+- 提案 [feature-list-draft.md](feature-list-draft.md) 已转正为权威 `../feature_list.json`
+  （24 features / 5 waves；UC-19 显式排除，见 feature_list.json `exclusions` 与 draft 头部勘误注记）。
+- 本文件夹自此仅为需求追溯输入；权威永远是 `../feature_list.json`。
