@@ -29,6 +29,10 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 # 非敏感运行时配置（协作平面数据源与门禁域；变更走 PR，部署即生效）
+# ⚠️ DEPRECATED（F10-pre）：COORD_SERVICE_URL 与加密 secret COORD_DISPATCH_TOKEN /
+# COORD_BROKER_TOKEN 是旧 coord-service（冻结退役中）通道——派工看板已切到
+# coord-gateway（复用 COORD_GATEWAY_ADMIN_TOKEN + COORD_GATEWAY_URL + GITHUB_REPO）。
+# 保留不删：割接 PR（F10 本体）统一移除，env 变更与部署必须原子（先切后删）。
 COORD_SERVICE_URL = "https://coord-service-staging.boardx.workers.dev"
 # F08：按仓 scoped token 的发放上游（coord-gateway；配合加密 secret COORD_GATEWAY_ADMIN_TOKEN）
 # p29/F09：coord-gateway 同时是 RepoHub WS 实时流 + stream-ticket 签发端。

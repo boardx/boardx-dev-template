@@ -89,7 +89,7 @@ export function DispatchPanel() {
       {/* 派工表单：仅有资格者可见（own 协调者身份），符合"人类身份映射" */}
       {data.can_dispatch ? (
         !data.broker_configured ? (
-          <p className="mb-3 text-11 text-muted-foreground">派工 broker 未接线（COORD_DISPATCH_TOKEN 未配置）。</p>
+          <p className="mb-3 text-11 text-muted-foreground">派工 broker 未接线（COORD_GATEWAY_ADMIN_TOKEN 未配置）。</p>
         ) : (
           <div className="mb-4 grid grid-cols-1 gap-2 rounded-8 border border-border bg-surface-2 p-3 md:grid-cols-[7rem_1fr_6rem_auto]" data-testid="dispatch-form">
             <div>

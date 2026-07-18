@@ -84,6 +84,27 @@ CREATE TABLE IF NOT EXISTS stream_tickets (
   expires_at TEXT NOT NULL
 );
 
+-- tasks 收件箱（F10 前置）：字段语义等价 coord-service migrations/0002_tasks.sql（#614）。
+-- coordinator 经 admin 面派工，assignee 轮询 GET + ack，纯 HTTP + bearer token。
+-- 与 D1 版的差异：assignee/created_by 不再 REFERENCES agents(id)——DO 无 agents 表，
+-- 派工资格与 assignee 在册校验上移到调用方（devportal broker 对 registry.yaml 校验）。
+-- id 保留 AUTOINCREMENT：割接导入显式 id 后 sqlite_sequence 自动推进，新派工不撞号。
+CREATE TABLE IF NOT EXISTS tasks (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  issue       INTEGER NOT NULL,                -- GitHub issue 号（任务规格所在）
+  assignee    TEXT NOT NULL,
+  priority    TEXT NOT NULL DEFAULT 'normal',  -- 'high' | 'normal' | 'low'（提示性，不参与逻辑）
+  deadline    TEXT,                            -- ISO 时间，可选
+  note        TEXT,                            -- 派工附言，可选（≤2000）
+  status      TEXT NOT NULL DEFAULT 'pending', -- pending → acked → done；coordinator 可 recalled
+  created_by  TEXT NOT NULL,                   -- 派工方（broker 身份 / "admin"）
+  created_at  TEXT NOT NULL,
+  acked_at    TEXT,
+  updated_at  TEXT NOT NULL
+);
+-- 收件箱查询就是这一个访问模式：WHERE assignee = ? AND status = ?
+CREATE INDEX IF NOT EXISTS idx_tasks_assignee_status ON tasks(assignee, status);
+
 -- issue/PR 镜像：关键字段拉平便于过滤，全量 JSON 保真（F04）
 CREATE TABLE IF NOT EXISTS mirror_items (
   kind        TEXT NOT NULL,                -- issue | pr

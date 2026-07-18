@@ -394,6 +394,113 @@ describe("F09 WS 实时流", () => {
   });
 });
 
+describe("F10-pre tasks 收件箱（迁自 coord-service #614/#631）", () => {
+  type Task = { id: number; issue: number; assignee: string; priority: string; status: string; note: string | null; deadline: string | null; created_by: string; acked_at: string | null };
+  const dispatch = (over: Record<string, unknown> = {}) =>
+    post("/tasks", { issue: 601, assignee: "wrk-t1", created_by: "devportal-broker", ...over });
+  async function events(type: string): Promise<Array<Record<string, unknown>>> {
+    const all = await (await SELF.fetch(`${BASE}/events?limit=500`)).json<{ events: Array<Record<string, unknown>> }>();
+    return all.events.filter((e) => e["type"] === type);
+  }
+
+  it("派工 → 201 pending + task.dispatched 事件（payload 含 task_id/assignee/priority）", async () => {
+    const r = await dispatch({ note: "先修 CI 再动手", deadline: "2026-07-19T00:00:00Z", priority: "high" });
+    expect(r.status).toBe(201);
+    const { task } = await r.json<{ task: Task }>();
+    expect(task).toMatchObject({ issue: 601, assignee: "wrk-t1", priority: "high", status: "pending", created_by: "devportal-broker" });
+    expect(task.deadline).toBe("2026-07-19T00:00:00.000Z"); // 归一存储
+    const evs = await events("task.dispatched");
+    expect(evs).toHaveLength(1);
+    expect(evs[0]!["resource_id"]).toBe("issue:601");
+    expect(evs[0]!["agent_id"]).toBe("devportal-broker");
+    expect(evs[0]!["payload"]).toMatchObject({ task_id: task.id, assignee: "wrk-t1", priority: "high" });
+  });
+
+  it("派工校验 400：坏 issue / 空 assignee / 坏 priority / 脏 deadline / 超长 note", async () => {
+    expect((await dispatch({ issue: "n" })).status).toBe(400);
+    expect((await dispatch({ issue: -1 })).status).toBe(400);
+    expect((await dispatch({ assignee: "" })).status).toBe(400);
+    expect((await dispatch({ priority: "urgent" })).status).toBe(400);
+    expect((await dispatch({ deadline: "明天吧" })).status).toBe(400);
+    expect((await dispatch({ note: "x".repeat(2001) })).status).toBe(400);
+  });
+
+  it("收件箱查询：按 assignee / status 过滤；assignee=* 列全队；缺 assignee 400", async () => {
+    await dispatch({ issue: 602, assignee: "wrk-t2" });
+    const mine = await (await SELF.fetch(`${BASE}/tasks?assignee=wrk-t2`)).json<{ tasks: Task[] }>();
+    expect(mine.tasks.every((t) => t.assignee === "wrk-t2")).toBe(true);
+    expect(mine.tasks.length).toBeGreaterThanOrEqual(1);
+    const all = await (await SELF.fetch(`${BASE}/tasks?assignee=*`)).json<{ tasks: Task[] }>();
+    expect(new Set(all.tasks.map((t) => t.assignee)).size).toBeGreaterThanOrEqual(2);
+    const pending = await (await SELF.fetch(`${BASE}/tasks?assignee=*&status=pending`)).json<{ tasks: Task[] }>();
+    expect(pending.tasks.every((t) => t.status === "pending")).toBe(true);
+    expect((await SELF.fetch(`${BASE}/tasks`)).status).toBe(400);
+    expect((await SELF.fetch(`${BASE}/tasks?assignee=*&status=banana`)).status).toBe(400);
+  });
+
+  it("ack：非 assignee 403；本人 → acked + acked_at + task.acked 事件；重复 ack 409 不重复发事件", async () => {
+    const { task } = await (await dispatch({ issue: 603, assignee: "wrk-t3" })).json<{ task: Task }>();
+    expect((await post(`/tasks/${task.id}/ack`, { agent_id: "evil" })).status).toBe(403);
+    expect((await post(`/tasks/${task.id}/ack`, {})).status).toBe(400); // 缺 agent_id
+    const ok = await post(`/tasks/${task.id}/ack`, { agent_id: "wrk-t3" });
+    expect(ok.status).toBe(200);
+    const acked = (await ok.json<{ task: Task }>()).task;
+    expect(acked.status).toBe("acked");
+    expect(typeof acked.acked_at).toBe("string");
+    const dup = await post(`/tasks/${task.id}/ack`, { agent_id: "wrk-t3" });
+    expect(dup.status).toBe(409);
+    expect((await dup.json<Record<string, unknown>>())["error"]).toBe("invalid_transition:acked->acked");
+    expect((await events("task.acked")).filter((e) => (e["payload"] as { task_id: number }).task_id === task.id)).toHaveLength(1);
+  });
+
+  it("complete：pending 可直接 done（跳过 ack，D1 现行为）；done 后 ack/complete/recall 全 409", async () => {
+    const { task } = await (await dispatch({ issue: 604, assignee: "wrk-t4" })).json<{ task: Task }>();
+    const done = await post(`/tasks/${task.id}/complete`, { agent_id: "wrk-t4" });
+    expect(done.status).toBe(200);
+    expect((await done.json<{ task: Task }>()).task.status).toBe("done");
+    expect((await post(`/tasks/${task.id}/ack`, { agent_id: "wrk-t4" })).status).toBe(409);
+    expect((await post(`/tasks/${task.id}/complete`, { agent_id: "wrk-t4" })).status).toBe(409);
+    expect((await post(`/tasks/${task.id}/recall`, {})).status).toBe(409);
+    expect((await events("task.completed")).filter((e) => (e["payload"] as { task_id: number }).task_id === task.id)).toHaveLength(1);
+  });
+
+  it("recall：空 body 可撤（admin 面无身份，actor 记 admin）；acked 也可撤；撤后 ack 409", async () => {
+    const { task } = await (await dispatch({ issue: 605, assignee: "wrk-t5" })).json<{ task: Task }>();
+    await post(`/tasks/${task.id}/ack`, { agent_id: "wrk-t5" });
+    const r = await SELF.fetch(`${BASE}/tasks/${task.id}/recall`, { method: "POST" }); // 无 body
+    expect(r.status).toBe(200);
+    expect((await r.json<{ task: Task }>()).task.status).toBe("recalled");
+    const evs = (await events("task.recalled")).filter((e) => (e["payload"] as { task_id: number }).task_id === task.id);
+    expect(evs).toHaveLength(1);
+    expect(evs[0]!["agent_id"]).toBe("admin");
+    expect((await post(`/tasks/${task.id}/ack`, { agent_id: "wrk-t5" })).status).toBe(409);
+    expect((await SELF.fetch(`${BASE}/tasks/99999/recall`, { method: "POST" })).status).toBe(404);
+  });
+
+  it("import：保留原 id 幂等导入，重跑 skipped，不产生事件；新派工不撞导入的 id", async () => {
+    const rows = [
+      { id: 9001, issue: 700, assignee: "wrk-old-1", priority: "normal", deadline: null, note: "[派工人 a@b.c] 存量", status: "done", created_by: "portal-broker", created_at: "2026-07-14T00:00:00Z", acked_at: "2026-07-14T01:00:00Z", updated_at: "2026-07-14T02:00:00Z" },
+      { id: 9002, issue: 701, assignee: "wrk-old-2", priority: "high", deadline: null, note: null, status: "pending", created_by: "coord-main", created_at: "2026-07-15T00:00:00Z", acked_at: null, updated_at: "2026-07-15T00:00:00Z" },
+    ];
+    const evBefore = (await events("task.dispatched")).length;
+    const first = await post("/tasks/import", { tasks: rows });
+    expect(first.status).toBe(200);
+    expect(await first.json()).toEqual({ ok: true, imported: 2, skipped: 0 });
+    const rerun = await post("/tasks/import", { tasks: rows });
+    expect(await rerun.json()).toEqual({ ok: true, imported: 0, skipped: 2 });
+    expect((await events("task.dispatched")).length).toBe(evBefore); // 导入不产事件
+    // 存量字段保真（status/acked_at/created_by 原样）
+    const old = await (await SELF.fetch(`${BASE}/tasks?assignee=wrk-old-1`)).json<{ tasks: Task[] }>();
+    expect(old.tasks[0]).toMatchObject({ id: 9001, status: "done", created_by: "portal-broker", acked_at: "2026-07-14T01:00:00Z" });
+    // AUTOINCREMENT 序列被显式 id 推进：新派工 id > 9002
+    const fresh = await (await dispatch({ issue: 702, assignee: "wrk-new" })).json<{ task: Task }>();
+    expect(fresh.task.id).toBeGreaterThan(9002);
+    // 坏行整体 422
+    expect((await post("/tasks/import", { tasks: [{ id: 1 }] })).status).toBe(422);
+    expect((await post("/tasks/import", { tasks: "x" })).status).toBe(422);
+  });
+});
+
 async function fetchClaim(base: string, agent: string, resource: string): Promise<Response> {
   return SELF.fetch(`${base}/claims`, {
     method: "POST",

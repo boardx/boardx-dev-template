@@ -4,9 +4,12 @@
 // owner 匹配 → kind ∈ 协调层）。这把派工权与 registry 里的协调者归属绑定，实现
 // issue 说的"人类身份映射"——不是任何过 Access 的人都能派工。
 //
-// 服务端 broker：coord-service 的 POST /tasks 要 coordinator token。devportal 持
-// 一个协调者级 broker token（COORD_DISPATCH_TOKEN，Pages secret，永不到浏览器）
-// 代调；派工的 note 里带上真实人类 email 做审计。同 #629 mint 的 broker 模式。
+// 服务端 broker（F10-pre 起）：数据源从冻结退役中的 coord-service D1 切到
+// coord-gateway（RepoHub DO 权威）。派工/撤回是 gateway 的 COORD_ADMIN_TOKEN
+// 管理面——复用既有 Pages secret COORD_GATEWAY_ADMIN_TOKEN（F08 mint 同款），
+// 永不到浏览器；派工的 note 里带上真实人类 email 做审计。
+// COORD_DISPATCH_TOKEN / COORD_SERVICE_URL：deprecated（旧 coord-service broker
+// 通道，本轮只切数据源不删配置；割接 PR 删除，遵守 env 原子纪律）。
 import { parse } from "yaml";
 import { ownerMatches } from "@/lib/access";
 import { readRepoFile } from "@/lib/repo-files";
@@ -34,7 +37,11 @@ export function canDispatch(agents: RegistryAgent[], email: string): boolean {
 }
 
 export function dispatchBroker(): { token: string; baseUrl: string } | null {
-  const token = process.env["COORD_DISPATCH_TOKEN"];
-  const baseUrl = process.env["COORD_SERVICE_URL"];
-  return token && baseUrl ? { token, baseUrl } : null;
+  // F10-pre：tasks 收件箱权威已迁 RepoHub DO；baseUrl 指向 gateway 的按仓前缀，
+  // 下游调用（/tasks、/tasks/:id/recall）的相对路径与 coord-service 时代一致。
+  const token = process.env["COORD_GATEWAY_ADMIN_TOKEN"];
+  const gatewayUrl = process.env["COORD_GATEWAY_URL"];
+  const repo = process.env["GITHUB_REPO"];
+  if (!token || !gatewayUrl || !repo) return null;
+  return { token, baseUrl: `${gatewayUrl}/api/coord/repos/${repo}` };
 }
