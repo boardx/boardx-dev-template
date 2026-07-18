@@ -22,7 +22,7 @@
       "title": "平台目录 DO：Project/Membership/Enrollment 领域模型",
       "user_visible_behavior": "coord-gateway 挂载平台级目录 DO（PlatformDirectory，单例；与按仓分片的 RepoHub 互补），持久化 Project（slug/可见性/模块划分/SLA/门禁策略）、Engineer（@handle 全局唯一）、Membership（owner/maintainer/approver/contributor × pending/active/suspended）、Agent（owner 必填/parent 可空/心跳时间戳，内部主键不可变 ULID，D6）、Enrollment（agent×项目 + scoped token 引用）。GET /api/coord/directory/projects|engineers|agents 返回真实数据；任意 agent 行都能回答「哪个项目的？属于哪个人类？parent 是谁？」；写路径仅限身份/授权/审批/派工（三条铁律）。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
@@ -40,7 +40,7 @@
       "title": "GitHub OAuth 登录（D3 阶段 2：公开层免登录 + 工作区 OAuth，原子灰度）",
       "user_visible_behavior": "devportal 公开层（/explore、/projects/:slug、/u/:handle、/a/:handle/:agent）免登录可访问且组件零身份读取、零 Access header 依赖；工作区与个人层（/p/:slug/*、/me*）走 GitHub OAuth（复用 p29-F08 OAuth 栈），Access 收缩为只罩治理面；切换在同一个 PR 内「先加后删」原子完成（env 原子纪律）；#588 的 401 整页重认证行为不回退。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-AUTH",
       "verification": [
@@ -59,7 +59,7 @@
       "title": "/p/:slug 路由化 + 成员鉴权（服务端角色裁剪 + 无权限态）",
       "user_visible_behavior": "/p/:slug/{pulse,work,coord,talk,people,settings} 按 slug 从目录 DO 解析项目并按登录者 Membership 服务端裁剪：contributor 访问 /p/:slug/settings 看到整页拒绝态（gov-no-access，引导 ✋ 举手），owner/maintainer 看到治理台；批次 2 的页内「视角开关」mock 被真实 membership 判定替换；非成员访问私有项目工作区得到无权限态而非数据泄漏；顶栏项目切换器列出登录者的真实项目。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-WEB",
       "verification": [
@@ -77,7 +77,7 @@
       "title": "工作区数据按项目分片（需求/sprint/对话流入项目 DO）",
       "user_visible_behavior": "需求（requirements 流水线条目）、sprint 面板数据、talk 对话流全部迁入按项目分片的存储（RepoHub DO 或项目子空间），两个项目命名空间的工作区互不可见对方数据；项目间隔离升级兑现（N3：一个项目的数据量/故障不拖垮另一个项目的工作区）。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
