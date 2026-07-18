@@ -14,3 +14,4 @@ export * from "./presentationGenerator";
 export * from "./researchGenerator";
 // 问卷报告 AI 摘要生成器（P13 F07）
 export * from "./reportSummaryGenerator";
+export * from "./surveyReportWorkspace";
