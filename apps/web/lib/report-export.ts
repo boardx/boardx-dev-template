@@ -435,13 +435,19 @@ export function buildProfessionalReportHtml(report: ProfessionalSurveyReportDocu
         <strong>${row.count} · ${row.percentage}%</strong>
       </div>
     `).join("") ?? "";
-    const quotes = chapter.textResponses?.map((text) => `<blockquote>“${escapeHtml(text)}”</blockquote>`).join("") ?? "";
     return `
       <section class="chapter">
-        <p class="eyebrow">${String(index + 1).padStart(2, "0")} / 分题分析</p>
+        <p class="eyebrow">${String(index + 1).padStart(2, "0")} / ${escapeHtml(
+          chapter.outputType === "chart"
+            ? "图表章节"
+            : chapter.outputType === "image"
+              ? "图片章节"
+              : "文本章节"
+        )}</p>
         <div class="chapter-title"><h2>${escapeHtml(chapter.title)}</h2><span>有效回答 n=${chapter.validResponseCount}</span></div>
-        ${chartRows ? `<div class="chart">${chartRows}<footer>数据来源：真实问卷答卷 · ${escapeHtml(chapter.chart!.denominatorLabel)} n=${chapter.chart!.denominator}</footer></div>` : ""}
-        ${quotes ? `<div class="quotes">${quotes}</div>` : ""}
+        ${chapter.requirement ? `<p>${escapeHtml(`生成要求：${chapter.requirement}`)}</p>` : ""}
+        ${chapter.outputType === "chart" && chartRows ? `<div class="chart">${chapter.chartTemplateId ? `<p>${escapeHtml(`ECharts 模板：${chapter.chartTemplateId}`)}</p>` : ""}${chartRows}<footer>数据来源：真实问卷答卷 · ${escapeHtml(chapter.chart!.denominatorLabel)} n=${chapter.chart!.denominator}</footer></div>` : ""}
+        ${chapter.outputType === "image" && chapter.imagePrompt ? `<p class="limitation">${escapeHtml(`图片生成约束：${chapter.imagePrompt}`)}</p>` : ""}
         ${chapter.limitations.length ? `<p class="limitation">限制：${escapeHtml(chapter.limitations.join(" "))}</p>` : ""}
       </section>
     `;

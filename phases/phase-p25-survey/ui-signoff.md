@@ -60,9 +60,14 @@ confirmed_at: 2026-07-14T00:00:00+08:00
   三张卡片必须显示完整说明与行动文案，AI 入口标记为推荐，移动端改为单列且不得溢出。
   该确认是 `requirements/14-create-dialog-usability-review.md` 的人类 UI 依据。
 - 2026-07-18 报告编排器增量确认：用户指出中间栏将设置和预览纵向堆叠后过长，要求删除逐题绑定，
-  将输出配置精简为自然语言约束，并确认采用版本化事实库、按需生成和不可变报告版本方案。
+  将输出配置精简为自然语言约束 + 单一输出类型，并确认采用版本化事实库、按需生成和不可变报告版本方案。
   桌面端改为“报告要求 / 报告预览”横向工作区，生成记录与证据面板可折叠；新答卷只提示数据有更新，
   不自动调用模型。该确认是 `requirements/15-versioned-fact-base-report-composer.md` 的人类 UI 依据。
+- 2026-07-18 增量确认：用户确认采用已批准的
+  `docs/superpowers/specs/2026-07-18-survey-single-output-report-chapter-design.md`，每章必须且只能选择图片、图表或文本一种输出；
+  图表使用白名单 Apache ECharts 官方模板，右栏提供效果预览和只读 Option JSON。
+  图表模板参考 Apache ECharts `line-simple` 页面：
+  `https://echarts.apache.org/examples/zh/editor.html?c=line-simple`。
 
 ---
 **确认动作**：核对无误后，把顶部 frontmatter 的 `status` 改为 `confirmed`，填 `confirmed_by` / `confirmed_at`，提交。之后才可调 requirement-author 生成 feature_list、跑 new-sprint。

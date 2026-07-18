@@ -64,22 +64,69 @@ flowchart LR
 
 ```text
 sourceRevision = hash(schemaVersion + normalizedSurvey + normalizedResponses)
-requirementHash = hash(normalizedNaturalLanguageRequirement)
+requirementHash = hash(
+  normalizedTitle +
+  outputType +
+  chartTemplateId? +
+  normalizedNaturalLanguageRequirement
+)
 artifactKey = sourceRevision + requirementHash + templateVersion
 reportVersion = immutable identifier for a successful generated artifact
 ```
 
 - 归一化必须稳定排序，避免数据库返回顺序造成无意义新修订。
+- `requirementHash` 必须包含归一化后的章节标题、唯一输出类型（`image`、`chart` 或
+  `text`）、图表章节归一化后的有效白名单 `chartTemplateId`，以及归一化后的自然语言要求；
+  仅图片或文本章节省略 `chartTemplateId`。
 - 不把 `generatedAt` 放入内容哈希。
 - 数据库记录变化但分析语义不变时不应产生新修订。
+- `survey-source-v2` 将匿名/实名模式、发布窗口、答卷上限和单人答卷限制纳入事实快照；
+  这些样本口径变化必须产生新的 `sourceRevision`。
 - 失败任务可以重试，但不能覆盖同键的成功产物。
+- 生成权必须在创建会话和调用模型前，按完整 `artifactKey` 原子抢占。只有一个请求可以成为
+  生成者；同键并发请求若已有成功产物则直接复用，若仍在生成则返回 `202 in_progress`，
+  不能再创建分析会话或调用模型。
+- 生成 claim 持久化保存会话与产物引用；异常退出时释放，超过租约时间的遗留 claim 可被后续
+  请求接管。成功完成时 claim 与不可变产物一并进入 ready 状态。
+
+## Compatibility and Migration
+
+- 读取旧章节时，若 `outputType` 缺失或不是有效的 `image`、`chart`、`text`，必须归一化为
+  `text`，以保持既有章节的文本生成语义。
+- 迁移期旧 `inputModes` 只保留为单值兼容投影：最多保留一个与归一化后 `outputType` 对应的
+  值，不能继续表示多输出或驱动新契约；新保存的数据不再依赖该字段。
+- 旧章节的模块提示合并为自然语言要求；既有成功报告继续可读，迁移不得覆盖不可变产物。
+- 旧产物即使包含原始文本答卷，返回浏览器前也必须经过兼容脱敏；报告正文、导出与历史版本
+  只暴露聚合证据和结论，不暴露逐份原始回答。
+- GET 报告计划只能读取并在内存中归一化；只有通过管理权限门禁的保存、分类或显式生成流程
+  才能迁移或写入共享计划。
+
+## Chart Contract and Persistence Safety
+
+- 输出类型与图表模板必须满足条件不变量：`outputType=chart` 时，`chartTemplateId` 必须是产品
+  维护的有效白名单值；`outputType=image` 或 `outputType=text` 时必须省略
+  `chartTemplateId`。缺失或无效的图表模板必须在持久化前归一化为 `line-simple` 或拒绝请求，
+  因而不得持久化没有模板的图表章节。
+- 持久化时只允许保存产品维护的白名单 `chartTemplateId` 与归一化后的 `outputType`；服务端
+  必须拒绝任意 ECharts `option` 对象、脚本、`formatter` 函数和外部 URL。浏览器提交的模板
+  标识必须再次经过服务端白名单校验。
+- 预览可以使用白名单模板的安全样例数据，但样例值只能用于草稿预览，绝不能写入事实库、
+  证据索引、报告产物或报告版本。
+- 正式报告产物必须逐章固化唯一 `outputType`、自然语言要求和条件性的
+  `chartTemplateId`；文本章节不得携带图表，图片章节保存图片生成约束，图表章节只使用真实
+  聚合证据。
+- 右栏的 `Option JSON` 必须展示当前模板对应的完整只读 JSON，并提供复制操作；它不是可编辑
+  的配置入口，也不能借此绕过上述白名单和执行内容校验。
 
 ## F16 Contract
 
 F16 是完整、可独立使用的产品增量：
 
 - 桌面端章节列表、报告要求、报告预览形成清晰的横向工作区。
-- 用户只编辑章节标题和自然语言要求。
+- 用户只编辑章节标题、一个输出类型和自然语言要求；每章必须且只能输出图片、图表或文本。
+- 图表从白名单 Apache ECharts 官方模板中选择，右栏同时提供效果预览、完整只读 Option JSON
+  和复制操作；持久化只接受白名单 `chartTemplateId`，拒绝任意 Option、脚本、formatter 函数
+  和外部 URL。
 - 服务端以整份问卷和全部授权答卷创建版本化事实库。
 - 新数据只产生 stale 状态；用户主动更新才生成新版本。
 - 当前确定性证据聚合器继续生成真实统计和可验证报告。
@@ -102,13 +149,14 @@ F17 在 F16 合并后实现：
 
 ## UI Information Architecture
 
-### Desktop
+### Desktop: Composer
 
 ```text
-| 章节列表 | 报告要求                     | 报告预览                     |
-|          | 标题                         | 当前版本 / 数据截止点         |
-|          | 一段自然语言约束             | 只读章节、图表、证据和限制     |
-|          | 保存要求 / 生成或更新报告     | 可折叠版本与生成记录           |
+| 章节列表 | 报告要求                     | 章节效果预览                 |
+|          | 标题                         | 效果预览 / 只读 Option JSON    |
+|          | 图片 / 图表 / 文本（单选）   | 生成状态摘要                 |
+|          | 一段自然语言约束             |                             |
+|          | 保存要求 / 生成或更新报告     |                             |
 ```
 
 ### Narrow viewport
@@ -116,18 +164,32 @@ F17 在 F16 合并后实现：
 ```text
 章节列表
 报告要求
-报告预览
-版本与生成记录
+章节效果预览
+生成状态摘要
 ```
 
-不再展示逐题绑定、输出模块卡片、手工图表样式、JSON 映射或常驻聊天栏。
+不再展示逐题绑定、可添加问题、自由模块堆叠、可编辑 JSON 映射或常驻聊天栏；每章只保留图片、图表或文本单选。
+图表配置只允许白名单 Apache ECharts 官方模板，右栏展示效果预览和只读 Option JSON。
+
+完整报告和不可变历史版本属于 `分析报告` 的 `WorkspaceReportWorkbench`，而非
+composer。该工作台承载完整报告，并为版本列表提供独立的可滚动区域。历史版本
+选择必须精确匹配请求的 artifact id；只有精确版本成功加载后才替换当前报告，失败
+或响应版本不匹配时保留当前报告。
+
+正式图表产物按 `chartTemplateId` 从白名单构造 ECharts `option`，数据来自该章节的
+确定性聚合结果；分析报告直接渲染这份不可变 option。历史列表查询只返回最多 50 条
+轻量摘要并使用不透明的 `createdAt + artifactId` 组合游标翻页，分析报告可继续加载更早
+版本；完整报告只在当前版本或显式 artifact id 加载时读取。
 
 ## Data Privacy
 
 - 完整答卷只在服务端授权上下文中读取。
 - 快照存储按 survey/team/room 隔离，并记录 source revision。
+- 报告产物的 source revision 由数据库外键约束到事实快照；快照缺失时读取必须
+  fail-closed，不能返回未经脱敏的旧产物。
 - 浏览器不接收完整原始答卷。
-- 开放题原声在进入报告前匿名化。
+- 开放题原声在进入报告前匿名化；加载旧产物时，从该产物的 source revision 找到对应
+  快照，递归清除 executive summary、章节、建议与行动项中的原文回显。
 - F17 文件工具限制命名空间、路径和读写能力。
 
 ## Error Semantics

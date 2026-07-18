@@ -6,6 +6,7 @@ import {
   defaultSurveyReportCategoryPlan,
   ensureSurveyReportCategoryPlan,
   getSurveyWithQuestions,
+  readSurveyReportCategoryPlan,
   upsertSurveyReportCategoryPlan,
   type SurveyReportCategoryPlanInput,
 } from "@repo/data";
@@ -24,6 +25,19 @@ function systemSelectedModel() {
   return String(process.env.SURVEY_AI_MODEL ?? "qwen3.7-max").trim() || "qwen3.7-max";
 }
 
+function containsUnsafeReportPayload(value: unknown): boolean {
+  if (typeof value === "string") {
+    return /https?:\/\//i.test(value) || /<script|=>|\bfunction\s*\(/i.test(value);
+  }
+  if (Array.isArray(value)) return value.some(containsUnsafeReportPayload);
+  if (!value || typeof value !== "object") return false;
+  return Object.entries(value as Record<string, unknown>).some(
+    ([key, item]) =>
+      ["option", "formatter", "script", "sourceUrl"].includes(key) ||
+      containsUnsafeReportPayload(item)
+  );
+}
+
 async function loadSurvey(surveyId: number, userId: number) {
   if (!(await canViewSurvey(surveyId, userId, currentTeamId()))) return { error: "无权限", status: 403 as const };
   const survey = await getSurveyWithQuestions(surveyId);
@@ -37,7 +51,11 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   if (surveyId == null) return NextResponse.json({ error: "surveyId 无效" }, { status: 400 });
   const loaded = await loadSurvey(surveyId, user.id);
   if ("error" in loaded) return NextResponse.json({ error: loaded.error }, { status: loaded.status });
-  const reportCategoryPlan = await ensureSurveyReportCategoryPlan(surveyId, loaded.survey.title, loaded.survey.questions);
+  const reportCategoryPlan = await readSurveyReportCategoryPlan(
+    surveyId,
+    loaded.survey.title,
+    loaded.survey.questions
+  );
   return NextResponse.json({ reportCategoryPlan });
 }
 
@@ -51,8 +69,15 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (!(await canManageSurveyScope(surveyId, user.id))) {
     return NextResponse.json({ error: "无管理权限" }, { status: 403 });
   }
+  const body = await req.json().catch(() => ({}));
+  if (containsUnsafeReportPayload(body)) {
+    return NextResponse.json(
+      { error: "报告模板只接受允许列表中的图表模板标识和自然语言要求" },
+      { status: 400 }
+    );
+  }
   const cleaned = cleanSurveyReportCategoryPlan(
-    await req.json().catch(() => ({})),
+    body,
     loaded.survey.title,
     loaded.survey.questions
   );

@@ -5,20 +5,24 @@ import {
   buildSurveyReportSourceSnapshot,
   canManageSurveyScope,
   canViewSurvey,
+  claimSurveyReportGeneration,
+  completeSurveyReportGenerationClaim,
   createSurveyAiModelTrace,
-  createSurveyAiSession,
   createVersionedSurveyReportArtifact,
   ensureSurveyReportCategoryPlan,
   ensureSurveyReportSourceSnapshot,
   findReadySurveyReportArtifact,
+  findReadySurveyReportArtifactById,
+  findSurveyReportSourceSnapshot,
   getSurveyWithQuestions,
   hashSurveyReportRequirement,
   listReadySurveyReportArtifacts,
   listSurveyResponses,
   normalizeJsonObject,
-  updateSurveyAiSessionStatus,
+  readSurveyReportCategoryPlan,
+  releaseSurveyReportGenerationClaim,
   type SurveyReportArtifactVersion,
-  type SurveyReportCategoryInput,
+  type SurveyReportArtifactKey,
 } from "@repo/data";
 import { currentTeamId, currentUser } from "@/lib/session";
 import { buildSurveyReportEvidence } from "@/lib/survey-report-evidence";
@@ -26,7 +30,13 @@ import {
   resolveSurveyReportGenerationStatus,
   type SurveyReportGenerationStatus,
 } from "@/lib/survey-report-generation";
-import { buildProfessionalReportDocument } from "@/lib/survey-professional-report";
+import {
+  buildProfessionalReportDocument,
+  modelSafeSurveyReportEvidence,
+  rawTextResponsesFromSourceData,
+  sanitizeProfessionalReportDocument,
+} from "@/lib/survey-professional-report";
+import { buildSurveyReportRequirementPayload } from "@/lib/survey-report-requirement";
 import type { AiEvidenceClaimCandidate } from "@/lib/survey-professional-report";
 import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
 import { callQwenJson } from "@/lib/qwen";
@@ -39,32 +49,51 @@ function parseSurveyId(raw: string) {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-function categoryRequirement(category: SurveyReportCategoryInput): string {
-  const current = "requirement" in category
-    ? String((category as SurveyReportCategoryInput & { requirement?: unknown }).requirement ?? "").trim()
-    : "";
-  return current || category.prompt.trim();
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    .test(value);
 }
 
-function reportRequirementPayload(plan: {
-  title: string;
-  description: string;
-  categories: SurveyReportCategoryInput[];
-}) {
-  return {
-    title: plan.title,
-    description: plan.description,
-    categories: plan.categories
-      .slice()
-      .sort((left, right) => left.order - right.order)
-      .map((category) => ({
-        id: category.id,
-        name: category.name,
-        description: category.description,
-        requirement: categoryRequirement(category),
-        order: category.order,
-      })),
-  };
+function encodeHistoryCursor(
+  artifact: SurveyReportArtifactVersion | undefined
+): string | null {
+  if (!artifact) return null;
+  return Buffer.from(JSON.stringify({
+    createdAt: artifact.createdAt,
+    id: artifact.id,
+  })).toString("base64url");
+}
+
+function nextHistoryCursorForPage(
+  artifacts: SurveyReportArtifactVersion[]
+): string | null {
+  return artifacts.length === 50
+    ? encodeHistoryCursor(artifacts[artifacts.length - 1])
+    : null;
+}
+
+function decodeHistoryCursor(
+  value: string | null
+): { createdAt: string; id: string } | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(value, "base64url").toString("utf8")
+    ) as { createdAt?: unknown; id?: unknown };
+    const createdAt = String(parsed.createdAt ?? "");
+    const id = String(parsed.id ?? "");
+    if (Number.isNaN(new Date(createdAt).getTime()) || !isUuid(id)) {
+      return undefined;
+    }
+    return { createdAt, id };
+  } catch {
+    return undefined;
+  }
+}
+
+function isoTimestamp(value: unknown): string {
+  const date = value instanceof Date ? value : new Date(String(value));
+  return Number.isNaN(date.getTime()) ? String(value) : date.toISOString();
 }
 
 async function loadReportContext(rawId: string, requireManage: boolean) {
@@ -90,17 +119,32 @@ async function loadReportContext(rawId: string, requireManage: boolean) {
   if (!survey) {
     return { response: NextResponse.json({ error: "问卷不存在" }, { status: 404 }) };
   }
-  const reportCategoryPlan = await ensureSurveyReportCategoryPlan(
-    surveyId,
-    survey.title,
-    survey.questions
-  );
+  const reportCategoryPlan = requireManage
+    ? await ensureSurveyReportCategoryPlan(
+        surveyId,
+        survey.title,
+        survey.questions
+      )
+    : await readSurveyReportCategoryPlan(
+        surveyId,
+        survey.title,
+        survey.questions
+      );
   const sourceSnapshot = buildSurveyReportSourceSnapshot({
     survey: {
       id: survey.id,
       title: survey.title,
       description: survey.description,
       updatedAt: survey.updated_at,
+      responseMode: survey.response_mode,
+      publishStartAt: survey.publish_start_at
+        ? isoTimestamp(survey.publish_start_at)
+        : null,
+      publishEndAt: survey.publish_end_at
+        ? isoTimestamp(survey.publish_end_at)
+        : null,
+      responseLimit: survey.response_limit,
+      oneResponsePerUser: survey.one_response_per_user,
     },
     questions: survey.questions.map((question) => ({
       id: question.id,
@@ -113,12 +157,12 @@ async function loadReportContext(rawId: string, requireManage: boolean) {
     })),
     responses: responses.map((response) => ({
       id: response.id,
-      submittedAt: response.submitted_at,
+      submittedAt: isoTimestamp(response.submitted_at),
       answers: response.answers,
     })),
   });
   await ensureSurveyReportSourceSnapshot(sourceSnapshot);
-  const requirementPayload = reportRequirementPayload(reportCategoryPlan);
+  const requirementPayload = buildSurveyReportRequirementPayload(reportCategoryPlan);
   const requirementHash = hashSurveyReportRequirement(requirementPayload);
   const artifacts = await listReadySurveyReportArtifacts(surveyId);
   const evidence = buildSurveyReportEvidence({
@@ -143,6 +187,7 @@ async function loadReportContext(rawId: string, requireManage: boolean) {
     user,
     survey,
     evidence,
+    reportCategoryPlan,
     sourceSnapshot,
     requirementPayload,
     requirementHash,
@@ -172,46 +217,106 @@ function generationStatus(
   });
 }
 
-function artifactReport(
+function includeArtifactInStatus(
+  artifacts: SurveyReportArtifactVersion[],
   artifact: SurveyReportArtifactVersion | undefined
-): ProfessionalSurveyReportDocument | undefined {
-  return artifact?.report as unknown as ProfessionalSurveyReportDocument | undefined;
+): SurveyReportArtifactVersion[] {
+  if (!artifact || artifacts.some((item) => item.id === artifact.id)) {
+    return artifacts;
+  }
+  return [...artifacts, artifact];
 }
 
-function selectedArtifact(
-  artifacts: SurveyReportArtifactVersion[],
-  artifactId: string | null
-): SurveyReportArtifactVersion | undefined {
-  if (!artifactId) return undefined;
-  return artifacts.find((artifact) => artifact.id === artifactId);
+async function artifactReport(
+  artifact: SurveyReportArtifactVersion | undefined
+): Promise<ProfessionalSurveyReportDocument | undefined> {
+  const report =
+    artifact?.report as unknown as ProfessionalSurveyReportDocument | undefined;
+  if (!artifact || !report) return undefined;
+  const sourceSnapshot = await findSurveyReportSourceSnapshot(
+    artifact.sourceRevision
+  );
+  if (!sourceSnapshot) {
+    throw new Error("survey_report_source_snapshot_missing");
+  }
+  return sanitizeProfessionalReportDocument(
+    report,
+    rawTextResponsesFromSourceData(sourceSnapshot?.sourceData)
+  );
 }
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const context = await loadReportContext(params.id, false);
     if ("response" in context) return context.response;
-    const status = generationStatus(context);
-    const requestedArtifact = selectedArtifact(
-      context.artifacts,
-      new URL(request.url).searchParams.get("artifactId")
-    );
+    const requestUrl = new URL(request.url);
+    const requestedArtifactId = requestUrl.searchParams.get("artifactId");
+    if (requestedArtifactId && !isUuid(requestedArtifactId)) {
+      return NextResponse.json({ error: "report_version_not_found" }, { status: 404 });
+    }
+    const historyBefore = requestUrl.searchParams.get("historyBefore");
+    const historyCursor = decodeHistoryCursor(historyBefore);
+    if (historyBefore && !historyCursor) {
+      return NextResponse.json({ error: "invalid_history_cursor" }, { status: 400 });
+    }
+    if (historyCursor) {
+      const historyArtifacts = await listReadySurveyReportArtifacts(
+        context.survey.id,
+        { before: historyCursor }
+      );
+      return NextResponse.json({
+        historyPage: generationStatus({
+          ...context,
+          artifacts: historyArtifacts,
+        }).versions,
+        nextHistoryCursor: nextHistoryCursorForPage(historyArtifacts),
+      });
+    }
     const currentArtifact = await findReadySurveyReportArtifact({
       surveyId: context.survey.id,
       sourceRevision: context.sourceSnapshot.sourceRevision,
       requirementHash: context.requirementHash,
       templateVersion: SURVEY_REPORT_TEMPLATE_VERSION,
     });
-    const artifact = requestedArtifact ?? currentArtifact ?? context.artifacts[0];
-    const report = artifactReport(artifact) ?? buildProfessionalReportDocument({
+    const requestedArtifact = requestedArtifactId
+      ? await findReadySurveyReportArtifactById(
+          context.survey.id,
+          requestedArtifactId
+        )
+      : undefined;
+    if (requestedArtifactId && !requestedArtifact) {
+      return NextResponse.json({ error: "report_version_not_found" }, { status: 404 });
+    }
+    const latestArtifact = !requestedArtifact && !currentArtifact && context.artifacts[0]
+      ? await findReadySurveyReportArtifactById(
+          context.survey.id,
+          context.artifacts[0].id
+        )
+      : undefined;
+    const artifact = requestedArtifact ?? currentArtifact ?? latestArtifact;
+    const status = generationStatus({
+      ...context,
+      artifacts: includeArtifactInStatus(context.artifacts, currentArtifact),
+    });
+    const report = await artifactReport(artifact) ?? buildProfessionalReportDocument({
       evidence: context.evidence,
       generatedAt: new Date().toISOString(),
+      reportPlan: context.reportCategoryPlan,
     });
+    const historyArtifacts = context.artifacts;
+    const nextHistoryCursor = nextHistoryCursorForPage(historyArtifacts);
+    const historyPage = generationStatus({
+      ...context,
+      artifacts: historyArtifacts,
+    }).versions;
 
     return NextResponse.json({
       report,
       preview: !artifact,
       selectedArtifactId: artifact?.id ?? null,
-      generation: status,
+      generation: { ...status, nextHistoryCursor },
+      historyPage,
+      nextHistoryCursor,
     });
   } catch (error) {
     console.error("[api] professional-report load failed", error);
@@ -220,21 +325,17 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
+  let claimedGeneration:
+    | { artifactKey: SurveyReportArtifactKey; sessionId: string }
+    | undefined;
   try {
     const context = await loadReportContext(params.id, true);
     if ("response" in context) return context.response;
     const body = (await request.json().catch(() => ({}))) as {
-      instruction?: unknown;
       model?: unknown;
     };
-    const instruction = String(body.instruction ?? "").trim();
     const model = String(body.model ?? "qwen3.7-max").trim() || "qwen3.7-max";
-    const requirementHash = instruction
-      ? hashSurveyReportRequirement({
-          plan: context.requirementPayload,
-          instruction,
-        })
-      : context.requirementHash;
+    const requirementHash = context.requirementHash;
     const artifactKey = {
       surveyId: context.survey.id,
       sourceRevision: context.sourceSnapshot.sourceRevision,
@@ -243,25 +344,28 @@ export async function POST(request: Request, { params }: { params: { id: string 
     };
     const existing = await findReadySurveyReportArtifact(artifactKey);
     if (existing) {
+      const historyPage = await listReadySurveyReportArtifacts(context.survey.id);
+      const artifacts = includeArtifactInStatus(
+        historyPage,
+        existing
+      );
       return NextResponse.json({
-        report: artifactReport(existing),
+        report: await artifactReport(existing),
         reused: true,
         model: existing.modelId,
-        generation: generationStatus(
-          { ...context, artifacts: await listReadySurveyReportArtifacts(context.survey.id) },
-          requirementHash
-        ),
+        generation: {
+          ...generationStatus({ ...context, artifacts }, requirementHash),
+          nextHistoryCursor: nextHistoryCursorForPage(historyPage),
+        },
       });
     }
 
-    const session = await createSurveyAiSession({
-      id: randomUUID(),
+    const claim = await claimSurveyReportGeneration({
+      ...artifactKey,
+      sessionId: randomUUID(),
       actorUserId: context.user.id,
-      kind: "report",
-      goal: instruction || "生成专业问卷报告",
-      surveyId: context.survey.id,
+      goal: "按已保存的章节计划生成专业问卷报告",
       teamId: context.survey.team_id,
-      status: "generating",
       selectedModelId: model,
       provider: "qwen",
       context: {
@@ -270,6 +374,35 @@ export async function POST(request: Request, { params }: { params: { id: string 
         requirementHash,
       },
     });
+    if (claim.status === "ready") {
+      const historyPage = await listReadySurveyReportArtifacts(context.survey.id);
+      const artifacts = includeArtifactInStatus(
+        historyPage,
+        claim.artifact
+      );
+      return NextResponse.json({
+        report: await artifactReport(claim.artifact),
+        reused: true,
+        model: claim.artifact.modelId,
+        generation: {
+          ...generationStatus({ ...context, artifacts }, requirementHash),
+          nextHistoryCursor: nextHistoryCursorForPage(historyPage),
+        },
+      });
+    }
+    if (claim.status === "in_progress") {
+      return NextResponse.json({
+        status: "in_progress",
+        sessionId: claim.sessionId,
+        reused: false,
+        generation: {
+          ...generationStatus(context, requirementHash),
+          nextHistoryCursor: nextHistoryCursorForPage(context.artifacts),
+        },
+      }, { status: 202 });
+    }
+    const session = { id: claim.sessionId };
+    claimedGeneration = { artifactKey, sessionId: session.id };
     const startedAt = Date.now();
     let aiClaims: AiEvidenceClaimCandidate[] = [];
     let warning: string | undefined;
@@ -291,7 +424,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
               role: "user",
               content: JSON.stringify({
                 task: "generate_evidence_bound_survey_claims",
-                requirement: instruction || context.requirementPayload,
+                requirement: context.requirementPayload,
                 requiredShape: {
                   claims: [{
                     statement: "结论",
@@ -302,7 +435,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
                     recommendation: "行动建议",
                   }],
                 },
-                evidence: context.evidence,
+                evidence: modelSafeSurveyReportEvidence(context.evidence),
               }),
             },
           ],
@@ -348,6 +481,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       evidence: context.evidence,
       generatedAt,
       aiClaims,
+      reportPlan: context.reportCategoryPlan,
     });
     const artifact = await createVersionedSurveyReportArtifact({
       id: randomUUID(),
@@ -361,17 +495,34 @@ export async function POST(request: Request, { params }: { params: { id: string 
       modelId: artifactModel,
       provider: artifactProvider,
     });
-    await updateSurveyAiSessionStatus(session.id, "ready");
+    await completeSurveyReportGenerationClaim({
+      ...artifactKey,
+      sessionId: session.id,
+      artifactId: artifact.id,
+    });
     const artifacts = await listReadySurveyReportArtifacts(context.survey.id);
 
     return NextResponse.json({
-      report: artifactReport(artifact),
+      report: await artifactReport(artifact),
       reused: false,
       warning,
       model: artifact.modelId,
-      generation: generationStatus({ ...context, artifacts }, requirementHash),
+      generation: {
+        ...generationStatus({ ...context, artifacts }, requirementHash),
+        nextHistoryCursor: nextHistoryCursorForPage(artifacts),
+      },
     });
   } catch (error) {
+    if (claimedGeneration) {
+      await releaseSurveyReportGenerationClaim({
+        ...claimedGeneration.artifactKey,
+        sessionId: claimedGeneration.sessionId,
+        errorMessage:
+          error instanceof Error ? error.message : "report_generation_failed",
+      }).catch((releaseError) => {
+        console.error("[api] professional-report claim release failed", releaseError);
+      });
+    }
     console.error("[api] professional-report generation failed", error);
     return NextResponse.json({ error: "professional_report_generation_failed" }, { status: 500 });
   }

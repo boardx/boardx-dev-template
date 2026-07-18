@@ -1,4 +1,8 @@
-import type { SurveyReportArtifactVersion } from "@repo/data";
+import type {
+  SurveyReportArtifactVersion,
+  SurveyReportCategoryPlanInput,
+} from "@repo/data";
+import { areSurveyReportCategoryPlansEqual } from "./survey-report-category-plan";
 
 export interface SurveyReportArtifactSummary {
   id: string;
@@ -22,6 +26,124 @@ export interface SurveyReportGenerationStatus {
   currentArtifact: SurveyReportArtifactSummary | null;
   latestArtifact: SurveyReportArtifactSummary | null;
   versions: SurveyReportArtifactSummary[];
+  nextHistoryCursor?: string | null;
+}
+
+export interface SurveyReportRequestState {
+  epoch: number;
+  requirementsChangedOverride: boolean;
+}
+
+export interface SurveyReportRefreshResolution {
+  accepted: boolean;
+  state: SurveyReportRequestState;
+}
+
+export interface SurveyReportRequestTransition {
+  invalidated: boolean;
+  requestEpoch: number | null;
+  state: SurveyReportRequestState;
+}
+
+export function createSurveyReportRequestState(): SurveyReportRequestState {
+  return {
+    epoch: 0,
+    requirementsChangedOverride: false,
+  };
+}
+
+export function captureSurveyReportRequestEpoch(
+  state: SurveyReportRequestState
+): number {
+  return state.epoch;
+}
+
+export function markSurveyReportRequestsRequirementsChanged(
+  state: SurveyReportRequestState
+): SurveyReportRequestState {
+  return {
+    epoch: state.epoch + 1,
+    requirementsChangedOverride: true,
+  };
+}
+
+export function beginSurveyReportCategoryPlanPersistence(input: {
+  state: SurveyReportRequestState;
+  previousPlan: SurveyReportCategoryPlanInput | undefined;
+  persistedPlan: SurveyReportCategoryPlanInput;
+  invalidateWhenUnchanged: boolean;
+}): SurveyReportRequestTransition {
+  const unchanged = input.previousPlan
+    ? areSurveyReportCategoryPlansEqual(
+        input.previousPlan,
+        input.persistedPlan
+      )
+    : false;
+  if (unchanged && !input.invalidateWhenUnchanged) {
+    return {
+      invalidated: false,
+      requestEpoch: null,
+      state: input.state,
+    };
+  }
+  const state = markSurveyReportRequestsRequirementsChanged(input.state);
+  return {
+    invalidated: true,
+    requestEpoch: state.epoch,
+    state,
+  };
+}
+
+export function beginSurveyReportGenerationRequest(
+  state: SurveyReportRequestState
+): { requestEpoch: number; state: SurveyReportRequestState } {
+  const next = {
+    ...state,
+    epoch: state.epoch + 1,
+  };
+  return {
+    requestEpoch: next.epoch,
+    state: next,
+  };
+}
+
+export function isSurveyReportRequestCurrent(
+  state: SurveyReportRequestState,
+  requestEpoch: number
+): boolean {
+  return state.epoch === requestEpoch;
+}
+
+export function settleSurveyReportRefresh(
+  state: SurveyReportRequestState,
+  requestEpoch: number,
+  succeeded: boolean
+): SurveyReportRefreshResolution {
+  if (!succeeded || !isSurveyReportRequestCurrent(state, requestEpoch)) {
+    return { accepted: false, state };
+  }
+  return {
+    accepted: true,
+    state: {
+      ...state,
+      requirementsChangedOverride: false,
+    },
+  };
+}
+
+export function settleSurveyReportGenerationRequest(
+  state: SurveyReportRequestState,
+  requestEpoch: number,
+  succeeded: boolean
+): SurveyReportRefreshResolution {
+  return settleSurveyReportRefresh(state, requestEpoch, succeeded);
+}
+
+export function markSurveyReportGenerationRequirementsChanged(
+  generation: SurveyReportGenerationStatus | undefined
+): SurveyReportGenerationStatus | undefined {
+  if (!generation) return undefined;
+  return { ...generation, requirementChanged: true };
 }
 
 function summarizeArtifact(
@@ -62,8 +184,13 @@ export function resolveSurveyReportGenerationStatus(input: {
     currentSourceRevision: input.currentSourceRevision,
     currentRequirementHash: input.currentRequirementHash,
     currentResponseCount: input.currentResponseCount,
-    stale: Boolean(latest && latest.sourceRevision !== input.currentSourceRevision),
+    stale: Boolean(
+      !current &&
+      latest &&
+      latest.sourceRevision !== input.currentSourceRevision
+    ),
     requirementChanged: Boolean(
+      !current &&
       latest &&
       latest.sourceRevision === input.currentSourceRevision &&
       latest.requirementHash !== input.currentRequirementHash

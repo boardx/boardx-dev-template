@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import {
   buildSurveyReportSourceSnapshot,
   hashSurveyReportRequirement,
@@ -73,6 +73,33 @@ describe("survey report source revisions", () => {
     expect(second.contentHash).not.toBe(first.contentHash);
   });
 
+  it("changes the source revision when the publication sampling contract changes", () => {
+    const base = sourceWithResponses([
+      response(1, "成分", "2026-07-18T01:00:00.000Z"),
+    ]);
+    const first = buildSurveyReportSourceSnapshot({
+      ...base,
+      survey: {
+        ...base.survey,
+        responseMode: "anonymous",
+        responseLimit: 100,
+        oneResponsePerUser: false,
+      },
+    }, generatedAt);
+    const second = buildSurveyReportSourceSnapshot({
+      ...base,
+      survey: {
+        ...base.survey,
+        responseMode: "identified",
+        responseLimit: 50,
+        oneResponsePerUser: true,
+      },
+    }, generatedAt);
+
+    expect(second.sourceRevision).not.toBe(first.sourceRevision);
+    expect(second.contentHash).not.toBe(first.contentHash);
+  });
+
   it("omits respondent identity from the source data", () => {
     const identifiedResponse = {
       ...response(1, "成分", "2026-07-18T01:00:00.000Z"),
@@ -108,5 +135,38 @@ describe("survey report version persistence migration", () => {
     expect(sql).toContain("requirement_hash");
     expect(sql).toContain("template_version");
     expect(sql).toContain("WHERE status = 'ready'");
+  });
+
+  it("creates a durable generation claim keyed by every artifact dimension", () => {
+    const migrationUrl = new URL(
+      "../migrations/049_survey_report_generation_claims.sql",
+      import.meta.url
+    );
+    expect(existsSync(migrationUrl)).toBe(true);
+    if (!existsSync(migrationUrl)) return;
+    const sql = readFileSync(migrationUrl, "utf8");
+
+    expect(sql).toContain("CREATE TABLE IF NOT EXISTS survey_report_generation_claims");
+    expect(sql).toContain(
+      "PRIMARY KEY (survey_id, source_revision, requirement_hash, template_version)"
+    );
+    expect(sql).toContain("session_id uuid NOT NULL");
+    expect(sql).toContain("status text NOT NULL");
+  });
+
+  it("links artifacts to source snapshots and creates a stable history index", () => {
+    const migrationUrl = new URL(
+      "../migrations/050_survey_report_artifact_integrity.sql",
+      import.meta.url
+    );
+    expect(existsSync(migrationUrl)).toBe(true);
+    if (!existsSync(migrationUrl)) return;
+    const sql = readFileSync(migrationUrl, "utf8");
+
+    expect(sql).toContain("FOREIGN KEY (source_revision)");
+    expect(sql).toContain(
+      "REFERENCES survey_report_source_snapshots(source_revision)"
+    );
+    expect(sql).toContain("created_at DESC, id DESC");
   });
 });
