@@ -45,6 +45,7 @@ import { SurveyListScreen } from "@/components/survey/survey-list-screen";
 import { SurveyNavigationSidebar, type SurveyNavigationTarget } from "@/components/survey/survey-navigation-sidebar";
 import { SurveyOutlinePanel } from "@/components/survey/survey-outline-panel";
 import { SurveyDesignWorkbench } from "@/components/survey/survey-design-workbench";
+import { SurveyReportVersionHistory } from "@/components/survey/survey-report-version-history";
 import { SurveyVersionedReportComposer } from "@/components/survey/survey-versioned-report-composer";
 import {
   downloadProfessionalWordReport,
@@ -2738,18 +2739,22 @@ function WorkspaceReportWorkbench({
   categoryPlan,
   generatedReport,
   professionalReport,
+  generation,
   generating,
   error,
   onGenerateReport,
+  onSelectVersion,
 }: {
   survey: Survey;
   questions: Question[];
   categoryPlan?: ReportCategoryPlanDraft;
   generatedReport?: unknown;
   professionalReport?: ProfessionalSurveyReportDocument;
+  generation?: SurveyReportGenerationStatus;
   generating: boolean;
   error: string;
   onGenerateReport: (instruction?: string, reportCategoryPlan?: ReportCategoryPlanDraft) => void;
+  onSelectVersion: (artifactId: string) => Promise<boolean>;
 }) {
   const [reportOutlineCollapsed, setReportOutlineCollapsed] = useState(false);
   const [selectedReportSection, setSelectedReportSection] = useState("");
@@ -2953,6 +2958,13 @@ function WorkspaceReportWorkbench({
           </div>
         </div>
       </section>
+
+      <SurveyReportVersionHistory
+        key={survey.id}
+        generation={generation}
+        report={professionalReport}
+        onSelectVersion={onSelectVersion}
+      />
 
       {error && (
         <p
@@ -6261,7 +6273,6 @@ export default function SurveysPage() {
                     reportCategoryPlansBySurveyId[currentSurveyForNavigation.id] ??
                     fallbackReportCategoryPlan(currentSurveyForNavigation, questions)
                   }
-                  professionalReport={professionalReportsBySurveyId[currentSurveyForNavigation.id]}
                   generation={professionalReportGenerationBySurveyId[currentSurveyForNavigation.id]}
                   saving={workspaceTemplateSaving}
                   classifying={workspaceReportClassifying}
@@ -6276,13 +6287,6 @@ export default function SurveysPage() {
                     )
                   }
                   onGenerateReport={() => void generateWorkspaceCategoryReport(currentSurveyForNavigation.id)}
-                  onSelectVersion={(artifactId) =>
-                    loadWorkspaceProfessionalReportVersion(
-                      currentSurveyForNavigation.id,
-                      artifactId
-                    )
-                  }
-                  onOpenReport={() => navigateWorkspace("report")}
                   onBackToDesign={() => {
                     window.location.href = "/surveys?view=templates";
                   }}
@@ -6328,10 +6332,17 @@ export default function SurveysPage() {
                   categoryPlan={reportCategoryPlansBySurveyId[currentSurveyForNavigation.id]}
                   generatedReport={generatedReportsBySurveyId[currentSurveyForNavigation.id]}
                   professionalReport={professionalReportsBySurveyId[currentSurveyForNavigation.id]}
+                  generation={professionalReportGenerationBySurveyId[currentSurveyForNavigation.id]}
                   generating={workspaceReportGenerating}
                   error={workspaceTemplateError}
                   onGenerateReport={(instruction, reportCategoryPlan) =>
                     void generateWorkspaceCategoryReport(currentSurveyForNavigation.id, instruction, reportCategoryPlan)
+                  }
+                  onSelectVersion={(artifactId) =>
+                    loadWorkspaceProfessionalReportVersion(
+                      currentSurveyForNavigation.id,
+                      artifactId
+                    )
                   }
                 />
               </div>

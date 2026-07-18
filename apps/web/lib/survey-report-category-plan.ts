@@ -64,6 +64,54 @@ const CHART_TYPE_BY_TEMPLATE: Record<SurveyReportChartTemplateId, SurveyReportCh
   "heatmap-cartesian": "heatmap",
 };
 
+const REPORT_INPUT_MODE_ORDER: ReportInputMode[] = ["text", "chat", "chart", "image"];
+
+function stableCategoryFields(category: SurveyReportCategoryInput) {
+  const chartConfig = category.chartConfig;
+  return [
+    category.id,
+    category.name,
+    category.description,
+    category.requirement ?? null,
+    category.questionIds,
+    category.outputType,
+    category.inputModes[0],
+    category.chartTemplateId ?? null,
+    category.chartType ?? null,
+    category.chartStyle ?? null,
+    chartConfig
+      ? [
+          chartConfig.primaryColor,
+          chartConfig.maxDimensions,
+          chartConfig.sort,
+          chartConfig.showLabels,
+          chartConfig.showLegend,
+          chartConfig.orientation,
+        ]
+      : null,
+    category.dataPrompt ?? null,
+    REPORT_INPUT_MODE_ORDER.map((mode) => category.modulePrompts?.[mode] ?? null),
+    category.prompt,
+    category.order,
+    category.isCustom,
+  ];
+}
+
+function stablePlanFields(plan: SurveyReportCategoryPlanInput) {
+  return [
+    plan.title,
+    plan.description,
+    orderedReportCategories(plan).map(stableCategoryFields),
+  ];
+}
+
+export function areSurveyReportCategoryPlansEqual(
+  left: SurveyReportCategoryPlanInput,
+  right: SurveyReportCategoryPlanInput
+): boolean {
+  return JSON.stringify(stablePlanFields(left)) === JSON.stringify(stablePlanFields(right));
+}
+
 function buildTextPreview(
   category: SurveyReportCategoryInput,
   survey: ComposerSurvey,

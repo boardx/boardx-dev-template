@@ -9,7 +9,6 @@ import {
   ChevronLeft,
   Clock3,
   FileText,
-  History,
   ImageIcon,
   Plus,
   RefreshCw,
@@ -24,21 +23,20 @@ import type {
   SurveyReportCategoryPlanInput,
 } from "@repo/data";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SurveyReportOutputPreview } from "@/components/survey/survey-report-output-preview";
 import {
   addCustomReportCategory,
+  areSurveyReportCategoryPlansEqual,
   moveReportCategory,
   normalizeCategoryOrder,
   updateReportCategory,
 } from "@/lib/survey-report-category-plan";
 import { SURVEY_REPORT_CHART_TEMPLATES } from "@/lib/survey-report-chart-templates";
 import type { SurveyReportGenerationStatus } from "@/lib/survey-report-generation";
-import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
-import { selectReportVersionAndOpenReport } from "@/lib/survey-report-version-navigation";
 
 interface ReportComposerSurvey {
   id: number;
@@ -50,7 +48,6 @@ interface ReportComposerSurvey {
 interface SurveyVersionedReportComposerProps {
   survey: ReportComposerSurvey;
   plan: SurveyReportCategoryPlanInput;
-  professionalReport?: ProfessionalSurveyReportDocument;
   generation?: SurveyReportGenerationStatus;
   saving: boolean;
   classifying: boolean;
@@ -60,8 +57,6 @@ interface SurveyVersionedReportComposerProps {
   onClassify: () => void;
   onSavePlan: (plan: SurveyReportCategoryPlanInput) => void;
   onGenerateReport: () => void;
-  onSelectVersion: (artifactId: string) => Promise<boolean>;
-  onOpenReport: () => void | Promise<void>;
   onBackToDesign: () => void;
   onOpenCollect: () => void;
 }
@@ -83,7 +78,17 @@ const CHART_TEMPLATE_LABELS = {
   "heatmap-cartesian": "热力图",
 } as const;
 
-function generationLabel(generation?: SurveyReportGenerationStatus) {
+function generationLabel(
+  generation: SurveyReportGenerationStatus | undefined,
+  draftDirty: boolean
+) {
+  if (draftDirty) {
+    return {
+      label: "草稿未保存",
+      detail: "当前预览包含未保存变化；保存后再判断报告版本状态。",
+      variant: "outline" as const,
+    };
+  }
   if (!generation?.latestArtifact) {
     return { label: "尚未生成", detail: "保存要求后，手动生成首个可追溯报告版本。", variant: "muted" as const };
   }
@@ -128,8 +133,6 @@ export function SurveyVersionedReportComposer({
   onClassify,
   onSavePlan,
   onGenerateReport,
-  onSelectVersion,
-  onOpenReport,
   onBackToDesign,
   onOpenCollect,
 }: SurveyVersionedReportComposerProps) {
@@ -148,7 +151,8 @@ export function SurveyVersionedReportComposer({
   const categories = draft.categories.slice().sort((left, right) => left.order - right.order);
   const selectedCategory =
     categories.find((category) => category.id === selectedCategoryId) ?? categories[0];
-  const reportState = generationLabel(generation);
+  const draftDirty = !areSurveyReportCategoryPlansEqual(draft, plan);
+  const reportState = generationLabel(generation, draftDirty);
 
   function patchSelected(patch: Partial<SurveyReportCategoryInput>) {
     if (!selectedCategory) return;
@@ -490,10 +494,14 @@ export function SurveyVersionedReportComposer({
                   {formatVersionTime(generation.latestArtifact.createdAt)}
                 </p>
               ) : null}
-              <Button type="button" size="sm" variant="outline" onClick={() => void onOpenReport()}>
+              <a
+                data-testid="open-analysis-report"
+                href={`/surveys?survey=${survey.id}&step=report`}
+                className={buttonVariants({ size: "sm", variant: "outline" })}
+              >
                 <FileText className="h-4 w-4" strokeWidth={1.6} />
-                分析报告
-              </Button>
+                查看分析报告
+              </a>
             </div>
           </div>
 
@@ -516,44 +524,6 @@ export function SurveyVersionedReportComposer({
             )}
           </div>
 
-          <details
-            data-testid="report-version-history"
-            className="border-t border-border bg-background xl:shrink-0 xl:open:grid xl:open:min-h-0 xl:open:max-h-[45%] xl:open:grid-rows-[auto_minmax(0,1fr)]"
-          >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4">
-              <span className="flex items-center gap-2 text-13 font-semibold text-foreground">
-                <History className="h-4 w-4" strokeWidth={1.6} />
-                历史版本
-              </span>
-              <span className="text-11 text-muted-foreground">{generation?.versions.length ?? 0} 个版本</span>
-            </summary>
-            <div className="grid gap-px border-t border-border bg-border xl:min-h-0 xl:overflow-y-auto">
-              {generation?.versions.length ? generation.versions.map((version, index) => (
-                <button
-                  key={version.id}
-                  type="button"
-                  className="flex items-center justify-between gap-3 bg-background px-5 py-3 text-left transition-colors hover:bg-secondary"
-                  onClick={() => void selectReportVersionAndOpenReport(
-                    version.id,
-                    onSelectVersion,
-                    onOpenReport
-                  )}
-                >
-                  <span>
-                    <span className="block text-12 font-semibold text-foreground">
-                      版本 {generation.versions.length - index}
-                    </span>
-                    <span className="mt-0.5 block text-11 text-muted-foreground">
-                      {version.responseCount} 份答卷 · {formatVersionTime(version.createdAt)}
-                    </span>
-                  </span>
-                  {version.id === generation.currentArtifact?.id ? <Badge variant="success">当前</Badge> : null}
-                </button>
-              )) : (
-                <p className="bg-background px-5 py-4 text-12 text-muted-foreground">生成后可在这里切换历史版本。</p>
-              )}
-            </div>
-          </details>
         </aside>
       </section>
     </div>
