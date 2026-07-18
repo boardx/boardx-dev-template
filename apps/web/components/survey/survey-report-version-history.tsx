@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Check, Clock3, History, LoaderCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { SurveyReportGenerationStatus } from "@/lib/survey-report-generation";
 import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
 
@@ -11,6 +12,7 @@ interface SurveyReportVersionHistoryProps {
   report?: ProfessionalSurveyReportDocument;
   disabled?: boolean;
   onSelectVersion: (artifactId: string) => Promise<boolean>;
+  onLoadMore: () => Promise<boolean>;
 }
 
 function formatVersionTime(value: string) {
@@ -34,9 +36,11 @@ export function SurveyReportVersionHistory({
   report,
   disabled = false,
   onSelectVersion,
+  onLoadMore,
 }: SurveyReportVersionHistoryProps) {
   const [selectedVersionId, setSelectedVersionId] = useState(() => initialVersionId(generation));
   const [selectingVersionId, setSelectingVersionId] = useState("");
+  const [loadingMore, setLoadingMore] = useState(false);
   const defaultVersionId = initialVersionId(generation);
   const versions = generation?.versions ?? [];
 
@@ -65,6 +69,16 @@ export function SurveyReportVersionHistory({
       if (loaded) setSelectedVersionId(artifactId);
     } finally {
       setSelectingVersionId("");
+    }
+  }
+
+  async function loadMore() {
+    if (disabled || selectingVersionId || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      await onLoadMore();
+    } finally {
+      setLoadingMore(false);
     }
   }
 
@@ -125,6 +139,22 @@ export function SurveyReportVersionHistory({
         }) : (
           <p className="bg-background px-5 py-4 text-12 text-muted-foreground">生成报告后可在这里切换不可变版本。</p>
         )}
+        {generation?.nextHistoryCursor ? (
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={disabled || Boolean(selectingVersionId) || loadingMore}
+            className="h-11 w-full rounded-none border-t border-border bg-background text-12"
+            onClick={() => void loadMore()}
+          >
+            {loadingMore ? (
+              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <History className="mr-2 h-4 w-4" />
+            )}
+            {loadingMore ? "正在加载" : "加载更早版本"}
+          </Button>
+        ) : null}
       </div>
     </section>
   );

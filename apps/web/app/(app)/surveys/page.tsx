@@ -2754,6 +2754,7 @@ function WorkspaceReportWorkbench({
   error,
   onGenerateReport,
   onSelectVersion,
+  onLoadMoreVersions,
 }: {
   survey: Survey;
   questions: Question[];
@@ -2765,6 +2766,7 @@ function WorkspaceReportWorkbench({
   error: string;
   onGenerateReport: (instruction?: string, reportCategoryPlan?: ReportCategoryPlanDraft) => void;
   onSelectVersion: (artifactId: string) => Promise<boolean>;
+  onLoadMoreVersions: () => Promise<boolean>;
 }) {
   const [reportOutlineCollapsed, setReportOutlineCollapsed] = useState(false);
   const [selectedReportSection, setSelectedReportSection] = useState("");
@@ -2975,6 +2977,7 @@ function WorkspaceReportWorkbench({
         report={professionalReport}
         disabled={generating}
         onSelectVersion={onSelectVersion}
+        onLoadMore={onLoadMoreVersions}
       />
 
       {error && (
@@ -4754,7 +4757,17 @@ export default function SurveysPage() {
       if (payload.generation) {
         setProfessionalReportGenerationBySurveyId((items) => ({
           ...items,
-          [surveyId]: payload.generation as SurveyReportGenerationStatus,
+          [surveyId]: {
+            ...(payload.generation as SurveyReportGenerationStatus),
+            versions: Array.from(new Map([
+              ...(payload.generation.versions ?? []),
+              ...(items[surveyId]?.versions ?? []),
+            ].map((version) => [version.id, version])).values()),
+            nextHistoryCursor:
+              items[surveyId]
+                ? items[surveyId].nextHistoryCursor
+                : payload.generation.nextHistoryCursor,
+          },
         }));
       }
       return true;
@@ -4766,6 +4779,43 @@ export default function SurveysPage() {
         return false;
       }
       setWorkspaceTemplateError("报告版本加载失败，请稍后重试。");
+      return false;
+    }
+  }
+
+  async function loadMoreWorkspaceProfessionalReportVersions(
+    surveyId: number
+  ): Promise<boolean> {
+    const cursor =
+      professionalReportGenerationBySurveyId[surveyId]?.nextHistoryCursor;
+    if (!cursor) return true;
+    try {
+      const res = await fetch(
+        `/api/surveys/${surveyId}/professional-report?historyBefore=${encodeURIComponent(cursor)}`
+      );
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || !Array.isArray(payload.historyPage)) {
+        setWorkspaceTemplateError(payload?.error ?? "历史版本加载失败");
+        return false;
+      }
+      setProfessionalReportGenerationBySurveyId((items) => {
+        const current = items[surveyId];
+        if (!current) return items;
+        return {
+          ...items,
+          [surveyId]: {
+            ...current,
+            versions: Array.from(new Map([
+              ...current.versions,
+              ...payload.historyPage,
+            ].map((version) => [version.id, version])).values()),
+            nextHistoryCursor: payload.nextHistoryCursor ?? null,
+          },
+        };
+      });
+      return true;
+    } catch {
+      setWorkspaceTemplateError("历史版本加载失败，请稍后重试。");
       return false;
     }
   }
@@ -6538,6 +6588,11 @@ export default function SurveysPage() {
                     loadWorkspaceProfessionalReportVersion(
                       currentSurveyForNavigation.id,
                       artifactId
+                    )
+                  }
+                  onLoadMoreVersions={() =>
+                    loadMoreWorkspaceProfessionalReportVersions(
+                      currentSurveyForNavigation.id
                     )
                   }
                 />

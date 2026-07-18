@@ -242,6 +242,8 @@ const SOURCE_SNAPSHOT_COLUMNS =
   "source_revision, survey_id, content_hash, schema_version, response_count, source_data, created_at";
 const REPORT_ARTIFACT_COLUMNS =
   "id, survey_id, source_revision, requirement_hash, template_version, response_count, report, status, model_id, provider, created_at";
+const REPORT_ARTIFACT_SUMMARY_COLUMNS =
+  "id, survey_id, source_revision, requirement_hash, template_version, response_count, '{}'::jsonb AS report, status, model_id, provider, created_at";
 
 export async function ensureSurveyReportSourceSnapshot(
   snapshot: SurveyReportSourceSnapshot
@@ -266,6 +268,19 @@ export async function ensureSurveyReportSourceSnapshot(
   return sourceSnapshotFromRow(rows[0]!);
 }
 
+export async function findSurveyReportSourceSnapshot(
+  sourceRevision: string
+): Promise<SurveyReportSourceSnapshotRecord | undefined> {
+  const rows = await query<SurveyReportSourceSnapshotRow>(
+    `SELECT ${SOURCE_SNAPSHOT_COLUMNS}
+     FROM survey_report_source_snapshots
+     WHERE source_revision = $1
+     LIMIT 1`,
+    [sourceRevision]
+  );
+  return rows[0] ? sourceSnapshotFromRow(rows[0]) : undefined;
+}
+
 export async function findReadySurveyReportArtifact(
   input: SurveyReportArtifactKey
 ): Promise<SurveyReportArtifactVersion | undefined> {
@@ -280,6 +295,24 @@ export async function findReadySurveyReportArtifact(
      ORDER BY created_at DESC
      LIMIT 1`,
     [input.surveyId, input.sourceRevision, input.requirementHash, input.templateVersion]
+  );
+  return rows[0] ? artifactFromRow(rows[0]) : undefined;
+}
+
+export async function findReadySurveyReportArtifactById(
+  surveyId: number,
+  artifactId: string
+): Promise<SurveyReportArtifactVersion | undefined> {
+  const rows = await query<SurveyReportArtifactVersionRow>(
+    `SELECT ${REPORT_ARTIFACT_COLUMNS}
+     FROM survey_ai_report_artifacts
+     WHERE survey_id = $1
+       AND id = $2
+       AND status = 'ready'
+       AND source_revision IS NOT NULL
+       AND requirement_hash IS NOT NULL
+     LIMIT 1`,
+    [surveyId, artifactId]
   );
   return rows[0] ? artifactFromRow(rows[0]) : undefined;
 }
@@ -546,17 +579,32 @@ export async function releaseSurveyReportGenerationClaim(
 }
 
 export async function listReadySurveyReportArtifacts(
-  surveyId: number
+  surveyId: number,
+  options: {
+    limit?: number;
+    before?: { createdAt: string; id: string };
+  } = {}
 ): Promise<SurveyReportArtifactVersion[]> {
+  const limit = Math.max(1, Math.min(options.limit ?? 50, 100));
   const rows = await query<SurveyReportArtifactVersionRow>(
-    `SELECT ${REPORT_ARTIFACT_COLUMNS}
+    `SELECT ${REPORT_ARTIFACT_SUMMARY_COLUMNS}
      FROM survey_ai_report_artifacts
      WHERE survey_id = $1
        AND status = 'ready'
        AND source_revision IS NOT NULL
        AND requirement_hash IS NOT NULL
-     ORDER BY created_at DESC`,
-    [surveyId]
+       AND (
+         $2::timestamptz IS NULL
+         OR (created_at, id) < ($2::timestamptz, $3::uuid)
+       )
+     ORDER BY created_at DESC, id DESC
+     LIMIT $4`,
+    [
+      surveyId,
+      options.before?.createdAt ?? null,
+      options.before?.id ?? null,
+      limit,
+    ]
   );
   return rows.map(artifactFromRow);
 }

@@ -153,4 +153,20 @@ describe("survey report version persistence migration", () => {
     expect(sql).toContain("session_id uuid NOT NULL");
     expect(sql).toContain("status text NOT NULL");
   });
+
+  it("links artifacts to source snapshots and creates a stable history index", () => {
+    const migrationUrl = new URL(
+      "../migrations/050_survey_report_artifact_integrity.sql",
+      import.meta.url
+    );
+    expect(existsSync(migrationUrl)).toBe(true);
+    if (!existsSync(migrationUrl)) return;
+    const sql = readFileSync(migrationUrl, "utf8");
+
+    expect(sql).toContain("FOREIGN KEY (source_revision)");
+    expect(sql).toContain(
+      "REFERENCES survey_report_source_snapshots(source_revision)"
+    );
+    expect(sql).toContain("created_at DESC, id DESC");
+  });
 });

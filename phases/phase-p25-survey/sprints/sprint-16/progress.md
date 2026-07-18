@@ -73,3 +73,23 @@
 - 运行过的验证: Data 94 项、Web 162 项、Data/Web typecheck 与 F16 Playwright 通过。
 - 已知风险或未解决问题: 等待 harness backfill、独立复审与全仓基础验证。
 - 下一步最佳动作: 刷新证据并复审；无阻塞后提交、推送现有 PR `#716`。
+
+### 2026-07-18 20:58:00
+- 本轮目标: 关闭复审剩余的历史隐私、正式图表渲染和历史查询扩展性问题。
+- 已完成: 正式报告按 8 种白名单模板使用真实聚合数据构造并渲染 ECharts option；
+  历史产物依据各自 source revision 递归脱敏；历史列表改为 50 条游标分页摘要，
+  完整报告按合法 artifact UUID 精确加载，首屏外当前契约不会误报要求变化。
+- 运行过的验证: Data 94 项、Web 166 项、Data/Web typecheck、design lint、
+  路由定向 7 项和 F16 Playwright 全流程通过。
+- 已记录证据: `evidence/survey-report-single-output-desktop.png` 已由本轮 E2E 刷新。
+- 已知风险或未解决问题: 等待独立复审、harness evidence backfill 和全仓基础验证。
+- 下一步最佳动作: 复审无 blocker 后提交并推送现有 PR `#716`。
+
+### 2026-07-18 21:06:00
+- 本轮目标: 关闭第三轮复审的历史版本完整性与可达性问题。
+- 已完成: 新增 source snapshot 外键并对缺快照产物 fail-closed；历史分页接入分析报告
+  “加载更早版本”；游标使用 `created_at + artifact id` 稳定排序，切换版本后保留已加载历史。
+- 运行过的验证: Data/Web typecheck、Data 95 项、路由与状态 22 项、F16 Playwright 通过。
+- 已记录证据: E2E 桌面截图与 `evidence/F16.verify.log` 已通过 harness backfill 刷新。
+- 已知风险或未解决问题: 独立 reviewer 已确认无 blocker/Important。
+- 下一步最佳动作: 提交并推送现有 PR `#716`，等待 CI 与 merge。

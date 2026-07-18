@@ -10,6 +10,7 @@ import type {
   SurveyReportChartTemplateId,
   SurveyReportOutputType,
 } from "@repo/data";
+import { buildSurveyReportChartOption } from "./survey-report-chart-templates";
 
 export interface AiEvidenceClaimCandidate {
   statement: string;
@@ -30,6 +31,7 @@ export interface ProfessionalReportChart {
   title: string;
   type: "bar" | "score";
   templateId?: SurveyReportChartTemplateId;
+  option?: Record<string, unknown>;
   denominator: number;
   denominatorLabel: string;
   rows: Array<{ label: string; count: number; percentage: number }>;
@@ -111,6 +113,56 @@ export function modelSafeSurveyReportEvidence(
   };
 }
 
+export function rawTextResponsesFromSourceData(
+  sourceData: Record<string, unknown> | undefined
+): string[] {
+  const records = Array.isArray(sourceData?.records) ? sourceData.records : [];
+  const textQuestionIds = new Set(
+    records.flatMap((record) => {
+      if (!record || typeof record !== "object") return [];
+      const item = record as Record<string, unknown>;
+      return item.type === "question" &&
+        ["short_text", "text"].includes(String(item.questionType))
+        ? [String(item.id)]
+        : [];
+    })
+  );
+  return Array.from(new Set(records.flatMap((record) => {
+    if (!record || typeof record !== "object") return [];
+    const item = record as Record<string, unknown>;
+    if (item.type !== "response" || !item.answers || typeof item.answers !== "object") {
+      return [];
+    }
+    return Object.entries(item.answers as Record<string, unknown>)
+      .filter(([questionId]) => textQuestionIds.has(questionId))
+      .flatMap(([, answer]) => Array.isArray(answer) ? answer : [answer])
+      .map((answer) => String(answer ?? "").trim())
+      .filter(Boolean);
+  })));
+}
+
+function redactRawText(value: unknown, rawTextResponses: string[]): unknown {
+  if (typeof value === "string") {
+    return rawTextResponses.reduce(
+      (redacted, response) =>
+        response.length > 1
+          ? redacted.split(response).join("[开放题原文已脱敏]")
+          : redacted,
+      value
+    );
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => redactRawText(item, rawTextResponses));
+  }
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+      key,
+      redactRawText(item, rawTextResponses),
+    ])
+  );
+}
+
 function chartForQuestion(question: SurveyQuestionEvidence): ProfessionalReportChart | undefined {
   const rows = question.distribution ?? question.score?.distribution;
   if (!rows?.length || question.validResponseCount === 0) return undefined;
@@ -172,6 +224,10 @@ function chapterForCategory(
     ? {
         ...chartForQuestion(chartQuestion)!,
         templateId: category.chartTemplateId,
+        option: buildSurveyReportChartOption(
+          category.chartTemplateId ?? "line-simple",
+          chartForQuestion(chartQuestion)!.rows
+        ),
       }
     : undefined;
   const limitations = Array.from(new Set([
@@ -212,11 +268,18 @@ function chapterForCategory(
 }
 
 export function sanitizeProfessionalReportDocument(
-  report: ProfessionalSurveyReportDocument
+  report: ProfessionalSurveyReportDocument,
+  rawTextResponses: string[] = []
 ): ProfessionalSurveyReportDocument {
+  const redactedReport = redactRawText(
+    report,
+    rawTextResponses
+  ) as ProfessionalSurveyReportDocument;
   return {
-    ...report,
-    chapters: (Array.isArray(report.chapters) ? report.chapters : []).map((rawChapter) => {
+    ...redactedReport,
+    chapters: (
+      Array.isArray(redactedReport.chapters) ? redactedReport.chapters : []
+    ).map((rawChapter) => {
       const {
         textResponses: _rawTextResponses,
         ...chapter

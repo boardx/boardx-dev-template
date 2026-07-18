@@ -1,82 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import * as echarts from "echarts/core";
-import {
-  BarChart,
-  FunnelChart,
-  GaugeChart,
-  HeatmapChart,
-  LineChart,
-  PieChart,
-  RadarChart,
-  ScatterChart,
-} from "echarts/charts";
-import {
-  GridComponent,
-  LegendComponent,
-  RadarComponent,
-  TitleComponent,
-  TooltipComponent,
-  VisualMapComponent,
-} from "echarts/components";
-import { CanvasRenderer } from "echarts/renderers";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { BarChart3, Check, Copy, FileText, ImageIcon } from "lucide-react";
 import type { SurveyReportCategoryInput } from "@repo/data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SurveyEChartsCanvas } from "@/components/survey/survey-echarts-canvas";
 import { findSurveyReportChartTemplate } from "@/lib/survey-report-chart-templates";
-
-echarts.use([
-  BarChart,
-  FunnelChart,
-  GaugeChart,
-  HeatmapChart,
-  LineChart,
-  PieChart,
-  RadarChart,
-  ScatterChart,
-  GridComponent,
-  LegendComponent,
-  RadarComponent,
-  TitleComponent,
-  TooltipComponent,
-  VisualMapComponent,
-  CanvasRenderer,
-]);
 
 interface SurveyReportOutputPreviewProps {
   category: SurveyReportCategoryInput;
   responseCount: number;
-}
-
-function EChartsOptionCanvas({ option }: { option: Record<string, unknown> }) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const instance = echarts.init(container, undefined, { renderer: "canvas" });
-    instance.setOption(option, true);
-    const resizeObserver = new ResizeObserver(() => instance.resize());
-    resizeObserver.observe(container);
-
-    return () => {
-      resizeObserver.disconnect();
-      instance.dispose();
-    };
-  }, [option]);
-
-  return (
-    <div
-      ref={containerRef}
-      data-testid="report-chart-canvas"
-      className="h-80 min-h-80 w-full"
-      role="img"
-      aria-label="章节图表配置预览"
-    />
-  );
 }
 
 function PreviewBoundary({ responseCount }: { responseCount: number }) {
@@ -207,7 +141,11 @@ function ChartOutputPreview({
           >
             示例数据，仅用于模板配置，不会写入报告证据。
           </p>
-          <EChartsOptionCanvas option={template.option} />
+          <SurveyEChartsCanvas
+            option={template.option}
+            testId="report-chart-canvas"
+            ariaLabel="章节图表配置预览"
+          />
         </div>
       ) : (
         <div

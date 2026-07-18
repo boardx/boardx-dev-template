@@ -3,6 +3,8 @@ import { buildSurveyReportEvidence } from "./survey-report-evidence";
 import {
   buildProfessionalReportDocument,
   modelSafeSurveyReportEvidence,
+  rawTextResponsesFromSourceData,
+  sanitizeProfessionalReportDocument,
   validateEvidenceClaims,
 } from "./survey-professional-report";
 
@@ -207,5 +209,36 @@ describe("professional survey report", () => {
       imagePrompt: "生成不虚构人物的总结配图。",
       chart: undefined,
     });
+  });
+
+  it("recursively redacts raw historical text from claims and actions", () => {
+    const canary = "F16_HISTORICAL_RAW_CANARY_0af8";
+    const rawResponses = rawTextResponsesFromSourceData({
+      records: [
+        { type: "question", id: 3, questionType: "text" },
+        { type: "question", id: 4, questionType: "single" },
+        {
+          type: "response",
+          answers: { "3": canary, "4": "安全" },
+        },
+      ],
+    });
+    const report = {
+      title: "历史报告",
+      executiveSummary: {
+        claims: [{ statement: `摘要回显 ${canary}` }],
+      },
+      chapters: [{
+        questionId: 3,
+        claims: [{ implication: `章节回显 ${canary}` }],
+      }],
+      actions: [{ action: `行动回显 ${canary}` }],
+    } as unknown as Parameters<typeof sanitizeProfessionalReportDocument>[0];
+
+    const sanitized = sanitizeProfessionalReportDocument(report, rawResponses);
+
+    expect(rawResponses).toEqual([canary]);
+    expect(JSON.stringify(sanitized)).not.toContain(canary);
+    expect(JSON.stringify(sanitized)).toContain("[开放题原文已脱敏]");
   });
 });

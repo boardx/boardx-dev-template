@@ -26,6 +26,7 @@ export interface SurveyReportGenerationStatus {
   currentArtifact: SurveyReportArtifactSummary | null;
   latestArtifact: SurveyReportArtifactSummary | null;
   versions: SurveyReportArtifactSummary[];
+  nextHistoryCursor?: string | null;
 }
 
 export interface SurveyReportRequestState {

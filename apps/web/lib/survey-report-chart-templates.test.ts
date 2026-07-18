@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildSurveyReportChartOption,
   getSurveyReportChartTemplate,
   stringifySurveyReportChartOption,
   SURVEY_REPORT_CHART_TEMPLATES,
@@ -44,5 +45,54 @@ describe("survey report chart templates", () => {
     expect(JSON.parse(stringifySurveyReportChartOption("line-simple"))).toEqual(
       getSurveyReportChartTemplate("line-simple").option,
     );
+  });
+
+  it("binds every formal template to real aggregate rows", () => {
+    const rows = [
+      { label: "成分", count: 6, percentage: 60 },
+      { label: "认证", count: 4, percentage: 40 },
+    ];
+    const options = Object.fromEntries(
+      SURVEY_REPORT_CHART_TEMPLATES.map((template) => [
+        template.id,
+        buildSurveyReportChartOption(template.id, rows),
+      ])
+    );
+
+    expect(options["line-simple"]).toMatchObject({
+      xAxis: { data: ["成分", "认证"] },
+      series: [{ type: "line", data: [6, 4] }],
+    });
+    expect(options["bar-simple"]).toMatchObject({
+      series: [{ type: "bar", data: [6, 4] }],
+    });
+    expect(options["pie-simple"]).toMatchObject({
+      series: [{
+        type: "pie",
+        data: [
+          { value: 6, name: "成分" },
+          { value: 4, name: "认证" },
+        ],
+      }],
+    });
+    expect(options["scatter-simple"]).toMatchObject({
+      series: [{ type: "scatter" }],
+    });
+    expect(options.radar).toMatchObject({
+      radar: { indicator: [{ name: "成分" }, { name: "认证" }] },
+      series: [{ type: "radar", data: [{ value: [6, 4] }] }],
+    });
+    expect(options.funnel).toMatchObject({
+      series: [{ type: "funnel" }],
+    });
+    expect(options.gauge).toMatchObject({
+      series: [{ type: "gauge", data: [{ value: 60, name: "成分" }] }],
+    });
+    expect(options["heatmap-cartesian"]).toMatchObject({
+      series: [{
+        type: "heatmap",
+        data: [[0, 0, 6], [1, 0, 4]],
+      }],
+    });
   });
 });

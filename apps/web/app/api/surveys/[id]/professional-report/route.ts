@@ -12,6 +12,8 @@ import {
   ensureSurveyReportCategoryPlan,
   ensureSurveyReportSourceSnapshot,
   findReadySurveyReportArtifact,
+  findReadySurveyReportArtifactById,
+  findSurveyReportSourceSnapshot,
   getSurveyWithQuestions,
   hashSurveyReportRequirement,
   listReadySurveyReportArtifacts,
@@ -31,10 +33,10 @@ import {
 import {
   buildProfessionalReportDocument,
   modelSafeSurveyReportEvidence,
+  rawTextResponsesFromSourceData,
   sanitizeProfessionalReportDocument,
 } from "@/lib/survey-professional-report";
 import { buildSurveyReportRequirementPayload } from "@/lib/survey-report-requirement";
-import { selectExactReportVersion } from "@/lib/survey-report-version-navigation";
 import type { AiEvidenceClaimCandidate } from "@/lib/survey-professional-report";
 import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
 import { callQwenJson } from "@/lib/qwen";
@@ -45,6 +47,48 @@ export const dynamic = "force-dynamic";
 function parseSurveyId(raw: string) {
   const id = Number(raw);
   return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    .test(value);
+}
+
+function encodeHistoryCursor(
+  artifact: SurveyReportArtifactVersion | undefined
+): string | null {
+  if (!artifact) return null;
+  return Buffer.from(JSON.stringify({
+    createdAt: artifact.createdAt,
+    id: artifact.id,
+  })).toString("base64url");
+}
+
+function nextHistoryCursorForPage(
+  artifacts: SurveyReportArtifactVersion[]
+): string | null {
+  return artifacts.length === 50
+    ? encodeHistoryCursor(artifacts[artifacts.length - 1])
+    : null;
+}
+
+function decodeHistoryCursor(
+  value: string | null
+): { createdAt: string; id: string } | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(value, "base64url").toString("utf8")
+    ) as { createdAt?: unknown; id?: unknown };
+    const createdAt = String(parsed.createdAt ?? "");
+    const id = String(parsed.id ?? "");
+    if (Number.isNaN(new Date(createdAt).getTime()) || !isUuid(id)) {
+      return undefined;
+    }
+    return { createdAt, id };
+  } catch {
+    return undefined;
+  }
 }
 
 function isoTimestamp(value: unknown): string {
@@ -173,25 +217,60 @@ function generationStatus(
   });
 }
 
-function artifactReport(
+function includeArtifactInStatus(
+  artifacts: SurveyReportArtifactVersion[],
   artifact: SurveyReportArtifactVersion | undefined
-): ProfessionalSurveyReportDocument | undefined {
+): SurveyReportArtifactVersion[] {
+  if (!artifact || artifacts.some((item) => item.id === artifact.id)) {
+    return artifacts;
+  }
+  return [...artifacts, artifact];
+}
+
+async function artifactReport(
+  artifact: SurveyReportArtifactVersion | undefined
+): Promise<ProfessionalSurveyReportDocument | undefined> {
   const report =
     artifact?.report as unknown as ProfessionalSurveyReportDocument | undefined;
-  return report ? sanitizeProfessionalReportDocument(report) : undefined;
+  if (!artifact || !report) return undefined;
+  const sourceSnapshot = await findSurveyReportSourceSnapshot(
+    artifact.sourceRevision
+  );
+  if (!sourceSnapshot) {
+    throw new Error("survey_report_source_snapshot_missing");
+  }
+  return sanitizeProfessionalReportDocument(
+    report,
+    rawTextResponsesFromSourceData(sourceSnapshot?.sourceData)
+  );
 }
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const context = await loadReportContext(params.id, false);
     if ("response" in context) return context.response;
-    const status = generationStatus(context);
-    const requestedArtifact = selectExactReportVersion(
-      context.artifacts,
-      new URL(request.url).searchParams.get("artifactId")
-    );
-    if (requestedArtifact.isExplicitRequest && !requestedArtifact.artifact) {
+    const requestUrl = new URL(request.url);
+    const requestedArtifactId = requestUrl.searchParams.get("artifactId");
+    if (requestedArtifactId && !isUuid(requestedArtifactId)) {
       return NextResponse.json({ error: "report_version_not_found" }, { status: 404 });
+    }
+    const historyBefore = requestUrl.searchParams.get("historyBefore");
+    const historyCursor = decodeHistoryCursor(historyBefore);
+    if (historyBefore && !historyCursor) {
+      return NextResponse.json({ error: "invalid_history_cursor" }, { status: 400 });
+    }
+    if (historyCursor) {
+      const historyArtifacts = await listReadySurveyReportArtifacts(
+        context.survey.id,
+        { before: historyCursor }
+      );
+      return NextResponse.json({
+        historyPage: generationStatus({
+          ...context,
+          artifacts: historyArtifacts,
+        }).versions,
+        nextHistoryCursor: nextHistoryCursorForPage(historyArtifacts),
+      });
     }
     const currentArtifact = await findReadySurveyReportArtifact({
       surveyId: context.survey.id,
@@ -199,18 +278,45 @@ export async function GET(request: Request, { params }: { params: { id: string }
       requirementHash: context.requirementHash,
       templateVersion: SURVEY_REPORT_TEMPLATE_VERSION,
     });
-    const artifact = requestedArtifact.artifact ?? currentArtifact ?? context.artifacts[0];
-    const report = artifactReport(artifact) ?? buildProfessionalReportDocument({
+    const requestedArtifact = requestedArtifactId
+      ? await findReadySurveyReportArtifactById(
+          context.survey.id,
+          requestedArtifactId
+        )
+      : undefined;
+    if (requestedArtifactId && !requestedArtifact) {
+      return NextResponse.json({ error: "report_version_not_found" }, { status: 404 });
+    }
+    const latestArtifact = !requestedArtifact && !currentArtifact && context.artifacts[0]
+      ? await findReadySurveyReportArtifactById(
+          context.survey.id,
+          context.artifacts[0].id
+        )
+      : undefined;
+    const artifact = requestedArtifact ?? currentArtifact ?? latestArtifact;
+    const status = generationStatus({
+      ...context,
+      artifacts: includeArtifactInStatus(context.artifacts, currentArtifact),
+    });
+    const report = await artifactReport(artifact) ?? buildProfessionalReportDocument({
       evidence: context.evidence,
       generatedAt: new Date().toISOString(),
       reportPlan: context.reportCategoryPlan,
     });
+    const historyArtifacts = context.artifacts;
+    const nextHistoryCursor = nextHistoryCursorForPage(historyArtifacts);
+    const historyPage = generationStatus({
+      ...context,
+      artifacts: historyArtifacts,
+    }).versions;
 
     return NextResponse.json({
       report,
       preview: !artifact,
       selectedArtifactId: artifact?.id ?? null,
-      generation: status,
+      generation: { ...status, nextHistoryCursor },
+      historyPage,
+      nextHistoryCursor,
     });
   } catch (error) {
     console.error("[api] professional-report load failed", error);
@@ -238,14 +344,19 @@ export async function POST(request: Request, { params }: { params: { id: string 
     };
     const existing = await findReadySurveyReportArtifact(artifactKey);
     if (existing) {
+      const historyPage = await listReadySurveyReportArtifacts(context.survey.id);
+      const artifacts = includeArtifactInStatus(
+        historyPage,
+        existing
+      );
       return NextResponse.json({
-        report: artifactReport(existing),
+        report: await artifactReport(existing),
         reused: true,
         model: existing.modelId,
-        generation: generationStatus(
-          { ...context, artifacts: await listReadySurveyReportArtifacts(context.survey.id) },
-          requirementHash
-        ),
+        generation: {
+          ...generationStatus({ ...context, artifacts }, requirementHash),
+          nextHistoryCursor: nextHistoryCursorForPage(historyPage),
+        },
       });
     }
 
@@ -264,12 +375,19 @@ export async function POST(request: Request, { params }: { params: { id: string 
       },
     });
     if (claim.status === "ready") {
-      const artifacts = await listReadySurveyReportArtifacts(context.survey.id);
+      const historyPage = await listReadySurveyReportArtifacts(context.survey.id);
+      const artifacts = includeArtifactInStatus(
+        historyPage,
+        claim.artifact
+      );
       return NextResponse.json({
-        report: artifactReport(claim.artifact),
+        report: await artifactReport(claim.artifact),
         reused: true,
         model: claim.artifact.modelId,
-        generation: generationStatus({ ...context, artifacts }, requirementHash),
+        generation: {
+          ...generationStatus({ ...context, artifacts }, requirementHash),
+          nextHistoryCursor: nextHistoryCursorForPage(historyPage),
+        },
       });
     }
     if (claim.status === "in_progress") {
@@ -277,7 +395,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
         status: "in_progress",
         sessionId: claim.sessionId,
         reused: false,
-        generation: generationStatus(context, requirementHash),
+        generation: {
+          ...generationStatus(context, requirementHash),
+          nextHistoryCursor: nextHistoryCursorForPage(context.artifacts),
+        },
       }, { status: 202 });
     }
     const session = { id: claim.sessionId };
@@ -382,11 +503,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const artifacts = await listReadySurveyReportArtifacts(context.survey.id);
 
     return NextResponse.json({
-      report: artifactReport(artifact),
+      report: await artifactReport(artifact),
       reused: false,
       warning,
       model: artifact.modelId,
-      generation: generationStatus({ ...context, artifacts }, requirementHash),
+      generation: {
+        ...generationStatus({ ...context, artifacts }, requirementHash),
+        nextHistoryCursor: nextHistoryCursorForPage(artifacts),
+      },
     });
   } catch (error) {
     if (claimedGeneration) {

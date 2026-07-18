@@ -12,9 +12,12 @@ const mocks = vi.hoisted(() => ({
   ensureSurveyReportCategoryPlan: vi.fn(),
   ensureSurveyReportSourceSnapshot: vi.fn(),
   findReadySurveyReportArtifact: vi.fn(),
+  findReadySurveyReportArtifactById: vi.fn(),
+  findSurveyReportSourceSnapshot: vi.fn(),
   getSurveyWithQuestions: vi.fn(),
   listReadySurveyReportArtifacts: vi.fn(),
   listSurveyResponses: vi.fn(),
+  readSurveyReportCategoryPlan: vi.fn(),
   releaseSurveyReportGenerationClaim: vi.fn(),
   updateSurveyAiSessionStatus: vi.fn(),
 }));
@@ -44,16 +47,20 @@ vi.mock("@repo/data", async (importOriginal) => {
     ensureSurveyReportCategoryPlan: mocks.ensureSurveyReportCategoryPlan,
     ensureSurveyReportSourceSnapshot: mocks.ensureSurveyReportSourceSnapshot,
     findReadySurveyReportArtifact: mocks.findReadySurveyReportArtifact,
+    findReadySurveyReportArtifactById:
+      mocks.findReadySurveyReportArtifactById,
+    findSurveyReportSourceSnapshot: mocks.findSurveyReportSourceSnapshot,
     getSurveyWithQuestions: mocks.getSurveyWithQuestions,
     listReadySurveyReportArtifacts: mocks.listReadySurveyReportArtifacts,
     listSurveyResponses: mocks.listSurveyResponses,
+    readSurveyReportCategoryPlan: mocks.readSurveyReportCategoryPlan,
     releaseSurveyReportGenerationClaim:
       mocks.releaseSurveyReportGenerationClaim,
     updateSurveyAiSessionStatus: mocks.updateSurveyAiSessionStatus,
   };
 });
 
-import { POST } from "./route";
+import { GET, POST } from "./route";
 
 const params = { params: { id: "41" } };
 const artifact = {
@@ -120,10 +127,17 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
         isCustom: false,
       }],
     });
+    mocks.readSurveyReportCategoryPlan.mockImplementation(
+      (...args) => mocks.ensureSurveyReportCategoryPlan(...args)
+    );
     mocks.ensureSurveyReportSourceSnapshot.mockImplementation(
       (snapshot) => Promise.resolve({ ...snapshot, createdAt: snapshot.generatedAt })
     );
     mocks.findReadySurveyReportArtifact.mockResolvedValue(undefined);
+    mocks.findReadySurveyReportArtifactById.mockResolvedValue(undefined);
+    mocks.findSurveyReportSourceSnapshot.mockResolvedValue({
+      sourceData: { records: [] },
+    });
     mocks.listReadySurveyReportArtifacts.mockResolvedValue([]);
     mocks.createSurveyAiSession
       .mockResolvedValueOnce({ id: "20000000-0000-4000-8000-000000000041" })
@@ -186,11 +200,27 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
       ...artifact,
       report: {
         title: "历史报告",
-        chapters: [{ questionId: 12, textResponses: [canary] }],
+        executiveSummary: {
+          claims: [{ statement: `历史模型回显 ${canary}` }],
+        },
+        actions: [{ action: `继续跟进 ${canary}` }],
+        chapters: [{
+          questionId: 12,
+          textResponses: [canary],
+          claims: [{ statement: `章节回显 ${canary}` }],
+        }],
       },
     };
     mocks.findReadySurveyReportArtifact.mockResolvedValue(legacyArtifact);
     mocks.listReadySurveyReportArtifacts.mockResolvedValue([legacyArtifact]);
+    mocks.findSurveyReportSourceSnapshot.mockResolvedValue({
+      sourceData: {
+        records: [
+          { type: "question", id: 12, questionType: "text" },
+          { type: "response", answers: { "12": canary } },
+        ],
+      },
+    });
 
     const response = await POST(reportRequest(), params);
     expect(response).toBeDefined();
@@ -202,7 +232,111 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
     expect(response.status).toBe(200);
     expect(payload.reused).toBe(true);
     expect(JSON.stringify(payload)).not.toContain(canary);
+    expect(JSON.stringify(payload)).toContain("[开放题原文已脱敏]");
     expect(payload.report.chapters[0]).not.toHaveProperty("textResponses");
+  });
+
+  it("loads a complete artifact by id even when it is outside the summary page", async () => {
+    const oldArtifact = {
+      ...artifact,
+      id: "10000000-0000-4000-8000-000000000099",
+      report: {
+        title: "第 51 个历史版本",
+        executiveSummary: { claims: [] },
+        chapters: [],
+      },
+      createdAt: "2026-07-01T08:00:00.000Z",
+    };
+    mocks.findReadySurveyReportArtifactById.mockImplementation(
+      (_surveyId, artifactId) =>
+        Promise.resolve(artifactId === oldArtifact.id ? oldArtifact : undefined)
+    );
+    mocks.listReadySurveyReportArtifacts.mockResolvedValue(
+      Array.from({ length: 50 }, (_, index) => ({
+        ...artifact,
+        id: `10000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+        report: {},
+        createdAt: new Date(Date.UTC(2026, 6, 18, 8, 0, 0) - index * 1000)
+          .toISOString(),
+      }))
+    );
+
+    const response = await GET(
+      new Request(
+        `http://test.local/api/surveys/41/professional-report?artifactId=${oldArtifact.id}`
+      ),
+      params
+    );
+    expect(response).toBeDefined();
+    if (!response) {
+      throw new Error("report route did not return a response");
+    }
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.selectedArtifactId).toBe(oldArtifact.id);
+    expect(payload.report.title).toBe("第 51 个历史版本");
+    expect(payload.historyPage).toHaveLength(50);
+    expect(payload.historyPage[0]).not.toHaveProperty("report");
+    expect(payload.nextHistoryCursor).toBeTruthy();
+    expect(mocks.findReadySurveyReportArtifactById).toHaveBeenCalledWith(
+      41,
+      oldArtifact.id
+    );
+  });
+
+  it("requests the next lightweight history page with its cursor", async () => {
+    const before = {
+      createdAt: "2026-07-10T08:00:00.000Z",
+      id: "10000000-0000-4000-8000-000000000050",
+    };
+    const cursor = Buffer.from(JSON.stringify(before)).toString("base64url");
+
+    const response = await GET(
+      new Request(
+        `http://test.local/api/surveys/41/professional-report?historyBefore=${encodeURIComponent(cursor)}`
+      ),
+      params
+    );
+    expect(response).toBeDefined();
+    if (!response) {
+      throw new Error("report route did not return a response");
+    }
+
+    expect(response.status).toBe(200);
+    expect(mocks.listReadySurveyReportArtifacts).toHaveBeenLastCalledWith(41, {
+      before,
+    });
+  });
+
+  it("fails closed when a historical artifact has no source snapshot", async () => {
+    mocks.findReadySurveyReportArtifact.mockResolvedValue(artifact);
+    mocks.findSurveyReportSourceSnapshot.mockResolvedValue(undefined);
+
+    const response = await GET(
+      new Request("http://test.local/api/surveys/41/professional-report"),
+      params
+    );
+
+    expect(response?.status).toBe(500);
+    await expect(response?.json()).resolves.toEqual({
+      error: "professional_report_load_failed",
+    });
+  });
+
+  it("rejects a malformed artifact id without querying PostgreSQL", async () => {
+    const response = await GET(
+      new Request(
+        "http://test.local/api/surveys/41/professional-report?artifactId=missing-artifact"
+      ),
+      params
+    );
+
+    expect(response?.status).toBe(404);
+    await expect(response?.json()).resolves.toEqual({
+      error: "report_version_not_found",
+    });
+    expect(mocks.findReadySurveyReportArtifactById).not.toHaveBeenCalled();
   });
 
   it("uses only the persisted plan hash even when a legacy instruction is sent", async () => {

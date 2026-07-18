@@ -176,12 +176,20 @@ composer。该工作台承载完整报告，并为版本列表提供独立的可
 选择必须精确匹配请求的 artifact id；只有精确版本成功加载后才替换当前报告，失败
 或响应版本不匹配时保留当前报告。
 
+正式图表产物按 `chartTemplateId` 从白名单构造 ECharts `option`，数据来自该章节的
+确定性聚合结果；分析报告直接渲染这份不可变 option。历史列表查询只返回最多 50 条
+轻量摘要并使用不透明的 `createdAt + artifactId` 组合游标翻页，分析报告可继续加载更早
+版本；完整报告只在当前版本或显式 artifact id 加载时读取。
+
 ## Data Privacy
 
 - 完整答卷只在服务端授权上下文中读取。
 - 快照存储按 survey/team/room 隔离，并记录 source revision。
+- 报告产物的 source revision 由数据库外键约束到事实快照；快照缺失时读取必须
+  fail-closed，不能返回未经脱敏的旧产物。
 - 浏览器不接收完整原始答卷。
-- 开放题原声在进入报告前匿名化。
+- 开放题原声在进入报告前匿名化；加载旧产物时，从该产物的 source revision 找到对应
+  快照，递归清除 executive summary、章节、建议与行动项中的原文回显。
 - F17 文件工具限制命名空间、路径和读写能力。
 
 ## Error Semantics

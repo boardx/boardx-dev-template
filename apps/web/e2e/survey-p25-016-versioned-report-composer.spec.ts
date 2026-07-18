@@ -2,6 +2,7 @@ import {
   expect,
   test,
   type BrowserContext,
+  type Locator,
   type Page,
 } from "@playwright/test";
 import { closePool, query } from "@repo/data";
@@ -22,7 +23,10 @@ interface ProfessionalReportPayload {
       outputType?: "image" | "chart" | "text";
       requirement?: string;
       chartTemplateId?: string;
-      chart?: { templateId?: string };
+      chart?: {
+        templateId?: string;
+        option?: { series?: Array<{ type?: string }> };
+      };
     }>;
   };
   preview?: boolean;
@@ -86,8 +90,7 @@ async function countGenerationRecords(surveyId: number) {
   };
 }
 
-async function expectNonEmptyEChartsCanvas(page: Page) {
-  const canvas = page.getByTestId("report-chart-canvas").locator("canvas");
+async function expectNonEmptyCanvas(canvas: Locator) {
   await expect(canvas).toBeVisible();
   await expect.poll(async () => canvas.evaluate((element: HTMLCanvasElement) => {
     const context = element.getContext("2d");
@@ -108,6 +111,12 @@ async function expectNonEmptyEChartsCanvas(page: Page) {
     }
     return paintedPixels;
   })).toBeGreaterThan(100);
+}
+
+async function expectNonEmptyEChartsCanvas(page: Page) {
+  await expectNonEmptyCanvas(
+    page.getByTestId("report-chart-canvas").locator("canvas")
+  );
 }
 
 async function expectCopiedOptionJson(
@@ -354,7 +363,10 @@ test("single-output report chapters persist and create exact immutable versions"
   expect(chartGenerationPayload.report?.chapters[0]).toMatchObject({
     outputType: "chart",
     chartTemplateId: "line-simple",
-    chart: { templateId: "line-simple" },
+    chart: {
+      templateId: "line-simple",
+      option: { series: [{ type: "line" }] },
+    },
   });
   const chartVersion = chartGenerationPayload.generation.versions.find(
     (version) => version.id !== firstVersion.id
@@ -443,6 +455,25 @@ test("single-output report chapters persist and create exact immutable versions"
   const history = page.getByTestId("report-version-history");
   await expect(history).toBeVisible();
   await expect(history.getByRole("button")).toHaveCount(3);
+
+  const chartVersionButton = history.getByRole("button").filter({ hasText: "版本 2" });
+  const chartVersionResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname === `/api/surveys/${survey.id}/professional-report` &&
+      url.searchParams.get("artifactId") === chartVersion.id &&
+      response.request().method() === "GET"
+    );
+  });
+  await chartVersionButton.click();
+  const exactChartVersionPayload =
+    await (await chartVersionResponse).json() as ProfessionalReportPayload;
+  expect(exactChartVersionPayload.selectedArtifactId).toBe(chartVersion.id);
+  expect(exactChartVersionPayload.report?.chapters[0]?.chart?.option)
+    .toMatchObject({ series: [{ type: "line" }] });
+  await expectNonEmptyCanvas(
+    page.locator('[data-testid^="professional-echarts-"] canvas').first()
+  );
 
   const oldestVersionButton = history.getByRole("button").filter({ hasText: "版本 1" });
   const exactVersionResponse = page.waitForResponse((response) => {

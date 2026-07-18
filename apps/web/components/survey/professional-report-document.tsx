@@ -1,6 +1,7 @@
 "use client";
 
 import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
+import { SurveyEChartsCanvas } from "@/components/survey/survey-echarts-canvas";
 
 function confidenceLabel(confidence: ProfessionalSurveyReportDocument["methodology"]["confidence"]) {
   return { none: "无数据", low: "方向性", medium: "中等", high: "较高" }[confidence];
@@ -81,6 +82,14 @@ export function ProfessionalReportDocument({ report }: { report: ProfessionalSur
                     <p className="text-11 font-semibold text-muted-foreground">
                       ECharts 模板：{chapter.chartTemplateId}
                     </p>
+                  ) : null}
+                  {chapter.chart.option ? (
+                    <SurveyEChartsCanvas
+                      option={chapter.chart.option}
+                      testId={`professional-echarts-${chapter.categoryId ?? chapter.id}`}
+                      ariaLabel={`${chapter.title} 正式报告图表`}
+                      className="h-96 min-h-96 w-full"
+                    />
                   ) : null}
                   {chapter.chart.rows.map((row) => (
                     <div key={row.label} className="grid grid-cols-[120px_minmax(120px,1fr)_88px] items-center gap-3 text-12">

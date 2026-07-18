@@ -262,3 +262,108 @@ export function getSurveyReportChartTemplate(
 export function stringifySurveyReportChartOption(id: SurveyReportChartTemplateId): string {
   return JSON.stringify(getSurveyReportChartTemplate(id).option);
 }
+
+export function buildSurveyReportChartOption(
+  id: SurveyReportChartTemplateId,
+  rows: Array<{ label: string; count: number; percentage: number }>
+): Record<string, unknown> {
+  const labels = rows.map((row) => row.label);
+  const counts = rows.map((row) => row.count);
+  const max = Math.max(1, ...counts);
+
+  switch (id) {
+    case "line-simple":
+      return {
+        xAxis: { type: "category", data: labels },
+        yAxis: { type: "value" },
+        tooltip: { trigger: "axis" },
+        series: [{ type: "line", data: counts }],
+      };
+    case "bar-simple":
+      return {
+        xAxis: { type: "category", data: labels },
+        yAxis: { type: "value" },
+        tooltip: { trigger: "axis" },
+        series: [{ type: "bar", data: counts }],
+      };
+    case "pie-simple":
+      return {
+        tooltip: { trigger: "item" },
+        legend: { orient: "vertical", left: "left" },
+        series: [{
+          type: "pie",
+          radius: "50%",
+          data: rows.map((row) => ({ value: row.count, name: row.label })),
+        }],
+      };
+    case "scatter-simple":
+      return {
+        xAxis: { type: "category", data: labels },
+        yAxis: { type: "value" },
+        tooltip: { trigger: "item" },
+        series: [{
+          type: "scatter",
+          symbolSize: 18,
+          data: rows.map((row) => [row.label, row.count]),
+        }],
+      };
+    case "radar":
+      return {
+        radar: {
+          indicator: rows.map((row) => ({ name: row.label, max })),
+        },
+        series: [{
+          type: "radar",
+          data: [{ name: "回答数量", value: counts }],
+        }],
+      };
+    case "funnel":
+      return {
+        tooltip: { trigger: "item" },
+        series: [{
+          type: "funnel",
+          left: "10%",
+          top: 24,
+          bottom: 24,
+          width: "80%",
+          min: 0,
+          max,
+          sort: "descending",
+          data: rows.map((row) => ({ value: row.count, name: row.label })),
+        }],
+      };
+    case "gauge": {
+      const leading = rows.slice().sort((left, right) => right.count - left.count)[0];
+      return {
+        series: [{
+          type: "gauge",
+          progress: { show: true },
+          detail: { valueAnimation: true, formatter: "{value}%" },
+          data: [{
+            value: leading?.percentage ?? 0,
+            name: leading?.label ?? "暂无数据",
+          }],
+        }],
+      };
+    }
+    case "heatmap-cartesian":
+      return {
+        grid: { height: "55%", top: "8%" },
+        xAxis: { type: "category", data: labels, splitArea: { show: true } },
+        yAxis: { type: "category", data: ["回答数量"], splitArea: { show: true } },
+        visualMap: {
+          min: 0,
+          max,
+          calculable: true,
+          orient: "horizontal",
+          left: "center",
+          bottom: "4%",
+        },
+        series: [{
+          type: "heatmap",
+          data: rows.map((row, index) => [index, 0, row.count]),
+          label: { show: true },
+        }],
+      };
+  }
+}
