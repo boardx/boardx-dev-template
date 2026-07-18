@@ -1,9 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   cleanSurveyReportCategoryPlan,
   defaultSurveyReportCategoryPlan,
+  ensureSurveyReportCategoryPlan,
   type SurveyQuestion,
 } from "./survey";
+import { query } from "./index";
+
+vi.mock("./index", () => ({
+  getPool: vi.fn(),
+  query: vi.fn(),
+}));
+
+const mockQuery = vi.mocked(query);
 
 const questions: SurveyQuestion[] = [
   {
@@ -29,6 +38,10 @@ const questions: SurveyQuestion[] = [
 ];
 
 describe("Survey source data contract", () => {
+  beforeEach(() => {
+    mockQuery.mockReset();
+  });
+
   it("builds report categories from persisted question categories", () => {
     const plan = defaultSurveyReportCategoryPlan("商品调研", questions);
 
@@ -181,5 +194,56 @@ describe("Survey source data contract", () => {
       chartType: undefined,
     });
     expect(plan.categories[0]?.chartTemplateId).toBeUndefined();
+  });
+
+  it("migrates only the output contract without rebinding persisted question IDs", async () => {
+    const persistedPlan = {
+      title: "商品安全报告",
+      description: "管理层报告",
+      categories: [{
+        id: "safety",
+        name: "安全认知",
+        description: "分析消费者关注点",
+        requirement: "先给结论",
+        questionIds: [999, 11],
+        outputType: "chart",
+        inputModes: ["chart", "text"],
+        chartTemplateId: "bar-simple",
+        chartType: "line",
+        chartStyle: "auto",
+        chartConfig: {
+          primaryColor: "#4f6edb",
+          maxDimensions: 6,
+          sort: "none",
+          showLabels: true,
+          showLegend: false,
+          orientation: "vertical",
+        },
+        dataPrompt: "",
+        modulePrompts: {},
+        prompt: "先给结论",
+        order: 1,
+        isCustom: false,
+      }],
+    };
+    const row = {
+      id: 31,
+      survey_id: 7,
+      categoryPlan: persistedPlan,
+      created_at: "2026-07-18T00:00:00.000Z",
+      updated_at: "2026-07-18T00:00:00.000Z",
+    };
+    mockQuery.mockResolvedValueOnce([row]).mockResolvedValueOnce([row]);
+
+    await ensureSurveyReportCategoryPlan(7, "商品调研", questions);
+
+    const persistedMigration = JSON.parse(String(mockQuery.mock.calls[1]?.[1]?.[2]));
+    expect(persistedMigration.categories[0]).toMatchObject({
+      questionIds: [999, 11],
+      outputType: "chart",
+      inputModes: ["chart"],
+      chartTemplateId: "bar-simple",
+      chartType: "bar",
+    });
   });
 });

@@ -18,7 +18,6 @@ import {
   normalizeJsonObject,
   updateSurveyAiSessionStatus,
   type SurveyReportArtifactVersion,
-  type SurveyReportCategoryInput,
 } from "@repo/data";
 import { currentTeamId, currentUser } from "@/lib/session";
 import { buildSurveyReportEvidence } from "@/lib/survey-report-evidence";
@@ -27,6 +26,7 @@ import {
   type SurveyReportGenerationStatus,
 } from "@/lib/survey-report-generation";
 import { buildProfessionalReportDocument } from "@/lib/survey-professional-report";
+import { buildSurveyReportRequirementPayload } from "@/lib/survey-report-requirement";
 import type { AiEvidenceClaimCandidate } from "@/lib/survey-professional-report";
 import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
 import { callQwenJson } from "@/lib/qwen";
@@ -37,37 +37,6 @@ export const dynamic = "force-dynamic";
 function parseSurveyId(raw: string) {
   const id = Number(raw);
   return Number.isInteger(id) && id > 0 ? id : null;
-}
-
-function categoryRequirement(category: SurveyReportCategoryInput): string {
-  const current = "requirement" in category
-    ? String((category as SurveyReportCategoryInput & { requirement?: unknown }).requirement ?? "").trim()
-    : "";
-  return current || category.prompt.trim();
-}
-
-function reportRequirementPayload(plan: {
-  title: string;
-  description: string;
-  categories: SurveyReportCategoryInput[];
-}) {
-  return {
-    title: plan.title,
-    description: plan.description,
-    categories: plan.categories
-      .slice()
-      .sort((left, right) => left.order - right.order)
-      .map((category) => ({
-        id: category.id,
-        name: category.name,
-        description: category.description,
-        requirement: categoryRequirement(category),
-        outputType: category.outputType,
-        chartTemplateId:
-          category.outputType === "chart" ? category.chartTemplateId : undefined,
-        order: category.order,
-      })),
-  };
 }
 
 async function loadReportContext(rawId: string, requireManage: boolean) {
@@ -121,7 +90,7 @@ async function loadReportContext(rawId: string, requireManage: boolean) {
     })),
   });
   await ensureSurveyReportSourceSnapshot(sourceSnapshot);
-  const requirementPayload = reportRequirementPayload(reportCategoryPlan);
+  const requirementPayload = buildSurveyReportRequirementPayload(reportCategoryPlan);
   const requirementHash = hashSurveyReportRequirement(requirementPayload);
   const artifacts = await listReadySurveyReportArtifacts(surveyId);
   const evidence = buildSurveyReportEvidence({

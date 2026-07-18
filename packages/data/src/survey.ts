@@ -325,6 +325,27 @@ export function cleanSurveyReportCategoryPlan(input: unknown, surveyTitle: strin
   };
 }
 
+export function normalizePersistedSurveyReportCategoryPlanOutputContract(
+  plan: SurveyReportCategoryPlanInput
+): SurveyReportCategoryPlanInput {
+  return {
+    ...plan,
+    categories: plan.categories.map((category) => {
+      const outputType = cleanReportOutputType(category.outputType);
+      const chartTemplateId = outputType === "chart"
+        ? cleanChartTemplateId(category.chartTemplateId)
+        : undefined;
+      return {
+        ...category,
+        outputType,
+        inputModes: [outputType],
+        chartTemplateId,
+        chartType: outputType === "chart" ? chartTypeForTemplate(chartTemplateId!) : undefined,
+      };
+    }),
+  };
+}
+
 type SurveyReportCategoryPlanRow = Omit<SurveyReportCategoryPlan, "title" | "description" | "categories"> & {
   categoryPlan: SurveyReportCategoryPlanInput;
 };
@@ -350,15 +371,19 @@ export async function getSurveyReportCategoryPlan(surveyId: number): Promise<Sur
 export async function ensureSurveyReportCategoryPlan(surveyId: number, surveyTitle: string, questions: SurveyQuestion[] = []): Promise<SurveyReportCategoryPlan> {
   const existing = await getSurveyReportCategoryPlan(surveyId);
   if (existing?.categories.length) {
-    const cleaned = cleanSurveyReportCategoryPlan(existing, surveyTitle, questions);
-    if (JSON.stringify(cleaned) === JSON.stringify({
+    const normalized = normalizePersistedSurveyReportCategoryPlanOutputContract({
+      title: existing.title,
+      description: existing.description,
+      categories: existing.categories,
+    });
+    if (JSON.stringify(normalized) === JSON.stringify({
       title: existing.title,
       description: existing.description,
       categories: existing.categories,
     })) {
       return existing;
     }
-    return upsertSurveyReportCategoryPlan(surveyId, cleaned);
+    return upsertSurveyReportCategoryPlan(surveyId, normalized);
   }
   return upsertSurveyReportCategoryPlan(surveyId, defaultSurveyReportCategoryPlan(surveyTitle, questions));
 }
