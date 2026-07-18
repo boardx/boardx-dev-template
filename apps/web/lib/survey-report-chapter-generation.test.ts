@@ -78,30 +78,34 @@ const snapshot = buildSurveyReportTemplateSnapshot({
   ],
 });
 
+const sourceSnapshot = {
+  surveyId: 59,
+  sourceRevision: "source-revision-1",
+  contentHash: "content-hash",
+  schemaVersion: "survey-source-v1",
+  generatedAt: "2026-07-18T12:00:00.000Z",
+  responseCount: 3,
+  sourceData: { format: "survey-source.jsonl", records: [] },
+};
+
 describe("template report chapter generation", () => {
   it("generates every template chapter in order against one source revision", async () => {
-    const callJson = vi.fn(async (input: { messages: Array<{ content: string }> }) => {
-      const request = JSON.parse(input.messages[1]!.content) as {
-        task: string;
-      };
-      if (request.task === "generate_template_text_chapter") {
-        return {
-          headline: "安全信任是当前购买决策的首要解释变量",
-          claims: [{
-            statement: "认证信息为占比最高的安全关注项。",
-            evidenceId: "question-2-top",
-            value: 2,
-            denominator: 3,
-            implication: "用户需要可验证的信任凭据。",
-            recommendation: "优先强化认证信息披露。",
-          }],
-        };
-      }
-      return {
-        questionId: 2,
-        interpretation: "认证关注高于成分关注，安全证明应成为首要沟通内容。",
-      };
-    });
+    const generateTextChapterAgent = vi.fn(async (input: { chapterId: string; title: string }) => ({
+      headline: "安全信任是当前购买决策的首要解释变量",
+      claims: [{
+        statement: "认证信息为占比最高的安全关注项。",
+        evidenceId: "question-2-top",
+        value: 2,
+        denominator: 3,
+        implication: "用户需要可验证的信任凭据。",
+        recommendation: "优先强化认证信息披露。",
+      }],
+      invalid: false,
+    }));
+    const callJson = vi.fn(async (_input: { messages: Array<{ content: string }> }) => ({
+      questionId: 2,
+      interpretation: "认证关注高于成分关注，安全证明应成为首要沟通内容。",
+    }));
     const generateImage = vi.fn().mockResolvedValue({
       assetId: "scenario-image",
       objectKey: "survey-reports/7/59/artifact-id/scenario-image.png",
@@ -112,6 +116,7 @@ describe("template report chapter generation", () => {
     const chapters = await generateTemplateReportChapters({
       snapshot,
       evidence,
+      sourceSnapshot,
       sourceRevision: "source-revision-1",
       teamId: 7,
       surveyId: 59,
@@ -120,6 +125,7 @@ describe("template report chapter generation", () => {
     }, {
       callJson,
       generateImage,
+      generateTextChapterAgent,
     });
 
     expect(chapters.map((chapter) => [
@@ -145,12 +151,17 @@ describe("template report chapter generation", () => {
       assetId: "scenario-image",
       evidenceRefs: expect.arrayContaining(["question-1-top", "question-2-top"]),
     });
-    expect(callJson).toHaveBeenCalledTimes(2);
-    for (const call of callJson.mock.calls) {
-      const request = JSON.parse(call[0].messages[1]!.content);
-      expect(request.sourceRevision).toBe("source-revision-1");
-      expect(request.chapter.requirement).toBeTruthy();
-    }
+    expect(callJson).toHaveBeenCalledTimes(1);
+    const chartRequest = JSON.parse(callJson.mock.calls[0]![0].messages[1]!.content);
+    expect(chartRequest.sourceRevision).toBe("source-revision-1");
+    expect(chartRequest.chapter.requirement).toBeTruthy();
+    expect(generateTextChapterAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chapterId: "summary",
+        snapshot: sourceSnapshot,
+        modelId: "qwen-test",
+      })
+    );
     expect(generateImage).toHaveBeenCalledWith(expect.objectContaining({
       artifactId: "artifact-id",
       chapterId: "scenario-image",
@@ -166,6 +177,7 @@ describe("template report chapter generation", () => {
         value: 99,
         denominator: 100,
       }],
+      invalid: true,
     });
     await expect(generateTemplateReportChapters({
       snapshot: {
@@ -173,14 +185,15 @@ describe("template report chapter generation", () => {
         chapters: [snapshot.chapters[0]!],
       },
       evidence,
+      sourceSnapshot,
       sourceRevision: "source-revision-1",
       teamId: 7,
       surveyId: 59,
       artifactId: "artifact-id",
       model: "qwen-test",
     }, {
-      callJson: invalidClaim,
       generateImage: vi.fn(),
+      generateTextChapterAgent: invalidClaim,
     })).rejects.toThrow("report_text_evidence_invalid");
 
     const invalidChart = vi.fn().mockResolvedValue({
@@ -193,6 +206,7 @@ describe("template report chapter generation", () => {
         chapters: [snapshot.chapters[1]!],
       },
       evidence,
+      sourceSnapshot,
       sourceRevision: "source-revision-1",
       teamId: 7,
       surveyId: 59,
