@@ -7,7 +7,7 @@
       "area": "coord",
       "title": "开源就绪与服务端门禁：LICENSE + 密钥历史审计 + 分支保护",
       "user_visible_behavior": "仓库根存在 Apache-2.0 LICENSE；docs/coord-platform/README.md 是对外贡献者入口（定位/架构图/接入路径）；全历史密钥扫描报告已存档且高危项为零（或已轮换并记录）；GitHub main 分支保护开启：必须 PR、required checks 含 verify。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
       "owner": null,
       "capability": "CAP-QUALITY",
@@ -17,7 +17,7 @@
         "test -s phases/phase-p29-coord-platform/evidence/gitleaks-report.md",
         "gh api repos/boardx/boardx-dev-template/branches/main/protection --jq '.required_status_checks.contexts' | grep -q verify"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-07-18T03:06:39.567Z",
       "notes": "仓库已是 public；扫描报告先交人类过目再关闭本 feature。分支保护启用需 org admin 权限，若当前凭据不足则升级人类执行。"
     },
     {
@@ -26,7 +26,7 @@
       "area": "coord",
       "title": "协议规格 v0：三原语 wire format + coord-protocol 包",
       "user_visible_behavior": "docs/coord-platform/protocol/ 下有 lease.md、evidence.md、events.md 三份规格与 CHANGELOG.md；packages/coord-protocol 提供全部消息类型的 TS 类型 + 运行时校验，测试覆盖每种消息的合法/非法样例。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
@@ -34,7 +34,7 @@
         "test -f docs/coord-platform/protocol/lease.md && test -f docs/coord-platform/protocol/evidence.md && test -f docs/coord-platform/protocol/events.md && test -f docs/coord-platform/protocol/CHANGELOG.md",
         "pnpm --filter @repo/coord-protocol test"
       ],
-      "evidence": "",
+      "evidence": "evidence/F02.verify.log @ 2026-07-18T03:06:41.889Z",
       "notes": "语义继承 ADR-009（claim/heartbeat/TTL/sweeper、events 唯一可信历史），载体换 DO。规格与实现同 PR 演进，CHANGELOG 从 v0 开始记。"
     },
     {
@@ -44,7 +44,7 @@
       "title": "GitHub App + webhook ingest（coord-gateway + Queues 幂等）",
       "user_visible_behavior": "GitHub App 安装到本仓后，issues/issue_comment/pull_request/pull_request_review/check_run/push/status 事件经 apps/coord-gateway（签名校验 + Queues 削峰 + delivery GUID 幂等去重）写入对应 RepoHub DO；重复投递不产生重复事件；/healthz 反映消费延迟。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "02",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
@@ -61,7 +61,7 @@
       "title": "RepoHub DO：issue/PR 实时镜像 + GET /realtime/*",
       "user_visible_behavior": "packages/coord-repohub 的 RepoHub DO（每仓一个，SQLite 存储）维护 issue/PR 镜像，字段必含 state、labels、assignees、mergeable、mergeStateStatus、head SHA、checks 汇总；GET /api/coord/realtime/issues|prs|prs/:n 秒级新鲜，响应带镜像时间戳与 SHA 锚点。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "02",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
@@ -78,7 +78,7 @@
       "title": "RepoHub DO：原子租约（claim/heartbeat/TTL/alarm 回收）",
       "user_visible_behavior": "POST /api/coord/claims 对同一 resource 并发请求恰好一个 201，其余 409（带当前持有者信息）；heartbeat 续期；TTL 过期由 DO alarm 机械回收并产生事件；释放/回收必须附 handoff note，缺失被拒绝。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "02",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
