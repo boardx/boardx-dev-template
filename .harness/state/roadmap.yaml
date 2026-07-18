@@ -212,3 +212,10 @@ phases:
     goal: "协调层按 RepoHub Durable Object 重建并开源产品化：GitHub webhook 实时镜像 + 原子租约 + agent MCP 接入；本仓作为租户 #1 在 develop.boardx.us 跑通全链路"
     status: not_started
     depends_on: []
+  - id: "p30"
+    slug: devportal-platform
+    name: devportal-platform
+    goal: "DevPortal 平台化：多项目 agentic 协作平台（19 用例 + coord-resident 常驻云端协调者）——项目 5 分钟接入、工程师全生命周期、agent 车队管理、常驻 DO 协调与 dispatcher loops"
+    status: not_started
+    depends_on: []
+    has_ui: true
