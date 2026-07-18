@@ -502,10 +502,18 @@ Desktop layout:
 report-module-list | report-requirement-panel | report-preview-panel
 ```
 
-The requirement panel contains only chapter title, chapter description, one natural-language requirement textarea, save, and generate/update. The preview panel renders the latest `ProfessionalReportDocument`, or a zero-artifact prompt. Generation status shows “最新”, “数据有更新”, or “要求已修改”; version history is a native disclosure controlled by an icon/text button.
+The composer contains only the chapter list, chapter requirement editor, chapter effect
+preview, and a short generation summary. It does not render the complete
+`ProfessionalReportDocument` or own version selection. `分析报告` renders
+`WorkspaceReportWorkbench`, which owns the complete report and a bounded, scrollable
+immutable version history. Selecting a historical version uses exact artifact selection
+and replaces the displayed report only after that exact version loads successfully;
+failed or mismatched responses leave the current report unchanged.
 
-At widths below `xl`, the order is chapters, requirement, preview, then the collapsed history inside
-the preview panel. No fixed-height nested scroller may hide the primary controls.
+At widths below `xl`, the composer order is chapters, requirement, preview, then the
+generation summary. The analysis report keeps its version list scrollable without
+hiding the complete report or primary controls. No fixed-height nested scroller may
+hide the primary controls.
 
 - [x] **Step 5: Update superseded F12 UI assertions**
 

@@ -192,6 +192,12 @@ Preview states:
 Switching output type updates the preview immediately but does not generate a report.
 Generation remains an explicit user action.
 
+The composer exposes only the chapter effect preview and generation summary. Complete
+reports and immutable history are handled by `WorkspaceReportWorkbench` on
+`分析报告`; its version list is independently scrollable. A historical version changes
+the displayed report only after exact artifact selection and a successful matching load.
+Failed or mismatched loads leave the current report selected.
+
 ## Data and Versioning
 
 The normalized chapter output contract participates in `requirementHash`:

@@ -31,6 +31,19 @@
 - Do not modify `active-features.json` or hand-edit F16 `status`/`owner`/`evidence`.
 - F17 LangGraph and autonomous file retrieval remain out of scope.
 
+### Temporary large-file exemption
+
+F16 correction continues to touch the pre-existing oversized page
+`apps/web/app/(app)/surveys/page.tsx` (approximately 6,761 lines at this review).
+This is a temporary exemption under `.harness/instructions/coding-standards.md:7`
+and the root `AGENTS.md:39`: the correction only adds assembly and historical-report
+props, and this PR does not take on the high-risk page split. The exemption is
+explicitly owned by `wrk-survey-1` and must be removed before the next Survey UI
+feature in Phase p25 starts, and no later than `2026-08-01`.
+
+The follow-up extraction must move `WorkspaceReportWorkbench` and the report-version
+loading controller into independent components/modules before that deadline.
+
 ---
 
 ### Task 1: Amend the authoritative F16 requirement and verification contract
@@ -539,13 +552,17 @@ Render:
 />
 ```
 
-Title the right column `章节效果预览`. Keep generation state, timestamp, and collapsible
-immutable version-history summary there. The chart effect area must prominently state
+Title the right column `章节效果预览`. The composer only shows the selected chapter
+effect preview and a short generation summary (status/timestamp); it does not own the
+complete report or version history. The chart effect area must prominently state
 `示例数据，仅用于模板配置，不会写入报告证据。`. Text and image previews must describe
 configuration/structure only and direct users to `分析报告`; do not render
-`ProfessionalReportDocument` or generated chapter artifacts inside this panel. When a
-historical version is clicked, await `onSelectVersion(version.id)` before calling a
-minimal `onOpenReport` callback that navigates to `分析报告`.
+`ProfessionalReportDocument`, generated chapter artifacts, or historical versions inside
+this panel. `分析报告` owns `WorkspaceReportWorkbench`, which displays the complete
+report and a bounded, scrollable immutable version history. Selecting a version must
+use exact artifact selection and switch the displayed report only after the requested
+version loads successfully; failed or mismatched responses leave the current report
+unchanged.
 
 Use a viewport-bounded desktop layout:
 
