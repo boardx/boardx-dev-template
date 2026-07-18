@@ -29,6 +29,12 @@ CREATE TABLE IF NOT EXISTS events (
   payload     TEXT NOT NULL                 -- JSON
 );
 
+-- webhook 幂等：delivery GUID 去重（F03——重复投递不产生重复事件）
+CREATE TABLE IF NOT EXISTS deliveries (
+  delivery_id TEXT PRIMARY KEY,
+  at          TEXT NOT NULL
+);
+
 -- issue/PR 镜像：关键字段拉平便于过滤，全量 JSON 保真（F04）
 CREATE TABLE IF NOT EXISTS mirror_items (
   kind        TEXT NOT NULL,                -- issue | pr
