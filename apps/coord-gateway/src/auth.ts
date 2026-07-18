@@ -51,6 +51,13 @@ export function requireAdmin(req: Request, env: Env): Response | null {
   return null;
 }
 
+/** bearer 是否为 admin token（F10-pre：GET /tasks 双面复用的路由判定——
+ *  admin bearer（devportal broker，可 assignee=*）直通管理面，其余落 REST scoped 面）。 */
+export function isAdminBearer(req: Request, env: Env): boolean {
+  const bearer = bearerOf(req);
+  return Boolean(env.COORD_ADMIN_TOKEN && bearer && timingSafeEqualStr(bearer, env.COORD_ADMIN_TOKEN));
+}
+
 /** 鉴权通过后的主体：ops = COORD_API_TOKEN 万能钥匙（保留自证 agent_id 的运维语义）；
  *  scoped = 按仓 token，携带 DO 在册的 agent_id/owner——下游必须强绑定，禁止自证。 */
 export type RepoPrincipal =
@@ -133,6 +140,22 @@ export async function bindScopedAgentRequest(
   return new Request(req.url, { method: req.method, headers: req.headers, body });
 }
 
+/** GET /tasks 的收件箱可见性绑定（F10-pre，语义等价 coord-service inbox_is_private）：
+ *  scoped token 只能查自己的收件箱——assignee 缺省注入 token 身份；指定他人或 `*`
+ *  一律 403。ops 万能钥匙与 admin 面不受限（协调层可查任何人/列全队，#706）。 */
+export function bindScopedInboxQuery(
+  search: URLSearchParams,
+  principal: RepoPrincipal,
+): URLSearchParams | Response {
+  if (principal.kind !== "scoped") return search;
+  const assignee = search.get("assignee");
+  if (assignee !== null && assignee !== principal.agentId)
+    return json(403, { error: "inbox_is_private", token_agent_id: principal.agentId });
+  const bound = new URLSearchParams(search);
+  bound.set("assignee", principal.agentId);
+  return bound;
+}
+
 // ---------- REST 可达面 allowlist（F08 返工）----------
 // scoped/API token 只能触达协调读写端点；/mirror/upsert（挂 admin 面）、/webhook/ingest、
 // /projector/*、/tokens* 是内部/管理端点，普通透传一律 404。
@@ -140,6 +163,11 @@ export async function bindScopedAgentRequest(
 // /stream 预留给 F09 实时化读端点（GET）。
 export function isAllowedRestSubpath(method: string, sub: string): boolean {
   if (sub === "/claims") return true; // GET 列表 / POST 认领
+  // tasks 收件箱（F10-pre）：GET 轮询 + ack/complete 归 scoped 面；
+  // POST /tasks（派工）、/tasks/:id/recall（撤回）、/tasks/import（割接导入）
+  // 是 COORD_ADMIN_TOKEN 管理面（index.ts 先行路由），普通透传一律 404
+  if (sub === "/tasks") return method === "GET";
+  if (/^\/tasks\/\d+\/(ack|complete)$/.test(sub)) return method === "POST";
   if (/^\/claims\/[^/]+\/(heartbeat|release)$/.test(sub)) return method === "POST";
   if (sub === "/events") return method === "GET";
   if (sub === "/evidence") return true; // GET 查询 / POST 提交声明

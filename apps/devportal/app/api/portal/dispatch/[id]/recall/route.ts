@@ -1,4 +1,5 @@
-// 撤回派工（#594 P3）：验派工资格 → broker 代调 coord-service POST /tasks/:id/recall。
+// 撤回派工（#594 P3）：验派工资格 → broker 代调上游 POST /tasks/:id/recall
+// （F10-pre 起上游为 coord-gateway admin 面，数据权威在 RepoHub DO）。
 import { NextResponse } from "next/server";
 import { accessUser } from "@/lib/access";
 import { loadRegistry, canDispatch, dispatchBroker } from "@/lib/dispatch";

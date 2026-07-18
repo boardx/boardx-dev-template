@@ -36,6 +36,10 @@
 | `andon.raised` | scope, reason | （新增） |
 | `andon.cleared` | scope, reason | （新增） |
 | `mirror.updated` | kind issue/pr, number, fields_changed | （新增，镜像增量信号） |
+| `task.dispatched` | task_id, assignee, priority, deadline, note | task-dispatch（0.1.1 起） |
+| `task.acked` | task_id | task-ack（0.1.1 起） |
+| `task.completed` | task_id | task-done（0.1.1 起） |
+| `task.recalled` | task_id | task-recall（0.1.1 起） |
 
 ## 订阅
 
@@ -74,3 +78,20 @@
   合并」指的是 andon **触发时**已投递到 PR 上的 failure status 会阻断该 PR
   的合并，**不是**要你把它设为 required。
 - `reason` 必填且必须含可查证的锚点（issue/事件链接）——停线要能被追责与复盘。
+
+## Tasks（coord/0.1.1：派工收件箱事件）
+
+tasks 收件箱（语义等价 coord-service `0002_tasks.sql`，#614）迁入 RepoHub DO 后，
+每个状态迁移 emit 对应事件，`resource_id` 为 `issue:<n>`：
+
+- `task.dispatched`：派工（admin 面，coordinator 特权）。payload 必含
+  `task_id`（int ≥1）、`assignee`（非空）、`priority`（`high|normal|low`）；
+  `deadline`/`note` 可为 null。`agent_id` = 派工方（broker 身份或 "admin"）。
+- `task.acked` / `task.completed`：assignee 认领/交付（scoped 面，agent_id 强绑定，
+  只能动自己的收件箱）。payload 必含 `task_id`。
+- `task.recalled`：coordinator 撤回（admin 面）。payload 必含 `task_id`。
+- 状态机：`pending → acked → done`；`pending|acked → recalled`；`pending → done`
+  允许（跳过 ack 直接交付，D1 现行为）。非法迁移 409，不产生事件。
+- **存量导入不产事件**：D1 → DO 的割接导入（`/tasks/import`，admin 面，幂等
+  INSERT OR IGNORE 保留原 id）是审计回填，不是活跃协调信号；历史事件留存于
+  D1 归档（F10 割接产物）。

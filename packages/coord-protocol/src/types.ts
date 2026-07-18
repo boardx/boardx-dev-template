@@ -108,6 +108,12 @@ export const EVENT_TYPES = [
   "andon.raised",
   "andon.cleared",
   "mirror.updated",
+  // coord/0.1.1（F10 前置）：tasks 收件箱迁入 RepoHub，派工状态机四事件。
+  // 语义承接 coord-service D1 events 的 task-dispatch/ack/done/recall（#614/#631）。
+  "task.dispatched",
+  "task.acked",
+  "task.completed",
+  "task.recalled",
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];
@@ -129,6 +135,22 @@ export interface AndonPayload {
   scope: AndonScope;
   reason: string; // 必填，须含可查证锚点（issue/事件链接）
   severity: "stop-merge";
+}
+
+// ---------- Tasks（coord/0.1.1：派工收件箱，语义等价 coord-service 0002_tasks.sql） ----------
+
+export type TaskStatus = "pending" | "acked" | "done" | "recalled";
+export type TaskPriority = "high" | "normal" | "low";
+
+export const TASK_NOTE_MAX_LENGTH = 2000; // #631：派工附言不是日志倾倒场
+
+/** task.dispatched 的 payload 要点；task.acked/completed/recalled 仅需 task_id。 */
+export interface TaskDispatchedPayload {
+  task_id: number;
+  assignee: string;
+  priority: TaskPriority;
+  deadline: string | null;
+  note: string | null;
 }
 
 // ---------- 校验结果 ----------

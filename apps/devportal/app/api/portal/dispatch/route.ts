@@ -1,6 +1,7 @@
 // dispatch — 门户派工看板（#594 P3）。
 //   GET  → 派工资格 + 可派 agent 列表 + 全队任务队列（coordinator 视角）
-//   POST → 派工（验资格 → broker 代调 coord-service POST /tasks，note 带真人 email）
+//   POST → 派工（验资格 → broker 代调 coord-gateway 管理面 POST /tasks，note 带真人 email；
+//          F10-pre 起数据源为 RepoHub DO，coord-service 通道废弃）
 // 门禁 Cloudflare Access；无派工资格的人看得到队列但不显示派工表单（前端）+ POST 403。
 import { NextResponse } from "next/server";
 import { accessUser, ownerMatches } from "@/lib/access";
@@ -20,8 +21,9 @@ interface Task {
 // —— 有意的团队级可见（人类 2026-07-18 确认，非漏洞）——
 // 本 GET 对**任何通过 Cloudflare Access 的用户**返回全队任务队列，
 // 含 created_by / 派工人 email（note 前缀）/ deadline 等字段。这是刻意的团队透明设计。
-// 它**有意放宽**了 coord-service 声明的「协调者-only 读模型」：coord-service 对 worker 的
-// assignee=* 请求会返 403 inbox_is_private（per-user 隐私边界）。此处门户 broker 以协调者
+// 它**有意放宽**了上游声明的「协调者-only 读模型」：上游（F10-pre 起为 coord-gateway，
+// 此前为 coord-service）对 worker 的 assignee=* 请求会返 403 inbox_is_private
+// （per-user 隐私边界）。此处门户 broker 以协调者
 // 身份绕过该 per-user 边界、把全队队列摊平给所有 Access 用户，是设计决策而非越权——
 // 可见性由整站的 Cloudflare Access（GitHub org 成员）统一兜底。
 // 注意:此放宽只作用于**读取（GET）**；派工（POST）仍严格限协调者（见下方 canDispatch 校验）。
@@ -85,9 +87,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unknown_assignee" }, { status: 400 });
   }
 
-  // 审计：note 前缀标注真实派工人（coord-service 记录的 created_by 是 broker 身份）
+  // 审计：note 前缀标注真实派工人（上游记录的 created_by 是 broker 身份；
+  // F10-pre 起上游为 coord-gateway admin 面，broker 身份由本路由显式自报）
   const humanNote = `[派工人 ${user.email}] ${typeof body.note === "string" ? body.note : ""}`.trim().slice(0, 1900);
-  const payload: Record<string, unknown> = { issue, assignee, note: humanNote };
+  const payload: Record<string, unknown> = { issue, assignee, note: humanNote, created_by: "devportal-broker" };
   if (typeof body.priority === "string") payload["priority"] = body.priority;
   if (typeof body.deadline === "string") payload["deadline"] = body.deadline;
 

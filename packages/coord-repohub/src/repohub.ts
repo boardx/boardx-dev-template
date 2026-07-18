@@ -5,6 +5,7 @@ import { DurableObject } from "cloudflare:workers";
 import {
   PROTOCOL,
   LEASE_TTL_DEFAULT_SECONDS,
+  TASK_NOTE_MAX_LENGTH,
   validateClaimRequest,
   validateReleaseRequest,
   validateEvidenceManifest,
@@ -45,6 +46,31 @@ interface MirrorRow {
   data: string;
   mirrored_at: string;
 }
+
+interface TaskRow {
+  [key: string]: string | number | null;
+  id: number;
+  issue: number;
+  assignee: string;
+  priority: string;
+  deadline: string | null;
+  note: string | null;
+  status: string;
+  created_by: string;
+  created_at: string;
+  acked_at: string | null;
+  updated_at: string;
+}
+
+// tasks 状态机（语义等价 coord-service tasks.ts：pending→acked→done，可 recalled；
+// pending 直接 done 允许——跳过 ack 直接交付是 D1 现行为）
+const TASK_PRIORITIES = new Set(["high", "normal", "low"]);
+const TASK_STATUSES = new Set(["pending", "acked", "done", "recalled"]);
+const TASK_TRANSITIONS = {
+  ack: { to: "acked", from: ["pending"], event: "task.acked" },
+  complete: { to: "done", from: ["pending", "acked"], event: "task.completed" },
+  recall: { to: "recalled", from: ["pending", "acked"], event: "task.recalled" },
+} as const;
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -97,6 +123,12 @@ export class RepoHub extends DurableObject {
       if (req.method === "POST" && p === "/tokens/revoke") return this.tokenRevoke(await req.json());
       if (req.method === "POST" && p === "/tokens/verify") return this.tokenVerify(await req.json());
       if (req.method === "GET" && p === "/tokens") return this.tokenList();
+      if (req.method === "POST" && p === "/tasks") return this.taskDispatch(await req.json());
+      if (req.method === "GET" && p === "/tasks") return this.taskList(url);
+      if (req.method === "POST" && p === "/tasks/import") return this.taskImport(await req.json());
+      const tt = p.match(/^\/tasks\/(\d+)\/(ack|complete|recall)$/);
+      if (req.method === "POST" && tt)
+        return this.taskTransition(Number(tt[1]), tt[2] as "ack" | "complete" | "recall", await req.text());
       if (req.method === "POST" && p === "/stream/ticket") return this.mintStreamTicket();
       if (req.method === "GET" && p === "/stream") return this.streamUpgrade(req, url);
       const rt = p.match(/^\/realtime\/(issues|prs)$/);
@@ -582,6 +614,165 @@ export class RepoHub extends DurableObject {
         revoked_at: r["revoked_at"],
       })),
     });
+  }
+
+  // ---------- Tasks 收件箱（F10 前置：迁自 coord-service routes/tasks.ts，#614/#631） ----------
+  // 语义等价对照：字段/状态机/轮询契约与 D1 版一致；差异集中在鉴权载体——
+  //   派工/撤回 = gateway admin 面（COORD_ADMIN_TOKEN，原 COORDINATOR_KINDS 判定）；
+  //   ack/complete = scoped 面 + agent_id 强绑定（原 requireAgent 本人判定）；
+  //   assignee 在册校验上移到 devportal broker（DO 无 agents 表）。
+  // D1 版的原子条件 UPDATE（防 TOCTOU）保留——DO 单线程已消灭并发窗口，但
+  // 「数据库的原子写本身就是判定」的模式照搬，不退回 SELECT-then-decide。
+
+  private taskDispatch(body: unknown): Response {
+    const b = body as Record<string, unknown> | null;
+    const issue = b?.["issue"];
+    if (typeof issue !== "number" || !Number.isInteger(issue) || issue <= 0)
+      return json(400, { error: "missing_or_invalid_field:issue" });
+    const assignee = b?.["assignee"];
+    if (typeof assignee !== "string" || assignee.length === 0)
+      return json(400, { error: "missing_or_invalid_field:assignee" });
+
+    const priority = typeof b?.["priority"] === "string" ? (b["priority"] as string) : "normal";
+    if (!TASK_PRIORITIES.has(priority)) return json(400, { error: "invalid_priority" });
+
+    // deadline 必须可解析——脏字符串进库会让「超期」判定永远静默失效（#631）
+    let deadline: string | null = null;
+    if (b?.["deadline"] !== undefined && b["deadline"] !== null) {
+      if (typeof b["deadline"] !== "string" || Number.isNaN(Date.parse(b["deadline"])))
+        return json(400, { error: "invalid_deadline" });
+      deadline = new Date(b["deadline"]).toISOString(); // 归一存储
+    }
+    // note 上限——收件箱是协调面，不是日志倾倒场；超限直接拒（#631）
+    let note: string | null = null;
+    if (b?.["note"] !== undefined && b["note"] !== null) {
+      if (typeof b["note"] !== "string") return json(400, { error: "invalid_note" });
+      if (b["note"].length > TASK_NOTE_MAX_LENGTH) return json(400, { error: "note_too_long" });
+      note = b["note"];
+    }
+    // 派工方身份：admin 面无 token 身份，broker 自报（devportal-broker / 缺省 admin）
+    const createdBy = typeof b?.["created_by"] === "string" && b["created_by"].length > 0
+      ? (b["created_by"] as string) : "admin";
+
+    const at = iso(Date.now());
+    const task = [...this.sql.exec<TaskRow>(
+      `INSERT INTO tasks (issue, assignee, priority, deadline, note, status, created_by, created_at, updated_at)
+       VALUES (?,?,?,?,?,'pending',?,?,?) RETURNING *`,
+      issue, assignee, priority, deadline, note, createdBy, at, at,
+    )][0];
+    if (!task) return json(500, { error: "task_insert_failed" });
+
+    this.emit("task.dispatched", `issue:${issue}`, createdBy, {
+      task_id: task.id, assignee, priority, deadline, note,
+    });
+    return json(201, { task });
+  }
+
+  /** GET /tasks?assignee=&status= — 收件箱。可见性由 gateway 把守：
+   *  scoped token 被强制 assignee=<本人>；assignee=* 仅 admin/ops 面可达（列全队，#706）。 */
+  private taskList(url: URL): Response {
+    const assignee = url.searchParams.get("assignee");
+    const status = url.searchParams.get("status");
+    if (status && !TASK_STATUSES.has(status)) return json(400, { error: "invalid_status" });
+    if (!assignee) return json(400, { error: "missing_assignee" }); // DO 无身份上下文，必须显式
+    if (assignee === "*") {
+      const rows = status
+        ? [...this.sql.exec<TaskRow>(`SELECT * FROM tasks WHERE status=? ORDER BY id DESC LIMIT 200`, status)]
+        : [...this.sql.exec<TaskRow>(`SELECT * FROM tasks ORDER BY id DESC LIMIT 200`)];
+      return json(200, { tasks: rows });
+    }
+    const rows = status
+      ? [...this.sql.exec<TaskRow>(`SELECT * FROM tasks WHERE assignee=? AND status=? ORDER BY id DESC LIMIT 100`, assignee, status)]
+      : [...this.sql.exec<TaskRow>(`SELECT * FROM tasks WHERE assignee=? ORDER BY id DESC LIMIT 100`, assignee)];
+    return json(200, { tasks: rows });
+  }
+
+  /** POST /tasks/:id/(ack|complete|recall) — 状态迁移。body 可为空（recall 无 body）。
+   *  ack/complete：body.agent_id（gateway 对 scoped 强绑定注入）必须 === assignee；
+   *  recall：admin 面，agent_id 可选（缺省 "admin"）。 */
+  private taskTransition(id: number, action: "ack" | "complete" | "recall", rawBody: string): Response {
+    let b: Record<string, unknown> | null = null;
+    if (rawBody.length > 0) {
+      try {
+        const parsed = JSON.parse(rawBody) as unknown;
+        b = typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
+          ? (parsed as Record<string, unknown>) : null;
+      } catch {
+        return json(400, { error: "invalid_json" });
+      }
+    }
+    const task = [...this.sql.exec<TaskRow>(`SELECT * FROM tasks WHERE id=?`, id)][0];
+    if (!task) return json(404, { error: "task_not_found" });
+
+    const spec = TASK_TRANSITIONS[action];
+    let actor: string;
+    if (action === "recall") {
+      actor = typeof b?.["agent_id"] === "string" && b["agent_id"].length > 0 ? (b["agent_id"] as string) : "admin";
+    } else {
+      const agentId = b?.["agent_id"];
+      if (typeof agentId !== "string" || agentId.length === 0)
+        return json(400, { error: "missing_agent_id" });
+      if (task.assignee !== agentId) return json(403, { error: "not_your_task" });
+      actor = agentId;
+    }
+
+    const at = iso(Date.now());
+    const placeholders = spec.from.map(() => "?").join(",");
+    const sets = ["status=?", "updated_at=?", ...(action === "ack" ? ["acked_at=?"] : [])];
+    const binds = [spec.to, at, ...(action === "ack" ? [at] : []), id, ...spec.from];
+    const updated = [...this.sql.exec<TaskRow>(
+      `UPDATE tasks SET ${sets.join(", ")} WHERE id=? AND status IN (${placeholders}) RETURNING *`,
+      ...binds,
+    )][0];
+    // 空返回 = 前置状态不满足——原子判定的结果，不再 SELECT-then-decide
+    if (!updated) {
+      const current = [...this.sql.exec<{ status: string }>(`SELECT status FROM tasks WHERE id=?`, id)][0];
+      return json(409, { error: `invalid_transition:${current?.status ?? "gone"}->${spec.to}` });
+    }
+    this.emit(spec.event, `issue:${task.issue}`, actor, { task_id: id });
+    return json(200, { task: updated });
+  }
+
+  /** POST /tasks/import — D1 → DO 割接导入（admin 面，不走 REST allowlist）。
+   *  幂等：INSERT OR IGNORE 按原 id 保留，重跑不产生重复；**不 emit 事件**——
+   *  这是审计回填，不是活跃协调信号（events.md §Tasks）；历史事件留在 D1 归档。 */
+  private taskImport(body: unknown): Response {
+    const rows = (body as Record<string, unknown> | null)?.["tasks"];
+    if (!Array.isArray(rows)) return json(422, { error: "invalid_import", details: ["tasks 必须是数组"] });
+    let imported = 0;
+    let skipped = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i] as Record<string, unknown>;
+      const bad = (msg: string) => json(422, { error: "invalid_import", details: [`tasks[${i}] ${msg}`] });
+      if (typeof r !== "object" || r === null) return bad("必须是对象");
+      if (!Number.isInteger(r["id"]) || (r["id"] as number) <= 0) return bad("id 必须是正整数");
+      if (!Number.isInteger(r["issue"]) || (r["issue"] as number) <= 0) return bad("issue 必须是正整数");
+      if (typeof r["assignee"] !== "string" || r["assignee"].length === 0) return bad("assignee 必须非空");
+      if (typeof r["status"] !== "string" || !TASK_STATUSES.has(r["status"])) return bad("status 非法");
+      if (typeof r["created_by"] !== "string" || r["created_by"].length === 0) return bad("created_by 必须非空");
+      if (typeof r["created_at"] !== "string" || typeof r["updated_at"] !== "string")
+        return bad("created_at/updated_at 必须是字符串");
+      const priority = typeof r["priority"] === "string" && TASK_PRIORITIES.has(r["priority"])
+        ? (r["priority"] as string) : "normal";
+      // DO 单线程：existence check 与 INSERT 之间没有并发窗口，幂等判定安全
+      const exists = [...this.sql.exec(`SELECT 1 FROM tasks WHERE id=?`, r["id"])][0];
+      if (exists) {
+        skipped++;
+        continue;
+      }
+      this.sql.exec(
+        `INSERT INTO tasks (id, issue, assignee, priority, deadline, note, status, created_by, created_at, acked_at, updated_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+        r["id"], r["issue"], r["assignee"], priority,
+        (r["deadline"] as string | null | undefined) ?? null,
+        (r["note"] as string | null | undefined) ?? null,
+        r["status"], r["created_by"], r["created_at"],
+        (r["acked_at"] as string | null | undefined) ?? null,
+        r["updated_at"],
+      );
+      imported++;
+    }
+    return json(200, { ok: true, imported, skipped });
   }
 
   // ---------- helpers ----------

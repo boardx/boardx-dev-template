@@ -165,13 +165,29 @@ describe("VerificationVerdict", () => {
 });
 
 describe("CoordEvent", () => {
-  it("全部 11 个封闭集合类型均可通过（andon 用合法 payload）", () => {
+  it("全部封闭集合类型均可通过（andon/task 用合法 payload）", () => {
     for (const t of EVENT_TYPES) {
       const payload = t.startsWith("andon.")
         ? { scope: "repo", reason: "main 基础验证挂了，停线（issue #123）", severity: "stop-merge" }
-        : {};
+        : t === "task.dispatched"
+          ? { task_id: 1, assignee: "wrk-1", priority: "normal", deadline: null, note: null }
+          : t.startsWith("task.")
+            ? { task_id: 1 }
+            : {};
       expect(validateEvent(event(t, payload)).ok, t).toBe(true);
     }
+  });
+  it("task.* 缺 task_id / task.dispatched 缺 assignee 或坏 priority 被拒（coord/0.1.1）", () => {
+    expect(validateEvent(event("task.acked", {})).ok).toBe(false);
+    expect(validateEvent(event("task.completed", { task_id: 0 })).ok).toBe(false);
+    expect(validateEvent(event("task.recalled", { task_id: 7 })).ok).toBe(true);
+    expect(validateEvent(event("task.dispatched", { task_id: 1, priority: "normal" })).ok).toBe(false);
+    expect(
+      validateEvent(event("task.dispatched", { task_id: 1, assignee: "wrk-1", priority: "urgent" })).ok,
+    ).toBe(false);
+    expect(
+      validateEvent(event("task.dispatched", { task_id: 1, assignee: "wrk-1", priority: "high" })).ok,
+    ).toBe(true);
   });
   it("拒绝未知事件类型 / 非法 repo", () => {
     expect(validateEvent(event("lease.stolen")).ok).toBe(false);

@@ -3,6 +3,23 @@
 规格版本独立于实现版本；wire format 变更**必须**在此登记（ADR-017 §4，
 北极星 §7.5"协议即规格"）。语义化：破坏性变更升 minor（0.x 阶段）。
 
+## coord/0.1.1 — 2026-07-18
+
+**加法扩展（非破坏）：task.\* 事件四类型**（F10 前置：tasks 收件箱与派工 broker
+从冻结退役中的 coord-service D1 迁入 RepoHub DO）。
+
+- 事件封闭集合新增 `task.dispatched` / `task.acked` / `task.completed` /
+  `task.recalled`，payload 校验入 `validateEvent`（task_id 必填；dispatched
+  另需 assignee + priority）。语义承接 D1 events 的
+  task-dispatch/ack/done/recall（#614/#631）。
+- 版本判定理由：信封结构、既有 11 个类型、全部请求/响应 wire format 均不变，
+  仅扩事件类型集合——按语义化是 **patch（0.1.1）而非 0.2**。wire 上的
+  `protocol` 字段维持 `"coord/0.1"` 不动：升 tag 会让所有已部署校验器
+  （`protocol === "coord/0.1"` 强等判定）拒收新消息，属于人为制造破坏；
+  0.x 阶段只有破坏性变更才升 minor 并更换 wire tag。
+- 不认识 task.* 的旧消费者按「未知类型忽略」处理即可（事件流本就要求
+  消费者对新增类型前向兼容）。
+
 ## coord/0.1 — 2026-07-18
 
 首个公开版本。三原语定稿：

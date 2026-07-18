@@ -14,6 +14,7 @@ type Obj = Record<string, unknown>;
 const RESOURCE_TYPES = new Set(["feature", "issue", "coordinator-role", "module", "custom"]);
 const LEASE_STATUSES = new Set(["in_progress", "released", "expired"]);
 const VERIFIER_KINDS = new Set(["independent-rerun", "reviewer-attest", "ci"]);
+const TASK_PRIORITIES = new Set(["high", "normal", "low"]);
 const EVENT_TYPE_SET = new Set<string>(EVENT_TYPES);
 
 const RESOURCE_ID_RE = /^(feature:[\w.-]+\/F\d{2,}|issue:\d+|role:[\w-]+|module:[\w-]+|custom:[\w:./-]+)$/;
@@ -203,6 +204,16 @@ export function validateEvent(input: unknown): ValidationResult {
       pc.errors.push("scope 必须是 repo 或 module:<name>");
     if (type === "andon.raised" && p["severity"] !== "stop-merge")
       pc.errors.push('severity 必须是 "stop-merge"');
+    pc.errors.forEach((e) => r.errors.push(`payload.${e}`));
+  }
+
+  // task.* 事件的 payload 强校验（coord/0.1.1，events.md §Tasks）
+  if (type.startsWith("task.") && isObj(o["payload"])) {
+    const p = o["payload"] as Obj;
+    const pc = new Check(p).int("task_id", { min: 1 });
+    if (type === "task.dispatched") {
+      pc.str("assignee").oneOf("priority", TASK_PRIORITIES);
+    }
     pc.errors.forEach((e) => r.errors.push(`payload.${e}`));
   }
   return r.result();
