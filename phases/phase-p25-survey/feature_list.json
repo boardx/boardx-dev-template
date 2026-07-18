@@ -431,7 +431,7 @@
       "title": "模板驱动的专业分析报告",
       "user_visible_behavior": "用户保存报告模板并主动生成报告时，系统从同一份完整问卷事实库中为每个模板章节生成唯一的文本、ECharts 图表或图片产物；成功报告的章节数量、顺序、标题和类型与生成时模板快照逐项一致。任一章节失败时不发布部分版本并保留最近成功报告。分析报告页以专业阅读布局展示模板目录、连续章节、紧凑版本入口、分享和导出操作，且不再显示固定业务章节或常驻编辑助手。",
       "design_ref": "requirements/18-template-driven-professional-report.md；docs/superpowers/specs/2026-07-19-template-driven-professional-report-design.md；2026-07-19 用户确认",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "19",
       "owner": "wrk-survey-1",
       "capability": "CAP-WEB",
@@ -448,7 +448,7 @@
         "pnpm harness doctor --phase p25",
         "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-19/evidence/F19.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F19.verify.log @ 2026-07-18T18:57:21.681Z",
       "notes": "独立 Delivery PR，Refs #648。共享热点为 professional-report route、survey-professional-report.ts、report export 和 surveys/page.tsx；F17 合并前后均通过明确的章节生成接口集成，不在本 feature 修改 LangGraph runtime。"
     }
   ]
