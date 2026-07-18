@@ -62,4 +62,12 @@
 - `scope` ∈ `repo | module:<name>`；`severity` v0.1 仅 `stop-merge`。
 - **投影**：andon.raised(repo) → 所有 open PR 的 commit status `coord/andon` 置
   failure（若该 status 被设为 required，即物理阻断合并）；andon.cleared → success。
+- ⚠️ **禁止把 `coord/andon` 配置为 required status check**。`coord/andon` 是
+  **条件投递**的 status——仅在停线（andon active）或刚解除时才会出现在 PR 上，
+  平时任何 PR 上都没有它（见 `apps/coord-gateway/src/projection.ts` 的
+  「无新事件且未停线：无事可投」逻辑）。而 required 语义要求该 check 在**每个**
+  PR 上出现并转绿；`coord/andon` 无基线绿，设为 required 会让全仓所有 PR 因该
+  check 永久 pending 而无法合并（锁死全仓）。上一条里的「物理阻断合并」指的是
+  andon **触发时**已投递到 PR 上的 failure status 会阻断该 PR 的合并，**不是**
+  要你把它设为 required。
 - `reason` 必填且必须含可查证的锚点（issue/事件链接）——停线要能被追责与复盘。
