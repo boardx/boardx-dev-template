@@ -483,7 +483,7 @@
       "title": "修复模板驱动报告入口",
       "user_visible_behavior": "用户从问卷设计器点击“分析报告”时进入统一工作流的模板驱动专业报告页；主动生成报告调用 professional-report 并按已保存模板组装章节，不再进入旧 results/ai-report 页面或显示 ai_report_failed。",
       "design_ref": "requirements/20-template-report-entry-routing.md；2026-07-19 用户缺陷截图",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "21",
       "owner": "wrk-survey-1",
       "capability": "CAP-WEB",
@@ -499,7 +499,7 @@
         "pnpm harness doctor --phase p25",
         "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-21/evidence/F21.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F21.verify.log @ 2026-07-18T21:51:28.110Z",
       "notes": "独立 bug feature，Refs #648，追加到 PR #757；仅修复设计器报告入口路由，不删除旧结果统计页。"
     }
   ]
