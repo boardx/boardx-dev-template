@@ -13,10 +13,10 @@
 - F17 交付说明改为复用同一个物理 worktree，合并 F16 后同步最新 main 并切独立分支。
 
 ## 仍损坏或未验证
-- F16 feature issue 已同步为 `#715`，尚未推送分支或创建 Delivery PR。
+- F16 无已知 blocker。PR `#716` 已推送、ready 且 mergeable；远端状态检查在创建后尚未上报。
 
 ## 下一步最佳动作
-- 完成 F16 Delivery PR 和 review；PR 只 `Closes #715`、`Refs #648`，F16 合并前不要开始 F17。
+- 等待 `#716` review/CI/merge；PR 只 `Closes #715`、`Refs #648`，F16 合并前不要开始 F17。
 - F16 合并后复用本 worktree，同步最新 `main`，再切换到独立 F17 分支。
 
 ## 命令

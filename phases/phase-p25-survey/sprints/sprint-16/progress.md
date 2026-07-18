@@ -38,4 +38,6 @@
 - 已记录证据: 最终桌面截图由 Playwright 在合并后的代码上重新生成。
 - 已知风险或未解决问题: 无 F16 blocker；F17 仍等待本 PR 合并。
 - GitHub 投影: F16 feature issue 为 `#715`，正文 `Refs #648`。
-- 下一步最佳动作: 推送分支并创建只 `Closes #715`、`Refs #648` 的 Delivery PR。
+- Delivery PR: `#716`（目标 `main`，ready，mergeable），只 `Closes #715`、`Refs #648`。
+- Umbrella 回链: `#648` 已追加 `#715` / `#716` 与 F17 后续顺序。
+- 下一步最佳动作: 等待 `#716` review/CI/merge；合并前不开始 F17。
