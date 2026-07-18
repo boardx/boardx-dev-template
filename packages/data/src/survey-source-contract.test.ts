@@ -37,12 +37,13 @@ describe("Survey source data contract", () => {
     expect(plan.categories[0]).toMatchObject({
       name: "商品安全",
       questionIds: [11],
-      inputModes: ["chart", "text"],
-      chartType: "bar",
+      outputType: "text",
+      inputModes: ["text"],
     });
     expect(plan.categories[1]).toMatchObject({
       name: "开放反馈",
       questionIds: [12],
+      outputType: "text",
       inputModes: ["text"],
     });
   });
@@ -103,5 +104,82 @@ describe("Survey source data contract", () => {
     expect(plan.categories[0]?.requirement).toContain("标注样本量");
     expect(plan.categories[0]?.requirement).toContain("突出关键差异");
     expect(plan.categories[0]?.requirement).toContain("给出行动建议");
+  });
+
+  it("normalizes an explicit chart chapter to one output type", () => {
+    const plan = cleanSurveyReportCategoryPlan({
+      categories: [{
+        id: "safety",
+        name: "安全认知",
+        outputType: "chart",
+        inputModes: ["chart", "text"],
+        chartType: "line",
+        questionIds: [],
+        prompt: "分析安全认知",
+        order: 1,
+        isCustom: false,
+      }],
+    }, "商品安全调研");
+
+    expect(plan.categories[0]).toMatchObject({
+      outputType: "chart",
+      inputModes: ["chart"],
+      chartTemplateId: "line-simple",
+    });
+  });
+
+  it("defaults chapters without a valid output type to text", () => {
+    const plan = cleanSurveyReportCategoryPlan({
+      categories: [{
+        id: "summary",
+        name: "总结",
+        inputModes: ["chart", "text"],
+        chartType: "line",
+      }],
+    }, "商品安全调研");
+
+    expect(plan.categories[0]).toMatchObject({
+      outputType: "text",
+      inputModes: ["text"],
+    });
+    expect(plan.categories[0]?.chartTemplateId).toBeUndefined();
+  });
+
+  it("falls back to the line template for an invalid chart template", () => {
+    const plan = cleanSurveyReportCategoryPlan({
+      categories: [{
+        id: "safety",
+        name: "安全认知",
+        outputType: "chart",
+        chartTemplateId: "unsupported",
+        chartType: "bar",
+      }],
+    }, "商品安全调研");
+
+    expect(plan.categories[0]).toMatchObject({
+      outputType: "chart",
+      inputModes: ["chart"],
+      chartTemplateId: "line-simple",
+      chartType: "line",
+    });
+  });
+
+  it("removes chart templates from non-chart chapters", () => {
+    const plan = cleanSurveyReportCategoryPlan({
+      categories: [{
+        id: "visual",
+        name: "图片说明",
+        outputType: "image",
+        chartTemplateId: "bar-simple",
+        chartType: "bar",
+      }],
+    }, "商品安全调研");
+
+    expect(plan.categories[0]).toMatchObject({
+      outputType: "image",
+      inputModes: ["image"],
+      chartType: undefined,
+    });
+    expect(plan.categories[0]?.chartTemplateId).toBeUndefined();
   });
 });

@@ -62,6 +62,9 @@ function reportRequirementPayload(plan: {
         name: category.name,
         description: category.description,
         requirement: categoryRequirement(category),
+        outputType: category.outputType,
+        chartTemplateId:
+          category.outputType === "chart" ? category.chartTemplateId : undefined,
         order: category.order,
       })),
   };

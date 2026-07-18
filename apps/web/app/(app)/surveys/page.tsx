@@ -163,7 +163,17 @@ interface ReportCategoryDraft {
   description: string;
   requirement?: string;
   questionIds: number[];
-  inputModes: ReportInputMode[];
+  outputType: ReportElement;
+  inputModes: [ReportElement];
+  chartTemplateId?:
+    | "line-simple"
+    | "bar-simple"
+    | "pie-simple"
+    | "scatter-simple"
+    | "radar"
+    | "funnel"
+    | "gauge"
+    | "heatmap-cartesian";
   chartType?: ReportCategoryChartType;
   chartStyle?: ReportCategoryChartStyle;
   chartConfig?: {
@@ -473,8 +483,8 @@ function fallbackReportCategoryPlan(survey: Survey, questions: Question[]): Repo
             description: "覆盖完整问卷事实库，生成管理层可读的综合分析。",
             requirement: "面向决策者，先给结论，再展示证据、样本边界和行动建议。",
             questionIds: ids,
-            inputModes: ["text", "chart"],
-            chartType: "bar",
+            outputType: "text",
+            inputModes: ["text"],
             prompt: "基于全部问题和答卷数据生成管理层可读的综合分析。",
             order: 1,
             isCustom: false,

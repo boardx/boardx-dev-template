@@ -90,6 +90,7 @@ export function addCustomReportCategory(
         description: "从整份问卷和全部授权答卷中自主检索证据。",
         requirement: `面向决策者分析「${name}」，先给结论，再展示证据、样本边界和行动建议。`,
         questionIds: [],
+        outputType: "text",
         inputModes: ["text"],
         prompt: `围绕「${name}」生成专业报告内容。`,
         order: nextOrder,
