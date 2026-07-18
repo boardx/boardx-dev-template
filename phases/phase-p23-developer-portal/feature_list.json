@@ -5,7 +5,7 @@
     {
       "id": "F01",
       "priority": 1,
-      "area": "portal",
+      "area": "devportal",
       "title": "门户骨架：五 tab 导航 + 待人类拍板全局通知 + 访客分流带",
       "user_visible_behavior": "打开 /portal 看到五个板块 tab（窄屏横滚）；存在待拍板事项时顶栏出现常驻通知条（含数量与'去处理'跳转）、讨论流 tab 带红点计数、浏览器标题前缀 (N)；顶部有未登录访客分流带（3 分钟了解 / 开始 onboarding）；页头显示当前开发者身份 chip（👤 姓名 + @github + 带来的 agent 数）——开发者是人类一等实体，不混同于 agent。",
       "status": "passing",
@@ -27,7 +27,7 @@
     {
       "id": "F02",
       "priority": 1,
-      "area": "portal",
+      "area": "devportal",
       "title": "数据接入层：门户聚合 API + 全卡片三态与互不拖垮降级",
       "user_visible_behavior": "门户各卡片有 loading 骨架 / 空态 / 数据源不可达降级横幅三态；coord-service 挂时 GitHub 类卡片照常，反之亦然（互不拖垮）；页面标注数据更新时间。",
       "status": "passing",
@@ -48,7 +48,7 @@
     {
       "id": "F03",
       "priority": 1,
-      "area": "portal",
+      "area": "devportal",
       "title": "脉搏与进度板块：整体进度+周变化、flow-time 趋势、phase 下钻",
       "user_visible_behavior": "总进度 N/M 旁显示本周增量；每 phase 进度条带 ↑n；点击 phase 展开下钻（通过/进行中/受阻徽章 + feature 明细，语义色 token）；flow-time 卡显示当前中位值、与基线对比、近 7 天趋势线。",
       "status": "passing",
@@ -71,7 +71,7 @@
     {
       "id": "F04",
       "priority": 1,
-      "area": "portal",
+      "area": "devportal",
       "title": "谁在干活 + PR 队列（堵点高亮与行动按钮）",
       "user_visible_behavior": "'现在谁在干活'每行显示 agent、正在做什么（当前 claim/cycle-plan）、🟢🟡🔴 心跳状态点（时间在悬停）；PR 队列超 1 个周期（3h）未动的行红框高亮并提供 催办/认领 review/去 GitHub 行动按钮；每个 agent 行标注归属开发者（👤 owner，当前开发者显示为'我'并高亮）。",
       "status": "passing",
@@ -94,7 +94,7 @@
     {
       "id": "F05",
       "priority": 2,
-      "area": "portal",
+      "area": "devportal",
       "title": "实时协调板块迁入门户（状态点语义化）",
       "user_visible_behavior": "活跃租约/协调事件两卡迁入门户（中文标题+术语括注），租约行用 🟢🟡🔴 状态点表达心跳新鲜度（阈值同 admin/coordination 现有逻辑），expire 类事件红色徽章。",
       "status": "passing",
@@ -115,7 +115,7 @@
     {
       "id": "F06",
       "priority": 1,
-      "area": "portal",
+      "area": "devportal",
       "title": "讨论流：人类/AI 分流 + 分级降噪 + 待拍板卡强化",
       "user_visible_behavior": "聚合协调叙述 issue 与活跃 feature issue 评论；👤/🤖/待拍板过滤；排序 拍板>andon>站会>巡检（巡检默认折叠可展开）；待拍板卡把问题本身加粗放大并提供'快捷回应'（预填 GitHub 评论跳转）；权威在 GitHub，门户不发评论。",
       "status": "passing",
@@ -138,7 +138,7 @@
     {
       "id": "F07",
       "priority": 2,
-      "area": "portal",
+      "area": "devportal",
       "title": "加入开发：onboarding 向导（现实版）+ 学习页",
       "user_visible_behavior": "5 步 stepper（每步标预计耗时+所需条件，任意步可预览）；第 4 步显示审批 SLA；第 5 步如实呈现人工发放三步流程+命令自取（注明自动发放待 ADR-011 P2/P3）；提交申请自动创建预填 onboarding issue；学习页渲染 human-developer-onboarding.md 并随 main 更新。",
       "status": "passing",
@@ -160,7 +160,7 @@
     {
       "id": "F08",
       "priority": 2,
-      "area": "portal",
+      "area": "devportal",
       "title": "性能板块：按 开发者→agents 配对分组 + C-cycle 周期报告",
       "user_visible_behavior": "性能表按'开发者（👤 人类分组头，含姓名/@github/合计数）→ 其 agents（🤖 行）'分组呈现——开发者不是 agent 行、但与其 agents 成对出现；当前登录开发者的分组标'我'；sub-agent 在所属 agent 下按 parent 缩进；周期报告表=cycle-report 的 Web 版。",
       "status": "passing",
@@ -183,7 +183,7 @@
     {
       "id": "F09",
       "priority": 2,
-      "area": "portal",
+      "area": "devportal",
       "title": "门禁与路由收口：/portal 正式路由 + 登录门禁 + 原型退役",
       "user_visible_behavior": "门户挂在 /portal（develop.boardx.us 首页跳转到它）；板块页登录可见（先复用现有会话/SysAdmin 门禁，OAuth 随 ADR-011 P2 升级），未登录见分流带+学习页只读；/portal-prototype 原型路由移除。",
       "status": "passing",
@@ -210,7 +210,7 @@
     {
       "id": "F10",
       "priority": 3,
-      "area": "portal",
+      "area": "devportal",
       "title": "【Phase F 后置】登录后'我'视角首页",
       "user_visible_behavior": "登录后首页=我的 agent 队伍、@我的待拍板、我卡住的 PR、我的 flow-time，全局脉搏第二屏——10 秒内知道'我现在该干什么'。",
       "status": "passing",

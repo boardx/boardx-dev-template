@@ -142,7 +142,7 @@
     {
       "id": "F09",
       "priority": 4,
-      "area": "portal",
+      "area": "devportal",
       "title": "devportal 门户实时化（WebSocket 接 RepoHub）",
       "user_visible_behavior": "devportal 看板数据源切到 RepoHub：页面通过 WebSocket 秒级跟随 GitHub 变更（新 issue/PR 状态/check 变化无需刷新即出现），每张卡片展示数据新鲜度时间戳；Access 会话过期仍走 401 整页重认证（#588 行为不回退）。",
       "status": "passing",

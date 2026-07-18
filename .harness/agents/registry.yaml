@@ -25,7 +25,7 @@ agents:
     active: true
     kind: token-broker
     model: service
-    areas: [portal]
+    areas: [devportal]
     responsibilities:
       - devportal 自助 token 领取/轮换的唯一服务端入口（mint 经它代调）
   # 门户派工的 broker（#594 P3）：kind=module-coordinator 只为满足 coord-service
@@ -36,7 +36,7 @@ agents:
     active: true
     kind: module-coordinator
     model: service
-    areas: [portal]
+    areas: [devportal]
     responsibilities:
       - devportal 门户派工的唯一服务端入口（POST /tasks / recall 经它代调，#594 P3）
   # ── 主 Agent：编排者（唯一）────────────────────────────────────────────────
@@ -148,7 +148,7 @@ agents:
     parent: coord-architecture
     role: portal-dev
     owner: usamshen
-    areas: [portal]
+    areas: [devportal]
     spawned_at: 2026-07-09T12:20:00Z
     responsibilities: [p23 wave1 F03+F04（脉搏与进度 / 谁在干活+PR队列）]
   - id: coord-architecture.portal-dev-2
@@ -157,7 +157,7 @@ agents:
     parent: coord-architecture
     role: portal-dev
     owner: usamshen
-    areas: [portal]
+    areas: [devportal]
     spawned_at: 2026-07-09T12:20:00Z
     responsibilities: [p23 wave1 F05+F06（实时协调 / 讨论流）]
   - id: coord-architecture.portal-dev-3
@@ -166,7 +166,7 @@ agents:
     parent: coord-architecture
     role: portal-dev
     owner: usamshen
-    areas: [portal]
+    areas: [devportal]
     spawned_at: 2026-07-09T12:20:00Z
     responsibilities: [p23 wave1 F07+F08（加入开发 / 性能）]
 
