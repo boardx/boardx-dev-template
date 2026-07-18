@@ -216,5 +216,5 @@ phases:
     slug: harness-v2
     name: Harness V2
     goal: "建立供应商中立、可持久恢复、可评估且可渐进迁移的长期 Agent Harness 产品"
-    status: not_started
+    status: in_progress
     depends_on: []

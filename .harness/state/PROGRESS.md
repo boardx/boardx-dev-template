@@ -34,6 +34,6 @@
 | p27 | AI Store | in_progress | 0 | 0 | 0 | 17 |
 | p28 | platform-accounts-gap2 | not_started | 1 | 0 | 0 | 0 |
 | p29 | coord-platform | not_started | 3 | 0 | 0 | 7 |
-| p30 | Harness V2 | not_started | 6 | 0 | 0 | 1 |
+| p30 | Harness V2 | in_progress | 6 | 0 | 0 | 1 |
 
-_最近聚合:2026-07-18T07:29:10.866Z_
+_最近聚合:2026-07-18T07:35:46.826Z_
