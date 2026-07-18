@@ -79,4 +79,29 @@ describe("Survey source data contract", () => {
     });
     expect(plan.categories.flatMap((category) => category.questionIds).sort()).toEqual([11, 12]);
   });
+
+  it("folds legacy module prompts into one natural-language requirement", () => {
+    const plan = cleanSurveyReportCategoryPlan(
+      {
+        categories: [
+          {
+            name: "商品安全",
+            prompt: "先给结论",
+            dataPrompt: "标注样本量",
+            modulePrompts: {
+              chart: "突出关键差异",
+              text: "给出行动建议",
+            },
+          },
+        ],
+      },
+      "商品调研",
+      questions
+    );
+
+    expect(plan.categories[0]?.requirement).toContain("先给结论");
+    expect(plan.categories[0]?.requirement).toContain("标注样本量");
+    expect(plan.categories[0]?.requirement).toContain("突出关键差异");
+    expect(plan.categories[0]?.requirement).toContain("给出行动建议");
+  });
 });

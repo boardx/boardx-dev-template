@@ -119,6 +119,7 @@ export interface SurveyReportCategoryInput {
   id: string;
   name: string;
   description: string;
+  requirement?: string;
   questionIds: number[];
   inputModes: ReportInputMode[];
   chartType?: SurveyReportChartType;
@@ -222,6 +223,7 @@ export function defaultSurveyReportCategoryPlan(title: string, questions: Survey
       id: stableCategoryId(name, index),
       name: name.slice(0, 48),
       description: `围绕「${name}」下的 ${items.length} 个问题生成报告内容。`,
+      requirement: `面向决策者分析「${name}」，先给结论，再展示证据、样本边界和行动建议。`,
       questionIds: items.map((question) => question.id),
       inputModes: inferReportInputModes(items),
       chartType: items.some((question) => ["single", "multiple", "dropdown", "rating", "linear_scale", "nps", "number"].includes(question.type)) ? "bar" : undefined,
@@ -246,10 +248,24 @@ export function cleanSurveyReportCategoryPlan(input: unknown, surveyTitle: strin
     const modulePrompts = Object.fromEntries((["text", "chat", "chart", "image"] as ReportInputMode[])
       .map((mode) => [mode, String((item.modulePrompts as Record<string, unknown> | undefined)?.[mode] ?? "").trim().slice(0, 1000)])
       .filter(([, value]) => value));
+    const explicitRequirement = String(item.requirement ?? "").trim();
+    const legacyRequirementParts = [
+      String(item.prompt ?? "").trim(),
+      String(item.dataPrompt ?? "").trim(),
+      ...Object.values(modulePrompts),
+    ].filter(Boolean);
+    const requirementParts = explicitRequirement
+      ? [explicitRequirement]
+      : Array.from(new Set(legacyRequirementParts));
+    const requirement = (
+      requirementParts.join("\n") ||
+      `面向决策者分析「${name}」，先给结论，再展示证据、样本边界和行动建议。`
+    ).slice(0, 2000);
     return {
       id: String(item.id ?? stableCategoryId(name, index)).trim().slice(0, 80),
       name,
       description: String(item.description ?? "").trim().slice(0, 240),
+      requirement,
       questionIds,
       inputModes: cleanReportInputModes(item.inputModes),
       chartType: REPORT_CHART_TYPES.has(item.chartType as SurveyReportChartType) ? item.chartType as SurveyReportChartType : undefined,
@@ -257,7 +273,7 @@ export function cleanSurveyReportCategoryPlan(input: unknown, surveyTitle: strin
       chartConfig: cleanReportChartConfig(item.chartConfig),
       dataPrompt: String(item.dataPrompt ?? "").trim().slice(0, 1000),
       modulePrompts,
-      prompt: String(item.prompt ?? `围绕「${name}」生成专业报告内容。`).trim().slice(0, 1000),
+      prompt: String(item.prompt ?? requirement).trim().slice(0, 1000),
       order: Number.isFinite(Number(item.order)) ? Number(item.order) : index + 1,
       isCustom: item.isCustom === true,
     };
