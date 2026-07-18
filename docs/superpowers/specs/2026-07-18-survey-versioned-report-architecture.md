@@ -76,8 +76,8 @@ reportVersion = immutable identifier for a successful generated artifact
 
 - 归一化必须稳定排序，避免数据库返回顺序造成无意义新修订。
 - `requirementHash` 必须包含归一化后的章节标题、唯一输出类型（`image`、`chart` 或
-  `text`）、图表章节选定的可选白名单 `chartTemplateId`，以及归一化后的自然语言要求；
-  未选图表模板时省略 `chartTemplateId`。
+  `text`）、图表章节归一化后的有效白名单 `chartTemplateId`，以及归一化后的自然语言要求；
+  仅图片或文本章节省略 `chartTemplateId`。
 - 不把 `generatedAt` 放入内容哈希。
 - 数据库记录变化但分析语义不变时不应产生新修订。
 - 失败任务可以重试，但不能覆盖同键的成功产物。
@@ -92,6 +92,10 @@ reportVersion = immutable identifier for a successful generated artifact
 
 ## Chart Contract and Persistence Safety
 
+- 输出类型与图表模板必须满足条件不变量：`outputType=chart` 时，`chartTemplateId` 必须是产品
+  维护的有效白名单值；`outputType=image` 或 `outputType=text` 时必须省略
+  `chartTemplateId`。缺失或无效的图表模板必须在持久化前归一化为 `line-simple` 或拒绝请求，
+  因而不得持久化没有模板的图表章节。
 - 持久化时只允许保存产品维护的白名单 `chartTemplateId` 与归一化后的 `outputType`；服务端
   必须拒绝任意 ECharts `option` 对象、脚本、`formatter` 函数和外部 URL。浏览器提交的模板
   标识必须再次经过服务端白名单校验。
