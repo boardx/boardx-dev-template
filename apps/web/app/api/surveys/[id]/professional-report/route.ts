@@ -152,8 +152,9 @@ async function loadReportContext(rawId: string, requireManage: boolean) {
 
 function generationStatus(
   context: Awaited<ReturnType<typeof loadReportContext>>,
-  requirementHash: string =
+  requirementHash: string = (
     "requirementHash" in context ? String(context.requirementHash ?? "") : ""
+  )
 ): SurveyReportGenerationStatus {
   if (
     !("sourceSnapshot" in context) ||
