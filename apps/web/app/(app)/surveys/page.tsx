@@ -4533,7 +4533,7 @@ export default function SurveysPage() {
     }
   }
 
-  async function loadWorkspaceProfessionalReportVersion(surveyId: number, artifactId: string) {
+  async function loadWorkspaceProfessionalReportVersion(surveyId: number, artifactId: string): Promise<boolean> {
     setWorkspaceTemplateError("");
     try {
       const res = await fetch(
@@ -4542,22 +4542,26 @@ export default function SurveysPage() {
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
         setWorkspaceTemplateError(payload?.error ?? "报告版本加载失败");
-        return;
+        return false;
       }
-      if (payload.report) {
-        setProfessionalReportsBySurveyId((items) => ({
-          ...items,
-          [surveyId]: payload.report as ProfessionalSurveyReportDocument,
-        }));
+      if (!payload.report) {
+        setWorkspaceTemplateError("报告版本加载失败");
+        return false;
       }
+      setProfessionalReportsBySurveyId((items) => ({
+        ...items,
+        [surveyId]: payload.report as ProfessionalSurveyReportDocument,
+      }));
       if (payload.generation) {
         setProfessionalReportGenerationBySurveyId((items) => ({
           ...items,
           [surveyId]: payload.generation as SurveyReportGenerationStatus,
         }));
       }
+      return true;
     } catch {
       setWorkspaceTemplateError("报告版本加载失败，请稍后重试。");
+      return false;
     }
   }
 

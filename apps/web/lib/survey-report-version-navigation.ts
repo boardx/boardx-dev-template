@@ -1,8 +1,10 @@
 export async function selectReportVersionAndOpenReport(
   artifactId: string,
-  onSelectVersion: (artifactId: string) => Promise<void>,
+  onSelectVersion: (artifactId: string) => Promise<boolean>,
   onOpenReport: () => void | Promise<void>
 ) {
-  await onSelectVersion(artifactId);
-  await onOpenReport();
+  const loaded = await onSelectVersion(artifactId);
+  if (loaded) {
+    await onOpenReport();
+  }
 }

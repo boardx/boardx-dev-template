@@ -60,7 +60,7 @@ interface SurveyVersionedReportComposerProps {
   onClassify: () => void;
   onSavePlan: (plan: SurveyReportCategoryPlanInput) => void;
   onGenerateReport: () => void;
-  onSelectVersion: (artifactId: string) => Promise<void>;
+  onSelectVersion: (artifactId: string) => Promise<boolean>;
   onOpenReport: () => void | Promise<void>;
   onBackToDesign: () => void;
   onOpenCollect: () => void;
