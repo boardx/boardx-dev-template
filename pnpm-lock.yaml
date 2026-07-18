@@ -330,6 +330,18 @@ importers:
         specifier: ^4.0.0
         version: 4.107.0(@cloudflare/workers-types@4.20260702.1)
 
+  packages/coord-protocol:
+    devDependencies:
+      '@types/node':
+        specifier: '*'
+        version: 22.20.1
+      typescript:
+        specifier: '*'
+        version: 5.6.2
+      vitest:
+        specifier: '*'
+        version: 2.1.9(@types/node@22.20.1)(jsdom@26.1.0(canvas@3.2.3))
+
   packages/coord-service:
     devDependencies:
       '@cloudflare/vitest-pool-workers':
