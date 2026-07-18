@@ -212,6 +212,65 @@ describe("F06 andon 状态 + 投影游标", () => {
   });
 });
 
+describe("F07 evidence 提交", () => {
+  const manifest = (id: string, resource = "feature:p29/F07") => ({
+    protocol: PROTOCOL,
+    manifest_id: id,
+    resource_id: resource,
+    agent_id: "wrk-ev-1",
+    head_sha: "abc1234",
+    attestations: [{
+      command: "pnpm --filter coord-gateway test",
+      exit_code: 0,
+      output_digest: "sha256:deadbeef",
+      output_excerpt: "Tests 12 passed (12)",
+      log_url: "phases/phase-p29-coord-platform/evidence/F07.verify.log",
+    }],
+    attested_at: "2026-07-18T04:00:00Z",
+  });
+
+  it("合法 manifest → 201 + evidence.submitted 事件（payload 含 manifest_id/head_sha）；重复提交幂等 200", async () => {
+    const r = await post("/evidence", manifest("evm_test_01"));
+    expect(r.status).toBe(201);
+    const dup = await post("/evidence", manifest("evm_test_01"));
+    expect(dup.status).toBe(200);
+    expect((await dup.json<Record<string, unknown>>())["duplicate"]).toBe(true);
+
+    const events = await (await SELF.fetch(`${BASE}/events?limit=500`)).json<{ events: Array<Record<string, unknown>> }>();
+    const submitted = events.events.filter((e) => e["type"] === "evidence.submitted");
+    expect(submitted).toHaveLength(1); // 幂等：重复提交不产生第二条事件
+    const payload = submitted[0]!["payload"] as Record<string, unknown>;
+    expect(payload["manifest_id"]).toBe("evm_test_01");
+    expect(payload["head_sha"]).toBe("abc1234");
+  });
+
+  it("非法 manifest → 422 拒收（exit_code 非 0 / 缺 head_sha 都不构成有效声明）", async () => {
+    const failedCmd = manifest("evm_test_bad");
+    failedCmd.attestations[0]!.exit_code = 1;
+    expect((await post("/evidence", failedCmd)).status).toBe(422);
+    const { head_sha: _drop, ...noSha } = manifest("evm_test_bad2");
+    expect((await post("/evidence", noSha)).status).toBe(422);
+  });
+
+  it("GET /evidence?resource_id= 查询存档原文", async () => {
+    await post("/evidence", manifest("evm_test_02", "feature:p29/F08"));
+    const got = await (
+      await SELF.fetch(`${BASE}/evidence?resource_id=feature:p29/F08`)
+    ).json<{ manifests: Array<Record<string, unknown>> }>();
+    expect(got.manifests).toHaveLength(1);
+    expect(got.manifests[0]!["manifest_id"]).toBe("evm_test_02");
+    expect(got.manifests[0]!["head_sha"]).toBe("abc1234");
+    // 原文保真：manifest 字段完整回读
+    const body = got.manifests[0]!["manifest"] as Record<string, unknown>;
+    expect((body["attestations"] as unknown[]).length).toBe(1);
+    // 不匹配的 resource_id 查不到
+    const none = await (
+      await SELF.fetch(`${BASE}/evidence?resource_id=feature:p29/F99`)
+    ).json<{ manifests: unknown[] }>();
+    expect(none.manifests).toHaveLength(0);
+  });
+});
+
 async function fetchClaim(base: string, agent: string, resource: string): Promise<Response> {
   return SELF.fetch(`${base}/claims`, {
     method: "POST",

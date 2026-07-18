@@ -4,6 +4,7 @@ import { RepoHub } from "@repo/coord-repohub";
 import { verifyWebhookSignature } from "./signature";
 import { toIngestBody, type QueuedWebhook } from "./mapping";
 import { runProjectionTick } from "./projection";
+import { handleMcp } from "./mcp";
 
 export { RepoHub };
 
@@ -87,6 +88,9 @@ export default {
     if (req.method === "POST" && andon)
       return handleAndonAdmin(req, env, `${andon[1]}/${andon[2]}`, andon[3]!);
     if (url.pathname.startsWith("/api/coord/repos/")) return handleRest(req, env, url);
+    // MCP 接入面（F07）：逻辑全在 src/mcp.ts，这里只做路由（降低与并行改动的冲突面）
+    const mcp = url.pathname.match(/^\/api\/coord\/mcp\/([^/]+)\/([^/]+)$/);
+    if (mcp) return handleMcp(req, env, mcp[1]!, mcp[2]!);
     return json(404, { error: "not_found" });
   },
 

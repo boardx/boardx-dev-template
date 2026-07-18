@@ -1,0 +1,22 @@
+{
+  "name": "@repo/coord-cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "coord 命令行：connect/claim/status/release/events——纯 Node 22 内置 fetch，零运行时依赖（F07）",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "coord": "dist/bin.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "echo 'lint: ok'"
+  },
+  "devDependencies": {
+    "typescript": "*",
+    "vitest": "*",
+    "@types/node": "*"
+  }
+}
