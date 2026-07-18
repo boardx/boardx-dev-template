@@ -335,3 +335,204 @@ export function rosterCounts(roster: readonly RosterMember[]): { humans: number;
     agents: roster.reduce((sum, m) => sum + countAgents(m.agents), 0),
   };
 }
+
+// ================= 批次 2（P2 招募页 + W6 治理台）=================
+// ⚠️ 同头部声明：p30 UI 先行 mock，feature 实现时替换；不得被真实数据路径 import。
+
+// ---------------- P2 /projects/:slug 项目公开主页（招募页，UC-03 访客视角） ----------------
+// D3：公开层页面不依赖 Access 注入 header——本页 mock 未登录态，无任何身份假设。
+
+export interface MockPublicProject {
+  slug: string;
+  name: string;
+  tagline: string;
+  /** README 摘要（自动截取，mock） */
+  readmeSummary: readonly string[];
+  /** 近 12 周合并数（火花线数据，自动生成自 GitHub） */
+  mergeSparkline: readonly number[];
+  /** flow-time 中位（认领→合并，小时） */
+  flowTimeMedianH: number;
+  /** andon 响应中位（分钟） */
+  andonResponseMedianMin: number;
+  /** 审批 SLA 兑现记录 */
+  approvalSla: { promiseH: number; last30dMedianH: number; kept: number; total: number };
+  /** 👤/🤖 计数（分开，UC-03） */
+  humans: number;
+  agents: number;
+  /** 成员头像墙（mock：handle 首字母渲染） */
+  memberWall: readonly { handle: string; kind: "human" }[];
+  agentWall: readonly { id: string; kind: "agent" }[];
+  /** 需要帮助的模块 */
+  helpWanted: readonly { module: string; need: string; goodFirst: number }[];
+}
+
+export const MOCK_PUBLIC_PROJECT: MockPublicProject = {
+  slug: "boardx",
+  name: "BoardX",
+  tagline: "AI 协作白板——人与 agent 车队在同一块板上交付软件",
+  readmeSummary: [
+    "BoardX 是一个 agentic 开发的实验场：真实产品（白板/协作/AI 对话）由人类工程师带着 agent 车队持续交付。",
+    "仓库即唯一事实来源；功能清单权威（feature_list.json）；一切完成必须有可执行验证与证据。",
+    "新成员从 good-first-issue 起步，前 3 个 PR 强制人工 review（Probation），之后逐级解锁。",
+  ],
+  mergeSparkline: [4, 7, 5, 9, 12, 8, 11, 14, 10, 16, 13, 18],
+  flowTimeMedianH: 9,
+  andonResponseMedianMin: 23,
+  approvalSla: { promiseH: 24, last30dMedianH: 6, kept: 11, total: 12 },
+  humans: 3,
+  agents: 9,
+  memberWall: [
+    { handle: "usamshen", kind: "human" },
+    { handle: "lichen", kind: "human" },
+    { handle: "kaiwei", kind: "human" },
+  ],
+  agentWall: [
+    { id: "@usamshen/coord-main", kind: "agent" },
+    { id: "@usamshen/feature-implementer-a", kind: "agent" },
+    { id: "@usamshen/feature-implementer-b", kind: "agent" },
+    { id: "@lichen/module-collab", kind: "agent" },
+    { id: "@kaiwei/starter", kind: "agent" },
+  ],
+  helpWanted: [
+    { module: "collab", need: "实时协作 e2e 基线不稳，需要有 WebSocket 排障经验的人", goodFirst: 2 },
+    { module: "survey", need: "问卷诊断 UI 刚过验收，需要接手迭代打磨", goodFirst: 3 },
+    { module: "devportal", need: "平台化重设计（p30）进行中，UI 工程师优先", goodFirst: 1 },
+  ],
+};
+
+/** UC-04 加入向导：可选角色与模块（mock） */
+export const JOIN_ROLES = ["contributor", "approver", "maintainer"] as const;
+export type JoinRole = (typeof JOIN_ROLES)[number];
+export const JOIN_MODULES = ["collab", "survey", "devportal", "board", "canvas", "其他"] as const;
+
+// ---------------- W6 /p/:slug/settings 治理台（UC-02 owner 视角） ----------------
+
+/** 唯一管理员与 coord-agent 绑定（repo admin 已校验，UC-02） */
+export const MOCK_GOVERNANCE_BINDING = {
+  adminHandle: "usamshen",
+  adminName: "Usam Shen",
+  adminVerified: true,
+  coordAgentId: "@usamshen/coord-main",
+  coordHeartbeat: "fresh" as FleetHeartbeat,
+  boundAt: "2026-06-02T09:00:00Z",
+} as const;
+
+export interface MockMemberApplication {
+  id: string;
+  handle: string;
+  name: string;
+  role: JoinRole;
+  modules: readonly string[];
+  intro: string;
+  submittedAt: string;
+  /** 审批 SLA 剩余小时（倒计时徽章） */
+  slaHoursLeft: number;
+}
+
+export const MOCK_APPROVAL_QUEUE: readonly MockMemberApplication[] = [
+  {
+    id: "app1",
+    handle: "mzhao",
+    name: "Ming Zhao",
+    role: "contributor",
+    modules: ["collab"],
+    intro: "8 年前端，做过多人协同编辑器，想带一个 Claude Code agent 参与 collab 模块。",
+    submittedAt: "2026-07-17T22:10:00Z",
+    slaHoursLeft: 14,
+  },
+  {
+    id: "app2",
+    handle: "tanaka-dev",
+    name: "Yuki Tanaka",
+    role: "approver",
+    modules: ["survey", "devportal"],
+    intro: "QA 背景，擅长写端到端验证；申请 approver 帮项目守 review 门禁。",
+    submittedAt: "2026-07-18T06:40:00Z",
+    slaHoursLeft: 3,
+  },
+] as const;
+
+export interface MockActiveAndon {
+  id: string;
+  pulledBy: string;
+  reason: string;
+  scope: string;
+  sinceMin: number;
+}
+
+/** 当前活跃 andon（mock 一条，UC-13） */
+export const MOCK_ACTIVE_ANDON: MockActiveAndon = {
+  id: "andon-31",
+  pulledBy: "@lichen/module-collab",
+  reason: "collab e2e 基线连续 3 次红——疑似 WS 网关回归，先停 merge 队列排查",
+  scope: "阻断性 commit status：merge 队列已拉停",
+  sinceMin: 37,
+};
+
+/** D5：per-person andon 授权名单（owner 可授予/移除，全部入审计） */
+export interface MockAndonGrant {
+  handle: string;
+  name: string;
+  role: RosterMember["role"];
+  grantedAt: string;
+  grantedBy: string;
+}
+
+export const MOCK_ANDON_GRANTS: readonly MockAndonGrant[] = [
+  { handle: "kaiwei", name: "Kai Wei", role: "contributor", grantedAt: "2026-07-10T08:00:00Z", grantedBy: "@usamshen" },
+] as const;
+
+/** 可加入授权名单的候选（mock：花名册里 maintainer+ 之外的成员） */
+export const MOCK_GRANT_CANDIDATES: readonly { handle: string; name: string; role: RosterMember["role"] }[] = [
+  { handle: "mzhao", name: "Ming Zhao", role: "contributor" },
+] as const;
+
+/** ✋ 举手事件（D5：人人可发、琥珀色、不阻断） */
+export interface MockRaiseHand {
+  id: string;
+  from: string;
+  fromKind: "human" | "agent";
+  text: string;
+  ageH: number;
+  /** 24h 无回应自动升级 */
+  escalateInH: number;
+  status: "open" | "answered";
+}
+
+export const MOCK_RAISE_HANDS: readonly MockRaiseHand[] = [
+  {
+    id: "rh1",
+    from: "@kaiwei/module-collab",
+    fromKind: "agent",
+    text: "e2e 基线 3 条 spec 长期 flaky，建议隔离出主门禁",
+    ageH: 3,
+    escalateInH: 21,
+    status: "open",
+  },
+  {
+    id: "rh2",
+    from: "@kaiwei",
+    fromKind: "human",
+    text: "onboarding 第 3 步的花名册链接 404（已有人跟进）",
+    ageH: 26,
+    escalateInH: 0,
+    status: "answered",
+  },
+] as const;
+
+/** token 审计表（mock 最近 mint/revoke 事件，N5：一切授权动作入只增审计） */
+export interface MockTokenAudit {
+  id: string;
+  at: string;
+  action: "mint" | "rotate" | "revoke";
+  agentId: string;
+  actor: string;
+  note: string;
+}
+
+export const MOCK_TOKEN_AUDIT: readonly MockTokenAudit[] = [
+  { id: "t1", at: "2026-07-18T07:52:00Z", action: "mint", agentId: "@mzhao/collab-dev", actor: "@mzhao", note: "enroll 首发（成员批准后自动生效，D2）" },
+  { id: "t2", at: "2026-07-17T15:20:00Z", action: "rotate", agentId: "@usamshen/crm-migrator", actor: "@usamshen", note: "到期前轮换；旧 token 即时 401" },
+  { id: "t3", at: "2026-07-16T11:05:00Z", action: "revoke", agentId: "@usamshen/legacy-syncer", actor: "@usamshen", note: "agent 退役，吊销即时生效" },
+  { id: "t4", at: "2026-07-15T09:30:00Z", action: "mint", agentId: "@kaiwei/starter", actor: "@kaiwei", note: "onboarding 第 2 步 enroll" },
+] as const;
