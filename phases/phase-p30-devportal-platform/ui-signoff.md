@@ -213,6 +213,77 @@ confirmed_at:   2026-07-19T10:00:00Z
   全局侧栏/导航壳是后续批次（P6/P7、导航整合）范围。
 - 体检状态点未直接复用 `HeartbeatDot` 组件（其入参是「分钟数」语义），而是沿用其视觉语言
   （同色 token、同尺寸点）实现体检四态点——如需强制同一组件请拍板。
+## UI 范围清单（第四批·最后一批，P4 + P5 + UC-17 调度中心）
+
+- [ ] **P4 `/u/:handle` 工程师公开档案**（UC-16，D1）— `apps/devportal/components/p30/public-profile.tsx`
+  - 分区语义（D1）：① 贡献事实区**默认公开**——参与项目卡（角色/起始/PR 合并数/模块）+
+    PR 合并时间线（mock，自动生成不可自填）；② 聚合指标区 **opt-in 且区间化**
+    （flow-time "6-12h" / 拍板响应 "1-4h" / 月吞吐 "40-60 PR" / andon "<30min"），
+    整区带「已 opt-in 公开」标注，未 opt-in 时整区隐藏为占位说明；
+    ③ 🤖 名下 agents 缩略行（心跳点 + 在做什么）链到 P5 分身页。
+  - 页内演示「档案公开开关 + 预览模式」：本人视角可切 opt-in 开/关并「以访客身份预览」
+    当前设置的效果（mock；真实实现由服务端判定 viewer，公开层组件零身份读取 D3）。
+  - 截图：`ui-preview/p4-profile.png`（本人视角，opt-in 开）、
+    `ui-preview/p4-optin-toggle.png`（opt-in 关 + 访客预览模式，指标区整区隐藏）
+- [ ] **P5 `/a/:handle/:agent` Agent 数字分身页**（UC-16，D1/D6）— `apps/devportal/components/p30/agent-twin.tsx`
+  - 默认**全公开**，无任何视角开关（D1：软件资产无隐私权——页头角标注明）；顶部完整
+    `@usamshen/portal-dev-1` 标识 + 不可变 ULID（D6：改名不断链）+ 运行时/生命周期徽章。
+  - 板块：归属 owner 卡（👤 蓝，链回 P4；「一切行为归因到人」）｜parent 派生树
+    （本页高亮 + 点号 sub 逐级缩进，紫色左边条）｜授权项目列表（scope + token 状态徽章）｜
+    性能三格（达成率 92% / 吞吐 11 PR·周 / 异常 1）｜最近事件时间线
+    （lease 🔒 / evidence 📎 / andon 🅰️ / heartbeat 💓 / enroll 🪪 图标化）。
+  - 截图：`ui-preview/p5-agent-twin.png`
+- [ ] **调度中心 `/platform/dispatcher`**（UC-17，平台 admin 视角）— `apps/devportal/components/p30/dispatcher-center.tsx`
+  - 五个固定 loop 卡：1m 心跳&租约 / 5m PR·CI / 15m stale 处置 / 1h SLA+快照 / 24h C-cycle，
+    各带上次运行时间、下次运行倒计时（mock 本地递减演示循环感）、上轮扫描/定位计数。
+  - 「当前定位到的问题」列表：严重度徽章（严重红 / 警示琥珀 / 记录灰）+ 「已采取动作」——
+    全部为**起草/通知/路由类**文案并标注路由目标 coord-agent（呼应「dispatcher 永不直接改
+    项目内状态」；页脚有动作边界说明）。
+  - 非 admin 无权限态（N1 第四态）：页内 mock 视角开关切「普通成员」→ 整页拒绝态
+    （说明 dispatcher 会主动通知到 /me，平台角色见 UC-19）。
+  - 截图：`ui-preview/dispatcher-loops.png`（五 loop 卡）、`ui-preview/dispatcher-issues.png`（问题列表整页）
+
+### 组件落点（第四批）
+- 路由页：`apps/devportal/app/u/[handle]/page.tsx`、`apps/devportal/app/a/[handle]/[agent]/page.tsx`、
+  `apps/devportal/app/platform/dispatcher/page.tsx`（均 edge runtime）
+- 组件：`apps/devportal/components/p30/{public-profile,agent-twin,dispatcher-center}.tsx`
+  （复用 `shared.tsx` / `PortalCard` / `HeartbeatDot` / `IdentityChip` 三色体系）
+- mock：`apps/devportal/lib/mock/p30.ts`（追加批次 4 段，同头部声明）
+- 关键 `data-testid`（供 requirement-author 锚定 verification）：
+  P4：`public-profile` / `profile-view-{self,visitor}` / `profile-owner-controls` / `optin-toggle` /
+  `profile-preview-toggle` / `profile-preview-banner` / `profile-facts` / `profile-projects` /
+  `profile-project-<slug>` / `profile-merge-timeline` / `merge-event-*` / `profile-metrics` /
+  `metrics-optin-note` / `metric-*` / `profile-metrics-hidden` / `profile-agents` / `profile-agent-*`；
+  P5：`agent-twin` / `twin-full-id` / `twin-public-badge` / `twin-owner-card` / `twin-tree` /
+  `twin-tree-self` / `twin-tree-*` / `twin-enrollments` / `twin-enrollment-<slug>` / `twin-perf` /
+  `twin-perf-{attainment,throughput,anomalies}` / `twin-events` / `twin-event-*`；
+  调度中心：`dispatcher-center` / `view-as-{admin,member}` / `dispatcher-no-access` /
+  `dispatcher-readonly-note` / `dispatcher-loops` / `loop-card-loop-{1m,5m,15m,1h,24h}` /
+  `loop-{last,next}-*` / `dispatcher-issues` / `dispatcher-issue-*` / `issue-severity-*` / `issue-action-*`；
+  各页 `toggle-empty-demo` 与 `*-empty` 空态。
+
+### 截图证据（第四批）
+- [P4 公开档案（本人视角，opt-in 开）](ui-preview/p4-profile.png) ·
+  [P4 opt-in 关 + 访客预览](ui-preview/p4-optin-toggle.png)
+- [P5 Agent 数字分身页](ui-preview/p5-agent-twin.png)
+- [调度中心五 loop 卡](ui-preview/dispatcher-loops.png) ·
+  [当前定位到的问题列表](ui-preview/dispatcher-issues.png)
+
+浏览路径（本地核对）：`pnpm --filter devportal dev` → `http://localhost:3400/u/usamshen`、
+`/a/usamshen/portal-dev-1`、`/platform/dispatcher`。
+
+### 已知偏差与待人类拍板点（第四批）
+- P4 的「本人视角/访客视角」开关是原型演示；真实实现由服务端判定 viewer 是否本人，
+  公开层组件零身份读取（D3）。opt-in 开关与预览模式只改本地状态，不落库。
+- P4 聚合指标的区间分档（如 "6-12h"）是 mock 拍脑袋值；真实分档规则（对数档/固定档）需拍板。
+- P5 授权项目列表的 `scope` 采用空格分隔的能力串（`coord.read work.claim evidence.write`）——
+  这是 mock 提议的展示形态，真实 scope 词表以 p29 scoped token（F08）实现为准。
+- 调度中心 loop 卡的倒计时是静态起点的本地递减（归零后按周期重置演示循环感），
+  不代表真实调度；真实实现由 @platform/dispatcher（Cloudflare 常驻，coord-resident.md）驱动。
+- 调度中心「当前定位到的问题」未提供操作按钮（如手动重跑 loop / 忽略问题）——UC-17 只定义
+  展示语义；是否给平台 admin 手动干预入口需人类拍板。
+- 本批基于 main（批次 1-2 已合并）开发；**批次 3（PR #750）尚未合并**，`p30.ts` 与本文件
+  两处追加可能与 #750 产生纯追加型冲突，合并时保留双方即可。
 
 ## 已知偏差与待人类拍板点（第一批）
 - D4「记住上次停留」「登录默认落点切到 /me」是行为逻辑，不在本批 mock 界面内，feature 实现时做。
