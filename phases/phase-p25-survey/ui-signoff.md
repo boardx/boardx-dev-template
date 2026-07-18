@@ -38,6 +38,7 @@ confirmed_at: 2026-07-14T00:00:00+08:00
 - [模板桌面](ui-preview/02-templates-desktop.png)
 - [AI 创建桌面](ui-preview/03-ai-create-desktop.png)
 - [AI 创建移动端](ui-preview/04-ai-create-mobile.png)
+- [报告编排器长度 review](ui-preview/2026-07-18-report-composer-length-review.png)
 
 ## 人类确认意见
 <!-- 确认人填写：通过 / 需修改（列出修改点）。改完再确认。 -->
@@ -58,6 +59,10 @@ confirmed_at: 2026-07-14T00:00:00+08:00
 - 2026-07-18 弹窗 review 再确认：用户指出当前“新建问卷”弹窗不够友好，并确认采用更宽的三入口卡片方案；
   三张卡片必须显示完整说明与行动文案，AI 入口标记为推荐，移动端改为单列且不得溢出。
   该确认是 `requirements/14-create-dialog-usability-review.md` 的人类 UI 依据。
+- 2026-07-18 报告编排器增量确认：用户指出中间栏将设置和预览纵向堆叠后过长，要求删除逐题绑定，
+  将输出配置精简为自然语言约束，并确认采用版本化事实库、按需生成和不可变报告版本方案。
+  桌面端改为“报告要求 / 报告预览”横向工作区，生成记录与证据面板可折叠；新答卷只提示数据有更新，
+  不自动调用模型。该确认是 `requirements/15-versioned-fact-base-report-composer.md` 的人类 UI 依据。
 
 ---
 **确认动作**：核对无误后，把顶部 frontmatter 的 `status` 改为 `confirmed`，填 `confirmed_by` / `confirmed_at`，提交。之后才可调 requirement-author 生成 feature_list、跑 new-sprint。

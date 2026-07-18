@@ -14,5 +14,9 @@
 - `01-source-stash-ui-fidelity.md`：首次发现未提交首页漏同步的纠偏要求。
 - `02` 至 `10`：从 `boardx-survey` 的 `codex-survey-home-nav-redesign` stash 同步的商业、专业、AI、发布、动态报告、分类报告和模板编辑需求/设计输入。
 - `11-source-capability-matrix.md`：不可变源快照、主仓差距、同步原则和 F09-F14 归属。
+- `12-diagnostic-platform-html-fidelity.md`：2026-07-17 起生效的诊断平台 HTML UI 参考。
+- `13` 至 `14`：Survey 首页信息层级与新建问卷弹窗增量 review。
+- `15-versioned-fact-base-report-composer.md`：F16 精简报告工作区、事实库修订和按需生成。
+- `16-langgraph-autonomous-report-analysis.md`：F17 LangGraph 虚拟文件系统与自主分析模块。
 
 权威源由分支 HEAD 与 stash tree 共同组成，具体 SHA 见 `11-source-capability-matrix.md`。
