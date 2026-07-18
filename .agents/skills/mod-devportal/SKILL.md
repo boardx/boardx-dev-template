@@ -37,6 +37,12 @@ issue #523/#543；wrangler.toml 头注；apps/devportal/README.md
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-18：p29 全周期三条协调层经验（出处：p29 sprint01-05 evidence + PR #697-#737）：
+  ①「全部合并了」类转述必须逐 PR 锚定核验（gh pr view --json state），#733 曾被误当已合并，
+  差点造成协调层双权威窗口（P23 postmortem §9 的跨会话版）；②vitest 2 不认 --grep，
+  verification 契约里写 --grep 的要么走翻译层（coord-gateway scripts/run-tests.mjs）要么用
+  -t/全量包测试；③agent API 与人类门户有意分域：webhook/MCP/REST 走 workers.dev
+  （coord-gateway.boardx.workers.dev），develop.boardx.us 整站 Access 门禁挡非交互客户端。
 - 2026-07-18：协调层割接 coord-gateway（p29-F10 stage-2，ADR-017）——COORD_SERVICE_URL var、COORD_BROKER_TOKEN/COORD_DISPATCH_TOKEN secret 全部退役；my-tokens 只剩 coord-gateway 按仓 scoped 通道（响应不再有 broker_configured 字段）；coordination/agents/my-home/pulse 的租约读面统一走 `lib/coord-gateway.ts`（gateway /claims+/events 需 bearer，不再有公开 /status）。Pages 侧残留的两个旧 secret 由人类在 dashboard 删除，代码已不读。
 - 2026-07-12：compatibility_date 2024-11-01 < cache 选项门槛 → 所有出站 fetch 抛异常，全数据源 unreachable（#593）。toml 入仓沿用项目现值，别抄模板。
 - 2026-07-11：先删 secrets 等 toml 接管，被 CD 中途部署踩中断供——env 变更原子性（记忆已固化）。
