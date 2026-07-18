@@ -458,7 +458,7 @@
       "title": "统一问卷设计入口",
       "user_visible_behavior": "用户从“我的问卷”进入尚无答卷问卷的设计页、从诊断模板创建问卷，或刷新 survey=<id>&step=design 深链接时，均进入同一套已确认的新式设计器；五步工作流、问卷摘要、诊断假设、连续问题画布和右侧 AI 助手保持一致，已有问卷数据不会被模板初始值覆盖。",
       "design_ref": "requirements/19-unified-survey-design-entry.md；2026-07-19 用户确认第 3 张截图",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "20",
       "owner": "wrk-survey-1",
       "capability": "CAP-WEB",
@@ -473,7 +473,7 @@
         "pnpm harness doctor --phase p25",
         "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-20/evidence/F20.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F20.verify.log @ 2026-07-18T21:13:53.016Z",
       "notes": "在 PR #757 中作为独立小提交交付，Refs #648；仅统一 design 入口和深链接恢复，不改后续工作流与数据契约。"
     }
   ]
