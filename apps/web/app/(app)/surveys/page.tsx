@@ -5217,7 +5217,7 @@ export default function SurveysPage() {
         return;
       }
       if (target === "report") {
-        window.location.href = `/surveys/${editingSurveyId}/results?from=editor`;
+        window.location.href = `/surveys?survey=${editingSurveyId}&step=report`;
         return;
       }
       void navigateWorkspace(target);
@@ -5420,7 +5420,7 @@ export default function SurveysPage() {
                   size="sm"
                   className="gap-1.5"
                   onClick={() => {
-                    window.location.href = `/surveys/${created.id}/results?from=editor&tab=report`;
+                    window.location.href = `/surveys?survey=${created.id}&step=report`;
                   }}
                 >
                   <FileText className="h-4 w-4" strokeWidth={1.5} />

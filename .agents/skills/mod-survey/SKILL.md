@@ -41,6 +41,10 @@ phases/phase-p13-survey
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-19：设计器进入专业报告不能继续跳转旧 `/surveys/:id/results` 页面，也不能在问卷 ID
+  不变时只切换 React 工作区状态；前者会调用旧 `/ai-report`，后者可能不会重新触发报告读取。
+  应进入规范 `/surveys?survey=:id&step=report` 深链接，并用 E2E 断言模板章节可见、重新生成成功且
+  全程没有旧 `/ai-report` 请求（出处：phase-p25 F21 / issue #648）。
 - 2026-07-19：同一个 Survey `step=design` 不能由 `mode` 与 `workspaceView` 两套状态分别选择不同渲染器；
   应集中到一个入口函数，并用“已有问卷、模板创建、URL 直刷”三条 E2E 路径断言同一编辑器和数据保真
   （出处：phase-p25 F20 / issue #648）。

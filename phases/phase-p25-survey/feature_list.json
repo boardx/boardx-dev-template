@@ -475,6 +475,32 @@
       ],
       "evidence": "evidence/F20.verify.log @ 2026-07-18T21:13:53.016Z",
       "notes": "在 PR #757 中作为独立小提交交付，Refs #648；仅统一 design 入口和深链接恢复，不改后续工作流与数据契约。"
+    },
+    {
+      "id": "F21",
+      "priority": 1,
+      "area": "survey",
+      "title": "修复模板驱动报告入口",
+      "user_visible_behavior": "用户从问卷设计器点击“分析报告”时进入统一工作流的模板驱动专业报告页；主动生成报告调用 professional-report 并按已保存模板组装章节，不再进入旧 results/ai-report 页面或显示 ai_report_failed。",
+      "design_ref": "requirements/20-template-report-entry-routing.md；2026-07-19 用户缺陷截图",
+      "status": "in_progress",
+      "sprint": "21",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F19",
+        "F20"
+      ],
+      "wave": 18,
+      "verification": [
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "E2E_PORT=62638 COLLAB_WS_PORT=62639 pnpm --filter @repo/web exec playwright test e2e/survey-p25-021-template-report-entry.spec.ts",
+        "pnpm harness doctor --phase p25",
+        "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-21/evidence/F21.verify.log"
+      ],
+      "evidence": "",
+      "notes": "独立 bug feature，Refs #648，追加到 PR #757；仅修复设计器报告入口路由，不删除旧结果统计页。"
     }
   ]
 }
