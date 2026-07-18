@@ -64,4 +64,36 @@ describe("professional survey report", () => {
     expect(report.executiveSummary.claims.every((claim) => claim.directional)).toBe(true);
     expect(report.limitations).toContain("有效样本少于 30 份，结论仅作为方向性信号。");
   });
+
+  it("keeps raw text answers out of the browser report artifact", () => {
+    const canary = "F16_RAW_RESPONSE_CANARY_7d4bba65";
+    const evidence = buildSurveyReportEvidence({
+      survey: {
+        ...survey,
+        questions: [
+          ...survey.questions,
+          {
+            id: 3,
+            title: "补充建议",
+            type: "text" as const,
+            required: false,
+            options: [],
+          },
+        ],
+      },
+      responses: [{
+        id: 1,
+        answers: { "1": "女", "2": "一年级", "3": canary },
+      }],
+    });
+
+    const report = buildProfessionalReportDocument({
+      evidence,
+      generatedAt: "2026-07-15T00:00:00.000Z",
+    });
+
+    expect(JSON.stringify(report)).not.toContain(canary);
+    expect(report.chapters.find((chapter) => chapter.questionId === 3))
+      .toMatchObject({ validResponseCount: 1, missingResponseCount: 0 });
+  });
 });

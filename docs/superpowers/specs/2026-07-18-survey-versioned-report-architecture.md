@@ -81,6 +81,11 @@ reportVersion = immutable identifier for a successful generated artifact
 - 不把 `generatedAt` 放入内容哈希。
 - 数据库记录变化但分析语义不变时不应产生新修订。
 - 失败任务可以重试，但不能覆盖同键的成功产物。
+- 生成权必须在创建会话和调用模型前，按完整 `artifactKey` 原子抢占。只有一个请求可以成为
+  生成者；同键并发请求若已有成功产物则直接复用，若仍在生成则返回 `202 in_progress`，
+  不能再创建分析会话或调用模型。
+- 生成 claim 持久化保存会话与产物引用；异常退出时释放，超过租约时间的遗留 claim 可被后续
+  请求接管。成功完成时 claim 与不可变产物一并进入 ready 状态。
 
 ## Compatibility and Migration
 
@@ -89,6 +94,8 @@ reportVersion = immutable identifier for a successful generated artifact
 - 迁移期旧 `inputModes` 只保留为单值兼容投影：最多保留一个与归一化后 `outputType` 对应的
   值，不能继续表示多输出或驱动新契约；新保存的数据不再依赖该字段。
 - 旧章节的模块提示合并为自然语言要求；既有成功报告继续可读，迁移不得覆盖不可变产物。
+- 旧产物即使包含原始文本答卷，返回浏览器前也必须经过兼容脱敏；报告正文、导出与历史版本
+  只暴露聚合证据和结论，不暴露逐份原始回答。
 
 ## Chart Contract and Persistence Safety
 

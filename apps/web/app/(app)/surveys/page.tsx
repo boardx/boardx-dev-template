@@ -4674,6 +4674,12 @@ export default function SurveysPage() {
       )) {
         return;
       }
+      if (res.status === 202 && payload?.status === "in_progress") {
+        setWorkspaceTemplateStatus(
+          "相同事实库和报告要求的版本正在生成，请稍后刷新或重试。"
+        );
+        return;
+      }
       if (!res.ok) {
         setWorkspaceTemplateError(payload?.error ?? "正式报告生成失败");
         return;

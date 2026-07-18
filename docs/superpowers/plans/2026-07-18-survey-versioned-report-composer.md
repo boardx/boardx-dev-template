@@ -358,9 +358,9 @@ GET must:
 5. return the latest successful artifact report, or an unpersisted deterministic preview when no artifact exists;
 6. never call Qwen and never include `sourceData` or raw responses in JSON.
 
-- [x] **Step 4: Implement POST with cache reuse**
+- [x] **Step 4: Implement POST with cache reuse and a generation claim**
 
-POST must additionally require `canManageSurveyScope`. It builds the same artifact key and returns the existing artifact before creating a session or calling Qwen. On cache miss, it creates one session, generates evidence-bound claims, builds the professional report, persists a ready immutable artifact, then returns refreshed generation status. Qwen failure uses the deterministic evidence report and records a warning without deleting prior artifacts.
+POST must additionally require `canManageSurveyScope`. It builds the same artifact key and returns the existing artifact before creating a session or calling Qwen. On cache miss, it atomically claims the artifact key before creating a session or invoking Qwen. The claimant generates evidence-bound claims, builds the professional report, persists a ready immutable artifact, and completes the claim. A concurrent request for an active claim returns `202 in_progress`; a stale claim can be taken over after its lease expires. Qwen failure uses the deterministic evidence report, releases the claim, and records a warning without deleting prior artifacts.
 
 - [x] **Step 5: Run focused and route-adjacent tests**
 

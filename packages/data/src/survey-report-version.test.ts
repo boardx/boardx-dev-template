@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import {
   buildSurveyReportSourceSnapshot,
   hashSurveyReportRequirement,
@@ -108,5 +108,22 @@ describe("survey report version persistence migration", () => {
     expect(sql).toContain("requirement_hash");
     expect(sql).toContain("template_version");
     expect(sql).toContain("WHERE status = 'ready'");
+  });
+
+  it("creates a durable generation claim keyed by every artifact dimension", () => {
+    const migrationUrl = new URL(
+      "../migrations/049_survey_report_generation_claims.sql",
+      import.meta.url
+    );
+    expect(existsSync(migrationUrl)).toBe(true);
+    if (!existsSync(migrationUrl)) return;
+    const sql = readFileSync(migrationUrl, "utf8");
+
+    expect(sql).toContain("CREATE TABLE IF NOT EXISTS survey_report_generation_claims");
+    expect(sql).toContain(
+      "PRIMARY KEY (survey_id, source_revision, requirement_hash, template_version)"
+    );
+    expect(sql).toContain("session_id uuid NOT NULL");
+    expect(sql).toContain("status text NOT NULL");
   });
 });

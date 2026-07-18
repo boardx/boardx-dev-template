@@ -3,12 +3,13 @@ import {
   test,
   type BrowserContext,
   type Page,
-  type Route,
 } from "@playwright/test";
+import { closePool, query } from "@repo/data";
 
 interface ReportArtifactSummary {
   id: string;
   createdAt: string;
+  newResponseCount: number;
   requirementHash: string;
   responseCount: number;
   sourceRevision: string;
@@ -20,10 +21,21 @@ interface ProfessionalReportPayload {
   preview?: boolean;
   reused?: boolean;
   selectedArtifactId?: string | null;
+  sessionId?: string;
+  status?: "in_progress";
   generation: {
+    currentResponseCount: number;
+    currentRequirementHash: string;
+    currentSourceRevision: string;
     requirementChanged: boolean;
+    stale: boolean;
     versions: ReportArtifactSummary[];
   };
+}
+
+interface GenerationRecordCounts {
+  session_count: string;
+  trace_count: string;
 }
 
 async function register(page: Page) {
@@ -39,12 +51,32 @@ async function register(page: Page) {
   expect(response.status()).toBe(201);
 }
 
-function expectNoRawResponseRecords(payload: unknown) {
+function expectNoRawResponseRecords(payload: unknown, ...canaries: string[]) {
   const serialized = JSON.stringify(payload);
   expect(serialized).not.toContain('"answers"');
   expect(serialized).not.toContain('"responses"');
   expect(serialized).not.toContain('"sourceData"');
   expect(serialized).not.toContain('"sourceSnapshot"');
+  for (const canary of canaries) {
+    expect(serialized).not.toContain(canary);
+  }
+}
+
+async function countGenerationRecords(surveyId: number) {
+  const rows = await query<GenerationRecordCounts>(
+    `SELECT
+       count(DISTINCT sessions.id)::text AS session_count,
+       count(traces.id)::text AS trace_count
+     FROM survey_ai_sessions sessions
+     LEFT JOIN survey_ai_model_traces traces ON traces.session_id = sessions.id
+     WHERE sessions.survey_id = $1
+       AND sessions.kind = 'report'`,
+    [surveyId]
+  );
+  return {
+    sessions: Number(rows[0]?.session_count ?? 0),
+    traces: Number(rows[0]?.trace_count ?? 0),
+  };
 }
 
 async function expectNonEmptyEChartsCanvas(page: Page) {
@@ -101,6 +133,10 @@ async function expectCopiedOptionJson(
   });
 }
 
+test.afterAll(async () => {
+  await closePool();
+});
+
 test("single-output report chapters persist and create exact immutable versions", async ({
   context,
   page,
@@ -119,14 +155,36 @@ test("single-output report chapters persist and create exact immutable versions"
           options: ["成分", "认证"],
           category: "安全认知",
         },
+        {
+          title: "补充说明",
+          type: "text",
+          required: true,
+          options: [],
+          category: "开放反馈",
+        },
       ],
     },
   });
   expect(created.status()).toBe(201);
-  const survey = (await created.json()).survey as { id: number };
+  const survey = (await created.json()).survey as {
+    id: number;
+    questions: Array<{ id: number; type: string }>;
+  };
   expect(
     (await page.request.patch(`/api/surveys/${survey.id}`, { data: { isActive: true } })).status()
   ).toBe(200);
+  const choiceQuestion = survey.questions.find((question) => question.type === "single")!;
+  const textQuestion = survey.questions.find((question) => question.type === "text")!;
+  const initialCanary = `F16_RAW_CANARY_${Date.now()}_${survey.id}`;
+  const initialAnswer = await page.request.post(`/api/surveys/${survey.id}/responses`, {
+    data: {
+      answers: {
+        [String(choiceQuestion.id)]: "成分",
+        [String(textQuestion.id)]: initialCanary,
+      },
+    },
+  });
+  expect(initialAnswer.status()).toBe(201);
 
   const categoriesResponse = await page.request.get(`/api/surveys/${survey.id}/report-categories`);
   const categoryPlan = (await categoriesResponse.json()).reportCategoryPlan;
@@ -139,26 +197,52 @@ test("single-output report chapters persist and create exact immutable versions"
   const beforeGeneration = await page.request.get(`/api/surveys/${survey.id}/professional-report`);
   const beforePayload = await beforeGeneration.json() as ProfessionalReportPayload;
   expect(beforePayload.preview).toBe(true);
+  expect(beforePayload.generation.currentResponseCount).toBe(1);
   expect(beforePayload.generation.versions).toHaveLength(0);
-  expectNoRawResponseRecords(beforePayload);
+  expectNoRawResponseRecords(beforePayload, initialCanary);
 
-  const firstGeneration = await page.request.post(`/api/surveys/${survey.id}/professional-report`, {
-    data: {},
-  });
-  expect(firstGeneration.status()).toBe(200);
-  const firstPayload = await firstGeneration.json() as ProfessionalReportPayload;
-  expect(firstPayload.reused).toBe(false);
+  const concurrentGenerations = await Promise.all([
+    page.request.post(`/api/surveys/${survey.id}/professional-report`, { data: {} }),
+    page.request.post(`/api/surveys/${survey.id}/professional-report`, { data: {} }),
+  ]);
+  const concurrentPayloads = await Promise.all(
+    concurrentGenerations.map(
+      async (response) => ({
+        status: response.status(),
+        payload: await response.json() as ProfessionalReportPayload,
+      })
+    )
+  );
+  const newlyGenerated = concurrentPayloads.filter(
+    ({ status, payload }) => status === 200 && payload.reused === false
+  );
+  expect(newlyGenerated).toHaveLength(1);
+  expect(concurrentPayloads.some(({ status, payload }) =>
+    status === 202
+      ? payload.status === "in_progress"
+      : status === 200 && payload.reused === true
+  )).toBe(true);
+  for (const { status, payload } of concurrentPayloads) {
+    expect([200, 202]).toContain(status);
+    expectNoRawResponseRecords(payload, initialCanary);
+  }
+  const firstPayload = newlyGenerated[0]!.payload;
   expect(firstPayload.generation.versions).toHaveLength(1);
-  expectNoRawResponseRecords(firstPayload);
+  expectNoRawResponseRecords(firstPayload, initialCanary);
   const firstVersion = firstPayload.generation.versions[0]!;
+  expect(await countGenerationRecords(survey.id)).toEqual({
+    sessions: 1,
+    traces: 1,
+  });
 
   const reusedGeneration = await page.request.post(`/api/surveys/${survey.id}/professional-report`, {
     data: {},
   });
+  expect(reusedGeneration.status()).toBe(200);
   const reusedPayload = await reusedGeneration.json() as ProfessionalReportPayload;
   expect(reusedPayload.reused).toBe(true);
   expect(reusedPayload.generation.versions).toEqual([firstVersion]);
-  expectNoRawResponseRecords(reusedPayload);
+  expectNoRawResponseRecords(reusedPayload, initialCanary);
 
   const loadedPlanResponse = page.waitForResponse((response) =>
     response.url().includes(`/api/surveys/${survey.id}/report-categories`) &&
@@ -175,7 +259,7 @@ test("single-output report chapters persist and create exact immutable versions"
     "面向管理层，先给结论，再说明证据边界和行动建议。"
   );
   expect(loadedReportPayload.generation.versions).toEqual([firstVersion]);
-  expectNoRawResponseRecords(loadedReportPayload);
+  expectNoRawResponseRecords(loadedReportPayload, initialCanary);
 
   await expect(page.getByTestId("report-template-builder")).toBeVisible();
   await expect(page.getByTestId("report-module-list")).toBeVisible();
@@ -219,7 +303,11 @@ test("single-output report chapters persist and create exact immutable versions"
   const changedChartStatusPayload =
     await changedChartStatusResponse.json() as ProfessionalReportPayload;
   expect(changedChartStatusPayload.generation.requirementChanged).toBe(true);
-  expectNoRawResponseRecords(changedChartStatusPayload);
+  expect(changedChartStatusPayload.generation.currentSourceRevision)
+    .toBe(firstVersion.sourceRevision);
+  expect(changedChartStatusPayload.generation.currentRequirementHash)
+    .not.toBe(firstVersion.requirementHash);
+  expectNoRawResponseRecords(changedChartStatusPayload, initialCanary);
   await expect(page.getByTestId("generate-versioned-report")).toBeEnabled();
 
   await page.reload();
@@ -255,41 +343,80 @@ test("single-output report chapters persist and create exact immutable versions"
   expect(chartGenerationPayload.reused).toBe(false);
   expect(chartGenerationPayload.generation.versions).toHaveLength(2);
   expect(chartGenerationPayload.generation.versions).toContainEqual(firstVersion);
-  expectNoRawResponseRecords(chartGenerationPayload);
+  expectNoRawResponseRecords(chartGenerationPayload, initialCanary);
   const chartVersion = chartGenerationPayload.generation.versions.find(
     (version) => version.id !== firstVersion.id
   )!;
+  expect(chartVersion.sourceRevision).toBe(firstVersion.sourceRevision);
+  expect(chartVersion.templateVersion).toBe(firstVersion.templateVersion);
+  expect(chartVersion.requirementHash).not.toBe(firstVersion.requirementHash);
 
-  await page.getByRole("button", { name: "图片", exact: true }).click();
+  const textRequirement =
+    `文本版管理摘要 ${Date.now()}：只展示聚合结论、样本边界和行动建议。`;
+  await page.getByRole("button", { name: "文本", exact: true }).click();
+  await page.getByTestId("report-requirement-input").fill(textRequirement);
   await expect(page.getByTestId("generate-versioned-report")).toBeDisabled();
-  const savedImagePlanResponse = page.waitForResponse((response) =>
+  const savedTextPlanResponse = page.waitForResponse((response) =>
     response.url().includes(`/api/surveys/${survey.id}/report-categories`) &&
     response.request().method() === "PATCH"
   );
   await page.getByTestId("save-report-plan").click();
-  const savedImagePlanPayload = await (await savedImagePlanResponse).json();
-  expect(savedImagePlanPayload.reportCategoryPlan.categories[0].outputType).toBe("image");
-  expect(savedImagePlanPayload.reportCategoryPlan.categories[0].chartTemplateId).toBeUndefined();
+  const savedTextPlanPayload = await (await savedTextPlanResponse).json();
+  expect(savedTextPlanPayload.reportCategoryPlan.categories[0]).toMatchObject({
+    outputType: "text",
+    requirement: textRequirement,
+  });
+  expect(savedTextPlanPayload.reportCategoryPlan.categories[0].chartTemplateId)
+    .toBeUndefined();
   await expect(page.getByTestId("report-generation-status")).toContainText("要求已修改");
-  const changedImageStatusResponse =
+  const changedTextStatusResponse =
     await page.request.get(`/api/surveys/${survey.id}/professional-report`);
-  const changedImageStatusPayload =
-    await changedImageStatusResponse.json() as ProfessionalReportPayload;
-  expect(changedImageStatusPayload.generation.requirementChanged).toBe(true);
-  expectNoRawResponseRecords(changedImageStatusPayload);
+  const changedTextStatusPayload =
+    await changedTextStatusResponse.json() as ProfessionalReportPayload;
+  expect(changedTextStatusPayload.generation.requirementChanged).toBe(true);
+  expect(changedTextStatusPayload.generation.currentSourceRevision)
+    .toBe(chartVersion.sourceRevision);
+  expect(changedTextStatusPayload.generation.currentRequirementHash)
+    .not.toBe(chartVersion.requirementHash);
+  expectNoRawResponseRecords(changedTextStatusPayload, initialCanary);
 
-  const imageGenerationResponse = page.waitForResponse((response) =>
+  await page.reload();
+  await expect(page.getByRole("button", { name: "文本", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true"
+  );
+  await expect(page.getByTestId("report-requirement-input")).toHaveValue(textRequirement);
+  const reloadedTextPlan = await page.request.get(
+    `/api/surveys/${survey.id}/report-categories`
+  );
+  const reloadedTextPlanPayload = await reloadedTextPlan.json();
+  expect(reloadedTextPlanPayload.reportCategoryPlan.categories[0]).toMatchObject({
+    outputType: "text",
+    requirement: textRequirement,
+  });
+  expect(reloadedTextPlanPayload.reportCategoryPlan.categories[0].chartTemplateId)
+    .toBeUndefined();
+
+  const textGenerationResponse = page.waitForResponse((response) =>
     response.url().includes(`/api/surveys/${survey.id}/professional-report`) &&
     response.request().method() === "POST"
   );
   await page.getByTestId("generate-versioned-report").click();
-  const imageGenerationPayload =
-    await (await imageGenerationResponse).json() as ProfessionalReportPayload;
-  expect(imageGenerationPayload.reused).toBe(false);
-  expect(imageGenerationPayload.generation.versions).toHaveLength(3);
-  expect(imageGenerationPayload.generation.versions).toContainEqual(firstVersion);
-  expect(imageGenerationPayload.generation.versions).toContainEqual(chartVersion);
-  expectNoRawResponseRecords(imageGenerationPayload);
+  const textGenerationPayload =
+    await (await textGenerationResponse).json() as ProfessionalReportPayload;
+  expect(textGenerationPayload.reused).toBe(false);
+  expect(textGenerationPayload.generation.versions).toHaveLength(3);
+  expect(textGenerationPayload.generation.versions).toContainEqual(firstVersion);
+  expect(textGenerationPayload.generation.versions).toContainEqual(chartVersion);
+  expectNoRawResponseRecords(textGenerationPayload, initialCanary);
+  const textVersion = textGenerationPayload.generation.versions.find(
+    (version) =>
+      version.id !== firstVersion.id &&
+      version.id !== chartVersion.id
+  )!;
+  expect(textVersion.sourceRevision).toBe(chartVersion.sourceRevision);
+  expect(textVersion.templateVersion).toBe(chartVersion.templateVersion);
+  expect(textVersion.requirementHash).not.toBe(chartVersion.requirementHash);
 
   await page.getByTestId("open-analysis-report").click();
   await expect(page).toHaveURL(new RegExp(`survey=${survey.id}.*step=report`));
@@ -312,7 +439,8 @@ test("single-output report chapters persist and create exact immutable versions"
   const exactVersionPayload =
     await (await exactVersionResponse).json() as ProfessionalReportPayload;
   expect(exactVersionPayload.selectedArtifactId).toBe(firstVersion.id);
-  expectNoRawResponseRecords(exactVersionPayload);
+  expect(exactVersionPayload.report).toEqual(firstPayload.report);
+  expectNoRawResponseRecords(exactVersionPayload, initialCanary);
   await expect(oldestVersionButton).toHaveAttribute("aria-current", "true");
 
   const invalidArtifact = await page.request.get(
@@ -321,48 +449,77 @@ test("single-output report chapters persist and create exact immutable versions"
   expect(invalidArtifact.status()).toBe(404);
   expect(await invalidArtifact.json()).toEqual({ error: "report_version_not_found" });
 
-  let releaseGeneration!: () => void;
-  let markGenerationStarted!: () => void;
-  const generationHeld = new Promise<void>((resolve) => {
-    releaseGeneration = resolve;
+  expect(await countGenerationRecords(survey.id)).toEqual({
+    sessions: 3,
+    traces: 3,
   });
-  const generationStarted = new Promise<void>((resolve) => {
-    markGenerationStarted = resolve;
+  const staleCanary = `F16_STALE_CANARY_${Date.now()}_${survey.id}`;
+  const laterAnswer = await page.request.post(`/api/surveys/${survey.id}/responses`, {
+    data: {
+      answers: {
+        [String(choiceQuestion.id)]: "认证",
+        [String(textQuestion.id)]: staleCanary,
+      },
+    },
   });
-  const holdGeneration = async (route: Route) => {
-    if (route.request().method() !== "POST") {
-      await route.continue();
-      return;
-    }
-    markGenerationStarted();
-    await generationHeld;
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ ...imageGenerationPayload, reused: true }),
-    });
-  };
-  await page.route(
-    `**/api/surveys/${survey.id}/professional-report`,
-    holdGeneration
+  expect(laterAnswer.status()).toBe(201);
+
+  const staleResponse = await page.request.get(
+    `/api/surveys/${survey.id}/professional-report`
   );
-  const analysisGenerate = page
-    .getByTestId("workspace-report-workbench")
-    .getByRole("button", { name: "生成报告" });
-  await analysisGenerate.click();
-  await generationStarted;
-  try {
-    for (const button of await history.getByRole("button").all()) {
-      await expect(button).toBeDisabled();
-    }
-  } finally {
-    releaseGeneration();
-  }
-  await expect(analysisGenerate).toBeEnabled();
-  await page.unroute(
-    `**/api/surveys/${survey.id}/professional-report`,
-    holdGeneration
+  const stalePayload = await staleResponse.json() as ProfessionalReportPayload;
+  expect(stalePayload.generation.stale).toBe(true);
+  expect(stalePayload.generation.currentResponseCount).toBe(2);
+  expect(stalePayload.generation.versions).toHaveLength(3);
+  expect(stalePayload.generation.versions.map((version) => version.id)).toEqual(
+    textGenerationPayload.generation.versions.map((version) => version.id)
   );
+  expect(stalePayload.generation.versions.every(
+    (version) => version.newResponseCount === 1
+  )).toBe(true);
+  expect(stalePayload.generation.currentSourceRevision)
+    .not.toBe(textVersion.sourceRevision);
+  expect(stalePayload.generation.currentRequirementHash)
+    .toBe(textVersion.requirementHash);
+  expectNoRawResponseRecords(stalePayload, initialCanary, staleCanary);
+  expect(await countGenerationRecords(survey.id)).toEqual({
+    sessions: 3,
+    traces: 3,
+  });
+
+  await page.goto(`/surveys?survey=${survey.id}&step=template`);
+  await expect(page.getByTestId("report-generation-status")).toContainText("数据有更新");
+  await expect(page.getByTestId("report-generation-status")).toContainText("新增 1 份答卷");
+  await expect(page.getByTestId("generate-versioned-report")).toBeEnabled();
+  expect(await countGenerationRecords(survey.id)).toEqual({
+    sessions: 3,
+    traces: 3,
+  });
+
+  const staleGenerationResponse = page.waitForResponse((response) =>
+    response.url().includes(`/api/surveys/${survey.id}/professional-report`) &&
+    response.request().method() === "POST"
+  );
+  await page.getByTestId("generate-versioned-report").click();
+  const staleGenerationPayload =
+    await (await staleGenerationResponse).json() as ProfessionalReportPayload;
+  expect(staleGenerationPayload.reused).toBe(false);
+  expect(staleGenerationPayload.generation.stale).toBe(false);
+  expect(staleGenerationPayload.generation.versions).toHaveLength(4);
+  const refreshedVersion = staleGenerationPayload.generation.versions.find(
+    (version) => version.sourceRevision !== textVersion.sourceRevision
+  )!;
+  expect(refreshedVersion.requirementHash).toBe(textVersion.requirementHash);
+  expect(refreshedVersion.templateVersion).toBe(textVersion.templateVersion);
+  expectNoRawResponseRecords(
+    staleGenerationPayload,
+    initialCanary,
+    staleCanary
+  );
+  expect(await countGenerationRecords(survey.id)).toEqual({
+    sessions: 4,
+    traces: 4,
+  });
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/surveys?survey=${survey.id}&step=template`);

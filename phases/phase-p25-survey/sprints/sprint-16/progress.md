@@ -52,3 +52,15 @@
   仍由首次合法 harness 门禁维护，passing 状态下 verify 按设计跳过且不覆写日志。
 - 已知风险或未解决问题: 无 F16 blocker；F17 LangGraph 自主分析仍不属于本 PR。
 - 下一步最佳动作: 完成 Task 5 与全分支审查，推送更新现有 PR `#716`。
+
+### 2026-07-18 22:35:00
+- 本轮目标: 修复 Task 5 审查发现的并发生成、原始答卷泄漏与 stale 再生成覆盖缺口。
+- 已完成: 新增按产物键原子抢占的持久化 generation claim；并发 POST 只允许一个生成者；
+  浏览器、历史版本与导出统一移除原始文本答卷；补齐新答卷后只标记 stale、用户显式生成新版本
+  的端到端路径。
+- 运行过的验证: Data 92 项、Web 157 项、Data/Web typecheck、design lint、F16 Playwright
+  以及 `pnpm harness verify --sprint p25/16 --feature F16 --backfill-evidence` 全部通过。
+- 已记录证据: `evidence/F16.verify.log` 已通过合法 backfill 刷新；
+  `evidence/survey-report-single-output-desktop.png` 已重新生成。
+- 已知风险或未解决问题: 无 F16 blocker；F17 LangGraph 自主分析仍为后续独立 feature。
+- 下一步最佳动作: 完成修复复审与全分支审查，提交并推送现有 PR `#716`。

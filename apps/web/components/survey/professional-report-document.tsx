@@ -71,11 +71,6 @@ export function ProfessionalReportDocument({ report }: { report: ProfessionalSur
                   <p className="border-t border-border pt-2 text-11 text-muted-foreground">口径：{chapter.chart.denominatorLabel} n={chapter.chart.denominator}</p>
                 </div>
               ) : null}
-              {chapter.textResponses?.length ? (
-                <div className="mt-5 grid gap-2">
-                  {chapter.textResponses.map((response, responseIndex) => <blockquote key={`${response}-${responseIndex}`} className="border-l border-border pl-3 text-13 leading-6 text-muted-foreground">“{response}”</blockquote>)}
-                </div>
-              ) : null}
               {chapter.claims.map((claim) => <p key={claim.id} className="mt-5 text-14 leading-7"><strong>结论：</strong>{claim.statement}</p>)}
               {chapter.limitations.length ? <p className="mt-4 text-12 leading-5 text-muted-foreground">限制：{chapter.limitations.join(" ")}</p> : null}
             </section>

@@ -435,13 +435,11 @@ export function buildProfessionalReportHtml(report: ProfessionalSurveyReportDocu
         <strong>${row.count} · ${row.percentage}%</strong>
       </div>
     `).join("") ?? "";
-    const quotes = chapter.textResponses?.map((text) => `<blockquote>“${escapeHtml(text)}”</blockquote>`).join("") ?? "";
     return `
       <section class="chapter">
         <p class="eyebrow">${String(index + 1).padStart(2, "0")} / 分题分析</p>
         <div class="chapter-title"><h2>${escapeHtml(chapter.title)}</h2><span>有效回答 n=${chapter.validResponseCount}</span></div>
         ${chartRows ? `<div class="chart">${chartRows}<footer>数据来源：真实问卷答卷 · ${escapeHtml(chapter.chart!.denominatorLabel)} n=${chapter.chart!.denominator}</footer></div>` : ""}
-        ${quotes ? `<div class="quotes">${quotes}</div>` : ""}
         ${chapter.limitations.length ? `<p class="limitation">限制：${escapeHtml(chapter.limitations.join(" "))}</p>` : ""}
       </section>
     `;

@@ -5,8 +5,9 @@ import {
   buildSurveyReportSourceSnapshot,
   canManageSurveyScope,
   canViewSurvey,
+  claimSurveyReportGeneration,
+  completeSurveyReportGenerationClaim,
   createSurveyAiModelTrace,
-  createSurveyAiSession,
   createVersionedSurveyReportArtifact,
   ensureSurveyReportCategoryPlan,
   ensureSurveyReportSourceSnapshot,
@@ -16,8 +17,9 @@ import {
   listReadySurveyReportArtifacts,
   listSurveyResponses,
   normalizeJsonObject,
-  updateSurveyAiSessionStatus,
+  releaseSurveyReportGenerationClaim,
   type SurveyReportArtifactVersion,
+  type SurveyReportArtifactKey,
 } from "@repo/data";
 import { currentTeamId, currentUser } from "@/lib/session";
 import { buildSurveyReportEvidence } from "@/lib/survey-report-evidence";
@@ -25,7 +27,10 @@ import {
   resolveSurveyReportGenerationStatus,
   type SurveyReportGenerationStatus,
 } from "@/lib/survey-report-generation";
-import { buildProfessionalReportDocument } from "@/lib/survey-professional-report";
+import {
+  buildProfessionalReportDocument,
+  sanitizeProfessionalReportDocument,
+} from "@/lib/survey-professional-report";
 import { buildSurveyReportRequirementPayload } from "@/lib/survey-report-requirement";
 import { selectExactReportVersion } from "@/lib/survey-report-version-navigation";
 import type { AiEvidenceClaimCandidate } from "@/lib/survey-professional-report";
@@ -38,6 +43,11 @@ export const dynamic = "force-dynamic";
 function parseSurveyId(raw: string) {
   const id = Number(raw);
   return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+function isoTimestamp(value: unknown): string {
+  const date = value instanceof Date ? value : new Date(String(value));
+  return Number.isNaN(date.getTime()) ? String(value) : date.toISOString();
 }
 
 async function loadReportContext(rawId: string, requireManage: boolean) {
@@ -86,7 +96,7 @@ async function loadReportContext(rawId: string, requireManage: boolean) {
     })),
     responses: responses.map((response) => ({
       id: response.id,
-      submittedAt: response.submitted_at,
+      submittedAt: isoTimestamp(response.submitted_at),
       answers: response.answers,
     })),
   });
@@ -148,7 +158,9 @@ function generationStatus(
 function artifactReport(
   artifact: SurveyReportArtifactVersion | undefined
 ): ProfessionalSurveyReportDocument | undefined {
-  return artifact?.report as unknown as ProfessionalSurveyReportDocument | undefined;
+  const report =
+    artifact?.report as unknown as ProfessionalSurveyReportDocument | undefined;
+  return report ? sanitizeProfessionalReportDocument(report) : undefined;
 }
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
@@ -188,6 +200,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
+  let claimedGeneration:
+    | { artifactKey: SurveyReportArtifactKey; sessionId: string }
+    | undefined;
   try {
     const context = await loadReportContext(params.id, true);
     if ("response" in context) return context.response;
@@ -222,14 +237,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
       });
     }
 
-    const session = await createSurveyAiSession({
-      id: randomUUID(),
+    const claim = await claimSurveyReportGeneration({
+      ...artifactKey,
+      sessionId: randomUUID(),
       actorUserId: context.user.id,
-      kind: "report",
       goal: instruction || "生成专业问卷报告",
-      surveyId: context.survey.id,
       teamId: context.survey.team_id,
-      status: "generating",
       selectedModelId: model,
       provider: "qwen",
       context: {
@@ -238,6 +251,25 @@ export async function POST(request: Request, { params }: { params: { id: string 
         requirementHash,
       },
     });
+    if (claim.status === "ready") {
+      const artifacts = await listReadySurveyReportArtifacts(context.survey.id);
+      return NextResponse.json({
+        report: artifactReport(claim.artifact),
+        reused: true,
+        model: claim.artifact.modelId,
+        generation: generationStatus({ ...context, artifacts }, requirementHash),
+      });
+    }
+    if (claim.status === "in_progress") {
+      return NextResponse.json({
+        status: "in_progress",
+        sessionId: claim.sessionId,
+        reused: false,
+        generation: generationStatus(context, requirementHash),
+      }, { status: 202 });
+    }
+    const session = { id: claim.sessionId };
+    claimedGeneration = { artifactKey, sessionId: session.id };
     const startedAt = Date.now();
     let aiClaims: AiEvidenceClaimCandidate[] = [];
     let warning: string | undefined;
@@ -329,7 +361,11 @@ export async function POST(request: Request, { params }: { params: { id: string 
       modelId: artifactModel,
       provider: artifactProvider,
     });
-    await updateSurveyAiSessionStatus(session.id, "ready");
+    await completeSurveyReportGenerationClaim({
+      ...artifactKey,
+      sessionId: session.id,
+      artifactId: artifact.id,
+    });
     const artifacts = await listReadySurveyReportArtifacts(context.survey.id);
 
     return NextResponse.json({
@@ -340,6 +376,16 @@ export async function POST(request: Request, { params }: { params: { id: string 
       generation: generationStatus({ ...context, artifacts }, requirementHash),
     });
   } catch (error) {
+    if (claimedGeneration) {
+      await releaseSurveyReportGenerationClaim({
+        ...claimedGeneration.artifactKey,
+        sessionId: claimedGeneration.sessionId,
+        errorMessage:
+          error instanceof Error ? error.message : "report_generation_failed",
+      }).catch((releaseError) => {
+        console.error("[api] professional-report claim release failed", releaseError);
+      });
+    }
     console.error("[api] professional-report generation failed", error);
     return NextResponse.json({ error: "professional_report_generation_failed" }, { status: 500 });
   }

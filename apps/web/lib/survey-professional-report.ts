@@ -35,7 +35,6 @@ export interface ProfessionalReportChapter {
   validResponseCount: number;
   missingResponseCount: number;
   chart?: ProfessionalReportChart;
-  textResponses?: string[];
   claims: ValidatedReportClaim[];
   limitations: string[];
 }
@@ -105,9 +104,25 @@ function chapterForQuestion(
     validResponseCount: question.validResponseCount,
     missingResponseCount: question.missingResponseCount,
     chart: chartForQuestion(question),
-    textResponses: question.textResponses?.slice(0, 8),
     claims: claims.filter((claim) => claim.questionId === question.questionId),
     limitations,
+  };
+}
+
+export function sanitizeProfessionalReportDocument(
+  report: ProfessionalSurveyReportDocument
+): ProfessionalSurveyReportDocument {
+  return {
+    ...report,
+    chapters: (Array.isArray(report.chapters) ? report.chapters : []).map((rawChapter) => {
+      const {
+        textResponses: _rawTextResponses,
+        ...chapter
+      } = rawChapter as ProfessionalReportChapter & {
+        textResponses?: unknown;
+      };
+      return chapter;
+    }),
   };
 }
 
