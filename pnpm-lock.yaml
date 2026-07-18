@@ -11,6 +11,9 @@ importers:
       '@repo/coord-cli':
         specifier: workspace:*
         version: link:packages/coord-cli
+      '@repo/coord-protocol':
+        specifier: workspace:*
+        version: link:packages/coord-protocol
       '@repo/coord-service':
         specifier: workspace:*
         version: link:packages/coord-service
