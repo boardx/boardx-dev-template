@@ -81,20 +81,13 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         {
           role: "system",
           content:
-            "你是专业用户研究报告架构师。你必须输出严格 JSON，不要 Markdown。你要把问卷问题分成业务可读的报告分类，并为每类推荐 inputModes。",
+            "你是专业用户研究报告架构师。你必须输出严格 JSON，不要 Markdown。你要把问卷主题组织成业务可读的报告章节，并为每章给出一段自然语言报告要求。",
         },
         {
           role: "user",
           content: JSON.stringify({
             task: "classify_survey_questions_for_report_composer",
-            requiredInputModes: ["text", "chat", "chart", "image"],
-            supportedChartTypes: [
-              "bar", "grouped_bar", "stacked_bar", "line", "area", "pie", "doughnut", "rose",
-              "scatter", "radar", "heatmap", "treemap", "funnel", "gauge", "waterfall", "histogram",
-              "boxplot", "matrix", "kpi", "text",
-            ],
-            supportedChartStyles: ["auto", "business", "minimal", "editorial", "presentation", "dark"],
-            rule: "每个问题默认只放入一个主分类。分类顺序就是报告输出顺序。",
+            rule: "章节顺序就是报告输出顺序。每个章节都可以从整份问卷和全部授权答卷中自主检索证据。",
             survey: {
               title: loaded.survey.title,
               description: loaded.survey.description,
@@ -113,18 +106,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
                 {
                   name: "分类名称",
                   description: "分类说明",
-                  questionIds: [1],
-                  inputModes: ["text", "chart"],
-                  chartType: "bar",
-                  chartStyle: "business",
-                  dataPrompt: "报表数据口径、过滤条件、样本量限制和格式要求",
-                  modulePrompts: {
-                    chart: "图表排序、标注和重点呈现要求",
-                    text: "洞察结论、证据和建议的写作要求",
-                    image: "配图内容、风格和构图要求",
-                    chat: "专家问答的角色、问题数量和引用要求",
-                  },
-                  prompt: "该分类的专业报告生成要求",
+                  requirement: "描述读者、决策目标、必须回答的问题、证据边界和表达要求",
                 },
               ],
             },

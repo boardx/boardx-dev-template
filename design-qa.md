@@ -110,4 +110,23 @@ The 2026-07-18 PR review identified a compressed `448px` create chooser whose in
 
 The implementation uses a wider three-card chooser with wrapped descriptions, explicit action labels, an AI recommendation badge, and stable initial focus. The source and implementation were reviewed together at the same dimensions. No text crosses a card boundary, no control is clipped, and spacing, border radii, icon treatment, and hierarchy remain consistent with the Survey design system. The `390 x 844` test confirms single-column cards and no horizontal overflow. No P0, P1, or P2 issue remains.
 
+## F16 Versioned Report Composer
+
+The 2026-07-18 report-composer review supersedes the reference screen's mixed question binding,
+output-module controls, simulated chart settings, and permanent AI assistant:
+
+- Source review: `phases/phase-p25-survey/ui-preview/2026-07-18-report-composer-length-review.png`
+- Implementation: `phases/phase-p25-survey/sprints/sprint-16/evidence/survey-report-composer-desktop.png`
+- Side-by-side comparison: `phases/phase-p25-survey/sprints/sprint-16/evidence/comparison-report-composer-f16.png`
+- Comparison viewport: `1653 x 1024` per side.
+
+The source and implementation were opened together in one comparison image. The implementation
+keeps the existing Survey shell and compact chapter list, replaces the overlong center column with
+one natural-language requirement editor, and uses the third column for the real versioned report.
+The generated report is visibly distinct from configuration, stale/current state remains adjacent
+to the preview, and history is collapsed below it. No text or control overlaps, the primary actions
+remain visible without scrolling, and the `768 x 900` plus `390 x 844` checks have no horizontal
+overflow. The removed question assignment, output-module picker, simulated chart, and AI assistant
+are intentional product changes rather than fidelity defects. No P0, P1, or P2 issue remains.
+
 final result: passed
