@@ -1,6 +1,7 @@
 # ADR 002: shellTool 用 best-effort deny 筛查，硬隔离留给 OS 沙箱
 
 - 状态: Accepted
+- 适用层：方法论（可移植：随模板打包）
 - 日期: 2026-06-29
 
 ## 背景

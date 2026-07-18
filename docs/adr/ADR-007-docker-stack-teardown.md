@@ -1,6 +1,7 @@
 # ADR 007: Docker compose 栈的强制收尾 + 破坏性清理需人类/coord-main 授权
 
 - 状态: Accepted
+- 适用层：项目实现（BoardX 专属：模板只带模式引用）
 - 日期: 2026-07-07
 - 关联: 细化 `parallel-dev-workflow.md` §5 的 worktree 隔离——worktree 起了独占的
   docker compose 栈，但对应的收尾动作从未被明确成硬约束；补一条新铁律，级别对齐

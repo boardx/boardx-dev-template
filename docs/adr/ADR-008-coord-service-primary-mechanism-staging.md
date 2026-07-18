@@ -1,6 +1,7 @@
 # ADR 008: coord-service 从 opt-in 增强分阶段升级为主协调机制（Stage A→D）
 
 - 状态: Proposed（Stage A 已启动并在跑，Stage B/C/D 未开始）
+- 适用层：项目实现（BoardX 专属：模板只带模式引用）
 - 日期: 2026-07-06（方案拍板日）；本文件落笔于 2026-07-08，见下方"落地时间线与
   一个需要如实记录的流程失职"
 - 关联: 接续 ADR-006（coord-service 作为 opt-in 增强，GitHub 保留默认与兜底）；

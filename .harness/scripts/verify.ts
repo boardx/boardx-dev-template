@@ -112,7 +112,7 @@ export function verify(args: Args): void {
     if (ok) {
       if (!sprintId) {
         // ADR-012 D5：--phase 模式不落证据日志、不刷派生视图——曾产出"门控真实通过
-        // 但审计链断裂"的假 passing（P23 事件，见 postmortem-p23-false-passing.md）。
+        // 但审计链断裂"的假 passing（P23 事件，见 docs/postmortems/postmortem-p23-false-passing.md）。
         // 该模式保留为调试观察用途，翻转 passing 一律走 --sprint。
         log.info(`${f.id} 验证全部通过，但 --phase 模式不翻转 passing（无证据落盘）。`);
         log.info(`  正式门控请跑: pnpm harness verify --sprint ${phaseId}/<MM>`);

@@ -1,5 +1,5 @@
 // coordination dashboard — GET /api/admin/coordination/registry
-// 直接读 .harness/agents/registry.yaml（本地文件，免费，见 agent-lifecycle-management-proposal.md
+// 直接读 .harness/agents/registry.yaml（本地文件，免费，见 docs/proposals/agent-lifecycle-management-proposal.md
 // §3「三个 API 路由」）。按 kind 分组返回，供 Coordinators 卡片使用。60s 内存缓存——
 // 这是本地文件读取，不是外部调用，缓存纯粹是避免每次轮询都重新解析 YAML。
 import { NextResponse } from "next/server";

@@ -1,8 +1,8 @@
 # p23 developer-portal — 原始需求
 
 > 权威需求来源（本阶段的输入，按依赖顺序）：
-> 1. `.harness/instructions/developer-portal-design.md`（IA 六板块 → v2 合并为五，PR #495）
-> 2. `.harness/instructions/developer-portal-use-cases.md`（UML 用例图/时序图 + UC-01~22 + 验收锚点，PR #496）
+> 1. `docs/design/developer-portal-design.md`（IA 六板块 → v2 合并为五，PR #495）
+> 2. `docs/design/developer-portal-use-cases.md`（UML 用例图/时序图 + UC-01~22 + 验收锚点，PR #496）
 > 3. **PR #497 的 coord-main UIUX review 意见 + v2 原型**（`apps/web/app/portal-prototype/page.tsx`）——
 >    v2 是本阶段的界面契约候选，等 ui-signoff.md confirmed 后定稿。
 

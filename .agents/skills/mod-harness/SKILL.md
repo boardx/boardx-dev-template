@@ -27,7 +27,7 @@ description: >
 - 改门控工具本身 = 高危变更，需要显式授权，绝不悄悄改。
 
 ## 关联阶段 / ADR / 文档
-ADR-001/003/005/009/010/011/012/013；postmortem-p23-false-passing.md；coordinator-sop.md
+ADR-001/003/005/009/010/011/012/013；docs/postmortems/postmortem-p23-false-passing.md；coordinator-sop.md
 
 ## 模块 SOP
 1. 动手前：读本文件 + 对应 feature 的 `user_visible_behavior`/`verification`；跑 `pnpm harness doctor --phase <相关 phase>` 确认没接手一个带审计债的现场。

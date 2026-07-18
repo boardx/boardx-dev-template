@@ -34,7 +34,7 @@ GitHub(权威) --webhooks--> apps/coord-gateway (Worker + Queues, 幂等)
 - 决策记录：`docs/adr/ADR-017-coord-repohub-do-rebuild.md`
 - 协议规格（三原语 wire format，开放标准）：`docs/coord-platform/protocol/`
 - 执行载体与验收：`phases/phase-p29-coord-platform/feature_list.json`
-- 北极星与产品阶梯：`.harness/instructions/product-vision-github-agent-layer.md`
+- 北极星与产品阶梯：`docs/design/product-vision-github-agent-layer.md`
 
 ## 代码地图
 
