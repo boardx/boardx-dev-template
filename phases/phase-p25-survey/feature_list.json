@@ -394,7 +394,7 @@
         "pnpm harness doctor --phase p25"
       ],
       "evidence": "evidence/F16.verify.log @ 2026-07-18T04:08:37.011Z",
-      "notes": "独立 Delivery PR；使用现有确定性证据聚合路径完成事实库修订、产物键、stale 状态和版本历史，不在本 feature 引入 LangGraph。PR 只 Closes F16 feature issue，并 Refs #648。"
+      "notes": "独立 Delivery PR；使用现有确定性证据聚合路径完成事实库修订、产物键、stale 状态和版本历史，不在本 feature 引入 LangGraph。PR 只 Closes #715，并 Refs #648。"
     },
     {
       "id": "F17",

@@ -29,3 +29,13 @@
 - 已知风险或未解决问题: 无 F16 blocker；F17 尚未开始。
 - 下一步最佳动作: 提交 evidence 与 sprint 文档，检查 git 树证据，关闭 Docker 栈，
   同步 GitHub 并创建 Delivery PR。
+
+### 2026-07-18 12:27:00
+- 本轮目标: 在最新 `origin/main` 上完成交付前回归。
+- 已完成: 合并最新 main，按新 lockfile 同步依赖，并重新执行 F16 全部定向验证。
+- 运行过的验证: Data 86 项、Web 123 项、design lint、Web typecheck、F16 Playwright、
+  harness doctor，以及全仓 `verify:base` 69/69 个 Turbo 任务全部通过。
+- 已记录证据: 最终桌面截图由 Playwright 在合并后的代码上重新生成。
+- 已知风险或未解决问题: 无 F16 blocker；F17 仍等待本 PR 合并。
+- GitHub 投影: F16 feature issue 为 `#715`，正文 `Refs #648`。
+- 下一步最佳动作: 推送分支并创建只 `Closes #715`、`Refs #648` 的 Delivery PR。
