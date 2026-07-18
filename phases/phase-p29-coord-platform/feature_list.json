@@ -8,7 +8,7 @@
       "title": "开源就绪与服务端门禁：LICENSE + 密钥历史审计 + 分支保护",
       "user_visible_behavior": "仓库根存在 Apache-2.0 LICENSE；docs/coord-platform/README.md 是对外贡献者入口（定位/架构图/接入路径）；全历史密钥扫描报告已存档且高危项为零（或已轮换并记录）；GitHub main 分支保护开启：必须 PR、required checks 含 verify。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-QUALITY",
       "verification": [
@@ -27,7 +27,7 @@
       "title": "协议规格 v0：三原语 wire format + coord-protocol 包",
       "user_visible_behavior": "docs/coord-platform/protocol/ 下有 lease.md、evidence.md、events.md 三份规格与 CHANGELOG.md；packages/coord-protocol 提供全部消息类型的 TS 类型 + 运行时校验，测试覆盖每种消息的合法/非法样例。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
