@@ -1,0 +1,874 @@
+$ pnpm --filter @repo/coord-repohub test
+[exit 0]
+
+> @repo/coord-repohub@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/coord-repohub
+> vitest run
+
+
+ RUN  v2.1.9 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/coord-repohub
+
+[vpw:debug] Adding `enable_nodejs_tty_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+[vpw:debug] Adding `enable_nodejs_fs_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+[vpw:debug] Adding `enable_nodejs_http_modules` compatibility flag during tests as this feature is needed to support the Vitest runner.
+[vpw:debug] Adding `enable_nodejs_perf_hooks_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+[vpw:info] Starting single runtime for vitest.config.ts...
+[mf:warn] The latest compatibility date supported by the installed Cloudflare Workers Runtime is "2026-03-10",
+but you've requested "2026-07-01". Falling back to "2026-03-10"...
+ ✓ test/repohub.test.ts (9 tests) 46ms
+
+ Test Files  1 passed (1)
+      Tests  9 passed (9)
+   Start at  13:22:35
+   Duration  801ms (transform 45ms, setup 0ms, collect 56ms, tests 46ms, environment 0ms, prepare 56ms)
+
+[vpw:debug] Shutting down runtimes...
+[vpw:debug] Disposing remote proxy sessions...
+
+
+$ bash phases/phase-p29-coord-platform/scripts/verify-claim-race.sh
+[exit 0]
+==> 并发 20 claim @ custom:race-test-1784352156
+201=1 409=19
+==> 等待 TTL(60s) 过期 + alarm 回收
+过期后再 claim -> 201
+✓ F05 e2e 通过：原子撞车防护 + TTL 机械回收 + 强制交接释放
+
+
+
+[BASE VERIFY] $ pnpm -w run verify:base
+[exit 0]
+
+> boardx-dev-template@ verify:base /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff
+> turbo run typecheck lint test
+
+• Packages in scope: @repo/agent-core, @repo/ai, @repo/auth, @repo/canvas, @repo/collab, @repo/coord-dashboard, @repo/coord-gateway, @repo/coord-protocol, @repo/coord-repohub, @repo/coord-service, @repo/data, @repo/devportal, @repo/export, @repo/memory, @repo/orchestrator, @repo/queue, @repo/storage, @repo/tools, @repo/web, @repo/workflow-worker
+• Running typecheck, lint, test in 20 packages
+• Remote caching disabled
+@repo/devportal:typecheck: cache hit, replaying logs 985cecce34e6a890
+@repo/tools:typecheck: cache hit, replaying logs ab7d04414bafca67
+@repo/storage:build: cache hit, replaying logs 2cae66754de601c9
+@repo/devportal:typecheck: 
+@repo/tools:typecheck: 
+@repo/tools:typecheck: > @repo/tools@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/tools
+@repo/tools:typecheck: > tsc --noEmit
+@repo/tools:typecheck: 
+@repo/devportal:typecheck: > @repo/devportal@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/devportal
+@repo/devportal:typecheck: > tsc --noEmit
+@repo/devportal:typecheck: 
+@repo/storage:build: 
+@repo/storage:build: > @repo/storage@0.1.0 build /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/storage
+@repo/storage:build: > tsc --noEmit
+@repo/storage:build: 
+@repo/agent-core:lint: cache hit, replaying logs ef80c374274cdf33
+@repo/agent-core:lint: 
+@repo/agent-core:lint: > @repo/agent-core@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/agent-core
+@repo/agent-core:lint: > echo 'lint: ok'
+@repo/agent-core:lint: 
+@repo/agent-core:lint: lint: ok
+@repo/data:lint: cache hit, replaying logs 41a2e0bb5ea4621c
+@repo/data:lint: 
+@repo/data:lint: > @repo/data@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/data
+@repo/data:lint: > echo 'lint: ok'
+@repo/data:lint: 
+@repo/data:lint: lint: ok
+@repo/coord-repohub:lint: cache hit, replaying logs 46b6c36b47cb8f53
+@repo/coord-repohub:lint: 
+@repo/coord-repohub:lint: > @repo/coord-repohub@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/coord-repohub
+@repo/coord-repohub:lint: > echo 'lint: ok'
+@repo/coord-repohub:lint: 
+@repo/coord-repohub:lint: lint: ok
+@repo/queue:test: cache hit, replaying logs 50783c81c3ad57b7
+@repo/queue:test: 
+@repo/queue:test: > @repo/queue@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/queue
+@repo/queue:test: > vitest run
+@repo/queue:test: 
+@repo/queue:test: 
+@repo/queue:test:  RUN  v2.0.0 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/queue
+@repo/queue:test: 
+@repo/queue:test:  ✓ src/index.test.ts  (4 tests) 10ms
+@repo/queue:test: 
+@repo/queue:test:  Test Files  1 passed (1)
+@repo/queue:test:       Tests  4 passed (4)
+@repo/queue:test:    Start at  13:21:21
+@repo/queue:test:    Duration  740ms (transform 43ms, setup 0ms, collect 255ms, tests 10ms, environment 0ms, prepare 45ms)
+@repo/queue:test: 
+@repo/auth:build: cache hit, replaying logs c5397611a9841a32
+@repo/auth:build: 
+@repo/auth:build: > @repo/auth@0.1.0 build /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/auth
+@repo/auth:build: > tsc --noEmit
+@repo/auth:build: 
+@repo/orchestrator:lint: cache hit, replaying logs 5c7db080201e7ea0
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: > @repo/orchestrator@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/orchestrator
+@repo/orchestrator:lint: > echo 'lint: ok'
+@repo/orchestrator:lint: 
+@repo/orchestrator:lint: lint: ok
+@repo/ai:typecheck: cache hit, replaying logs d38e2d83826fc6ec
+@repo/ai:typecheck: 
+@repo/ai:typecheck: > @repo/ai@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/ai
+@repo/ai:typecheck: > tsc --noEmit
+@repo/ai:typecheck: 
+@repo/tools:lint: cache hit, replaying logs 6dac0438034c7d60
+@repo/tools:lint: 
+@repo/tools:lint: > @repo/tools@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/tools
+@repo/tools:lint: > echo 'lint: ok'
+@repo/tools:lint: 
+@repo/tools:lint: lint: ok
+@repo/storage:test: cache hit, replaying logs 441e25197e30d3b9
+@repo/storage:test: 
+@repo/storage:test: > @repo/storage@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/storage
+@repo/storage:test: > vitest run
+@repo/storage:test: 
+@repo/storage:test: 
+@repo/storage:test:  RUN  v2.0.0 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/storage
+@repo/storage:test: 
+@repo/storage:test:  ✓ src/index.test.ts  (23 tests) 7ms
+@repo/storage:test: 
+@repo/storage:test:  Test Files  1 passed (1)
+@repo/storage:test:       Tests  23 passed (23)
+@repo/storage:test:    Start at  13:21:12
+@repo/storage:test:    Duration  1.25s (transform 134ms, setup 0ms, collect 816ms, tests 7ms, environment 0ms, prepare 142ms)
+@repo/storage:test: 
+@repo/coord-service:typecheck: cache hit, replaying logs a7d99478d5491950
+@repo/coord-service:typecheck: 
+@repo/coord-service:typecheck: > @repo/coord-service@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/coord-service
+@repo/coord-service:typecheck: > tsc --noEmit
+@repo/coord-service:typecheck: 
+@repo/tools:test: cache hit, replaying logs 8eb1b8ebfe5deacb
+@repo/tools:test: 
+@repo/tools:test: > @repo/tools@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/tools
+@repo/tools:test: > vitest run
+@repo/tools:test: 
+@repo/tools:test: 
+@repo/tools:test:  RUN  v2.0.0 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/tools
+@repo/tools:test: 
+@repo/tools:test:  ✓ src/index.test.ts  (12 tests) 123ms
+@repo/tools:test: 
+@repo/tools:test:  Test Files  1 passed (1)
+@repo/tools:test:       Tests  12 passed (12)
+@repo/tools:test:    Start at  13:21:13
+@repo/tools:test:    Duration  1.36s (transform 160ms, setup 0ms, collect 183ms, tests 123ms, environment 0ms, prepare 136ms)
+@repo/tools:test: 
+@repo/coord-service:lint: cache hit, replaying logs 39cab4f979b4ea88
+@repo/coord-service:lint: 
+@repo/coord-service:lint: > @repo/coord-service@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/coord-service
+@repo/coord-service:lint: > echo 'lint: ok'
+@repo/coord-service:lint: 
+@repo/coord-service:lint: lint: ok
+@repo/coord-service:test: cache hit, replaying logs d6f6e7fad633807d
+@repo/coord-service:test: 
+@repo/coord-service:test: > @repo/coord-service@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/coord-service
+@repo/coord-service:test: > vitest run
+@repo/coord-service:test: 
+@repo/coord-service:test: 
+@repo/coord-service:test:  RUN  v2.0.0 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/coord-service
+@repo/coord-service:test: 
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_tty_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_fs_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_http_modules` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_perf_hooks_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:info] Starting isolated runtimes for vitest.config.ts...
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/unit/cycle.test.ts's suite "C-cycle 时钟（权威实现）"" (raw bytes: "\x74\x65\x73\x74\x2f\x75\x6e\x69\x74\x2f\x63\x79\x63\x6c\x65\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x43\x2d\x63\x79\x63\x6c\x65\x20\xe6\x97\xb6\xe9\x92\x9f\xef\xbc\x88\xe6\x9d\x83\xe5\xa8\x81\xe5\xae\x9e\xe7\x8e\xb0\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's suite "POST /agents/:id/mint-token（ADR-011 P2 自助领取）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x50\x4f\x53\x54\x20\x2f\x61\x67\x65\x6e\x74\x73\x2f\x3a\x69\x64\x2f\x6d\x69\x6e\x74\x2d\x74\x6f\x6b\x65\x6e\xef\xbc\x88\x41\x44\x52\x2d\x30\x31\x31\x20\x50\x32\x20\xe8\x87\xaa\xe5\x8a\xa9\xe9\xa2\x86\xe5\x8f\x96\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's suite "POST /events (narrative events — ADR-009 GitHub 协调面退役后的站会/andon 信道)"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x50\x4f\x53\x54\x20\x2f\x65\x76\x65\x6e\x74\x73\x20\x28\x6e\x61\x72\x72\x61\x74\x69\x76\x65\x20\x65\x76\x65\x6e\x74\x73\x20\xe2\x80\x94\x20\x41\x44\x52\x2d\x30\x30\x39\x20\x47\x69\x74\x48\x75\x62\x20\xe5\x8d\x8f\xe8\xb0\x83\xe9\x9d\xa2\xe9\x80\x80\xe5\xbd\xb9\xe5\x90\x8e\xe7\x9a\x84\xe7\xab\x99\xe4\xbc\x9a\x2f\x61\x6e\x64\x6f\x6e\x20\xe4\xbf\xa1\xe9\x81\x93\x29\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/unit/cycle.test.ts's test "锚定到 UTC 整点 00/03/06/09/12/15/18/21"" (raw bytes: "\x74\x65\x73\x74\x2f\x75\x6e\x69\x74\x2f\x63\x79\x63\x6c\x65\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe9\x94\x9a\xe5\xae\x9a\xe5\x88\xb0\x20\x55\x54\x43\x20\xe6\x95\xb4\xe7\x82\xb9\x20\x30\x30\x2f\x30\x33\x2f\x30\x36\x2f\x30\x39\x2f\x31\x32\x2f\x31\x35\x2f\x31\x38\x2f\x32\x31\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's test "非 broker 一律 403（worker 不能给自己 mint，coordinator 也不行——入口唯一）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe9\x9d\x9e\x20\x62\x72\x6f\x6b\x65\x72\x20\xe4\xb8\x80\xe5\xbe\x8b\x20\x34\x30\x33\xef\xbc\x88\x77\x6f\x72\x6b\x65\x72\x20\xe4\xb8\x8d\xe8\x83\xbd\xe7\xbb\x99\xe8\x87\xaa\xe5\xb7\xb1\x20\x6d\x69\x6e\x74\xef\xbc\x8c\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe4\xb9\x9f\xe4\xb8\x8d\xe8\xa1\x8c\xe2\x80\x94\xe2\x80\x94\xe5\x85\xa5\xe5\x8f\xa3\xe5\x94\xaf\xe4\xb8\x80\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "no bearer token → 401"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x6e\x6f\x20\x62\x65\x61\x72\x65\x72\x20\x74\x6f\x6b\x65\x6e\x20\xe2\x86\x92\x20\x34\x30\x31\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's suite "tasks 派工原语（#594：收件箱 + 轮询契约的服务端）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x74\x61\x73\x6b\x73\x20\xe6\xb4\xbe\xe5\xb7\xa5\xe5\x8e\x9f\xe8\xaf\xad\xef\xbc\x88\x23\x35\x39\x34\xef\xbc\x9a\xe6\x94\xb6\xe4\xbb\xb6\xe7\xae\xb1\x20\x2b\x20\xe8\xbd\xae\xe8\xaf\xa2\xe5\xa5\x91\xe7\xba\xa6\xe7\x9a\x84\xe6\x9c\x8d\xe5\x8a\xa1\xe7\xab\xaf\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/unit/cycle.test.ts's test "锚定到 UTC 整点 00/03/06/09/12/15/18/21"" (raw bytes: "\x74\x65\x73\x74\x2f\x75\x6e\x69\x74\x2f\x63\x79\x63\x6c\x65\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe9\x94\x9a\xe5\xae\x9a\xe5\x88\xb0\x20\x55\x54\x43\x20\xe6\x95\xb4\xe7\x82\xb9\x20\x30\x30\x2f\x30\x33\x2f\x30\x36\x2f\x30\x39\x2f\x31\x32\x2f\x31\x35\x2f\x31\x38\x2f\x32\x31\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "worker 不能派工（403）——派工是协调层权力，同 andon 的门"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe4\xb8\x8d\xe8\x83\xbd\xe6\xb4\xbe\xe5\xb7\xa5\xef\xbc\x88\x34\x30\x33\xef\xbc\x89\xe2\x80\x94\xe2\x80\x94\xe6\xb4\xbe\xe5\xb7\xa5\xe6\x98\xaf\xe5\x8d\x8f\xe8\xb0\x83\xe5\xb1\x82\xe6\x9d\x83\xe5\x8a\x9b\xef\xbc\x8c\xe5\x90\x8c\x20\x61\x6e\x64\x6f\x6e\x20\xe7\x9a\x84\xe9\x97\xa8\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "no bearer token → 401"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x6e\x6f\x20\x62\x65\x61\x72\x65\x72\x20\x74\x6f\x6b\x65\x6e\x20\xe2\x86\x92\x20\x34\x30\x31\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's test "非 broker 一律 403（worker 不能给自己 mint，coordinator 也不行——入口唯一）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe9\x9d\x9e\x20\x62\x72\x6f\x6b\x65\x72\x20\xe4\xb8\x80\xe5\xbe\x8b\x20\x34\x30\x33\xef\xbc\x88\x77\x6f\x72\x6b\x65\x72\x20\xe4\xb8\x8d\xe8\x83\xbd\xe7\xbb\x99\xe8\x87\xaa\xe5\xb7\xb1\x20\x6d\x69\x6e\x74\xef\xbc\x8c\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe4\xb9\x9f\xe4\xb8\x8d\xe8\xa1\x8c\xe2\x80\x94\xe2\x80\x94\xe5\x85\xa5\xe5\x8f\xa3\xe5\x94\xaf\xe4\xb8\x80\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "worker 不能派工（403）——派工是协调层权力，同 andon 的门"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe4\xb8\x8d\xe8\x83\xbd\xe6\xb4\xbe\xe5\xb7\xa5\xef\xbc\x88\x34\x30\x33\xef\xbc\x89\xe2\x80\x94\xe2\x80\x94\xe6\xb4\xbe\xe5\xb7\xa5\xe6\x98\xaf\xe5\x8d\x8f\xe8\xb0\x83\xe5\xb1\x82\xe6\x9d\x83\xe5\x8a\x9b\xef\xbc\x8c\xe5\x90\x8c\x20\x61\x6e\x64\x6f\x6e\x20\xe7\x9a\x84\xe9\x97\xa8\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/unit/cycle.test.ts's test "cycle id 是同一周期内任意时刻的同一字符串（全队指代一致）"" (raw bytes: "\x74\x65\x73\x74\x2f\x75\x6e\x69\x74\x2f\x63\x79\x63\x6c\x65\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x79\x63\x6c\x65\x20\x69\x64\x20\xe6\x98\xaf\xe5\x90\x8c\xe4\xb8\x80\xe5\x91\xa8\xe6\x9c\x9f\xe5\x86\x85\xe4\xbb\xbb\xe6\x84\x8f\xe6\x97\xb6\xe5\x88\xbb\xe7\x9a\x84\xe5\x90\x8c\xe4\xb8\x80\xe5\xad\x97\xe7\xac\xa6\xe4\xb8\xb2\xef\xbc\x88\xe5\x85\xa8\xe9\x98\x9f\xe6\x8c\x87\xe4\xbb\xa3\xe4\xb8\x80\xe8\x87\xb4\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/unit/cycle.test.ts's test "cycle id 是同一周期内任意时刻的同一字符串（全队指代一致）"" (raw bytes: "\x74\x65\x73\x74\x2f\x75\x6e\x69\x74\x2f\x63\x79\x63\x6c\x65\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x79\x63\x6c\x65\x20\x69\x64\x20\xe6\x98\xaf\xe5\x90\x8c\xe4\xb8\x80\xe5\x91\xa8\xe6\x9c\x9f\xe5\x86\x85\xe4\xbb\xbb\xe6\x84\x8f\xe6\x97\xb6\xe5\x88\xbb\xe7\x9a\x84\xe5\x90\x8c\xe4\xb8\x80\xe5\xad\x97\xe7\xac\xa6\xe4\xb8\xb2\xef\xbc\x88\xe5\x85\xa8\xe9\x98\x9f\xe6\x8c\x87\xe4\xbb\xa3\xe4\xb8\x80\xe8\x87\xb4\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "cycle-plan 写入成功并可在 /status 的 recent_events 里看到"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xe5\xb9\xb6\xe5\x8f\xaf\xe5\x9c\xa8\x20\x2f\x73\x74\x61\x74\x75\x73\x20\xe7\x9a\x84\x20\x72\x65\x63\x65\x6e\x74\x5f\x65\x76\x65\x6e\x74\x73\x20\xe9\x87\x8c\xe7\x9c\x8b\xe5\x88\xb0\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's test "broker mint 成功：返回明文一次；旧 token 立即失效、新 token 立即可用"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x62\x72\x6f\x6b\x65\x72\x20\x6d\x69\x6e\x74\x20\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x9a\xe8\xbf\x94\xe5\x9b\x9e\xe6\x98\x8e\xe6\x96\x87\xe4\xb8\x80\xe6\xac\xa1\xef\xbc\x9b\xe6\x97\xa7\x20\x74\x6f\x6b\x65\x6e\x20\xe7\xab\x8b\xe5\x8d\xb3\xe5\xa4\xb1\xe6\x95\x88\xe3\x80\x81\xe6\x96\xb0\x20\x74\x6f\x6b\x65\x6e\x20\xe7\xab\x8b\xe5\x8d\xb3\xe5\x8f\xaf\xe7\x94\xa8\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "coordinator 派工成功；assignee 收件箱可见 pending"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe6\xb4\xbe\xe5\xb7\xa5\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x9b\x61\x73\x73\x69\x67\x6e\x65\x65\x20\xe6\x94\xb6\xe4\xbb\xb6\xe7\xae\xb1\xe5\x8f\xaf\xe8\xa7\x81\x20\x70\x65\x6e\x64\x69\x6e\x67\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "cycle-plan 写入成功并可在 /status 的 recent_events 里看到"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xe5\xb9\xb6\xe5\x8f\xaf\xe5\x9c\xa8\x20\x2f\x73\x74\x61\x74\x75\x73\x20\xe7\x9a\x84\x20\x72\x65\x63\x65\x6e\x74\x5f\x65\x76\x65\x6e\x74\x73\x20\xe9\x87\x8c\xe7\x9c\x8b\xe5\x88\xb0\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/unit/cycle.test.ts's test "跨周期边界后 id 改变"" (raw bytes: "\x74\x65\x73\x74\x2f\x75\x6e\x69\x74\x2f\x63\x79\x63\x6c\x65\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe8\xb7\xa8\xe5\x91\xa8\xe6\x9c\x9f\xe8\xbe\xb9\xe7\x95\x8c\xe5\x90\x8e\x20\x69\x64\x20\xe6\x94\xb9\xe5\x8f\x98\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/unit/cycle.test.ts's test "跨周期边界后 id 改变"" (raw bytes: "\x74\x65\x73\x74\x2f\x75\x6e\x69\x74\x2f\x63\x79\x63\x6c\x65\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe8\xb7\xa8\xe5\x91\xa8\xe6\x9c\x9f\xe8\xbe\xb9\xe7\x95\x8c\xe5\x90\x8e\x20\x69\x64\x20\xe6\x94\xb9\xe5\x8f\x98\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "coordinator 派工成功；assignee 收件箱可见 pending"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe6\xb4\xbe\xe5\xb7\xa5\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x9b\x61\x73\x73\x69\x67\x6e\x65\x65\x20\xe6\x94\xb6\xe4\xbb\xb6\xe7\xae\xb1\xe5\x8f\xaf\xe8\xa7\x81\x20\x70\x65\x6e\x64\x69\x6e\x67\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's test "broker mint 成功：返回明文一次；旧 token 立即失效、新 token 立即可用"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x62\x72\x6f\x6b\x65\x72\x20\x6d\x69\x6e\x74\x20\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x9a\xe8\xbf\x94\xe5\x9b\x9e\xe6\x98\x8e\xe6\x96\x87\xe4\xb8\x80\xe6\xac\xa1\xef\xbc\x9b\xe6\x97\xa7\x20\x74\x6f\x6b\x65\x6e\x20\xe7\xab\x8b\xe5\x8d\xb3\xe5\xa4\xb1\xe6\x95\x88\xe3\x80\x81\xe6\x96\xb0\x20\x74\x6f\x6b\x65\x6e\x20\xe7\xab\x8b\xe5\x8d\xb3\xe5\x8f\xaf\xe7\x94\xa8\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "andon stop 信号写入成功，payload 原样保留"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x61\x6e\x64\x6f\x6e\x20\x73\x74\x6f\x70\x20\xe4\xbf\xa1\xe5\x8f\xb7\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x8c\x70\x61\x79\x6c\x6f\x61\x64\x20\xe5\x8e\x9f\xe6\xa0\xb7\xe4\xbf\x9d\xe7\x95\x99\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/unit/cycle.test.ts's test "describeCycle 的剩余/已过秒数自洽且总和=周期长度"" (raw bytes: "\x74\x65\x73\x74\x2f\x75\x6e\x69\x74\x2f\x63\x79\x63\x6c\x65\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x64\x65\x73\x63\x72\x69\x62\x65\x43\x79\x63\x6c\x65\x20\xe7\x9a\x84\xe5\x89\xa9\xe4\xbd\x99\x2f\xe5\xb7\xb2\xe8\xbf\x87\xe7\xa7\x92\xe6\x95\xb0\xe8\x87\xaa\xe6\xb4\xbd\xe4\xb8\x94\xe6\x80\xbb\xe5\x92\x8c\x3d\xe5\x91\xa8\xe6\x9c\x9f\xe9\x95\xbf\xe5\xba\xa6\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "派给未注册/inactive 身份直接 400——收件箱黑洞在入口拒绝"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe6\xb4\xbe\xe7\xbb\x99\xe6\x9c\xaa\xe6\xb3\xa8\xe5\x86\x8c\x2f\x69\x6e\x61\x63\x74\x69\x76\x65\x20\xe8\xba\xab\xe4\xbb\xbd\xe7\x9b\xb4\xe6\x8e\xa5\x20\x34\x30\x30\xe2\x80\x94\xe2\x80\x94\xe6\x94\xb6\xe4\xbb\xb6\xe7\xae\xb1\xe9\xbb\x91\xe6\xb4\x9e\xe5\x9c\xa8\xe5\x85\xa5\xe5\x8f\xa3\xe6\x8b\x92\xe7\xbb\x9d\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/unit/cycle.test.ts's test "describeCycle 的剩余/已过秒数自洽且总和=周期长度"" (raw bytes: "\x74\x65\x73\x74\x2f\x75\x6e\x69\x74\x2f\x63\x79\x63\x6c\x65\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x64\x65\x73\x63\x72\x69\x62\x65\x43\x79\x63\x6c\x65\x20\xe7\x9a\x84\xe5\x89\xa9\xe4\xbd\x99\x2f\xe5\xb7\xb2\xe8\xbf\x87\xe7\xa7\x92\xe6\x95\xb0\xe8\x87\xaa\xe6\xb4\xbd\xe4\xb8\x94\xe6\x80\xbb\xe5\x92\x8c\x3d\xe5\x91\xa8\xe6\x9c\x9f\xe9\x95\xbf\xe5\xba\xa6\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's test "broker/全部协调层身份不可经自助通道轮换（共享设施钥匙走人类运维流程）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x62\x72\x6f\x6b\x65\x72\x2f\xe5\x85\xa8\xe9\x83\xa8\xe5\x8d\x8f\xe8\xb0\x83\xe5\xb1\x82\xe8\xba\xab\xe4\xbb\xbd\xe4\xb8\x8d\xe5\x8f\xaf\xe7\xbb\x8f\xe8\x87\xaa\xe5\x8a\xa9\xe9\x80\x9a\xe9\x81\x93\xe8\xbd\xae\xe6\x8d\xa2\xef\xbc\x88\xe5\x85\xb1\xe4\xba\xab\xe8\xae\xbe\xe6\x96\xbd\xe9\x92\xa5\xe5\x8c\x99\xe8\xb5\xb0\xe4\xba\xba\xe7\xb1\xbb\xe8\xbf\x90\xe7\xbb\xb4\xe6\xb5\x81\xe7\xa8\x8b\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "andon stop 信号写入成功，payload 原样保留"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x61\x6e\x64\x6f\x6e\x20\x73\x74\x6f\x70\x20\xe4\xbf\xa1\xe5\x8f\xb7\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x8c\x70\x61\x79\x6c\x6f\x61\x64\x20\xe5\x8e\x9f\xe6\xa0\xb7\xe4\xbf\x9d\xe7\x95\x99\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/sweeper.test.ts  (2 tests) 90ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "派给未注册/inactive 身份直接 400——收件箱黑洞在入口拒绝"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe6\xb4\xbe\xe7\xbb\x99\xe6\x9c\xaa\xe6\xb3\xa8\xe5\x86\x8c\x2f\x69\x6e\x61\x63\x74\x69\x76\x65\x20\xe8\xba\xab\xe4\xbb\xbd\xe7\x9b\xb4\xe6\x8e\xa5\x20\x34\x30\x30\xe2\x80\x94\xe2\x80\x94\xe6\x94\xb6\xe4\xbb\xb6\xe7\xae\xb1\xe9\xbb\x91\xe6\xb4\x9e\xe5\x9c\xa8\xe5\x85\xa5\xe5\x8f\xa3\xe6\x8b\x92\xe7\xbb\x9d\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/unit/cycle.test.ts's test "边界时刻：周期起点 remaining=满、elapsed=0"" (raw bytes: "\x74\x65\x73\x74\x2f\x75\x6e\x69\x74\x2f\x63\x79\x63\x6c\x65\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe8\xbe\xb9\xe7\x95\x8c\xe6\x97\xb6\xe5\x88\xbb\xef\xbc\x9a\xe5\x91\xa8\xe6\x9c\x9f\xe8\xb5\xb7\xe7\x82\xb9\x20\x72\x65\x6d\x61\x69\x6e\x69\x6e\x67\x3d\xe6\xbb\xa1\xe3\x80\x81\x65\x6c\x61\x70\x73\x65\x64\x3d\x30\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "claim 生命周期类型（如 claim）不接受手写 → 400，防止伪造审计历史"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x6c\x61\x69\x6d\x20\xe7\x94\x9f\xe5\x91\xbd\xe5\x91\xa8\xe6\x9c\x9f\xe7\xb1\xbb\xe5\x9e\x8b\xef\xbc\x88\xe5\xa6\x82\x20\x63\x6c\x61\x69\x6d\xef\xbc\x89\xe4\xb8\x8d\xe6\x8e\xa5\xe5\x8f\x97\xe6\x89\x8b\xe5\x86\x99\x20\xe2\x86\x92\x20\x34\x30\x30\xef\xbc\x8c\xe9\x98\xb2\xe6\xad\xa2\xe4\xbc\xaa\xe9\x80\xa0\xe5\xae\xa1\xe8\xae\xa1\xe5\x8e\x86\xe5\x8f\xb2\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/unit/cycle.test.ts's test "边界时刻：周期起点 remaining=满、elapsed=0"" (raw bytes: "\x74\x65\x73\x74\x2f\x75\x6e\x69\x74\x2f\x63\x79\x63\x6c\x65\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe8\xbe\xb9\xe7\x95\x8c\xe6\x97\xb6\xe5\x88\xbb\xef\xbc\x9a\xe5\x91\xa8\xe6\x9c\x9f\xe8\xb5\xb7\xe7\x82\xb9\x20\x72\x65\x6d\x61\x69\x6e\x69\x6e\x67\x3d\xe6\xbb\xa1\xe3\x80\x81\x65\x6c\x61\x70\x73\x65\x64\x3d\x30\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/unit/time.test.ts  (3 tests) 109ms
+@repo/coord-service:test:  ✓ test/integration/status.test.ts  (2 tests) 116ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "收件箱是私有的：worker 查别人 403，coordinator 查任何人 200"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe6\x94\xb6\xe4\xbb\xb6\xe7\xae\xb1\xe6\x98\xaf\xe7\xa7\x81\xe6\x9c\x89\xe7\x9a\x84\xef\xbc\x9a\x77\x6f\x72\x6b\x65\x72\x20\xe6\x9f\xa5\xe5\x88\xab\xe4\xba\xba\x20\x34\x30\x33\xef\xbc\x8c\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe6\x9f\xa5\xe4\xbb\xbb\xe4\xbd\x95\xe4\xba\xba\x20\x32\x30\x30\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's test "broker/全部协调层身份不可经自助通道轮换（共享设施钥匙走人类运维流程）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x62\x72\x6f\x6b\x65\x72\x2f\xe5\x85\xa8\xe9\x83\xa8\xe5\x8d\x8f\xe8\xb0\x83\xe5\xb1\x82\xe8\xba\xab\xe4\xbb\xbd\xe4\xb8\x8d\xe5\x8f\xaf\xe7\xbb\x8f\xe8\x87\xaa\xe5\x8a\xa9\xe9\x80\x9a\xe9\x81\x93\xe8\xbd\xae\xe6\x8d\xa2\xef\xbc\x88\xe5\x85\xb1\xe4\xba\xab\xe8\xae\xbe\xe6\x96\xbd\xe9\x92\xa5\xe5\x8c\x99\xe8\xb5\xb0\xe4\xba\xba\xe7\xb1\xbb\xe8\xbf\x90\xe7\xbb\xb4\xe6\xb5\x81\xe7\xa8\x8b\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "claim 生命周期类型（如 claim）不接受手写 → 400，防止伪造审计历史"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x6c\x61\x69\x6d\x20\xe7\x94\x9f\xe5\x91\xbd\xe5\x91\xa8\xe6\x9c\x9f\xe7\xb1\xbb\xe5\x9e\x8b\xef\xbc\x88\xe5\xa6\x82\x20\x63\x6c\x61\x69\x6d\xef\xbc\x89\xe4\xb8\x8d\xe6\x8e\xa5\xe5\x8f\x97\xe6\x89\x8b\xe5\x86\x99\x20\xe2\x86\x92\x20\x34\x30\x30\xef\xbc\x8c\xe9\x98\xb2\xe6\xad\xa2\xe4\xbc\xaa\xe9\x80\xa0\xe5\xae\xa1\xe8\xae\xa1\xe5\x8e\x86\xe5\x8f\xb2\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/unit/cycle.test.ts's suite "C-cycle 时钟（权威实现）"" (raw bytes: "\x74\x65\x73\x74\x2f\x75\x6e\x69\x74\x2f\x63\x79\x63\x6c\x65\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x43\x2d\x63\x79\x63\x6c\x65\x20\xe6\x97\xb6\xe9\x92\x9f\xef\xbc\x88\xe6\x9d\x83\xe5\xa8\x81\xe5\xae\x9e\xe7\x8e\xb0\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's test "未注册身份 404；缺 requested_by 400；mint 写 token-mint 审计事件"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe6\x9c\xaa\xe6\xb3\xa8\xe5\x86\x8c\xe8\xba\xab\xe4\xbb\xbd\x20\x34\x30\x34\xef\xbc\x9b\xe7\xbc\xba\x20\x72\x65\x71\x75\x65\x73\x74\x65\x64\x5f\x62\x79\x20\x34\x30\x30\xef\xbc\x9b\x6d\x69\x6e\x74\x20\xe5\x86\x99\x20\x74\x6f\x6b\x65\x6e\x2d\x6d\x69\x6e\x74\x20\xe5\xae\xa1\xe8\xae\xa1\xe4\xba\x8b\xe4\xbb\xb6\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "缺 resource_id → 400"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe7\xbc\xba\x20\x72\x65\x73\x6f\x75\x72\x63\x65\x5f\x69\x64\x20\xe2\x86\x92\x20\x34\x30\x30\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "收件箱是私有的：worker 查别人 403，coordinator 查任何人 200"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe6\x94\xb6\xe4\xbb\xb6\xe7\xae\xb1\xe6\x98\xaf\xe7\xa7\x81\xe6\x9c\x89\xe7\x9a\x84\xef\xbc\x9a\x77\x6f\x72\x6b\x65\x72\x20\xe6\x9f\xa5\xe5\x88\xab\xe4\xba\xba\x20\x34\x30\x33\xef\xbc\x8c\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe6\x9f\xa5\xe4\xbb\xbb\xe4\xbd\x95\xe4\xba\xba\x20\x32\x30\x30\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "缺 resource_id → 400"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe7\xbc\xba\x20\x72\x65\x73\x6f\x75\x72\x63\x65\x5f\x69\x64\x20\xe2\x86\x92\x20\x34\x30\x30\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/claims.auth.test.ts  (4 tests) 146ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "ack：仅 assignee；pending→acked 写 acked_at；重复 ack 409"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x61\x63\x6b\xef\xbc\x9a\xe4\xbb\x85\x20\x61\x73\x73\x69\x67\x6e\x65\x65\xef\xbc\x9b\x70\x65\x6e\x64\x69\x6e\x67\xe2\x86\x92\x61\x63\x6b\x65\x64\x20\xe5\x86\x99\x20\x61\x63\x6b\x65\x64\x5f\x61\x74\xef\xbc\x9b\xe9\x87\x8d\xe5\xa4\x8d\x20\x61\x63\x6b\x20\x34\x30\x39\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/unit/cycle.test.ts  (5 tests) 153ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 andon → 403（停线信号是 coordinator 层专属，防伪造拉停 fleet）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x61\x6e\x64\x6f\x6e\x20\xe2\x86\x92\x20\x34\x30\x33\xef\xbc\x88\xe5\x81\x9c\xe7\xba\xbf\xe4\xbf\xa1\xe5\x8f\xb7\xe6\x98\xaf\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe5\xb1\x82\xe4\xb8\x93\xe5\xb1\x9e\xef\xbc\x8c\xe9\x98\xb2\xe4\xbc\xaa\xe9\x80\xa0\xe6\x8b\x89\xe5\x81\x9c\x20\x66\x6c\x65\x65\x74\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's test "未注册身份 404；缺 requested_by 400；mint 写 token-mint 审计事件"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe6\x9c\xaa\xe6\xb3\xa8\xe5\x86\x8c\xe8\xba\xab\xe4\xbb\xbd\x20\x34\x30\x34\xef\xbc\x9b\xe7\xbc\xba\x20\x72\x65\x71\x75\x65\x73\x74\x65\x64\x5f\x62\x79\x20\x34\x30\x30\xef\xbc\x9b\x6d\x69\x6e\x74\x20\xe5\x86\x99\x20\x74\x6f\x6b\x65\x6e\x2d\x6d\x69\x6e\x74\x20\xe5\xae\xa1\xe8\xae\xa1\xe4\xba\x8b\xe4\xbb\xb6\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 andon → 403（停线信号是 coordinator 层专属，防伪造拉停 fleet）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x61\x6e\x64\x6f\x6e\x20\xe2\x86\x92\x20\x34\x30\x33\xef\xbc\x88\xe5\x81\x9c\xe7\xba\xbf\xe4\xbf\xa1\xe5\x8f\xb7\xe6\x98\xaf\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe5\xb1\x82\xe4\xb8\x93\xe5\xb1\x9e\xef\xbc\x8c\xe9\x98\xb2\xe4\xbc\xaa\xe9\x80\xa0\xe6\x8b\x89\xe5\x81\x9c\x20\x66\x6c\x65\x65\x74\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/mint.test.ts's suite "POST /agents/:id/mint-token（ADR-011 P2 自助领取）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x6d\x69\x6e\x74\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x50\x4f\x53\x54\x20\x2f\x61\x67\x65\x6e\x74\x73\x2f\x3a\x69\x64\x2f\x6d\x69\x6e\x74\x2d\x74\x6f\x6b\x65\x6e\xef\xbc\x88\x41\x44\x52\x2d\x30\x31\x31\x20\x50\x32\x20\xe8\x87\xaa\xe5\x8a\xa9\xe9\xa2\x86\xe5\x8f\x96\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "ack：仅 assignee；pending→acked 写 acked_at；重复 ack 409"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x61\x63\x6b\xef\xbc\x9a\xe4\xbb\x85\x20\x61\x73\x73\x69\x67\x6e\x65\x65\xef\xbc\x9b\x70\x65\x6e\x64\x69\x6e\x67\xe2\x86\x92\x61\x63\x6b\x65\x64\x20\xe5\x86\x99\x20\x61\x63\x6b\x65\x64\x5f\x61\x74\xef\xbc\x9b\xe9\x87\x8d\xe5\xa4\x8d\x20\x61\x63\x6b\x20\x34\x30\x39\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 cycle-plan → 201（叙述站会不限 coordinator）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe2\x86\x92\x20\x32\x30\x31\xef\xbc\x88\xe5\x8f\x99\xe8\xbf\xb0\xe7\xab\x99\xe4\xbc\x9a\xe4\xb8\x8d\xe9\x99\x90\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/claims.lifecycle.test.ts  (4 tests) 176ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "done：assignee 可从 acked 或 pending 直达；recalled 后不可 done"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x64\x6f\x6e\x65\xef\xbc\x9a\x61\x73\x73\x69\x67\x6e\x65\x65\x20\xe5\x8f\xaf\xe4\xbb\x8e\x20\x61\x63\x6b\x65\x64\x20\xe6\x88\x96\x20\x70\x65\x6e\x64\x69\x6e\x67\x20\xe7\x9b\xb4\xe8\xbe\xbe\xef\xbc\x9b\x72\x65\x63\x61\x6c\x6c\x65\x64\x20\xe5\x90\x8e\xe4\xb8\x8d\xe5\x8f\xaf\x20\x64\x6f\x6e\x65\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 cycle-plan → 201（叙述站会不限 coordinator）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe2\x86\x92\x20\x32\x30\x31\xef\xbc\x88\xe5\x8f\x99\xe8\xbf\xb0\xe7\xab\x99\xe4\xbc\x9a\xe4\xb8\x8d\xe9\x99\x90\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/unit/auth.test.ts  (7 tests) 179ms
+@repo/coord-service:test:  ✓ test/integration/mint.test.ts  (4 tests) 187ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's suite "POST /events (narrative events — ADR-009 GitHub 协调面退役后的站会/andon 信道)"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x50\x4f\x53\x54\x20\x2f\x65\x76\x65\x6e\x74\x73\x20\x28\x6e\x61\x72\x72\x61\x74\x69\x76\x65\x20\x65\x76\x65\x6e\x74\x73\x20\xe2\x80\x94\x20\x41\x44\x52\x2d\x30\x30\x39\x20\x47\x69\x74\x48\x75\x62\x20\xe5\x8d\x8f\xe8\xb0\x83\xe9\x9d\xa2\xe9\x80\x80\xe5\xbd\xb9\xe5\x90\x8e\xe7\x9a\x84\xe7\xab\x99\xe4\xbc\x9a\x2f\x61\x6e\x64\x6f\x6e\x20\xe4\xbf\xa1\xe9\x81\x93\x29\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/events.test.ts  (7 tests) 202ms
+@repo/coord-service:test:  ✓ test/unit/projector.test.ts  (8 tests) 192ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "done：assignee 可从 acked 或 pending 直达；recalled 后不可 done"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x64\x6f\x6e\x65\xef\xbc\x9a\x61\x73\x73\x69\x67\x6e\x65\x65\x20\xe5\x8f\xaf\xe4\xbb\x8e\x20\x61\x63\x6b\x65\x64\x20\xe6\x88\x96\x20\x70\x65\x6e\x64\x69\x6e\x67\x20\xe7\x9b\xb4\xe8\xbe\xbe\xef\xbc\x9b\x72\x65\x63\x61\x6c\x6c\x65\x64\x20\xe5\x90\x8e\xe4\xb8\x8d\xe5\x8f\xaf\x20\x64\x6f\x6e\x65\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "recall：仅 coordinator（assignee 自己不能撤）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x72\x65\x63\x61\x6c\x6c\xef\xbc\x9a\xe4\xbb\x85\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\xef\xbc\x88\x61\x73\x73\x69\x67\x6e\x65\x65\x20\xe8\x87\xaa\xe5\xb7\xb1\xe4\xb8\x8d\xe8\x83\xbd\xe6\x92\xa4\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "recall：仅 coordinator（assignee 自己不能撤）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x72\x65\x63\x61\x6c\x6c\xef\xbc\x9a\xe4\xbb\x85\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\xef\xbc\x88\x61\x73\x73\x69\x67\x6e\x65\x65\x20\xe8\x87\xaa\xe5\xb7\xb1\xe4\xb8\x8d\xe8\x83\xbd\xe6\x92\xa4\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "全生命周期照写 events（task-dispatch/ack/done），portal 可对账"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe5\x85\xa8\xe7\x94\x9f\xe5\x91\xbd\xe5\x91\xa8\xe6\x9c\x9f\xe7\x85\xa7\xe5\x86\x99\x20\x65\x76\x65\x6e\x74\x73\xef\xbc\x88\x74\x61\x73\x6b\x2d\x64\x69\x73\x70\x61\x74\x63\x68\x2f\x61\x63\x6b\x2f\x64\x6f\x6e\x65\xef\xbc\x89\xef\xbc\x8c\x70\x6f\x72\x74\x61\x6c\x20\xe5\x8f\xaf\xe5\xaf\xb9\xe8\xb4\xa6\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "全生命周期照写 events（task-dispatch/ack/done），portal 可对账"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe5\x85\xa8\xe7\x94\x9f\xe5\x91\xbd\xe5\x91\xa8\xe6\x9c\x9f\xe7\x85\xa7\xe5\x86\x99\x20\x65\x76\x65\x6e\x74\x73\xef\xbc\x88\x74\x61\x73\x6b\x2d\x64\x69\x73\x70\x61\x74\x63\x68\x2f\x61\x63\x6b\x2f\x64\x6f\x6e\x65\xef\xbc\x89\xef\xbc\x8c\x70\x6f\x72\x74\x61\x6c\x20\xe5\x8f\xaf\xe5\xaf\xb9\xe8\xb4\xa6\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "手写 POST /events 不接受 task-* 类型（只能由 /tasks 路由内部产生）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe6\x89\x8b\xe5\x86\x99\x20\x50\x4f\x53\x54\x20\x2f\x65\x76\x65\x6e\x74\x73\x20\xe4\xb8\x8d\xe6\x8e\xa5\xe5\x8f\x97\x20\x74\x61\x73\x6b\x2d\x2a\x20\xe7\xb1\xbb\xe5\x9e\x8b\xef\xbc\x88\xe5\x8f\xaa\xe8\x83\xbd\xe7\x94\xb1\x20\x2f\x74\x61\x73\x6b\x73\x20\xe8\xb7\xaf\xe7\x94\xb1\xe5\x86\x85\xe9\x83\xa8\xe4\xba\xa7\xe7\x94\x9f\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "手写 POST /events 不接受 task-* 类型（只能由 /tasks 路由内部产生）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe6\x89\x8b\xe5\x86\x99\x20\x50\x4f\x53\x54\x20\x2f\x65\x76\x65\x6e\x74\x73\x20\xe4\xb8\x8d\xe6\x8e\xa5\xe5\x8f\x97\x20\x74\x61\x73\x6b\x2d\x2a\x20\xe7\xb1\xbb\xe5\x9e\x8b\xef\xbc\x88\xe5\x8f\xaa\xe8\x83\xbd\xe7\x94\xb1\x20\x2f\x74\x61\x73\x6b\x73\x20\xe8\xb7\xaf\xe7\x94\xb1\xe5\x86\x85\xe9\x83\xa8\xe4\xba\xa7\xe7\x94\x9f\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/claims.concurrency.test.ts  (5 tests) 236ms
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's suite "tasks 派工原语（#594：收件箱 + 轮询契约的服务端）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x74\x61\x73\x6b\x73\x20\xe6\xb4\xbe\xe5\xb7\xa5\xe5\x8e\x9f\xe8\xaf\xad\xef\xbc\x88\x23\x35\x39\x34\xef\xbc\x9a\xe6\x94\xb6\xe4\xbb\xb6\xe7\xae\xb1\x20\x2b\x20\xe8\xbd\xae\xe8\xaf\xa2\xe5\xa5\x91\xe7\xba\xa6\xe7\x9a\x84\xe6\x9c\x8d\xe5\x8a\xa1\xe7\xab\xaf\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's suite "#631 transition 原子性（TOCTOU 修复）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x23\x36\x33\x31\x20\x74\x72\x61\x6e\x73\x69\x74\x69\x6f\x6e\x20\xe5\x8e\x9f\xe5\xad\x90\xe6\x80\xa7\xef\xbc\x88\x54\x4f\x43\x54\x4f\x55\x20\xe4\xbf\xae\xe5\xa4\x8d\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "并发 ack 只有一个成功，另一个 409——且只写一条 task-ack 事件"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe5\xb9\xb6\xe5\x8f\x91\x20\x61\x63\x6b\x20\xe5\x8f\xaa\xe6\x9c\x89\xe4\xb8\x80\xe4\xb8\xaa\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x8c\xe5\x8f\xa6\xe4\xb8\x80\xe4\xb8\xaa\x20\x34\x30\x39\xe2\x80\x94\xe2\x80\x94\xe4\xb8\x94\xe5\x8f\xaa\xe5\x86\x99\xe4\xb8\x80\xe6\x9d\xa1\x20\x74\x61\x73\x6b\x2d\x61\x63\x6b\x20\xe4\xba\x8b\xe4\xbb\xb6\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "并发 ack 只有一个成功，另一个 409——且只写一条 task-ack 事件"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe5\xb9\xb6\xe5\x8f\x91\x20\x61\x63\x6b\x20\xe5\x8f\xaa\xe6\x9c\x89\xe4\xb8\x80\xe4\xb8\xaa\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x8c\xe5\x8f\xa6\xe4\xb8\x80\xe4\xb8\xaa\x20\x34\x30\x39\xe2\x80\x94\xe2\x80\x94\xe4\xb8\x94\xe5\x8f\xaa\xe5\x86\x99\xe4\xb8\x80\xe6\x9d\xa1\x20\x74\x61\x73\x6b\x2d\x61\x63\x6b\x20\xe4\xba\x8b\xe4\xbb\xb6\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "并发 done 与 recall：只有一个生效，最终状态自洽"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe5\xb9\xb6\xe5\x8f\x91\x20\x64\x6f\x6e\x65\x20\xe4\xb8\x8e\x20\x72\x65\x63\x61\x6c\x6c\xef\xbc\x9a\xe5\x8f\xaa\xe6\x9c\x89\xe4\xb8\x80\xe4\xb8\xaa\xe7\x94\x9f\xe6\x95\x88\xef\xbc\x8c\xe6\x9c\x80\xe7\xbb\x88\xe7\x8a\xb6\xe6\x80\x81\xe8\x87\xaa\xe6\xb4\xbd\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "并发 done 与 recall：只有一个生效，最终状态自洽"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe5\xb9\xb6\xe5\x8f\x91\x20\x64\x6f\x6e\x65\x20\xe4\xb8\x8e\x20\x72\x65\x63\x61\x6c\x6c\xef\xbc\x9a\xe5\x8f\xaa\xe6\x9c\x89\xe4\xb8\x80\xe4\xb8\xaa\xe7\x94\x9f\xe6\x95\x88\xef\xbc\x8c\xe6\x9c\x80\xe7\xbb\x88\xe7\x8a\xb6\xe6\x80\x81\xe8\x87\xaa\xe6\xb4\xbd\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "409 报出的是真实当前状态（原子判定后回读）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x34\x30\x39\x20\xe6\x8a\xa5\xe5\x87\xba\xe7\x9a\x84\xe6\x98\xaf\xe7\x9c\x9f\xe5\xae\x9e\xe5\xbd\x93\xe5\x89\x8d\xe7\x8a\xb6\xe6\x80\x81\xef\xbc\x88\xe5\x8e\x9f\xe5\xad\x90\xe5\x88\xa4\xe5\xae\x9a\xe5\x90\x8e\xe5\x9b\x9e\xe8\xaf\xbb\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "409 报出的是真实当前状态（原子判定后回读）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x34\x30\x39\x20\xe6\x8a\xa5\xe5\x87\xba\xe7\x9a\x84\xe6\x98\xaf\xe7\x9c\x9f\xe5\xae\x9e\xe5\xbd\x93\xe5\x89\x8d\xe7\x8a\xb6\xe6\x80\x81\xef\xbc\x88\xe5\x8e\x9f\xe5\xad\x90\xe5\x88\xa4\xe5\xae\x9a\xe5\x90\x8e\xe5\x9b\x9e\xe8\xaf\xbb\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's suite "#631 transition 原子性（TOCTOU 修复）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x23\x36\x33\x31\x20\x74\x72\x61\x6e\x73\x69\x74\x69\x6f\x6e\x20\xe5\x8e\x9f\xe5\xad\x90\xe6\x80\xa7\xef\xbc\x88\x54\x4f\x43\x54\x4f\x55\x20\xe4\xbf\xae\xe5\xa4\x8d\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's suite "#631 派工入参校验"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x23\x36\x33\x31\x20\xe6\xb4\xbe\xe5\xb7\xa5\xe5\x85\xa5\xe5\x8f\x82\xe6\xa0\xa1\xe9\xaa\x8c\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "deadline 非法时间 → 400（脏值进库会让超期判定静默失效）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x64\x65\x61\x64\x6c\x69\x6e\x65\x20\xe9\x9d\x9e\xe6\xb3\x95\xe6\x97\xb6\xe9\x97\xb4\x20\xe2\x86\x92\x20\x34\x30\x30\xef\xbc\x88\xe8\x84\x8f\xe5\x80\xbc\xe8\xbf\x9b\xe5\xba\x93\xe4\xbc\x9a\xe8\xae\xa9\xe8\xb6\x85\xe6\x9c\x9f\xe5\x88\xa4\xe5\xae\x9a\xe9\x9d\x99\xe9\xbb\x98\xe5\xa4\xb1\xe6\x95\x88\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "deadline 非法时间 → 400（脏值进库会让超期判定静默失效）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x64\x65\x61\x64\x6c\x69\x6e\x65\x20\xe9\x9d\x9e\xe6\xb3\x95\xe6\x97\xb6\xe9\x97\xb4\x20\xe2\x86\x92\x20\x34\x30\x30\xef\xbc\x88\xe8\x84\x8f\xe5\x80\xbc\xe8\xbf\x9b\xe5\xba\x93\xe4\xbc\x9a\xe8\xae\xa9\xe8\xb6\x85\xe6\x9c\x9f\xe5\x88\xa4\xe5\xae\x9a\xe9\x9d\x99\xe9\xbb\x98\xe5\xa4\xb1\xe6\x95\x88\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "deadline 合法 → 归一成 ISO 存储"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x64\x65\x61\x64\x6c\x69\x6e\x65\x20\xe5\x90\x88\xe6\xb3\x95\x20\xe2\x86\x92\x20\xe5\xbd\x92\xe4\xb8\x80\xe6\x88\x90\x20\x49\x53\x4f\x20\xe5\xad\x98\xe5\x82\xa8\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "deadline 合法 → 归一成 ISO 存储"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x64\x65\x61\x64\x6c\x69\x6e\x65\x20\xe5\x90\x88\xe6\xb3\x95\x20\xe2\x86\x92\x20\xe5\xbd\x92\xe4\xb8\x80\xe6\x88\x90\x20\x49\x53\x4f\x20\xe5\xad\x98\xe5\x82\xa8\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "note 超 2000 字 → 400 note_too_long（拒绝，不静默截断）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x6e\x6f\x74\x65\x20\xe8\xb6\x85\x20\x32\x30\x30\x30\x20\xe5\xad\x97\x20\xe2\x86\x92\x20\x34\x30\x30\x20\x6e\x6f\x74\x65\x5f\x74\x6f\x6f\x5f\x6c\x6f\x6e\x67\xef\xbc\x88\xe6\x8b\x92\xe7\xbb\x9d\xef\xbc\x8c\xe4\xb8\x8d\xe9\x9d\x99\xe9\xbb\x98\xe6\x88\xaa\xe6\x96\xad\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "note 超 2000 字 → 400 note_too_long（拒绝，不静默截断）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x6e\x6f\x74\x65\x20\xe8\xb6\x85\x20\x32\x30\x30\x30\x20\xe5\xad\x97\x20\xe2\x86\x92\x20\x34\x30\x30\x20\x6e\x6f\x74\x65\x5f\x74\x6f\x6f\x5f\x6c\x6f\x6e\x67\xef\xbc\x88\xe6\x8b\x92\xe7\xbb\x9d\xef\xbc\x8c\xe4\xb8\x8d\xe9\x9d\x99\xe9\xbb\x98\xe6\x88\xaa\xe6\x96\xad\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "body 超 16KB → 413 body_too_large（不进 JSON.parse）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x62\x6f\x64\x79\x20\xe8\xb6\x85\x20\x31\x36\x4b\x42\x20\xe2\x86\x92\x20\x34\x31\x33\x20\x62\x6f\x64\x79\x5f\x74\x6f\x6f\x5f\x6c\x61\x72\x67\x65\xef\xbc\x88\xe4\xb8\x8d\xe8\xbf\x9b\x20\x4a\x53\x4f\x4e\x2e\x70\x61\x72\x73\x65\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "body 超 16KB → 413 body_too_large（不进 JSON.parse）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x62\x6f\x64\x79\x20\xe8\xb6\x85\x20\x31\x36\x4b\x42\x20\xe2\x86\x92\x20\x34\x31\x33\x20\x62\x6f\x64\x79\x5f\x74\x6f\x6f\x5f\x6c\x61\x72\x67\x65\xef\xbc\x88\xe4\xb8\x8d\xe8\xbf\x9b\x20\x4a\x53\x4f\x4e\x2e\x70\x61\x72\x73\x65\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's suite "#631 派工入参校验"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x23\x36\x33\x31\x20\xe6\xb4\xbe\xe5\xb7\xa5\xe5\x85\xa5\xe5\x8f\x82\xe6\xa0\xa1\xe9\xaa\x8c\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's suite "#594 P3 门户派工看板：assignee=* 列全队"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x23\x35\x39\x34\x20\x50\x33\x20\xe9\x97\xa8\xe6\x88\xb7\xe6\xb4\xbe\xe5\xb7\xa5\xe7\x9c\x8b\xe6\x9d\xbf\xef\xbc\x9a\x61\x73\x73\x69\x67\x6e\x65\x65\x3d\x2a\x20\xe5\x88\x97\xe5\x85\xa8\xe9\x98\x9f\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "coordinator assignee=* 列出所有 agent 的任务"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\x61\x73\x73\x69\x67\x6e\x65\x65\x3d\x2a\x20\xe5\x88\x97\xe5\x87\xba\xe6\x89\x80\xe6\x9c\x89\x20\x61\x67\x65\x6e\x74\x20\xe7\x9a\x84\xe4\xbb\xbb\xe5\x8a\xa1\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "coordinator assignee=* 列出所有 agent 的任务"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\x61\x73\x73\x69\x67\x6e\x65\x65\x3d\x2a\x20\xe5\x88\x97\xe5\x87\xba\xe6\x89\x80\xe6\x9c\x89\x20\x61\x67\x65\x6e\x74\x20\xe7\x9a\x84\xe4\xbb\xbb\xe5\x8a\xa1\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "worker assignee=* → 403（列全队是协调层特权）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\x61\x73\x73\x69\x67\x6e\x65\x65\x3d\x2a\x20\xe2\x86\x92\x20\x34\x30\x33\xef\xbc\x88\xe5\x88\x97\xe5\x85\xa8\xe9\x98\x9f\xe6\x98\xaf\xe5\x8d\x8f\xe8\xb0\x83\xe5\xb1\x82\xe7\x89\xb9\xe6\x9d\x83\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "worker assignee=* → 403（列全队是协调层特权）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\x61\x73\x73\x69\x67\x6e\x65\x65\x3d\x2a\x20\xe2\x86\x92\x20\x34\x30\x33\xef\xbc\x88\xe5\x88\x97\xe5\x85\xa8\xe9\x98\x9f\xe6\x98\xaf\xe5\x8d\x8f\xe8\xb0\x83\xe5\xb1\x82\xe7\x89\xb9\xe6\x9d\x83\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "assignee=* 可叠加 status 过滤"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x61\x73\x73\x69\x67\x6e\x65\x65\x3d\x2a\x20\xe5\x8f\xaf\xe5\x8f\xa0\xe5\x8a\xa0\x20\x73\x74\x61\x74\x75\x73\x20\xe8\xbf\x87\xe6\xbb\xa4\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's test "assignee=* 可叠加 status 过滤"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x61\x73\x73\x69\x67\x6e\x65\x65\x3d\x2a\x20\xe5\x8f\xaf\xe5\x8f\xa0\xe5\x8a\xa0\x20\x73\x74\x61\x74\x75\x73\x20\xe8\xbf\x87\xe6\xbb\xa4\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/tasks.test.ts's suite "#594 P3 门户派工看板：assignee=* 列全队"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x74\x61\x73\x6b\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x23\x35\x39\x34\x20\x50\x33\x20\xe9\x97\xa8\xe6\x88\xb7\xe6\xb4\xbe\xe5\xb7\xa5\xe7\x9c\x8b\xe6\x9d\xbf\xef\xbc\x9a\x61\x73\x73\x69\x67\x6e\x65\x65\x3d\x2a\x20\xe5\x88\x97\xe5\x85\xa8\xe9\x98\x9f\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  ✓ test/integration/tasks.test.ts  (19 tests) 381ms
+@repo/coord-service:test: 
+@repo/coord-service:test:  Test Files  12 passed (12)
+@repo/coord-service:test:       Tests  70 passed (70)
+@repo/coord-service:test:    Start at  13:21:21
+@repo/coord-service:test:    Duration  5.83s (transform 518ms, setup 7.57s, collect 490ms, tests 2.17s, environment 1ms, prepare 14.52s)
+@repo/coord-service:test: 
+@repo/coord-service:test: [vpw:debug] Shutting down runtimes...
+@repo/coord-service:test: [vpw:debug] Disposing remote proxy sessions...
+@repo/memory:typecheck: cache hit, replaying logs 4c56a218a9e7efa7
+@repo/memory:typecheck: 
+@repo/memory:typecheck: > @repo/memory@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/memory
+@repo/memory:typecheck: > tsc --noEmit
+@repo/memory:typecheck: 
+@repo/memory:lint: cache hit, replaying logs ea81342b42a3c29c
+@repo/memory:lint: 
+@repo/memory:lint: > @repo/memory@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/memory
+@repo/memory:lint: > echo 'lint: ok'
+@repo/memory:lint: 
+@repo/memory:lint: lint: ok
+@repo/memory:test: cache hit, replaying logs 360bd639a40af2d2
+@repo/memory:test: 
+@repo/memory:test: > @repo/memory@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/memory
+@repo/memory:test: > vitest run
+@repo/memory:test: 
+@repo/memory:test: 
+@repo/memory:test:  RUN  v2.0.0 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/memory
+@repo/memory:test: 
+@repo/memory:test:  ✓ src/index.test.ts  (13 tests) 9ms
+@repo/memory:test: 
+@repo/memory:test:  Test Files  1 passed (1)
+@repo/memory:test:       Tests  13 passed (13)
+@repo/memory:test:    Start at  13:21:16
+@repo/memory:test:    Duration  502ms (transform 44ms, setup 0ms, collect 68ms, tests 9ms, environment 0ms, prepare 48ms)
+@repo/memory:test: 
+@repo/coord-protocol:lint: cache hit, replaying logs bddfbc3e9d4c83ea
+@repo/coord-protocol:lint: 
+@repo/coord-protocol:lint: > @repo/coord-protocol@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/coord-protocol
+@repo/coord-protocol:lint: > echo 'lint: ok'
+@repo/coord-protocol:lint: 
+@repo/coord-protocol:lint: lint: ok
+@repo/queue:typecheck: cache hit, replaying logs 0b88cd5e2a810110
+@repo/queue:typecheck: 
+@repo/queue:typecheck: > @repo/queue@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/queue
+@repo/queue:typecheck: > tsc --noEmit
+@repo/queue:typecheck: 
+@repo/coord-protocol:typecheck: cache hit, replaying logs 351f47886c569553
+@repo/coord-protocol:typecheck: 
+@repo/coord-protocol:typecheck: > @repo/coord-protocol@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/coord-protocol
+@repo/coord-protocol:typecheck: > tsc --noEmit
+@repo/coord-protocol:typecheck: 
+@repo/queue:lint: cache hit, replaying logs b8313f30598ebb6f
+@repo/queue:lint: 
+@repo/queue:lint: > @repo/queue@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/queue
+@repo/queue:lint: > echo 'lint: ok'
+@repo/queue:lint: 
+@repo/queue:lint: lint: ok
+@repo/collab:typecheck: cache hit, replaying logs 749e66ec1e32d0a5
+@repo/collab:typecheck: 
+@repo/collab:typecheck: > @repo/collab@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/collab
+@repo/collab:typecheck: > tsc --noEmit
+@repo/collab:typecheck: 
+@repo/collab:build: cache hit, replaying logs 6bbe32b78d4a9340
+@repo/collab:build: 
+@repo/collab:build: > @repo/collab@0.1.0 build /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/collab
+@repo/collab:build: > tsc --noEmit
+@repo/collab:build: 
+@repo/memory:build: cache hit, replaying logs bf80812390b8f1f2
+@repo/memory:build: 
+@repo/memory:build: > @repo/memory@0.1.0 build /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/memory
+@repo/memory:build: > tsc --noEmit
+@repo/memory:build: 
+@repo/agent-core:build: cache hit, replaying logs 7a4bc3fcc4556057
+@repo/agent-core:build: 
+@repo/agent-core:build: > @repo/agent-core@0.1.0 build /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/agent-core
+@repo/agent-core:build: > tsc --noEmit
+@repo/agent-core:build: 
+@repo/ai:lint: cache hit, replaying logs 6f8cfec19d1ec8b6
+@repo/ai:lint: 
+@repo/ai:lint: > @repo/ai@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/ai
+@repo/ai:lint: > echo 'lint: ok'
+@repo/ai:lint: 
+@repo/ai:lint: lint: ok
+@repo/ai:test: cache hit, replaying logs c161c27351670fcd
+@repo/ai:test: 
+@repo/ai:test: > @repo/ai@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/ai
+@repo/ai:test: > vitest run
+@repo/ai:test: 
+@repo/ai:test: 
+@repo/ai:test:  RUN  v2.0.0 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/ai
+@repo/ai:test: 
+@repo/ai:test:  ✓ src/sttProvider.test.ts  (6 tests) 20ms
+@repo/ai:test:  ✓ src/studioGenerator.test.ts  (4 tests) 4ms
+@repo/ai:test:  ✓ src/qwenProvider.test.ts  (6 tests) 11ms
+@repo/ai:test:  ✓ src/index.test.ts  (12 tests) 8ms
+@repo/ai:test:  ✓ src/anthropicProvider.test.ts  (13 tests) 20ms
+@repo/ai:test: 
+@repo/ai:test:  Test Files  5 passed (5)
+@repo/ai:test:       Tests  41 passed (41)
+@repo/ai:test:    Start at  13:21:12
+@repo/ai:test:    Duration  656ms (transform 243ms, setup 0ms, collect 470ms, tests 63ms, environment 1ms, prepare 677ms)
+@repo/ai:test: 
+@repo/tools:build: cache hit, replaying logs c500f34048066e1b
+@repo/tools:build: 
+@repo/tools:build: > @repo/tools@0.1.0 build /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/tools
+@repo/tools:build: > tsc --noEmit
+@repo/tools:build: 
+@repo/agent-core:typecheck: cache hit, replaying logs b21da251fd60fdd0
+@repo/agent-core:typecheck: 
+@repo/agent-core:typecheck: > @repo/agent-core@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/agent-core
+@repo/agent-core:typecheck: > tsc --noEmit
+@repo/agent-core:typecheck: 
+@repo/coord-protocol:test: cache hit, replaying logs 865ad6b3f2835cf0
+@repo/coord-protocol:test: 
+@repo/coord-protocol:test: > @repo/coord-protocol@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/coord-protocol
+@repo/coord-protocol:test: > vitest run
+@repo/coord-protocol:test: 
+@repo/coord-protocol:test: 
+@repo/coord-protocol:test:  RUN  v2.1.9 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/coord-protocol
+@repo/coord-protocol:test: 
+@repo/coord-protocol:test:  ✓ test/protocol.test.ts (18 tests) 8ms
+@repo/coord-protocol:test: 
+@repo/coord-protocol:test:  Test Files  1 passed (1)
+@repo/coord-protocol:test:       Tests  18 passed (18)
+@repo/coord-protocol:test:    Start at  13:21:17
+@repo/coord-protocol:test:    Duration  404ms (transform 115ms, setup 0ms, collect 118ms, tests 8ms, environment 0ms, prepare 48ms)
+@repo/coord-protocol:test: 
+@repo/devportal:test: cache hit, replaying logs 75191334d7443a46
+@repo/devportal:test: 
+@repo/devportal:test: > @repo/devportal@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/devportal
+@repo/devportal:test: > vitest run --passWithNoTests
+@repo/devportal:test: 
+@repo/devportal:test: 
+@repo/devportal:test:  RUN  v2.1.9 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/devportal
+@repo/devportal:test: 
+@repo/devportal:test: include: **/*.{test,spec}.?(c|m)[jt]s?(x)
+@repo/devportal:test: No test files found, exiting with code 0
+@repo/devportal:test: exclude:  **/node_modules/**, **/dist/**, **/cypress/**, **/.{idea,git,cache,output,temp}/**, **/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*
+@repo/devportal:test: 
+@repo/queue:build: cache hit, replaying logs 93b6e9529241d0c1
+@repo/queue:build: 
+@repo/queue:build: > @repo/queue@0.1.0 build /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/queue
+@repo/queue:build: > tsc --noEmit
+@repo/queue:build: 
+@repo/devportal:lint: cache hit, replaying logs 0b9847fbaec63115
+@repo/devportal:lint: 
+@repo/devportal:lint: > @repo/devportal@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/devportal
+@repo/devportal:lint: > echo 'lint: ok'
+@repo/devportal:lint: 
+@repo/devportal:lint: lint: ok
+@repo/coord-protocol:build: cache hit, replaying logs eb1dde1f90a7bda8
+@repo/coord-protocol:build: 
+@repo/coord-protocol:build: > @repo/coord-protocol@0.1.0 build /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/coord-protocol
+@repo/coord-protocol:build: > tsc --noEmit
+@repo/coord-protocol:build: 
+@repo/storage:typecheck: cache hit, replaying logs c1d1ca566612a650
+@repo/storage:typecheck: 
+@repo/storage:typecheck: > @repo/storage@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/storage
+@repo/storage:typecheck: > tsc --noEmit
+@repo/storage:typecheck: 
+@repo/ai:build: cache hit, replaying logs 9891d114ef69d3df
+@repo/ai:build: 
+@repo/ai:build: > @repo/ai@0.1.0 build /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/ai
+@repo/ai:build: > tsc --noEmit
+@repo/ai:build: 
+@repo/storage:lint: cache hit, replaying logs d40f4bac77f35c3c
+@repo/storage:lint: 
+@repo/storage:lint: > @repo/storage@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/storage
+@repo/storage:lint: > echo 'lint: ok'
+@repo/storage:lint: 
+@repo/storage:lint: lint: ok
+@repo/canvas:lint: cache hit, replaying logs d44f5e00cca89351
+@repo/canvas:lint: 
+@repo/canvas:lint: > @repo/canvas@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/canvas
+@repo/canvas:lint: > echo 'lint: ok'
+@repo/canvas:lint: 
+@repo/canvas:lint: lint: ok
+@repo/agent-core:test: cache hit, replaying logs ce39e00bea5046eb
+@repo/agent-core:test: 
+@repo/agent-core:test: > @repo/agent-core@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/agent-core
+@repo/agent-core:test: > vitest run
+@repo/agent-core:test: 
+@repo/agent-core:test: 
+@repo/agent-core:test:  RUN  v2.0.0 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/agent-core
+@repo/agent-core:test: 
+@repo/agent-core:test:  ✓ src/index.test.ts  (3 tests) 2ms
+@repo/agent-core:test: 
+@repo/agent-core:test:  Test Files  1 passed (1)
+@repo/agent-core:test:       Tests  3 passed (3)
+@repo/agent-core:test:    Start at  13:21:13
+@repo/agent-core:test:    Duration  1.02s (transform 92ms, setup 0ms, collect 43ms, tests 2ms, environment 0ms, prepare 515ms)
+@repo/agent-core:test: 
+@repo/canvas:test: cache hit, replaying logs 260c4e5f78cf9033
+@repo/canvas:test: 
+@repo/canvas:test: > @repo/canvas@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/canvas
+@repo/canvas:test: > vitest run
+@repo/canvas:test: 
+@repo/canvas:test: 
+@repo/canvas:test:  RUN  v2.0.0 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/canvas
+@repo/canvas:test: 
+@repo/canvas:test:  ✓ src/index.test.ts  (25 tests) 75ms
+@repo/canvas:test: 
+@repo/canvas:test:  Test Files  1 passed (1)
+@repo/canvas:test:       Tests  25 passed (25)
+@repo/canvas:test:    Start at  13:21:14
+@repo/canvas:test:    Duration  630ms (transform 67ms, setup 0ms, collect 62ms, tests 75ms, environment 0ms, prepare 140ms)
+@repo/canvas:test: 
+@repo/canvas:build: cache hit, replaying logs 38e7d5d1f1c345f9
+@repo/canvas:build: 
+@repo/canvas:build: > @repo/canvas@0.1.0 build /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/canvas
+@repo/canvas:build: > tsc --noEmit
+@repo/canvas:build: 
+@repo/auth:typecheck: cache hit, replaying logs 63ccfa4201d9932c
+@repo/auth:typecheck: 
+@repo/auth:typecheck: > @repo/auth@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/auth
+@repo/auth:typecheck: > tsc --noEmit
+@repo/auth:typecheck: 
+@repo/export:typecheck: cache hit, replaying logs 772180395de34690
+@repo/export:typecheck: 
+@repo/export:typecheck: > @repo/export@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/export
+@repo/export:typecheck: > tsc --noEmit
+@repo/export:typecheck: 
+@repo/auth:test: cache hit, replaying logs 209402e6b2c3e3f0
+@repo/auth:test: 
+@repo/auth:test: > @repo/auth@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/auth
+@repo/auth:test: > vitest run
+@repo/auth:test: 
+@repo/auth:test: 
+@repo/auth:test:  RUN  v2.0.0 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/auth
+@repo/auth:test: 
+@repo/auth:test:  ✓ src/index.test.ts  (15 tests) 429ms
+@repo/auth:test: 
+@repo/auth:test:  Test Files  1 passed (1)
+@repo/auth:test:       Tests  15 passed (15)
+@repo/auth:test:    Start at  13:21:19
+@repo/auth:test:    Duration  1.14s (transform 130ms, setup 0ms, collect 105ms, tests 429ms, environment 0ms, prepare 214ms)
+@repo/auth:test: 
+@repo/collab:test: cache hit, replaying logs 30b8a8a1067451b3
+@repo/collab:test: 
+@repo/collab:test: > @repo/collab@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/collab
+@repo/collab:test: > vitest run
+@repo/collab:test: 
+@repo/collab:test: 
+@repo/collab:test:  RUN  v2.0.0 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/collab
+@repo/collab:test: 
+@repo/collab:test:  ✓ src/index.test.ts  (14 tests) 35ms
+@repo/collab:test: 
+@repo/collab:test:  Test Files  1 passed (1)
+@repo/collab:test:       Tests  14 passed (14)
+@repo/collab:test:    Start at  13:21:16
+@repo/collab:test:    Duration  482ms (transform 50ms, setup 0ms, collect 84ms, tests 35ms, environment 0ms, prepare 70ms)
+@repo/collab:test: 
+@repo/export:lint: cache hit, replaying logs ada2606d74d3197e
+@repo/export:lint: 
+@repo/export:lint: > @repo/export@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/export
+@repo/export:lint: > echo 'lint: ok'
+@repo/export:lint: 
+@repo/export:lint: lint: ok
+@repo/auth:lint: cache hit, replaying logs 8acb989d5b44df0c
+@repo/auth:lint: 
+@repo/auth:lint: > @repo/auth@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/auth
+@repo/auth:lint: > echo 'lint: ok'
+@repo/auth:lint: 
+@repo/auth:lint: lint: ok
+@repo/workflow-worker:lint: cache hit, replaying logs 30d125247b10ab74
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: > @repo/workflow-worker@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/workflow-worker
+@repo/workflow-worker:lint: > echo 'lint: ok'
+@repo/workflow-worker:lint: 
+@repo/workflow-worker:lint: lint: ok
+@repo/web:lint: cache hit, replaying logs 1b6843a54a9ccff4
+@repo/web:lint: 
+@repo/web:lint: > @repo/web@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/web
+@repo/web:lint: > bash scripts/lint-design.sh
+@repo/web:lint: 
+@repo/web:lint: · 扫描范围：app/ + components/（含 ava/ai-store/surveys/admin/studio/presentations 等模块）
+@repo/web:lint: ✓ token 对比度：全部色面/文字对过线（中性 ≥4.5:1，状态色 ≥3:1，明暗两套）
+@repo/web:lint: · API 错误泄漏门控：0 泄漏
+@repo/web:lint: ⚠ LABEL-LANG-MIX(同文件内中英混用，警告，不拦截；修复归属 phase-p17 reskin)：
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:180:  { id: "understand-file", label: "理解文件", prompt: "帮我理解这份材料，并总结关键结论。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:181:  { id: "draft-email", label: "起草邮件", prompt: "帮我起草一封项目进展同步邮件。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:182:  { id: "summarize-trends", label: "总结趋势", prompt: "帮我总结最近用户反馈中的主要趋势。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:183:  { id: "brainstorm", label: "头脑风暴", prompt: "围绕这个目标帮我头脑风暴 5 个可执行方案。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:200:    label: "深度研究",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:206:    label: "用户研究",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:213:  { id: "make-tasks", label: "拆成任务", prompt: "把上面的建议拆成可执行任务，并按优先级排序。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:214:  { id: "find-risks", label: "识别风险", prompt: "基于上面的回复，列出主要风险和缓解措施。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:215:  { id: "shorten", label: "压缩摘要", prompt: "把上面的回复压缩成 5 条要点。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2996:  if (diffDays === 0) return { key: "today", label: "Today" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2997:  if (diffDays === 1) return { key: "yesterday", label: "Yesterday" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2998:  if (diffDays < 7) return { key: "last-7-days", label: "Last 7 days" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2999:  return { key: "older", label: "Older" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:289:  { label: "文本", types: ["short_text", "text", "email", "number", "phone"] },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:290:  { label: "选择", types: ["single", "multiple", "dropdown"] },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:291:  { label: "量表", types: ["rating", "linear_scale", "nps"] },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:292:  { label: "时间与文件", types: ["date", "time", "file"] },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:579:      label: "Purpose",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:586:      label: "Audience",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:593:      label: "Decision",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:600:      label: "Information",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:607:      label: "Constraints",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:687:    { id: "design", label: "设计问卷", desc: "题目与元数据", icon: ClipboardList },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:688:    { id: "template", label: "报告模板", desc: "分类与模块组件", icon: FileText },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:689:    { id: "collect", label: "发布回收", desc: "链接与回收规则", icon: Send },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:690:    { id: "answer", label: "查看答题", desc: "答题页与样本", icon: Eye },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:691:    { id: "report", label: "分析报告", desc: "洞察与导出", icon: BarChart3 },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:696:      ? { label: "我的问卷" }
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:698:        ? { label: "问卷模版" }
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:907:      label: "Design",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:913:      label: "Report Blocks",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:919:      label: "Collect",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:925:      label: "Report",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:931:      label: "Responses",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1060:              { id: "all", label: "全部答卷", meta: `${survey.responses} 份` },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1061:              { id: "today", label: "今日提交", meta: `${Math.min(18, survey.responses)} 份` },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1062:              { id: "review", label: "需复核", meta: survey.responses ? "待检查" : "0 份" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1063:              { id: "flagged", label: "已标记", meta: "0 份" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1064:              { id: "invalid", label: "无效答卷", meta: "0 份" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1553:    image: { label: "图片生成要求", placeholder: "例如：使用真实产品研究场景，避免装饰性背景，保留数据标注区域。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1554:    chart: { label: "报表生成要求", placeholder: "例如：突出关键差异，显示数值标签，按占比从高到低排序。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1555:    text: { label: "文本生成要求", placeholder: "例如：先给结论，再说明证据、限制和行动建议。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1581:    { value: "auto", label: "自动匹配" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1582:    { value: "business", label: "商务分析" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1583:    { value: "minimal", label: "极简数据" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1584:    { value: "editorial", label: "编辑叙事" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1585:    { value: "presentation", label: "演示汇报" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1586:    { value: "dark", label: "深色大屏" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1597:    { mode: "image", label: "图片", desc: "为报告页生成配图或场景说明。", icon: Eye },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1598:    { mode: "chart", label: "报表", desc: "把选择题和评分题转成可比较的数据视图。", icon: BarChart3 },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1599:    { mode: "text", label: "文本", desc: "输出结论、证据和执行建议。", icon: FileText },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:4062:                      : section.chart?.rows ?? [{ label: "待生成", value: 0 }];
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:5602:                    label: "Survey Agent",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:5607:                    label: "Report Agent",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:5612:                    label: "Publish",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:5878:      { id: "design", label: "设计问卷", description: "题目与元数据" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:5879:      { id: "template", label: "报告模板", description: "分类与模块组件" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:5880:      { id: "collect", label: "发布回收", description: "链接与回收规则" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:5881:      { id: "answer", label: "查看答题", description: "答题页与样本" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:5882:      { id: "report", label: "分析报告", description: "洞察与导出" },
+@repo/web:lint: ⚠ LABEL-LANG-MIX(跨文件中英混用，警告，不拦截；修复归属 phase-p17 reskin)：以下文件整体用中文 label，而以下文件整体用英文 label，同一层级 UI 组件的文案语言应统一：
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/[id]/results/page.tsx:743:                      { label: "平均", value: reportMetrics.avgCompletion },
+@repo/web:lint:     LABEL-LANG-MIX: components/board/board-canvas.tsx:190:  { value: "sans-serif", label: "无衬线" },
+@repo/web:lint:     LABEL-LANG-MIX: components/board/sync-status.tsx:14:  synced: { label: "已同步", dot: "bg-tag-green", text: "text-success" },
+@repo/web:lint:     LABEL-LANG-MIX: components/studio/studio-panel.tsx:29:  { type: "audio", label: "音频概览", icon: AudioLines },
+@repo/web:lint:     LABEL-LANG-MIX: components/survey/survey-home-dashboard.tsx:46:    label: "WHY · 为什么",
+@repo/web:lint:     LABEL-LANG-MIX: components/survey/survey-navigation-sidebar.tsx:16:  { id: "home", label: "主页", group: "工作台", icon: Home },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/account/page.tsx:15:  { key: "personal", label: "Personal info", icon: User },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/admin-home.tsx:113:        { testKey: "users", label: "Total users", stat: stats.users },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/admin-tabs.tsx:8:  { key: "overview", label: "Overview", href: "/admin" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/ai-store/featured/page.tsx:33:  { key: "", label: "All approved" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/ai-store/review/page.tsx:37:  { key: "", label: "All" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ai-store/_components/store-navigation.tsx:20:    label: "Discover",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/credits/page.tsx:237:              <SummaryCard value={fmt(wallet.balance)} label="Current balance" />
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/rooms/[id]/layout.tsx:27:  { key: "boards", label: "Boards", segment: "boards" },
+@repo/web:lint:     LABEL-LANG-MIX: components/app-shell/sidebar.tsx:45:  { label: "Home", icon: Home, href: "/" },
+@repo/web:lint:   示例（Board 工具条 vs Sidebar 导航）：见 components/board/board-canvas.tsx 与 components/app-shell/sidebar.tsx
+@repo/web:lint: ✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性/文案语言一致性）
+@repo/collab:lint: cache hit, replaying logs 0e228d26814c575e
+@repo/collab:lint: 
+@repo/collab:lint: > @repo/collab@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/collab
+@repo/collab:lint: > echo 'lint: ok'
+@repo/collab:lint: 
+@repo/collab:lint: lint: ok
+@repo/export:test: cache hit, replaying logs 350cc8187ce7c069
+@repo/export:test: 
+@repo/export:test: > @repo/export@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/export
+@repo/export:test: > vitest run
+@repo/export:test: 
+@repo/export:test: 
+@repo/export:test:  RUN  v2.1.9 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/export
+@repo/export:test: 
+@repo/export:test:  ✓ src/index.test.ts (9 tests) 121ms
+@repo/export:test: 
+@repo/export:test:  Test Files  1 passed (1)
+@repo/export:test:       Tests  9 passed (9)
+@repo/export:test:    Start at  13:21:15
+@repo/export:test:    Duration  908ms (transform 70ms, setup 0ms, collect 286ms, tests 121ms, environment 0ms, prepare 89ms)
+@repo/export:test: 
+@repo/coord-gateway:lint: cache hit, replaying logs bc9512f4e0406618
+@repo/coord-gateway:lint: 
+@repo/coord-gateway:lint: > @repo/coord-gateway@0.1.0 lint /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/coord-gateway
+@repo/coord-gateway:lint: > echo 'lint: ok'
+@repo/coord-gateway:lint: 
+@repo/coord-gateway:lint: lint: ok
+@repo/canvas:typecheck: cache hit, replaying logs 27122831ca7b5595
+@repo/canvas:typecheck: 
+@repo/canvas:typecheck: > @repo/canvas@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/canvas
+@repo/canvas:typecheck: > tsc --noEmit
+@repo/canvas:typecheck: 
+@repo/orchestrator:test: cache hit, replaying logs 37b586c5b8a16f32
+@repo/orchestrator:test: 
+@repo/orchestrator:test: > @repo/orchestrator@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/orchestrator
+@repo/orchestrator:test: > vitest run
+@repo/orchestrator:test: 
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  RUN  v2.0.0 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/orchestrator
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  ✓ src/orchestrator.test.ts  (3 tests) 28ms
+@repo/orchestrator:test: 
+@repo/orchestrator:test:  Test Files  1 passed (1)
+@repo/orchestrator:test:       Tests  3 passed (3)
+@repo/orchestrator:test:    Start at  13:21:25
+@repo/orchestrator:test:    Duration  684ms (transform 66ms, setup 0ms, collect 94ms, tests 28ms, environment 0ms, prepare 72ms)
+@repo/orchestrator:test: 
+@repo/orchestrator:typecheck: cache hit, replaying logs 6ee4695a8c32599a
+@repo/orchestrator:typecheck: 
+@repo/orchestrator:typecheck: > @repo/orchestrator@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/orchestrator
+@repo/orchestrator:typecheck: > tsc --noEmit
+@repo/orchestrator:typecheck: 
+@repo/coord-repohub:build: cache hit, replaying logs ec4d20e423d7f75c
+@repo/coord-repohub:build: 
+@repo/coord-repohub:build: > @repo/coord-repohub@0.1.0 build /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/coord-repohub
+@repo/coord-repohub:build: > tsc --noEmit
+@repo/coord-repohub:build: 
+@repo/coord-repohub:typecheck: cache hit, replaying logs 3adf893614c5ab94
+@repo/coord-repohub:typecheck: 
+@repo/coord-repohub:typecheck: > @repo/coord-repohub@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/coord-repohub
+@repo/coord-repohub:typecheck: > tsc --noEmit
+@repo/coord-repohub:typecheck: 
+@repo/coord-repohub:test: cache hit, replaying logs 6d83d051b43b73e5
+@repo/coord-repohub:test: 
+@repo/coord-repohub:test: > @repo/coord-repohub@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/coord-repohub
+@repo/coord-repohub:test: > vitest run
+@repo/coord-repohub:test: 
+@repo/coord-repohub:test: 
+@repo/coord-repohub:test:  RUN  v2.1.9 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/coord-repohub
+@repo/coord-repohub:test: 
+@repo/coord-repohub:test: [vpw:debug] Adding `enable_nodejs_tty_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-repohub:test: [vpw:debug] Adding `enable_nodejs_fs_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-repohub:test: [vpw:debug] Adding `enable_nodejs_http_modules` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-repohub:test: [vpw:debug] Adding `enable_nodejs_perf_hooks_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-repohub:test: [vpw:info] Starting single runtime for vitest.config.ts...
+@repo/coord-repohub:test: [mf:warn] The latest compatibility date supported by the installed Cloudflare Workers Runtime is "2026-03-10",
+@repo/coord-repohub:test: but you've requested "2026-07-01". Falling back to "2026-03-10"...
+@repo/coord-repohub:test:  ✓ test/repohub.test.ts (9 tests) 188ms
+@repo/coord-repohub:test: 
+@repo/coord-repohub:test:  Test Files  1 passed (1)
+@repo/coord-repohub:test:       Tests  9 passed (9)
+@repo/coord-repohub:test:    Start at  13:21:22
+@repo/coord-repohub:test:    Duration  3.36s (transform 83ms, setup 0ms, collect 154ms, tests 188ms, environment 0ms, prepare 116ms)
+@repo/coord-repohub:test: 
+@repo/coord-repohub:test: [vpw:debug] Shutting down runtimes...
+@repo/coord-repohub:test: [vpw:debug] Disposing remote proxy sessions...
+@repo/data:test: cache hit, replaying logs 11916aaae604e6bb
+@repo/data:test: 
+@repo/data:test: > @repo/data@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/data
+@repo/data:test: > vitest run
+@repo/data:test: 
+@repo/data:test: 
+@repo/data:test:  RUN  v2.0.0 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/data
+@repo/data:test: 
+@repo/data:test:  ✓ src/aiStore.migrationAudit.test.ts  (4 tests) 17ms
+@repo/data:test:  ✓ src/aiStore.teamIsolation.test.ts  (5 tests) 3ms
+@repo/data:test:  ✓ src/aiStore.test.ts  (18 tests) 12ms
+@repo/data:test:  ✓ src/ids.test.ts  (8 tests) 38ms
+@repo/data:test:  ✓ src/aiStore.skillsVersioning.test.ts  (4 tests) 3ms
+@repo/data:test:  ✓ src/migrateHelpers.test.ts  (6 tests) 27ms
+@repo/data:test:  ✓ src/survey-source-contract.test.ts  (2 tests) 51ms
+@repo/data:test:  ✓ src/board.test.ts  (11 tests) 36ms
+@repo/data:test:  ✓ src/dockerComposePersistence.test.ts  (2 tests) 3ms
+@repo/data:test:  ✓ src/roomChat.test.ts  (5 tests) 4ms
+@repo/data:test:  ✓ src/survey.test.ts  (5 tests) 16ms
+@repo/data:test:  ✓ src/avaChat.test.ts  (5 tests) 84ms
+@repo/data:test:  ✓ src/index.test.ts  (3 tests) 2ms
+@repo/data:test:  ✓ src/rooms.test.ts  (2 tests) 1ms
+@repo/data:test: 
+@repo/data:test:  Test Files  14 passed (14)
+@repo/data:test:       Tests  80 passed (80)
+@repo/data:test:    Start at  13:21:23
+@repo/data:test:    Duration  2.21s (transform 1.71s, setup 3ms, collect 5.94s, tests 297ms, environment 2ms, prepare 4.00s)
+@repo/data:test: 
+@repo/data:typecheck: cache hit, replaying logs b0b742ebf51100b2
+@repo/data:typecheck: 
+@repo/data:typecheck: > @repo/data@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/data
+@repo/data:typecheck: > tsc --noEmit
+@repo/data:typecheck: 
+@repo/data:build: cache hit, replaying logs 673a83a2b6ad5417
+@repo/data:build: 
+@repo/data:build: > @repo/data@0.1.0 build /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/data
+@repo/data:build: > tsc --noEmit
+@repo/data:build: 
+@repo/coord-gateway:test: cache hit, replaying logs 33a2b8997c80f1a5
+@repo/coord-gateway:test: 
+@repo/coord-gateway:test: > @repo/coord-gateway@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/coord-gateway
+@repo/coord-gateway:test: > vitest run
+@repo/coord-gateway:test: 
+@repo/coord-gateway:test: 
+@repo/coord-gateway:test:  RUN  v2.1.9 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/coord-gateway
+@repo/coord-gateway:test: 
+@repo/coord-gateway:test: [vpw:debug] Adding `enable_nodejs_tty_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-gateway:test: [vpw:debug] Adding `enable_nodejs_fs_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-gateway:test: [vpw:debug] Adding `enable_nodejs_http_modules` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-gateway:test: [vpw:debug] Adding `enable_nodejs_perf_hooks_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-gateway:test: [vpw:info] Starting single runtime for vitest.config.ts...
+@repo/coord-gateway:test: [mf:warn] The latest compatibility date supported by the installed Cloudflare Workers Runtime is "2026-03-10",
+@repo/coord-gateway:test: but you've requested "2026-07-01". Falling back to "2026-03-10"...
+@repo/coord-gateway:test:  ✓ test/gateway.test.ts (5 tests) 24ms
+@repo/coord-gateway:test: 
+@repo/coord-gateway:test:  Test Files  1 passed (1)
+@repo/coord-gateway:test:       Tests  5 passed (5)
+@repo/coord-gateway:test:    Start at  13:21:25
+@repo/coord-gateway:test:    Duration  1.29s (transform 103ms, setup 0ms, collect 165ms, tests 24ms, environment 0ms, prepare 97ms)
+@repo/coord-gateway:test: 
+@repo/coord-gateway:test: [vpw:debug] Shutting down runtimes...
+@repo/coord-gateway:test: [vpw:debug] Disposing remote proxy sessions...
+@repo/coord-gateway:typecheck: cache hit, replaying logs 2636f02bbbbb1a07
+@repo/coord-gateway:typecheck: 
+@repo/coord-gateway:typecheck: > @repo/coord-gateway@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/coord-gateway
+@repo/coord-gateway:typecheck: > tsc --noEmit
+@repo/coord-gateway:typecheck: 
+@repo/workflow-worker:test: cache hit, replaying logs 4ab5b5fc6b08e1bc
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test: > @repo/workflow-worker@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/workflow-worker
+@repo/workflow-worker:test: > vitest run
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  RUN  v2.0.0 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/workflow-worker
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  ✓ src/kbFileJob.test.ts  (2 tests) 2ms
+@repo/workflow-worker:test:  ✓ src/job.test.ts  (3 tests) 5ms
+@repo/workflow-worker:test:  ✓ src/presentationRevisionJob.test.ts  (4 tests) 3ms
+@repo/workflow-worker:test:  ✓ src/studioJob.test.ts  (2 tests) 3ms
+@repo/workflow-worker:test: 
+@repo/workflow-worker:test:  Test Files  4 passed (4)
+@repo/workflow-worker:test:       Tests  11 passed (11)
+@repo/workflow-worker:test:    Start at  13:21:27
+@repo/workflow-worker:test:    Duration  749ms (transform 195ms, setup 0ms, collect 548ms, tests 13ms, environment 0ms, prepare 647ms)
+@repo/workflow-worker:test: 
+@repo/web:test: cache hit, replaying logs a9a0b39c90cd6816
+@repo/web:test: 
+@repo/web:test: > @repo/web@0.1.0 test /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/web
+@repo/web:test: > vitest run
+@repo/web:test: 
+@repo/web:test: [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+@repo/web:test: 
+@repo/web:test:  RUN  v2.0.0 /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/web
+@repo/web:test: 
+@repo/web:test:  ✓ lib/canvas-snap.test.ts  (14 tests) 6ms
+@repo/web:test:  ✓ app/api/ai-store/items/skills-versioning.route.test.ts  (2 tests) 5ms
+@repo/web:test:  ✓ app/api/ai-store/items/[id]/route.test.ts  (2 tests) 6ms
+@repo/web:test:  ✓ lib/survey-report-evidence.test.ts  (4 tests) 9ms
+@repo/web:test:  ✓ lib/api/handler.test.ts  (10 tests) 31ms
+@repo/web:test:  ✓ lib/survey-professional-report.test.ts  (4 tests) 2ms
+@repo/web:test:  ✓ app/api/ava/threads/[id]/share/route.test.ts  (5 tests) 8ms
+@repo/web:test:  ✓ app/api/ava/threads/[id]/route.test.ts  (4 tests) 13ms
+@repo/web:test: stderr | app/api/boards/[id]/ai-chat/route.test.ts > POST /api/boards/:id/ai-chat — 画布内容触发词过滤（code-reviewer 复审修复） > 触发词出现在 question 本身（非画布内容）时，仍保留网关原有的确定性失败态
+@repo/web:test: [api] unhandled Error: stub provider: 强制失败（测试触发）
+@repo/web:test:     at Object.streamChat (/private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/packages/ai/src/gateway.ts:224:13)
+@repo/web:test:     at streamChat.next (<anonymous>)
+@repo/web:test:     at Module.POST (/private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/web/app/api/boards/[id]/ai-chat/route.ts:89:22)
+@repo/web:test:     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+@repo/web:test:     at /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/web/app/api/boards/[id]/ai-chat/route.test.ts:62:17
+@repo/web:test:     at runTest (file:///private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:939:11)
+@repo/web:test:     at runSuite (file:///private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runSuite (file:///private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runFiles (file:///private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1152:5)
+@repo/web:test:     at startTests (file:///private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1161:3)
+@repo/web:test: 
+@repo/web:test:  ✓ app/api/boards/[id]/ai-chat/route.test.ts  (3 tests) 14ms
+@repo/web:test:  ✓ lib/collab-bus.test.ts  (4 tests) 2ms
+@repo/web:test: stderr | app/api/admin/coordination/status/route.test.ts > GET /api/admin/coordination/status > 502 when upstream fetch throws (network failure / timeout)
+@repo/web:test: [admin/coordination/status] coord-service fetch failed Error: fetch failed
+@repo/web:test:  ✓ lib/ava-agents.test.ts  (3 tests) 4ms
+@repo/web:test:     at /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/web/app/api/admin/coordination/status/route.test.ts:75:15
+@repo/web:test:     at mockCall (file:///private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/node_modules/.pnpm/@vitest+spy@2.0.0/node_modules/@vitest/spy/dist/index.js:61:17)
+@repo/web:test:     at spy (file:///private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/node_modules/.pnpm/tinyspy@3.0.2/node_modules/tinyspy/dist/index.js:45:80)
+@repo/web:test:     at Module.GET (/private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/web/app/api/admin/coordination/status/route.ts:31:23)
+@repo/web:test:     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+@repo/web:test:     at /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/web/app/api/admin/coordination/status/route.test.ts:78:17
+@repo/web:test:     at runTest (file:///private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:939:11)
+@repo/web:test:     at runSuite (file:///private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runSuite (file:///private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runFiles (file:///private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1152:5)
+@repo/web:test: 
+@repo/web:test:  ✓ app/api/admin/coordination/status/route.test.ts  (6 tests) 11ms
+@repo/web:test:  ✓ lib/utils.test.ts  (30 tests) 5ms
+@repo/web:test:  ✓ lib/ava-legacy-compat.test.ts  (6 tests) 9ms
+@repo/web:test:  ✓ lib/report-export.test.ts  (1 test) 19ms
+@repo/web:test:  ✓ app/api/v1/chat/handleRequestAIChat/route.test.ts  (2 tests) 7ms
+@repo/web:test:  ✓ app/api/collab/config/route.test.ts  (3 tests) 15ms
+@repo/web:test:  ✓ lib/survey-report-layout.test.ts  (3 tests) 13ms
+@repo/web:test:  ✓ lib/feedback.test.ts  (2 tests) 4ms
+@repo/web:test:  ✓ lib/agents.test.ts  (5 tests) 4ms
+@repo/web:test:  ✓ lib/health.test.ts  (1 test) 1ms
+@repo/web:test:  ✓ lib/qwen.test.ts  (1 test) 8ms
+@repo/web:test:  ✓ lib/viewport.test.ts  (4 tests) 10ms
+@repo/web:test: 
+@repo/web:test:  Test Files  23 passed (23)
+@repo/web:test:       Tests  119 passed (119)
+@repo/web:test:    Start at  13:21:27
+@repo/web:test:    Duration  1.53s (transform 744ms, setup 0ms, collect 2.40s, tests 206ms, environment 4ms, prepare 2.76s)
+@repo/web:test: 
+@repo/web:typecheck: cache hit, replaying logs 8c4c806fce682a35
+@repo/web:typecheck: 
+@repo/web:typecheck: > @repo/web@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/web
+@repo/web:typecheck: > tsc --noEmit
+@repo/web:typecheck: 
+@repo/workflow-worker:typecheck: cache hit, replaying logs 87ce518f772c51ac
+@repo/workflow-worker:typecheck: 
+@repo/workflow-worker:typecheck: > @repo/workflow-worker@0.1.0 typecheck /private/tmp/claude-501/-Users-shenyanbin-Documents-projects-boardx-dev-next/cfce6ab5-657e-4ff5-a1cc-4c94f3be994a/scratchpad/p29-kickoff/apps/workflow-worker
+@repo/workflow-worker:typecheck: > tsc --noEmit
+@repo/workflow-worker:typecheck: 
+
+ Tasks:    69 successful, 69 total
+Cached:    69 cached, 69 total
+  Time:    338ms >>> FULL TURBO
+
+turbo 2.5.0
+

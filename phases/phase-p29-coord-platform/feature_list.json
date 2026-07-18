@@ -43,7 +43,7 @@
       "area": "coord",
       "title": "GitHub App + webhook ingest（coord-gateway + Queues 幂等）",
       "user_visible_behavior": "GitHub App 安装到本仓后，issues/issue_comment/pull_request/pull_request_review/check_run/push/status 事件经 apps/coord-gateway（签名校验 + Queues 削峰 + delivery GUID 幂等去重）写入对应 RepoHub DO；重复投递不产生重复事件；/healthz 反映消费延迟。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
       "owner": null,
       "capability": "CAP-DATA",
@@ -51,7 +51,7 @@
         "pnpm --filter coord-gateway test",
         "curl -sf https://coord-gateway.boardx.workers.dev/api/coord/healthz | jq -e '.ok == true and .webhook_configured == true'"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-07-18T05:21:30.125Z",
       "notes": "GitHub App 已建（4328933，webhook 待激活）。网关部署在 workers.dev 而非 develop.boardx.us：后者整站在 Cloudflare Access 门禁后，GitHub webhook 与 agent API 客户端过不了交互式 SSO——人类门户与 agent API 分域是有意设计（2026-07-18 实现期修正）。webhook secret/COORD_API_TOKEN 入 Cloudflare secrets，遵守 env 原子变更纪律（mod-devportal 事故）。"
     },
     {
@@ -60,7 +60,7 @@
       "area": "coord",
       "title": "RepoHub DO：issue/PR 实时镜像 + GET /realtime/*",
       "user_visible_behavior": "packages/coord-repohub 的 RepoHub DO（每仓一个，SQLite 存储）维护 issue/PR 镜像，字段必含 state、labels、assignees、mergeable、mergeStateStatus、head SHA、checks 汇总；GET /api/coord/realtime/issues|prs|prs/:n 秒级新鲜，响应带镜像时间戳与 SHA 锚点。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
       "owner": null,
       "capability": "CAP-DATA",
@@ -68,7 +68,7 @@
         "pnpm --filter @repo/coord-repohub test",
         "bash phases/phase-p29-coord-platform/scripts/verify-mirror-consistency.sh"
       ],
-      "evidence": "",
+      "evidence": "evidence/F04.verify.log @ 2026-07-18T05:21:38.790Z",
       "notes": "verify-mirror-consistency.sh：随机抽 N 个 open PR，对比 /realtime 与 gh api 的 mergeable/SHA 一致。镜像冷启动用 GitHub API 全量回填，之后 webhook 增量。"
     },
     {
@@ -77,16 +77,16 @@
       "area": "coord",
       "title": "RepoHub DO：原子租约（claim/heartbeat/TTL/alarm 回收）",
       "user_visible_behavior": "POST /api/coord/claims 对同一 resource 并发请求恰好一个 201，其余 409（带当前持有者信息）；heartbeat 续期；TTL 过期由 DO alarm 机械回收并产生事件；释放/回收必须附 handoff note，缺失被拒绝。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
-        "pnpm --filter @repo/coord-repohub test -- --grep lease",
+        "pnpm --filter @repo/coord-repohub test",
         "bash phases/phase-p29-coord-platform/scripts/verify-claim-race.sh"
       ],
-      "evidence": "",
-      "notes": "verify-claim-race.sh：对同一 resource 并发打 20 个 claim，断言 201 计数==1 且 409 计数==19；再验 TTL 过期后可重新认领。DO 串行执行是原子性的结构保证，不再依赖 fail-open 补丁。"
+      "evidence": "evidence/F05.verify.log @ 2026-07-18T05:23:56.246Z",
+      "notes": "verify-claim-race.sh：对同一 resource 并发打 20 个 claim，断言 201 计数==1 且 409 计数==19；再验 TTL 过期后可重新认领。DO 串行执行是原子性的结构保证，不再依赖 fail-open 补丁。（2026-07-18 修正：原命令 `test -- --grep lease` 中 vitest 2 不支持 --grep，改为全量包测试——严格超集，含全部 lease 用例。）"
     },
     {
       "id": "F06",
