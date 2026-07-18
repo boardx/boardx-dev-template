@@ -6272,11 +6272,12 @@ export default function SurveysPage() {
                   }
                   onGenerateReport={() => void generateWorkspaceCategoryReport(currentSurveyForNavigation.id)}
                   onSelectVersion={(artifactId) =>
-                    void loadWorkspaceProfessionalReportVersion(
+                    loadWorkspaceProfessionalReportVersion(
                       currentSurveyForNavigation.id,
                       artifactId
                     )
                   }
+                  onOpenReport={() => navigateWorkspace("report")}
                   onBackToDesign={() => {
                     window.location.href = "/surveys?view=templates";
                   }}

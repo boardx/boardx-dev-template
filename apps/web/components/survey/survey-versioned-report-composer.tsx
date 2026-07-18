@@ -38,6 +38,7 @@ import {
 import { SURVEY_REPORT_CHART_TEMPLATES } from "@/lib/survey-report-chart-templates";
 import type { SurveyReportGenerationStatus } from "@/lib/survey-report-generation";
 import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
+import { selectReportVersionAndOpenReport } from "@/lib/survey-report-version-navigation";
 
 interface ReportComposerSurvey {
   id: number;
@@ -59,7 +60,8 @@ interface SurveyVersionedReportComposerProps {
   onClassify: () => void;
   onSavePlan: (plan: SurveyReportCategoryPlanInput) => void;
   onGenerateReport: () => void;
-  onSelectVersion: (artifactId: string) => void;
+  onSelectVersion: (artifactId: string) => Promise<void>;
+  onOpenReport: () => void | Promise<void>;
   onBackToDesign: () => void;
   onOpenCollect: () => void;
 }
@@ -127,6 +129,7 @@ export function SurveyVersionedReportComposer({
   onSavePlan,
   onGenerateReport,
   onSelectVersion,
+  onOpenReport,
   onBackToDesign,
   onOpenCollect,
 }: SurveyVersionedReportComposerProps) {
@@ -475,17 +478,23 @@ export function SurveyVersionedReportComposer({
           >
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-14 font-bold text-foreground">章节预览</h3>
+                <h3 className="text-14 font-bold text-foreground">章节效果预览</h3>
                 <Badge variant={reportState.variant}>{reportState.label}</Badge>
               </div>
               <p className="mt-1 text-11 leading-5 text-muted-foreground">{reportState.detail}</p>
             </div>
-            {generation?.latestArtifact ? (
-              <p className="flex items-center gap-1 text-11 text-muted-foreground">
-                <Clock3 className="h-3.5 w-3.5" strokeWidth={1.6} />
-                {formatVersionTime(generation.latestArtifact.createdAt)}
-              </p>
-            ) : null}
+            <div className="flex items-center gap-2">
+              {generation?.latestArtifact ? (
+                <p className="flex items-center gap-1 text-11 text-muted-foreground">
+                  <Clock3 className="h-3.5 w-3.5" strokeWidth={1.6} />
+                  {formatVersionTime(generation.latestArtifact.createdAt)}
+                </p>
+              ) : null}
+              <Button type="button" size="sm" variant="outline" onClick={() => void onOpenReport()}>
+                <FileText className="h-4 w-4" strokeWidth={1.6} />
+                分析报告
+              </Button>
+            </div>
           </div>
 
           <div className="min-h-96 min-w-0 overflow-y-auto bg-secondary/20 p-5 xl:min-h-0 xl:max-h-full xl:flex-1">
@@ -524,7 +533,11 @@ export function SurveyVersionedReportComposer({
                   key={version.id}
                   type="button"
                   className="flex items-center justify-between gap-3 bg-background px-5 py-3 text-left transition-colors hover:bg-secondary"
-                  onClick={() => onSelectVersion(version.id)}
+                  onClick={() => void selectReportVersionAndOpenReport(
+                    version.id,
+                    onSelectVersion,
+                    onOpenReport
+                  )}
                 >
                   <span>
                     <span className="block text-12 font-semibold text-foreground">

@@ -2,7 +2,12 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Let each Survey report chapter select exactly one image, chart, or text output while the right column previews that output and exposes a read-only official ECharts option for chart chapters.
+**Goal:** Let each Survey report chapter select exactly one image, chart, or text output while the right column provides a configuration/effect preview and exposes a read-only official ECharts option for chart chapters. Complete generated reports and historical artifacts remain on `分析报告`.
+
+> **2026-07-18 final user confirmation:** This overrides earlier Task 4 wording that
+> proposed showing generated chapter output in the right column. F16's right column is
+> configuration/effect preview only; `分析报告` is the single place to view complete and
+> historical generated report artifacts.
 
 **Architecture:** Extend the existing report-category JSON contract with a normalized single `outputType` and allowlisted `chartTemplateId`, while retaining `inputModes` only as a legacy compatibility field. Keep official chart templates in a pure serializable registry, render them through a focused client component, and include the normalized output contract in the existing versioned report requirement hash.
 
@@ -18,6 +23,9 @@
 - Store an allowlisted chart template identifier, never arbitrary executable ECharts JavaScript.
 - ECharts option JSON is complete, read-only, and copyable.
 - Official sample values are preview-only and never enter report evidence or generated artifacts.
+- The right column is configuration/effect preview only; do not render generated text,
+  images, chart evidence, or immutable report artifacts there. Navigate to `分析报告` for
+  complete and historical reports.
 - Output type and chart template participate in `requirementHash`.
 - Changing the output contract marks the latest report stale; generation remains an explicit action.
 - Do not modify `active-features.json` or hand-edit F16 `status`/`owner`/`evidence`.
@@ -485,9 +493,11 @@ Use `echarts.init()`, `instance.setOption(option, true)`, `ResizeObserver`, and 
 with `instance.dispose()`. Register only the chart and component modules used by the
 eight templates.
 
-For text, render the chapter title, requirement, evidence boundary, and empty/generated
-state as document typography. For image, render the natural-language image requirement
-and an explicit “生成报告后显示图片” empty state; do not fabricate an image asset.
+For text, render the chapter title, requirement, evidence boundary, and configuration
+structure explanation as document typography. For image, render the natural-language
+image requirement and a configuration explanation; do not fabricate or claim to show a
+generated image asset. Both panels must direct users to `分析报告` for complete generated
+content and historical versions.
 
 - [ ] **Step 5: Add the single-selection controls**
 
@@ -529,9 +539,13 @@ Render:
 />
 ```
 
-Keep generation state, timestamp, and collapsible immutable version history in the
-right column. The existing complete report remains reachable through the report flow;
-do not render `ProfessionalReportDocument` inside this chapter configuration panel.
+Title the right column `章节效果预览`. Keep generation state, timestamp, and collapsible
+immutable version-history summary there. The chart effect area must prominently state
+`示例数据，仅用于模板配置，不会写入报告证据。`. Text and image previews must describe
+configuration/structure only and direct users to `分析报告`; do not render
+`ProfessionalReportDocument` or generated chapter artifacts inside this panel. When a
+historical version is clicked, await `onSelectVersion(version.id)` before calling a
+minimal `onOpenReport` callback that navigates to `分析报告`.
 
 Use a viewport-bounded desktop layout:
 

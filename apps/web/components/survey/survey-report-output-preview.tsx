@@ -134,11 +134,11 @@ function ChartOutputPreview({
     <div className="grid min-w-0 gap-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-11 font-semibold text-muted-foreground">图表配置草稿</p>
+          <p className="text-11 font-semibold text-muted-foreground">图表模板配置</p>
           <h4 className="mt-1 text-17 font-bold text-foreground">{category.name}</h4>
           <p className="mt-1 text-12 text-muted-foreground">{template.label}</p>
         </div>
-        <Badge variant="outline">预览数据</Badge>
+        <Badge variant="outline">示例数据</Badge>
       </div>
 
       <div
@@ -184,6 +184,12 @@ function ChartOutputPreview({
           role="tabpanel"
           className="min-w-0 overflow-hidden border border-border bg-background p-3"
         >
+          <p
+            role="note"
+            className="mb-3 border-l-2 border-foreground bg-secondary/50 px-3 py-2 text-12 font-semibold leading-5 text-foreground"
+          >
+            示例数据，仅用于模板配置，不会写入报告证据。
+          </p>
           <EChartsOptionCanvas option={template.option} />
         </div>
       ) : (
@@ -223,7 +229,7 @@ function ChartOutputPreview({
 
       <PreviewBoundary responseCount={responseCount} />
       <p className="text-11 leading-5 text-muted-foreground">
-        当前图形使用模板内的模拟数据，仅用于配置预览，不会写入报告证据或生成请求。
+        此处仅展示图表模板效果；完整生成内容及历史版本请在“分析报告”中查看。
       </p>
     </div>
   );
@@ -239,8 +245,8 @@ function TextOutputPreview({
     <article className="grid gap-6">
       <header className="border-b border-border pb-5">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-11 font-semibold text-muted-foreground">文本章节草稿</p>
-          <Badge variant="outline">待生成</Badge>
+          <p className="text-11 font-semibold text-muted-foreground">文本章节配置</p>
+          <Badge variant="outline">结构说明</Badge>
         </div>
         <h4 className="mt-3 text-20 font-bold text-foreground">{category.name}</h4>
         <p className="mt-3 text-13 leading-6 text-foreground">
@@ -257,9 +263,9 @@ function TextOutputPreview({
       >
         <div>
           <FileText className="mx-auto h-8 w-8 text-muted-foreground" strokeWidth={1.4} />
-          <h5 className="mt-3 text-14 font-bold text-foreground">生成报告后显示章节文本</h5>
+          <h5 className="mt-3 text-14 font-bold text-foreground">文本章节结构说明</h5>
           <p className="mx-auto mt-2 max-w-sm text-12 leading-5 text-muted-foreground">
-            结论、支持证据、限制条件和建议只会来自已生成的不可变报告版本。
+            此处仅展示章节标题与要求如何构成文本输出。完整生成内容及历史版本请在“分析报告”中查看。
           </p>
         </div>
       </div>
@@ -277,8 +283,8 @@ function ImageOutputPreview({
     <article className="grid gap-6">
       <header>
         <div className="flex items-center justify-between gap-3">
-          <p className="text-11 font-semibold text-muted-foreground">图片章节草稿</p>
-          <Badge variant="outline">待生成</Badge>
+          <p className="text-11 font-semibold text-muted-foreground">图片章节配置</p>
+          <Badge variant="outline">结构说明</Badge>
         </div>
         <h4 className="mt-3 text-20 font-bold text-foreground">{category.name}</h4>
         <p className="mt-3 text-13 leading-6 text-foreground">
@@ -295,9 +301,9 @@ function ImageOutputPreview({
       >
         <div>
           <ImageIcon className="mx-auto h-9 w-9 text-muted-foreground" strokeWidth={1.4} />
-          <h5 className="mt-3 text-14 font-bold text-foreground">生成报告后显示图片</h5>
+          <h5 className="mt-3 text-14 font-bold text-foreground">图片章节配置说明</h5>
           <p className="mx-auto mt-2 max-w-sm text-12 leading-5 text-muted-foreground">
-            当前不展示占位素材；真实图片将在报告版本成功生成后出现。
+            此处仅用于定义图片输出要求，不展示生成素材。完整生成内容及历史版本请在“分析报告”中查看。
           </p>
         </div>
       </div>
