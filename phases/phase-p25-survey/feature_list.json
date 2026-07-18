@@ -404,9 +404,9 @@
       "title": "LangGraph 自主报告分析文件系统",
       "user_visible_behavior": "用户主动生成或更新报告时，系统从只读的整卷事实库中自主检索所需题目和答卷证据，由专业分析模块形成可追溯结论；相同输入直接复用报告，失败、超时或预算耗尽时保留最近成功版本并提供明确可重试状态。",
       "design_ref": "requirements/16-langgraph-autonomous-report-analysis.md；docs/superpowers/specs/2026-07-18-survey-versioned-report-architecture.md",
-      "status": "pending",
-      "sprint": null,
-      "owner": null,
+      "status": "in_progress",
+      "sprint": "17",
+      "owner": "wrk-survey-1",
       "capability": "CAP-AI",
       "depends_on": [
         "F11",
