@@ -17,6 +17,14 @@ interface Task {
   created_by: string; created_at: string; acked_at: string | null;
 }
 
+// —— 有意的团队级可见（人类 2026-07-18 确认，非漏洞）——
+// 本 GET 对**任何通过 Cloudflare Access 的用户**返回全队任务队列，
+// 含 created_by / 派工人 email（note 前缀）/ deadline 等字段。这是刻意的团队透明设计。
+// 它**有意放宽**了 coord-service 声明的「协调者-only 读模型」：coord-service 对 worker 的
+// assignee=* 请求会返 403 inbox_is_private（per-user 隐私边界）。此处门户 broker 以协调者
+// 身份绕过该 per-user 边界、把全队队列摊平给所有 Access 用户，是设计决策而非越权——
+// 可见性由整站的 Cloudflare Access（GitHub org 成员）统一兜底。
+// 注意:此放宽只作用于**读取（GET）**；派工（POST）仍严格限协调者（见下方 canDispatch 校验）。
 export async function GET(req: Request) {
   const user = await accessUser(req.headers);
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
