@@ -1,9 +1,10 @@
 # 会话交接 — Sprint p25/22
 
 ## 当前已验证
-- F22 实现和定向回归已通过；等待 Harness 写入最终 passing 状态。
+- F22 已由 Harness 门控为 passing。
 - Web lint、typecheck 通过。
 - F19、F21、F22 Playwright 联合回归 3/3 通过。
+- `verify:base` 73/73 个任务成功，Web 单测 36 个文件、183 条测试通过。
 
 ## 本轮改动
 - 分析报告统一为居中的单列阅读页，不再显示左侧章节目录与右侧报告 AI。
@@ -13,10 +14,10 @@
 
 ## 仍损坏或未验证
 - 无答卷时报告保持“暂无真实答卷”，不会伪造分析内容。
-- 完整 Harness 门控尚待实现提交后执行。
+- 无未验证项。
 
 ## 下一步最佳动作
-- 提交当前实现，运行 F22 Harness verify，提交证据和 passing 状态后更新 PR #757。
+- 推送当前分支并更新 PR #757；后续功能继续按单 feature、单 Harness 门控推进。
 
 ## 命令
 - 启动:`pnpm -w run dev`

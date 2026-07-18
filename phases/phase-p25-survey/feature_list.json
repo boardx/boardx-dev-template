@@ -509,7 +509,7 @@
       "title": "收敛分析报告为单列阅读页",
       "user_visible_behavior": "用户进入分析报告时只看到居中的模板驱动报告正文；左侧章节目录、移动端章节选择器和右侧报告 AI 均移除，顶部版本、分享、导出与重新生成操作保留；页面不再请求旧 ai-report 接口。",
       "design_ref": "requirements/21-single-column-report-reading.md；2026-07-19 用户截图确认",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "22",
       "owner": "wrk-survey-1",
       "capability": "CAP-WEB",
@@ -525,7 +525,7 @@
         "pnpm harness doctor --phase p25",
         "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-22/evidence/F22.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F22.verify.log @ 2026-07-18T22:32:11.811Z",
       "notes": "独立 UI feature，Refs #648，追加到 PR #757；只收敛报告阅读布局和移除旧报告读取，不改报告生成契约。"
     }
   ]
