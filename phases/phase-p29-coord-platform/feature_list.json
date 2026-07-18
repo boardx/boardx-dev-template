@@ -128,15 +128,15 @@
       "area": "auth",
       "title": "GitHub OAuth + 按仓 scoped token 自助领取",
       "user_visible_behavior": "开发者 GitHub OAuth 登录 devportal 后自助领取按仓 scope 的 agent token（mint-on-reveal，owner 绑定，继承 ADR-011 P2/P3）；该 token 可调 /api/coord/* 与 MCP，越仓访问被 403；吊销即时生效。",
-      "status": "not_started",
-      "sprint": null,
+      "status": "passing",
+      "sprint": "04",
       "owner": null,
       "capability": "CAP-AUTH",
       "verification": [
         "pnpm --filter coord-gateway test -- --grep auth",
         "bash phases/phase-p29-coord-platform/scripts/verify-token-scope.sh"
       ],
-      "evidence": "",
+      "evidence": "evidence/F08.verify.log @ 2026-07-18T07:37:28.125Z",
       "notes": "verify-token-scope.sh：领 token → 本仓 API 200 → 伪造他仓路径 403 → 吊销 → 401。敏感 area，主动挂 rev-security。"
     },
     {
@@ -145,15 +145,15 @@
       "area": "portal",
       "title": "devportal 门户实时化（WebSocket 接 RepoHub）",
       "user_visible_behavior": "devportal 看板数据源切到 RepoHub：页面通过 WebSocket 秒级跟随 GitHub 变更（新 issue/PR 状态/check 变化无需刷新即出现），每张卡片展示数据新鲜度时间戳；Access 会话过期仍走 401 整页重认证（#588 行为不回退）。",
-      "status": "not_started",
-      "sprint": null,
+      "status": "passing",
+      "sprint": "04",
       "owner": null,
       "capability": "CAP-WEB",
       "verification": [
         "pnpm --filter devportal lint && pnpm --filter devportal build",
         "bash phases/phase-p29-coord-platform/scripts/verify-portal-live.sh"
       ],
-      "evidence": "",
+      "evidence": "evidence/F09.verify.log @ 2026-07-18T07:40:18.663Z",
       "notes": "【ADR-003 约束】复用 p23 已确认 UI，不新增视图不改布局，只换数据层+新鲜度标识；出现新视图需求必须停下走 ui-signoff。verify-portal-live.sh：改一个测试 issue 的 label → N 秒内 portal 数据接口反映变更。"
     },
     {

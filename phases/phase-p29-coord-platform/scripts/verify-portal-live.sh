@@ -67,7 +67,8 @@ issue = sys.argv[1]
 evs = json.load(sys.stdin)["events"]
 hits = [e for e in evs if e["type"] == "mirror.updated" and e["resource_id"] == f"issue:{issue}"]
 assert hits, f"事件流缺 mirror.updated issue:{issue}（WS 订阅端不会收到推送）"
-print(f"PASS: mirror.updated issue:{issue} 已入事件流（WS 广播同源），event_id={hits[-1]['event_id']}")
+last = hits[-1]
+print("PASS: mirror.updated issue:%s 已入事件流（WS 广播同源），event_id=%s" % (issue, last["event_id"]))
 ' "$TEST_ISSUE"
 
 echo "== F09 活体验证通过：改 label → ${lat}s 内 镜像接口 + 事件流（WS 源）双双反映变更"
