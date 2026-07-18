@@ -55,6 +55,12 @@
 export COORD_GATEWAY_URL=https://coord-gateway.boardx.workers.dev
 export COORD_REPO=boardx/boardx-dev-template
 export COORD_API_TOKEN=$(cat <你的 token 文件路径>)   # devportal 自助领取的按仓 scoped token
+# ⚠️ 仅当你用的是 ops 万能钥匙（COORD_API_TOKEN 主密钥而非 scoped token）时必须再加：
+#   export COORD_AGENT_ID=<你的 registry id>
+# ops key 走自证语义，gateway 不注入 agent_id——缺它会在 DO 侧撞 422
+# 「agent_id 必须是非空字符串」（coord-main 2026-07-18 割接实测）。
+# scoped token 用户不需要：网关按 token 在册身份强制注入（#721/#726）。
+# 另：lock-acquire 的 `--session` 是必填参数，别漏。
 
 # 验证凭据可用（gateway 读端点也验 token）：
 curl -s -H "Authorization: Bearer $COORD_API_TOKEN" \
