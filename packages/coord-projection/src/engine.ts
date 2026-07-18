@@ -40,10 +40,21 @@ export type GithubCall =
       summary: string;
     };
 
+// 活跃租约快照（RepoHub GET /claims 的行）：lease check 的状态对账输入（#723-2）
+export interface ActiveLease {
+  lease_id: string;
+  resource_id: string;
+  agent_id: string;
+  claimed_at: string;
+  expires_at: string;
+}
+
 export interface ProjectionInput {
   events: ProjectionEvent[];
   openPrs: OpenPr[];
   andon: AndonState;
+  /** 当前活跃租约快照；缺省 []（老调用方兼容）。用于 lease check 的每 tick 对账补投。 */
+  leases?: ActiveLease[];
   now: number; // 注入时钟：TTL 剩余可确定性计算
 }
 
@@ -86,7 +97,7 @@ function leaseCheck(ev: ProjectionEvent, now: number): { conclusion: "success" |
 }
 
 export function project(input: ProjectionInput): GithubCall[] {
-  const { events, openPrs, andon, now } = input;
+  const { events, openPrs, andon, leases, now } = input;
   // 同一目标（status 同 sha / check 同 sha）多次触发时后者覆盖前者——按事件序保序去重
   const statusBySha = new Map<string, GithubCall>();
   const checkBySha = new Map<string, GithubCall>();
@@ -126,6 +137,29 @@ export function project(input: ProjectionInput): GithubCall[] {
       checkBySha.set(pr.head_sha, {
         kind: "check_run", head_sha: pr.head_sha, name: "coord/lease",
         conclusion: spec.conclusion, title: spec.title, summary: spec.summary,
+      });
+    }
+  }
+
+  // ---- lease 对账：状态驱动补投（#723-2，对齐 andon 的模式）----
+  // 事件路径是 at-least-once 但游标无条件推进：apply 失败（GitHub 瞬断等）后
+  // 事件不会重来，纯事件驱动会永久漏投。这里按活跃租约快照每 tick 重投
+  // claimed check（GitHub check_run 按 name 幂等覆盖，重投无害），漏投在下一
+  // tick 自愈。放在事件循环之后覆盖：快照是当前真值，批内 stale 事件不得回退它。
+  // 残留边界：released/expired 是结束态、无状态快照可对账，仍仅事件驱动——
+  // 其 apply 失败会残留 stale success，直到该 issue 下一次租约活动才被覆盖；
+  // coord/lease 是信息性 check、不阻断合并，接受此残留（PR body 有取舍说明）。
+  for (const lease of leases ?? []) {
+    const m = lease.resource_id.match(/^issue:(\d+)$/);
+    if (!m) continue; // 与事件路径同口径：非 issue 租约无 PR 锚点
+    const remainMin = Math.max(0, Math.round((Date.parse(lease.expires_at) - now) / 60000));
+    for (const pr of prsForIssue(openPrs, Number(m[1]))) {
+      if (!pr.head_sha) continue;
+      checkBySha.set(pr.head_sha, {
+        kind: "check_run", head_sha: pr.head_sha, name: "coord/lease",
+        conclusion: "success",
+        title: `持有者 ${lease.agent_id} · TTL 剩余 ${remainMin}m`,
+        summary: `租约 ${lease.lease_id} 于 ${lease.claimed_at} 认领 ${lease.resource_id}。`,
       });
     }
   }

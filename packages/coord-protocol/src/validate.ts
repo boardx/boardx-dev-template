@@ -81,6 +81,38 @@ function guard(input: unknown): [Check | null, ValidationResult | null] {
   return [new Check(input), null];
 }
 
+// ---- andon 规则单一出口（events.md §Andon 是语义权威）----
+// reason≥10（须含可查证锚点）、scope ∈ repo|module:<name>、raise 时 severity
+// 必须 stop-merge。validateEvent 的 andon 分支与 RepoHub DO 的 /andon 请求
+// 校验（validateAndonAction）都走这里——曾经两处手写同一套规则（#723-3），
+// 现在只许在此改。
+function andonRuleErrors(o: Obj, requireSeverity: boolean): string[] {
+  const errors: string[] = [];
+  const reason = o["reason"];
+  if (typeof reason !== "string" || reason.length < 10)
+    errors.push("reason 长度必须 ≥10（须含可查证锚点）");
+  const scope = o["scope"];
+  if (typeof scope !== "string" || !(scope === "repo" || /^module:[\w-]+$/.test(scope)))
+    errors.push("scope 必须是 repo 或 module:<name>");
+  if (requireSeverity && o["severity"] !== "stop-merge")
+    errors.push('severity 必须是 "stop-merge"');
+  return errors;
+}
+
+// RepoHub DO `/andon` 动作请求（{action, agent_id, reason, scope[, severity]}）
+// 的校验单一出口。与事件 payload 的差异仅在信封字段（action/agent_id）。
+export function validateAndonAction(input: unknown): ValidationResult {
+  if (!isObj(input)) return { ok: false, errors: ["消息必须是 JSON 对象"] };
+  const o = input as Obj;
+  const errors: string[] = [];
+  const action = o["action"];
+  if (action !== "raise" && action !== "clear") errors.push('action 必须是 "raise" | "clear"');
+  if (typeof o["agent_id"] !== "string" || o["agent_id"].length === 0)
+    errors.push("agent_id 必须是非空字符串");
+  errors.push(...andonRuleErrors(o, action === "raise"));
+  return { ok: errors.length === 0, errors };
+}
+
 export function validateClaimRequest(input: unknown): ValidationResult {
   const [c, bad] = guard(input);
   if (!c) return bad!;
@@ -194,17 +226,11 @@ export function validateEvent(input: unknown): ValidationResult {
     .str("at", { re: ISO_RE, reHint: "ISO 8601" });
   if (!isObj(o["payload"])) r.errors.push("payload 必须是对象");
 
-  // andon 特权事件的 payload 强校验（events.md §Andon）
+  // andon 特权事件的 payload 强校验（规则单一出口：andonRuleErrors）
   const type = o["type"] as EventType;
   if ((type === "andon.raised" || type === "andon.cleared") && isObj(o["payload"])) {
-    const p = o["payload"] as Obj;
-    const pc = new Check(p).str("reason", { min: 10 });
-    const scope = p["scope"];
-    if (typeof scope !== "string" || !(scope === "repo" || /^module:[\w-]+$/.test(scope)))
-      pc.errors.push("scope 必须是 repo 或 module:<name>");
-    if (type === "andon.raised" && p["severity"] !== "stop-merge")
-      pc.errors.push('severity 必须是 "stop-merge"');
-    pc.errors.forEach((e) => r.errors.push(`payload.${e}`));
+    andonRuleErrors(o["payload"] as Obj, type === "andon.raised")
+      .forEach((e) => r.errors.push(`payload.${e}`));
   }
 
   // task.* 事件的 payload 强校验（coord/0.1.1，events.md §Tasks）

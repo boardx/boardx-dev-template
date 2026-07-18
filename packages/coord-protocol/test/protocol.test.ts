@@ -7,6 +7,7 @@ import {
   validateEvidenceManifest,
   validateVerificationVerdict,
   validateEvent,
+  validateAndonAction,
   PROTOCOL,
   EVENT_TYPES,
 } from "../src/index";
@@ -193,6 +194,22 @@ describe("CoordEvent", () => {
     expect(validateEvent(event("lease.stolen")).ok).toBe(false);
     expect(validateEvent({ ...event("merge.completed"), repo: "not-a-repo" }).ok).toBe(false);
   });
+  it("validateAndonAction（#723-3 单一出口）：与事件分支同一套 andon 规则", () => {
+    const good = {
+      action: "raise", agent_id: "coord-main", scope: "module:devportal",
+      reason: "devportal 构建挂了，停线（issue #712）", severity: "stop-merge",
+    };
+    expect(validateAndonAction(good).ok).toBe(true);
+    // clear 不要求 severity
+    expect(validateAndonAction({ ...good, action: "clear", severity: undefined }).ok).toBe(true);
+    expect(validateAndonAction({ ...good, action: "pause" }).ok).toBe(false);
+    expect(validateAndonAction({ ...good, agent_id: "" }).ok).toBe(false);
+    expect(validateAndonAction({ ...good, reason: "太短" }).ok).toBe(false);
+    expect(validateAndonAction({ ...good, scope: "everywhere" }).ok).toBe(false);
+    expect(validateAndonAction({ ...good, severity: "warn" }).ok).toBe(false);
+    expect(validateAndonAction(null).ok).toBe(false);
+  });
+
   it("andon.raised 缺 reason/scope/severity 被拒（停线要能追责）", () => {
     expect(validateEvent(event("andon.raised", { scope: "repo" })).ok).toBe(false);
     expect(

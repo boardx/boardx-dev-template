@@ -2,7 +2,7 @@
 // 覆盖：andon 对账（active 补投 / cleared 恢复）、lease→关联 PR 匹配、
 // 无关事件忽略、同 sha 去重后者覆盖。
 import { describe, expect, it } from "vitest";
-import { project, type OpenPr, type ProjectionEvent, type AndonState } from "../src/engine";
+import { project, type ActiveLease, type OpenPr, type ProjectionEvent, type AndonState } from "../src/engine";
 
 const NOW = Date.parse("2026-07-18T04:00:00Z");
 
@@ -112,6 +112,47 @@ describe("lease → 关联 PR 的 coord/lease check", () => {
     });
     expect(calls).toHaveLength(1);
     expect(calls[0]).toMatchObject({ kind: "check_run", conclusion: "neutral" });
+  });
+
+  it("对账补投（#723-2）：事件已被游标消费（上轮 apply 失败），下 tick 无事件也按活跃租约快照重投 success check", () => {
+    // 场景：lease.claimed 事件那轮 applyCalls 失败但游标已推进——事件不会重来。
+    // 下 tick events 为空，靠 leases 快照对账补投。
+    const lease: ActiveLease = {
+      lease_id: "lse_1", resource_id: "issue:698", agent_id: "wrk-1",
+      claimed_at: "2026-07-18T03:00:00Z", expires_at: "2026-07-18T05:00:00Z", // now 04:00 → 剩 60m
+    };
+    const calls = project({ events: [], openPrs: prs, andon: noAndon, leases: [lease], now: NOW });
+    expect(calls).toHaveLength(1);
+    const c = calls[0]!;
+    expect(c).toMatchObject({ kind: "check_run", head_sha: "aaa1111", name: "coord/lease", conclusion: "success" });
+    if (c.kind === "check_run") {
+      expect(c.title).toContain("wrk-1");
+      expect(c.title).toContain("60m");
+      expect(c.summary).toContain("lse_1");
+    }
+  });
+
+  it("对账快照覆盖批内 stale 事件；租约已结束（快照为空）时结束态事件不被回退", () => {
+    // 批内 released 事件 + 快照显示已被 wrk-2 重新认领 → 快照（当前真值）胜出
+    const reclaimed: ActiveLease = {
+      lease_id: "lse_2", resource_id: "issue:698", agent_id: "wrk-2",
+      claimed_at: "2026-07-18T03:50:00Z", expires_at: "2026-07-18T05:00:00Z",
+    };
+    const overwritten = project({
+      events: [ev({ type: "lease.released", payload: { handoff_note: "交接给下家" } })],
+      openPrs: prs, andon: noAndon, leases: [reclaimed], now: NOW,
+    });
+    expect(overwritten).toHaveLength(1);
+    expect(overwritten[0]).toMatchObject({ kind: "check_run", conclusion: "success" });
+    if (overwritten[0]!.kind === "check_run") expect(overwritten[0]!.title).toContain("wrk-2");
+
+    // 快照为空（租约真的结束了）→ released 事件的 neutral check 保持
+    const kept = project({
+      events: [ev({ type: "lease.released", payload: { handoff_note: "交接给下家" } })],
+      openPrs: prs, andon: noAndon, leases: [], now: NOW,
+    });
+    expect(kept).toHaveLength(1);
+    expect(kept[0]).toMatchObject({ kind: "check_run", conclusion: "neutral" });
   });
 
   it("非 issue 资源（feature:/role:）与无关事件类型全部忽略", () => {

@@ -210,7 +210,7 @@ phases:
     slug: coord-platform
     name: coord-platform
     goal: "协调层按 RepoHub Durable Object 重建并开源产品化：GitHub webhook 实时镜像 + 原子租约 + agent MCP 接入；本仓作为租户 #1 在 develop.boardx.us 跑通全链路"
-    status: not_started
+    status: done
     depends_on: []
   - id: "p30"
     slug: devportal-platform
