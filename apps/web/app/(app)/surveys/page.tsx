@@ -4642,8 +4642,8 @@ export default function SurveysPage() {
 
   async function generateWorkspaceCategoryReport(
     surveyId: number,
-    instruction = "",
-    reportCategoryPlan?: ReportCategoryPlanDraft
+    _instruction = "",
+    _reportCategoryPlan?: ReportCategoryPlanDraft
   ) {
     if (
       workspaceReportGenerating ||
@@ -4658,14 +4658,10 @@ export default function SurveysPage() {
     setWorkspaceTemplateStatus("");
     setWorkspaceTemplateError("");
     try {
-      const categoryContext = reportCategoryPlan?.categories.map((category) => category.name).join("、");
-      const reportInstruction = categoryContext && instruction
-        ? `${instruction}\n报告章节：${categoryContext}`
-        : instruction;
       const res = await fetch(`/api/surveys/${surveyId}/professional-report`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(reportInstruction ? { instruction: reportInstruction } : {}),
+        body: "{}",
       });
       const payload = await res.json().catch(() => ({}));
       if (!isSurveyReportRequestCurrent(

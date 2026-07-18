@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildSurveyReportEvidence } from "./survey-report-evidence";
-import { buildProfessionalReportDocument, validateEvidenceClaims } from "./survey-professional-report";
+import {
+  buildProfessionalReportDocument,
+  modelSafeSurveyReportEvidence,
+  validateEvidenceClaims,
+} from "./survey-professional-report";
 
 const survey = {
   title: "学生成长调查",
@@ -95,5 +99,113 @@ describe("professional survey report", () => {
     expect(JSON.stringify(report)).not.toContain(canary);
     expect(report.chapters.find((chapter) => chapter.questionId === 3))
       .toMatchObject({ validResponseCount: 1, missingResponseCount: 0 });
+  });
+
+  it("keeps raw text answers out of the model prompt and rejects echoed raw text", () => {
+    const canary = "F16_MODEL_RAW_CANARY_7d4bba65";
+    const evidence = buildSurveyReportEvidence({
+      survey: {
+        ...survey,
+        questions: [
+          ...survey.questions,
+          {
+            id: 3,
+            title: "补充建议",
+            type: "text" as const,
+            required: false,
+            options: [],
+          },
+        ],
+      },
+      responses: [{
+        id: 1,
+        answers: { "1": "女", "2": "一年级", "3": canary },
+      }],
+    });
+
+    expect(JSON.stringify(modelSafeSurveyReportEvidence(evidence)))
+      .not.toContain(canary);
+    expect(validateEvidenceClaims(evidence, [{
+      statement: `合法数值，但泄漏原文：${canary}`,
+      evidenceId: "question-1-top",
+      value: 1,
+      denominator: 1,
+    }])).toEqual([]);
+  });
+
+  it("materializes exactly one selected output contract per report chapter", () => {
+    const evidence = buildSurveyReportEvidence({
+      survey,
+      responses: [
+        { id: 1, answers: { "1": "女", "2": "一年级" } },
+        { id: 2, answers: { "1": "男", "2": "二年级" } },
+      ],
+    });
+    const report = buildProfessionalReportDocument({
+      evidence,
+      generatedAt: "2026-07-15T00:00:00.000Z",
+      reportPlan: {
+        title: "学生成长报告",
+        description: "管理层版本",
+        categories: [
+          {
+            id: "profile-chart",
+            name: "画像图表",
+            description: "",
+            requirement: "用图表展示画像。",
+            questionIds: [1],
+            outputType: "chart",
+            inputModes: ["chart"],
+            chartTemplateId: "pie-simple",
+            prompt: "用图表展示画像。",
+            order: 1,
+            isCustom: false,
+          },
+          {
+            id: "grade-text",
+            name: "年级结论",
+            description: "",
+            requirement: "输出文字结论。",
+            questionIds: [2],
+            outputType: "text",
+            inputModes: ["text"],
+            prompt: "输出文字结论。",
+            order: 2,
+            isCustom: false,
+          },
+          {
+            id: "overview-image",
+            name: "总结配图",
+            description: "",
+            requirement: "生成不虚构人物的总结配图。",
+            questionIds: [],
+            outputType: "image",
+            inputModes: ["image"],
+            prompt: "生成不虚构人物的总结配图。",
+            order: 3,
+            isCustom: false,
+          },
+        ],
+      },
+    });
+
+    expect(report.chapters).toHaveLength(3);
+    expect(report.chapters[0]).toMatchObject({
+      categoryId: "profile-chart",
+      outputType: "chart",
+      chartTemplateId: "pie-simple",
+      chart: { templateId: "pie-simple" },
+    });
+    expect(report.chapters[1]).toMatchObject({
+      categoryId: "grade-text",
+      outputType: "text",
+      chart: undefined,
+    });
+    expect(report.chapters[2]).toMatchObject({
+      categoryId: "overview-image",
+      outputType: "image",
+      imagePrompt: "生成不虚构人物的总结配图。",
+      chart: undefined,
+    });
   });
 });

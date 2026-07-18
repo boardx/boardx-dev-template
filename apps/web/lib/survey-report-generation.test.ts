@@ -79,6 +79,32 @@ describe("resolveSurveyReportGenerationStatus", () => {
     expect(status.currentArtifact?.id).toBe("artifact-current");
     expect(status.versions).toHaveLength(2);
   });
+
+  it("does not mark a restored existing contract as changed when it is not latest", () => {
+    const restored = artifact({
+      id: "artifact-restored",
+      sourceRevision: "rev-1",
+      requirementHash: "req-1",
+      createdAt: "2026-07-18T03:00:00.000Z",
+    });
+    const latest = artifact({
+      id: "artifact-latest",
+      sourceRevision: "rev-1",
+      requirementHash: "req-2",
+      createdAt: "2026-07-18T04:00:00.000Z",
+    });
+
+    const status = resolveSurveyReportGenerationStatus({
+      currentSourceRevision: "rev-1",
+      currentRequirementHash: "req-1",
+      currentResponseCount: 10,
+      artifacts: [latest, restored],
+    });
+
+    expect(status.currentArtifact?.id).toBe("artifact-restored");
+    expect(status.stale).toBe(false);
+    expect(status.requirementChanged).toBe(false);
+  });
 });
 
 describe("markSurveyReportGenerationRequirementsChanged", () => {

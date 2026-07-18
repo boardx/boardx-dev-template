@@ -183,8 +183,13 @@ export function resolveSurveyReportGenerationStatus(input: {
     currentSourceRevision: input.currentSourceRevision,
     currentRequirementHash: input.currentRequirementHash,
     currentResponseCount: input.currentResponseCount,
-    stale: Boolean(latest && latest.sourceRevision !== input.currentSourceRevision),
+    stale: Boolean(
+      !current &&
+      latest &&
+      latest.sourceRevision !== input.currentSourceRevision
+    ),
     requirementChanged: Boolean(
+      !current &&
       latest &&
       latest.sourceRevision === input.currentSourceRevision &&
       latest.requirementHash !== input.currentRequirementHash

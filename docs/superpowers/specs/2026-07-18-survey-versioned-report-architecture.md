@@ -80,6 +80,8 @@ reportVersion = immutable identifier for a successful generated artifact
   仅图片或文本章节省略 `chartTemplateId`。
 - 不把 `generatedAt` 放入内容哈希。
 - 数据库记录变化但分析语义不变时不应产生新修订。
+- `survey-source-v2` 将匿名/实名模式、发布窗口、答卷上限和单人答卷限制纳入事实快照；
+  这些样本口径变化必须产生新的 `sourceRevision`。
 - 失败任务可以重试，但不能覆盖同键的成功产物。
 - 生成权必须在创建会话和调用模型前，按完整 `artifactKey` 原子抢占。只有一个请求可以成为
   生成者；同键并发请求若已有成功产物则直接复用，若仍在生成则返回 `202 in_progress`，
@@ -96,6 +98,8 @@ reportVersion = immutable identifier for a successful generated artifact
 - 旧章节的模块提示合并为自然语言要求；既有成功报告继续可读，迁移不得覆盖不可变产物。
 - 旧产物即使包含原始文本答卷，返回浏览器前也必须经过兼容脱敏；报告正文、导出与历史版本
   只暴露聚合证据和结论，不暴露逐份原始回答。
+- GET 报告计划只能读取并在内存中归一化；只有通过管理权限门禁的保存、分类或显式生成流程
+  才能迁移或写入共享计划。
 
 ## Chart Contract and Persistence Safety
 
@@ -108,6 +112,9 @@ reportVersion = immutable identifier for a successful generated artifact
   标识必须再次经过服务端白名单校验。
 - 预览可以使用白名单模板的安全样例数据，但样例值只能用于草稿预览，绝不能写入事实库、
   证据索引、报告产物或报告版本。
+- 正式报告产物必须逐章固化唯一 `outputType`、自然语言要求和条件性的
+  `chartTemplateId`；文本章节不得携带图表，图片章节保存图片生成约束，图表章节只使用真实
+  聚合证据。
 - 右栏的 `Option JSON` 必须展示当前模板对应的完整只读 JSON，并提供复制操作；它不是可编辑
   的配置入口，也不能借此绕过上述白名单和执行内容校验。
 

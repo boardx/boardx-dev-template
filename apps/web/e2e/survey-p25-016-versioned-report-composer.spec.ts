@@ -17,7 +17,14 @@ interface ReportArtifactSummary {
 }
 
 interface ProfessionalReportPayload {
-  report?: unknown;
+  report?: {
+    chapters: Array<{
+      outputType?: "image" | "chart" | "text";
+      requirement?: string;
+      chartTemplateId?: string;
+      chart?: { templateId?: string };
+    }>;
+  };
   preview?: boolean;
   reused?: boolean;
   selectedArtifactId?: string | null;
@@ -344,6 +351,11 @@ test("single-output report chapters persist and create exact immutable versions"
   expect(chartGenerationPayload.generation.versions).toHaveLength(2);
   expect(chartGenerationPayload.generation.versions).toContainEqual(firstVersion);
   expectNoRawResponseRecords(chartGenerationPayload, initialCanary);
+  expect(chartGenerationPayload.report?.chapters[0]).toMatchObject({
+    outputType: "chart",
+    chartTemplateId: "line-simple",
+    chart: { templateId: "line-simple" },
+  });
   const chartVersion = chartGenerationPayload.generation.versions.find(
     (version) => version.id !== firstVersion.id
   )!;
@@ -409,6 +421,12 @@ test("single-output report chapters persist and create exact immutable versions"
   expect(textGenerationPayload.generation.versions).toContainEqual(firstVersion);
   expect(textGenerationPayload.generation.versions).toContainEqual(chartVersion);
   expectNoRawResponseRecords(textGenerationPayload, initialCanary);
+  expect(textGenerationPayload.report?.chapters[0]).toMatchObject({
+    outputType: "text",
+    requirement: textRequirement,
+  });
+  expect(textGenerationPayload.report?.chapters[0]?.chart).toBeUndefined();
+  expect(textGenerationPayload.report?.chapters[0]?.chartTemplateId).toBeUndefined();
   const textVersion = textGenerationPayload.generation.versions.find(
     (version) =>
       version.id !== firstVersion.id &&

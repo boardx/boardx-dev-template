@@ -3,6 +3,7 @@ import {
   cleanSurveyReportCategoryPlan,
   defaultSurveyReportCategoryPlan,
   ensureSurveyReportCategoryPlan,
+  readSurveyReportCategoryPlan,
   type SurveyQuestion,
 } from "./survey";
 import { query } from "./index";
@@ -245,5 +246,46 @@ describe("Survey source data contract", () => {
       chartTemplateId: "bar-simple",
       chartType: "bar",
     });
+  });
+
+  it("normalizes report plans for read-only callers without persisting migration", async () => {
+    const row = {
+      id: 32,
+      survey_id: 7,
+      categoryPlan: {
+        title: "只读报告",
+        description: "",
+        categories: [{
+          id: "legacy",
+          name: "旧章节",
+          description: "",
+          requirement: "先给结论",
+          questionIds: [11],
+          outputType: "chart",
+          inputModes: ["chart", "text"],
+          chartTemplateId: "bar-simple",
+          prompt: "先给结论",
+          order: 1,
+          isCustom: false,
+        }],
+      },
+      created_at: "2026-07-18T00:00:00.000Z",
+      updated_at: "2026-07-18T00:00:00.000Z",
+    };
+    mockQuery.mockResolvedValueOnce([row]);
+
+    const plan = await readSurveyReportCategoryPlan(
+      7,
+      "商品调研",
+      questions
+    );
+
+    expect(plan.categories[0]).toMatchObject({
+      outputType: "chart",
+      inputModes: ["chart"],
+      chartTemplateId: "bar-simple",
+    });
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(String(mockQuery.mock.calls[0]?.[0])).toContain("SELECT");
   });
 });

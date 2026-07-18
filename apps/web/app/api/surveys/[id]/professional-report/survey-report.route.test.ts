@@ -204,4 +204,75 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
     expect(JSON.stringify(payload)).not.toContain(canary);
     expect(payload.report.chapters[0]).not.toHaveProperty("textResponses");
   });
+
+  it("uses only the persisted plan hash even when a legacy instruction is sent", async () => {
+    mocks.callQwenJson.mockResolvedValue({ claims: [] });
+
+    const first = await POST(new Request(
+      "http://test.local/api/surveys/41/professional-report",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ instruction: "临时要求 A" }),
+      }
+    ), params);
+    const second = await POST(new Request(
+      "http://test.local/api/surveys/41/professional-report",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ instruction: "临时要求 B" }),
+      }
+    ), params);
+
+    expect(first?.status).toBe(200);
+    expect(second?.status).toBe(202);
+    const firstClaim = mocks.claimSurveyReportGeneration.mock.calls[0]?.[0];
+    const secondClaim = mocks.claimSurveyReportGeneration.mock.calls[1]?.[0];
+    expect(firstClaim?.requirementHash).toBeTruthy();
+    expect(secondClaim?.requirementHash).toBe(firstClaim?.requirementHash);
+  });
+
+  it("never sends raw text responses to the model", async () => {
+    const canary = "F16_ROUTE_MODEL_CANARY_72b15";
+    mocks.getSurveyWithQuestions.mockResolvedValue({
+      id: 41,
+      title: "隐私测试",
+      description: "",
+      updated_at: "2026-07-18T07:00:00.000Z",
+      team_id: 3,
+      questions: [
+        {
+          id: 11,
+          position: 0,
+          title: "首要关注项",
+          type: "single",
+          required: true,
+          options: ["安全", "价格"],
+          category: "关注项",
+        },
+        {
+          id: 12,
+          position: 1,
+          title: "补充建议",
+          type: "text",
+          required: false,
+          options: [],
+          category: "关注项",
+        },
+      ],
+    });
+    mocks.listSurveyResponses.mockResolvedValue([{
+      id: 91,
+      submitted_at: new Date("2026-07-18T07:30:00.000Z"),
+      answers: { "11": "安全", "12": canary },
+    }]);
+    mocks.callQwenJson.mockResolvedValue({ claims: [] });
+
+    const response = await POST(reportRequest(), params);
+
+    expect(response?.status).toBe(200);
+    const modelRequest = mocks.callQwenJson.mock.calls[0]?.[0];
+    expect(JSON.stringify(modelRequest)).not.toContain(canary);
+  });
 });

@@ -62,7 +62,7 @@ export interface SurveyReportSourceSnapshot {
   surveyId: number;
   sourceRevision: string;
   contentHash: string;
-  schemaVersion: "survey-source-v1";
+  schemaVersion: "survey-source-v2";
   generatedAt: string;
   responseCount: number;
   sourceData: Record<string, unknown>;

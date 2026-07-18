@@ -368,6 +368,22 @@ export async function getSurveyReportCategoryPlan(surveyId: number): Promise<Sur
   return row ? { id: row.id, survey_id: row.survey_id, ...row.categoryPlan, created_at: row.created_at, updated_at: row.updated_at } : undefined;
 }
 
+export async function readSurveyReportCategoryPlan(
+  surveyId: number,
+  surveyTitle: string,
+  questions: SurveyQuestion[] = []
+): Promise<SurveyReportCategoryPlanInput> {
+  const existing = await getSurveyReportCategoryPlan(surveyId);
+  if (!existing?.categories.length) {
+    return defaultSurveyReportCategoryPlan(surveyTitle, questions);
+  }
+  return normalizePersistedSurveyReportCategoryPlanOutputContract({
+    title: existing.title,
+    description: existing.description,
+    categories: existing.categories,
+  });
+}
+
 export async function ensureSurveyReportCategoryPlan(surveyId: number, surveyTitle: string, questions: SurveyQuestion[] = []): Promise<SurveyReportCategoryPlan> {
   const existing = await getSurveyReportCategoryPlan(surveyId);
   if (existing?.categories.length) {

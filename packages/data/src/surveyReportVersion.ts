@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { getPool, query } from "./index";
 
-export const SURVEY_REPORT_SOURCE_SCHEMA_VERSION = "survey-source-v1" as const;
+export const SURVEY_REPORT_SOURCE_SCHEMA_VERSION = "survey-source-v2" as const;
 export const SURVEY_REPORT_TEMPLATE_VERSION = "survey-report-v1" as const;
 
 export interface SurveyReportSourceSnapshotInput {
@@ -10,6 +10,11 @@ export interface SurveyReportSourceSnapshotInput {
     title: string;
     description: string;
     updatedAt: string;
+    responseMode?: "anonymous" | "identified";
+    publishStartAt?: string | null;
+    publishEndAt?: string | null;
+    responseLimit?: number | null;
+    oneResponsePerUser?: boolean;
   };
   questions: Array<{
     id: number;
@@ -163,6 +168,11 @@ export function buildSurveyReportSourceSnapshot(
       id: input.survey.id,
       title: input.survey.title,
       description: input.survey.description,
+      responseMode: input.survey.responseMode ?? "anonymous",
+      publishStartAt: input.survey.publishStartAt ?? null,
+      publishEndAt: input.survey.publishEndAt ?? null,
+      responseLimit: input.survey.responseLimit ?? null,
+      oneResponsePerUser: input.survey.oneResponsePerUser ?? false,
     },
     questions,
     responses,
@@ -536,8 +546,7 @@ export async function releaseSurveyReportGenerationClaim(
 }
 
 export async function listReadySurveyReportArtifacts(
-  surveyId: number,
-  limit = 20
+  surveyId: number
 ): Promise<SurveyReportArtifactVersion[]> {
   const rows = await query<SurveyReportArtifactVersionRow>(
     `SELECT ${REPORT_ARTIFACT_COLUMNS}
@@ -546,9 +555,8 @@ export async function listReadySurveyReportArtifacts(
        AND status = 'ready'
        AND source_revision IS NOT NULL
        AND requirement_hash IS NOT NULL
-     ORDER BY created_at DESC
-     LIMIT $2`,
-    [surveyId, Math.max(1, Math.min(limit, 50))]
+     ORDER BY created_at DESC`,
+    [surveyId]
   );
   return rows.map(artifactFromRow);
 }

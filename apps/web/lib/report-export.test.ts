@@ -28,6 +28,7 @@ const report: ProfessionalSurveyReportDocument = {
     id: "question-1",
     title: "性别",
     questionId: 1,
+    outputType: "chart",
     validResponseCount: 10,
     missingResponseCount: 0,
     chart: {

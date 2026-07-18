@@ -51,14 +51,37 @@ export function ProfessionalReportDocument({ report }: { report: ProfessionalSur
           </section>
 
           {report.chapters.map((chapter, index) => (
-            <section key={chapter.id} className="break-inside-avoid border-b border-border px-8 py-8">
-              <p className="text-11 font-semibold text-muted-foreground">{String(index + 2).padStart(2, "0")} / 分题分析</p>
+            <section
+              key={chapter.id}
+              data-testid={`professional-report-chapter-${chapter.categoryId ?? chapter.id}`}
+              data-output-type={chapter.outputType ?? "text"}
+              className="break-inside-avoid border-b border-border px-8 py-8"
+            >
+              <p className="text-11 font-semibold text-muted-foreground">
+                {String(index + 2).padStart(2, "0")} / {
+                  chapter.outputType === "chart"
+                    ? "图表章节"
+                    : chapter.outputType === "image"
+                      ? "图片章节"
+                      : "文本章节"
+                }
+              </p>
               <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
                 <h2 className="text-22 font-bold">{chapter.title}</h2>
                 <p className="text-12 text-muted-foreground">有效回答 n={chapter.validResponseCount}</p>
               </div>
-              {chapter.chart ? (
+              {chapter.requirement ? (
+                <p className="mt-3 text-12 leading-5 text-muted-foreground">
+                  生成要求：{chapter.requirement}
+                </p>
+              ) : null}
+              {chapter.outputType === "chart" && chapter.chart ? (
                 <div className="mt-6 grid gap-3" data-testid={`professional-chart-${chapter.questionId}`}>
+                  {chapter.chartTemplateId ? (
+                    <p className="text-11 font-semibold text-muted-foreground">
+                      ECharts 模板：{chapter.chartTemplateId}
+                    </p>
+                  ) : null}
                   {chapter.chart.rows.map((row) => (
                     <div key={row.label} className="grid grid-cols-[120px_minmax(120px,1fr)_88px] items-center gap-3 text-12">
                       <span className="truncate">{row.label}</span>
@@ -69,6 +92,17 @@ export function ProfessionalReportDocument({ report }: { report: ProfessionalSur
                     </div>
                   ))}
                   <p className="border-t border-border pt-2 text-11 text-muted-foreground">口径：{chapter.chart.denominatorLabel} n={chapter.chart.denominator}</p>
+                </div>
+              ) : null}
+              {chapter.outputType === "image" && chapter.imagePrompt ? (
+                <div
+                  data-testid={`professional-image-requirement-${chapter.categoryId ?? chapter.id}`}
+                  className="mt-6 border-l-2 border-foreground bg-secondary/40 px-4 py-3"
+                >
+                  <p className="text-12 font-semibold">图片生成约束</p>
+                  <p className="mt-1 text-13 leading-6 text-muted-foreground">
+                    {chapter.imagePrompt}
+                  </p>
                 </div>
               ) : null}
               {chapter.claims.map((claim) => <p key={claim.id} className="mt-5 text-14 leading-7"><strong>结论：</strong>{claim.statement}</p>)}

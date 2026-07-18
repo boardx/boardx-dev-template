@@ -17,6 +17,7 @@ import {
   listReadySurveyReportArtifacts,
   listSurveyResponses,
   normalizeJsonObject,
+  readSurveyReportCategoryPlan,
   releaseSurveyReportGenerationClaim,
   type SurveyReportArtifactVersion,
   type SurveyReportArtifactKey,
@@ -29,6 +30,7 @@ import {
 } from "@/lib/survey-report-generation";
 import {
   buildProfessionalReportDocument,
+  modelSafeSurveyReportEvidence,
   sanitizeProfessionalReportDocument,
 } from "@/lib/survey-professional-report";
 import { buildSurveyReportRequirementPayload } from "@/lib/survey-report-requirement";
@@ -73,17 +75,32 @@ async function loadReportContext(rawId: string, requireManage: boolean) {
   if (!survey) {
     return { response: NextResponse.json({ error: "问卷不存在" }, { status: 404 }) };
   }
-  const reportCategoryPlan = await ensureSurveyReportCategoryPlan(
-    surveyId,
-    survey.title,
-    survey.questions
-  );
+  const reportCategoryPlan = requireManage
+    ? await ensureSurveyReportCategoryPlan(
+        surveyId,
+        survey.title,
+        survey.questions
+      )
+    : await readSurveyReportCategoryPlan(
+        surveyId,
+        survey.title,
+        survey.questions
+      );
   const sourceSnapshot = buildSurveyReportSourceSnapshot({
     survey: {
       id: survey.id,
       title: survey.title,
       description: survey.description,
       updatedAt: survey.updated_at,
+      responseMode: survey.response_mode,
+      publishStartAt: survey.publish_start_at
+        ? isoTimestamp(survey.publish_start_at)
+        : null,
+      publishEndAt: survey.publish_end_at
+        ? isoTimestamp(survey.publish_end_at)
+        : null,
+      responseLimit: survey.response_limit,
+      oneResponsePerUser: survey.one_response_per_user,
     },
     questions: survey.questions.map((question) => ({
       id: question.id,
@@ -126,6 +143,7 @@ async function loadReportContext(rawId: string, requireManage: boolean) {
     user,
     survey,
     evidence,
+    reportCategoryPlan,
     sourceSnapshot,
     requirementPayload,
     requirementHash,
@@ -185,6 +203,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     const report = artifactReport(artifact) ?? buildProfessionalReportDocument({
       evidence: context.evidence,
       generatedAt: new Date().toISOString(),
+      reportPlan: context.reportCategoryPlan,
     });
 
     return NextResponse.json({
@@ -207,17 +226,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const context = await loadReportContext(params.id, true);
     if ("response" in context) return context.response;
     const body = (await request.json().catch(() => ({}))) as {
-      instruction?: unknown;
       model?: unknown;
     };
-    const instruction = String(body.instruction ?? "").trim();
     const model = String(body.model ?? "qwen3.7-max").trim() || "qwen3.7-max";
-    const requirementHash = instruction
-      ? hashSurveyReportRequirement({
-          plan: context.requirementPayload,
-          instruction,
-        })
-      : context.requirementHash;
+    const requirementHash = context.requirementHash;
     const artifactKey = {
       surveyId: context.survey.id,
       sourceRevision: context.sourceSnapshot.sourceRevision,
@@ -241,7 +253,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       ...artifactKey,
       sessionId: randomUUID(),
       actorUserId: context.user.id,
-      goal: instruction || "生成专业问卷报告",
+      goal: "按已保存的章节计划生成专业问卷报告",
       teamId: context.survey.team_id,
       selectedModelId: model,
       provider: "qwen",
@@ -291,7 +303,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
               role: "user",
               content: JSON.stringify({
                 task: "generate_evidence_bound_survey_claims",
-                requirement: instruction || context.requirementPayload,
+                requirement: context.requirementPayload,
                 requiredShape: {
                   claims: [{
                     statement: "结论",
@@ -302,7 +314,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
                     recommendation: "行动建议",
                   }],
                 },
-                evidence: context.evidence,
+                evidence: modelSafeSurveyReportEvidence(context.evidence),
               }),
             },
           ],
@@ -348,6 +360,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       evidence: context.evidence,
       generatedAt,
       aiClaims,
+      reportPlan: context.reportCategoryPlan,
     });
     const artifact = await createVersionedSurveyReportArtifact({
       id: randomUUID(),

@@ -73,6 +73,33 @@ describe("survey report source revisions", () => {
     expect(second.contentHash).not.toBe(first.contentHash);
   });
 
+  it("changes the source revision when the publication sampling contract changes", () => {
+    const base = sourceWithResponses([
+      response(1, "成分", "2026-07-18T01:00:00.000Z"),
+    ]);
+    const first = buildSurveyReportSourceSnapshot({
+      ...base,
+      survey: {
+        ...base.survey,
+        responseMode: "anonymous",
+        responseLimit: 100,
+        oneResponsePerUser: false,
+      },
+    }, generatedAt);
+    const second = buildSurveyReportSourceSnapshot({
+      ...base,
+      survey: {
+        ...base.survey,
+        responseMode: "identified",
+        responseLimit: 50,
+        oneResponsePerUser: true,
+      },
+    }, generatedAt);
+
+    expect(second.sourceRevision).not.toBe(first.sourceRevision);
+    expect(second.contentHash).not.toBe(first.contentHash);
+  });
+
   it("omits respondent identity from the source data", () => {
     const identifiedResponse = {
       ...response(1, "成分", "2026-07-18T01:00:00.000Z"),
