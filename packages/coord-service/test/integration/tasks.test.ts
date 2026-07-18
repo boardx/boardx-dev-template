@@ -195,3 +195,33 @@ describe("#631 派工入参校验", () => {
     expect(huge.status).toBe(413);
   });
 });
+
+describe("#594 P3 门户派工看板：assignee=* 列全队", () => {
+  beforeEach(async () => {
+    await seedAgent("coord-p3", "coord-p3-token", "coordinator");
+    await seedAgent("wrk-p3a", "wrka-token", "worker");
+    await seedAgent("wrk-p3b", "wrkb-token", "worker");
+  });
+  it("coordinator assignee=* 列出所有 agent 的任务", async () => {
+    await SELF.fetch(post("/tasks", "coord-p3-token", { issue: 701, assignee: "wrk-p3a" }));
+    await SELF.fetch(post("/tasks", "coord-p3-token", { issue: 702, assignee: "wrk-p3b" }));
+    const res = await SELF.fetch(get("/tasks?assignee=*", "coord-p3-token"));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { tasks: Array<{ issue: number; assignee: string }> };
+    const pairs = body.tasks.map((t) => `${t.assignee}:${t.issue}`);
+    expect(pairs).toContain("wrk-p3a:701");
+    expect(pairs).toContain("wrk-p3b:702");
+  });
+  it("worker assignee=* → 403（列全队是协调层特权）", async () => {
+    const res = await SELF.fetch(get("/tasks?assignee=*", "wrka-token"));
+    expect(res.status).toBe(403);
+  });
+  it("assignee=* 可叠加 status 过滤", async () => {
+    const r = await SELF.fetch(post("/tasks", "coord-p3-token", { issue: 703, assignee: "wrk-p3a" }));
+    const id = ((await r.json()) as { task: { id: number } }).task.id;
+    await SELF.fetch(post(`/tasks/${id}/ack`, "wrka-token"));
+    const pending = await SELF.fetch(get("/tasks?assignee=*&status=pending", "coord-p3-token"));
+    const body = (await pending.json()) as { tasks: Array<{ issue: number }> };
+    expect(body.tasks.map((t) => t.issue)).not.toContain(703); // 已 ack，不在 pending
+  });
+});
