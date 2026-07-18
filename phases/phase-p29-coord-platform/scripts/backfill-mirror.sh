@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 # F04 镜像冷启动回填：用 gh api 拉 open issues/PRs → POST /mirror/upsert。
 # webhook 只送增量；存量数据用本脚本一次性灌入（App token 自动回填随后续 feature）。
-# 需要：COORD_API_TOKEN、gh 已登录；可选 COORD_GATEWAY_URL / REPO / LIMIT。
+# F08 起 /mirror/upsert 是管理写端点（COORD_ADMIN_TOKEN 特权，普通 token 404）。
+# 需要：COORD_ADMIN_TOKEN、gh 已登录；可选 COORD_GATEWAY_URL / REPO / LIMIT。
 set -euo pipefail
 BASE="${COORD_GATEWAY_URL:-https://coord-gateway.boardx.workers.dev}"
 REPO="${REPO:-boardx/boardx-dev-template}"
 LIMIT="${LIMIT:-50}"
-: "${COORD_API_TOKEN:?需要 env COORD_API_TOKEN}"
+: "${COORD_ADMIN_TOKEN:?需要 env COORD_ADMIN_TOKEN（F08 起 mirror/upsert 走管理面）}"
 
 upsert() { # stdin: {kind, data} JSON
   curl -s -o /dev/null -w '%{http_code}' -m 30 \
     -X POST "$BASE/api/coord/repos/$REPO/mirror/upsert" \
-    -H "authorization: Bearer $COORD_API_TOKEN" -H 'content-type: application/json' -d @-
+    -H "authorization: Bearer $COORD_ADMIN_TOKEN" -H 'content-type: application/json' -d @-
 }
 
 echo "==> 回填 open issues（≤$LIMIT）"

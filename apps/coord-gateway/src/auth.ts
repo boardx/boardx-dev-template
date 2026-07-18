@@ -51,17 +51,29 @@ export function requireAdmin(req: Request, env: Env): Response | null {
   return null;
 }
 
+/** 鉴权通过后的主体：ops = COORD_API_TOKEN 万能钥匙（保留自证 agent_id 的运维语义）；
+ *  scoped = 按仓 token，携带 DO 在册的 agent_id/owner——下游必须强绑定，禁止自证。 */
+export type RepoPrincipal =
+  | { kind: "ops" }
+  | { kind: "scoped"; agentId: string; owner: string };
+
+export type RepoAccess =
+  | { granted: true; principal: RepoPrincipal }
+  | { granted: false; response: Response };
+
 /** 仓级访问鉴权（REST /api/coord/repos/:o/:r/* 与 MCP 共用）。
- *  通过返回 null；拒绝返回错误 Response（矩阵见文件头）。 */
+ *  通过返回 principal（供 agent_id 强绑定）；拒绝返回错误 Response（矩阵见文件头）。 */
 export async function authorizeRepoAccess(
   req: Request,
   env: Env,
   repo: string,
-): Promise<Response | null> {
-  if (!env.COORD_API_TOKEN) return json(503, { error: "api_token_not_configured" });
+): Promise<RepoAccess> {
+  const deny = (r: Response): RepoAccess => ({ granted: false, response: r });
+  if (!env.COORD_API_TOKEN) return deny(json(503, { error: "api_token_not_configured" }));
   const bearer = bearerOf(req);
-  if (!bearer) return json(401, { error: "unauthorized" });
-  if (timingSafeEqualStr(bearer, env.COORD_API_TOKEN)) return null; // ops 万能钥匙
+  if (!bearer) return deny(json(401, { error: "unauthorized" }));
+  if (timingSafeEqualStr(bearer, env.COORD_API_TOKEN))
+    return { granted: true, principal: { kind: "ops" } }; // ops 万能钥匙
 
   // scoped token 路径：只发 hash 给 DO，明文不出本函数
   const hash = await sha256Hex(bearer);
@@ -71,9 +83,68 @@ export async function authorizeRepoAccess(
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ token_hash: hash }),
   });
-  if (res.status === 200) return null;
-  if (res.status === 401) return json(401, { error: "token_revoked" });
-  if (res.status === 404) return json(403, { error: "token_not_valid_for_repo" }); // 跨仓/伪造
+  if (res.status === 200) {
+    const v = (await res.json()) as { agent_id: string; owner: string };
+    return { granted: true, principal: { kind: "scoped", agentId: v.agent_id, owner: v.owner } };
+  }
+  if (res.status === 401) return deny(json(401, { error: "token_revoked" }));
+  if (res.status === 404) return deny(json(403, { error: "token_not_valid_for_repo" })); // 跨仓/伪造
   // DO 侧异常（422 等）不放行——fail-closed
-  return json(403, { error: "token_verification_failed", upstream_status: res.status });
+  return deny(json(403, { error: "token_verification_failed", upstream_status: res.status }));
+}
+
+// ---------- agent_id 强绑定（F08 返工，#721）----------
+// scoped token 的 agent 身份以 DO 在册记录为准，请求侧自证一律不信：
+// body/工具参数里的 agent_id 与 token 身份不一致 → 403 token_agent_mismatch；
+// 缺省 → 注入 token 身份。ops 万能钥匙路径维持自证（运维语义）。
+
+/** MCP 工具参数版：返回错误 Response 或（可能注入了 agent_id 的）参数对象。 */
+export function bindScopedAgentArgs(
+  principal: RepoPrincipal,
+  args: Record<string, unknown>,
+): Response | Record<string, unknown> {
+  if (principal.kind !== "scoped") return args;
+  const claimed = args["agent_id"];
+  if (claimed !== undefined && claimed !== principal.agentId)
+    return json(403, { error: "token_agent_mismatch", token_agent_id: principal.agentId });
+  return { ...args, agent_id: principal.agentId };
+}
+
+/** REST 版：对 scoped 主体的 POST JSON body 做同样的强绑定，返回可转发的 Request
+ *  （body 可能被改写）或错误 Response。非 JSON/非对象 body 原样放行（DO 会 400/422）。 */
+export async function bindScopedAgentRequest(
+  req: Request,
+  principal: RepoPrincipal,
+): Promise<Request | Response> {
+  if (principal.kind !== "scoped" || req.method !== "POST") return req;
+  const text = await req.text();
+  let parsed: unknown = null;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    /* 交给 DO 报 invalid_json */
+  }
+  let body = text;
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const bound = bindScopedAgentArgs(principal, parsed as Record<string, unknown>);
+    if (bound instanceof Response) return bound;
+    body = JSON.stringify(bound);
+  }
+  return new Request(req.url, { method: req.method, headers: req.headers, body });
+}
+
+// ---------- REST 可达面 allowlist（F08 返工）----------
+// scoped/API token 只能触达协调读写端点；/mirror/upsert（挂 admin 面）、/webhook/ingest、
+// /projector/*、/tokens* 是内部/管理端点，普通透传一律 404。
+// F06 投影 cron 与 Queues 消费者持 DO stub 直调（repoStub().fetch），不经 handleRest，不受影响。
+// /stream 预留给 F09 实时化读端点（GET）。
+export function isAllowedRestSubpath(method: string, sub: string): boolean {
+  if (sub === "/claims") return true; // GET 列表 / POST 认领
+  if (/^\/claims\/[^/]+\/(heartbeat|release)$/.test(sub)) return method === "POST";
+  if (sub === "/events") return method === "GET";
+  if (sub === "/evidence") return true; // GET 查询 / POST 提交声明
+  if (sub === "/andon") return method === "GET"; // raise/clear 走 COORD_ADMIN_TOKEN 管理面
+  if (sub === "/stream" || sub.startsWith("/stream/")) return method === "GET";
+  if (sub.startsWith("/realtime/")) return method === "GET";
+  return false;
 }

@@ -43,6 +43,11 @@ log "OK: mint（hash 前缀 $PREFIX；明文不落盘不回显）"
 status 200 GET "$GATEWAY_URL/api/coord/repos/$REPO/claims" "$TOKEN"
 log "OK: scoped token 调本仓 API → 200"
 
+# ---------- 2b) agent_id 强绑定（#721）：冒充他人身份 → 403 ----------
+status 403 POST "$GATEWAY_URL/api/coord/repos/$REPO/claims" "$TOKEN" \
+  "{\"protocol\":\"coord/0.1\",\"resource_id\":\"issue:1\",\"resource_type\":\"issue\",\"agent_id\":\"someone-else\",\"ttl_seconds\":3600}"
+log "OK: scoped token 冒充他人 agent_id → 403（强绑定生效）"
+
 # ---------- 3) 伪造他仓路径 → 403 ----------
 status 403 GET "$GATEWAY_URL/api/coord/repos/$OTHER_REPO/claims" "$TOKEN"
 log "OK: 伪造他仓路径 → 403（按仓 scope 生效）"

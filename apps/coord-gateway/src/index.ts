@@ -6,7 +6,12 @@ import { verifyWebhookSignature } from "./signature";
 import { toIngestBody, type QueuedWebhook } from "./mapping";
 import { runProjectionTick } from "./projection";
 import { handleMcp } from "./mcp";
-import { authorizeRepoAccess, requireAdmin } from "./auth";
+import {
+  authorizeRepoAccess,
+  bindScopedAgentRequest,
+  isAllowedRestSubpath,
+  requireAdmin,
+} from "./auth";
 
 export { RepoHub };
 
@@ -66,13 +71,17 @@ async function handleAdmin(req: Request, env: Env, repo: string, subpath: string
 async function handleRest(req: Request, env: Env, url: URL): Promise<Response> {
   const m = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)(\/.*)$/);
   if (!m) return json(404, { error: "not_found" });
-  // /tokens* 是管理面（上面已路由）：普通 REST 透传不得触达 DO 的 token 接口，
-  // 否则任意持 scoped token 者可自 mint/枚举 hash——防御纵深，双保险
-  if (m[3] === "/tokens" || m[3]!.startsWith("/tokens/")) return json(404, { error: "not_found" });
-  const denied = await authorizeRepoAccess(req, env, `${m[1]}/${m[2]}`);
-  if (denied) return denied;
+  // 可达面 allowlist（F08 返工）：普通 token（scoped/API）只触达协调端点；
+  // /mirror/upsert（admin 面，上面已路由）、/webhook/ingest、/projector/*、/tokens*
+  // 等内部/管理写端点一律 404。内部消费者（Queues/投影 cron）走 DO stub 不经此处。
+  if (!isAllowedRestSubpath(req.method, m[3]!)) return json(404, { error: "not_found" });
+  const access = await authorizeRepoAccess(req, env, `${m[1]}/${m[2]}`);
+  if (!access.granted) return access.response;
+  // agent_id 强绑定（#721）：scoped token 不得在 body 里自证他人身份
+  const bound = await bindScopedAgentRequest(req, access.principal);
+  if (bound instanceof Response) return bound;
   return repoStub(env, `${m[1]}/${m[2]}`).fetch(
-    new Request(new URL(m[3]! + url.search, url.origin), req),
+    new Request(new URL(m[3]! + url.search, url.origin), bound),
   );
 }
 
@@ -94,6 +103,11 @@ export default {
     const tok = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)(\/tokens(?:\/(?:mint|revoke))?)$/);
     if (tok && ((req.method === "POST" && tok[3] !== "/tokens") || (req.method === "GET" && tok[3] === "/tokens")))
       return handleAdmin(req, env, `${tok[1]}/${tok[2]}`, tok[3]!);
+    // 镜像回填（F04 backfill-mirror.sh）是管理写端点（F08 返工挂 admin 面）：
+    // 常规镜像增量走 webhook→Queues→DO stub，不经此路由
+    const mir = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)(\/mirror\/upsert)$/);
+    if (req.method === "POST" && mir)
+      return handleAdmin(req, env, `${mir[1]}/${mir[2]}`, mir[3]!);
     if (url.pathname.startsWith("/api/coord/repos/")) return handleRest(req, env, url);
     // MCP 接入面（F07）：逻辑全在 src/mcp.ts，这里只做路由（降低与并行改动的冲突面）
     const mcp = url.pathname.match(/^\/api\/coord\/mcp\/([^/]+)\/([^/]+)$/);
