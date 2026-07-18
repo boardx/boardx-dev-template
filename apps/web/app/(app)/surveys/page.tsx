@@ -58,10 +58,12 @@ import {
   type ReportComposerPreview,
 } from "@/lib/survey-report-category-plan";
 import {
+  beginSurveyReportCategoryPlanPersistence,
+  beginSurveyReportGenerationRequest,
   captureSurveyReportRequestEpoch,
   createSurveyReportRequestState,
   isSurveyReportRequestCurrent,
-  markSurveyReportRequestsRequirementsChanged,
+  settleSurveyReportGenerationRequest,
   settleSurveyReportRefresh,
   type SurveyReportRequestState,
   type SurveyReportGenerationStatus,
@@ -4502,10 +4504,10 @@ export default function SurveysPage() {
     }
   }
 
-  async function refreshWorkspaceProfessionalReport(surveyId: number): Promise<boolean> {
-    const requestEpoch = captureSurveyReportRequestEpoch(
-      getProfessionalReportRequestState(surveyId)
-    );
+  async function refreshWorkspaceProfessionalReport(
+    surveyId: number,
+    requestEpoch: number
+  ): Promise<boolean> {
     try {
       const res = await fetch(`/api/surveys/${surveyId}/professional-report`);
       const payload = await res.json().catch(() => ({}));
@@ -4532,8 +4534,40 @@ export default function SurveysPage() {
     }
   }
 
+  async function applyPersistedWorkspaceReportCategoryPlan(input: {
+    surveyId: number;
+    reportCategoryPlan: ReportCategoryPlanDraft;
+    invalidateWhenUnchanged: boolean;
+  }): Promise<"unchanged" | "refreshed" | "refresh-failed"> {
+    const transition = beginSurveyReportCategoryPlanPersistence({
+      state: getProfessionalReportRequestState(input.surveyId),
+      previousPlan: reportCategoryPlansBySurveyId[input.surveyId],
+      persistedPlan: input.reportCategoryPlan,
+      invalidateWhenUnchanged: input.invalidateWhenUnchanged,
+    });
+    setReportCategoryPlansBySurveyId((items) => ({
+      ...items,
+      [input.surveyId]: input.reportCategoryPlan,
+    }));
+    if (!transition.invalidated || transition.requestEpoch == null) {
+      return "unchanged";
+    }
+    setProfessionalReportRequestState(input.surveyId, transition.state);
+    return await refreshWorkspaceProfessionalReport(
+      input.surveyId,
+      transition.requestEpoch
+    )
+      ? "refreshed"
+      : "refresh-failed";
+  }
+
   async function classifyWorkspaceReportCategories(surveyId: number) {
-    if (workspaceTemplateSaving) return;
+    if (
+      workspaceTemplateSaving ||
+      workspaceReportClassifying ||
+      workspaceReportGenerating
+    ) return;
+    reportCategoryPlanRequestVersion.current += 1;
     setWorkspaceReportClassifying(true);
     setWorkspaceTemplateStatus("");
     setWorkspaceTemplateError("");
@@ -4544,8 +4578,21 @@ export default function SurveysPage() {
         setWorkspaceTemplateError(payload?.error ?? "AI 分类失败，请检查模型配置后重试");
         return;
       }
-      setReportCategoryPlansBySurveyId((items) => ({ ...items, [surveyId]: payload.reportCategoryPlan as ReportCategoryPlanDraft }));
-      setWorkspaceTemplateStatus(payload?.warning ?? "AI 已按问卷问题生成报告分类结构。");
+      const persistence = await applyPersistedWorkspaceReportCategoryPlan({
+        surveyId,
+        reportCategoryPlan:
+          payload.reportCategoryPlan as ReportCategoryPlanDraft,
+        invalidateWhenUnchanged: false,
+      });
+      const status =
+        payload?.warning ?? "AI 已按问卷问题生成报告分类结构。";
+      setWorkspaceTemplateStatus(
+        persistence === "unchanged"
+          ? status
+          : persistence === "refreshed"
+            ? `${status} 正式报告状态已刷新。`
+            : `${status} 正式报告状态刷新失败，请稍后重试。`
+      );
     } catch {
       setWorkspaceTemplateError("AI 分类失败，请稍后重试。");
     } finally {
@@ -4554,7 +4601,11 @@ export default function SurveysPage() {
   }
 
   async function saveWorkspaceReportCategoryPlan(surveyId: number, plan: ReportCategoryPlanDraft) {
-    if (workspaceTemplateSaving || workspaceReportClassifying) return;
+    if (
+      workspaceTemplateSaving ||
+      workspaceReportClassifying ||
+      workspaceReportGenerating
+    ) return;
     reportCategoryPlanRequestVersion.current += 1;
     setWorkspaceTemplateSaving(true);
     setWorkspaceTemplateStatus("");
@@ -4571,16 +4622,13 @@ export default function SurveysPage() {
         return;
       }
       const saved = payload.reportCategoryPlan as ReportCategoryPlanDraft;
-      setProfessionalReportRequestState(
+      const persistence = await applyPersistedWorkspaceReportCategoryPlan({
         surveyId,
-        markSurveyReportRequestsRequirementsChanged(
-          getProfessionalReportRequestState(surveyId)
-        )
-      );
-      setReportCategoryPlansBySurveyId((items) => ({ ...items, [surveyId]: saved }));
-      const refreshed = await refreshWorkspaceProfessionalReport(surveyId);
+        reportCategoryPlan: saved,
+        invalidateWhenUnchanged: true,
+      });
       setWorkspaceTemplateStatus(
-        refreshed
+        persistence === "refreshed"
           ? "报告结构已保存，正式报告状态已刷新。"
           : "报告结构已保存，但正式报告状态刷新失败，请稍后重试。"
       );
@@ -4596,7 +4644,15 @@ export default function SurveysPage() {
     instruction = "",
     reportCategoryPlan?: ReportCategoryPlanDraft
   ) {
-    if (workspaceReportGenerating) return;
+    if (
+      workspaceReportGenerating ||
+      workspaceTemplateSaving ||
+      workspaceReportClassifying
+    ) return;
+    const generationRequest = beginSurveyReportGenerationRequest(
+      getProfessionalReportRequestState(surveyId)
+    );
+    setProfessionalReportRequestState(surveyId, generationRequest.state);
     setWorkspaceReportGenerating(true);
     setWorkspaceTemplateStatus("");
     setWorkspaceTemplateError("");
@@ -4611,24 +4667,53 @@ export default function SurveysPage() {
         body: JSON.stringify(reportInstruction ? { instruction: reportInstruction } : {}),
       });
       const payload = await res.json().catch(() => ({}));
+      if (!isSurveyReportRequestCurrent(
+        getProfessionalReportRequestState(surveyId),
+        generationRequest.requestEpoch
+      )) {
+        return;
+      }
       if (!res.ok) {
         setWorkspaceTemplateError(payload?.error ?? "正式报告生成失败");
         return;
       }
-      if (payload.report) {
-        setProfessionalReportsBySurveyId((items) => ({ ...items, [surveyId]: payload.report as ProfessionalSurveyReportDocument }));
+      if (!payload.report || !payload.generation) {
+        setWorkspaceTemplateError("正式报告生成失败");
+        return;
       }
-      if (payload.generation) {
-        setProfessionalReportGenerationBySurveyId((items) => ({
-          ...items,
-          [surveyId]: payload.generation as SurveyReportGenerationStatus,
-        }));
-      }
+      const resolution = settleSurveyReportGenerationRequest(
+        getProfessionalReportRequestState(surveyId),
+        generationRequest.requestEpoch,
+        true
+      );
+      if (!resolution.accepted) return;
+      setProfessionalReportRequestState(surveyId, resolution.state);
+      setProfessionalReportsBySurveyId((items) => ({
+        ...items,
+        [surveyId]: payload.report as ProfessionalSurveyReportDocument,
+      }));
+      setProfessionalReportGenerationBySurveyId((items) => ({
+        ...items,
+        [surveyId]: payload.generation as SurveyReportGenerationStatus,
+      }));
       setWorkspaceTemplateStatus(
         payload.warning ??
         (payload.reused ? "当前事实库和报告要求未变化，已复用已有版本。" : "专业报告新版本已生成。")
       );
     } catch {
+      const resolution = settleSurveyReportGenerationRequest(
+        getProfessionalReportRequestState(surveyId),
+        generationRequest.requestEpoch,
+        false
+      );
+      if (isSurveyReportRequestCurrent(
+        resolution.state,
+        generationRequest.requestEpoch
+      )) {
+        setProfessionalReportRequestState(surveyId, resolution.state);
+      } else {
+        return;
+      }
       setWorkspaceTemplateError("正式报告生成失败，请稍后重试。");
     } finally {
       setWorkspaceReportGenerating(false);

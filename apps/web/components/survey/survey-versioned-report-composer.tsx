@@ -193,9 +193,9 @@ export function SurveyVersionedReportComposer({
             type="button"
             size="sm"
             variant="outline"
-            disabled={classifying || saving}
+            disabled={classifying || saving || generating}
             onClick={() => {
-              if (!saving) onClassify();
+              if (!saving && !generating) onClassify();
             }}
           >
             <Sparkles className="h-4 w-4" strokeWidth={1.6} />

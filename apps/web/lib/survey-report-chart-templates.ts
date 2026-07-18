@@ -241,10 +241,18 @@ export const SURVEY_REPORT_CHART_TEMPLATES: readonly SurveyReportChartTemplate[]
   },
 ];
 
+export function findSurveyReportChartTemplate(
+  id: string
+): SurveyReportChartTemplate | undefined {
+  return SURVEY_REPORT_CHART_TEMPLATES.find(
+    (candidate) => candidate.id === id
+  );
+}
+
 export function getSurveyReportChartTemplate(
   id: SurveyReportChartTemplateId,
 ): SurveyReportChartTemplate {
-  const template = SURVEY_REPORT_CHART_TEMPLATES.find((candidate) => candidate.id === id);
+  const template = findSurveyReportChartTemplate(id);
   if (!template) {
     throw new Error(`Unknown survey report chart template: ${id}`);
   }

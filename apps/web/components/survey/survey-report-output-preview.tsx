@@ -25,7 +25,7 @@ import { BarChart3, Check, Copy, FileText, ImageIcon } from "lucide-react";
 import type { SurveyReportCategoryInput } from "@repo/data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getSurveyReportChartTemplate } from "@/lib/survey-report-chart-templates";
+import { findSurveyReportChartTemplate } from "@/lib/survey-report-chart-templates";
 
 echarts.use([
   BarChart,
@@ -97,15 +97,32 @@ function ChartOutputPreview({
   const [view, setView] = useState<"preview" | "json">("preview");
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState("");
-  const template = getSurveyReportChartTemplate(
+  const template = findSurveyReportChartTemplate(
     category.chartTemplateId ?? "line-simple"
   );
-  const optionJson = JSON.stringify(template.option, null, 2);
+  const optionJson = template
+    ? JSON.stringify(template.option, null, 2)
+    : "";
 
   useEffect(() => {
     setCopied(false);
     setCopyError("");
-  }, [optionJson, template.id]);
+  }, [optionJson, template?.id]);
+
+  if (!template) {
+    return (
+      <div
+        data-testid="report-chart-template-error"
+        role="alert"
+        className="border border-destructive/30 bg-destructive/5 px-4 py-4 text-destructive"
+      >
+        <h4 className="text-14 font-bold">图表模板无效</h4>
+        <p className="mt-1 text-12 leading-5">
+          当前章节引用的模板不在允许列表中，请重新选择图表模板后保存。
+        </p>
+      </div>
+    );
+  }
 
   async function copyOption() {
     try {

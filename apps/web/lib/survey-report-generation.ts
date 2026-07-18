@@ -1,4 +1,8 @@
-import type { SurveyReportArtifactVersion } from "@repo/data";
+import type {
+  SurveyReportArtifactVersion,
+  SurveyReportCategoryPlanInput,
+} from "@repo/data";
+import { areSurveyReportCategoryPlansEqual } from "./survey-report-category-plan";
 
 export interface SurveyReportArtifactSummary {
   id: string;
@@ -34,6 +38,12 @@ export interface SurveyReportRefreshResolution {
   state: SurveyReportRequestState;
 }
 
+export interface SurveyReportRequestTransition {
+  invalidated: boolean;
+  requestEpoch: number | null;
+  state: SurveyReportRequestState;
+}
+
 export function createSurveyReportRequestState(): SurveyReportRequestState {
   return {
     epoch: 0,
@@ -53,6 +63,46 @@ export function markSurveyReportRequestsRequirementsChanged(
   return {
     epoch: state.epoch + 1,
     requirementsChangedOverride: true,
+  };
+}
+
+export function beginSurveyReportCategoryPlanPersistence(input: {
+  state: SurveyReportRequestState;
+  previousPlan: SurveyReportCategoryPlanInput | undefined;
+  persistedPlan: SurveyReportCategoryPlanInput;
+  invalidateWhenUnchanged: boolean;
+}): SurveyReportRequestTransition {
+  const unchanged = input.previousPlan
+    ? areSurveyReportCategoryPlansEqual(
+        input.previousPlan,
+        input.persistedPlan
+      )
+    : false;
+  if (unchanged && !input.invalidateWhenUnchanged) {
+    return {
+      invalidated: false,
+      requestEpoch: null,
+      state: input.state,
+    };
+  }
+  const state = markSurveyReportRequestsRequirementsChanged(input.state);
+  return {
+    invalidated: true,
+    requestEpoch: state.epoch,
+    state,
+  };
+}
+
+export function beginSurveyReportGenerationRequest(
+  state: SurveyReportRequestState
+): { requestEpoch: number; state: SurveyReportRequestState } {
+  const next = {
+    ...state,
+    epoch: state.epoch + 1,
+  };
+  return {
+    requestEpoch: next.epoch,
+    state: next,
   };
 }
 
@@ -78,6 +128,14 @@ export function settleSurveyReportRefresh(
       requirementsChangedOverride: false,
     },
   };
+}
+
+export function settleSurveyReportGenerationRequest(
+  state: SurveyReportRequestState,
+  requestEpoch: number,
+  succeeded: boolean
+): SurveyReportRefreshResolution {
+  return settleSurveyReportRefresh(state, requestEpoch, succeeded);
 }
 
 export function markSurveyReportGenerationRequirementsChanged(
