@@ -74,8 +74,8 @@
       "title": "聊天工作区左栏接通房间文件库（sources 勾选）",
       "user_visible_behavior": "聊天三栏工作区左栏（替换现『文件能力将在 p10 接入』占位）展示与 Files tab 同一房间文件列表；可在此上传（落房间库并标注 chat_thread_id 来源）；可勾选文件作为 AI 上下文 sources，展示『N sources selected as context』（data-testid=room-files-panel、room-files-source-toggle）；同一文件在该房间所有线程可见。",
       "design_ref": "prototype:<!-- ROOM WORKSPACE: Studio / Room Chat (3-col) --> 左栏 sources",
-      "status": "not_started",
-      "sprint": null,
+      "status": "passing",
+      "sprint": "01",
       "owner": null,
       "capability": "CAP-FILE",
       "depends_on": [
@@ -87,7 +87,7 @@
         "pnpm --filter @repo/data run migrate",
         "pnpm --filter @repo/web exec playwright test e2e/room-rr-004-chat-files-panel.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F04.verify.log @ 2026-07-11T01:32:38.219Z",
       "notes": "uc-rr-003 步骤 4/6。勾选状态进入发消息请求负载即可（RAG 内容注入归 p10）；e2e 断言跨线程可见同一文件。"
     },
     {

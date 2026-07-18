@@ -1,11 +1,13 @@
-import type {
+import {
+  normalizeAiStoreItemType,
+  type AiStoreSkillKind,
   AiStoreItemScope,
   AiStoreItemStatus,
   AiStoreItemType,
   AiStoreSubmitAction,
 } from "@repo/data";
 
-export const VALID_TYPES: AiStoreItemType[] = ["agent", "ai-tool", "image-tool", "template"];
+export const VALID_TYPES: AiStoreItemType[] = ["agent", "skill", "template"];
 const VALID_SCOPES: AiStoreItemScope[] = ["personal", "team", "platform"];
 const VALID_ACTIONS: AiStoreSubmitAction[] = ["draft", "publish", "submit_review"];
 
@@ -13,13 +15,15 @@ export interface ParsedAiStorePayload {
   type: AiStoreItemType;
   scope: AiStoreItemScope;
   status: AiStoreItemStatus;
-  teamId: number | null;
+  originTeamId: number;
   name: string;
   description: string;
   cover: string | null;
   tags: string[];
   examples: string[];
   config: Record<string, unknown>;
+  allowCopy: boolean;
+  expectedVersion?: number;
 }
 
 export interface PayloadResult {
@@ -40,10 +44,22 @@ function splitList(value: unknown): string[] {
 
 export function parseAiStorePayload(body: Record<string, unknown>, currentTeamId: number | null): PayloadResult {
   const errors: Record<string, string> = {};
+  if (currentTeamId == null) errors.team = "请先选择团队";
 
   const typeRaw = String(body.type ?? "");
-  const type = VALID_TYPES.includes(typeRaw as AiStoreItemType) ? (typeRaw as AiStoreItemType) : undefined;
-  if (!type) errors.type = "请选择创建类型";
+  const normalizedType = normalizeAiStoreItemType(typeRaw);
+  if (!normalizedType) errors.type = "请选择创建类型";
+  const type = normalizedType?.type;
+
+  let skillKind: AiStoreSkillKind | undefined = normalizedType?.skillKind;
+  if (type === "skill" && !skillKind) {
+    const requestedSkillKind = String(body.skillKind ?? "");
+    if (requestedSkillKind === "text" || requestedSkillKind === "image") {
+      skillKind = requestedSkillKind;
+    } else {
+      errors.skillKind = "请选择 Skill 类型";
+    }
+  }
 
   const actionRaw = String(body.action ?? "draft");
   const action = VALID_ACTIONS.includes(actionRaw as AiStoreSubmitAction)
@@ -60,13 +76,21 @@ export function parseAiStorePayload(body: Record<string, unknown>, currentTeamId
   const name = String(body.name ?? "").trim();
   const description = String(body.description ?? "").trim();
   const configText = String(body.config ?? "").trim();
+  const templateBoardId = body.templateBoardId == null ? undefined : Number(body.templateBoardId);
+  const expectedVersionRaw = body.expectedVersion;
+  const expectedVersion = expectedVersionRaw == null ? undefined : Number(expectedVersionRaw);
   if (!name) errors.name = "名称不能为空";
   if (!description) errors.description = "描述不能为空";
   if (!configText) errors.config = "配置不能为空";
+  if (type === "template" && (!Number.isInteger(templateBoardId) || templateBoardId! < 1)) {
+    errors.templateBoardId = "请选择模板源白板";
+  }
+  if (expectedVersionRaw != null && (!Number.isInteger(expectedVersion) || expectedVersion! < 1)) {
+    errors.expectedVersion = "版本号无效";
+  }
 
   let scope = requestedScope ?? "personal";
   let status: AiStoreItemStatus = "draft";
-  let teamId: number | null = null;
 
   if (action === "publish") {
     if (scope === "platform") errors.scope = "平台范围需要提交审核，不能直接发布";
@@ -83,23 +107,36 @@ export function parseAiStorePayload(body: Record<string, unknown>, currentTeamId
   }
   if (scope === "team") {
     if (currentTeamId == null) errors.scope = "发布到团队前请先选择团队";
-    teamId = currentTeamId;
   }
 
-  if (Object.keys(errors).length > 0 || !type || !action) return { errors };
+  if (Object.keys(errors).length > 0 || !type || !action || currentTeamId == null) return { errors };
 
   return {
     payload: {
       type,
       scope,
       status,
-      teamId,
+      originTeamId: currentTeamId,
       name,
       description,
       cover: String(body.cover ?? "").trim() || null,
       tags: splitList(body.tags),
       examples: splitList(body.examples),
-      config: { instructions: configText },
+      config: {
+        instructions: configText,
+        ...(type === "skill" ? { skillKind } : {}),
+        ...(type === "template" ? { templateBoardId } : {}),
+        ...(type === "agent" && Array.isArray(body.relatedSkillIds)
+          ? {
+              relatedSkillIds: body.relatedSkillIds
+                .map(Number)
+                .filter((id) => Number.isInteger(id) && id > 0)
+                .slice(0, 50),
+            }
+          : {}),
+      },
+      allowCopy: body.allowCopy === true,
+      expectedVersion,
     },
   };
 }

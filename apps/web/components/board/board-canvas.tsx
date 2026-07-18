@@ -1,9 +1,19 @@
 "use client";
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { CanvasViewport } from "@/components/board/canvas-viewport";
 import {
   FabricCanvas,
+  resolveConnectorEndpoints,
   type ItemMove,
   type ItemResize,
   type RenderItem,
@@ -461,6 +471,10 @@ function mergeRemoteItems(
 export interface BoardCanvasHandle {
   undo: () => void;
   redo: () => void;
+  // p7:F10（uc-board-header-006）：语音转录到白板——Header 的麦克风录制+转写完成后，
+  // 把识别文本作为文本组件写入画布并选中。复用 addText 的落库/哨兵/选中管线，只是
+  // 文案来自转写结果而非 DEFAULT_TEXT。
+  addVoiceText: (text: string) => void;
 }
 
 export const BoardCanvas = forwardRef<
@@ -571,6 +585,107 @@ export const BoardCanvas = forwardRef<
   const canRedo = useMemo(() => redoStack.current.length > 0, [historyTick]);
   // 视口快照（CanvasViewport 上报），供 fabric viewportTransform 镜像与测试 API 坐标换算。
   const [vp, setVp] = useState<ViewportState>({ tx: 0, ty: 0, scale: 1 });
+  // issue #470：Widget Menu 从固定 dock 位置改为跟随选区的浮动 context toolbar。
+  // wmPos=null 时不渲染（未定位/无选中/拖动中）；有值时用 position:fixed 摆到屏幕坐标
+  // （不是画布容器的相对坐标——用 fixed 可以直接拿 window 尺寸做溢出翻转/夹紧，不用
+  // 另外测量画布容器与外层 relative 祖先的偏移）。
+  const [wmPos, setWmPos] = useState<{ left: number; top: number } | null>(null);
+  const [wmDragActive, setWmDragActive] = useState(false);
+  const widgetMenuRef = useRef<HTMLDivElement | null>(null);
+
+  // 选区包围盒（画布/场景坐标）：所有选中 item 的 x/y/w/h 取并集。
+  // connector 特判（issue #470 PR #525 review 修复，见 coord-main 评论）：connector 的
+  // 落库 x/y/w/h 是创建时的初始包围盒，端点绑定到别的组件后，组件一移动，这个落库值就
+  // 陈旧了——本文件里 getItemScreenRect 对 connector 从不用它，而是 resolveConnectorEndpoints
+  // 按当前绑定组件的实时位置重算最近锚点。这里必须用同一套口径，否则端点跟随组件移动后，
+  // 浮动工具条会锚定在与视觉连线不一致的旧位置。
+  const selectionBBox = useMemo(() => {
+    if (selected.size === 0) return null;
+    const sel = items.filter((it) => selected.has(it.id));
+    if (sel.length === 0) return null;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    const consume = (x: number, y: number) => {
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    };
+    for (const it of sel) {
+      if (isConnector(it)) {
+        const conn = {
+          fromId: getConnectorFromId(it),
+          toId: getConnectorToId(it),
+          fromPoint: getConnectorFreePoint(it, "from") ?? { x: it.x, y: it.y },
+          toPoint: getConnectorFreePoint(it, "to") ?? { x: it.x + it.w, y: it.y + it.h },
+        };
+        const { from, to } = resolveConnectorEndpoints(conn, items);
+        consume(from.x, from.y);
+        consume(to.x, to.y);
+      } else {
+        consume(it.x, it.y);
+        consume(it.x + it.w, it.y + it.h);
+      }
+    }
+    return { minX, minY, maxX, maxY };
+  }, [items, selected]);
+
+  // issue #470：把选区包围盒（场景坐标）换算成屏幕坐标，摆在包围盒上方；顶部放不下
+  // （会盖住 Header）就翻转到选区下方；下方也放不下（贴视口底部，会盖住底部 dock）就
+  // 夹在 dock 安全区之上。水平方向夹在窗口内不溢出。
+  //
+  // 真实回归排查记录（供后来者理解为什么不是「简单摆上方」）：
+  // ① 曾经试过"上方放不下就固定贴 Header 安全区下沿"（不管选区具体位置），结果发现
+  //    这反而会让工具条压住"刚好离 Header 很近的那个被选中对象自己"（e2e 复现：
+  //    board-menu-003 双击文本组件进入编辑，双击点恰好落在被自身工具条盖住的区域，
+  //    编辑框未出现）——"固定贴顶"对近顶对象不安全，因为工具条会伸进对象自己的躯干里。
+  // ② 回到"翻转到选区下方"后，之所以现在安全（而不是重蹈最早那次导致相邻堆叠对象被盖住
+  //    的覆辙），是因为同时把 addNote/addText/addShape/addEmbed/addLink 的默认纵向堆叠
+  //    间距从 130 加到了 250（见各 addX 函数），gap 从仅 30px 变成 150px，稳稳大于工具条
+  //    常见高度（36~114px），翻到下方不会再撞见下一个堆叠对象。
+  // 用 useLayoutEffect 是因为要读 widgetMenuRef 的真实渲染尺寸（首次出现时还没量过，退化
+  // 用估计值，量完立即在同一绘制前的时机纠正，不会闪一帧到错误位置再跳）。
+  useLayoutEffect(() => {
+    if (!selectionBBox || wmDragActive) {
+      setWmPos(null);
+      return;
+    }
+    const containerRect = viewportContainerRect();
+    if (!containerRect) {
+      setWmPos(null);
+      return;
+    }
+    const GAP = 10;
+    const MARGIN = 12;
+    const HEADER_SAFE_TOP = 64; // 避开 Board Header（约 56px 高 + 余量）
+    const DOCK_SAFE_BOTTOM = 88; // 避开底部悬浮 dock（约 72px 高 + 余量）
+
+    const screenLeft = containerRect.left + vp.tx + selectionBBox.minX * vp.scale;
+    const screenTop = containerRect.top + vp.ty + selectionBBox.minY * vp.scale;
+    const screenRight = containerRect.left + vp.tx + selectionBBox.maxX * vp.scale;
+    const screenBottom = containerRect.top + vp.ty + selectionBBox.maxY * vp.scale;
+    const centerX = (screenLeft + screenRight) / 2;
+
+    const el = widgetMenuRef.current;
+    const menuW = el?.offsetWidth || 320;
+    const menuH = el?.offsetHeight || 36;
+
+    let top = screenTop - GAP - menuH;
+    if (top < HEADER_SAFE_TOP) {
+      top = screenBottom + GAP; // 上方放不下 → 翻转到选区下方
+    }
+    const maxTop = window.innerHeight - DOCK_SAFE_BOTTOM - menuH;
+    if (top > maxTop) {
+      top = Math.max(HEADER_SAFE_TOP, maxTop); // 下方也放不下 → 夹在安全区内
+    }
+
+    let left = centerX - menuW / 2;
+    left = Math.min(Math.max(left, MARGIN), window.innerWidth - menuW - MARGIN);
+
+    setWmPos({ left, top });
+  }, [selectionBBox, vp, wmDragActive]);
   // fabric 拖拽进行中（onOperating 回调驱动）：轮询同步在拖拽中不合并服务端快照。
   const draggingRef = useRef(false);
   // p8:F02 — 拖拽/操作中的 item ids 快照（onOperating 置位时从 selectedRef 拷贝），
@@ -1105,6 +1220,10 @@ export const BoardCanvas = forwardRef<
     draggingRef.current = op;
     draggingIdsRef.current = op ? Array.from(selectedRef.current) : [];
     setOperating(op);
+    // issue #470：拖动中 items 的 React 状态不逐帧更新（只在 onMoveCommit 落地时更新一次），
+    // 若这期间仍显示浮动工具条，它会锚定在拖动前的旧位置——选「临时隐藏」而非跟着假位置走，
+    // 拖拽结束后 items 落地 + selectionBBox 重算，工具条在新位置重新出现。
+    setWmDragActive(op);
   }, []);
 
   // p7:F14（uc-context-menu-003）：渲染顺序 = 按 (z, 原数组下标) 稳定排序后的顺序。
@@ -1197,7 +1316,7 @@ export const BoardCanvas = forwardRef<
     setActiveTool("sticky");
     setOpenPanel(null);
     const x = 40;
-    const y = 40 + placeN.current++ * 130;
+    const y = 40 + placeN.current++ * 250;
     const res = await fetch(`/api/boards/${boardId}/items`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -1218,7 +1337,7 @@ export const BoardCanvas = forwardRef<
     setActiveTool("text");
     setOpenPanel(null);
     const x = 220;
-    const y = 40 + placeN.current++ * 130;
+    const y = 40 + placeN.current++ * 250;
     // 服务端 validateNewItem 仅放行 note/rect（不可改）；以 note 落库，再用 color 哨兵标记为文本。
     const res = await fetch(`/api/boards/${boardId}/items`, {
       method: "POST",
@@ -1243,6 +1362,51 @@ export const BoardCanvas = forwardRef<
     setSelected(new Set([item.id]));
   }
 
+  // p7:F10（uc-board-header-006 主流程 4/6）：语音转录到白板——Header 麦克风录制 +
+  // 转写（复用 AVA 的 VoiceInputControl + /api/ava/transcribe，STT 能力见 p18:F06/F07）
+  // 完成后回填画布。落库/哨兵/选中管线与 addText 完全一致，只有两点不同：文案是转写
+  // 结果（而非 DEFAULT_TEXT）；落点固定在画布中央附近（UC 明确写"画布中央附近的文本
+  // 组件"，不用 addText 的左上角堆叠位——语音转录不是靠 Board Menu 连续点出来的，没有
+  // "上一个在哪就往下堆"的语境，中心点更符合"转录结果应该显眼"的直觉）。
+  async function addVoiceText(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed) return; // 转写为空（识别失败/静音）不建组件，避免留下空文本垃圾
+    setActiveTool("text");
+    setOpenPanel(null);
+    const x = 400;
+    const y = 300 + placeN.current++ * 40; // 多次转录避免完全重叠，仍聚在中央附近
+    const res = await fetch(`/api/boards/${boardId}/items`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "note", x, y, text: trimmed }),
+    });
+    if (res.status !== 201) return;
+    const { item } = (await res.json()) as { item: Item };
+    await fetch(`/api/board-items/${item.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ color: TEXT_MARK }),
+    });
+    // 强写完整字段（不只 color）：真实回归排查发现，只写 color 时偶发被并发的远端
+    // sync-response 用"POST 落库但还没等到这次 PATCH"的旧快照覆盖回 collab doc——
+    // 旧快照本身 text 也是对的（POST 已经把 trimmed 文本落库），但这里如果只强写
+    // color，一旦真的被旧快照覆盖过，text 字段就没有第二次机会被纠正回来。全字段
+    // 强写像 connector 创建那样一次到位，不留这个缝。
+    const finalItem: Item = { ...item, color: TEXT_MARK };
+    upsertItem(docRef.current, item.id, {
+      x: finalItem.x,
+      y: finalItem.y,
+      w: finalItem.w,
+      h: finalItem.h,
+      text: finalItem.text,
+      type: finalItem.type,
+      color: TEXT_MARK,
+    });
+    recordOp({ kind: "add", items: [finalItem] });
+    await load();
+    setSelected(new Set([item.id]));
+  }
+
   // 形状（Shape）组件创建（uc-widgets-004 主流程 1-5）：Board Menu「形状」入口旁的下拉选形状
   // 类型，创建后系统记住该类型供下次沿用（主流程 4）。线上以 type:"rect" 落库（服务端原生放行），
   // 具体形状种类经 color 的 "|shape=<token>" 哨兵表达（不新增持久化列），创建后立即 PATCH 写入，
@@ -1256,7 +1420,7 @@ export const BoardCanvas = forwardRef<
     // 视口顶部居中区域），导致新建形状一创建就被浮层盖住、拦截了鼠标事件（dblclick 编辑/
     // 拖拽移动均因此失效，真实回归见 e2e 诊断：点空白取消选中后同一手势对形状完全生效）。
     const x = 40;
-    const y = 40 + placeN.current++ * 130;
+    const y = 40 + placeN.current++ * 250;
     // 默认占位文字（对齐便签/文本/嵌入组件已有的 DEFAULT_TEXT/DEFAULT_EMBED 模式，也是
     // board-menu-001 既有回归断言的期望：新建矩形默认文案「矩形」）。用户仍可清空成空形状
     // （UC 备选流程 1：只创建空形状时系统保留空形状，稍后仍可输入文本）。
@@ -1300,7 +1464,7 @@ export const BoardCanvas = forwardRef<
     setActiveTool("select");
     setOpenPanel(null);
     const x = 580;
-    const y = 40 + placeN.current++ * 130;
+    const y = 40 + placeN.current++ * 250;
     const res = await fetch(`/api/boards/${boardId}/items`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -1360,7 +1524,7 @@ export const BoardCanvas = forwardRef<
       return;
     }
     const x = 40;
-    const y = 40 + placeN.current++ * 130;
+    const y = 40 + placeN.current++ * 250;
     const res = await fetch(`/api/boards/${boardId}/items`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -2176,7 +2340,11 @@ export const BoardCanvas = forwardRef<
 
   // board-shell reskin（issue #468）：撤销/重做按钮在页面 header（page.tsx）渲染，
   // 经 ref 句柄调进来；可用态随 historyTick 变化回传（初始也发一次，header 首屏即禁用态）。
-  useImperativeHandle(ref, () => ({ undo: () => void undo(), redo: () => void redo() }), [undo, redo]);
+  useImperativeHandle(
+    ref,
+    () => ({ undo: () => void undo(), redo: () => void redo(), addVoiceText: (text: string) => void addVoiceText(text) }),
+    [undo, redo, addVoiceText],
+  );
   useEffect(() => {
     onHistoryChange?.({ canUndo, canRedo });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2306,15 +2474,31 @@ export const BoardCanvas = forwardRef<
         </div>
       )}
 
-      {/* Widget Menu：选中驱动的悬浮操作（F10）。能力随 widget type 矩阵扩展（F17 样式/F18 锁定…）。
-          当前 item 均为便签，动作统一；多选展示交集动作。 */}
-      {canEdit && selected.size > 0 && (
+      {/* Widget Menu：选中驱动的悬浮 context toolbar（F10，issue #470 改为跟随选区定位，
+          替代此前固定在画布中上的 dock 式布局）。能力随 widget type 矩阵扩展（F17 样式/F18 锁定…），
+          按选中对象类型显示相关动作，与选区无关的项已在各分组条件里过滤掉（见下方各 IIFE）。
+          位置由 wmPos（useLayoutEffect 计算，见上方）驱动：null 时不渲染——涵盖“无选中”“定位未就绪”
+          “拖动中”三种情况，拖动中隐藏是刻意选择（items 在拖动过程中不逐帧更新，硬跟着走会锚定在
+          旧位置，见 onOperating 里的注释）。 */}
+      {canEdit && selected.size > 0 && !wmDragActive && (
         <div
+          ref={widgetMenuRef}
           data-testid="widget-menu"
-          // p6:F21：对齐/编组按钮加入后单行操作数明显增多，改为 flex-wrap + max-w 避免菜单宽度
-          // 超出视口在两侧「溢出」并遮挡画布空白区域（真实回归：曾导致点击视口边缘空白处误命中
-          // 菜单而非清空选择，见 canvas-select.spec.ts「点选/Shift多选/点空白清除」）。
-          className="absolute left-1/2 top-14 z-20 flex max-w-[92vw] flex-wrap -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-lg"
+          // wmPos 为 null 时（首次挂载、真实尺寸还没测出来那一帧）先摆到屏幕外——同一次 commit 里
+          // useLayoutEffect 会在浏览器绘制前用这次挂载出的真实 offsetWidth/offsetHeight 纠正到
+          // 正确坐标，不会看到"先出现在错误位置再跳"的一帧闪烁。
+          style={{ position: "fixed", left: wmPos?.left ?? -9999, top: wmPos?.top ?? -9999 }}
+          // p6:F21：对齐/编组按钮加入后单行操作数明显增多，改为 flex-wrap 避免超出视口。
+          // issue #470 真实回归 + 根因修复：旧版 max-w-[92vw]（工具条固定在画布中上时留下的
+          // 尺寸约定）在"跟随选区"的新布局下会失真——单选一个便签就能展开一长串样式控件，
+          // 92vw 让工具条几乎顶满整个窗口宽度，横向"伸"到远处盖住画布上其它不相关对象，
+          // 复现为 shift+click 追加旁边一个 embed 到选区时，点击被这条超宽工具条本体拦截
+          // （e2e widget-menu-009 混选场景实测捕获）。真正的修复是把宽度收紧到真正"贴近对象"
+          // 的紧凑尺寸（更多控件换行，不横向占地盘），而不是加 pointer-events 补丁掩盖——
+          // 后者在点击点恰好落在工具条某个真实按钮上时无效（按钮本该可点，只是它不该出现在
+          // 那么远的地方）。保留 pointer-events-none + 子元素 auto 作为兜底：多行换行之间的
+          // 留白仍可穿透点击到画布，属于防御性加固，不是主修复。
+          className="pointer-events-none z-20 flex max-w-[min(420px,92vw)] flex-wrap items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-lg [&>*]:pointer-events-auto"
         >
           {/* selection-count 原在顶部工具条，reskin 后迁入 widget-menu（testid 保活，
               spec 断言"已选 N"文本不变；widget-menu 本就 selected.size>0 才渲染，语义一致）。 */}

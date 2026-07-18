@@ -1,0 +1,31 @@
+# wrangler.toml — devportal（develop.boardx.us）的 Pages 部署配置（issue #543）
+# 仓库即唯一事实来源：此前 nodejs_compat/vars 只存在于 Cloudflare dashboard，换环境
+# 无法复现部署——现在全部非敏感配置在此声明，`wrangler pages deploy` 自动读取。
+#
+# 部署（首次与日常步骤见同目录 README.md；日常由 CI deploy-devportal.yml 自动执行）：
+#   pnpm build && pnpm exec next-on-pages
+#   pnpm exec wrangler pages deploy .vercel/output/static --branch main
+#
+# 敏感值不在此文件（Pages 加密 secret，wrangler pages secret put 写入）：
+#   GITHUB_TOKEN        细粒度只读 PAT（数据源）
+#   COORD_BROKER_TOKEN  token-broker 身份（portal-broker）的 bearer——自助领 token
+#                       的服务端凭据（ADR-011 P2），永不下发浏览器
+# GITHUB_TOKEN（细粒度只读 PAT）是 Pages 加密 secret——
+#   pnpm exec wrangler pages secret put GITHUB_TOKEN --project-name devportal
+name = "devportal"
+pages_build_output_dir = ".vercel/output/static"
+# ⚠️ 不要低于 2024-11-11：fetch 的 cache:"no-store" 选项要求该日期起的运行时，
+# 低于它所有带 cache 选项的出站 fetch 直接抛异常（2026-07-12 生产事故：#550 把
+# 日期写成 2024-11-01，devportal 全部数据源同时 unreachable）。
+compatibility_date = "2026-07-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# 非敏感运行时配置（协作平面数据源与门禁域；变更走 PR，部署即生效）
+COORD_SERVICE_URL = "https://coord-service-staging.boardx.workers.dev"
+GITHUB_REPO = "boardx/boardx-dev-template"
+CF_ACCESS_TEAM_DOMAIN = "https://boardx.cloudflareaccess.com"
+# CF_ACCESS_AUD：Access 应用的 audience tag（拿到后填上即启用 aud 严格校验，
+# 见 lib/access.ts——当前 API token 无 Access 读权限，从 dashboard 的
+# Zero Trust → Access → Applications → develop.boardx.us 应用详情可查）
+# CF_ACCESS_AUD = "<aud tag>"

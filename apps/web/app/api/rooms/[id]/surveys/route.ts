@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { canViewRoom, getRoomRole, listRoomSurveys } from "@repo/data";
+import { canViewRoom, getRoomRole, listRoomSurveys, resolveRoomId } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-  const roomId = Number(params.id);
+  const roomId = await resolveRoomId(params.id);
   if (!Number.isFinite(roomId)) return NextResponse.json({ error: "roomId 无效" }, { status: 400 });
   if (!(await canViewRoom(roomId, user.id))) {
     return NextResponse.json({ error: "无权限" }, { status: 403 });

@@ -3,6 +3,14 @@
 > `multi-agent-coordination.md` §2 定义了 coordinator 单轮循环"做什么"（ADR-004 §4 确立 coordinator 角色）；本文定义"什么节奏做、每层必查什么"。
 > 目标：事件驱动为主、定期扫描兜底，任何一层漏掉的问题都会被更大的循环接住。
 
+## Loop 设计原则（先读这个）
+
+自动派发循环（`/loop` 唤醒、事件驱动 tick）的八条设计原则已归纳为独立文档
+`loop-design-principles.md`（拿锁才调度 / 事件驱动为主扫描兜底 / 一次性授权不写进
+自动化策略 / 汇报而非代劳 / 不可静默等待 / 分支短命 / 状态视图脚本生成 / 破坏性
+动作永远在 loop 之外）。均归纳自本文与 `.harness/state/coordinator-loop-brief.md`
+的既有教训，实现或修改自动循环前先读它。
+
 ## 三层循环
 
 ### L0 事件层（~60s，事件驱动，非轮询开销）
@@ -81,7 +89,7 @@
 5. **共享主 checkout 隔离**：任何要落地写文件/提交的会话（含 coordinator 自己）一律
    `git worktree add` 开独立工作区，不在共享主 checkout 上 `commit`/`stash`/`reset`/
    `branch -f`/`checkout <branch>`；分支建好立即 push。见 ADR-005
-   （`phases/phase-01-foundation/adr/ADR-005-shared-checkout-isolation.md`），本地另有
+   （`docs/adr/ADR-005-shared-checkout-isolation.md`），本地另有
    `reference-transaction` git hook 兜底拦截非快进更新。
 6. **不可静默等待**：发现 lease/PR 停滞（见上方 Deadline 表）时，必须在总线上贴出带
    明确时限的通牒，再据此回收/升级——不能只是内部判断"再等等"或"已经提醒过了"就不再
@@ -91,7 +99,7 @@
    `module-lock-*` 必须配置 `COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN` 才能使用，
    未配置直接报错——不存在降级回 GitHub 的路径（GitHub 协调面已整体退役）。
    权威（D1）联系不上时 acquire fail-closed 拒绝执行，`--force` 仅限人类授权的
-   抢占仪式。见 ADR-009（`phases/phase-01-foundation/adr/
+   抢占仪式。见 ADR-009（`docs/adr/
    ADR-009-github-coordination-plane-retirement.md`）；本条 2026-07-08 之前的
    opt-in 版本见 ADR-006（保留为历史决策记录）。
 8. **破坏性清理操作需要显式人类/coord-main 授权，任何会话都不能仅凭自己判断"逻辑
@@ -101,7 +109,30 @@
    registry.yaml 的 schema 变更同一个审批级别。这条是 2026-07-07 的真实教训：
    一次基于"worktree 目录已不存在"这条本身可靠的判定标准，未经请示就直接跑了
    `--apply`，即使结果本身没错，这个执行顺序本身不该发生。见 ADR-007
-   （`phases/phase-01-foundation/adr/ADR-007-docker-stack-teardown.md`）。
+   （`docs/adr/ADR-007-docker-stack-teardown.md`）。
+9. **review 判定锚定 SHA + 审计链用 doctor 机器判（2026-07-10 起，ADR-012）**：
+   Block/Accept 结论必须写明审的是哪个 commit（`审于 <sha>`）；对"已修复"声明复查
+   前必须先 `git fetch` 确认审的是分支头——p23（#517）三轮 Block 里有两轮是基于
+   stale fetch 重复指控已修复的问题。证据链核查（evidence 非空/含 exit 0/派生视图
+   一致）不再人肉逐字节验，跑 `pnpm harness doctor --phase NN`；引用派生视图时用
+   **列名**不用列序号。仓库侧审计对象以 git 树为准——gitignored 的本地派生文件
+   （active-features.json）不是审计对象，in-repo 的 PROGRESS.md 才是。
+
+10. **统一时钟 + loop 纪律（2026-07-16 起，ADR-014）**：协调决策一律以
+   coord-service `GET /time` 为准（现在几点/当前哪个周期/租约还新鲜吗），**不信本机
+   `date`**——机器时钟漂移会让你误判租约新鲜度与周期边界，`harness tick` 会在漂移
+   >60s 时告警。**每个层级都必须有 loop**：coord-main 5 分钟、module-coordinator
+   15 分钟、sub-agent/worker 15 分钟，每个 loop 跑 `pnpm harness tick`（权威时钟+
+   漂移检测+续租约+收件箱一条命令做完）。loop 是操作节拍，C-cycle（3h）是汇报节拍
+   ——只有后者没有前者，就是"coord-architecture 租约静默过期 8 小时"的成因。
+   席位按 ttl 正常过期是**诚实信号**，不得调大 ttl 或替人代跑心跳来掩盖失联。
+
+11. **协调权威（coord-service）绝不手动部署（2026-07-17 起）**：coord-service 有了
+   CD（deploy-coord-service.yml）——改它的代码一律走 PR 合 main 触发自动部署，
+   **不再 `wrangler deploy`**。手动部署会 last-write-wins 互相覆盖（#629 覆盖 #614
+   的 tasks 路由、线上收件箱静默消失，andon #272/#290）。CD 冒烟带部署漂移探针
+   （/time 存在 + /tasks 返 401 而非 404），漂移当场红。这条对 devportal/devapp
+   同理——**有 CD 的目标不手动部署**，把"从哪个 checkout 部署"的竞争彻底消灭。
 
 ## 事故分诊速查（来自实战）
 - CI 秒级失败 + steps 空 → 账单/runner，非代码（2026-07-04 账单事故）。

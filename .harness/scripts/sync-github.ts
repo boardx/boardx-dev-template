@@ -68,20 +68,32 @@ function renderDependsOn(f: Feature, phaseId: string, fl: FeatureList): string[]
  *  原则：GitHub 是只读投影，仓库才是权威——body 提供完整契约 + 指回权威文件的链接，
  *  不试图复制仓库里所有规则（规则以 AGENTS.md 为准）。
  *  模版规格见 .harness/templates/github-issue-body.template.md（改这里请同步改模版文档）。 */
-function buildIssueBody(
+export function buildIssueBody(
   f: Feature,
   phaseId: string,
   sprintId: string,
   repo: string,
-  fl: FeatureList
+  fl: FeatureList,
+  trackingIssue?: number,
 ): string {
   const phaseDir = basename(findPhaseDir(phaseId));
   const blob = (p: string) => `https://github.com/${repo}/blob/main/${p}`;
   const evidencePath = `phases/${phaseDir}/sprints/sprint-${sprintId}/evidence/${f.id}.verify.log`;
+  const parentSection = trackingIssue == null
+    ? []
+    : [
+        `## Parent Tracking Issue`,
+        ``,
+        `Parent: #${trackingIssue}`,
+        ``,
+        `https://github.com/${repo}/issues/${trackingIssue}`,
+        ``,
+      ];
 
   return [
     projectionMarker(phaseId, f.id),
     ``,
+    ...parentSection,
     `## 交付契约（user_visible_behavior）`,
     ``,
     f.user_visible_behavior,
@@ -133,6 +145,9 @@ function buildIssueBody(
   ].join("\n");
 }
 
+/** 通过 title 搜索 issue（apply 模式下执行；dry-run 只打印意图）。
+ *  返回完整投影字段（number/title/body/state）：body 供 marker 校验（避免误关非 sync issue），
+ *  state 供 close 幂等判断（已 CLOSED 不重复关，也绝不重开——#526）。 */
 function findIssueByTitle(repo: string, title: string, apply: boolean): ProjectedIssue | null {
   if (!apply) return null; // dry-run 不实际查询
   // --state all：含已关闭 issue，否则幂等检查会漏掉 closed issue 而重复创建
@@ -222,7 +237,14 @@ export function syncGithub(args: Args): void {
       if (statusAction.add_label) labels.push(statusAction.add_label);
 
       const title = `[${f.id}] ${f.title}`;
-      const body = buildIssueBody(f, phaseId, sid, cfg.repo, fl);
+      const body = buildIssueBody(
+        f,
+        phaseId,
+        sid,
+        cfg.repo,
+        fl,
+        phase.tracking_issue,
+      );
 
       // body 走 --body-file 而不是 --body "<内联字符串>"：
       // 内联时 bash 双引号里的反引号会做命令替换（body 含 `pnpm test`/`./init.sh` 这类
@@ -239,7 +261,8 @@ export function syncGithub(args: Args): void {
       // 幂等 + 收敛：不存在则创建；已存在则更新 body（文件是权威，投影必须跟着文件走——
       // 否则改了模版/notes/verification，存量 issue 永远停在旧信息上）。
       const existing = findIssueByTitle(cfg.repo, title, apply);
-      let issueWithMarker: ProjectedIssue | null = existing?.body.includes(projectionMarker(phaseId, f.id))
+      // close 用的投影 issue：edit 后 body 已带 marker（我们刚写入）；create 分支下方回填。
+      let issueForClose: ProjectedIssue | null = existing?.body.includes(projectionMarker(phaseId, f.id))
         ? existing
         : null;
       if (apply && existing !== null) {
@@ -247,20 +270,75 @@ export function syncGithub(args: Args): void {
           `gh issue edit --repo ${cfg.repo} ${existing.number} --body-file ${JSON.stringify(bodyFile)}`,
           `更新 Issue #${existing.number} body: ${title}`
         );
-        issueWithMarker = { ...existing, body };
+        // edit 已把带 marker 的 body 写回，close 阶段据此放行。
+        issueForClose = { ...existing, body };
+        // #526：存量 issue 的 label 也要 reconcile——此前 edit 只更新 body，状态 label
+        // 永远停在创建时刻（p23 的 #506-511 就是这样漏掉 status:merged 的）。
+        // 做法：加当前 status 的 label，移除 status_actions 里其它状态的 label
+        //（gh 对"移除不存在的 label"静默容忍，天然幂等）。
+        const allStatusLabels = [
+          ...new Set(
+            Object.values(cfg.status_actions ?? {})
+              .map((a) => a?.add_label)
+              .filter((l): l is string => !!l)
+          ),
+        ];
+        const stale = allStatusLabels.filter((l) => l !== statusAction.add_label);
+        const addArg = statusAction.add_label ? ` --add-label ${JSON.stringify(statusAction.add_label)}` : "";
+        const rmArg = stale.map((l) => ` --remove-label ${JSON.stringify(l)}`).join("");
+        if (addArg || rmArg) {
+          run(
+            `gh issue edit --repo ${cfg.repo} ${existing.number}${addArg}${rmArg}`,
+            `label reconcile #${existing.number} → [${f.status}]`
+          );
+        }
       } else {
-        run(
+        const createCmd =
           `gh issue create --repo ${cfg.repo} --title ${JSON.stringify(title)} ` +
-            `--body-file ${JSON.stringify(bodyFile)} --label ${JSON.stringify(labels.join(","))} --milestone ${JSON.stringify(milestone)}${assigneeArg}`,
-          `创建 Issue: ${title} [${f.status}]${f.owner ? ` @${f.owner}` : ""}`
-        );
+          `--body-file ${JSON.stringify(bodyFile)} --label ${JSON.stringify(labels.join(","))} --milestone ${JSON.stringify(milestone)}${assigneeArg}`;
+        if (apply) {
+          // #526：创建后从 stdout 的 issue URL 直取 number——不能靠 findIssue 回查，
+          // GitHub 搜索索引有延迟，"创建即 passing"的 close 会因搜不到而被跳过
+          //（p23 的 #504/#505 事故根因）。
+          plan.push(`# 创建 Issue: ${title} [${f.status}]${f.owner ? ` @${f.owner}` : ""}\n${createCmd}`);
+          let r = sh(createCmd);
+          if (r.code !== 0 && assigneeArg) {
+            // owner 是 harness 身份(如 coord-architecture)而非 GitHub 用户时 assignee 会被
+            // gh 拒绝——退化为不带 assignee 重试,投影不该因归因字段整条失败(#526)。
+            log.warn(`assignee 失败,退化为无 assignee 重试: ${title}`);
+            r = sh(createCmd.replace(assigneeArg, ""));
+          }
+          if (r.code !== 0) {
+            log.err(`gh 命令失败(${r.code}): ${createCmd}\n${r.stderr}`);
+          } else {
+            log.ok(createCmd);
+            const m = r.stdout.match(/\/issues\/(\d+)/);
+            if (m) {
+              // 新建 issue：body 是我们刚写入的（含 marker），state 为 OPEN。
+              issueForClose = { number: Number(m[1]), title, body, state: "OPEN" };
+            }
+          }
+        } else {
+          run(createCmd, `创建 Issue: ${title} [${f.status}]${f.owner ? ` @${f.owner}` : ""}`);
+        }
       }
 
       if (statusAction.close_issue) {
-        const issue = issueWithMarker ?? findProjectedIssue(cfg.repo, title, phaseId, f.id, apply);
-        if (apply && issue?.state.toLowerCase() === "closed") {
+        // 只关带 marker 的投影 issue（避免误关非 sync issue，#653）；
+        // 幂等 + 不重开（#526）。
+        const issue = issueForClose ?? findProjectedIssue(cfg.repo, title, phaseId, f.id, apply);
+        if (!apply) {
+          // dry-run 时打印意图（无法预知 issue number）
+          run(
+            `gh issue close --repo ${cfg.repo} <issue-number-for: ${JSON.stringify(title)}>`,
+            `关闭已 passing 的 Issue: ${title}`
+          );
+        } else if (issue === null) {
+          log.warn(`找不到带 ${projectionMarker(phaseId, f.id)} 的投影 Issue for "${title}"，跳过关闭`);
+        } else if (issue.state.toLowerCase() === "closed") {
+          // 幂等：已关的不重复关；反向（issue 被误关但 feature 未 passing）不自动重开（#526）
           log.info(`Issue #${issue.number} 已关闭，跳过重复关闭: ${title}`);
-        } else if (apply && issue !== null) {
+        } else {
           const closeComment = [
             `由 \`phases/${basename(findPhaseDir(phaseId))}/feature_list.json\` 中 \`${phaseId}/${f.id}\` 已 \`passing\` 自动关闭。`,
             ``,
@@ -276,14 +354,6 @@ export function syncGithub(args: Args): void {
             `gh issue close --repo ${cfg.repo} ${issue.number} --reason completed`,
             `关闭 Issue #${issue.number}: ${title}`
           );
-        } else if (!apply) {
-          // dry-run 时打印意图（无法预知 issue number）
-          run(
-            `gh issue close --repo ${cfg.repo} <issue-number-for: ${JSON.stringify(title)}>`,
-            `关闭已 passing 的 Issue: ${title}`
-          );
-        } else {
-          log.warn(`找不到带 ${projectionMarker(phaseId, f.id)} 的投影 Issue for "${title}"，跳过关闭`);
         }
       }
     }

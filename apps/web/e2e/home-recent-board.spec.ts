@@ -14,7 +14,7 @@ test("Home 最近白板：访问过的白板出现且可点击跳转 Board", asy
   await page.goto("/home");
   await expect(page.getByTestId("recent-boards-list")).toContainText("Recent One");
   await page.getByTestId(`recent-board-${board.id}`).click();
-  await expect(page).toHaveURL(new RegExp(`/boards/${board.id}`));
+  await expect(page).toHaveURL(new RegExp(`/boards/${board.public_id}`));
   await expect(page.getByTestId("board-title")).toHaveText("Recent One");
 });
 

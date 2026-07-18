@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRoom, canViewRoom, createRoomChat, listRoomChats } from "@repo/data";
+import { canViewRoom, createRoomChat, getRoom, listRoomChats, resolveRoomId } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-  const roomId = Number(params.id);
+  const roomId = await resolveRoomId(params.id);
   const room = await getRoom(roomId);
   if (!room) return NextResponse.json({ error: "not found" }, { status: 404 });
   if (!(await canViewRoom(roomId, user.id))) {
@@ -23,7 +23,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   try {
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-    const roomId = Number(params.id);
+    const roomId = await resolveRoomId(params.id);
     const room = await getRoom(roomId);
     if (!room) return NextResponse.json({ error: "not found" }, { status: 404 });
     if (!(await canViewRoom(roomId, user.id))) {
@@ -34,6 +34,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const chat = await createRoomChat(roomId, user.id, name, room.team_id);
     return NextResponse.json({ chat }, { status: 201 });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    // 内部细节只进日志，响应给稳定错误码（ADR-015 / #539 教训）
+    console.error("[api] unhandled", err);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 }

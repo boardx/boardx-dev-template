@@ -36,6 +36,7 @@
 - **状态不能自己改**:你不能把 feature 直接标成 `passing`。只能跑
   `pnpm harness verify`,由验证脚本门控转移。`passing` 不可逆。
 - **范围纪律**:只动当前 feature 涉及的代码,别顺手重构无关区域。
+- **文件规模**:业务源文件原则上不超过 2000 行;接近上限时必须按领域职责拆分。超过 2000 行仅允许有明确豁免、拆分计划和验证证据,禁止继续在超限文件中堆功能。
 - **UI 先行(仅 has_ui 阶段)**:UI 相关阶段的 `feature_list` 必须在真实 UI 经**人类**确认
   (`ui-signoff.md` status: confirmed)之后才定稿;`new-sprint` 对未确认的 UI 阶段直接拒绝。见 ADR-003。
 
@@ -61,6 +62,7 @@
 - **新 agent 接入执行书（第一次进来照它走）** → `.harness/instructions/agent-bootstrap.md`；背后的规则清单 → `agent-onboarding-checklist.md`（见 ADR-005）
 - **人类开发者带 agent 加入 BoardX 开发** → `.harness/instructions/human-developer-onboarding.md`（面向人类；enroll 步骤 + 启用 agent 的首条消息模板 + 三级 coordinator 层级 + 性能管理，见 ADR-010）
 - Agent 组织模型（多级 coordinator + 子 agent 注册 + 3h 性能周期 + 防断链）→ ADR-010
+- **模块活知识库（做某模块的活之前先读）** → `.agents/skills/mod-<模块名>/SKILL.md`（15 个模块：room/board/canvas/collab/ava/knowledge-base/ai-store/studio/survey/credits-billing/admin/auth-identity/platform/devportal/harness；经验回流规则见各文件末尾）
 - 编码规范 → `.harness/instructions/coding-standards.md`
 - UIUX 规范 → `.harness/instructions/uiux-standards.md`
 - 端到端验证标准 → `.harness/instructions/testing-standards.md`
@@ -84,4 +86,5 @@ pnpm harness new-phase  --id 02 --name agent-runtime --goal "..."   # scaffold r
 pnpm harness new-sprint --phase 02 --id 01 --goal "..." --features F01,F02
 pnpm harness verify     --sprint 02/01
 pnpm harness sync       --phase 02 --apply
+pnpm harness doctor     --phase 02        # 审计链体检：passing 证据真实性 + 派生视图一致（ADR-012；pre-push 自动跑）
 ```

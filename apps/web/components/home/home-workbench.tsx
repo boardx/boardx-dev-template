@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Search, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { EMPTY_AGENT_GROUPS, type Agent, type AgentGroupKey, type AgentGroups } from "@/lib/agents";
+import { EMPTY_AGENT_GROUPS, filterAgents, type Agent, type AgentGroupKey, type AgentGroups } from "@/lib/agents";
 
 interface SessionUser {
   displayName: string;
@@ -78,8 +78,8 @@ export function HomeWorkbench() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [teamName, setTeamName] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  const [groups] = useState<AgentGroups>(EMPTY_AGENT_GROUPS);
-  const [recentBoards, setRecentBoards] = useState<{ id: number | string; name: string }[]>([]);
+  const [groups, setGroups] = useState<AgentGroups>(EMPTY_AGENT_GROUPS);
+  const [recentBoards, setRecentBoards] = useState<{ id: number | string; public_id: string; name: string }[]>([]);
   const [guideDismissed, setGuideDismissed] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -117,6 +117,30 @@ export function HomeWorkbench() {
       }
       const rb = await (await fetch("/api/boards?scope=recent")).json();
       if (alive) setRecentBoards(rb.boards ?? []);
+      // Agent 分组接 AI Store 真实数据（p11）：subscribed=me → 已订阅；团队可见的已发布
+      // Agent（去掉已订阅的）→ Team recommended。「Recently used」暂无使用记录数据源，
+      // 留空集走空状态（p2-F06 接续）。
+      type StoreItem = { id: number; type: string; name: string; description: string; tags: string[]; scope: string };
+      const toAgent = (it: StoreItem): Agent => ({
+        id: it.id,
+        name: it.name,
+        description: it.description,
+        tags: it.tags ?? [],
+        source: it.scope,
+      });
+      const [subRes, recRes] = await Promise.all([
+        fetch("/api/ai-store/items?subscribed=me"),
+        fetch("/api/ai-store/items?type=agent&pageSize=50"),
+      ]);
+      const sub = subRes.ok ? await subRes.json() : { items: [] };
+      const rec = recRes.ok ? await recRes.json() : { items: [] };
+      const subscribed: Agent[] = (sub.items ?? []).filter((it: StoreItem) => it.type === "agent").map(toAgent);
+      const subscribedIds = new Set(subscribed.map((a) => String(a.id)));
+      // Team recommended 只取发布到当前团队的 Agent（平台/个人项目走 AI Store 入口）。
+      const recommended: Agent[] = (rec.items ?? [])
+        .filter((it: StoreItem) => it.scope === "team" && !subscribedIds.has(String(it.id)))
+        .map(toAgent);
+      if (alive) setGroups({ recent: [], subscribed, recommended });
       if (alive) setLoading(false);
     })();
     return () => {
@@ -141,7 +165,7 @@ export function HomeWorkbench() {
       {/* 欢迎区 */}
       <section data-testid="home-welcome" className="flex flex-col gap-1">
         <h1 className="text-26 font-bold tracking-tight text-foreground">
-          Good to see you, <span data-testid="home-username">{user?.displayName}</span>
+          Hello, <span data-testid="home-username">{user?.displayName}</span>
         </h1>
         {teamName && (
           <p className="text-sm text-muted-foreground">
@@ -185,7 +209,7 @@ export function HomeWorkbench() {
             {recentBoards.map((b) => (
               <li key={String(b.id)} data-testid={`recent-board-${b.id}`}>
                 <a
-                  href={`/boards/${b.id}`}
+                  href={`/boards/${b.public_id}`}
                   className="flex items-center gap-3 rounded-11 border border-border px-4 py-3 transition-all hover:border-border-strong hover:bg-surface-1"
                 >
                   <div className="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
@@ -242,12 +266,25 @@ export function HomeWorkbench() {
       {/* Agent 分组 */}
       <div className="mt-2">
         {GROUPS.map((g) => {
-          const items = groups[g.key];
+          const all = groups[g.key];
+          const items = filterAgents(all, q);
           return (
             <section key={g.key} data-testid={`group-${g.key}`} className="mt-7">
-              <h2 className="mb-3 text-13 font-semibold text-foreground">{g.title}</h2>
-              {items.length === 0 ? (
+              <h2 className="mb-3 text-13 font-semibold text-foreground">
+                {g.title}{" "}
+                <span data-testid={`group-count-${g.key}`} className="font-normal text-muted-foreground">
+                  ({items.length})
+                </span>
+              </h2>
+              {all.length === 0 ? (
                 <GroupEmptyState groupKey={g.key} />
+              ) : items.length === 0 ? (
+                <div
+                  data-testid={`no-match-${g.key}`}
+                  className="rounded-12 border border-dashed border-border p-6 text-13 text-muted-foreground"
+                >
+                  No agents match “{q.trim()}”.
+                </div>
               ) : (
                 <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
                   {items.map((a) => (

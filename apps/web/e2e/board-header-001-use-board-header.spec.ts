@@ -76,7 +76,8 @@ test("owner 通过 Board Header 理解状态并进入授权操作", async ({ pag
   await page.getByTestId("board-share").click();
   await expect(page.getByTestId("share-panel")).toBeVisible();
   await expect(page.getByTestId("share-visibility")).toContainText("房间成员可访问");
-  await expect(page.getByTestId("share-url")).toHaveValue(`${new URL(page.url()).origin}/boards/${board.id}`);
+  // issue #584：分享链接用 public_id 形式（地址栏此时也已经是 public_id，直接对比当前 URL 即可）。
+  await expect(page.getByTestId("share-url")).toHaveValue(page.url());
   await page.getByTestId("share-copy").click();
   await expect(page.getByTestId("share-copy-status")).toContainText("已复制");
   await page.getByTestId("share-qr-toggle").click();

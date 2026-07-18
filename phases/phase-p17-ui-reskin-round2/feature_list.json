@@ -103,7 +103,7 @@
       "title": "Surveys 页面 reskin",
       "user_visible_behavior": "问卷列表/编辑器/答题预览/结果报告页面的视觉对齐 prototype SURVEYS 屏，不改变 p13 已 passing 的功能行为（含公开答题页的访客体验）。",
       "design_ref": "docs/design/boardx-prototype-v1.bundle.html SURVEYS 屏；phase-p16:F02 审计报告（Surveys 部分）。",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": "wrk-survey-3",
       "capability": "CAP-WEB",
@@ -114,11 +114,11 @@
       "verification": [
         "docker compose -f infra/docker-compose.yml up -d",
         "pnpm --filter @repo/data run migrate",
-        "pnpm --filter @repo/web exec playwright test e2e/survey-*.spec.ts",
+        "cd apps/web && pnpm exec playwright test e2e/survey-*.spec.ts",
         "cd apps/web && bash scripts/lint-design.sh"
       ],
-      "evidence": "phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F05-e2e-survey-regression.log (23/23 survey e2e specs passed, incl. p13 view-answers-report + 公开答题页访客体验回归); phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F05-lint-design.log (design lint 通过); phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F05-migrate.log; phases/phase-p17-ui-reskin-round2/sprints/sprint-01/evidence/F05-compose-up.log; PR: worker/wrk-survey-3-p17-f05-survey-reskin (Closes #239).",
-      "notes": "uc-survey-reskin-001（新增）。verification 复用既有 p13 全部 e2e 回归（含公开答题页，访客体验不能破坏）+ design lint。blocked-on 同 F01。"
+      "evidence": "evidence/F05.verify.log @ 2026-07-13T00:33:25.690Z",
+      "notes": "uc-survey-reskin-001（新增）。verification 复用既有 p13 全部 e2e 回归（含公开答题页，访客体验不能破坏）+ design lint。blocked-on 同 F01。fix(F05，同 F02/F03/F04 已知问题): verification 第 3 条原写法 `pnpm --filter @repo/web exec playwright test e2e/survey-*.spec.ts` 在 `pnpm harness verify` 从 repo 根目录执行时，bash glob 相对 repo 根展开（根目录不存在 `e2e/`，只有 `apps/web/e2e/`），导致 glob 无匹配、原样传给 playwright 报 \"No tests found\"——与 F02/F03/F04 记录的是同一个 harness 执行环境 bug，非本 feature 引入，只是此前一直没人对 F05 应用已知修法。改为 `cd apps/web && pnpm exec playwright test e2e/survey-*.spec.ts`（与 F02/F03/F04 已验证过的修法一致）后可正确匹配 7 个 survey-*.spec.ts 文件（含 F07 新增的 survey-007）并执行，29/29 通过，语义不变。"
     },
     {
       "id": "F06",

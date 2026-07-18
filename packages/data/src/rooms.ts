@@ -1,10 +1,12 @@
 // packages/data/src/rooms.ts — CAP-COLLAB 房间仓储
 import { query } from "./index";
+import { generateId, isValidPublicId } from "./ids";
 
 export type RoomVisibility = "private" | "team";
 
 export interface Room {
   id: number;
+  public_id: string;
   name: string;
   owner_user_id: number;
   team_id: number | null;
@@ -23,10 +25,12 @@ export async function createRoom(
   visibility: RoomVisibility = "private",
   teamId: number | null = null
 ): Promise<Room> {
+  // 热修（issue #530 收紧 public_id NOT NULL 后暴露，理由同 board.ts 的 createBoard）：
+  // 新建房间必须显式生成 public_id，DB 端没有默认值。
   const rows = await query<Room>(
-    `INSERT INTO rooms (name, owner_user_id, team_id, visibility) VALUES ($1, $2, $3, $4)
-     RETURNING id, name, owner_user_id, team_id, visibility, created_at, description, ai_instruction`,
-    [name, ownerId, teamId, visibility]
+    `INSERT INTO rooms (name, owner_user_id, team_id, visibility, public_id) VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, public_id, name, owner_user_id, team_id, visibility, created_at, description, ai_instruction`,
+    [name, ownerId, teamId, visibility, generateId("rm")]
   );
   const room = rows[0]!;
   await query("INSERT INTO room_members (room_id, user_id, role) VALUES ($1, $2, 'owner')", [room.id, ownerId]);
@@ -35,10 +39,27 @@ export async function createRoom(
 
 export async function getRoom(roomId: number): Promise<Room | undefined> {
   const rows = await query<Room>(
-    "SELECT id, name, owner_user_id, team_id, visibility, created_at, description, ai_instruction FROM rooms WHERE id = $1",
+    "SELECT id, public_id, name, owner_user_id, team_id, visibility, created_at, description, ai_instruction FROM rooms WHERE id = $1",
     [roomId]
   );
   return rows[0];
+}
+
+// issue #471/#529 阶段2（路由层）：同 board.ts 的 resolveBoardId，见那边的完整注释——
+// 查无此 public_id、或数字分支解析出 NaN，都统一落到哨兵 id（-1），让既有的
+// `if (!room) return 404` 分支照旧接管，不让 NaN 传进 pg 查询参数炸掉请求。
+export async function resolveRoomId(idParam: string): Promise<number> {
+  if (isValidPublicId(idParam, "rm")) {
+    const rows = await query<{ id: number }>("SELECT id FROM rooms WHERE public_id = $1", [idParam]);
+    // pg 的 bigint 主键运行时按字符串返回（这里的 TS 类型 { id: number } 只是编译期
+    // 断言，不改变运行时类型）——不显式 Number() 归一化的话，调用方任何 `=== 数字` /
+    // `Number(x) === roomId` 的比较都会因为「数字 vs 数字字符串」永远为 false，
+    // 导致所有走 public_id 路径解析出的房间在下游查找里都表现为"不存在"（真实回归，
+    // 见 room-chat 详情接口 404 排查）。
+    return rows[0] ? Number(rows[0].id) : -1;
+  }
+  const n = Number(idParam);
+  return Number.isFinite(n) ? n : -1;
 }
 
 /** 房间的 ai_instruction（聊天发消息注入系统提示时用；同房间全部线程共享同一指令）。 */
@@ -64,7 +85,7 @@ export async function listVisibleRooms(userId: number, q?: string): Promise<Visi
     nameClause = ` AND r.name ILIKE $${params.length}`;
   }
   return query<VisibleRoom>(
-    `SELECT DISTINCT r.id, r.name, r.owner_user_id, r.team_id, r.visibility, r.created_at,
+    `SELECT DISTINCT r.id, r.public_id, r.name, r.owner_user_id, r.team_id, r.visibility, r.created_at,
             (r.owner_user_id = $1 OR rm.user_id IS NOT NULL) AS is_member
      FROM rooms r
      LEFT JOIN room_members rm ON rm.room_id = r.id AND rm.user_id = $1

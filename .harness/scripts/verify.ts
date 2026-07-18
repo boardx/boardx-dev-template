@@ -1,5 +1,7 @@
 // verify.ts — 逐条执行 feature.verification；全部通过 + base verify 通过才门控 passing。
 // 这是"通过状态门控"的唯一实现。agent 不能自己改 passing。
+// ADR-012 D5：只有 --sprint 模式能把 status 翻成 passing（证据落盘 + 派生视图刷新
+// 与翻转原子绑定）；--phase/--feature 模式仅作调试观察，验证通过也不改 status。
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { sprintDir } from "./lib/paths";
@@ -108,10 +110,16 @@ export function verify(args: Args): void {
     }
 
     if (ok) {
+      if (!sprintId) {
+        // ADR-012 D5：--phase 模式不落证据日志、不刷派生视图——曾产出"门控真实通过
+        // 但审计链断裂"的假 passing（P23 事件，见 postmortem-p23-false-passing.md）。
+        // 该模式保留为调试观察用途，翻转 passing 一律走 --sprint。
+        log.info(`${f.id} 验证全部通过，但 --phase 模式不翻转 passing（无证据落盘）。`);
+        log.info(`  正式门控请跑: pnpm harness verify --sprint ${phaseId}/<MM>`);
+        continue;
+      }
       f.status = "passing";
-      f.evidence = sprintId
-        ? `evidence/${f.id}.verify.log @ ${new Date().toISOString()}`
-        : new Date().toISOString();
+      f.evidence = `evidence/${f.id}.verify.log @ ${new Date().toISOString()}`;
       promoted++;
       log.ok(`门控通过 -> ${f.id} = passing`);
     } else {

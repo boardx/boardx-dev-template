@@ -1,6 +1,7 @@
 // packages/data/src/board.ts — CAP-DATA 白板容器仓储（P5）
 // Board = 房间内的白板容器（生命周期）。画布内容（items）属 P6，不在此层。
 import { query } from "./index";
+import { generateId, isValidPublicId } from "./ids";
 import { canViewRoom, isRoomOwner } from "./rooms";
 import { getMembership } from "./teams";
 
@@ -9,6 +10,7 @@ export type BoardRole = "owner" | "editor" | "viewer";
 
 export interface Board {
   id: number;
+  public_id: string;
   room_id: number;
   team_id: number | null;
   name: string;
@@ -32,7 +34,7 @@ export function boardTitleOrDefault(name: string | null | undefined): string {
 }
 
 const BOARD_COLS =
-  "id, room_id, team_id, name, cover, category, description, visibility, owner_user_id, settings, created_at, updated_at, tags";
+  "id, public_id, room_id, team_id, name, cover, category, description, visibility, owner_user_id, settings, created_at, updated_at, tags";
 
 export async function createBoard(
   roomId: number,
@@ -42,11 +44,15 @@ export async function createBoard(
   visibility: BoardVisibility = "room",
   tags: string[] = []
 ): Promise<Board> {
+  // 热修（issue #530 收紧 public_id NOT NULL 后暴露：这条 INSERT 一直没写这一列，
+  // 每次新建白板都撞约束报 500——见 #471/#530 讨论）：新建时必须显式生成 public_id，
+  // 不能指望 DB 端有默认值（没有，也不该有——生成逻辑统一收在 generateId()，SQL 层
+  // 自己拼会和 ids.ts 的格式产生第二套实现）。
   const rows = await query<Board>(
-    `INSERT INTO boards (room_id, team_id, name, owner_user_id, visibility, tags)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO boards (room_id, team_id, name, owner_user_id, visibility, tags, public_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING ${BOARD_COLS}`,
-    [roomId, teamId, boardTitleOrDefault(name), ownerId, visibility, tags]
+    [roomId, teamId, boardTitleOrDefault(name), ownerId, visibility, tags, generateId("brd")]
   );
   return rows[0]!;
 }
@@ -54,6 +60,31 @@ export async function createBoard(
 export async function getBoard(boardId: number): Promise<Board | undefined> {
   const rows = await query<Board>(`SELECT ${BOARD_COLS} FROM boards WHERE id = $1`, [boardId]);
   return rows[0];
+}
+
+// issue #471/#529 阶段2（路由层）：把路由参数（可能是旧的内部数字 id 字符串，也可能是
+// #471 阶段1 新增的 public_id）解析成内部数字 id，供既有的 getBoard(numericId) 等函数
+// 继续使用——不改任何下游权限校验逻辑，只在路由入口这一层加一次查找。
+// 刻意不做「查无此 public_id 就 404」：返回一个必然查不到 board 的哨兵 id（-1），让
+// 调用方紧随其后的既有 `if (!board) return 404` 分支照旧接管，不引入新的错误处理路径、
+// 也不需要改动任何一处 route 的错误处理代码——只替换 `Number(params.id)` 这一行本身。
+// 数字分支同样统一落到 -1 哨兵（而不是放行 NaN）：`getBoard(NaN)` 会把 NaN 传进
+// pg 查询参数，驱动层直接抛异常（41 个 route 里原本就是 `Number(params.id)` 直传，
+// main 上今天对任何非数字 id 段就已经是这个隐患——这不是本次改动引入的新问题）。
+// 这里顺手收口是因为往后 public_id 链接一旦上线，「格式对不上」会比以前更容易被真实
+// 触发（用户手输/拼错 public_id 也会落进这条分支），值得在这个新函数自己的边界内堵掉；
+// 不去动其余 41 个文件的错误处理代码，范围不外溢。
+export async function resolveBoardId(idParam: string): Promise<number> {
+  if (isValidPublicId(idParam, "brd")) {
+    const rows = await query<{ id: number }>("SELECT id FROM boards WHERE public_id = $1", [idParam]);
+    // pg 的 bigint 主键运行时按字符串返回（{ id: number } 只是编译期类型断言，不改变
+    // 运行时值）——不显式 Number() 归一化，调用方任何 `Number(x) === boardId` 之类的
+    // 比较都会因「数字 vs 数字字符串」永远为 false（同 rooms.ts resolveRoomId 的真实
+    // 回归，见 room-chat 详情接口 404 排查；两处同一函数模式、同一根因，一并修）。
+    return rows[0] ? Number(rows[0].id) : -1;
+  }
+  const n = Number(idParam);
+  return Number.isFinite(n) ? n : -1;
 }
 
 /** 房间内白板，最新在前；可选按名称（ILIKE）过滤。 */
@@ -101,7 +132,7 @@ export async function listRecentBoards(userId: number, q?: string): Promise<Boar
     nameClause = ` AND b.name ILIKE $${params.length}`;
   }
   return query<Board>(
-    `SELECT b.id, b.room_id, b.team_id, b.name, b.cover, b.category, b.tags, b.description,
+    `SELECT b.id, b.public_id, b.room_id, b.team_id, b.name, b.cover, b.category, b.tags, b.description,
             b.visibility, b.owner_user_id, b.settings, b.created_at, b.updated_at
      FROM board_visits v
      JOIN boards b ON b.id = v.board_id
@@ -153,11 +184,22 @@ export async function moveBoard(
 export async function duplicateBoard(boardId: number, userId: number): Promise<Board | undefined> {
   const src = await getBoard(boardId);
   if (!src) return undefined;
+  // 同 createBoard 的热修理由：复制白板也是一次新 INSERT，同样需要显式 public_id。
   const rows = await query<Board>(
-    `INSERT INTO boards (room_id, team_id, name, cover, category, description, visibility, owner_user_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO boards (room_id, team_id, name, cover, category, description, visibility, owner_user_id, public_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING ${BOARD_COLS}`,
-    [src.room_id, src.team_id, `${src.name}（副本）`, src.cover, src.category, src.description, src.visibility, userId]
+    [
+      src.room_id,
+      src.team_id,
+      `${src.name}（副本）`,
+      src.cover,
+      src.category,
+      src.description,
+      src.visibility,
+      userId,
+      generateId("brd"),
+    ]
   );
   return rows[0];
 }
@@ -193,7 +235,7 @@ export async function listFavoriteBoards(userId: number, q?: string): Promise<Bo
     nameClause = ` AND b.name ILIKE $${params.length}`;
   }
   return query<Board>(
-    `SELECT b.id, b.room_id, b.team_id, b.name, b.cover, b.category, b.tags, b.description,
+    `SELECT b.id, b.public_id, b.room_id, b.team_id, b.name, b.cover, b.category, b.tags, b.description,
             b.visibility, b.owner_user_id, b.settings, b.created_at, b.updated_at
      FROM board_favorites f
      JOIN boards b ON b.id = f.board_id
@@ -222,7 +264,7 @@ export async function listEditableBoardsForUser(userId: number, q?: string): Pro
     nameClause = ` AND b.name ILIKE $${params.length}`;
   }
   return query<Board>(
-    `SELECT DISTINCT b.id, b.room_id, b.team_id, b.name, b.cover, b.category, b.tags, b.description,
+    `SELECT DISTINCT b.id, b.public_id, b.room_id, b.team_id, b.name, b.cover, b.category, b.tags, b.description,
             b.visibility, b.owner_user_id, b.settings, b.created_at, b.updated_at
      FROM boards b
      JOIN rooms r ON r.id = b.room_id

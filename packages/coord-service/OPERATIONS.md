@@ -126,36 +126,51 @@ curl -s -X POST .../events -H "Authorization: Bearer $COORD_SERVICE_TOKEN" \
 
 ## 2. 凭据（token）管理
 
-### token 怎么发到 agent 会话（实际现状，非自动）
+### token 怎么发到 agent 会话
 
-**没有一个自动生成的中央凭据文件。** `seed-agents.ts` 只在生成那一刻把新 token
-**打印到 stdout 一次**（`console.log`，见下），不落任何文件。分发是人工的：谁跑的
-seed，谁负责把每个 token 写进对应 agent 会话能读到的本地文件，再让会话 source。
-
-2026-07-08 的 8 身份分发实际就是这么做的：每个身份一个独立文件（mode 600、
-放在 git worktree 之外），文件内容两行——
+**中央凭据文件 = `.harness/state/.cache/coord-credentials.json`**（gitignored、
+mode 600；#520 起为全部 onboarding/bootstrap 文档的标准机制）。`seed-agents.ts`
+在 mint 新身份时**自动把 token 合并写入该文件**（不覆盖已有身份），并同时打印
+一行可复制的取用命令。agent 会话取用：
 
 ```bash
-# <coord-id>.env（gitignored 或放在仓库树外，绝不进 git）
-export COORD_SERVICE_URL="https://coord-service-staging.boardx.workers.dev"
-export COORD_SERVICE_TOKEN="<该身份的 token>"
+export COORD_SERVICE_URL=$(jq -r '.COORD_SERVICE_URL' .harness/state/.cache/coord-credentials.json)
+export COORD_SERVICE_TOKEN=$(jq -r '.tokens["<你的身份id>"]' .harness/state/.cache/coord-credentials.json)
 ```
 
-agent 会话每次跑 lock 命令前 `source` 它即可。分发时只把**文件路径**贴到总线
-（如各自 lease issue / #323），**token 值绝不贴**。
+分发时只把**文件路径**贴到总线，**token 值绝不贴**进 issue/PR/聊天记录。
+跨机器分发（如给另一台开发机上的会话）仍是人工动作：安全拷贝该文件或对应
+条目，同样只走文件、不走聊天明文。
 
-> 一个自动写中央 `coord-credentials.json` 的便利脚本尚未实现——现状是"seed 打印
-> → 人工分发到 per-session 文件"。要做成自动的话是独立改进，别假设那个 json 已存在。
+> 历史注记：2026-07-10（#493）之前 seed 只打印不落盘、由人工抄进 per-session
+> 文件——那套 `<coord-id>.env` 文件仍然有效（本质是同一 token 的另一种存放），
+> 但新 mint 一律进中央文件，文档以本节为准。
 
-### 给新身份发 token（registry.yaml 加了新 agent 之后）
+### 自助领取（开发者身份的主路径，ADR-011 P2，2026-07-14 起）
+
+registry.yaml 合并（owner=你的 GitHub login）后，开发者在 **develop.boardx.us →
+加入开发 → 第 5 步**直接领取/轮换自己身份的 token——门户验 Access 身份 + registry
+归属，经 portal-broker（kind=token-broker，仅有 mint 权力）代调
+`POST /agents/:id/mint-token`。明文只显示一次；轮换使旧 token 立即失效（丢失/泄露
+自救通道）。coordinator/token-broker 身份**不可自助**，走下面的人工流程。
+
+### 存量身份迁移到自助（P3 上线后一次性）
+
+P3 之前人工 mint 到中央凭据文件的开发者身份（如 usersyj 的 wrk-survey-syj-1 /
+wrk-ava-syj-1），可选择走一次自助 reveal 脱离人工链：本人登录 develop.boardx.us
+→ 加入开发 → 第 5 步 → 对该身份点「领取 / 轮换」——旧 token 立即失效、新 token
+只在其浏览器显示一次。**这是所有者本人的动作**：coord-main/管理员不代为 reveal
+（明文只应出现在所有者已认证的浏览器里）。中央凭据文件仍作为本机会话分发通道
+不变，迁与不迁都可用。
+
+### 人工发放（coordinator 级身份 / 自助通道不可用时）
 
 ```bash
 cd packages/coord-service
 npx tsx scripts/seed-agents.ts        # 幂等：只给 D1 里还没有的 id 生成新行+新 token
 ```
 
-**token 只在生成那一刻打印一次**（stdout），立刻按上面的方式分发进 per-session
-文件，别贴进 issue/PR/聊天记录。
+新 token 自动写入中央凭据文件（见上节）；stdout 只打印取用命令、不打印 token 值。
 
 ### 轮换（token 疑似泄漏 / 丢失时）
 

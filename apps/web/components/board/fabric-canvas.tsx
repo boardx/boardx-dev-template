@@ -974,9 +974,21 @@ function nearestAnchor(r: { x: number; y: number; w: number; h: number }, toward
 }
 
 // 解析连接线的实际端点：绑定组件时按当前矩形动态重算最近锚点；自由端点用存储的画布坐标。
-function resolveConnectorEndpoints(
-  conn: NonNullable<RenderItem["connector"]>,
-  items: RenderItem[],
+// 导出（issue #470 PR #525 review 修复）：board-canvas.tsx 的浮动工具条定位需要 connector
+// 选中时的真实端点（而非落库的陈旧 x/y/w/h），与本文件内 getItemScreenRect 用同一套口径，
+// 避免端点跟随被移动的绑定组件后，工具条定位与视觉连线不一致。纯函数，不碰 fabric 实例，
+// 导出无副作用。两个参数都收窄成只含实际用到字段的结构类型（而不是要求完整
+// RenderItem["connector"]/RenderItem[]）——board-canvas.tsx 手上是尚未转换成 RenderItem
+// 的原始 items 状态 + 手搭的最小 connector 描述，没有必要为了调这个纯几何函数去多跑一遍
+// RenderItem 转换、或伪造 line/arrow/stroke/strokeWidth 这些它根本不读的字段。
+export function resolveConnectorEndpoints(
+  conn: {
+    fromId: string | null;
+    toId: string | null;
+    fromPoint: { x: number; y: number } | null;
+    toPoint: { x: number; y: number } | null;
+  },
+  items: Array<{ id: string; x: number; y: number; w: number; h: number }>,
 ): { from: { x: number; y: number }; to: { x: number; y: number } } {
   const fromItem = conn.fromId ? items.find((i) => i.id === conn.fromId) : undefined;
   const toItem = conn.toId ? items.find((i) => i.id === conn.toId) : undefined;

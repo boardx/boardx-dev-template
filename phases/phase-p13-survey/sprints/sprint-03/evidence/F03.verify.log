@@ -1,0 +1,99 @@
+$ docker compose -f infra/docker-compose.yml up -d
+[exit 0]
+ Container codex-revert-survey-merge-harness-redis-1 Running
+ Container codex-revert-survey-merge-harness-postgres-1 Running
+ Container codex-revert-survey-merge-harness-minio-1 Running
+
+
+$ pnpm --filter @repo/data run migrate
+[exit 0]
+
+> @repo/data@0.1.0 migrate /private/tmp/boardx-survey-merge-revert/packages/data
+> sh -c 'set -a; [ -f ../../apps/web/.env.local ] && . ../../apps/web/.env.local; set +a; tsx src/migrate.ts'
+
+✓ 已应用，跳过：001_init.sql
+✓ 已应用，跳过：002_auth.sql
+✓ 已应用，跳过：003_team.sql
+✓ 已应用，跳过：004_room.sql
+✓ 已应用，跳过：005_canvas.sql
+✓ 已应用，跳过：006_profile.sql
+✓ 已应用，跳过：007_board.sql
+✓ 已应用，跳过：008_board_visits.sql
+✓ 已应用，跳过：009_board_favorites.sql
+✓ 已应用，跳过：010_room_chat.sql
+✓ 已应用，跳过：011_board_settings.sql
+✓ 已应用，跳过：012_board_items_board_id.sql
+✓ 已应用，跳过：013_board_items_color.sql
+✓ 已应用，跳过：014_feedback.sql
+✓ 已应用，跳过：014_room_chat_messages.sql
+✓ 已应用，跳过：015_team_general.sql
+✓ 已应用，跳过：016_admin_role.sql
+✓ 已应用，跳过：016_ai_store.sql
+✓ 已应用，跳过：016_ava_chat.sql
+✓ 已应用，跳过：016_credits.sql
+✓ 已应用，跳过：016_kb_files.sql
+✓ 已应用，跳过：016_survey.sql
+✓ 已应用，跳过：017_ai_store_item_config.sql
+✓ 已应用，跳过：017_payment_orders.sql
+✓ 已应用，跳过：017_studio_artifacts.sql
+✓ 已应用，跳过：017_survey_templates.sql
+✓ 已应用，跳过：018_ai_store_favorites.sql
+✓ 已应用，跳过：018_ava_message_attachments.sql
+✓ 已应用，跳过：018_ava_thread_share.sql
+✓ 已应用，跳过：018_user_plan.sql
+✓ 已应用，跳过：019_ai_store_subscriptions.sql
+✓ 已应用，跳过：019_credit_transaction_idempotency.sql
+✓ 已应用，跳过：019_presentation_artifacts.sql
+✓ 已应用，跳过：020_ava_message_feedback.sql
+✓ 已应用，跳过：021_ai_store_share.sql
+✓ 已应用，跳过：021_presentation_revisions.sql
+✓ 已应用，跳过：022_retire_room_canvas.sql
+✓ 已应用，跳过：023_outbound_emails.sql
+✓ 已应用，跳过：024_room_favorites.sql
+✓ 已应用，跳过：025_room_invites.sql
+✓ 已应用，跳过：026_room_files.sql
+✓ 已应用，跳过：026_survey_room_scope.sql
+✓ 已应用，跳过：027_ava_research_sessions.sql
+✓ 已应用，跳过：028_ava_research_clarify_stage.sql
+✓ 已应用，跳过：029_email_confirmation.sql
+✓ 已应用，跳过：030_room_ai_context.sql
+✓ 已应用，跳过：031_board_backups.sql
+✓ 已应用，跳过：032_board_tags.sql
+✓ 已应用，跳过：033_board_room_public_id.sql
+✓ 已应用，跳过：034_public_id_concurrent_index.sql
+✓ 已应用，跳过：035_public_id_not_null.sql
+迁移完成。
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/survey-003-answer-survey.spec.ts
+[exit 0]
+
+Running 3 tests using 1 worker
+
+  ✓  1 [chromium] › survey-003-answer-survey.spec.ts:40:5 › 访客打开公开答题页，完成必填校验并提交落库 (12.7s)
+  ✓  2 [chromium] › survey-003-answer-survey.spec.ts:71:5 › 未发布问卷公开链接展示不可答题态 (1.1s)
+  ✓  3 [chromium] › survey-003-answer-survey.spec.ts:82:5 › 安全回归：未发布问卷的公开答题 API 不泄露题目/选项内容（#181） (500ms)
+
+  3 passed (21.2s)
+[2m[WebServer] [22m(node:2659) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:2666) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:2676) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2682) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2682) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:2708) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:2717) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:2718) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:2725) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:2731) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:2735) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)

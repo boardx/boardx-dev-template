@@ -22,7 +22,24 @@ description: >
 
 ## 启动仪式
 
+### Step 0 — 挂上你的 loop（ADR-014，先做这个）
+
+**module-coordinator 的 loop 周期 = 15 分钟**，每个 loop 跑一条命令：
+
+```bash
+pnpm harness tick --session coord-<你的模块>
+# 权威时钟（不信本机 date）+ 时钟漂移告警 + 续模块租约（防静默过期）+ 拉任务收件箱
+```
+
+每 tick 除 tick 外还做：本模块收件箱/PR 队列扫一眼、首轮 review、按需派子 agent。
+每 3h C-cycle 边界发 cycle-plan/result + 补漏模块 skill 的经验回流。
+实现随 runtime（CC 用 /loop 或 Monitor，Codex 用等价物，cron 亦可）。
+
 ### Step 1 — 确认身份与领域
+**先读你模块的活知识库 `.agents/skills/mod-<模块名>/SKILL.md`**（代码地图/契约/前人踩坑），
+并承担它的 C-cycle 复盘义务：每周期检查本模块合并的 PR，有经验没回流的补写进去
+（ADR-010 "SOP 持续迭代"的落点）。
+
 读 `.harness/agents/registry.yaml` 里 `kind: module-coordinator` 的对应条目，确认自己的
 `id`（如 `coord-collab`）和 `areas`（如 `[collaboration]`）。只处理这些 area 的 issue/PR，
 不越界碰其他模块的文件——跨模块热点（如 `apps/web/app/(app)/rooms/[id]/members/page.tsx`
@@ -72,7 +89,7 @@ gh pr list --state open --json number,headRefName,baseRefName,statusCheckRollup
 > 分派/初审只涉及 `gh` 命令 + 只读 git 查阅，不需要 worktree；但一旦要自己落地改代码
 > （如 coord-collab 处理 stale 认领时直接代劳修复），必须先 `git worktree add` 开
 > 独立工作区，不得在共享主 checkout 上 commit/reset/stash——见 ADR-005
-> （`phases/phase-01-foundation/adr/ADR-005-shared-checkout-isolation.md`）。
+> （`docs/adr/ADR-005-shared-checkout-isolation.md`）。
 
 ### Step 6 — 心跳与巡检
 沿用顶层 coordinator 的 L0(60s 事件)/L2(15min 巡检+心跳)节奏，范围限于自己 areas。

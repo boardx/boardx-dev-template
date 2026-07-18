@@ -188,16 +188,16 @@
       "title": "语音输入 / 实时转写",
       "user_visible_behavior": "输入区语音按钮：请求麦克风权限→录音中展示剩余时间/音量可视化→结束后转写为文本填入输入框供检查/编辑/发送；或作为音频附件发送展示音频卡片。权限被拒/无麦克风/浏览器不支持/录音过短/转写失败均给对应提示；取消录音不发送空消息。",
       "design_ref": "prototype:<!-- composer --> 语音入口（AVA 输入区，录音/音量可视化细节较浅）；DESIGN.md tokens",
-      "status": "blocked",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "06",
+      "owner": "wrk-ava-1",
       "capability": "CAP-AI",
       "depends_on": [],
       "wave": null,
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/ava-voice-input.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F09.verify.log @ 2026-07-13T00:39:10.444Z",
       "notes": "uc-ava-008。blocked-on 语音转写（STT）服务能力——与 p7-F10「语音转录到白板」共用同一 STT 集成，能力未就绪。浏览器 MediaRecorder + 音量可视化的纯前端部分可先做，但有意义的端到端转写需 STT 服务，故整体 blocked；STT 接入后转 passing。"
     },
     {

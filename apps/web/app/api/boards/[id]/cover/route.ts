@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getBoard, canManageBoard, canViewBoard, updateBoard } from "@repo/data";
+import { canManageBoard, canViewBoard, getBoard, resolveBoardId, updateBoard } from "@repo/data";
 import {
   BOARD_COVER_ALLOWED_EXT,
   BOARD_COVER_MAX_BYTES,
@@ -19,7 +19,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   try {
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-    const boardId = Number(params.id);
+    const boardId = await resolveBoardId(params.id);
     const board = await getBoard(boardId);
     if (!board) return NextResponse.json({ error: "not found" }, { status: 404 });
     if (!(await canManageBoard(boardId, user.id))) {
@@ -51,7 +51,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ board: updated });
   } catch (err) {
     console.error("[boards/:id/cover POST] 操作失败:", err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "服务器错误" }, { status: 500 }); // #519:不回传 String(err)
   }
 }
 
@@ -60,7 +60,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   try {
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-    const boardId = Number(params.id);
+    const boardId = await resolveBoardId(params.id);
     const board = await getBoard(boardId);
     if (!board) return NextResponse.json({ error: "not found" }, { status: 404 });
     if (!(await canViewBoard(boardId, user.id))) {
@@ -72,6 +72,6 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     return NextResponse.redirect(url, 302);
   } catch (err) {
     console.error("[boards/:id/cover GET] 操作失败:", err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "服务器错误" }, { status: 500 }); // #519:不回传 String(err)
   }
 }

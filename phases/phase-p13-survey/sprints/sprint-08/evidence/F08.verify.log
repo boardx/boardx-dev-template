@@ -1,0 +1,642 @@
+$ pnpm --filter @repo/web run lint
+[exit 0]
+
+> @repo/web@0.1.0 lint /private/tmp/boardx-survey-clean-history/apps/web
+> bash scripts/lint-design.sh
+
+· 扫描范围：app/ + components/（含 ava/ai-store/surveys/admin/studio/presentations 等模块）
+✓ token 对比度：全部色面/文字对过线（中性 ≥4.5:1，状态色 ≥3:1，明暗两套）
+⚠ LABEL-LANG-MIX(同文件内中英混用，警告，不拦截；修复归属 phase-p17 reskin)：
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:173:  { id: "understand-file", label: "理解文件", prompt: "帮我理解这份材料，并总结关键结论。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:174:  { id: "draft-email", label: "起草邮件", prompt: "帮我起草一封项目进展同步邮件。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:175:  { id: "summarize-trends", label: "总结趋势", prompt: "帮我总结最近用户反馈中的主要趋势。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:176:  { id: "brainstorm", label: "头脑风暴", prompt: "围绕这个目标帮我头脑风暴 5 个可执行方案。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:193:    label: "深度研究",
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:199:    label: "用户研究",
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:206:  { id: "make-tasks", label: "拆成任务", prompt: "把上面的建议拆成可执行任务，并按优先级排序。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:207:  { id: "find-risks", label: "识别风险", prompt: "基于上面的回复，列出主要风险和缓解措施。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:208:  { id: "shorten", label: "压缩摘要", prompt: "把上面的回复压缩成 5 条要点。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2787:  if (diffDays === 0) return { key: "today", label: "Today" };
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2788:  if (diffDays === 1) return { key: "yesterday", label: "Yesterday" };
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2789:  if (diffDays < 7) return { key: "last-7-days", label: "Last 7 days" };
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2790:  return { key: "older", label: "Older" };
+⚠ LABEL-LANG-MIX(跨文件中英混用，警告，不拦截；修复归属 phase-p17 reskin)：以下文件整体用中文 label，而以下文件整体用英文 label，同一层级 UI 组件的文案语言应统一：
+    LABEL-LANG-MIX: components/board/board-canvas.tsx:190:  { value: "sans-serif", label: "无衬线" },
+    LABEL-LANG-MIX: components/board/sync-status.tsx:14:  synced: { label: "已同步", dot: "bg-tag-green", text: "text-success" },
+    LABEL-LANG-MIX: components/studio/studio-panel.tsx:29:  { type: "audio", label: "音频概览", icon: AudioLines },
+    LABEL-LANG-MIX: app/(app)/account/page.tsx:15:  { key: "personal", label: "Personal info", icon: User },
+    LABEL-LANG-MIX: app/(app)/admin/admin-home.tsx:113:        { testKey: "users", label: "Total users", stat: stats.users },
+    LABEL-LANG-MIX: app/(app)/admin/admin-tabs.tsx:8:  { key: "overview", label: "Overview", href: "/admin" },
+    LABEL-LANG-MIX: app/(app)/admin/ai-store/featured/page.tsx:33:  { key: "", label: "All approved" },
+    LABEL-LANG-MIX: app/(app)/admin/ai-store/review/page.tsx:36:  { key: "", label: "All" },
+    LABEL-LANG-MIX: app/(app)/credits/page.tsx:237:              <SummaryCard value={fmt(wallet.balance)} label="Current balance" />
+    LABEL-LANG-MIX: app/(app)/rooms/[id]/layout.tsx:27:  { key: "boards", label: "Boards", segment: "boards" },
+    LABEL-LANG-MIX: components/app-shell/sidebar.tsx:45:  { label: "Home", icon: Home, href: "/" },
+  示例（Board 工具条 vs Sidebar 导航）：见 components/board/board-canvas.tsx 与 components/app-shell/sidebar.tsx
+✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性/文案语言一致性）
+
+
+$ pnpm --filter @repo/web run typecheck
+[exit 0]
+
+> @repo/web@0.1.0 typecheck /private/tmp/boardx-survey-clean-history/apps/web
+> tsc --noEmit
+
+
+
+$ pnpm --filter @repo/data run typecheck
+[exit 0]
+
+> @repo/data@0.1.0 typecheck /private/tmp/boardx-survey-clean-history/packages/data
+> tsc --noEmit
+
+
+
+$ pnpm --filter @repo/data run test
+[exit 0]
+
+> @repo/data@0.1.0 test /private/tmp/boardx-survey-clean-history/packages/data
+> vitest run
+
+
+ RUN  v2.0.0 /private/tmp/boardx-survey-clean-history/packages/data
+
+ ✓ src/migrateHelpers.test.ts  (6 tests) 59ms
+ ✓ src/aiStore.test.ts  (17 tests) 35ms
+ ✓ src/ids.test.ts  (8 tests) 129ms
+ ✓ src/index.test.ts  (3 tests) 5ms
+ ✓ src/survey.test.ts  (4 tests) 4ms
+ ✓ src/avaChat.test.ts  (5 tests) 6ms
+ ✓ src/rooms.test.ts  (2 tests) 8ms
+ ✓ src/roomChat.test.ts  (4 tests) 19ms
+ ✓ src/board.test.ts  (11 tests) 9ms
+
+ Test Files  9 passed (9)
+      Tests  60 passed (60)
+   Start at  17:04:09
+   Duration  2.94s (transform 2.34s, setup 0ms, collect 7.59s, tests 274ms, environment 2ms, prepare 5.96s)
+
+
+
+$ ! git merge-base --is-ancestor 9cc1c25 HEAD
+[exit 0]
+
+
+$ git diff --quiet 61e5ec1 HEAD -- apps/web packages/ai packages/data pnpm-lock.yaml docs/superpowers
+[exit 0]
+
+
+
+[BASE VERIFY] $ pnpm -w run verify:base
+[exit 0]
+
+> boardx-dev-template@ verify:base /private/tmp/boardx-survey-clean-history
+> turbo run typecheck lint test
+
+• Packages in scope: @repo/agent-core, @repo/ai, @repo/auth, @repo/canvas, @repo/collab, @repo/coord-dashboard, @repo/coord-service, @repo/data, @repo/devportal, @repo/memory, @repo/orchestrator, @repo/queue, @repo/storage, @repo/tools, @repo/web, @repo/workflow-worker
+• Running typecheck, lint, test in 16 packages
+• Remote caching disabled
+@repo/ai:build: cache hit, replaying logs bb62852a548c5170
+@repo/tools:build: cache hit, replaying logs e7b15f42cf09c306
+@repo/ai:build:
+@repo/ai:build: > @repo/ai@0.1.0 build /private/tmp/boardx-survey-clean-history/packages/ai
+@repo/ai:build: > tsc --noEmit
+@repo/ai:build:
+@repo/tools:build:
+@repo/tools:build: > @repo/tools@0.1.0 build /private/tmp/boardx-survey-clean-history/packages/tools
+@repo/tools:build: > tsc --noEmit
+@repo/tools:build:
+@repo/ai:lint: cache hit, replaying logs 2cd9407a55c074a3
+@repo/ai:lint:
+@repo/ai:lint: > @repo/ai@0.1.0 lint /private/tmp/boardx-survey-clean-history/packages/ai
+@repo/ai:lint: > echo 'lint: ok'
+@repo/ai:lint:
+@repo/ai:lint: lint: ok
+@repo/queue:build: cache hit, replaying logs 6df8f897dd0499f4
+@repo/queue:build:
+@repo/queue:build: > @repo/queue@0.1.0 build /private/tmp/boardx-survey-clean-history/packages/queue
+@repo/queue:build: > tsc --noEmit
+@repo/queue:build:
+@repo/orchestrator:lint: cache hit, replaying logs cfc578116feadf62
+@repo/orchestrator:lint:
+@repo/orchestrator:lint: > @repo/orchestrator@0.1.0 lint /private/tmp/boardx-survey-clean-history/apps/orchestrator
+@repo/orchestrator:lint: > echo 'lint: ok'
+@repo/orchestrator:lint:
+@repo/orchestrator:lint: lint: ok
+@repo/collab:lint: cache hit, replaying logs db70c76a4af4b2a7
+@repo/collab:lint:
+@repo/collab:lint: > @repo/collab@0.1.0 lint /private/tmp/boardx-survey-clean-history/packages/collab
+@repo/collab:lint: > echo 'lint: ok'
+@repo/collab:lint:
+@repo/collab:lint: lint: ok
+@repo/memory:typecheck: cache hit, replaying logs 12bfb1c3b6874a3a
+@repo/memory:typecheck:
+@repo/memory:typecheck: > @repo/memory@0.1.0 typecheck /private/tmp/boardx-survey-clean-history/packages/memory
+@repo/memory:typecheck: > tsc --noEmit
+@repo/memory:typecheck:
+@repo/memory:build: cache hit, replaying logs fe945e6a9ed2f0fe
+@repo/memory:build:
+@repo/memory:build: > @repo/memory@0.1.0 build /private/tmp/boardx-survey-clean-history/packages/memory
+@repo/memory:build: > tsc --noEmit
+@repo/memory:build:
+@repo/data:build: cache hit, replaying logs ef1dbcabfc800146
+@repo/data:build:
+@repo/data:build: > @repo/data@0.1.0 build /private/tmp/boardx-survey-clean-history/packages/data
+@repo/data:build: > tsc --noEmit
+@repo/data:build:
+@repo/data:lint: cache hit, replaying logs 20e03600673be2f5
+@repo/data:lint:
+@repo/data:lint: > @repo/data@0.1.0 lint /private/tmp/boardx-survey-clean-history/packages/data
+@repo/data:lint: > echo 'lint: ok'
+@repo/data:lint:
+@repo/data:lint: lint: ok
+@repo/coord-service:typecheck: cache hit, replaying logs 36f4cb29dff26900
+@repo/coord-service:typecheck:
+@repo/coord-service:typecheck: > @repo/coord-service@0.1.0 typecheck /private/tmp/boardx-survey-clean-history/packages/coord-service
+@repo/coord-service:typecheck: > tsc --noEmit
+@repo/coord-service:typecheck:
+@repo/agent-core:build: cache hit, replaying logs 229eff6fc891e76c
+@repo/agent-core:build:
+@repo/agent-core:build: > @repo/agent-core@0.1.0 build /private/tmp/boardx-survey-clean-history/packages/agent-core
+@repo/agent-core:build: > tsc --noEmit
+@repo/agent-core:build:
+@repo/ai:test: cache hit, replaying logs aa6a2a42f4719b95
+@repo/ai:test:
+@repo/ai:test: > @repo/ai@0.1.0 test /private/tmp/boardx-survey-clean-history/packages/ai
+@repo/ai:test: > vitest run
+@repo/ai:test:
+@repo/ai:test:
+@repo/ai:test: [7m[1m[36m RUN [39m[22m[27m [36mv2.0.0[39m [90m/private/tmp/boardx-survey-clean-history/packages/ai[39m
+@repo/ai:test:
+@repo/ai:test:  [32m✓[39m src/studioGenerator.test.ts [2m ([22m[2m4 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+@repo/ai:test:  [32m✓[39m src/index.test.ts [2m ([22m[2m12 tests[22m[2m)[22m[90m 17[2mms[22m[39m
+@repo/ai:test:  [32m✓[39m src/sttProvider.test.ts [2m ([22m[2m6 tests[22m[2m)[22m[33m 502[2mms[22m[39m
+@repo/ai:test:  [32m✓[39m src/anthropicProvider.test.ts [2m ([22m[2m13 tests[22m[2m)[22m[33m 610[2mms[22m[39m
+@repo/ai:test:
+@repo/ai:test: [2m Test Files [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+@repo/ai:test: [2m      Tests [22m [1m[32m35 passed[39m[22m[90m (35)[39m
+@repo/ai:test: [2m   Start at [22m 16:59:18
+@repo/ai:test: [2m   Duration [22m 9.84s[2m (transform 4.36s, setup 0ms, collect 6.52s, tests 1.14s, environment 2ms, prepare 10.58s)[22m
+@repo/ai:test:
+@repo/auth:build: cache hit, replaying logs 67dc34f2d6a00c1d
+@repo/auth:build:
+@repo/auth:build: > @repo/auth@0.1.0 build /private/tmp/boardx-survey-clean-history/packages/auth
+@repo/auth:build: > tsc --noEmit
+@repo/auth:build:
+@repo/queue:test: cache hit, replaying logs 3c058d96464ae590
+@repo/queue:test:
+@repo/queue:test: > @repo/queue@0.1.0 test /private/tmp/boardx-survey-clean-history/packages/queue
+@repo/queue:test: > vitest run
+@repo/queue:test:
+@repo/queue:test:
+@repo/queue:test: [7m[1m[36m RUN [39m[22m[27m [36mv2.0.0[39m [90m/private/tmp/boardx-survey-clean-history/packages/queue[39m
+@repo/queue:test:
+@repo/queue:test:  [32m✓[39m src/index.test.ts [2m ([22m[2m4 tests[22m[2m)[22m[90m 124[2mms[22m[39m
+@repo/queue:test:
+@repo/queue:test: [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+@repo/queue:test: [2m      Tests [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+@repo/queue:test: [2m   Start at [22m 17:00:22
+@repo/queue:test: [2m   Duration [22m 13.63s[2m (transform 1.54s, setup 0ms, collect 4.53s, tests 124ms, environment 0ms, prepare 4.97s)[22m
+@repo/queue:test:
+@repo/devportal:test: cache hit, replaying logs 1cad140bc3441d55
+@repo/devportal:test:
+@repo/devportal:test: > @repo/devportal@0.1.0 test /private/tmp/boardx-survey-clean-history/apps/devportal
+@repo/devportal:test: > vitest run --passWithNoTests
+@repo/devportal:test:
+@repo/devportal:test:
+@repo/devportal:test: [1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90m/private/tmp/boardx-survey-clean-history/apps/devportal[39m
+@repo/devportal:test:
+@repo/devportal:test: [2minclude: [22m[33m**/*.{test,spec}.?(c|m)[jt]s?(x)[39m
+@repo/devportal:test: [2mexclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[2m, [22m**/cypress/**[2m, [22m**/.{idea,git,cache,output,temp}/**[2m, [22m**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*[39m
+@repo/devportal:test: No test files found, exiting with code 0
+@repo/devportal:test:
+@repo/memory:test: cache hit, replaying logs 4b3fd2897d8186db
+@repo/memory:test:
+@repo/memory:test: > @repo/memory@0.1.0 test /private/tmp/boardx-survey-clean-history/packages/memory
+@repo/memory:test: > vitest run
+@repo/memory:test:
+@repo/memory:test:
+@repo/memory:test: [7m[1m[36m RUN [39m[22m[27m [36mv2.0.0[39m [90m/private/tmp/boardx-survey-clean-history/packages/memory[39m
+@repo/memory:test:
+@repo/memory:test:  [32m✓[39m src/index.test.ts [2m ([22m[2m13 tests[22m[2m)[22m[90m 82[2mms[22m[39m
+@repo/memory:test:
+@repo/memory:test: [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+@repo/memory:test: [2m      Tests [22m [1m[32m13 passed[39m[22m[90m (13)[39m
+@repo/memory:test: [2m   Start at [22m 16:59:52
+@repo/memory:test: [2m   Duration [22m 4.89s[2m (transform 300ms, setup 0ms, collect 340ms, tests 82ms, environment 0ms, prepare 1.34s)[22m
+@repo/memory:test:
+@repo/canvas:build: cache hit, replaying logs fb2a877de59f3ccb
+@repo/canvas:build:
+@repo/canvas:build: > @repo/canvas@0.1.0 build /private/tmp/boardx-survey-clean-history/packages/canvas
+@repo/canvas:build: > tsc --noEmit
+@repo/canvas:build:
+@repo/data:typecheck: cache hit, replaying logs b79546d9ef27440b
+@repo/data:typecheck:
+@repo/data:typecheck: > @repo/data@0.1.0 typecheck /private/tmp/boardx-survey-clean-history/packages/data
+@repo/data:typecheck: > tsc --noEmit
+@repo/data:typecheck:
+@repo/tools:lint: cache hit, replaying logs a404e79ee6b4a6ce
+@repo/tools:lint:
+@repo/tools:lint: > @repo/tools@0.1.0 lint /private/tmp/boardx-survey-clean-history/packages/tools
+@repo/tools:lint: > echo 'lint: ok'
+@repo/tools:lint:
+@repo/tools:lint: lint: ok
+@repo/queue:typecheck: cache hit, replaying logs 6e1445712ecc6aed
+@repo/queue:typecheck:
+@repo/queue:typecheck: > @repo/queue@0.1.0 typecheck /private/tmp/boardx-survey-clean-history/packages/queue
+@repo/queue:typecheck: > tsc --noEmit
+@repo/queue:typecheck:
+@repo/tools:typecheck: cache hit, replaying logs 6642059751d1af19
+@repo/tools:typecheck:
+@repo/tools:typecheck: > @repo/tools@0.1.0 typecheck /private/tmp/boardx-survey-clean-history/packages/tools
+@repo/tools:typecheck: > tsc --noEmit
+@repo/tools:typecheck:
+@repo/workflow-worker:lint: cache hit, replaying logs 2ec34efef624d452
+@repo/workflow-worker:lint:
+@repo/workflow-worker:lint: > @repo/workflow-worker@0.1.0 lint /private/tmp/boardx-survey-clean-history/apps/workflow-worker
+@repo/workflow-worker:lint: > echo 'lint: ok'
+@repo/workflow-worker:lint:
+@repo/workflow-worker:lint: lint: ok
+@repo/tools:test: cache hit, replaying logs e552ee9dcb6ff5a1
+@repo/tools:test:
+@repo/tools:test: > @repo/tools@0.1.0 test /private/tmp/boardx-survey-clean-history/packages/tools
+@repo/tools:test: > vitest run
+@repo/tools:test:
+@repo/tools:test:
+@repo/tools:test: [7m[1m[36m RUN [39m[22m[27m [36mv2.0.0[39m [90m/private/tmp/boardx-survey-clean-history/packages/tools[39m
+@repo/tools:test:
+@repo/tools:test:  [32m✓[39m src/index.test.ts [2m ([22m[2m12 tests[22m[2m)[22m[33m 335[2mms[22m[39m
+@repo/tools:test:
+@repo/tools:test: [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+@repo/tools:test: [2m      Tests [22m [1m[32m12 passed[39m[22m[90m (12)[39m
+@repo/tools:test: [2m   Start at [22m 16:59:43
+@repo/tools:test: [2m   Duration [22m 5.21s[2m (transform 194ms, setup 0ms, collect 217ms, tests 335ms, environment 0ms, prepare 1.15s)[22m
+@repo/tools:test:
+@repo/canvas:typecheck: cache hit, replaying logs 15a9d26cc93d6b3f
+@repo/canvas:typecheck:
+@repo/canvas:typecheck: > @repo/canvas@0.1.0 typecheck /private/tmp/boardx-survey-clean-history/packages/canvas
+@repo/canvas:typecheck: > tsc --noEmit
+@repo/canvas:typecheck:
+@repo/auth:lint: cache hit, replaying logs 9ad54b6ffc408d5b
+@repo/auth:lint:
+@repo/auth:lint: > @repo/auth@0.1.0 lint /private/tmp/boardx-survey-clean-history/packages/auth
+@repo/auth:lint: > echo 'lint: ok'
+@repo/auth:lint:
+@repo/auth:lint: lint: ok
+@repo/ai:typecheck: cache hit, replaying logs f0c5dd1909fc0ecd
+@repo/ai:typecheck:
+@repo/ai:typecheck: > @repo/ai@0.1.0 typecheck /private/tmp/boardx-survey-clean-history/packages/ai
+@repo/ai:typecheck: > tsc --noEmit
+@repo/ai:typecheck:
+@repo/canvas:test: cache hit, replaying logs 14796fd2dfa59526
+@repo/canvas:test:
+@repo/canvas:test: > @repo/canvas@0.1.0 test /private/tmp/boardx-survey-clean-history/packages/canvas
+@repo/canvas:test: > vitest run
+@repo/canvas:test:
+@repo/canvas:test:
+@repo/canvas:test: [7m[1m[36m RUN [39m[22m[27m [36mv2.0.0[39m [90m/private/tmp/boardx-survey-clean-history/packages/canvas[39m
+@repo/canvas:test:
+@repo/canvas:test:  [32m✓[39m src/index.test.ts [2m ([22m[2m25 tests[22m[2m)[22m[90m 170[2mms[22m[39m
+@repo/canvas:test:
+@repo/canvas:test: [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+@repo/canvas:test: [2m      Tests [22m [1m[32m25 passed[39m[22m[90m (25)[39m
+@repo/canvas:test: [2m   Start at [22m 17:00:37
+@repo/canvas:test: [2m   Duration [22m 7.84s[2m (transform 715ms, setup 0ms, collect 889ms, tests 170ms, environment 0ms, prepare 1.53s)[22m
+@repo/canvas:test:
+@repo/agent-core:typecheck: cache hit, replaying logs 8e8adb6926e9c7a5
+@repo/agent-core:typecheck:
+@repo/agent-core:typecheck: > @repo/agent-core@0.1.0 typecheck /private/tmp/boardx-survey-clean-history/packages/agent-core
+@repo/agent-core:typecheck: > tsc --noEmit
+@repo/agent-core:typecheck:
+@repo/agent-core:lint: cache hit, replaying logs 52cdf44013591afb
+@repo/agent-core:lint:
+@repo/agent-core:lint: > @repo/agent-core@0.1.0 lint /private/tmp/boardx-survey-clean-history/packages/agent-core
+@repo/agent-core:lint: > echo 'lint: ok'
+@repo/agent-core:lint:
+@repo/agent-core:lint: lint: ok
+@repo/storage:test: cache hit, replaying logs d88ca4c46c0d5ad5
+@repo/storage:test:
+@repo/storage:test: > @repo/storage@0.1.0 test /private/tmp/boardx-survey-clean-history/packages/storage
+@repo/storage:test: > vitest run
+@repo/storage:test:
+@repo/storage:test:
+@repo/storage:test: [7m[1m[36m RUN [39m[22m[27m [36mv2.0.0[39m [90m/private/tmp/boardx-survey-clean-history/packages/storage[39m
+@repo/storage:test:
+@repo/storage:test:  [32m✓[39m src/index.test.ts [2m ([22m[2m19 tests[22m[2m)[22m[90m 136[2mms[22m[39m
+@repo/storage:test:
+@repo/storage:test: [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+@repo/storage:test: [2m      Tests [22m [1m[32m19 passed[39m[22m[90m (19)[39m
+@repo/storage:test: [2m   Start at [22m 17:00:36
+@repo/storage:test: [2m   Duration [22m 9.57s[2m (transform 762ms, setup 0ms, collect 3.13s, tests 136ms, environment 1ms, prepare 2.45s)[22m
+@repo/storage:test:
+@repo/storage:lint: cache hit, replaying logs e7d74461aea3056d
+@repo/storage:lint:
+@repo/storage:lint: > @repo/storage@0.1.0 lint /private/tmp/boardx-survey-clean-history/packages/storage
+@repo/storage:lint: > echo 'lint: ok'
+@repo/storage:lint:
+@repo/storage:lint: lint: ok
+@repo/collab:test: cache hit, replaying logs 619e54995daeee44
+@repo/collab:test:
+@repo/collab:test: > @repo/collab@0.1.0 test /private/tmp/boardx-survey-clean-history/packages/collab
+@repo/collab:test: > vitest run
+@repo/collab:test:
+@repo/collab:test:
+@repo/collab:test: [7m[1m[36m RUN [39m[22m[27m [36mv2.0.0[39m [90m/private/tmp/boardx-survey-clean-history/packages/collab[39m
+@repo/collab:test:
+@repo/collab:test:  [32m✓[39m src/index.test.ts [2m ([22m[2m14 tests[22m[2m)[22m[33m 418[2mms[22m[39m
+@repo/collab:test:
+@repo/collab:test: [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+@repo/collab:test: [2m      Tests [22m [1m[32m14 passed[39m[22m[90m (14)[39m
+@repo/collab:test: [2m   Start at [22m 17:00:06
+@repo/collab:test: [2m   Duration [22m 4.39s[2m (transform 446ms, setup 0ms, collect 830ms, tests 418ms, environment 1ms, prepare 1.29s)[22m
+@repo/collab:test:
+@repo/queue:lint: cache hit, replaying logs 425c213ae7a4d825
+@repo/queue:lint:
+@repo/queue:lint: > @repo/queue@0.1.0 lint /private/tmp/boardx-survey-clean-history/packages/queue
+@repo/queue:lint: > echo 'lint: ok'
+@repo/queue:lint:
+@repo/queue:lint: lint: ok
+@repo/coord-service:lint: cache hit, replaying logs 87efa467bbd9a1ca
+@repo/coord-service:lint:
+@repo/coord-service:lint: > @repo/coord-service@0.1.0 lint /private/tmp/boardx-survey-clean-history/packages/coord-service
+@repo/coord-service:lint: > echo 'lint: ok'
+@repo/coord-service:lint:
+@repo/coord-service:lint: lint: ok
+@repo/auth:test: cache hit, replaying logs 2dfadb7d38eb12f2
+@repo/auth:test:
+@repo/auth:test: > @repo/auth@0.1.0 test /private/tmp/boardx-survey-clean-history/packages/auth
+@repo/auth:test: > vitest run
+@repo/auth:test:
+@repo/auth:test:
+@repo/auth:test: [7m[1m[36m RUN [39m[22m[27m [36mv2.0.0[39m [90m/private/tmp/boardx-survey-clean-history/packages/auth[39m
+@repo/auth:test:
+@repo/auth:test:  [32m✓[39m src/index.test.ts [2m ([22m[2m15 tests[22m[2m)[22m[33m 4545[2mms[22m[39m
+@repo/auth:test:
+@repo/auth:test: [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+@repo/auth:test: [2m      Tests [22m [1m[32m15 passed[39m[22m[90m (15)[39m
+@repo/auth:test: [2m   Start at [22m 17:00:00
+@repo/auth:test: [2m   Duration [22m 8.73s[2m (transform 169ms, setup 0ms, collect 574ms, tests 4.54s, environment 1ms, prepare 455ms)[22m
+@repo/auth:test:
+@repo/auth:typecheck: cache hit, replaying logs 10bf00340d49c51a
+@repo/auth:typecheck:
+@repo/auth:typecheck: > @repo/auth@0.1.0 typecheck /private/tmp/boardx-survey-clean-history/packages/auth
+@repo/auth:typecheck: > tsc --noEmit
+@repo/auth:typecheck:
+@repo/storage:build: cache hit, replaying logs 8a66ac8e54b3b38b
+@repo/storage:build:
+@repo/storage:build: > @repo/storage@0.1.0 build /private/tmp/boardx-survey-clean-history/packages/storage
+@repo/storage:build: > tsc --noEmit
+@repo/storage:build:
+@repo/collab:build: cache hit, replaying logs 6518de443c730427
+@repo/collab:build:
+@repo/collab:build: > @repo/collab@0.1.0 build /private/tmp/boardx-survey-clean-history/packages/collab
+@repo/collab:build: > tsc --noEmit
+@repo/collab:build:
+@repo/storage:typecheck: cache hit, replaying logs 54dfe163a8bc512b
+@repo/storage:typecheck:
+@repo/storage:typecheck: > @repo/storage@0.1.0 typecheck /private/tmp/boardx-survey-clean-history/packages/storage
+@repo/storage:typecheck: > tsc --noEmit
+@repo/storage:typecheck:
+@repo/memory:lint: cache hit, replaying logs a5ab3894a64277fc
+@repo/memory:lint:
+@repo/memory:lint: > @repo/memory@0.1.0 lint /private/tmp/boardx-survey-clean-history/packages/memory
+@repo/memory:lint: > echo 'lint: ok'
+@repo/memory:lint:
+@repo/memory:lint: lint: ok
+@repo/collab:typecheck: cache hit, replaying logs 49ba60e683a8af48
+@repo/collab:typecheck:
+@repo/collab:typecheck: > @repo/collab@0.1.0 typecheck /private/tmp/boardx-survey-clean-history/packages/collab
+@repo/collab:typecheck: > tsc --noEmit
+@repo/collab:typecheck:
+@repo/devportal:lint: cache hit, replaying logs 6d5d4cb63450e0df
+@repo/devportal:lint:
+@repo/devportal:lint: > @repo/devportal@0.1.0 lint /private/tmp/boardx-survey-clean-history/apps/devportal
+@repo/devportal:lint: > echo 'lint: ok'
+@repo/devportal:lint:
+@repo/devportal:lint: lint: ok
+@repo/web:lint: cache hit, replaying logs ff8d8f28a029a1fd
+@repo/web:lint:
+@repo/web:lint: > @repo/web@0.1.0 lint /private/tmp/boardx-survey-clean-history/apps/web
+@repo/web:lint: > bash scripts/lint-design.sh
+@repo/web:lint:
+@repo/web:lint: · 扫描范围：app/ + components/（含 ava/ai-store/surveys/admin/studio/presentations 等模块）
+@repo/web:lint: ✓ token 对比度：全部色面/文字对过线（中性 ≥4.5:1，状态色 ≥3:1，明暗两套）
+@repo/web:lint: ⚠ LABEL-LANG-MIX(同文件内中英混用，警告，不拦截；修复归属 phase-p17 reskin)：
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:173:  { id: "understand-file", label: "理解文件", prompt: "帮我理解这份材料，并总结关键结论。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:174:  { id: "draft-email", label: "起草邮件", prompt: "帮我起草一封项目进展同步邮件。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:175:  { id: "summarize-trends", label: "总结趋势", prompt: "帮我总结最近用户反馈中的主要趋势。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:176:  { id: "brainstorm", label: "头脑风暴", prompt: "围绕这个目标帮我头脑风暴 5 个可执行方案。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:193:    label: "深度研究",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:199:    label: "用户研究",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:206:  { id: "make-tasks", label: "拆成任务", prompt: "把上面的建议拆成可执行任务，并按优先级排序。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:207:  { id: "find-risks", label: "识别风险", prompt: "基于上面的回复，列出主要风险和缓解措施。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:208:  { id: "shorten", label: "压缩摘要", prompt: "把上面的回复压缩成 5 条要点。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2787:  if (diffDays === 0) return { key: "today", label: "Today" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2788:  if (diffDays === 1) return { key: "yesterday", label: "Yesterday" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2789:  if (diffDays < 7) return { key: "last-7-days", label: "Last 7 days" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2790:  return { key: "older", label: "Older" };
+@repo/web:lint: ⚠ LABEL-LANG-MIX(跨文件中英混用，警告，不拦截；修复归属 phase-p17 reskin)：以下文件整体用中文 label，而以下文件整体用英文 label，同一层级 UI 组件的文案语言应统一：
+@repo/web:lint:     LABEL-LANG-MIX: components/board/board-canvas.tsx:190:  { value: "sans-serif", label: "无衬线" },
+@repo/web:lint:     LABEL-LANG-MIX: components/board/sync-status.tsx:14:  synced: { label: "已同步", dot: "bg-tag-green", text: "text-success" },
+@repo/web:lint:     LABEL-LANG-MIX: components/studio/studio-panel.tsx:29:  { type: "audio", label: "音频概览", icon: AudioLines },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/account/page.tsx:15:  { key: "personal", label: "Personal info", icon: User },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/admin-home.tsx:113:        { testKey: "users", label: "Total users", stat: stats.users },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/admin-tabs.tsx:8:  { key: "overview", label: "Overview", href: "/admin" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/ai-store/featured/page.tsx:33:  { key: "", label: "All approved" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/ai-store/review/page.tsx:36:  { key: "", label: "All" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/credits/page.tsx:237:              <SummaryCard value={fmt(wallet.balance)} label="Current balance" />
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/rooms/[id]/layout.tsx:27:  { key: "boards", label: "Boards", segment: "boards" },
+@repo/web:lint:     LABEL-LANG-MIX: components/app-shell/sidebar.tsx:45:  { label: "Home", icon: Home, href: "/" },
+@repo/web:lint:   示例（Board 工具条 vs Sidebar 导航）：见 components/board/board-canvas.tsx 与 components/app-shell/sidebar.tsx
+@repo/web:lint: ✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性/文案语言一致性）
+@repo/canvas:lint: cache hit, replaying logs 6dcb49807b7b8128
+@repo/canvas:lint:
+@repo/canvas:lint: > @repo/canvas@0.1.0 lint /private/tmp/boardx-survey-clean-history/packages/canvas
+@repo/canvas:lint: > echo 'lint: ok'
+@repo/canvas:lint:
+@repo/canvas:lint: lint: ok
+@repo/devportal:typecheck: cache hit, replaying logs b392bf40d158d5a6
+@repo/devportal:typecheck:
+@repo/devportal:typecheck: > @repo/devportal@0.1.0 typecheck /private/tmp/boardx-survey-clean-history/apps/devportal
+@repo/devportal:typecheck: > tsc --noEmit
+@repo/devportal:typecheck:
+@repo/agent-core:test: cache hit, replaying logs 96ee23859b2c26f2
+@repo/agent-core:test:
+@repo/agent-core:test: > @repo/agent-core@0.1.0 test /private/tmp/boardx-survey-clean-history/packages/agent-core
+@repo/agent-core:test: > vitest run
+@repo/agent-core:test:
+@repo/agent-core:test:
+@repo/agent-core:test: [7m[1m[36m RUN [39m[22m[27m [36mv2.0.0[39m [90m/private/tmp/boardx-survey-clean-history/packages/agent-core[39m
+@repo/agent-core:test:
+@repo/agent-core:test:  [32m✓[39m src/index.test.ts [2m ([22m[2m3 tests[22m[2m)[22m[90m 106[2mms[22m[39m
+@repo/agent-core:test:
+@repo/agent-core:test: [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+@repo/agent-core:test: [2m      Tests [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+@repo/agent-core:test: [2m   Start at [22m 16:59:16
+@repo/agent-core:test: [2m   Duration [22m 8.51s[2m (transform 1.80s, setup 0ms, collect 2.15s, tests 106ms, environment 1ms, prepare 2.76s)[22m
+@repo/agent-core:test:
+@repo/coord-service:test: cache hit, replaying logs ee731dd1ac276692
+@repo/coord-service:test:
+@repo/coord-service:test: > @repo/coord-service@0.1.0 test /private/tmp/boardx-survey-clean-history/packages/coord-service
+@repo/coord-service:test: > vitest run
+@repo/coord-service:test:
+@repo/coord-service:test:
+@repo/coord-service:test: [7m[1m[36m RUN [39m[22m[27m [36mv2.0.0[39m [90m/private/tmp/boardx-survey-clean-history/packages/coord-service[39m
+@repo/coord-service:test:
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_tty_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_fs_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_http_modules` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:debug] Adding `enable_nodejs_perf_hooks_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-service:test: [vpw:info] Starting isolated runtimes for vitest.config.ts...
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's suite "POST /events (narrative events — ADR-009 GitHub 协调面退役后的站会/andon 信道)"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x50\x4f\x53\x54\x20\x2f\x65\x76\x65\x6e\x74\x73\x20\x28\x6e\x61\x72\x72\x61\x74\x69\x76\x65\x20\x65\x76\x65\x6e\x74\x73\x20\xe2\x80\x94\x20\x41\x44\x52\x2d\x30\x30\x39\x20\x47\x69\x74\x48\x75\x62\x20\xe5\x8d\x8f\xe8\xb0\x83\xe9\x9d\xa2\xe9\x80\x80\xe5\xbd\xb9\xe5\x90\x8e\xe7\x9a\x84\xe7\xab\x99\xe4\xbc\x9a\x2f\x61\x6e\x64\x6f\x6e\x20\xe4\xbf\xa1\xe9\x81\x93\x29\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "no bearer token → 401"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x6e\x6f\x20\x62\x65\x61\x72\x65\x72\x20\x74\x6f\x6b\x65\x6e\x20\xe2\x86\x92\x20\x34\x30\x31\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "no bearer token → 401"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x6e\x6f\x20\x62\x65\x61\x72\x65\x72\x20\x74\x6f\x6b\x65\x6e\x20\xe2\x86\x92\x20\x34\x30\x31\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "cycle-plan 写入成功并可在 /status 的 recent_events 里看到"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xe5\xb9\xb6\xe5\x8f\xaf\xe5\x9c\xa8\x20\x2f\x73\x74\x61\x74\x75\x73\x20\xe7\x9a\x84\x20\x72\x65\x63\x65\x6e\x74\x5f\x65\x76\x65\x6e\x74\x73\x20\xe9\x87\x8c\xe7\x9c\x8b\xe5\x88\xb0\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "cycle-plan 写入成功并可在 /status 的 recent_events 里看到"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xe5\xb9\xb6\xe5\x8f\xaf\xe5\x9c\xa8\x20\x2f\x73\x74\x61\x74\x75\x73\x20\xe7\x9a\x84\x20\x72\x65\x63\x65\x6e\x74\x5f\x65\x76\x65\x6e\x74\x73\x20\xe9\x87\x8c\xe7\x9c\x8b\xe5\x88\xb0\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "andon stop 信号写入成功，payload 原样保留"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x61\x6e\x64\x6f\x6e\x20\x73\x74\x6f\x70\x20\xe4\xbf\xa1\xe5\x8f\xb7\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x8c\x70\x61\x79\x6c\x6f\x61\x64\x20\xe5\x8e\x9f\xe6\xa0\xb7\xe4\xbf\x9d\xe7\x95\x99\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  [32m✓[39m test/integration/sweeper.test.ts [2m ([22m[2m2 tests[22m[2m)[22m[33m 1117[2mms[22m[39m
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "andon stop 信号写入成功，payload 原样保留"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x61\x6e\x64\x6f\x6e\x20\x73\x74\x6f\x70\x20\xe4\xbf\xa1\xe5\x8f\xb7\xe5\x86\x99\xe5\x85\xa5\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x8c\x70\x61\x79\x6c\x6f\x61\x64\x20\xe5\x8e\x9f\xe6\xa0\xb7\xe4\xbf\x9d\xe7\x95\x99\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  [32m✓[39m test/unit/time.test.ts [2m ([22m[2m3 tests[22m[2m)[22m[33m 1412[2mms[22m[39m
+@repo/coord-service:test:  [32m✓[39m test/integration/status.test.ts [2m ([22m[2m2 tests[22m[2m)[22m[33m 1444[2mms[22m[39m
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "claim 生命周期类型（如 claim）不接受手写 → 400，防止伪造审计历史"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x6c\x61\x69\x6d\x20\xe7\x94\x9f\xe5\x91\xbd\xe5\x91\xa8\xe6\x9c\x9f\xe7\xb1\xbb\xe5\x9e\x8b\xef\xbc\x88\xe5\xa6\x82\x20\x63\x6c\x61\x69\x6d\xef\xbc\x89\xe4\xb8\x8d\xe6\x8e\xa5\xe5\x8f\x97\xe6\x89\x8b\xe5\x86\x99\x20\xe2\x86\x92\x20\x34\x30\x30\xef\xbc\x8c\xe9\x98\xb2\xe6\xad\xa2\xe4\xbc\xaa\xe9\x80\xa0\xe5\xae\xa1\xe8\xae\xa1\xe5\x8e\x86\xe5\x8f\xb2\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "claim 生命周期类型（如 claim）不接受手写 → 400，防止伪造审计历史"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x63\x6c\x61\x69\x6d\x20\xe7\x94\x9f\xe5\x91\xbd\xe5\x91\xa8\xe6\x9c\x9f\xe7\xb1\xbb\xe5\x9e\x8b\xef\xbc\x88\xe5\xa6\x82\x20\x63\x6c\x61\x69\x6d\xef\xbc\x89\xe4\xb8\x8d\xe6\x8e\xa5\xe5\x8f\x97\xe6\x89\x8b\xe5\x86\x99\x20\xe2\x86\x92\x20\x34\x30\x30\xef\xbc\x8c\xe9\x98\xb2\xe6\xad\xa2\xe4\xbc\xaa\xe9\x80\xa0\xe5\xae\xa1\xe8\xae\xa1\xe5\x8e\x86\xe5\x8f\xb2\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "缺 resource_id → 400"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe7\xbc\xba\x20\x72\x65\x73\x6f\x75\x72\x63\x65\x5f\x69\x64\x20\xe2\x86\x92\x20\x34\x30\x30\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  [32m✓[39m test/integration/claims.auth.test.ts [2m ([22m[2m4 tests[22m[2m)[22m[33m 1741[2mms[22m[39m
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "缺 resource_id → 400"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\xe7\xbc\xba\x20\x72\x65\x73\x6f\x75\x72\x63\x65\x5f\x69\x64\x20\xe2\x86\x92\x20\x34\x30\x30\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 andon → 403（停线信号是 coordinator 层专属，防伪造拉停 fleet）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x61\x6e\x64\x6f\x6e\x20\xe2\x86\x92\x20\x34\x30\x33\xef\xbc\x88\xe5\x81\x9c\xe7\xba\xbf\xe4\xbf\xa1\xe5\x8f\xb7\xe6\x98\xaf\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe5\xb1\x82\xe4\xb8\x93\xe5\xb1\x9e\xef\xbc\x8c\xe9\x98\xb2\xe4\xbc\xaa\xe9\x80\xa0\xe6\x8b\x89\xe5\x81\x9c\x20\x66\x6c\x65\x65\x74\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  [32m✓[39m test/integration/claims.lifecycle.test.ts [2m ([22m[2m4 tests[22m[2m)[22m[33m 1973[2mms[22m[39m
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 andon → 403（停线信号是 coordinator 层专属，防伪造拉停 fleet）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x61\x6e\x64\x6f\x6e\x20\xe2\x86\x92\x20\x34\x30\x33\xef\xbc\x88\xe5\x81\x9c\xe7\xba\xbf\xe4\xbf\xa1\xe5\x8f\xb7\xe6\x98\xaf\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\x20\xe5\xb1\x82\xe4\xb8\x93\xe5\xb1\x9e\xef\xbc\x8c\xe9\x98\xb2\xe4\xbc\xaa\xe9\x80\xa0\xe6\x8b\x89\xe5\x81\x9c\x20\x66\x6c\x65\x65\x74\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 cycle-plan → 201（叙述站会不限 coordinator）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe2\x86\x92\x20\x32\x30\x31\xef\xbc\x88\xe5\x8f\x99\xe8\xbf\xb0\xe7\xab\x99\xe4\xbc\x9a\xe4\xb8\x8d\xe9\x99\x90\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  [32m✓[39m test/unit/auth.test.ts [2m ([22m[2m7 tests[22m[2m)[22m[33m 2160[2mms[22m[39m
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's test "worker 身份写 cycle-plan → 201（叙述站会不限 coordinator）"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x74\x65\x73\x74\x20\x22\x77\x6f\x72\x6b\x65\x72\x20\xe8\xba\xab\xe4\xbb\xbd\xe5\x86\x99\x20\x63\x79\x63\x6c\x65\x2d\x70\x6c\x61\x6e\x20\xe2\x86\x92\x20\x32\x30\x31\xef\xbc\x88\xe5\x8f\x99\xe8\xbf\xb0\xe7\xab\x99\xe4\xbc\x9a\xe4\xb8\x8d\xe9\x99\x90\x20\x63\x6f\x6f\x72\x64\x69\x6e\x61\x74\x6f\x72\xef\xbc\x89\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test: A header value for "MF-Vitest-Source" contains non-ASCII characters: "test/integration/events.test.ts's suite "POST /events (narrative events — ADR-009 GitHub 协调面退役后的站会/andon 信道)"" (raw bytes: "\x74\x65\x73\x74\x2f\x69\x6e\x74\x65\x67\x72\x61\x74\x69\x6f\x6e\x2f\x65\x76\x65\x6e\x74\x73\x2e\x74\x65\x73\x74\x2e\x74\x73\x27\x73\x20\x73\x75\x69\x74\x65\x20\x22\x50\x4f\x53\x54\x20\x2f\x65\x76\x65\x6e\x74\x73\x20\x28\x6e\x61\x72\x72\x61\x74\x69\x76\x65\x20\x65\x76\x65\x6e\x74\x73\x20\xe2\x80\x94\x20\x41\x44\x52\x2d\x30\x30\x39\x20\x47\x69\x74\x48\x75\x62\x20\xe5\x8d\x8f\xe8\xb0\x83\xe9\x9d\xa2\xe9\x80\x80\xe5\xbd\xb9\xe5\x90\x8e\xe7\x9a\x84\xe7\xab\x99\xe4\xbc\x9a\x2f\x61\x6e\x64\x6f\x6e\x20\xe4\xbf\xa1\xe9\x81\x93\x29\x22"). As a quirk to support Unicode, we are encoding values as UTF-8 in the header, but in a browser this would likely result in a TypeError exception. Consider encoding this string in ASCII for compatibility with browser implementations of the Fetch specification.
+@repo/coord-service:test:  [32m✓[39m test/unit/projector.test.ts [2m ([22m[2m8 tests[22m[2m)[22m[33m 2494[2mms[22m[39m
+@repo/coord-service:test:  [32m✓[39m test/integration/events.test.ts [2m ([22m[2m7 tests[22m[2m)[22m[33m 2655[2mms[22m[39m
+@repo/coord-service:test:  [32m✓[39m test/integration/claims.concurrency.test.ts [2m ([22m[2m5 tests[22m[2m)[22m[33m 3087[2mms[22m[39m
+@repo/coord-service:test:
+@repo/coord-service:test: [2m Test Files [22m [1m[32m9 passed[39m[22m[90m (9)[39m
+@repo/coord-service:test: [2m      Tests [22m [1m[32m42 passed[39m[22m[90m (42)[39m
+@repo/coord-service:test: [2m   Start at [22m 17:00:19
+@repo/coord-service:test: [2m   Duration [22m 48.57s[2m (transform 1.50s, setup 15.41s, collect 2.01s, tests 18.08s, environment 3ms, prepare 52.15s)[22m
+@repo/coord-service:test:
+@repo/coord-service:test: [vpw:debug] Shutting down runtimes...
+@repo/coord-service:test: [vpw:debug] Disposing remote proxy sessions...
+@repo/data:test: cache hit, replaying logs 3b8df34001ec1071
+@repo/data:test:
+@repo/data:test: > @repo/data@0.1.0 test /private/tmp/boardx-survey-clean-history/packages/data
+@repo/data:test: > vitest run
+@repo/data:test:
+@repo/data:test:
+@repo/data:test: [7m[1m[36m RUN [39m[22m[27m [36mv2.0.0[39m [90m/private/tmp/boardx-survey-clean-history/packages/data[39m
+@repo/data:test:
+@repo/data:test:  [32m✓[39m src/migrateHelpers.test.ts [2m ([22m[2m6 tests[22m[2m)[22m[90m 198[2mms[22m[39m
+@repo/data:test:  [32m✓[39m src/aiStore.test.ts [2m ([22m[2m17 tests[22m[2m)[22m[90m 40[2mms[22m[39m
+@repo/data:test:  [32m✓[39m src/ids.test.ts [2m ([22m[2m8 tests[22m[2m)[22m[33m 856[2mms[22m[39m
+@repo/data:test:  [32m✓[39m src/roomChat.test.ts [2m ([22m[2m4 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+@repo/data:test:  [32m✓[39m src/index.test.ts [2m ([22m[2m3 tests[22m[2m)[22m[90m 4[2mms[22m[39m
+@repo/data:test:  [32m✓[39m src/rooms.test.ts [2m ([22m[2m2 tests[22m[2m)[22m[90m 49[2mms[22m[39m
+@repo/data:test:  [32m✓[39m src/avaChat.test.ts [2m ([22m[2m5 tests[22m[2m)[22m[90m 52[2mms[22m[39m
+@repo/data:test:  [32m✓[39m src/survey.test.ts [2m ([22m[2m4 tests[22m[2m)[22m[90m 6[2mms[22m[39m
+@repo/data:test:  [32m✓[39m src/board.test.ts [2m ([22m[2m11 tests[22m[2m)[22m[90m 21[2mms[22m[39m
+@repo/data:test:
+@repo/data:test: [2m Test Files [22m [1m[32m9 passed[39m[22m[90m (9)[39m
+@repo/data:test: [2m      Tests [22m [1m[32m60 passed[39m[22m[90m (60)[39m
+@repo/data:test: [2m   Start at [22m 16:59:20
+@repo/data:test: [2m   Duration [22m 13.02s[2m (transform 12.32s, setup 0ms, collect 41.51s, tests 1.23s, environment 3ms, prepare 16.41s)[22m
+@repo/data:test:
+@repo/orchestrator:test: cache hit, replaying logs b4b3d9c4797bd407
+@repo/orchestrator:test:
+@repo/orchestrator:test: > @repo/orchestrator@0.1.0 test /private/tmp/boardx-survey-clean-history/apps/orchestrator
+@repo/orchestrator:test: > vitest run
+@repo/orchestrator:test:
+@repo/orchestrator:test:
+@repo/orchestrator:test: [7m[1m[36m RUN [39m[22m[27m [36mv2.0.0[39m [90m/private/tmp/boardx-survey-clean-history/apps/orchestrator[39m
+@repo/orchestrator:test:
+@repo/orchestrator:test:  [32m✓[39m src/orchestrator.test.ts [2m ([22m[2m3 tests[22m[2m)[22m[33m 696[2mms[22m[39m
+@repo/orchestrator:test:
+@repo/orchestrator:test: [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+@repo/orchestrator:test: [2m      Tests [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+@repo/orchestrator:test: [2m   Start at [22m 17:00:40
+@repo/orchestrator:test: [2m   Duration [22m 6.62s[2m (transform 743ms, setup 1ms, collect 1.06s, tests 696ms, environment 0ms, prepare 1.55s)[22m
+@repo/orchestrator:test:
+@repo/orchestrator:typecheck: cache hit, replaying logs 2241237c4de59559
+@repo/orchestrator:typecheck:
+@repo/orchestrator:typecheck: > @repo/orchestrator@0.1.0 typecheck /private/tmp/boardx-survey-clean-history/apps/orchestrator
+@repo/orchestrator:typecheck: > tsc --noEmit
+@repo/orchestrator:typecheck:
+@repo/workflow-worker:typecheck: cache hit, replaying logs 75f280c2327f142c
+@repo/workflow-worker:typecheck:
+@repo/workflow-worker:typecheck: > @repo/workflow-worker@0.1.0 typecheck /private/tmp/boardx-survey-clean-history/apps/workflow-worker
+@repo/workflow-worker:typecheck: > tsc --noEmit
+@repo/workflow-worker:typecheck:
+@repo/workflow-worker:test: cache hit, replaying logs 3971e7a7f302dcd8
+@repo/workflow-worker:test:
+@repo/workflow-worker:test: > @repo/workflow-worker@0.1.0 test /private/tmp/boardx-survey-clean-history/apps/workflow-worker
+@repo/workflow-worker:test: > vitest run
+@repo/workflow-worker:test:
+@repo/workflow-worker:test:
+@repo/workflow-worker:test: [7m[1m[36m RUN [39m[22m[27m [36mv2.0.0[39m [90m/private/tmp/boardx-survey-clean-history/apps/workflow-worker[39m
+@repo/workflow-worker:test:
+@repo/workflow-worker:test:  [32m✓[39m src/kbFileJob.test.ts [2m ([22m[2m2 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+@repo/workflow-worker:test:  [32m✓[39m src/job.test.ts [2m ([22m[2m3 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+@repo/workflow-worker:test:  [32m✓[39m src/presentationRevisionJob.test.ts [2m ([22m[2m4 tests[22m[2m)[22m[90m 9[2mms[22m[39m
+@repo/workflow-worker:test:  [32m✓[39m src/studioJob.test.ts [2m ([22m[2m2 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+@repo/workflow-worker:test:
+@repo/workflow-worker:test: [2m Test Files [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+@repo/workflow-worker:test: [2m      Tests [22m [1m[32m11 passed[39m[22m[90m (11)[39m
+@repo/workflow-worker:test: [2m   Start at [22m 17:00:47
+@repo/workflow-worker:test: [2m   Duration [22m 4.40s[2m (transform 2.37s, setup 0ms, collect 3.63s, tests 37ms, environment 7ms, prepare 5.09s)[22m
+@repo/workflow-worker:test:
+@repo/web:test: cache hit, replaying logs 418ff0b8bf9913c6
+@repo/web:test:
+@repo/web:test: > @repo/web@0.1.0 test /private/tmp/boardx-survey-clean-history/apps/web
+@repo/web:test: > vitest run
+@repo/web:test:
+@repo/web:test: [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+@repo/web:test:
+@repo/web:test: [7m[1m[36m RUN [39m[22m[27m [36mv2.0.0[39m [90m/private/tmp/boardx-survey-clean-history/apps/web[39m
+@repo/web:test:
+@repo/web:test:  [32m✓[39m lib/canvas-snap.test.ts [2m ([22m[2m14 tests[22m[2m)[22m[90m 78[2mms[22m[39m
+@repo/web:test:  [32m✓[39m lib/collab-bus.test.ts [2m ([22m[2m4 tests[22m[2m)[22m[90m 62[2mms[22m[39m
+@repo/web:test: [90mstderr[2m | app/api/admin/coordination/status/route.test.ts[2m > [22m[2mGET /api/admin/coordination/status[2m > [22m[2m502 when upstream fetch throws (network failure / timeout)[22m[39m
+@repo/web:test: [admin/coordination/status] coord-service fetch failed Error: fetch failed
+@repo/web:test:     at [90m/private/tmp/boardx-survey-clean-history/apps/web/[39mapp/api/admin/coordination/status/route.test.ts:75:15
+@repo/web:test:     at mockCall (file:///private/tmp/boardx-survey-clean-history/node_modules/[4m.pnpm[24m/@vitest+spy@2.0.0/node_modules/[4m@vitest[24m/spy/dist/index.js:61:17)
+@repo/web:test:     at spy (file:///private/tmp/boardx-survey-clean-history/node_modules/[4m.pnpm[24m/tinyspy@3.0.2/node_modules/[4mtinyspy[24m/dist/index.js:45:80)
+@repo/web:test:     at Module.GET [90m(/private/tmp/boardx-survey-clean-history/apps/web/[39mapp/api/admin/coordination/status/route.ts:31:23[90m)[39m
+@repo/web:test: [90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+@repo/web:test:     at [90m/private/tmp/boardx-survey-clean-history/apps/web/[39mapp/api/admin/coordination/status/route.test.ts:78:17
+@repo/web:test:     at runTest (file:///private/tmp/boardx-survey-clean-history/node_modules/[4m.pnpm[24m/@vitest+runner@2.0.0/node_modules/[4m@vitest[24m/runner/dist/index.js:939:11)
+@repo/web:test:     at runSuite (file:///private/tmp/boardx-survey-clean-history/node_modules/[4m.pnpm[24m/@vitest+runner@2.0.0/node_modules/[4m@vitest[24m/runner/dist/index.js:1095:15)
+@repo/web:test:     at runSuite (file:///private/tmp/boardx-survey-clean-history/node_modules/[4m.pnpm[24m/@vitest+runner@2.0.0/node_modules/[4m@vitest[24m/runner/dist/index.js:1095:15)
+@repo/web:test:     at runFiles (file:///private/tmp/boardx-survey-clean-history/node_modules/[4m.pnpm[24m/@vitest+runner@2.0.0/node_modules/[4m@vitest[24m/runner/dist/index.js:1152:5)
+@repo/web:test:
+@repo/web:test:  [32m✓[39m app/api/admin/coordination/status/route.test.ts [2m ([22m[2m6 tests[22m[2m)[22m[33m 389[2mms[22m[39m
+@repo/web:test:  [32m✓[39m lib/utils.test.ts [2m ([22m[2m30 tests[22m[2m)[22m[90m 179[2mms[22m[39m
+@repo/web:test:  [32m✓[39m app/api/ava/threads/[id]/share/route.test.ts [2m ([22m[2m5 tests[22m[2m)[22m[90m 232[2mms[22m[39m
+@repo/web:test:  [32m✓[39m app/api/ava/threads/[id]/route.test.ts [2m ([22m[2m4 tests[22m[2m)[22m[90m 33[2mms[22m[39m
+@repo/web:test:  [32m✓[39m lib/ava-agents.test.ts [2m ([22m[2m3 tests[22m[2m)[22m[90m 15[2mms[22m[39m
+@repo/web:test:  [32m✓[39m app/api/boards/[id]/ai-chat/route.test.ts [2m ([22m[2m3 tests[22m[2m)[22m[90m 84[2mms[22m[39m
+@repo/web:test:  [32m✓[39m app/api/ai-store/items/[id]/route.test.ts [2m ([22m[2m2 tests[22m[2m)[22m[90m 205[2mms[22m[39m
+@repo/web:test:  [32m✓[39m app/api/collab/config/route.test.ts [2m ([22m[2m3 tests[22m[2m)[22m[33m 473[2mms[22m[39m
+@repo/web:test:  [32m✓[39m lib/agents.test.ts [2m ([22m[2m5 tests[22m[2m)[22m[90m 30[2mms[22m[39m
+@repo/web:test:  [32m✓[39m lib/feedback.test.ts [2m ([22m[2m2 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+@repo/web:test:  [32m✓[39m lib/health.test.ts [2m ([22m[2m1 test[22m[2m)[22m[90m 9[2mms[22m[39m
+@repo/web:test:  [32m✓[39m lib/viewport.test.ts [2m ([22m[2m4 tests[22m[2m)[22m[90m 9[2mms[22m[39m
+@repo/web:test:
+@repo/web:test: [2m Test Files [22m [1m[32m14 passed[39m[22m[90m (14)[39m
+@repo/web:test: [2m      Tests [22m [1m[32m86 passed[39m[22m[90m (86)[39m
+@repo/web:test: [2m   Start at [22m 17:00:49
+@repo/web:test: [2m   Duration [22m 11.16s[2m (transform 7.36s, setup 31ms, collect 20.38s, tests 1.82s, environment 40ms, prepare 12.23s)[22m
+@repo/web:test:
+@repo/web:typecheck: cache hit, replaying logs a209d5545df3a496
+@repo/web:typecheck:
+@repo/web:typecheck: > @repo/web@0.1.0 typecheck /private/tmp/boardx-survey-clean-history/apps/web
+@repo/web:typecheck: > tsc --noEmit
+@repo/web:typecheck:
+
+ Tasks:    55 successful, 55 total
+Cached:    55 cached, 55 total
+  Time:    1.877s >>> FULL TURBO
+
+turbo 2.5.0

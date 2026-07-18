@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import {
-  getRoom,
-  canViewRoom,
-  canManageRoom,
-  isRoomOwner,
-  updateRoom,
-  deleteRoom,
-  listFavoriteRoomIds,
   AI_INSTRUCTION_MAX_LEN,
+  canManageRoom,
+  canViewRoom,
+  deleteRoom,
+  getRoom,
+  isRoomOwner,
+  listFavoriteRoomIds,
+  resolveRoomId,
   type RoomVisibility,
+  updateRoom,
 } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-  const roomId = Number(params.id);
+  const roomId = await resolveRoomId(params.id);
   const room = await getRoom(roomId);
   if (!room) return NextResponse.json({ error: "not found" }, { status: 404 });
   if (!(await canViewRoom(roomId, user.id))) {
@@ -34,7 +35,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   try {
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-    const roomId = Number(params.id);
+    const roomId = await resolveRoomId(params.id);
     // uc-rr-006 权限矩阵：房间名/可见性等字段 owner/admin 均可修改
     if (!(await canManageRoom(roomId, user.id))) {
       return NextResponse.json({ error: "仅 owner/admin 可修改" }, { status: 403 });
@@ -75,7 +76,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     await updateRoom(roomId, fields);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    // 内部细节只进日志，响应给稳定错误码（ADR-015 / #539 教训）
+    console.error("[api] unhandled", err);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 }
 
@@ -83,7 +86,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   try {
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-    const roomId = Number(params.id);
+    const roomId = await resolveRoomId(params.id);
     // uc-rr-006 权限矩阵：删除房间仅 owner
     if (!(await isRoomOwner(roomId, user.id))) {
       return NextResponse.json({ error: "仅 owner 可删除" }, { status: 403 });
@@ -91,6 +94,8 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     await deleteRoom(roomId);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    // 内部细节只进日志，响应给稳定错误码（ADR-015 / #539 教训）
+    console.error("[api] unhandled", err);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 }

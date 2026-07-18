@@ -11,6 +11,9 @@ vi.mock("@repo/data", () => ({
   getBoard: vi.fn(),
   getBoardAccessRole: vi.fn(),
   listBoardItems: vi.fn(),
+  // issue #529 阶段2：路由改用 resolveBoardId 解析 params.id。测试用例的 params.id 全是
+  // 数字字符串，直通转数字即可复现原行为，不需要真的走 public_id 查表分支。
+  resolveBoardId: vi.fn((id: string) => Promise.resolve(Number(id))),
 }));
 
 vi.mock("@/lib/session", () => ({

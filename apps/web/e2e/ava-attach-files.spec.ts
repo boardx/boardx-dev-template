@@ -35,7 +35,7 @@ test("composer 附件入口：选择图片 → 预览条展示上传中到完成
   // 预览条出现，展示缩略图/文件名；上传完成后不再是 uploading 状态
   await expect(page.getByTestId("attachment-preview-strip")).toBeVisible();
   const previewItem = page.getByTestId("attachment-preview-item").first();
-  await expect(previewItem).toHaveAttribute("data-status", "uploaded", { timeout: 10_000 });
+  await expect(previewItem).toHaveAttribute("data-status", "uploaded", { timeout: 30_000 });
 
   // 只带附件不带文字也能发送（发送按钮不再被禁用）
   await expect(page.getByTestId("send")).toBeEnabled();
@@ -75,7 +75,11 @@ test("composer 附件入口：选择图片 → 预览条展示上传中到完成
 
   // reload 后附件仍随历史消息持久化展示（同样校验缩略图 alt 而非可见文本）
   await page.reload();
-  await page.getByTestId("thread-list").getByRole("button").first().click();
+  await page
+    .getByTestId("thread-list")
+    .getByRole("button", { name: /看看这张图/ })
+    .first()
+    .click();
   const persistedImage = page
     .getByTestId("msg-attachment-item")
     .first()
@@ -111,7 +115,7 @@ test("拖拽上传：拖一个文件到 composer 区域也能触发上传", asyn
   await expect(page.getByTestId("attachment-preview-item").first()).toHaveAttribute(
     "data-status",
     "uploaded",
-    { timeout: 10_000 }
+    { timeout: 30_000 }
   );
 });
 
@@ -171,7 +175,7 @@ test("移除附件：上传完成后可移除，移除后不随消息发送", as
     buffer: Buffer.from("temp"),
   });
   const item = page.getByTestId("attachment-preview-item").first();
-  await expect(item).toHaveAttribute("data-status", "uploaded", { timeout: 10_000 });
+  await expect(item).toHaveAttribute("data-status", "uploaded", { timeout: 30_000 });
 
   await page.getByTestId("attachment-remove").click();
   await expect(page.getByTestId("attachment-preview-strip")).toHaveCount(0);

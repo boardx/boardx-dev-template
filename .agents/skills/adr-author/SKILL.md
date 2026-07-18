@@ -40,9 +40,10 @@ evidence 文件被 gitignore 挡在仓库外导致"指向空气的引用"、feat
 ## 落地
 
 ```bash
-# ADR 放在阶段目录下，编号递增
-phases/<phase>/adr/ADR-00X-<slug>.md
+# ADR 是全局治理文件，统一放 docs/adr/（2026-07-12 人类拍板迁移），编号递增
+docs/adr/ADR-0XX-<slug>.md      # 下一个编号看 docs/adr/README.md 索引表
 ```
+写完同步更新 `docs/adr/README.md` 的索引表（编号/主题/状态一行）。
 
 按模板四段写。状态从 `Proposed` 起步，被采纳后改 `Accepted`，
 被后续决策取代时改 `Superseded` 并链接到新 ADR。

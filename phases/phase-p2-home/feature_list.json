@@ -43,14 +43,14 @@
       "area": "home-page",
       "title": "Home 内 Agent 搜索过滤",
       "user_visible_behavior": "在 Home 顶部搜索框输入关键词，前端按已加载 Agent 的名称/描述/标签过滤，各分组只显示匹配卡片并更新分组计数；无匹配显示分组空状态；清空恢复全部；数据加载中显示占位、返回后刷新。",
-      "status": "blocked",
-      "sprint": null,
-      "owner": null,
+      "status": "passing",
+      "sprint": "02",
+      "owner": "coord-platform",
       "capability": "CAP-WEB",
       "verification": [
         "pnpm --filter @repo/web exec playwright test e2e/home-agent-search.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-07-13T15:53:42.660Z",
       "notes": "uc-home-005。过滤逻辑 filterAgents 已实现并单测（lib/agents.test.ts，随 F02 落地）；但有意义的端到端搜索需要 Agent 数据，blocked_on p11:F03（AI Store「订阅并使用项目」，负责把 Agent 带入使用场景/AVA 会话，当前 in_progress）。【2026-07-05 p21-F06 修正】此前笼统写「blocked-on p11」，核实后 p11:F01/F02 与 p9:F01 均已 passing，真正卡住的是 p11:F03。p11:F03 转 passing 后补 home-agent-search.spec.ts 有数据分支并转 passing。"
     },
     {

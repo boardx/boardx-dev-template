@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import { FONT_SIZE_SCALE } from "./lib/font-scale";
 import animate from "tailwindcss-animate";
 
 // 颜色全部映射到 globals.css 的 HSL 语义变量（继承自 oldcode 黑白灰主题）。
@@ -43,6 +44,10 @@ const config: Config = {
           pink: "hsl(var(--tag-pink))",
           yellow: "hsl(var(--tag-yellow))",
         },
+        survey: {
+          DEFAULT: "hsl(var(--survey-accent))",
+          foreground: "hsl(var(--survey-accent-foreground))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -58,18 +63,9 @@ const config: Config = {
       },
       // 设计 token 字号网格（对齐 BoardX Prototype；以 px 命名，避免 [Npx] 任意值）。
       // 行高交给 leading-* 工具类按需设置。
-      fontSize: {
-        "9": "9px",
-        "10": "10px",
-        "11": "11px",
-        "13": "13px",
-        "15": "15px",
-        "17": "17px",
-        "22": "22px",
-        "26": "26px",
-        "30": "30px",
-        "34": "34px",
-      },
+      // 字号档位单一事实源：lib/font-scale.ts（ADR-013）。这里绝不手写档位——
+      // 手抄副本漂移曾两次酿成"黑底黑字"事故（2026-07-09/10），详见该文件头注。
+      fontSize: FONT_SIZE_SCALE,
       // 设计 token 间距/尺寸网格。键 = px/4（与 Tailwind rem 网格同构），
       // 仅补 Tailwind 默认缺失的档（7/9/11/13/15/17/18/22/26/30/34/42px + 常用宽度）。
       spacing: {
@@ -90,10 +86,18 @@ const config: Config = {
         "15": "60px",
         "62": "248px",
         "85": "340px",
+        "survey-create-card": "116px",
+        "survey-sidebar-inset": "31px",
+        "survey-workbench": "1180px",
       },
       maxWidth: {
         brand: "420px",
         content: "980px",
+        "survey-dashboard": "1240px",
+        "survey-editor": "1360px",
+      },
+      borderWidth: {
+        "3": "3px",
       },
     },
   },

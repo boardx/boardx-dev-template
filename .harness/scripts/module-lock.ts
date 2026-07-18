@@ -68,7 +68,12 @@ export async function moduleLockStatus(args: Args): Promise<void> {
 
 export async function moduleLockAcquire(args: Args): Promise<void> {
   const moduleName = req(args, "module");
-  const sessionId = req(args, "session");
+  // #502：--session 只是显示标签，不再参与属主判定。真实身份永远来自 bearer token
+  // （服务端 heartbeat 的 SQL 带 AND agent_id = <token身份>，属主校验在权威侧）。
+  // 此前拿手填 --session 与 claim.agent_id 比对：两者错位时（实例：token=coord-main
+  // 而 --session coord-main-bus-live），renew 分支永不触发，每个 tick 撞自己的
+  // 活跃租约 → 409，表现为"续约失效"。
+  const sessionLabel = args.opts["session"] ?? "(token 身份)";
   const client = requireClient();
   const rid = resourceId(moduleName);
 
@@ -79,25 +84,27 @@ export async function moduleLockAcquire(args: Args): Promise<void> {
         `拒绝认领（fail-closed，见 ADR-009）。`
     );
   }
-  if (outcome.kind === "held" && outcome.claim.agent_id !== sessionId) {
-    const heartbeatAgeMinutes = (Date.now() - new Date(outcome.claim.last_heartbeat_at).getTime()) / 60000;
-    die(
-      `${rid} 已由 "${outcome.claim.agent_id}" 持有（最后心跳 ${heartbeatAgeMinutes.toFixed(1)} 分钟前）。` +
-        `过期租约由服务端 sweeper 自动回收——等它过期，或与持有者协调交接。`
-    );
-  }
   if (outcome.kind === "held") {
-    // acquire-or-renew（2026-07-08 租约语义定稿）：自己仍持有且新鲜 → 转为续约，
-    // 而不是撞 uq_active_claim 得到一个吓人的 409。协议规范是"每个 tick
-    // acquire-or-renew"——tick 间隔撑不过 ttl 时租约正常过期、下个 tick 重新
-    // 认领即自愈，席位间歇性空缺是诚实信号不是故障。
+    // acquire-or-renew：是不是"自己仍持有"用试探性 heartbeat 判定——成功 = token
+    // 证明这个 claim 就是你的（顺便完成续约）；失败 = 属主另有其人（或已过期回收）。
     const renew = await client.heartbeat(outcome.claim.id);
     if (renew.ok) {
+      if (args.opts["session"] && args.opts["session"] !== outcome.claim.agent_id) {
+        log.info(
+          `⚠ --session "${args.opts["session"]}" 与 token 权威身份 "${outcome.claim.agent_id}" 不一致——` +
+            `以 token 为准（--session 仅作标签，见 issue #502）`
+        );
+      }
       writeModuleRemoteClaimId(moduleName, outcome.claim.id);
-      log.ok(`已续约 ${rid}：session=${sessionId}，claim id=${outcome.claim.id}（本来就由你持有）`);
+      log.ok(`已续约 ${rid}：agent=${outcome.claim.agent_id}，claim id=${outcome.claim.id}（本来就由你持有）`);
       return;
     }
-    log.info(`[coord-service] 续约未成功（HTTP ${renew.status}），按新认领处理`);
+    const heartbeatAgeMinutes = (Date.now() - new Date(outcome.claim.last_heartbeat_at).getTime()) / 60000;
+    die(
+      `${rid} 已由 "${outcome.claim.agent_id}" 持有（最后心跳 ${heartbeatAgeMinutes.toFixed(1)} 分钟前，` +
+        `试探续约被权威拒绝 HTTP ${renew.status}——不是你的 token）。过期租约由服务端 sweeper 自动回收——` +
+        `等它过期，或与持有者协调交接。`
+    );
   }
 
   const result = await client.claim(rid, RESOURCE_TYPE);
@@ -112,12 +119,12 @@ export async function moduleLockAcquire(args: Args): Promise<void> {
     die("[coord-service] 认领响应缺少 claim id——响应格式异常，视为失败。");
   }
   writeModuleRemoteClaimId(moduleName, claim.id);
-  log.ok(`已认领 ${rid}：session=${sessionId}，claim id=${claim.id}`);
+  log.ok(`已认领 ${rid}：session=${sessionLabel}，claim id=${claim.id}`);
 }
 
 export async function moduleLockHeartbeat(args: Args): Promise<void> {
   const moduleName = req(args, "module");
-  req(args, "session"); // 保持接口不变；身份最终由 token 决定，不信任这里的自称
+  // --session 已可选（#502）：身份由 token 决定，属主校验在服务端
   const client = requireClient();
 
   const remoteClaimId = readModuleRemoteClaimId(moduleName);
@@ -136,7 +143,7 @@ export async function moduleLockHeartbeat(args: Args): Promise<void> {
 
 export async function moduleLockRelease(args: Args): Promise<void> {
   const moduleName = req(args, "module");
-  req(args, "session");
+  // --session 已可选（#502）
   const client = requireClient();
 
   const remoteClaimId = readModuleRemoteClaimId(moduleName);

@@ -102,7 +102,29 @@ export async function lockAcquire(args: Args): Promise<void> {
           `见 ADR-009）。确认要强行接管，加 --force。`
       );
     }
-    if (outcome.kind === "held" && outcome.claim.agent_id !== sessionId) {
+    if (outcome.kind === "held") {
+      // #502：属主判定不再比对手填的 --session（曾因 session 标签与 token 身份错位
+      // 导致 renew 分支永不触发、tick tick 409）。改为试探性 heartbeat——服务端
+      // SQL 带 AND agent_id = <token身份>，成功 = 就是你的（顺便完成续约）。
+      const renew = await client.heartbeat(outcome.claim.id);
+      if (renew.ok) {
+        if (sessionId !== outcome.claim.agent_id) {
+          log.info(
+            `⚠ --session "${sessionId}" 与 token 权威身份 "${outcome.claim.agent_id}" 不一致——` +
+              `续约以 token 为准（--session 仅作本地锁标签，见 issue #502）`
+          );
+        }
+        try {
+          acquireLock(sessionId, { force: true, note });
+        } catch {
+          /* 本地文件锁刷新失败不影响权威续约结果 */
+        }
+        patchLock({ remoteClaimId: outcome.claim.id });
+        log.ok(`已续约：agent=${outcome.claim.agent_id}，coord-service claim id=${outcome.claim.id}（本来就由你持有）`);
+        return;
+      }
+      // 试探续约被拒 = 不是你的 token。新鲜 → 拒绝重复调度；过期 → 放行走新认领
+      //（服务端 uq_active_claim 仍是最终原子裁定）。
       const heartbeatAgeMinutes = (Date.now() - new Date(outcome.claim.last_heartbeat_at).getTime()) / 60000;
       if (heartbeatAgeMinutes <= STALE_THRESHOLD_MINUTES) {
         die(
@@ -110,23 +132,7 @@ export async function lockAcquire(args: Args): Promise<void> {
             `（最后心跳 ${heartbeatAgeMinutes.toFixed(1)} 分钟前）。不要重复调度——如确认它已失效，加 --force 抢占。`
         );
       }
-    }
-    if (outcome.kind === "held" && outcome.claim.agent_id === sessionId) {
-      // acquire-or-renew（2026-07-08 租约语义定稿）：自己仍持有 → 续约 + 刷新本地
-      // 文件锁，而不是撞 uq_active_claim 得 409。规范是"每个 tick acquire-or-renew"，
-      // tick 间隔撑不过 ttl 时租约正常过期、下次 acquire 自愈。
-      const renew = await client.heartbeat(outcome.claim.id);
-      if (renew.ok) {
-        try {
-          acquireLock(sessionId, { force: true, note });
-        } catch {
-          /* 本地文件锁刷新失败不影响权威续约结果 */
-        }
-        patchLock({ remoteClaimId: outcome.claim.id });
-        log.ok(`已续约：session=${sessionId}，coord-service claim id=${outcome.claim.id}（本来就由你持有）`);
-        return;
-      }
-      log.info(`[coord-service] 续约未成功（HTTP ${renew.status}），按新认领处理`);
+      log.info(`[coord-service] 持有者 "${outcome.claim.agent_id}" 心跳已过期（${heartbeatAgeMinutes.toFixed(1)} 分钟），按新认领处理`);
     }
   }
 

@@ -13,6 +13,7 @@ async function registerAndPromote(page: import("@playwright/test").Page) {
   await page.request.post("/api/auth/register", {
     data: { firstName: "Sys", lastName: "Admin", email, password: "secret123", agreeTerms: true },
   });
+  expect((await page.request.post("/api/teams", { data: { name: `Admin Team ${Date.now()}` } })).status()).toBe(201);
   const res = await page.request.post("/api/dev/grant-sysadmin", { data: { email } });
   expect(res.status()).toBe(200);
   return email;
@@ -29,6 +30,7 @@ async function createPendingItem(
   await ctx.post("/api/auth/register", {
     data: { firstName: "Creator", lastName: "User", email, password: "secret123", agreeTerms: true },
   });
+  expect((await ctx.post("/api/teams", { data: { name: `Creator Team ${Date.now()}` } })).status()).toBe(201);
   const res = await ctx.post("/api/ai-store/items", {
     data: {
       type: "agent",

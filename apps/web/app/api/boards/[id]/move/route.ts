@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getBoard, getRoom, canManageBoard, canViewRoom, moveBoard } from "@repo/data";
+import { canManageBoard, canViewRoom, getBoard, getRoom, moveBoard, resolveBoardId } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -11,7 +11,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   try {
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-    const boardId = Number(params.id);
+    const boardId = await resolveBoardId(params.id);
     const board = await getBoard(boardId);
     if (!board) return NextResponse.json({ error: "not found" }, { status: 404 });
     if (!(await canManageBoard(boardId, user.id))) {
@@ -28,6 +28,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const moved = await moveBoard(boardId, targetRoomId, target.team_id);
     return NextResponse.json({ board: moved });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    // 内部细节只进日志，响应给稳定错误码（ADR-015 / #539 教训）
+    console.error("[api] unhandled", err);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 }

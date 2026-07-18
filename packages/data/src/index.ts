@@ -26,6 +26,7 @@ export * from "./profile";
 export * from "./feedback";
 // CAP-DATA 问卷仓储（surveys / survey_questions / survey_responses / P13 F01）
 export * from "./survey";
+export * from "./surveyAi";
 // CAP-AI AVA 聊天线程与消息仓储（ava_threads/ava_messages / P9 F01）
 export * from "./avaChat";
 // CAP-DATA AI Store 商品仓储（ai_store_items / P11）
@@ -50,6 +51,8 @@ export * from "./mailbox";
 export * from "./roomFiles";
 // CAP-DATA 白板备份仓储（board_backups / p7 F08，uc-board-header-007）
 export * from "./backups";
+// 全局唯一 id 生成统一入口（issue #471 阶段 1）
+export * from "./ids";
 
 // ─── 连接配置（纯函数，可单测）──────────────────────────────────────────────
 
@@ -124,13 +127,14 @@ export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
   sql: string,
   params: unknown[] = []
 ): Promise<T[]> {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  const maxAttempts = 10;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     try {
       const res = await getPool().query<T>(sql, params as never[]);
       return res.rows;
     } catch (err) {
-      if (attempt === 2 || !isTransientDbError(err)) throw err;
-      await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+      if (attempt === maxAttempts - 1 || !isTransientDbError(err)) throw err;
+      await new Promise((resolve) => setTimeout(resolve, Math.min(1000, 150 * (attempt + 1))));
     }
   }
   return [];

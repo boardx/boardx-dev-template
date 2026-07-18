@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 
 interface Room {
   id: number | string;
+  public_id: string;
   name: string;
   visibility: string;
   team_id: number | string | null;
@@ -398,12 +399,15 @@ export function RoomListPanel() {
         ) : (
           <ul data-testid="room-list" className="flex flex-col gap-0.5 px-2 pb-3">
             {rooms.map((r) => {
-              const active = activeRoomId === String(r.id);
+              // issue #584：地址栏的房间 id 落地后会被规范化成 public_id 形式，这里的
+              // "当前是不是这一间房" 判断要两种格式都认，不然旧数字 id 匹配一失效，
+              // 侧栏高亮当前房间的状态就会跟着丢。
+              const active = activeRoomId === String(r.id) || activeRoomId === r.public_id;
               const targetSegment = active && currentSegment ? currentSegment : "boards";
               return (
                 <li key={String(r.id)}>
                   <Link
-                    href={`/rooms/${r.id}/${targetSegment}`}
+                    href={`/rooms/${r.public_id}/${targetSegment}`}
                     data-testid={`room-${r.id}`}
                     data-active={active ? "true" : "false"}
                     className={cn(

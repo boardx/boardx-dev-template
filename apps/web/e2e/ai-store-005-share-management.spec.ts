@@ -11,6 +11,10 @@ async function registerAndLogin(page: import("@playwright/test").Page, email: st
     data: { firstName: "A", lastName: "B", email, password: "secret123", agreeTerms: true },
   });
   expect(res.ok()).toBeTruthy();
+  const team = await page.request.post("/api/teams", {
+    data: { name: `Share Test Team ${Date.now()}` },
+  });
+  expect(team.status()).toBe(201);
 }
 
 async function publishOwnedItem(page: import("@playwright/test").Page, name: string) {

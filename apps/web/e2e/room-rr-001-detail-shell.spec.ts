@@ -15,18 +15,19 @@ async function register(page: Page, prefix: string): Promise<string> {
   return email;
 }
 
-async function createRoom(page: Page, name: string): Promise<number> {
+async function createRoom(page: Page, name: string): Promise<{ id: number; public_id: string }> {
   const res = await page.request.post("/api/rooms", { data: { name, visibility: "private" } });
   const d = await res.json();
-  return d.room.id as number;
+  return { id: d.room.id as number, public_id: d.room.public_id as string };
 }
 
 test("进入 /rooms/[id] 默认落 Boards tab，壳完整（面包屑/房间名/pill/头像/五 tab）", async ({ page }) => {
   await register(page, "shellowner");
-  const roomId = await createRoom(page, "Shell Room");
+  const room = await createRoom(page, "Shell Room");
 
-  await page.goto(`/rooms/${roomId}`);
-  await expect(page).toHaveURL(new RegExp(`/rooms/${roomId}/boards$`));
+  // issue #584：用数字 id 直接访问（模拟旧链接），落地后地址栏规范化到 public_id 形式。
+  await page.goto(`/rooms/${room.id}`);
+  await expect(page).toHaveURL(new RegExp(`/rooms/${room.public_id}/boards$`));
 
   const shell = page.getByTestId("room-shell");
   await expect(shell).toBeVisible();
@@ -45,23 +46,24 @@ test("进入 /rooms/[id] 默认落 Boards tab，壳完整（面包屑/房间名/
 
 test("tab 切换 URL 同步；直链打开对应 tab 高亮；Files/Survey 有占位内容", async ({ page }) => {
   await register(page, "shelltabs");
-  const roomId = await createRoom(page, "Tabs Room");
+  const room = await createRoom(page, "Tabs Room");
 
-  await page.goto(`/rooms/${roomId}/boards`);
+  // 直接用 public_id 进（已规范化过的形式），后续 tab 切换断言不再涉及数字→public_id 的转换时机。
+  await page.goto(`/rooms/${room.public_id}/boards`);
   await page.getByTestId("room-tab-members").click();
-  await expect(page).toHaveURL(new RegExp(`/rooms/${roomId}/members$`));
+  await expect(page).toHaveURL(new RegExp(`/rooms/${room.public_id}/members$`));
   await expect(page.getByTestId("room-tab-members")).toHaveAttribute("data-active", "true");
   await expect(page.getByTestId("room-tab-boards")).toHaveAttribute("data-active", "false");
 
   // 直链 → 高亮正确
-  await page.goto(`/rooms/${roomId}/chats`);
+  await page.goto(`/rooms/${room.public_id}/chats`);
   await expect(page.getByTestId("room-tab-chat")).toHaveAttribute("data-active", "true");
 
   // Files（p20-F03 已交付真实房间文件库，替换原占位）/ Survey（p20-F08 已交付真实内容，替换原占位）
-  await page.goto(`/rooms/${roomId}/files`);
+  await page.goto(`/rooms/${room.public_id}/files`);
   await expect(page.getByTestId("room-tab-files")).toHaveAttribute("data-active", "true");
   await expect(page.getByTestId("room-files-tab")).toBeVisible();
-  await page.goto(`/rooms/${roomId}/surveys`);
+  await page.goto(`/rooms/${room.public_id}/surveys`);
   await expect(page.getByTestId("room-tab-survey")).toHaveAttribute("data-active", "true");
   await expect(page.getByTestId("room-survey-tab")).toBeVisible();
 });

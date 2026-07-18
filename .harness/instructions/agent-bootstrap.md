@@ -30,8 +30,9 @@
 |---|---|
 | `AGENTS.md`（仓库根） | 完成定义是什么？哪些事是硬约束？ |
 | `.harness/instructions/multi-agent-coordination.md` | 协调权威在哪？PR 谁能合并？ |
-| ADR-009 / ADR-010（`phases/phase-01-foundation/adr/`） | 为什么不用 GitHub label 协调了？我在组织树的哪一级？ |
+| ADR-009 / ADR-010（`docs/adr/`） | 为什么不用 GitHub label 协调了？我在组织树的哪一级？ |
 | 你的角色 SKILL：`.agents/skills/<你的kind>/SKILL.md`（如有） | 我的角色仪式（巡检/review/汇报）是什么？ |
+| **你负责模块的知识库：`.agents/skills/mod-<模块名>/SKILL.md`** | 代码在哪？什么契约不能破坏？前人踩过什么坑？ |
 
 **完成标志**：能用一句话说出"我是谁（id/kind/parent）、我管什么（areas）、
 我的产出谁来验收（父 coordinator 是谁）"。
@@ -71,6 +72,58 @@ pnpm harness lock-acquire --session <你的身份id>
 
 **完成标志**：`curl -s $COORD_SERVICE_URL/status` 的 active_claims 里能看到你的
 租约；人类在 https://develop.boardx.us/portal 的"实时协调"里也能看到你。
+
+## 第 3.5 步 — 挂上你的 loop（ADR-014 统一时钟 + 分级 loop 纪律）
+
+**每个 agent 必须有 loop，且必须用统一时钟**——不是可选项。协调决策（租约还新鲜吗、
+当前哪个周期、还剩多久）一律以 coord-service 的权威时钟为准，**不信本机 `date`**
+（机器时钟一漂就误判；真实事故：coord-architecture 租约静默过期 8 小时）。
+
+每个 loop 只需跑**一条命令**，它把该做的四件事做完：
+
+```bash
+pnpm harness tick --session <你的身份id>     # 或设 COORD_AGENT_ID；--json 供脚本消费
+#  1. 读权威时钟 → 当前周期 id / 还剩多久（决定何时发 cycle-result）
+#  2. 时钟漂移检测（>60s 告警——你按错误时间协调会误判）
+#  3. 续自己的租约（acquire-or-renew，防静默过期）
+#  4. 拉任务收件箱（#594）→ 有 pending 就按提示 ack 开工
+```
+
+**你的 loop 周期按层级定（ADR-014 D3）**：
+
+| 你是 | tick 周期 | 每 tick 除 tick 外还做 |
+|---|---|---|
+| coord-main | 5 分钟 | 合并队列（CI 绿即合）、andon、review 积压升级 |
+| module-coordinator | 15 分钟 | 本模块收件箱/PR 队列、首轮 review、派子 agent |
+| sub-agent / worker | 15 分钟 | ack 待接任务、推进当前 feature |
+
+**实现随你的 runtime**：Claude Code 用 `/loop` 或 Monitor，Codex 用其等价物，裸脚本
+cron 也行——契约只规定**节奏 + 跑 tick**，不绑任何私有通道。
+
+**loop ≠ C-cycle**：loop 是操作节拍（分钟级），C-cycle（3h）是汇报/度量节拍。
+只有后者没有前者，就是"租约过期 8 小时没人知道"的成因。
+
+**完成标志**：`pnpm harness tick` 输出权威时刻 + 当前周期 + 你的租约状态；
+且你的循环里真的在按上表周期调它。
+
+### 旧版说明（收件箱轮询细节，tick 已包含）
+
+coordinator 派工写进 coord-service 的 tasks 表（你的收件箱），**不依赖任何 runtime
+私有通道**（Claude Code 的 session message 只是可选加速器，Codex/自研 agent 没有它
+也一样收到活）。你的义务：**周期 ≤15 分钟**轮询自己的收件箱：
+
+```bash
+# 有 pending 任务 → ack 确认 → 按 task.issue 读 GitHub 规格 → 认领开工
+curl -s -H "Authorization: Bearer $COORD_SERVICE_TOKEN"   "$COORD_SERVICE_URL/tasks?status=pending" | jq '.tasks'
+curl -s -X POST -H "Authorization: Bearer $COORD_SERVICE_TOKEN"   "$COORD_SERVICE_URL/tasks/<id>/ack"          # 认领确认（然后照第 4 步 lock/claim）
+# 交付完成后：POST /tasks/<id>/done
+```
+
+轮询实现随你的 runtime：Claude Code 用 /loop 或 Monitor，Codex 用其等价物，
+裸脚本 cron 也行——契约只规定"≤15min 查一次、pending 必须 ack"。收件箱是私有的
+（只能查自己）；派工/撤回（POST /tasks、/recall）是 coordinator 层专属。
+
+**完成标志**：`GET /tasks` 返回 200（空列表也算通），且你的巡检循环里有这一步。
 
 ## 第 4 步 — 认领一个 feature（一次只做一个）
 
@@ -125,6 +178,12 @@ curl -s -X POST -H "Authorization: Bearer $COORD_SERVICE_TOKEN" \
 
 唯一硬指标是 **flow time**（你的 PR 从开出到合并的中位时长）。查全队状态：
 `pnpm harness cycle-report`。
+
+## 第 8 步 — 经验回流（干完活的最后一个动作）
+
+本次工作若踩了新坑/建立了新做法/推翻了旧假设，往 `.agents/skills/mod-<模块名>/SKILL.md`
+的"踩坑与经验"追加一条（日期 + 一句话 + PR/issue 链接），随交付 PR 一起提交。
+**没有回流的经验会随会话消亡**——这是"仓库即唯一事实来源"对经验的延伸。
 
 ## 退出时（会话要结束了）
 

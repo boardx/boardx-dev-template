@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getBoard, getBoardAccessRole, listRoomMembers, query } from "@repo/data";
+import { getBoard, getBoardAccessRole, listRoomMembers, query, resolveBoardId } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -28,7 +28,7 @@ function classify(row: StatsRow): "note" | "text" | "shape" | "connector" | "emb
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-  const boardId = Number(params.id);
+  const boardId = await resolveBoardId(params.id);
   const board = await getBoard(boardId);
   if (!board) return NextResponse.json({ error: "not found" }, { status: 404 });
   const role = await getBoardAccessRole(boardId, user.id);

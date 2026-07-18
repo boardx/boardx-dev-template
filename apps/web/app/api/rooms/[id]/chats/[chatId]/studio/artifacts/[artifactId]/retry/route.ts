@@ -3,8 +3,9 @@ import {
   canViewRoom,
   getRoomChat,
   getStudioArtifact,
-  resetStudioArtifactForRetry,
   markStudioArtifactError,
+  resetStudioArtifactForRetry,
+  resolveRoomId,
 } from "@repo/data";
 import { makeQueue, QUEUE_NAMES } from "@repo/queue";
 import { currentUser } from "@/lib/session";
@@ -32,7 +33,7 @@ export async function POST(
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
 
-    const roomId = Number(params.id);
+    const roomId = await resolveRoomId(params.id);
     if (!(await canViewRoom(roomId, user.id))) {
       return NextResponse.json({ error: "无权限" }, { status: 403 });
     }

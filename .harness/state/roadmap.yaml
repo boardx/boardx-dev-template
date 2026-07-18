@@ -144,13 +144,6 @@ phases:
     status: not_started
     depends_on: ["p9", "p11"]
     has_ui: true
-  - id: "p19"
-    slug: ava-canvas-memory-expansion
-    name: AVA 画布/记忆扩展 (P19，待决策)
-    goal: "待人类对产品范围拍板：是否迁移老代码的 AI 直接操作白板 widget（digitize/translateWidgets/生成海报音频PPT故事板字幕）、Memories 记忆管理、演示文稿预览卡片；本阶段目前只记录范围，不进入实现"
-    status: not_started
-    depends_on: ["p9", "p12"]
-    has_ui: true
   - id: "p20"
     slug: room-realignment
     name: Room Realignment (P20)
@@ -182,6 +175,34 @@ phases:
     slug: room-board-management
     name: room-board-management
     goal: "Room 内 Board 列表管理补齐真实缺口（main 已有卡片化/Grid-List/创建弹窗）：卡片三点更多操作菜单（删除/重命名/编辑标签/上传·移除封面/移动）+ 多标签全套（新建打标/卡片显示/编辑/按 tag 过滤，需 boards.tags text[] schema）。对齐 oldcode uc-board-001/003/005/008 + 净新增多标签过滤"
+    status: not_started
+    depends_on: []
+    has_ui: true
+  - id: "p25"
+    slug: survey
+    name: Survey System
+    goal: "以 boardx-survey/codex-survey-home-nav-redesign 为事实来源，交付 AI 原生问卷设计、发布回收、答卷分析与专业报告完整闭环"
+    status: in_progress
+    depends_on: []
+    has_ui: true
+  - id: "p26"
+    slug: ava-legacy-sync
+    name: ava-legacy-sync
+    goal: "同步 boardx-web 与 boardx-backend 的 AVA 旧功能到 boardx-dev-template，建立可验证的兼容 API、迁移清单与分批交付路径。"
+    status: not_started
+    depends_on: []
+  - id: "p27"
+    slug: aiStore
+    name: AI Store
+    goal: "交付 Team 隔离的 Agent/Skills/Template 商店完整闭环与已确认的 Resource Library UIUX"
+    status: in_progress
+    depends_on: []
+    has_ui: true
+    tracking_issue: 679
+  - id: "p28"
+    slug: platform-accounts-gap2
+    name: platform-accounts-gap2
+    goal: "Platform/Accounts 五维差距审计(2026-07-14)红行修复：邀请闭环、成员管理UI、returnTo、错误反馈、孤岛路由入口、证据补救"
     status: not_started
     depends_on: []
     has_ui: true

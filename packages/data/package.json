@@ -12,16 +12,19 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "echo 'lint: ok'",
-    "migrate": "sh -c 'set -a; [ -f ../../apps/web/.env.local ] && . ../../apps/web/.env.local; set +a; tsx src/migrate.ts'"
+    "migrate": "sh -c 'set -a; [ -f ../../apps/web/.env.local ] && . ../../apps/web/.env.local; set +a; tsx src/migrate.ts'",
+    "backfill:public-id": "sh -c 'set -a; [ -f ../../apps/web/.env.local ] && . ../../apps/web/.env.local; set +a; tsx src/scripts/backfillPublicIds.ts'"
   },
   "dependencies": {
+    "@repo/ai": "workspace:*",
+    "nanoid": "^5.1.16",
     "pg": "^8.12.0"
   },
   "devDependencies": {
-    "typescript": "*",
-    "vitest": "*",
-    "tsx": "*",
     "@types/node": "*",
-    "@types/pg": "^8.11.0"
+    "@types/pg": "^8.11.0",
+    "tsx": "*",
+    "typescript": "*",
+    "vitest": "*"
   }
 }

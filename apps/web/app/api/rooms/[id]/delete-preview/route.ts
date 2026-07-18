@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import {
-  getRoom,
-  isRoomOwner,
   countBoardsInRoom,
   countRoomChats,
   countRoomFiles,
   countRoomSurveys,
+  getRoom,
+  isRoomOwner,
+  resolveRoomId,
 } from "@repo/data";
 import { currentUser } from "@/lib/session";
 
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-  const roomId = Number(params.id);
+  const roomId = await resolveRoomId(params.id);
   const room = await getRoom(roomId);
   if (!room) return NextResponse.json({ error: "not found" }, { status: 404 });
   if (!(await isRoomOwner(roomId, user.id))) {

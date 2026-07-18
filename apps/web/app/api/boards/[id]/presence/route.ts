@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getBoardAccessRole } from "@repo/data";
+import { getBoardAccessRole, resolveBoardId } from "@repo/data";
 import { currentUser } from "@/lib/session";
 import { heartbeat, listOnline, type PresenceCursor, type PresenceViewport } from "@/lib/presence";
 
@@ -55,7 +55,7 @@ function parseAwareness(body: unknown): {
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-  const boardId = Number(params.id);
+  const boardId = await resolveBoardId(params.id);
   const role = await getBoardAccessRole(boardId, user.id);
   if (!role) return NextResponse.json({ error: "无权限" }, { status: 403 });
   const members = listOnline(boardId);
@@ -67,7 +67,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
-  const boardId = Number(params.id);
+  const boardId = await resolveBoardId(params.id);
   const role = await getBoardAccessRole(boardId, user.id);
   if (!role) return NextResponse.json({ error: "无权限" }, { status: 403 });
   const name =

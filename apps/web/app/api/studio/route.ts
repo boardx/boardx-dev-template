@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { currentUser } from "@/lib/session";
+import { z } from "zod";
+import { withAuth, withValidation } from "@/lib/api/handler";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,47 +37,33 @@ const TYPE_PREVIEW: Record<ArtifactType, string> = {
   infographic: "信息图已生成（占位图片）。",
 };
 
-function isType(v: unknown): v is ArtifactType {
-  return v === "audio" || v === "slides" || v === "infographic";
-}
+// 入参契约（ADR-015：DTO 即 schema，取代手写 typeof 校验）
+const createArtifactSchema = z.object({
+  type: z.enum(["audio", "slides", "infographic"]),
+  prompt: z.string().trim().max(4000).optional().default(""),
+  config: z.record(z.string(), z.coerce.string()).optional().default({}),
+});
 
-export async function GET() {
-  const user = await currentUser();
-  if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
+export const GET = withAuth(async (_req, { user }) => {
   const mine = ARTIFACTS.filter((a) => a.userId === user.id).sort((a, b) => b.createdAt - a.createdAt);
   return NextResponse.json({ artifacts: mine });
-}
+});
 
-export async function POST(req: Request) {
-  try {
-    const user = await currentUser();
-    if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
+export const POST = withValidation(createArtifactSchema, async (_req, { user, body }) => {
+  const { type, prompt, config } = body;
 
-    const body = (await req.json()) as { type?: unknown; prompt?: unknown; config?: unknown };
-    if (!isType(body.type)) {
-      return NextResponse.json({ errors: { type: "请选择产物类型" } }, { status: 400 });
-    }
-    const type = body.type;
-    const prompt = String(body.prompt ?? "").trim();
-    const rawConfig = (body.config ?? {}) as Record<string, unknown>;
-    const config: Record<string, string> = {};
-    for (const [k, v] of Object.entries(rawConfig)) config[k] = String(v);
-
-    // STUB 生成：不调用任何真实生成服务，直接返回占位制品。
-    const artifact: Artifact = {
-      id: `art_${Date.now()}_${Math.floor(Math.random() * 1e6)}`,
-      userId: user.id,
-      type,
-      title: `${TYPE_LABEL[type]}`,
-      prompt,
-      config,
-      status: "ready",
-      preview: TYPE_PREVIEW[type],
-      createdAt: Date.now(),
-    };
-    ARTIFACTS.push(artifact);
-    return NextResponse.json({ artifact }, { status: 201 });
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
-  }
-}
+  // STUB 生成：不调用任何真实生成服务，直接返回占位制品。
+  const artifact: Artifact = {
+    id: `art_${Date.now()}_${Math.floor(Math.random() * 1e6)}`,
+    userId: user.id,
+    type,
+    title: `${TYPE_LABEL[type]}`,
+    prompt,
+    config,
+    status: "ready",
+    preview: TYPE_PREVIEW[type],
+    createdAt: Date.now(),
+  };
+  ARTIFACTS.push(artifact);
+  return NextResponse.json({ artifact }, { status: 201 });
+});

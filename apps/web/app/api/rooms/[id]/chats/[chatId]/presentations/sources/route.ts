@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { canViewRoom, getRoom, getRoomChat, listRoomChatMessages } from "@repo/data";
+import { canViewRoom, getRoom, getRoomChat, listRoomChatMessages, resolveRoomId } from "@repo/data";
 import { currentUser } from "@/lib/session";
 import { listRoomFiles } from "@/lib/studio";
 
@@ -18,7 +18,7 @@ export async function GET(
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
 
-    const roomId = Number(params.id);
+    const roomId = await resolveRoomId(params.id);
     if (!(await canViewRoom(roomId, user.id))) {
       return NextResponse.json({ error: "无权限" }, { status: 403 });
     }
