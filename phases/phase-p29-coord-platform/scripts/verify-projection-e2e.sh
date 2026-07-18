@@ -38,7 +38,7 @@ api() { # method path [json-body] [token]
 pr_head_sha() {
   gh pr list --repo "$REPO" --state open \
     --json number,title,body,headRefOid \
-    --jq "[.[] | select((.title + \" \" + (.body // \"\")) | test(\"#${ISSUE}(?![0-9])\"))][0].headRefOid"
+    --jq "[.[] | select((.title + \" \" + (.body // \"\")) | test(\"#${ISSUE}([^0-9]|\$)\"))][0].headRefOid"
 }
 
 poll() { # desc check-fn

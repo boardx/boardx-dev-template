@@ -94,7 +94,7 @@
       "area": "coord",
       "title": "反向投影：租约→GitHub check/status，andon→阻断 commit status",
       "user_visible_behavior": "issue 被认领后，其关联 PR/issue 上出现 GitHub 原生 check/status（持有者、租约新鲜度、TTL 剩余）；andon 停线（仅 maintainer 级身份可发）使 main 上待合并 PR 的 required status 变红从而阻断合并；解除后恢复。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "03",
       "owner": null,
       "capability": "CAP-DATA",
@@ -102,7 +102,7 @@
         "pnpm --filter @repo/coord-projection test",
         "bash phases/phase-p29-coord-platform/scripts/verify-projection-e2e.sh"
       ],
-      "evidence": "",
+      "evidence": "evidence/F06.verify.log @ 2026-07-18T06:15:17.236Z",
       "notes": "verify-projection-e2e.sh：建测试 claim → 轮询 gh api 断言 check 出现；触发测试 andon → 断言 status 为 failure → 解除 → success。维护者不打开门户也能看到全部核心信号。"
     },
     {
@@ -111,7 +111,7 @@
       "area": "coord",
       "title": "MCP server + CLI：agent 接入面",
       "user_visible_behavior": "任何支持 MCP 的 agent 配置一个 URL 即获得工具集：claim_issue/heartbeat/release/get_realtime_status/get_ready_work/submit_evidence；npx CLI 提供同能力（connect/claim/status）；按 docs/coord-platform/quickstart.md，一个全新 agent 会话 5 分钟内完成接入→认领→撞车 409 演示。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "03",
       "owner": null,
       "capability": "CAP-WEB",
@@ -119,7 +119,7 @@
         "pnpm --filter coord-gateway test -- --grep mcp",
         "bash phases/phase-p29-coord-platform/scripts/verify-quickstart-e2e.sh"
       ],
-      "evidence": "",
+      "evidence": "evidence/F07.verify.log @ 2026-07-18T06:15:25.826Z",
       "notes": "verify-quickstart-e2e.sh 逐步执行 quickstart 文档的每条命令（文档即测试）。MCP 传输用 streamable HTTP，token 认证复用 F08。"
     },
     {
@@ -172,7 +172,7 @@
         "pnpm harness doctor --phase p29"
       ],
       "evidence": "",
-      "notes": "割接前 D1 存量 claims/events 导出归档到 R2 + evidence/（审计史不丢，ADR-011 派生快照模式）。这是唯一动 harness 脚本与全仓文档的 feature，范围纪律见 requirements §五。"
+      "notes": "割接前 D1 存量 claims/events 导出归档到 R2 + evidence/（审计史不丢，ADR-011 派生快照模式）。这是唯一动 harness 脚本与全仓文档的 feature，范围纪律见 requirements §五。【2026-07-18 接管补充】#706（P3 派工 UI）已合并且依赖 coord-service 的 tasks 收件箱（#614）——F10 删除 coord-service 前必须先把 tasks/派工 broker 迁到 RepoHub/gateway（或另立 feature），否则派工链路断供；#706 的三步激活（mint broker token/Pages secret/部署）由人类拍板时机。"
     }
   ]
 }
