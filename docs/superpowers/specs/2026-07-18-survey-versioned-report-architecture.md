@@ -154,7 +154,7 @@ F17 在 F16 合并后实现：
 - Deep Agents/LangGraph virtual backend。
 - 自主检索模块、预算、可观测性和证据校验。
 - AI/Web 单元测试和 F17 Playwright 验收。
-- F16 合并后从最新 `main` 创建 worktree。
+- F16 合并后复用 Survey 交付 worktree，同步最新 `main` 并切换到独立 F17 分支。
 - PR 只 `Closes` F17 feature issue，并 `Refs #648`。
 
 ## Rejected Alternatives

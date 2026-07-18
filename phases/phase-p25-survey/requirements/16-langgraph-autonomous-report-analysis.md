@@ -7,7 +7,8 @@
 - 用户指定采用 LangGraph 文件系统能力。
 - 本 feature 依赖 F16 的版本化事实库、报告要求和产物版本契约。
 - Umbrella issue：`boardx/boardx-dev-template#648`。本 feature 使用独立 feature issue、
-  独立 worktree 和独立 Delivery PR，且仅在 F16 合并后开工。
+  独立分支和独立 Delivery PR，且仅在 F16 合并后开工。物理 worktree 复用 Survey
+  交付 worktree：F16 合并后同步最新 `main`，再切换到 F17 分支。
 
 ## 目标
 

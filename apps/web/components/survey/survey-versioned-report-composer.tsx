@@ -373,7 +373,10 @@ export function SurveyVersionedReportComposer({
           data-testid="report-preview-panel"
           className="min-w-0 self-start overflow-hidden border border-border bg-background xl:sticky xl:top-4"
         >
-          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4">
+          <div
+            data-testid="report-generation-status"
+            className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4"
+          >
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-14 font-bold text-foreground">报告预览</h3>
