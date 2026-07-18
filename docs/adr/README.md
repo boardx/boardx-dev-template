@@ -2,7 +2,7 @@
 
 > 2026-07-12 起（人类拍板）：ADR 是全项目治理文件，统一放这里；此前散在
 > `docs/adr/`（ADR-001~013，已迁入）与本目录早期两篇
-> （0001/0002，旧编号序列，保留原名）。新 ADR 编号从 ADR-017 起。
+> （0001/0002，旧编号序列，保留原名）。新 ADR 编号从 ADR-018 起。
 
 | 编号 | 主题 | 状态 |
 |---|---|---|
@@ -24,3 +24,4 @@
 | ADR-014 | unified-clock-and-loop-discipline（统一时钟 + 分级 loop） | Accepted |
 | ADR-015 | api-middleware-over-nestjs（API 三层中间件，不换 NestJS） | Accepted |
 | ADR-016 | app-default-ai-provider-qwen（应用端默认 AI 用 Qwen） | Accepted |
+| ADR-017 | coord-repohub-do-rebuild（协调层按 RepoHub DO 重建 + 仓内开源子项目） | Accepted |
