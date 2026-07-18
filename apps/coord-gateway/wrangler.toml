@@ -35,6 +35,16 @@ dead_letter_queue = "coord-webhook-dlq"
 name = "REPOHUB"
 class_name = "RepoHub"
 
+# 平台目录单例（p30/F01）：与按仓分片的 RepoHub 互补的平台级 DO
+[[durable_objects.bindings]]
+name = "DIRECTORY"
+class_name = "PlatformDirectory"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["RepoHub"]
+
+# 新 class 用新 tag 追加（别改旧 tag——migrations 是只增历史）
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["PlatformDirectory"]

@@ -114,6 +114,18 @@ export const EVENT_TYPES = [
   "task.acked",
   "task.completed",
   "task.recalled",
+  // coord/0.1.2（p30/F01）：平台目录 DO（PlatformDirectory）审计事件。
+  // 目录写路径仅限身份/授权/审批/派工（三条铁律），每次写都 emit 一条——
+  // 「一切身份/授权/审批动作入只增审计」（p30 需求 N5）。加法扩展，wire tag 不动。
+  "directory.project.registered",
+  "directory.engineer.upserted",
+  "directory.membership.requested",
+  "directory.membership.transitioned",
+  "directory.agent.enrolled",
+  "directory.agent.updated",
+  "directory.agent.heartbeat",
+  "directory.enrollment.created",
+  "directory.enrollment.revoked",
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];

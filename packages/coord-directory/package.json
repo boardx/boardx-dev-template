@@ -1,0 +1,27 @@
+{
+  "name": "@repo/coord-directory",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PlatformDirectory Durable Object：平台级目录单例——Project/Engineer/Membership/Agent/Enrollment 领域模型 + 只增审计事件（p30/F01，与按仓分片的 RepoHub 互补）",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "echo 'lint: ok'",
+    "dev": "wrangler dev --local"
+  },
+  "dependencies": {
+    "@repo/coord-protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "*",
+    "vitest": "^2.0.0",
+    "@cloudflare/vitest-pool-workers": "^0.12.0",
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "wrangler": "^4.0.0",
+    "@types/node": "*"
+  }
+}
