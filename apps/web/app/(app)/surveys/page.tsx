@@ -3202,7 +3202,9 @@ export default function SurveysPage() {
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [mode, setMode] = useState<"list" | "editor" | "template">("list");
+  const [mode, setMode] = useState<"list" | "editor" | "template">(
+    initialWorkspaceView === "design" && initialSurveyId != null ? "editor" : "list"
+  );
   const [view, setView] = useState<"edit" | "preview">("edit");
   const [editorTab, setEditorTab] = useState<"questions" | "responses" | "settings">("questions");
   const [filter, setFilter] = useState<"my" | "team">("my");
@@ -3349,6 +3351,10 @@ export default function SurveysPage() {
         && step
         && ["design", "template", "collect", "answer", "report"].includes(step)
       ) {
+        if (step === "design") {
+          void openSurveyDesign(surveyId);
+          return;
+        }
         setEditingSurveyId(surveyId);
         setWorkspaceView(step as Exclude<WorkspaceTarget, "workspace">);
         void loadSurveyForWorkspace(surveyId);
@@ -3747,6 +3753,12 @@ export default function SurveysPage() {
     rememberAiCreateFlow(false);
     resetAiState(false);
     void loadTeams();
+  }
+
+  async function openSurveyDesign(surveyId: number) {
+    window.history.replaceState(null, "", `/surveys?survey=${surveyId}&step=design`);
+    setWorkspaceView("design");
+    await loadSurveyForEditor(surveyId, "edit");
   }
 
   async function copyEditorShareLink() {
@@ -4428,6 +4440,15 @@ export default function SurveysPage() {
       return;
     }
 
+    if (target === "design") {
+      if (currentSurveyId == null) {
+        openEditor();
+        return;
+      }
+      await openSurveyDesign(currentSurveyId);
+      return;
+    }
+
     setMode("list");
     setWorkspaceView(target);
     setAiCreateFlow(false);
@@ -4443,6 +4464,11 @@ export default function SurveysPage() {
   }
 
   async function selectSurveyForWorkspace(surveyId: number, target: WorkspaceTarget = "workspace") {
+    if (target === "design") {
+      await openSurveyDesign(surveyId);
+      return;
+    }
+
     setMode("list");
     setEditingSurveyId(surveyId);
     setWorkspaceView(target);
