@@ -6,6 +6,7 @@ import {
   PROTOCOL,
   LEASE_TTL_DEFAULT_SECONDS,
   TASK_NOTE_MAX_LENGTH,
+  validateAndonAction,
   validateClaimRequest,
   validateReleaseRequest,
   validateEvidenceManifest,
@@ -64,6 +65,9 @@ interface TaskRow {
 
 // tasks 状态机（语义等价 coord-service tasks.ts：pending→acked→done，可 recalled；
 // pending 直接 done 允许——跳过 ack 直接交付是 D1 现行为）
+// deliveries（webhook GUID 去重）保留窗口：30 天（#712，alarm 里顺带清理）
+const DELIVERIES_RETENTION_MS = 30 * 24 * 3600 * 1000;
+
 const TASK_PRIORITIES = new Set(["high", "normal", "low"]);
 const TASK_STATUSES = new Set(["pending", "acked", "done", "recalled"]);
 const TASK_TRANSITIONS = {
@@ -233,6 +237,11 @@ export class RepoHub extends DurableObject {
   // TTL 过期回收：DO alarm 机械执行（lease.md——不依赖巡检会话恰好注意到）
   override async alarm(): Promise<void> {
     const now = Date.now();
+    // deliveries 保留窗口清理（#712）：webhook GUID 去重只需覆盖 Queues 重投
+    // 窗口（分钟级），30 天远超之；顺带在 lease alarm 里删过期行，幂等
+    // （无行可删即 no-op），防 DO SQLite 无界增长。活跃仓库租约活动常在，
+    // alarm 常态有排；完全无租约活动的静默仓库也没有新 deliveries 进来。
+    this.sql.exec(`DELETE FROM deliveries WHERE at <= ?`, iso(now - DELIVERIES_RETENTION_MS));
     const due = [...this.sql.exec<LeaseRow>(
       `SELECT * FROM leases WHERE status='in_progress' AND expires_at <= ?`, iso(now),
     )];
@@ -358,27 +367,19 @@ export class RepoHub extends DurableObject {
 
   // ---------- Andon（F06） ----------
   // 权限（仅 maintainer 级可发）在 gateway 层由独立 COORD_ADMIN_TOKEN 把守；
-  // DO 只管状态机与 payload 合法性——校验规则与 coord-protocol validateEvent
-  // 的 andon 分支保持一致（reason≥10、scope ∈ repo|module:<name>、raise 时
-  // severity 必须 stop-merge），events.md §Andon 是权威。
+  // DO 只管状态机与 payload 合法性——校验规则单一出口在 coord-protocol 的
+  // validateAndonAction（与 validateEvent andon 分支同源，#723-3），
+  // events.md §Andon 是语义权威。
 
   private andonAction(body: unknown): Response {
-    const b = body as Record<string, unknown> | null;
-    const action = b?.["action"];
-    const agentId = b?.["agent_id"];
-    const reason = b?.["reason"];
-    const scope = b?.["scope"];
-    const errors: string[] = [];
-    if (action !== "raise" && action !== "clear") errors.push('action 必须是 "raise" | "clear"');
-    if (typeof agentId !== "string" || agentId.length === 0) errors.push("agent_id 必须是非空字符串");
-    if (typeof reason !== "string" || reason.length < 10) errors.push("reason 长度必须 ≥10（须含可查证锚点）");
-    if (typeof scope !== "string" || !(scope === "repo" || /^module:[\w-]+$/.test(scope)))
-      errors.push("scope 必须是 repo 或 module:<name>");
-    if (action === "raise" && b?.["severity"] !== "stop-merge")
-      errors.push('severity 必须是 "stop-merge"');
-    if (errors.length > 0) return json(422, { error: "invalid_andon_request", details: errors });
+    const v = validateAndonAction(body);
+    if (!v.ok) return json(422, { error: "invalid_andon_request", details: v.errors });
+    const b = body as Record<string, unknown>;
+    const action = b["action"] as "raise" | "clear";
+    const agentId = b["agent_id"] as string;
+    const reason = b["reason"] as string;
 
-    const s = scope as string;
+    const s = b["scope"] as string;
     const now = iso(Date.now());
     const current = [...this.sql.exec(`SELECT active FROM andon_state WHERE scope=?`, s)][0];
     if (action === "raise") {

@@ -25,6 +25,11 @@ binding = "WEBHOOK_QUEUE"
 queue = "coord-webhook-events"
 max_batch_size = 25
 max_retries = 5
+# DLQ（#712）：持续失败（非 ok、非 422）的消息 5 次重试后落入死信队列，
+# 不再静默丢弃。处置约定：人工重放（wrangler queues 查看 + 重发），暂无
+# 自动消费者——镜像可由后续 webhook 自愈，DLQ 只是可观测落点。
+# 队列由 CD 的 ensure-queue 步骤幂等创建（deploy-coord-gateway.yml）。
+dead_letter_queue = "coord-webhook-dlq"
 
 [[durable_objects.bindings]]
 name = "REPOHUB"

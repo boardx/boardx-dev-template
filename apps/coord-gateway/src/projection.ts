@@ -6,6 +6,7 @@ import {
   applyCalls,
   createGitHubAppAuth,
   project,
+  type ActiveLease,
   type AndonState,
   type GitHubAppAuth,
   type OpenPr,
@@ -31,15 +32,20 @@ async function projectRepo(env: Env, auth: GitHubAppAuth, repo: string): Promise
     stub, `/events?limit=${EVENTS_BATCH}${cursor ? `&since=${cursor}` : ""}`,
   );
   const andon = await doJson<AndonState>(stub, "/andon");
-  // 无新事件且未停线：无事可投，也无游标可推
-  if (events.length === 0 && !andon.active) return;
+  // 活跃租约快照必须在 events 之后取：快照时点 ≥ 批内事件时点，引擎里
+  // 快照覆盖批内 stale 事件才是安全的（#723-2 对账路径）
+  const { leases } = await doJson<{ leases: ActiveLease[] }>(stub, "/claims");
+  // 无新事件、未停线、无活跃租约：无事可投也无可对账，游标也无可推
+  if (events.length === 0 && !andon.active && leases.length === 0) return;
 
   const { items } = await doJson<{ items: OpenPr[] }>(stub, "/realtime/prs?state=open");
-  const calls = project({ events, openPrs: items, andon, now: Date.now() });
+  const calls = project({ events, openPrs: items, andon, leases, now: Date.now() });
   if (calls.length > 0) {
     const token = await auth.installationToken(owner, name);
     const r = await applyCalls({ owner, repo: name, token, calls });
-    if (r.failed > 0) console.error(`[projection] ${repo}: ${r.failed}/${calls.length} 条投影失败（下 tick 对账补投）`);
+    // 漏投自愈口径：andon status 与 claimed lease check 均为状态驱动、下 tick
+    // 对账补投；lease 结束态（released/expired）仅事件驱动，失败即残留（见 engine.ts）
+    if (r.failed > 0) console.error(`[projection] ${repo}: ${r.failed}/${calls.length} 条投影失败（状态驱动部分下 tick 对账补投）`);
   }
   if (events.length > 0) {
     const last = events[events.length - 1]!.event_id;

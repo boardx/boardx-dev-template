@@ -523,6 +523,38 @@ describe("F10-pre tasks 收件箱（迁自 coord-service #614/#631）", () => {
   });
 });
 
+describe("deliveries 保留窗口清理（#712）", () => {
+  it("alarm 顺带删 30 天前的 deliveries 行；30 天内的保留（幂等）", async () => {
+    const id = env.REPOHUB.idFromName("boardx/boardx-dev-template");
+    const stub = env.REPOHUB.get(id);
+    // 先 claim 一个租约让 alarm 有排（清理搭 lease alarm 的便车）
+    expect((await post("/claims", claimBody("ttl-agent", "issue:712"))).status).toBe(201);
+
+    const old = new Date(Date.now() - 40 * 24 * 3600 * 1000).toISOString();
+    const fresh = new Date().toISOString();
+    await runInDurableObject(stub, async (_i: unknown, state: DurableObjectState) => {
+      state.storage.sql.exec(`INSERT INTO deliveries (delivery_id, at) VALUES ('dlv-old', ?)`, old);
+      state.storage.sql.exec(`INSERT INTO deliveries (delivery_id, at) VALUES ('dlv-fresh', ?)`, fresh);
+    });
+
+    expect(await runDurableObjectAlarm(stub)).toBe(true);
+
+    await runInDurableObject(stub, async (_i: unknown, state: DurableObjectState) => {
+      const rows = [...state.storage.sql.exec(`SELECT delivery_id FROM deliveries`)];
+      const ids = rows.map((r) => r["delivery_id"]);
+      expect(ids).not.toContain("dlv-old");
+      expect(ids).toContain("dlv-fresh");
+    });
+
+    // 幂等：再跑一轮 alarm 不报错、fresh 仍在
+    await runDurableObjectAlarm(stub);
+    await runInDurableObject(stub, async (_i: unknown, state: DurableObjectState) => {
+      const rows = [...state.storage.sql.exec(`SELECT delivery_id FROM deliveries`)];
+      expect(rows.map((r) => r["delivery_id"])).toContain("dlv-fresh");
+    });
+  });
+});
+
 async function fetchClaim(base: string, agent: string, resource: string): Promise<Response> {
   return SELF.fetch(`${base}/claims`, {
     method: "POST",

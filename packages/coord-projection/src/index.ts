@@ -4,6 +4,7 @@ export {
   project,
   type ProjectionEvent,
   type OpenPr,
+  type ActiveLease,
   type AndonState,
   type GithubCall,
   type ProjectionInput,
