@@ -12,6 +12,7 @@ import {
   isAllowedRestSubpath,
   requireAdmin,
 } from "./auth";
+import { handleStreamRoute } from "./stream";
 
 export { RepoHub };
 
@@ -108,6 +109,10 @@ export default {
     const mir = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)(\/mirror\/upsert)$/);
     if (req.method === "POST" && mir)
       return handleAdmin(req, env, `${mir[1]}/${mir[2]}`, mir[3]!);
+    // WS 实时流 + 一次性 ticket（F09）：逻辑全在 src/stream.ts，这里只做路由
+    const stream = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)\/(stream|stream-ticket)$/);
+    if (stream)
+      return handleStreamRoute(req, env, `${stream[1]}/${stream[2]}`, stream[3] as "stream" | "stream-ticket", url);
     if (url.pathname.startsWith("/api/coord/repos/")) return handleRest(req, env, url);
     // MCP 接入面（F07）：逻辑全在 src/mcp.ts，这里只做路由（降低与并行改动的冲突面）
     const mcp = url.pathname.match(/^\/api\/coord\/mcp\/([^/]+)\/([^/]+)$/);

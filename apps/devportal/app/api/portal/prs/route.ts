@@ -37,8 +37,11 @@ export async function GET(req: Request) {
   const repo = process.env["GITHUB_REPO"];
   if (!token || !repo) return NextResponse.json({ configured: false } satisfies PrsPayload);
 
+  // F09：实时事件触发的重拉带 ?fresh=1 绕过 30s 缓存（否则 WS 信号到了数据还是旧的）；
+  // 结果仍写回缓存，常规轮询照常受保护。
   const key = cacheKey();
-  if (cache && cache.key === key && cache.expiresAt > Date.now()) return NextResponse.json(cache.payload);
+  const fresh = new URL(req.url).searchParams.get("fresh") === "1";
+  if (!fresh && cache && cache.key === key && cache.expiresAt > Date.now()) return NextResponse.json(cache.payload);
 
   let payload: PrsPayload;
   try {

@@ -2,8 +2,9 @@
 // p23-F10「我」视角首页：登录后第一屏，10 秒内知道"我现在该干什么"（ADR-011 P2 解锁）。
 // 四象限，全部按当前 Access 身份过滤（/api/portal/my-home）；待拍板计数由 shell 传入
 // （复用其 discussions 轮询，不重复抓取）。任一象限未配置/空 → 诚实空态，不虚构。
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { portalFetch } from "@/lib/portal-fetch";
+import { debounceTrailing, useCoordStream } from "@/lib/coord-stream";
 import { Badge } from "@/components/ui/badge";
 import { PortalCard } from "@/components/portal/portal-card";
 
@@ -40,32 +41,38 @@ export function MeTab({ developer, decideCount }: { developer: { name: string; e
   const [data, setData] = useState<MyHome | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "degraded">("loading");
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await portalFetch("/api/portal/my-home");
-        if (!res) return; // 401 → 正在整页重新认证
-        if (!res.ok) {
-          if (!cancelled) setState("degraded");
-          return;
-        }
-        const body = (await res.json()) as MyHome;
-        if (!cancelled) {
-          setData(body);
-          setState("ready");
-        }
-      } catch {
-        if (!cancelled) setState("degraded");
+  const cancelledRef = useRef(false);
+  const load = useCallback(async () => {
+    try {
+      const res = await portalFetch("/api/portal/my-home");
+      if (!res) return; // 401 → 正在整页重新认证
+      if (!res.ok) {
+        if (!cancelledRef.current) setState("degraded");
+        return;
       }
+      const body = (await res.json()) as MyHome;
+      if (!cancelledRef.current) {
+        setData(body);
+        setState("ready");
+      }
+    } catch {
+      if (!cancelledRef.current) setState("degraded");
     }
+  }, []);
+
+  useEffect(() => {
+    cancelledRef.current = false;
     void load();
-    const timer = setInterval(() => void load(), 60_000);
+    const timer = setInterval(() => void load(), 60_000); // 轮询保留 = WS 断供兜底
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
       clearInterval(timer);
     };
-  }, []);
+  }, [load]);
+
+  // F09：我的 agent 租约 / 我的 PR 镜像变更 → 秒级重拉四象限
+  const reload = useMemo(() => debounceTrailing(() => void load()), [load]);
+  useCoordStream(["mirror.updated", "lease.*"], reload);
 
   if (state === "loading") return <PortalCard state="loading" title="我的视角"><span /></PortalCard>;
   if (state === "degraded" || !data) return <PortalCard state="degraded" title="我的视角"><span /></PortalCard>;
@@ -81,7 +88,7 @@ export function MeTab({ developer, decideCount }: { developer: { name: string; e
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {/* 象限 1：我的 agent 队伍 */}
-        <PortalCard state="ready" title={`我的 agent 队伍（${data.agents.length}）`}>
+        <PortalCard state="ready" title={`我的 agent 队伍（${data.agents.length}）`} freshAt={data.generated_at}>
           {data.agents.length === 0 ? (
             <p className="text-13 text-muted-foreground">你名下还没有登记的 agent——去「加入开发」onboarding。</p>
           ) : (
@@ -109,7 +116,7 @@ export function MeTab({ developer, decideCount }: { developer: { name: string; e
         </PortalCard>
 
         {/* 象限 2：我卡住的 PR */}
-        <PortalCard state="ready" title="我卡住的 PR">
+        <PortalCard state="ready" title="我卡住的 PR" freshAt={data.generated_at}>
           {!data.prs.configured ? (
             <p className="text-13 text-muted-foreground">GitHub 数据源未接线。</p>
           ) : stalePrs.length === 0 ? (
@@ -131,7 +138,7 @@ export function MeTab({ developer, decideCount }: { developer: { name: string; e
         </PortalCard>
 
         {/* 象限 3：@我的待拍板 */}
-        <PortalCard state="ready" title="@我的待拍板">
+        <PortalCard state="ready" title="@我的待拍板" freshAt={data.generated_at}>
           {decideCount === null ? (
             <p className="text-13 text-muted-foreground">讨论流数据源未接线。</p>
           ) : decideCount === 0 ? (
@@ -145,7 +152,7 @@ export function MeTab({ developer, decideCount }: { developer: { name: string; e
         </PortalCard>
 
         {/* 象限 4：我的 flow-time */}
-        <PortalCard state="ready" title="我的 flow-time（PR 开→合 中位）">
+        <PortalCard state="ready" title="我的 flow-time（PR 开→合 中位）" freshAt={data.generated_at}>
           {!data.flow_configured ? (
             <p className="text-13 text-muted-foreground">GitHub 数据源未接线。</p>
           ) : data.flow_hours_median === null ? (

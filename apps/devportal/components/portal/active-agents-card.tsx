@@ -12,13 +12,14 @@ function minutesSince(iso: string): number {
   return Math.max(0, (Date.now() - t) / 60_000);
 }
 
-export function ActiveAgentsCard({ state, coord }: { state: PortalCardState; coord: PulseCoord | null }) {
+export function ActiveAgentsCard({ state, coord, freshAt }: { state: PortalCardState; coord: PulseCoord | null; freshAt?: string | null }) {
   const claims = coord && coord.configured && "active_claims" in coord ? coord.active_claims : [];
   return (
     <PortalCard
       title="现在谁在干活"
       state={state}
       unconfiguredHint="协调数据源未配置（COORD_SERVICE_URL）——接线后此卡显示活跃 agent 与心跳状态。"
+      freshAt={freshAt}
     >
       {claims.length === 0 ? (
         <p className="text-13 text-muted-foreground">当前没有活跃租约——没有 agent 在干活。</p>

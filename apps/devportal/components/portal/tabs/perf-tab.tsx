@@ -6,7 +6,8 @@
 // 诚实降级：per-agent flow-time / 周期承诺当前无数据源 → 列显示"数据积累中"（不造假）；
 // coord_configured:false → 整列省略"当前租约"；C-cycle 周期报告无 Web 数据源 → unconfigured 态。
 import { portalFetch } from "@/lib/portal-fetch";
-import { Fragment, useEffect, useState } from "react";
+import { debounceTrailing, useCoordStream } from "@/lib/coord-stream";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { PortalCard, type PortalCardState } from "@/components/portal/portal-card";
 
@@ -51,39 +52,47 @@ function AgentRow({ a, indent, showLease }: { a: AgentNode; indent: boolean; sho
 export function PerfTab() {
   const [state, setState] = useState<PortalCardState>("loading");
   const [data, setData] = useState<AgentsPayload | null>(null);
+  const [freshAt, setFreshAt] = useState<string | null>(null); // F09 数据新鲜度时间戳
+  const cancelledRef = useRef(false);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await portalFetch("/api/portal/agents");
+      if (!res) return; // 401 → 正在整页重新认证（portal-fetch.ts）
+      if (!res.ok) {
+        if (!cancelledRef.current) setState("degraded");
+        return;
+      }
+      const body = (await res.json()) as AgentsPayload;
+      if (!cancelledRef.current) {
+        setData(body);
+        setFreshAt(new Date().toISOString());
+        setState("ready");
+      }
+    } catch {
+      if (!cancelledRef.current) setState("degraded");
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await portalFetch("/api/portal/agents");
-        if (!res) return; // 401 → 正在整页重新认证（portal-fetch.ts）
-        if (!res.ok) {
-          if (!cancelled) setState("degraded");
-          return;
-        }
-        const body = (await res.json()) as AgentsPayload;
-        if (!cancelled) {
-          setData(body);
-          setState("ready");
-        }
-      } catch {
-        if (!cancelled) setState("degraded");
-      }
-    }
+    cancelledRef.current = false;
     void load();
-    const timer = setInterval(() => void load(), 60_000);
+    const timer = setInterval(() => void load(), 60_000); // 轮询保留 = WS 断供兜底
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
       clearInterval(timer);
     };
-  }, []);
+  }, [load]);
+
+  // F09：租约变更 → "当前租约"列秒级跟随
+  const reload = useMemo(() => debounceTrailing(() => void load()), [load]);
+  useCoordStream(["lease.*"], reload);
 
   const showLease = data?.coord_configured ?? false;
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <PortalCard state={state} wide title="表现：按 开发者 → 其 agents 分组（开发者是人，agent 是队伍）">
+      <PortalCard state={state} wide title="表现：按 开发者 → 其 agents 分组（开发者是人，agent 是队伍）" freshAt={freshAt}>
         {data && (
           <div className="overflow-x-auto">
             <table className="w-full text-13">

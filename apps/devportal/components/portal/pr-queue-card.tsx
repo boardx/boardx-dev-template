@@ -3,7 +3,8 @@
 // 堵点高亮：开出超 1 个工作周期（3h）未动（updated_at 距今 >3h）的行红框高亮
 // （border-destructive/30 bg-destructive/5）+ 三个行动按钮：催办 / 认领 review / 去 GitHub。
 // 催办与认领 review 当前形态 = 跳转到该 PR 的 GitHub 页（权威在 GitHub，门户不写入）。
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { debounceTrailing, useCoordStream } from "@/lib/coord-stream";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -67,29 +68,37 @@ function PrRow({ pr }: { pr: PrItem }) {
 export function PrQueueCard() {
   const [payload, setPayload] = useState<PrsPayload | null>(null);
   const [failed, setFailed] = useState(false);
+  const cancelledRef = useRef(false);
+
+  const load = useCallback(async (fresh = false) => {
+    try {
+      const res = await fetch(fresh ? "/api/portal/prs?fresh=1" : "/api/portal/prs");
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      const body = (await res.json()) as PrsPayload;
+      if (!cancelledRef.current) {
+        setPayload(body);
+        setFailed(false);
+      }
+    } catch {
+      if (!cancelledRef.current) setFailed(true);
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await fetch("/api/portal/prs");
-        if (!res.ok) throw new Error(`status ${res.status}`);
-        const body = (await res.json()) as PrsPayload;
-        if (!cancelled) {
-          setPayload(body);
-          setFailed(false);
-        }
-      } catch {
-        if (!cancelled) setFailed(true);
-      }
-    }
+    cancelledRef.current = false;
     void load();
-    const timer = setInterval(() => void load(), 60_000);
+    const timer = setInterval(() => void load(), 60_000); // 轮询保留 = WS 断供兜底
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
       clearInterval(timer);
     };
-  }, []);
+  }, [load]);
+
+  // F09：PR 镜像变更（mirror.updated, kind=pr）→ 秒级重拉队列
+  const reload = useMemo(() => debounceTrailing(() => void load(true)), [load]);
+  useCoordStream(["mirror.updated"], (e) => {
+    if ((e.payload["kind"] ?? "pr") === "pr") reload();
+  });
 
   const state: PortalCardState = failed
     ? "degraded"
@@ -111,6 +120,7 @@ export function PrQueueCard() {
       title="PR 队列（超 1 个周期未动的高亮，可立即行动）"
       state={state}
       unconfiguredHint="GitHub 数据源未配置（GITHUB_TOKEN/GITHUB_REPO）——接线后此卡显示 open PR 队列与堵点高亮。"
+      freshAt={payload && payload.configured && "generated_at" in payload ? payload.generated_at : null}
     >
       {items.length === 0 ? (
         <p className="text-13 text-muted-foreground">当前没有 open PR——队列干净。</p>

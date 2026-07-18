@@ -76,6 +76,14 @@ CREATE TABLE IF NOT EXISTS agent_tokens (
   revoked_at TEXT                            -- 非 NULL = 已吊销（不删行，留审计）
 );
 
+-- WS 一次性 ticket（F09）：浏览器 WebSocket 无法带 Authorization header，
+-- 由 gateway 用 bearer 换 60s 一次性 ticket；查到即销（一次性），过期即废。
+-- 绝不把长期 token 下发到浏览器——这张表是唯一的替代凭据存放点。
+CREATE TABLE IF NOT EXISTS stream_tickets (
+  ticket     TEXT PRIMARY KEY,
+  expires_at TEXT NOT NULL
+);
+
 -- issue/PR 镜像：关键字段拉平便于过滤，全量 JSON 保真（F04）
 CREATE TABLE IF NOT EXISTS mirror_items (
   kind        TEXT NOT NULL,                -- issue | pr
