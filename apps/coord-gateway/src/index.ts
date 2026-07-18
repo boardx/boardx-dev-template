@@ -2,7 +2,9 @@
 // + REST 网关（bearer 鉴权 → 转发 RepoHub DO）。F08：按仓 scoped token 优先，
 // COORD_API_TOKEN 保留为 ops 万能钥匙；mint/revoke 走 COORD_ADMIN_TOKEN 管理面（auth.ts）。
 import { RepoHub } from "@repo/coord-repohub";
+import { PlatformDirectory } from "@repo/coord-directory";
 import { describeCycle } from "./cycle";
+import { handleDirectory } from "./directory";
 import { verifyWebhookSignature } from "./signature";
 import { toIngestBody, type QueuedWebhook } from "./mapping";
 import { runProjectionTick } from "./projection";
@@ -17,10 +19,12 @@ import {
 } from "./auth";
 import { handleStreamRoute } from "./stream";
 
-export { RepoHub };
+export { RepoHub, PlatformDirectory };
 
 export interface Env {
   REPOHUB: DurableObjectNamespace;
+  // 平台目录单例 DO（p30/F01）：Project/Membership/Enrollment 领域模型
+  DIRECTORY: DurableObjectNamespace;
   WEBHOOK_QUEUE: Queue<QueuedWebhook>;
   GITHUB_WEBHOOK_SECRET?: string;
   COORD_API_TOKEN?: string;
@@ -141,6 +145,8 @@ export default {
     if (stream)
       return handleStreamRoute(req, env, `${stream[1]}/${stream[2]}`, stream[3] as "stream" | "stream-ticket", url);
     if (url.pathname.startsWith("/api/coord/repos/")) return handleRest(req, env, url);
+    // 平台目录面（p30/F01）：逻辑全在 src/directory.ts，这里只做路由
+    if (url.pathname.startsWith("/api/coord/directory/")) return handleDirectory(req, env, url);
     // MCP 接入面（F07）：逻辑全在 src/mcp.ts，这里只做路由（降低与并行改动的冲突面）
     const mcp = url.pathname.match(/^\/api\/coord\/mcp\/([^/]+)\/([^/]+)$/);
     if (mcp) return handleMcp(req, env, mcp[1]!, mcp[2]!);

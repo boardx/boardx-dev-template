@@ -3,6 +3,24 @@
 规格版本独立于实现版本；wire format 变更**必须**在此登记（ADR-017 §4，
 北极星 §7.5"协议即规格"）。语义化：破坏性变更升 minor（0.x 阶段）。
 
+## coord/0.1.2 — 2026-07-19
+
+**加法扩展（非破坏）：directory.\* 事件九类型**（p30/F01：平台目录 DO
+PlatformDirectory——Project/Engineer/Membership/Agent/Enrollment 领域模型，
+与按仓分片的 RepoHub 互补的平台级单例）。
+
+- 事件封闭集合新增 `directory.project.registered` / `directory.engineer.upserted` /
+  `directory.membership.requested` / `directory.membership.transitioned` /
+  `directory.agent.enrolled` / `directory.agent.updated` /
+  `directory.agent.heartbeat` / `directory.enrollment.created` /
+  `directory.enrollment.revoked`。目录 DO 的每条写路径（仅限身份/授权/审批，
+  三条铁律）都 emit 对应审计事件，复用统一事件信封（p30 需求 N5「一切
+  身份/授权/审批动作入只增审计」）。
+- payload 不做强校验（实体细节是目录 DO 的实现域，字段随 UI 需要演进；
+  信封校验照旧）。不认识 directory.* 的旧消费者按「未知类型忽略」前向兼容。
+- 版本判定：与 task.\* 先例（0.1.1）同理——仅扩事件类型集合，wire 上的
+  `protocol` 字段维持 `"coord/0.1"` 不动，按语义化是 **patch（0.1.2）**。
+
 ## coord/0.1.1 — 2026-07-18
 
 **加法扩展（非破坏）：task.\* 事件四类型**（F10 前置：tasks 收件箱与派工 broker

@@ -1,0 +1,14 @@
+# coord-directory — PlatformDirectory DO 的宿主配置。
+# 本包单独部署仅用于开发/测试；生产由 apps/coord-gateway 绑定同一 DO class（p30/F01）。
+# ⚠️ compatibility_date 沿用本仓现值纪律（mod-devportal 2026-07-12 事故：别抄旧模板）。
+name = "coord-directory"
+main = "src/index.ts"
+compatibility_date = "2026-07-01"
+
+[[durable_objects.bindings]]
+name = "DIRECTORY"
+class_name = "PlatformDirectory"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["PlatformDirectory"]
