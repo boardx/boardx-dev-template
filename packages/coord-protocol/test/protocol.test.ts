@@ -166,7 +166,7 @@ describe("VerificationVerdict", () => {
 });
 
 describe("CoordEvent", () => {
-  it("全部封闭集合类型均可通过（andon/task 用合法 payload）", () => {
+  it("全部封闭集合类型均可通过（andon/task/workspace 用合法 payload）", () => {
     for (const t of EVENT_TYPES) {
       const payload = t.startsWith("andon.")
         ? { scope: "repo", reason: "main 基础验证挂了，停线（issue #123）", severity: "stop-merge" }
@@ -174,9 +174,31 @@ describe("CoordEvent", () => {
           ? { task_id: 1, assignee: "wrk-1", priority: "normal", deadline: null, note: null }
           : t.startsWith("task.")
             ? { task_id: 1 }
-            : {};
+            : t === "requirement.advanced"
+              ? { requirement_id: "req_01ABC", status: "analyzing" }
+              : t.startsWith("requirement.")
+                ? { requirement_id: "req_01ABC" }
+                : t === "sprint.upserted"
+                  ? { sprint: "p30/01", item_id: "F04" }
+                  : t === "talk.posted"
+                    ? { message_id: "tlk_01ABC" }
+                    : {};
       expect(validateEvent(event(t, payload)).ok, t).toBe(true);
     }
+  });
+  it("workspace 事件 payload 强校验（coord/0.1.3）：缺锚定字段/坏 status 被拒", () => {
+    expect(validateEvent(event("requirement.submitted", {})).ok).toBe(false);
+    expect(validateEvent(event("requirement.advanced", { requirement_id: "req_1" })).ok).toBe(false);
+    expect(
+      validateEvent(event("requirement.advanced", { requirement_id: "req_1", status: "shipped" })).ok,
+    ).toBe(false);
+    expect(
+      validateEvent(event("requirement.advanced", { requirement_id: "req_1", status: "in_review" })).ok,
+    ).toBe(true);
+    expect(validateEvent(event("requirement.dispatched", { requirement_id: "req_1", issue: 42 })).ok).toBe(true);
+    expect(validateEvent(event("sprint.upserted", { sprint: "p30/01" })).ok).toBe(false);
+    expect(validateEvent(event("talk.posted", {})).ok).toBe(false);
+    expect(validateEvent(event("talk.posted", { message_id: "tlk_1", needs_human: true })).ok).toBe(true);
   });
   it("task.* 缺 task_id / task.dispatched 缺 assignee 或坏 priority 被拒（coord/0.1.1）", () => {
     expect(validateEvent(event("task.acked", {})).ok).toBe(false);

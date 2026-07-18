@@ -5,6 +5,7 @@ import {
   EVENT_TYPES,
   LEASE_TTL_MAX_SECONDS,
   HANDOFF_NOTE_MIN_LENGTH,
+  REQUIREMENT_STATUSES,
   type ValidationResult,
   type EventType,
 } from "./types";
@@ -16,6 +17,7 @@ const LEASE_STATUSES = new Set(["in_progress", "released", "expired"]);
 const VERIFIER_KINDS = new Set(["independent-rerun", "reviewer-attest", "ci"]);
 const TASK_PRIORITIES = new Set(["high", "normal", "low"]);
 const EVENT_TYPE_SET = new Set<string>(EVENT_TYPES);
+const REQUIREMENT_STATUS_SET = new Set<string>(REQUIREMENT_STATUSES);
 
 const RESOURCE_ID_RE = /^(feature:[\w.-]+\/F\d{2,}|issue:\d+|role:[\w-]+|module:[\w-]+|custom:[\w:./-]+)$/;
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
@@ -241,6 +243,24 @@ export function validateEvent(input: unknown): ValidationResult {
       pc.str("assignee").oneOf("priority", TASK_PRIORITIES);
     }
     pc.errors.forEach((e) => r.errors.push(`payload.${e}`));
+  }
+
+  // 工作区分片事件的 payload 强校验（coord/0.1.3，events.md §Workspace，p30/F04）
+  if (isObj(o["payload"])) {
+    const p = o["payload"] as Obj;
+    if (type.startsWith("requirement.")) {
+      const pc = new Check(p).str("requirement_id");
+      if (type === "requirement.advanced") pc.oneOf("status", REQUIREMENT_STATUS_SET);
+      pc.errors.forEach((e) => r.errors.push(`payload.${e}`));
+    }
+    if (type === "sprint.upserted") {
+      const pc = new Check(p).str("sprint").str("item_id");
+      pc.errors.forEach((e) => r.errors.push(`payload.${e}`));
+    }
+    if (type === "talk.posted") {
+      const pc = new Check(p).str("message_id");
+      pc.errors.forEach((e) => r.errors.push(`payload.${e}`));
+    }
   }
   return r.result();
 }

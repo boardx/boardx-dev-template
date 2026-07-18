@@ -126,6 +126,14 @@ export const EVENT_TYPES = [
   "directory.agent.heartbeat",
   "directory.enrollment.created",
   "directory.enrollment.revoked",
+  // coord/0.1.3（p30/F04）：工作区数据按项目分片入 RepoHub DO——需求流水线 /
+  // sprint 面板 / talk 对话流三类写操作的事件。加法扩展，wire tag 不动（同 0.1.1 先例）。
+  "requirement.submitted",
+  "requirement.advanced",
+  "requirement.dispatched",
+  "requirement.rejected",
+  "sprint.upserted",
+  "talk.posted",
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];
@@ -164,6 +172,23 @@ export interface TaskDispatchedPayload {
   deadline: string | null;
   note: string | null;
 }
+
+// ---------- Workspace（coord/0.1.2：p30/F04 工作区数据按项目分片） ----------
+// 需求流水线五态：提交 → 分析 → 审核 → 下发（happy path 四段），rejected 为审核拒绝终态。
+// dispatched / rejected 均为终态；状态推进只许前向，非法迁移 409。
+
+export const REQUIREMENT_STATUSES = [
+  "submitted",
+  "analyzing",
+  "in_review",
+  "dispatched",
+  "rejected",
+] as const;
+export type RequirementStatus = (typeof REQUIREMENT_STATUSES)[number];
+
+export const REQUIREMENT_TITLE_MAX_LENGTH = 300;
+export const REQUIREMENT_BODY_MAX_LENGTH = 10000;
+export const TALK_BODY_MAX_LENGTH = 4000; // 对话流不是日志倾倒场（同 TASK_NOTE 纪律）
 
 // ---------- 校验结果 ----------
 

@@ -3,6 +3,23 @@
 规格版本独立于实现版本；wire format 变更**必须**在此登记（ADR-017 §4，
 北极星 §7.5"协议即规格"）。语义化：破坏性变更升 minor（0.x 阶段）。
 
+## coord/0.1.3 — 2026-07-19
+
+**加法扩展（非破坏）：工作区分片事件六类型**（p30/F04：需求流水线条目 /
+sprint 面板数据 / talk 对话流迁入按项目分片的 RepoHub DO）。
+
+- 事件封闭集合新增 `requirement.submitted` / `requirement.advanced` /
+  `requirement.dispatched` / `requirement.rejected` / `sprint.upserted` /
+  `talk.posted`，payload 校验入 `validateEvent`（requirement.\* 必含
+  `requirement_id`，advanced 另需合法 `status`；sprint.upserted 必含
+  `sprint` + `item_id`；talk.posted 必含 `message_id`）。
+- 需求流水线五态定稿：`submitted → analyzing → in_review → dispatched`
+  （提交→分析→审核→下发 happy path），`rejected` 为审核拒绝终态。
+- 版本判定理由：与 0.1.1/0.1.2 完全同型——信封结构、既有 24 个类型、全部请求/响应
+  wire format 不变，仅扩事件类型集合，按语义化是 **patch（0.1.3）**。wire 上的
+  `protocol` 字段维持 `"coord/0.1"` 不动（理由同 0.1.1：升 tag 即人为破坏）。
+- 不认识新类型的旧消费者按「未知类型忽略」处理（事件流前向兼容既定要求）。
+
 ## coord/0.1.2 — 2026-07-19
 
 **加法扩展（非破坏）：directory.\* 事件九类型**（p30/F01：平台目录 DO

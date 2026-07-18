@@ -18,6 +18,7 @@ import {
 } from "@repo/coord-protocol";
 import { SCHEMA } from "./schema";
 import { ulid } from "./ulid";
+import { handleWorkspace } from "./workspace";
 
 interface LeaseRow {
   [key: string]: string | number | null;
@@ -139,6 +140,11 @@ export class RepoHub extends DurableObject {
       if (req.method === "GET" && rt) return this.realtimeList(rt[1] === "prs" ? "pr" : "issue", url);
       const one = p.match(/^\/realtime\/prs\/(\d+)$/);
       if (req.method === "GET" && one) return this.realtimeOne("pr", Number(one[1]));
+      // 工作区分片三面（p30/F04）：需求流水线 / sprint 面板 / talk 对话流，逻辑全在 workspace.ts
+      const ws = await handleWorkspace(
+        { sql: this.sql, emit: (t, r, a, pl) => this.emit(t, r, a, pl) }, req, url,
+      );
+      if (ws) return ws;
       return json(404, { error: "not_found" });
     } catch (e) {
       if (e instanceof SyntaxError) return json(400, { error: "invalid_json" });
