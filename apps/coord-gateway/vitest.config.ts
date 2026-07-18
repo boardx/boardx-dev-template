@@ -12,6 +12,7 @@ export default defineWorkersConfig({
           bindings: {
             GITHUB_WEBHOOK_SECRET: "test-webhook-secret",
             COORD_API_TOKEN: "test-api-token",
+            COORD_ADMIN_TOKEN: "test-admin-token",
           },
         },
       },

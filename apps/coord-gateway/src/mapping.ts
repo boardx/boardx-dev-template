@@ -51,6 +51,7 @@ export function toIngestBody(msg: QueuedWebhook): IngestBody {
           number: pr["number"],
           state: pr["merged"] === true ? "merged" : pr["state"],
           title: pr["title"],
+          body: typeof pr["body"] === "string" ? pr["body"] : null, // 投影解析 "Closes #N" 关联（F06）
           head_sha: head["sha"] ?? null,
           mergeable: mergeable === true ? "MERGEABLE" : mergeable === false ? "CONFLICTING" : "UNKNOWN",
           merge_state: typeof pr["mergeable_state"] === "string" ? (pr["mergeable_state"] as string).toUpperCase() : null,

@@ -161,6 +161,57 @@ describe("F04 镜像", () => {
   });
 });
 
+describe("F06 andon 状态 + 投影游标", () => {
+  const raise = {
+    action: "raise", agent_id: "coord-main", severity: "stop-merge", scope: "module:devportal",
+    reason: "devportal 部署事故，模块停线（issue #888）",
+  };
+
+  it("非法请求 422：短 reason / 坏 scope / raise 缺 stop-merge", async () => {
+    expect((await post("/andon", { ...raise, reason: "太短" })).status).toBe(422);
+    expect((await post("/andon", { ...raise, scope: "banana" })).status).toBe(422);
+    expect((await post("/andon", { ...raise, severity: "warn" })).status).toBe(422);
+    expect((await post("/andon", { ...raise, action: "pause" })).status).toBe(422);
+  });
+
+  it("raise → 状态 active + andon.raised 事件；重复 raise 409；clear → 恢复 + andon.cleared", async () => {
+    expect((await post("/andon", raise)).status).toBe(200);
+    const state = await (await SELF.fetch(`${BASE}/andon`)).json<{ active: boolean; andons: Array<Record<string, unknown>> }>();
+    expect(state.active).toBe(true);
+    expect(state.andons[0]).toMatchObject({ scope: "module:devportal", severity: "stop-merge" });
+
+    expect((await post("/andon", raise)).status).toBe(409); // 已停线不重复停
+
+    const clear = { action: "clear", agent_id: "coord-main", scope: "module:devportal", reason: "事故已恢复（issue #888）" };
+    expect((await post("/andon", clear)).status).toBe(200);
+    const after = await (await SELF.fetch(`${BASE}/andon`)).json<{ active: boolean }>();
+    expect(after.active).toBe(false);
+    expect((await post("/andon", clear)).status).toBe(409); // 未停线无可清
+
+    const events = await (await SELF.fetch(`${BASE}/events?limit=500`)).json<{ events: Array<Record<string, unknown>> }>();
+    const raised = events.events.filter((e) => e["type"] === "andon.raised" && e["resource_id"] === "module:devportal");
+    const cleared = events.events.filter((e) => e["type"] === "andon.cleared" && e["resource_id"] === "module:devportal");
+    expect(raised).toHaveLength(1); // 409 的重复 raise 不产生事件
+    expect(cleared).toHaveLength(1);
+    expect((raised[0]!["payload"] as Record<string, unknown>)["severity"]).toBe("stop-merge");
+  });
+
+  it("投影游标：初始 null → PUT 后可读回；坏 cursor 422", async () => {
+    const empty = await (await SELF.fetch(`${BASE}/projector/cursor`)).json<{ cursor: string | null }>();
+    expect(empty.cursor).toBeNull();
+    const put = await SELF.fetch(`${BASE}/projector/cursor`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ cursor: "evt_01ABC" }),
+    });
+    expect(put.status).toBe(200);
+    const got = await (await SELF.fetch(`${BASE}/projector/cursor`)).json<{ cursor: string | null }>();
+    expect(got.cursor).toBe("evt_01ABC");
+    const bad = await SELF.fetch(`${BASE}/projector/cursor`, { method: "PUT", body: JSON.stringify({ cursor: 42 }) });
+    expect(bad.status).toBe(422);
+  });
+});
+
 async function fetchClaim(base: string, agent: string, resource: string): Promise<Response> {
   return SELF.fetch(`${base}/claims`, {
     method: "POST",

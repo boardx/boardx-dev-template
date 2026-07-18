@@ -35,6 +35,24 @@ CREATE TABLE IF NOT EXISTS deliveries (
   at          TEXT NOT NULL
 );
 
+-- andon 停线状态（F06）：按 scope 一行当前态；历史全在 events（append-only），
+-- 本表只是"现在停没停"的快照，供投影每 tick 对账。
+CREATE TABLE IF NOT EXISTS andon_state (
+  scope      TEXT PRIMARY KEY,               -- repo | module:<name>
+  active     INTEGER NOT NULL,               -- 0/1
+  severity   TEXT NOT NULL,                  -- v0.1 仅 stop-merge
+  reason     TEXT NOT NULL,
+  raised_by  TEXT NOT NULL,
+  raised_at  TEXT NOT NULL,
+  cleared_at TEXT                            -- active=0 时必有
+);
+
+-- 反向投影游标（F06）：投影消费 events 的断点，key 预留多投影器扩展
+CREATE TABLE IF NOT EXISTS projector_state (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
 -- issue/PR 镜像：关键字段拉平便于过滤，全量 JSON 保真（F04）
 CREATE TABLE IF NOT EXISTS mirror_items (
   kind        TEXT NOT NULL,                -- issue | pr
