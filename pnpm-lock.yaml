@@ -33,6 +33,34 @@ importers:
         specifier: ^2.5.0
         version: 2.5.0
 
+  apps/coord-gateway:
+    dependencies:
+      '@repo/coord-protocol':
+        specifier: workspace:*
+        version: link:../../packages/coord-protocol
+      '@repo/coord-repohub':
+        specifier: workspace:*
+        version: link:../../packages/coord-repohub
+    devDependencies:
+      '@cloudflare/vitest-pool-workers':
+        specifier: ^0.12.0
+        version: 0.12.21(@cloudflare/workers-types@4.20260702.1)(@vitest/runner@2.1.9)(@vitest/snapshot@2.1.9)(vitest@2.1.9(@types/node@22.20.1)(jsdom@26.1.0(canvas@3.2.3)))
+      '@cloudflare/workers-types':
+        specifier: ^4.20241127.0
+        version: 4.20260702.1
+      '@types/node':
+        specifier: '*'
+        version: 22.20.1
+      typescript:
+        specifier: '*'
+        version: 5.6.2
+      vitest:
+        specifier: ^2.0.0
+        version: 2.1.9(@types/node@22.20.1)(jsdom@26.1.0(canvas@3.2.3))
+      wrangler:
+        specifier: ^4.0.0
+        version: 4.107.0(@cloudflare/workers-types@4.20260702.1)
+
   apps/devportal:
     dependencies:
       class-variance-authority:
@@ -326,6 +354,43 @@ importers:
 
   packages/coord-dashboard:
     devDependencies:
+      wrangler:
+        specifier: ^4.0.0
+        version: 4.107.0(@cloudflare/workers-types@4.20260702.1)
+
+  packages/coord-protocol:
+    devDependencies:
+      '@types/node':
+        specifier: '*'
+        version: 22.20.1
+      typescript:
+        specifier: '*'
+        version: 5.6.2
+      vitest:
+        specifier: '*'
+        version: 2.1.9(@types/node@22.20.1)(jsdom@26.1.0(canvas@3.2.3))
+
+  packages/coord-repohub:
+    dependencies:
+      '@repo/coord-protocol':
+        specifier: workspace:*
+        version: link:../coord-protocol
+    devDependencies:
+      '@cloudflare/vitest-pool-workers':
+        specifier: ^0.12.0
+        version: 0.12.21(@cloudflare/workers-types@4.20260702.1)(@vitest/runner@2.1.9)(@vitest/snapshot@2.1.9)(vitest@2.1.9(@types/node@22.20.1)(jsdom@26.1.0(canvas@3.2.3)))
+      '@cloudflare/workers-types':
+        specifier: ^4.20241127.0
+        version: 4.20260702.1
+      '@types/node':
+        specifier: '*'
+        version: 22.20.1
+      typescript:
+        specifier: '*'
+        version: 5.6.2
+      vitest:
+        specifier: ^2.0.0
+        version: 2.1.9(@types/node@22.20.1)(jsdom@26.1.0(canvas@3.2.3))
       wrangler:
         specifier: ^4.0.0
         version: 4.107.0(@cloudflare/workers-types@4.20260702.1)
@@ -4073,6 +4138,20 @@ snapshots:
       esbuild: 0.27.3
       miniflare: 4.20260310.0
       vitest: 2.0.0(@types/node@22.0.0)(jsdom@26.1.0(canvas@3.2.3))
+      wrangler: 4.72.0(@cloudflare/workers-types@4.20260702.1)
+    transitivePeerDependencies:
+      - '@cloudflare/workers-types'
+      - bufferutil
+      - utf-8-validate
+
+  '@cloudflare/vitest-pool-workers@0.12.21(@cloudflare/workers-types@4.20260702.1)(@vitest/runner@2.1.9)(@vitest/snapshot@2.1.9)(vitest@2.1.9(@types/node@22.20.1)(jsdom@26.1.0(canvas@3.2.3)))':
+    dependencies:
+      '@vitest/runner': 2.1.9
+      '@vitest/snapshot': 2.1.9
+      cjs-module-lexer: 1.4.3
+      esbuild: 0.27.3
+      miniflare: 4.20260310.0
+      vitest: 2.1.9(@types/node@22.20.1)(jsdom@26.1.0(canvas@3.2.3))
       wrangler: 4.72.0(@cloudflare/workers-types@4.20260702.1)
     transitivePeerDependencies:
       - '@cloudflare/workers-types'

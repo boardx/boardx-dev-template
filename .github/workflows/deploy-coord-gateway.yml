@@ -1,0 +1,74 @@
+# deploy-coord-gateway.yml — coord-platform 网关 CD（ADR-017 / p29-F03）。
+# 唯一部署入口 = main 合并后自动部署（沿用 deploy-coord-service 的
+# "消灭手动部署 last-write-wins" 原则，andon #272/#290 根因）。
+#
+# secrets（一次性人工设置，之后 CD 不管）：
+#   wrangler secret put GITHUB_WEBHOOK_SECRET --name coord-gateway
+#   wrangler secret put COORD_API_TOKEN --name coord-gateway
+# 变更遵守 env 原子纪律（先 put 新值再合代码）。缺 secret 时 Worker fail-closed
+# 返回 503，不会静默放行。
+name: deploy-coord-gateway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/coord-gateway/**"
+      - "packages/coord-repohub/**"
+      - "packages/coord-protocol/**"
+      - "pnpm-lock.yaml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-coord-gateway
+  cancel-in-progress: false # 排队执行，不中途取消
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node (read .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile --filter @repo/coord-gateway...
+
+      - name: Typecheck + test (gate before touching prod)
+        run: |
+          pnpm --filter @repo/coord-protocol test
+          pnpm --filter @repo/coord-repohub typecheck
+          pnpm --filter @repo/coord-repohub test
+          pnpm --filter @repo/coord-gateway typecheck
+          pnpm --filter @repo/coord-gateway test
+
+      - name: Ensure queue exists (idempotent)
+        working-directory: apps/coord-gateway
+        run: pnpm exec wrangler queues create coord-webhook-events || true
+
+      - name: Deploy Worker (from main only)
+        working-directory: apps/coord-gateway
+        run: pnpm exec wrangler deploy
+
+      - name: Public smoke check
+        run: |
+          base=https://coord-gateway.boardx.workers.dev
+          h=$(curl -s -m 20 "$base/api/coord/healthz")
+          echo "GET /api/coord/healthz -> $h"
+          echo "$h" | grep -q '"ok":true' || { echo "::error::healthz not ok"; exit 1; }
+          # 未带签名的 webhook 必须被拒（401/503），绝不能 2xx——fail-closed 回归检测
+          s=$(curl -s -o /dev/null -w '%{http_code}' -m 20 -X POST "$base/api/coord/webhooks/github" -d '{}')
+          echo "POST /webhooks/github (unsigned) -> $s"
+          case "$s" in 401|503) ;; *) echo "::error::unsigned webhook not rejected ($s)"; exit 1;; esac

@@ -1,0 +1,178 @@
+{
+  "phase": "p29",
+  "features": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "area": "coord",
+      "title": "开源就绪与服务端门禁：LICENSE + 密钥历史审计 + 分支保护",
+      "user_visible_behavior": "仓库根存在 Apache-2.0 LICENSE；docs/coord-platform/README.md 是对外贡献者入口（定位/架构图/接入路径）；全历史密钥扫描报告已存档且高危项为零（或已轮换并记录）；GitHub main 分支保护开启：必须 PR、required checks 含 verify。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-QUALITY",
+      "verification": [
+        "test -f LICENSE && grep -q 'Apache License' LICENSE",
+        "test -f docs/coord-platform/README.md && grep -qi 'coord-platform' docs/coord-platform/README.md",
+        "test -s phases/phase-p29-coord-platform/evidence/gitleaks-report.md",
+        "gh api repos/boardx/boardx-dev-template/branches/main/protection --jq '.required_status_checks.contexts' | grep -q verify"
+      ],
+      "evidence": "evidence/F01.verify.log @ 2026-07-18T03:06:39.567Z",
+      "notes": "仓库已是 public；扫描报告先交人类过目再关闭本 feature。分支保护启用需 org admin 权限，若当前凭据不足则升级人类执行。"
+    },
+    {
+      "id": "F02",
+      "priority": 1,
+      "area": "coord",
+      "title": "协议规格 v0：三原语 wire format + coord-protocol 包",
+      "user_visible_behavior": "docs/coord-platform/protocol/ 下有 lease.md、evidence.md、events.md 三份规格与 CHANGELOG.md；packages/coord-protocol 提供全部消息类型的 TS 类型 + 运行时校验，测试覆盖每种消息的合法/非法样例。",
+      "status": "passing",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "test -f docs/coord-platform/protocol/lease.md && test -f docs/coord-platform/protocol/evidence.md && test -f docs/coord-platform/protocol/events.md && test -f docs/coord-platform/protocol/CHANGELOG.md",
+        "pnpm --filter @repo/coord-protocol test"
+      ],
+      "evidence": "evidence/F02.verify.log @ 2026-07-18T03:06:41.889Z",
+      "notes": "语义继承 ADR-009（claim/heartbeat/TTL/sweeper、events 唯一可信历史），载体换 DO。规格与实现同 PR 演进，CHANGELOG 从 v0 开始记。"
+    },
+    {
+      "id": "F03",
+      "priority": 2,
+      "area": "coord",
+      "title": "GitHub App + webhook ingest（coord-gateway + Queues 幂等）",
+      "user_visible_behavior": "GitHub App 安装到本仓后，issues/issue_comment/pull_request/pull_request_review/check_run/push/status 事件经 apps/coord-gateway（签名校验 + Queues 削峰 + delivery GUID 幂等去重）写入对应 RepoHub DO；重复投递不产生重复事件；/healthz 反映消费延迟。",
+      "status": "not_started",
+      "sprint": "02",
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "pnpm --filter coord-gateway test",
+        "curl -sf https://coord-gateway.boardx.workers.dev/api/coord/healthz | jq -e '.ok == true and .webhook_configured == true'"
+      ],
+      "evidence": "",
+      "notes": "GitHub App 已建（4328933，webhook 待激活）。网关部署在 workers.dev 而非 develop.boardx.us：后者整站在 Cloudflare Access 门禁后，GitHub webhook 与 agent API 客户端过不了交互式 SSO——人类门户与 agent API 分域是有意设计（2026-07-18 实现期修正）。webhook secret/COORD_API_TOKEN 入 Cloudflare secrets，遵守 env 原子变更纪律（mod-devportal 事故）。"
+    },
+    {
+      "id": "F04",
+      "priority": 2,
+      "area": "coord",
+      "title": "RepoHub DO：issue/PR 实时镜像 + GET /realtime/*",
+      "user_visible_behavior": "packages/coord-repohub 的 RepoHub DO（每仓一个，SQLite 存储）维护 issue/PR 镜像，字段必含 state、labels、assignees、mergeable、mergeStateStatus、head SHA、checks 汇总；GET /api/coord/realtime/issues|prs|prs/:n 秒级新鲜，响应带镜像时间戳与 SHA 锚点。",
+      "status": "not_started",
+      "sprint": "02",
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "pnpm --filter @repo/coord-repohub test",
+        "bash phases/phase-p29-coord-platform/scripts/verify-mirror-consistency.sh"
+      ],
+      "evidence": "",
+      "notes": "verify-mirror-consistency.sh：随机抽 N 个 open PR，对比 /realtime 与 gh api 的 mergeable/SHA 一致。镜像冷启动用 GitHub API 全量回填，之后 webhook 增量。"
+    },
+    {
+      "id": "F05",
+      "priority": 2,
+      "area": "coord",
+      "title": "RepoHub DO：原子租约（claim/heartbeat/TTL/alarm 回收）",
+      "user_visible_behavior": "POST /api/coord/claims 对同一 resource 并发请求恰好一个 201，其余 409（带当前持有者信息）；heartbeat 续期；TTL 过期由 DO alarm 机械回收并产生事件；释放/回收必须附 handoff note，缺失被拒绝。",
+      "status": "not_started",
+      "sprint": "02",
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "pnpm --filter @repo/coord-repohub test -- --grep lease",
+        "bash phases/phase-p29-coord-platform/scripts/verify-claim-race.sh"
+      ],
+      "evidence": "",
+      "notes": "verify-claim-race.sh：对同一 resource 并发打 20 个 claim，断言 201 计数==1 且 409 计数==19；再验 TTL 过期后可重新认领。DO 串行执行是原子性的结构保证，不再依赖 fail-open 补丁。"
+    },
+    {
+      "id": "F06",
+      "priority": 3,
+      "area": "coord",
+      "title": "反向投影：租约→GitHub check/status，andon→阻断 commit status",
+      "user_visible_behavior": "issue 被认领后，其关联 PR/issue 上出现 GitHub 原生 check/status（持有者、租约新鲜度、TTL 剩余）；andon 停线（仅 maintainer 级身份可发）使 main 上待合并 PR 的 required status 变红从而阻断合并；解除后恢复。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "pnpm --filter @repo/coord-projection test",
+        "bash phases/phase-p29-coord-platform/scripts/verify-projection-e2e.sh"
+      ],
+      "evidence": "",
+      "notes": "verify-projection-e2e.sh：建测试 claim → 轮询 gh api 断言 check 出现；触发测试 andon → 断言 status 为 failure → 解除 → success。维护者不打开门户也能看到全部核心信号。"
+    },
+    {
+      "id": "F07",
+      "priority": 3,
+      "area": "coord",
+      "title": "MCP server + CLI：agent 接入面",
+      "user_visible_behavior": "任何支持 MCP 的 agent 配置一个 URL 即获得工具集：claim_issue/heartbeat/release/get_realtime_status/get_ready_work/submit_evidence；npx CLI 提供同能力（connect/claim/status）；按 docs/coord-platform/quickstart.md，一个全新 agent 会话 5 分钟内完成接入→认领→撞车 409 演示。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "pnpm --filter coord-gateway test -- --grep mcp",
+        "bash phases/phase-p29-coord-platform/scripts/verify-quickstart-e2e.sh"
+      ],
+      "evidence": "",
+      "notes": "verify-quickstart-e2e.sh 逐步执行 quickstart 文档的每条命令（文档即测试）。MCP 传输用 streamable HTTP，token 认证复用 F08。"
+    },
+    {
+      "id": "F08",
+      "priority": 3,
+      "area": "auth",
+      "title": "GitHub OAuth + 按仓 scoped token 自助领取",
+      "user_visible_behavior": "开发者 GitHub OAuth 登录 devportal 后自助领取按仓 scope 的 agent token（mint-on-reveal，owner 绑定，继承 ADR-011 P2/P3）；该 token 可调 /api/coord/* 与 MCP，越仓访问被 403；吊销即时生效。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "verification": [
+        "pnpm --filter coord-gateway test -- --grep auth",
+        "bash phases/phase-p29-coord-platform/scripts/verify-token-scope.sh"
+      ],
+      "evidence": "",
+      "notes": "verify-token-scope.sh：领 token → 本仓 API 200 → 伪造他仓路径 403 → 吊销 → 401。敏感 area，主动挂 rev-security。"
+    },
+    {
+      "id": "F09",
+      "priority": 4,
+      "area": "portal",
+      "title": "devportal 门户实时化（WebSocket 接 RepoHub）",
+      "user_visible_behavior": "devportal 看板数据源切到 RepoHub：页面通过 WebSocket 秒级跟随 GitHub 变更（新 issue/PR 状态/check 变化无需刷新即出现），每张卡片展示数据新鲜度时间戳；Access 会话过期仍走 401 整页重认证（#588 行为不回退）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "pnpm --filter devportal lint && pnpm --filter devportal build",
+        "bash phases/phase-p29-coord-platform/scripts/verify-portal-live.sh"
+      ],
+      "evidence": "",
+      "notes": "【ADR-003 约束】复用 p23 已确认 UI，不新增视图不改布局，只换数据层+新鲜度标识；出现新视图需求必须停下走 ui-signoff。verify-portal-live.sh：改一个测试 issue 的 label → N 秒内 portal 数据接口反映变更。"
+    },
+    {
+      "id": "F10",
+      "priority": 4,
+      "area": "harness",
+      "title": "本仓割接租户 #1 + coord-service 存量退役",
+      "user_visible_behavior": "pnpm harness lock-*/module-lock-* 全部指向 coord-gateway 新端点且行为不变（认领/心跳/退位/状态查询）；packages/coord-service 从仓库删除，coord-dashboard 中被 RepoHub 取代的读路径切换；AGENTS.md/相关 instructions 中的协调层描述已更新；一个完整工作周期内零 stale-fetch 误判、零重复认领（以事件日志为证）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "pnpm harness lock-status 2>&1 | grep -qi 'coord-gateway\\|repohub'",
+        "! test -d packages/coord-service",
+        "pnpm harness doctor --phase p29"
+      ],
+      "evidence": "",
+      "notes": "割接前 D1 存量 claims/events 导出归档到 R2 + evidence/（审计史不丢，ADR-011 派生快照模式）。这是唯一动 harness 脚本与全仓文档的 feature，范围纪律见 requirements §五。"
+    }
+  ]
+}

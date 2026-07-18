@@ -8,6 +8,7 @@ import { portalFetch } from "@/lib/portal-fetch";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { PortalCard, type PortalCardState } from "@/components/portal/portal-card";
+import { DispatchPanel } from "@/components/portal/dispatch-panel";
 
 interface Claim {
   resource_id: string;
@@ -105,7 +106,9 @@ export function CoordTab() {
   const unconfiguredHint = "协调服务尚未接线（COORD_SERVICE_URL 未配置）——这是部署中间态，不是故障。";
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div className="space-y-4">
+      <DispatchPanel />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <PortalCard title="活跃租约（Active Claims）" state={state} unconfiguredHint={unconfiguredHint}>
         {claims.length === 0 ? (
           <p className="text-13 text-muted-foreground">当前没有活跃租约。</p>
@@ -149,6 +152,7 @@ export function CoordTab() {
           </ul>
         )}
       </PortalCard>
+      </div>
     </div>
   );
 }

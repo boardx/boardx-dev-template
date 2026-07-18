@@ -115,13 +115,25 @@ export const dispatchTask: Handler = async (request, env: Env) => {
 export const listTasks: Handler = async (request, env: Env) => {
   const agent = await requireAgent(request, env);
   const url = new URL(request.url);
-  const requestedAssignee = url.searchParams.get("assignee") ?? agent.id;
-  if (requestedAssignee !== agent.id && !COORDINATOR_KINDS.has(agent.kind)) {
-    throw new HttpError(403, "inbox_is_private"); // 只有协调层能看别人的收件箱
-  }
+  const assigneeParam = url.searchParams.get("assignee");
   const status = url.searchParams.get("status");
   if (status && !QUERYABLE_STATUSES.has(status)) throw new HttpError(400, "invalid_status");
 
+  // assignee=* → 列全队任务（仅 coordinator，P3 门户派工看板"谁被派了什么、接没接"）。
+  // 省略 assignee → 查自己的收件箱。指定他人 → 仅 coordinator 可查。
+  const isCoordinator = COORDINATOR_KINDS.has(agent.kind);
+  if (assigneeParam === "*") {
+    if (!isCoordinator) throw new HttpError(403, "inbox_is_private");
+    const rows = status
+      ? await env.DB.prepare("SELECT * FROM tasks WHERE status = ? ORDER BY id DESC LIMIT 200").bind(status).all<TaskRow>()
+      : await env.DB.prepare("SELECT * FROM tasks ORDER BY id DESC LIMIT 200").all<TaskRow>();
+    return Response.json({ tasks: rows.results ?? [] });
+  }
+
+  const requestedAssignee = assigneeParam ?? agent.id;
+  if (requestedAssignee !== agent.id && !isCoordinator) {
+    throw new HttpError(403, "inbox_is_private"); // 只有协调层能看别人的收件箱
+  }
   const rows = status
     ? await env.DB.prepare("SELECT * FROM tasks WHERE assignee = ? AND status = ? ORDER BY id DESC LIMIT 100")
         .bind(requestedAssignee, status)

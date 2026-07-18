@@ -24,13 +24,28 @@ export interface StorageConfig {
   forcePathStyle: boolean;
 }
 
-/** 从环境变量解析对象存储配置。默认对齐 infra/docker-compose.yml 的本地 MinIO。 */
+/** 从环境变量解析对象存储配置。默认对齐 infra/docker-compose.yml 的本地 MinIO。
+ *  生产环境（NODE_ENV=production）禁止回退默认口令：缺 S3_ACCESS_KEY / S3_SECRET_KEY
+ *  直接抛错 fail-fast，宁可起不来也不能带着 boardx/boardx123 上线（p29-F01 gitleaks 审计项）。 */
 export function resolveStorageConfig(env: NodeJS.ProcessEnv = process.env): StorageConfig {
+  const isProduction = env.NODE_ENV === "production";
+  const accessKeyId = env.S3_ACCESS_KEY?.trim();
+  const secretAccessKey = env.S3_SECRET_KEY?.trim();
+  if (isProduction && (!accessKeyId || !secretAccessKey)) {
+    const missing = [
+      !accessKeyId ? "S3_ACCESS_KEY" : null,
+      !secretAccessKey ? "S3_SECRET_KEY" : null,
+    ].filter(Boolean);
+    throw new Error(
+      `[storage] NODE_ENV=production 下缺少 ${missing.join(" / ")}，` +
+        "拒绝回退到默认凭据（boardx/boardx123）。请在部署环境显式配置对象存储凭据。"
+    );
+  }
   return {
     endpoint: env.S3_ENDPOINT ?? "http://localhost:9090",
     region: env.S3_REGION ?? "us-east-1",
-    accessKeyId: env.S3_ACCESS_KEY ?? "boardx",
-    secretAccessKey: env.S3_SECRET_KEY ?? "boardx123",
+    accessKeyId: accessKeyId ?? "boardx",
+    secretAccessKey: secretAccessKey ?? "boardx123",
     bucket: env.S3_BUCKET ?? "boardx-kb",
     forcePathStyle: (env.S3_FORCE_PATH_STYLE ?? "true") !== "false",
   };
