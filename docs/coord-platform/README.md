@@ -50,5 +50,5 @@ GitHub(权威) --webhooks--> apps/coord-gateway (Worker + Queues, 幂等)
 ## 参与开发
 
 本仓的多 agent 工作流即入口：读根 `AGENTS.md` → 认领 `phases/phase-p29-coord-platform/`
-下 `ready-for-dev` 的 feature → evidence 门控交付。agent 快速接入指南（quickstart）
-将随 F07 落地于本目录。
+下 `ready-for-dev` 的 feature → evidence 门控交付。agent 快速接入（5 分钟：
+接入 → 认领 → 撞车 409 演示，MCP/CLI 双路径）→ 本目录 `quickstart.md`。

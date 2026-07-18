@@ -53,6 +53,18 @@ CREATE TABLE IF NOT EXISTS projector_state (
   value TEXT NOT NULL
 );
 
+-- evidence manifest 原文存档（F07）：manifest 是"完成声明"留痕对象（evidence.md），
+-- 原文全量保存，评审/复核端按 resource_id 检索；append 语义，不暴露 UPDATE/DELETE
+CREATE TABLE IF NOT EXISTS evidence_manifests (
+  manifest_id TEXT PRIMARY KEY,
+  resource_id TEXT NOT NULL,
+  head_sha    TEXT NOT NULL,                 -- 声明锚定 commit（P23 postmortem 铁律）
+  body        TEXT NOT NULL,                 -- manifest 原文 JSON
+  at          TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_evidence_resource
+  ON evidence_manifests(resource_id);
+
 -- issue/PR 镜像：关键字段拉平便于过滤，全量 JSON 保真（F04）
 CREATE TABLE IF NOT EXISTS mirror_items (
   kind        TEXT NOT NULL,                -- issue | pr

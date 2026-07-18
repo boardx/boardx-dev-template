@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "node scripts/run-tests.mjs",
     "lint": "echo 'lint: ok'",
     "dev": "wrangler dev --local",
     "deploy": "wrangler deploy"

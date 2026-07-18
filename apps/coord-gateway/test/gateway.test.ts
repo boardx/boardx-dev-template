@@ -1,9 +1,21 @@
 // coord-gateway 测试（真 workerd）：签名校验、fail-closed、REST 鉴权转发、
 // 消费者幂等（同 delivery 重放不产生重复镜像事件）。
 import { SELF, env } from "cloudflare:test";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import worker from "../src/index";
 import type { QueuedWebhook } from "../src/mapping";
+
+// vitest-pool-workers（singleWorker）：另一个测试文件运行后再 transform 本文件的 src
+// 导入会使已实例化的 DO 失效，首次 stub.fetch 抛"changed, invalidating"要求重试一次。
+// 这里预热吸收该一次性失效，避免真实断言撞上它。
+beforeAll(async () => {
+  for (let i = 0; i < 2; i++) {
+    const r = await SELF.fetch("https://gw.test/api/coord/repos/boardx/boardx-dev-template/claims", {
+      headers: { authorization: "Bearer test-api-token" },
+    }).catch(() => null);
+    if (r?.ok) break;
+  }
+});
 
 const SECRET = "test-webhook-secret";
 const enc = new TextEncoder();

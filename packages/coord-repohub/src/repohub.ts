@@ -7,7 +7,9 @@ import {
   LEASE_TTL_DEFAULT_SECONDS,
   validateClaimRequest,
   validateReleaseRequest,
+  validateEvidenceManifest,
   type ClaimRequest,
+  type EvidenceManifest,
   type Lease,
   type ReleaseRequest,
   type EventType,
@@ -81,6 +83,8 @@ export class RepoHub extends DurableObject {
       if (req.method === "GET" && p === "/andon") return this.andonStatus();
       if (req.method === "GET" && p === "/projector/cursor") return this.cursorGet();
       if (req.method === "PUT" && p === "/projector/cursor") return this.cursorPut(await req.json());
+      if (req.method === "POST" && p === "/evidence") return this.submitEvidence(await req.json());
+      if (req.method === "GET" && p === "/evidence") return this.listEvidence(url);
       if (req.method === "POST" && p === "/mirror/upsert") return this.mirrorUpsert(await req.json());
       if (req.method === "POST" && p === "/webhook/ingest") return this.webhookIngest(await req.json());
       const rt = p.match(/^\/realtime\/(issues|prs)$/);
@@ -288,6 +292,46 @@ export class RepoHub extends DurableObject {
       andons: rows.map((r) => ({
         scope: r["scope"], severity: r["severity"], reason: r["reason"],
         raised_by: r["raised_by"], raised_at: r["raised_at"],
+      })),
+    });
+  }
+
+  // ---------- Evidence（F07） ----------
+
+  // 完成声明入库：manifest 是"声明"不是"事实"（evidence.md），入库前先过协议校验——
+  // 非法声明（exit_code 非 0、缺 head_sha 等）422 拒收，防止假证据进入审计链。
+  private submitEvidence(body: unknown): Response {
+    const v = validateEvidenceManifest(body);
+    if (!v.ok) return json(422, { error: "invalid_evidence_manifest", details: v.errors });
+    const m = body as EvidenceManifest;
+    const dup = [...this.sql.exec(
+      `SELECT 1 FROM evidence_manifests WHERE manifest_id=?`, m.manifest_id,
+    )][0];
+    if (dup) return json(200, { ok: true, manifest_id: m.manifest_id, duplicate: true }); // 幂等重提交
+    const now = iso(Date.now());
+    this.sql.exec(
+      `INSERT INTO evidence_manifests (manifest_id,resource_id,head_sha,body,at) VALUES (?,?,?,?,?)`,
+      m.manifest_id, m.resource_id, m.head_sha, JSON.stringify(m), now,
+    );
+    this.emit("evidence.submitted", m.resource_id, m.agent_id, {
+      manifest_id: m.manifest_id,
+      head_sha: m.head_sha,
+    });
+    return json(201, { ok: true, manifest_id: m.manifest_id, duplicate: false, at: now });
+  }
+
+  private listEvidence(url: URL): Response {
+    const resourceId = url.searchParams.get("resource_id");
+    const rows = resourceId
+      ? [...this.sql.exec(`SELECT * FROM evidence_manifests WHERE resource_id=? ORDER BY manifest_id`, resourceId)]
+      : [...this.sql.exec(`SELECT * FROM evidence_manifests ORDER BY manifest_id`)];
+    return json(200, {
+      manifests: rows.map((r) => ({
+        manifest_id: r["manifest_id"],
+        resource_id: r["resource_id"],
+        head_sha: r["head_sha"],
+        at: r["at"],
+        manifest: JSON.parse(r["body"] as string),
       })),
     });
   }
