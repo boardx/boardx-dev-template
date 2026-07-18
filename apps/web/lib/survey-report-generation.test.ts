@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { SurveyReportArtifactVersion } from "@repo/data";
 import {
+  captureSurveyReportRequestEpoch,
+  createSurveyReportRequestState,
+  markSurveyReportRequestsRequirementsChanged,
   markSurveyReportGenerationRequirementsChanged,
   resolveSurveyReportGenerationStatus,
+  settleSurveyReportRefresh,
 } from "./survey-report-generation";
 
 function artifact(
@@ -91,5 +95,45 @@ describe("markSurveyReportGenerationRequirementsChanged", () => {
     expect(changed).toMatchObject({ requirementChanged: true });
     expect(changed?.latestArtifact).toEqual(generation.latestArtifact);
     expect(changed?.versions).toEqual(generation.versions);
+  });
+});
+
+describe("survey report request epochs", () => {
+  it("ignores a response captured before requirements changed", () => {
+    const initial = createSurveyReportRequestState();
+    const oldEpoch = captureSurveyReportRequestEpoch(initial);
+    const changed = markSurveyReportRequestsRequirementsChanged(initial);
+
+    expect(settleSurveyReportRefresh(changed, oldEpoch, true)).toEqual({
+      accepted: false,
+      state: changed,
+    });
+  });
+
+  it("accepts a successful response captured after requirements changed", () => {
+    const changed = markSurveyReportRequestsRequirementsChanged(
+      createSurveyReportRequestState()
+    );
+    const newEpoch = captureSurveyReportRequestEpoch(changed);
+
+    expect(settleSurveyReportRefresh(changed, newEpoch, true)).toEqual({
+      accepted: true,
+      state: {
+        epoch: newEpoch,
+        requirementsChangedOverride: false,
+      },
+    });
+  });
+
+  it("retains the requirements-changed override when refresh fails", () => {
+    const changed = markSurveyReportRequestsRequirementsChanged(
+      createSurveyReportRequestState()
+    );
+    const newEpoch = captureSurveyReportRequestEpoch(changed);
+
+    expect(settleSurveyReportRefresh(changed, newEpoch, false)).toEqual({
+      accepted: false,
+      state: changed,
+    });
   });
 });

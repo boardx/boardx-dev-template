@@ -58,7 +58,12 @@ import {
   type ReportComposerPreview,
 } from "@/lib/survey-report-category-plan";
 import {
-  markSurveyReportGenerationRequirementsChanged,
+  captureSurveyReportRequestEpoch,
+  createSurveyReportRequestState,
+  isSurveyReportRequestCurrent,
+  markSurveyReportRequestsRequirementsChanged,
+  settleSurveyReportRefresh,
+  type SurveyReportRequestState,
   type SurveyReportGenerationStatus,
 } from "@/lib/survey-report-generation";
 import type { PlannedReportBlock } from "@/lib/survey-report-planner";
@@ -3223,6 +3228,9 @@ export default function SurveysPage() {
   const [generatedReportsBySurveyId, setGeneratedReportsBySurveyId] = useState<Record<number, unknown>>({});
   const [professionalReportsBySurveyId, setProfessionalReportsBySurveyId] = useState<Record<number, ProfessionalSurveyReportDocument>>({});
   const [professionalReportGenerationBySurveyId, setProfessionalReportGenerationBySurveyId] = useState<Record<number, SurveyReportGenerationStatus>>({});
+  const professionalReportRequestStateRef = useRef<Record<number, SurveyReportRequestState>>({});
+  const [professionalReportRequestStateBySurveyId, setProfessionalReportRequestStateBySurveyId] =
+    useState<Record<number, SurveyReportRequestState>>({});
   const [workspaceReportClassifying, setWorkspaceReportClassifying] = useState(false);
   const [aiSessionId, setAiSessionId] = useState<string | null>(null);
   const [pendingAiDraft, setPendingAiDraft] = useState<AiDraft | null>(null);
@@ -4296,6 +4304,23 @@ export default function SurveysPage() {
   const currentSurveyForNavigation = editingSurvey ?? workspaceSurvey ?? visibleSurveys[0] ?? surveys[0];
   const currentSurveyId = editingSurveyId ?? currentSurveyForNavigation?.id ?? null;
 
+  function getProfessionalReportRequestState(surveyId: number) {
+    return professionalReportRequestStateRef.current[surveyId] ??
+      createSurveyReportRequestState();
+  }
+
+  function setProfessionalReportRequestState(
+    surveyId: number,
+    requestState: SurveyReportRequestState
+  ) {
+    const next = {
+      ...professionalReportRequestStateRef.current,
+      [surveyId]: requestState,
+    };
+    professionalReportRequestStateRef.current = next;
+    setProfessionalReportRequestStateBySurveyId(next);
+  }
+
   useEffect(() => {
     if (!currentSurveyId || generatedReportsBySurveyId[currentSurveyId]) return;
     let cancelled = false;
@@ -4317,22 +4342,35 @@ export default function SurveysPage() {
       (professionalReportsBySurveyId[currentSurveyId] &&
         professionalReportGenerationBySurveyId[currentSurveyId])
     ) return;
+    const requestEpoch = captureSurveyReportRequestEpoch(
+      getProfessionalReportRequestState(currentSurveyId)
+    );
     let cancelled = false;
-    void fetch(`/api/surveys/${currentSurveyId}/professional-report`)
-      .then((response) => (response.ok ? response.json() : null))
-      .then((payload) => {
-        if (cancelled || !payload) return;
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/surveys/${currentSurveyId}/professional-report`
+        );
+        const payload = await response.json().catch(() => null);
+        if (cancelled) return;
+        const resolution = settleSurveyReportRefresh(
+          getProfessionalReportRequestState(currentSurveyId),
+          requestEpoch,
+          response.ok && Boolean(payload?.generation)
+        );
+        if (!resolution.accepted) return;
+        setProfessionalReportRequestState(currentSurveyId, resolution.state);
         if (payload.report) {
           setProfessionalReportsBySurveyId((items) => ({ ...items, [currentSurveyId]: payload.report as ProfessionalSurveyReportDocument }));
         }
-        if (payload.generation) {
-          setProfessionalReportGenerationBySurveyId((items) => ({
-            ...items,
-            [currentSurveyId]: payload.generation as SurveyReportGenerationStatus,
-          }));
-        }
-      })
-      .catch(() => undefined);
+        setProfessionalReportGenerationBySurveyId((items) => ({
+          ...items,
+          [currentSurveyId]: payload.generation as SurveyReportGenerationStatus,
+        }));
+      } catch {
+        return;
+      }
+    })();
     return () => {
       cancelled = true;
     };
@@ -4465,10 +4503,19 @@ export default function SurveysPage() {
   }
 
   async function refreshWorkspaceProfessionalReport(surveyId: number): Promise<boolean> {
+    const requestEpoch = captureSurveyReportRequestEpoch(
+      getProfessionalReportRequestState(surveyId)
+    );
     try {
       const res = await fetch(`/api/surveys/${surveyId}/professional-report`);
       const payload = await res.json().catch(() => ({}));
-      if (!res.ok || !payload?.generation) return false;
+      const resolution = settleSurveyReportRefresh(
+        getProfessionalReportRequestState(surveyId),
+        requestEpoch,
+        res.ok && Boolean(payload?.generation)
+      );
+      if (!resolution.accepted) return false;
+      setProfessionalReportRequestState(surveyId, resolution.state);
       if (payload.report) {
         setProfessionalReportsBySurveyId((items) => ({
           ...items,
@@ -4524,11 +4571,13 @@ export default function SurveysPage() {
         return;
       }
       const saved = payload.reportCategoryPlan as ReportCategoryPlanDraft;
+      setProfessionalReportRequestState(
+        surveyId,
+        markSurveyReportRequestsRequirementsChanged(
+          getProfessionalReportRequestState(surveyId)
+        )
+      );
       setReportCategoryPlansBySurveyId((items) => ({ ...items, [surveyId]: saved }));
-      setProfessionalReportGenerationBySurveyId((items) => {
-        const generation = markSurveyReportGenerationRequirementsChanged(items[surveyId]);
-        return generation ? { ...items, [surveyId]: generation } : items;
-      });
       const refreshed = await refreshWorkspaceProfessionalReport(surveyId);
       setWorkspaceTemplateStatus(
         refreshed
@@ -4587,12 +4636,21 @@ export default function SurveysPage() {
   }
 
   async function loadWorkspaceProfessionalReportVersion(surveyId: number, artifactId: string): Promise<boolean> {
+    const requestEpoch = captureSurveyReportRequestEpoch(
+      getProfessionalReportRequestState(surveyId)
+    );
     setWorkspaceTemplateError("");
     try {
       const res = await fetch(
         `/api/surveys/${surveyId}/professional-report?artifactId=${encodeURIComponent(artifactId)}`
       );
       const payload = await res.json().catch(() => ({}));
+      if (!isSurveyReportRequestCurrent(
+        getProfessionalReportRequestState(surveyId),
+        requestEpoch
+      )) {
+        return false;
+      }
       if (!res.ok) {
         setWorkspaceTemplateError(payload?.error ?? "报告版本加载失败");
         return false;
@@ -4613,6 +4671,12 @@ export default function SurveysPage() {
       }
       return true;
     } catch {
+      if (!isSurveyReportRequestCurrent(
+        getProfessionalReportRequestState(surveyId),
+        requestEpoch
+      )) {
+        return false;
+      }
       setWorkspaceTemplateError("报告版本加载失败，请稍后重试。");
       return false;
     }
@@ -6314,6 +6378,10 @@ export default function SurveysPage() {
                     fallbackReportCategoryPlan(currentSurveyForNavigation, questions)
                   }
                   generation={professionalReportGenerationBySurveyId[currentSurveyForNavigation.id]}
+                  requirementsChangedOverride={
+                    professionalReportRequestStateBySurveyId[currentSurveyForNavigation.id]
+                      ?.requirementsChangedOverride ?? false
+                  }
                   saving={workspaceTemplateSaving}
                   classifying={workspaceReportClassifying}
                   generating={workspaceReportGenerating}

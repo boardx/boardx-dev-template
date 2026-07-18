@@ -67,6 +67,14 @@ describe("getReportGenerationStatus", () => {
     expect(status.detail).not.toContain("当前展示");
   });
 
+  it("shows the independent changed override before generation is available", () => {
+    const status = getReportGenerationStatus(undefined, false, true);
+
+    expect(status).toMatchObject({ label: "要求已修改" });
+    expect(status.detail).toContain("分析报告保留最近成功版本");
+    expect(status.label).not.toBe("最新版本");
+  });
+
   it("states that stale facts retain the most recent successful report", () => {
     const status = getReportGenerationStatus({
       ...currentGeneration,

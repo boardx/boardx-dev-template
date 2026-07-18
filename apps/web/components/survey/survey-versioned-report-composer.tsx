@@ -53,6 +53,7 @@ interface SurveyVersionedReportComposerProps {
   survey: ReportComposerSurvey;
   plan: SurveyReportCategoryPlanInput;
   generation?: SurveyReportGenerationStatus;
+  requirementsChangedOverride?: boolean;
   saving: boolean;
   classifying: boolean;
   generating: boolean;
@@ -97,6 +98,7 @@ export function SurveyVersionedReportComposer({
   survey,
   plan,
   generation,
+  requirementsChangedOverride = false,
   saving,
   classifying,
   generating,
@@ -129,7 +131,11 @@ export function SurveyVersionedReportComposer({
     saving,
     generating,
   });
-  const reportState = getReportGenerationStatus(generation, draftDirty);
+  const reportState = getReportGenerationStatus(
+    generation,
+    draftDirty,
+    requirementsChangedOverride
+  );
   const draftEditingDisabled = saving;
 
   function patchSelected(patch: Partial<SurveyReportCategoryInput>) {

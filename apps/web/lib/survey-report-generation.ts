@@ -24,6 +24,62 @@ export interface SurveyReportGenerationStatus {
   versions: SurveyReportArtifactSummary[];
 }
 
+export interface SurveyReportRequestState {
+  epoch: number;
+  requirementsChangedOverride: boolean;
+}
+
+export interface SurveyReportRefreshResolution {
+  accepted: boolean;
+  state: SurveyReportRequestState;
+}
+
+export function createSurveyReportRequestState(): SurveyReportRequestState {
+  return {
+    epoch: 0,
+    requirementsChangedOverride: false,
+  };
+}
+
+export function captureSurveyReportRequestEpoch(
+  state: SurveyReportRequestState
+): number {
+  return state.epoch;
+}
+
+export function markSurveyReportRequestsRequirementsChanged(
+  state: SurveyReportRequestState
+): SurveyReportRequestState {
+  return {
+    epoch: state.epoch + 1,
+    requirementsChangedOverride: true,
+  };
+}
+
+export function isSurveyReportRequestCurrent(
+  state: SurveyReportRequestState,
+  requestEpoch: number
+): boolean {
+  return state.epoch === requestEpoch;
+}
+
+export function settleSurveyReportRefresh(
+  state: SurveyReportRequestState,
+  requestEpoch: number,
+  succeeded: boolean
+): SurveyReportRefreshResolution {
+  if (!succeeded || !isSurveyReportRequestCurrent(state, requestEpoch)) {
+    return { accepted: false, state };
+  }
+  return {
+    accepted: true,
+    state: {
+      ...state,
+      requirementsChangedOverride: false,
+    },
+  };
+}
+
 export function markSurveyReportGenerationRequirementsChanged(
   generation: SurveyReportGenerationStatus | undefined
 ): SurveyReportGenerationStatus | undefined {

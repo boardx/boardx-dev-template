@@ -35,12 +35,20 @@ export function getReportGenerationEligibility(input: {
 
 export function getReportGenerationStatus(
   generation: SurveyReportGenerationStatus | undefined,
-  draftDirty: boolean
+  draftDirty: boolean,
+  requirementsChangedOverride = false
 ): ReportGenerationDisplayStatus {
   if (draftDirty) {
     return {
       label: "草稿未保存",
       detail: "请先保存要求，保存完成后再判断报告版本状态。",
+      variant: "outline",
+    };
+  }
+  if (requirementsChangedOverride) {
+    return {
+      label: "要求已修改",
+      detail: "分析报告保留最近成功版本，请生成新版本应用新要求。",
       variant: "outline",
     };
   }
