@@ -66,3 +66,11 @@
 
 载体：`phases/phase-p29-coord-platform/`（F01–F10，wave 划分见 feature_list）。
 本 ADR 合并即生效；F10 完成后在本文件追加"割接完成"备注与证据链接。
+
+> **割接注记（2026-07-18，p29-F10 stage-2）**：决策 2 已执行——`packages/coord-service`
+> 与 `deploy-coord-service.yml` 从仓库删除；harness 锁/时钟/收件箱、devportal、
+> coord-dashboard、apps/web 管理面全部指向 coord-gateway（ADR-014 权威时钟迁至
+> gateway `GET /api/coord/time`，cycle 语义零变更）；D1 存量（claims 47 / events 292 /
+> agents 45（已剥离 token_hash）/ tasks 6 / verdicts 0）归档于
+> `phases/phase-p29-coord-platform/evidence/d1-final-archive/`。F10 的 verify 翻转与
+> "一个完整工作周期零事故" soak 验收随后续周期完成后再补最终备注。

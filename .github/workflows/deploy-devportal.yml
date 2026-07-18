@@ -2,7 +2,8 @@
 # develop.boardx.us（Cloudflare Pages 项目 devportal，#523 Track A）。
 # 构建链 = next build → @cloudflare/next-on-pages → wrangler pages deploy。
 # 凭据：CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID（Pages 权限即可）。
-# 运行时 secrets（GITHUB_TOKEN/COORD_SERVICE_URL 等）在 Pages 项目侧，与本流水线无关。
+# 运行时 secrets（GITHUB_TOKEN/COORD_API_TOKEN/COORD_GATEWAY_ADMIN_TOKEN 等）在
+# Pages 项目侧，与本流水线无关。
 name: deploy-devportal
 
 on:

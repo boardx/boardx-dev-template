@@ -5,8 +5,9 @@
 > 认领第一个 feature，按顺序执行，每步都有可验证的完成标志。
 >
 > 人类侧的对应文档是 `human-developer-onboarding.md`（讲组织模型和为什么）；
-> 本文只讲**你现在要按顺序做什么**。规则的权威出处：ADR-009（协调权威在
-> coord-service）、ADR-010（组织模型）、ADR-011（身份注册）。
+> 本文只讲**你现在要按顺序做什么**。规则的权威出处：ADR-009（协调权威语义）、
+> ADR-017（权威载体 = coord-gateway / RepoHub DO，2026-07-18 割接）、
+> ADR-010（组织模型）、ADR-011（身份注册）。
 
 ## 你需要先从人类那里拿到的东西
 
@@ -16,9 +17,12 @@
    `coord-<模块>.<role>-<n>`（你是某个 coordinator 的子 agent）。这个 id 必须
    已经在 `.harness/agents/registry.yaml` 里有条目——没有就让人类先走注册
    （见 human-developer-onboarding.md §3 第 1 步），你不能自封身份。
-2. **coord-service 凭据文件路径**：默认 `.harness/state/.cache/coord-credentials.json`
-   （gitignored）。人类只应该告诉你**路径**，绝不应该在聊天里贴 token 明文——
-   如果他贴了，提醒他这个 token 已泄露、需要去 Cloudflare 轮换。
+2. **coord-gateway 凭据**：按仓 scoped token，你的人类（或你自己，若已有 Access
+   登录）在 devportal（develop.boardx.us → 加入开发 → 第 5 步）自助领取（p29-F08），
+   保存到本机 gitignored 文件（如 `.harness/state/.cache/` 下）。人类只应该告诉你
+   **文件路径**，绝不应该在聊天里贴 token 明文——如果他贴了，提醒他这个 token
+   已泄露、需要在 devportal 再点一次领取（轮换，旧 token 即时失效）。
+   旧 coord-service 凭据（COORD_SERVICE_*）已随 ADR-017 割接退役。
 3. **你负责的范围**：哪个模块 / 哪些 feature（`phases/<phase>/feature_list.json`
    里的条目 id）。
 
@@ -48,11 +52,19 @@
 ## 第 3 步 — 接上协调平面（没有这步 = 你不存在）
 
 ```bash
-export COORD_SERVICE_URL=https://coord-service-staging.boardx.workers.dev
-export COORD_SERVICE_TOKEN=$(jq -r '.tokens["<你的身份id>"]' .harness/state/.cache/coord-credentials.json)
+export COORD_GATEWAY_URL=https://coord-gateway.boardx.workers.dev
+export COORD_REPO=boardx/boardx-dev-template
+export COORD_API_TOKEN=$(cat <你的 token 文件路径>)   # devportal 自助领取的按仓 scoped token
+# ⚠️ 仅当你用的是 ops 万能钥匙（COORD_API_TOKEN 主密钥而非 scoped token）时必须再加：
+#   export COORD_AGENT_ID=<你的 registry id>
+# ops key 走自证语义，gateway 不注入 agent_id——缺它会在 DO 侧撞 422
+# 「agent_id 必须是非空字符串」（coord-main 2026-07-18 割接实测）。
+# scoped token 用户不需要：网关按 token 在册身份强制注入（#721/#726）。
+# 另：lock-acquire 的 `--session` 是必填参数，别漏。
 
-# 验证凭据可用（公开只读端点不验 token；写操作才验）：
-curl -s "$COORD_SERVICE_URL/status" | jq '.active_claims | length'
+# 验证凭据可用（gateway 读端点也验 token）：
+curl -s -H "Authorization: Bearer $COORD_API_TOKEN" \
+  "$COORD_GATEWAY_URL/api/coord/repos/$COORD_REPO/claims" | jq '.leases | length'
 ```
 
 然后认领你的租约：
@@ -70,13 +82,14 @@ pnpm harness lock-acquire --session <你的身份id>
   自愈信号，恢复后重新 acquire 即可；但**不要**调大 ttl 或替别人代跑心跳。
 - token 任何时候不进 git / PR / issue / 聊天 / 命令行明文（只用 `$(jq ...)` 读取）。
 
-**完成标志**：`curl -s $COORD_SERVICE_URL/status` 的 active_claims 里能看到你的
-租约；人类在 https://develop.boardx.us/portal 的"实时协调"里也能看到你。
+**完成标志**：上面 `/claims` 的 leases 里能看到你的租约；人类在
+https://develop.boardx.us/portal 的"实时协调"里也能看到你。
 
 ## 第 3.5 步 — 挂上你的 loop（ADR-014 统一时钟 + 分级 loop 纪律）
 
 **每个 agent 必须有 loop，且必须用统一时钟**——不是可选项。协调决策（租约还新鲜吗、
-当前哪个周期、还剩多久）一律以 coord-service 的权威时钟为准，**不信本机 `date`**
+当前哪个周期、还剩多久）一律以 coord-gateway 的权威时钟（`GET /api/coord/time`）
+为准，**不信本机 `date`**
 （机器时钟一漂就误判；真实事故：coord-architecture 租约静默过期 8 小时）。
 
 每个 loop 只需跑**一条命令**，它把该做的四件事做完：
@@ -108,22 +121,23 @@ cron 也行——契约只规定**节奏 + 跑 tick**，不绑任何私有通道
 
 ### 旧版说明（收件箱轮询细节，tick 已包含）
 
-coordinator 派工写进 coord-service 的 tasks 表（你的收件箱），**不依赖任何 runtime
-私有通道**（Claude Code 的 session message 只是可选加速器，Codex/自研 agent 没有它
-也一样收到活）。你的义务：**周期 ≤15 分钟**轮询自己的收件箱：
+coordinator 派工写进你所在仓 RepoHub DO 的 tasks 收件箱（F10-pre 起，#732），
+**不依赖任何 runtime 私有通道**（Claude Code 的 session message 只是可选加速器，
+Codex/自研 agent 没有它也一样收到活）。你的义务：**周期 ≤15 分钟**轮询自己的收件箱：
 
 ```bash
+BASE="$COORD_GATEWAY_URL/api/coord/repos/$COORD_REPO"
 # 有 pending 任务 → ack 确认 → 按 task.issue 读 GitHub 规格 → 认领开工
-curl -s -H "Authorization: Bearer $COORD_SERVICE_TOKEN"   "$COORD_SERVICE_URL/tasks?status=pending" | jq '.tasks'
-curl -s -X POST -H "Authorization: Bearer $COORD_SERVICE_TOKEN"   "$COORD_SERVICE_URL/tasks/<id>/ack"          # 认领确认（然后照第 4 步 lock/claim）
-# 交付完成后：POST /tasks/<id>/done
+curl -s -H "Authorization: Bearer $COORD_API_TOKEN" "$BASE/tasks?status=pending" | jq '.tasks'
+curl -s -X POST -H "Authorization: Bearer $COORD_API_TOKEN" "$BASE/tasks/<id>/ack"   # 认领确认（然后照第 4 步 lock/claim）
+# 交付完成后：POST $BASE/tasks/<id>/complete
 ```
 
 轮询实现随你的 runtime：Claude Code 用 /loop 或 Monitor，Codex 用其等价物，
 裸脚本 cron 也行——契约只规定"≤15min 查一次、pending 必须 ack"。收件箱是私有的
 （只能查自己）；派工/撤回（POST /tasks、/recall）是 coordinator 层专属。
 
-**完成标志**：`GET /tasks` 返回 200（空列表也算通），且你的巡检循环里有这一步。
+**完成标志**：`GET $BASE/tasks` 返回 200（空列表也算通），且你的巡检循环里有这一步。
 
 ## 第 4 步 — 认领一个 feature（一次只做一个）
 
@@ -164,16 +178,17 @@ pnpm harness verify --sprint <阶段>/<sprint>   # 必须用 --sprint 模式
 
 ## 第 7 步 — 周期汇报（每 3 小时）
 
-节拍：UTC 00/03/06/09/12/15/18/21。每周期两条事件，发到 coord-service（不是
-GitHub 评论）：
+节拍：UTC 00/03/06/09/12/15/18/21（周期 id 以 `pnpm harness tick` 输出为准）。
+每周期两条评论，发到 label 为 `coordination:work-cycle` 的专用 issue（这是
+`cycle-report` 实际读取的权威位置；ADR-017 割接注记：旧 coord-service 的
+POST /events 叙述通道已随退役下线，gateway 的 events 由协调动作自动产生、只读）：
 
 ```bash
-# 进周期：承诺 1-3 件本周期可验证完成的事
-curl -s -X POST -H "Authorization: Bearer $COORD_SERVICE_TOKEN" \
-  -H "Content-Type: application/json" "$COORD_SERVICE_URL/events" \
-  -d '{"type":"cycle-plan","resource_id":"<你在做的资源>","summary":"<承诺内容>"}'
-# 出周期：真完成的 / 没完成的 + 原因
-#   type 换成 cycle-result；阻塞升级用 andon（仅 coordinator kind 可发）
+# 进周期：cycle-plan 开头 + cycle:<周期id> + by:<你的身份id>，承诺 1-3 件可验证完成的事
+# 出周期：cycle-result 开头，真完成的 / 没完成的 + 原因
+gh issue comment <work-cycle issue 编号> --body "cycle-plan cycle:<周期id> by:<你的身份id>
+commit: <承诺内容>"
+# 阻塞升级用 andon（仅 maintainer 级：gateway 管理面 POST /andon，见 F06）
 ```
 
 唯一硬指标是 **flow time**（你的 PR 从开出到合并的中位时长）。查全队状态：
@@ -188,16 +203,17 @@ curl -s -X POST -H "Authorization: Bearer $COORD_SERVICE_TOKEN" \
 ## 退出时（会话要结束了）
 
 1. 过一遍 `.harness/rubrics/clean-state-checklist.md`。
-2. 释放你不再持有的 claim（`lock-release` / claims release）。
-3. 把未完成状态写进 D1 事件或 PR/issue——**不要只留在你的会话记忆里**，
-   你死了记忆就没了，仓库和 D1 才是唯一事实来源。
+2. 释放你不再持有的 claim（`lock-release` / claims release）——release 必须带
+   handoff note（没有交接就不能放手，lease.md）。
+3. 把未完成状态写进 handoff note 或 PR/issue——**不要只留在你的会话记忆里**，
+   你死了记忆就没了，仓库和 RepoHub 事件日志才是唯一事实来源。
 
 ## 常见错误（前人真实踩过，别再踩）
 
 | 错误 | 后果 |
 |---|---|
 | 用 `--phase` 模式跑 verify | evidence 不落盘、派生视图不刷新 → 被判假 passing |
-| 干活但没在 D1 登记/认领 | 影子劳动力，coord-main 抽查会追溯到你的人类 |
+| 干活但没在协调层登记/认领（RepoHub 租约） | 影子劳动力，coord-main 抽查会追溯到你的人类 |
 | 长任务期间不续租约 | 租约过期、席位显示空缺、活可能被重新分派 |
 | token 贴进聊天/PR | 立即视为泄露，人类必须去 Cloudflare 轮换 |
 | 同时认领第二个 feature | 被 assertSingleInProgress 拒绝（设计如此） |

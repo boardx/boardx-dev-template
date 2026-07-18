@@ -1,53 +1,90 @@
-// Same-origin proxy for the public coord-service /status endpoint.
+// Same-origin proxy for the coordination read plane.
 //
-// Why a proxy instead of the browser calling coord-service directly: the
-// dashboard is served from *.pages.dev and coord-service lives on
-// *.workers.dev — a different origin. coord-service sends no CORS headers, so a
-// direct browser fetch would be blocked by the same-origin policy. This Pages
-// Function runs on Cloudflare's edge and fetches worker-to-worker (no CORS
-// involved), then returns the JSON to the browser from the SAME origin as the
-// page. Result: the dashboard package is fully self-contained and needs zero
-// changes to coord-service.
+// 2026-07-18 cutover (p29-F10 stage-2, ADR-017): coord-service (D1) is retired.
+// The authority is now coord-gateway (one RepoHub Durable Object per repo). The
+// gateway has no public unauthenticated /status — reads require a bearer token —
+// so this Pages Function now does the authenticated fetch server-side with a
+// Pages **secret** (COORD_API_TOKEN, never sent to the browser) and reshapes
+// the gateway's /claims + /events into the { active_claims, recent_events }
+// contract the static frontend already renders.
 //
-// The data is already world-readable (coord-service /status is public by
-// design, ADR-009 "full transparency"), so this proxy adds no new exposure — it
-// only reshapes access from cross-origin to same-origin.
+// Not configured → honest empty state (configured:false + empty arrays), NOT an
+// error: the dashboard keeps rendering with a banner. Unreachable upstream →
+// 502 with a structured error (fail-closed posture; a reachability problem is a
+// visible state, not a crash). Exception detail goes to the edge log, never the
+// client response.
+//
+// Required Pages project settings (wrangler pages secret put / dashboard vars):
+//   COORD_GATEWAY_URL  e.g. https://coord-gateway.boardx.workers.dev  ([vars])
+//   COORD_REPO         e.g. boardx/boardx-dev-template               ([vars])
+//   COORD_API_TOKEN    gateway bearer (encrypted secret)
 
 interface Env {
-  // Set as a Pages project variable; falls back to the known staging URL so the
-  // dashboard works out-of-the-box even before the var is configured.
-  COORD_SERVICE_URL?: string;
+  COORD_GATEWAY_URL?: string;
+  COORD_REPO?: string;
+  COORD_API_TOKEN?: string;
 }
 
-const DEFAULT_COORD_SERVICE_URL = "https://coord-service-staging.boardx.workers.dev";
+const RECENT_EVENTS = 50;
 
 export const onRequestGet = async (context: { env: Env }): Promise<Response> => {
-  const base = (context.env.COORD_SERVICE_URL || DEFAULT_COORD_SERVICE_URL).replace(/\/$/, "");
-  try {
-    const upstream = await fetch(`${base}/status`, {
-      headers: { accept: "application/json" },
-    });
-    const body = await upstream.text();
-    return new Response(body, {
-      status: upstream.status,
-      headers: {
-        "content-type": "application/json; charset=utf-8",
-        // Ops view must always reflect live state — never let an edge/browser
-        // cache serve a stale coordination snapshot.
-        "cache-control": "no-store",
-      },
-    });
-  } catch (err) {
-    // Upstream unreachable (Worker/D1 down). Surface it as a structured error the
-    // frontend can render, not an opaque 500 — mirrors coord-service's own
-    // fail-closed posture (a reachability problem is a visible state, not a crash).
-    // The exception detail goes to the edge log, NOT the client response (repo
-    // convention: never return String(err) to callers). `upstream` is the public
-    // coord-service host (documented in README), safe to echo for diagnosis.
-    console.error("coord_service_unreachable", { upstream: base, err: String(err) });
+  const { COORD_GATEWAY_URL, COORD_REPO, COORD_API_TOKEN } = context.env;
+  const headers = {
+    "content-type": "application/json; charset=utf-8",
+    // Ops view must always reflect live state — never let an edge/browser
+    // cache serve a stale coordination snapshot.
+    "cache-control": "no-store",
+  };
+
+  if (!COORD_GATEWAY_URL || !COORD_REPO || !COORD_API_TOKEN) {
+    // Deployment intermediate state is legitimate, not a fault: render empty.
     return new Response(
-      JSON.stringify({ error: "coord_service_unreachable", upstream: base }),
-      { status: 502, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } }
+      JSON.stringify({
+        configured: false,
+        note: "coord-gateway proxy not configured (COORD_GATEWAY_URL/COORD_REPO vars + COORD_API_TOKEN secret); coord-service retired per ADR-017",
+        active_claims: [],
+        recent_events: [],
+        generated_at: new Date().toISOString(),
+      }),
+      { status: 200, headers },
+    );
+  }
+
+  const base = `${COORD_GATEWAY_URL.replace(/\/$/, "")}/api/coord/repos/${COORD_REPO}`;
+  const auth = { accept: "application/json", authorization: `Bearer ${COORD_API_TOKEN}` };
+  try {
+    const [claimsRes, eventsRes] = await Promise.all([
+      fetch(`${base}/claims`, { headers: auth }),
+      fetch(`${base}/events?limit=500`, { headers: auth }),
+    ]);
+    if (!claimsRes.ok || !eventsRes.ok) {
+      console.error("coord_gateway_upstream_error", {
+        upstream: base, claims: claimsRes.status, events: eventsRes.status,
+      });
+      return new Response(
+        JSON.stringify({ error: "coord_gateway_unavailable", upstream: base }),
+        { status: 502, headers },
+      );
+    }
+    const claimsBody = (await claimsRes.json()) as { leases?: unknown[] };
+    const eventsBody = (await eventsRes.json()) as { events?: unknown[] };
+    // Gateway events are ascending by event_id (ULID = chronological); the
+    // dashboard shows "recent first" — take the tail, newest on top.
+    const recent = (eventsBody.events ?? []).slice(-RECENT_EVENTS).reverse();
+    return new Response(
+      JSON.stringify({
+        configured: true,
+        active_claims: claimsBody.leases ?? [],
+        recent_events: recent,
+        generated_at: new Date().toISOString(),
+      }),
+      { status: 200, headers },
+    );
+  } catch (err) {
+    console.error("coord_gateway_unreachable", { upstream: base, err: String(err) });
+    return new Response(
+      JSON.stringify({ error: "coord_gateway_unavailable", upstream: base }),
+      { status: 502, headers },
     );
   }
 };

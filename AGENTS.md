@@ -58,7 +58,7 @@
 ## 按需深入(渐进式披露,需要时才读)
 - 系统架构总览 → `.harness/instructions/architecture.md`
 - 智能体编排/工具/记忆约定 → `.harness/instructions/agentic-patterns.md`
-- 多 agent 协调（主 agent + issue-label 状态机 + review 门禁）→ `.harness/instructions/multi-agent-coordination.md`（见 ADR-004）
+- 多 agent 协调（权威 = coord-gateway/RepoHub 租约，ADR-017；issue 只承载规格与叙述 + review 门禁）→ `.harness/instructions/multi-agent-coordination.md`（见 ADR-004/009/017）
 - **新 agent 接入执行书（第一次进来照它走）** → `.harness/instructions/agent-bootstrap.md`；背后的规则清单 → `agent-onboarding-checklist.md`（见 ADR-005）
 - **人类开发者带 agent 加入 BoardX 开发** → `.harness/instructions/human-developer-onboarding.md`（面向人类；enroll 步骤 + 启用 agent 的首条消息模板 + 三级 coordinator 层级 + 性能管理，见 ADR-010）
 - Agent 组织模型（多级 coordinator + 子 agent 注册 + 3h 性能周期 + 防断链）→ ADR-010

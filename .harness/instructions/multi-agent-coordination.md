@@ -9,14 +9,18 @@
 > 共享 git 工作目录的隔离规则（任何角色一律 worktree、分支建好立即 push）见 **ADR-005**。
 > 新 agent/新平台加入协作的最小阅读清单见 `agent-onboarding-checklist.md`。
 >
-> ⚠️ **2026-07-08 起（ADR-009）：认领/心跳/退位的权威已整体切换到 coord-service (D1)**
-> （`pnpm harness lock-*` / `module-lock-*`，需要 `COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN`
-> 凭据）。本文中所有"lease 评论仪式 / claimed-by 评论 / label 认领锁"的段落自该日起
+> ⚠️ **2026-07-08 起（ADR-009）：认领/心跳/退位的权威整体切出 GitHub 评论仪式**。
+> **2026-07-18 起（ADR-017 割接）：权威载体 = coord-gateway（每仓一个 RepoHub
+> Durable Object）**——`pnpm harness lock-*` / `module-lock-*` 全部指向 gateway，
+> 需要 `COORD_GATEWAY_URL`/`COORD_API_TOKEN`/`COORD_REPO` 凭据（devportal 自助领取，
+> p29-F08）。ADR-009 的协议语义（claim/heartbeat/TTL/机械回收、events 唯一可信历史）
+> 不变，仅换载体；旧 coord-service（D1）与 `COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN`
+> 已退役删除。本文中所有"lease 评论仪式 / claimed-by 评论 / label 认领锁"的段落
 > **仅作历史记录保留**——GitHub issue 的 feature 规格用途、`status:*` label 作为
 > feature 工作流的单向投影（`sync-github.ts`）不受影响，但它们不再是协调层的锁或
-> 权威。人类看协调实时状态走 coord-service `GET /status` 或 `/admin/coordination`
-> 仪表盘，不再翻 issue 评论。ADR-004 的协调面结论被 ADR-009 取代；ADR-006/008 保留
-> 为历史决策记录。
+> 权威。人类看协调实时状态走 devportal（develop.boardx.us）或 `/admin/coordination`
+> 仪表盘，不再翻 issue 评论。ADR-004 的协调面结论被 ADR-009 取代；ADR-006/008/009
+> 保留为历史决策记录。
 
 ## 1. 规范 label 集合（唯一事实，禁止漂移）
 
@@ -169,7 +173,7 @@ v0 只做**契约层**，不引入 coordinator 自动化代码（那是 v1）：
 
 | 层 | 信道 | 用途 | 权威性 |
 |---|---|---|---|
-| 0 | **coord-service (D1)**（`lock-*`/`module-lock-*` 命令 + `GET /status`） | 认领/心跳/退位/过期回收——**一切租约类状态** | **权威（ADR-009 起）**。events 表是协调事件的唯一可信历史 |
+| 0 | **coord-gateway / RepoHub DO**（`lock-*`/`module-lock-*`/`tick` 命令 + gateway `/claims`、`/events`、`/api/coord/time`） | 认领/心跳/退位/过期回收——**一切租约类状态**，以及权威时钟（ADR-014） | **权威（ADR-009 语义，ADR-017 起载体为按仓 RepoHub DO；旧 coord-service D1 已退役，审计史归档于 p29 evidence/d1-final-archive）**。events 是协调事件的唯一可信历史 |
 | 1 | **issue/PR 总线**（评论 + label） | review verdict、返工清单、分派点名、事故复盘、需要人类可读叙述的一切；`status:*` label 仅为 feature 工作流投影 | 叙述层。租约类状态不再以此为准（ADR-009 前的历史评论保留可查） |
 | 2 | 跨会话直达消息 | 需要对方立即注意的通知：催办、澄清、回执 | **非权威**。消息中声称的状态变化必须同时在层 0/1 有落点；冲突时以层 0 为准 |
 | 3 | 仓库文件（SOP/registry/feature_list） | 协作规则与规范本身 | 规范权威（ADR-004 决策：规范平面，不受 ADR-009 影响） |

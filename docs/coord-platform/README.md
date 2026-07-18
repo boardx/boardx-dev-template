@@ -45,7 +45,7 @@ GitHub(权威) --webhooks--> apps/coord-gateway (Worker + Queues, 幂等)
 | `packages/coord-projection` | GitHub 反向投影 |
 | `apps/coord-gateway` | webhook ingest + REST + MCP server |
 | `apps/devportal` | 门户 UI（原 Developer Portal 原地升级） |
-| `packages/coord-service` | 存量 D1 实现，已冻结退役中（ADR-017），F10 删除 |
+| ~~`packages/coord-service`~~ | 存量 D1 实现，已按 ADR-017 于 2026-07-18（F10）删除；审计史归档 `phases/phase-p29-coord-platform/evidence/d1-final-archive/` |
 
 ## 参与开发
 

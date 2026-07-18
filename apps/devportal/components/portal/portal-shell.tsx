@@ -71,7 +71,7 @@ export function PortalShell({ developer }: { developer: { name: string; email: s
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-21 font-bold text-foreground">Developer Portal</h1>
-          <p className="mt-1 text-13 text-muted-foreground">BoardX agentic 开发的统一人类入口 · GitHub 是底座，coord-service 是 AI 增强</p>
+          <p className="mt-1 text-13 text-muted-foreground">BoardX agentic 开发的统一人类入口 · GitHub 是底座，coord-gateway 是 AI 增强</p>
         </div>
         {/* 开发者身份 chip：开发者是人类一等实体（👤），带来 N 个 agent（配对关系，ADR-011） */}
         <div data-testid="dev-identity-chip" className="flex items-center gap-2 rounded-12 border border-border bg-surface-1 px-3 py-1.5">

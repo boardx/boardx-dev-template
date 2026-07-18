@@ -1,6 +1,6 @@
 "use client";
 // 实时协调板块（p23/F05）：活跃租约 + 协调事件两卡迁入门户，数据源 /api/portal/coordination
-// （coord-service 公开 /status 的服务端代理）。界面契约 = p23 ui-signoff 确认的 v3 原型
+// （coord-gateway RepoHub 读面的服务端代理，ADR-017 割接）。界面契约 = p23 ui-signoff 确认的 v3 原型
 // CoordTab：中文标题 + 术语括注；租约行 🟢🟡🔴 心跳状态点（时间与 ttl 放 title 悬停）；
 // expire 事件 destructive 徽章，cycle-plan/cycle-result/andon 叙述层事件 secondary 徽章。
 // 三态诚实降级：未配置（unconfigured）≠ 不可达（degraded），语义沿用 PortalCard。
@@ -19,7 +19,7 @@ interface Claim {
 }
 
 interface CoordEvent {
-  id: number;
+  event_id: string;
   type: string;
   resource_id: string;
   agent_id: string;
@@ -112,7 +112,7 @@ export function CoordTab() {
   const reload = useMemo(() => debounceTrailing(() => void load()), [load]);
   useCoordStream(["lease.*", "andon.*"], reload);
 
-  const unconfiguredHint = "协调服务尚未接线（COORD_SERVICE_URL 未配置）——这是部署中间态，不是故障。";
+  const unconfiguredHint = "协调网关尚未接线（COORD_GATEWAY_URL/COORD_API_TOKEN 未配置）——这是部署中间态，不是故障。";
 
   return (
     <div className="space-y-4">
@@ -150,7 +150,7 @@ export function CoordTab() {
         ) : (
           <ul className="space-y-1" data-testid="coord-events">
             {events.map((e) => (
-              <li key={e.id} className="flex items-center justify-between gap-2 rounded-8 px-2 py-1.5 transition-colors duration-200 hover:bg-muted">
+              <li key={e.event_id} className="flex items-center justify-between gap-2 rounded-8 px-2 py-1.5 transition-colors duration-200 hover:bg-muted">
                 <span className="truncate text-13 text-foreground">
                   {e.resource_id}
                   <span className="text-muted-foreground"> · {relTime(e.at)}</span>

@@ -4,12 +4,11 @@
 // owner 匹配 → kind ∈ 协调层）。这把派工权与 registry 里的协调者归属绑定，实现
 // issue 说的"人类身份映射"——不是任何过 Access 的人都能派工。
 //
-// 服务端 broker（F10-pre 起）：数据源从冻结退役中的 coord-service D1 切到
-// coord-gateway（RepoHub DO 权威）。派工/撤回是 gateway 的 COORD_ADMIN_TOKEN
-// 管理面——复用既有 Pages secret COORD_GATEWAY_ADMIN_TOKEN（F08 mint 同款），
-// 永不到浏览器；派工的 note 里带上真实人类 email 做审计。
-// COORD_DISPATCH_TOKEN / COORD_SERVICE_URL：deprecated（旧 coord-service broker
-// 通道，本轮只切数据源不删配置；割接 PR 删除，遵守 env 原子纪律）。
+// 服务端 broker（F10-pre 起）：数据源 = coord-gateway（RepoHub DO 权威）。
+// 派工/撤回是 gateway 的 COORD_ADMIN_TOKEN 管理面——复用既有 Pages secret
+// COORD_GATEWAY_ADMIN_TOKEN（F08 mint 同款），永不到浏览器；派工的 note 里带上
+// 真实人类 email 做审计。旧 coord-service broker 通道（COORD_DISPATCH_TOKEN /
+// COORD_SERVICE_URL）已随 2026-07-18 割接删除（p29-F10 stage-2，ADR-017）。
 import { parse } from "yaml";
 import { ownerMatches } from "@/lib/access";
 import { readRepoFile } from "@/lib/repo-files";

@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { accessUser } from "@/lib/access";
 import { readRepoFile, listRepoDirs, githubConfigured } from "@/lib/repo-files";
+import { coordConfigKey, fetchActiveClaims } from "@/lib/coord-gateway";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -37,7 +38,7 @@ interface PulsePayload {
 let cache: { key: string; payload: PulsePayload; expiresAt: number } | null = null;
 
 function cacheKey(): string {
-  return [process.env["COORD_SERVICE_URL"] ?? "", process.env["GITHUB_TOKEN"] ? "t" : "", process.env["GITHUB_REPO"] ?? ""].join("|");
+  return [coordConfigKey(), process.env["GITHUB_TOKEN"] ? "t" : ""].join("|");
 }
 
 async function readPhases(): Promise<PulsePayload["phases"]> {
@@ -70,16 +71,11 @@ async function readPhases(): Promise<PulsePayload["phases"]> {
 }
 
 async function readCoord(): Promise<PulsePayload["coord"]> {
-  const baseUrl = process.env["COORD_SERVICE_URL"];
-  if (!baseUrl) return { configured: false };
-  try {
-    const res = await fetch(`${baseUrl}/status`, { signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS), cache: "no-store" });
-    if (!res.ok) return { configured: true, error: `upstream_${res.status}` };
-    const body = (await res.json()) as { active_claims?: CoordClaim[] };
-    return { configured: true, active_claims: body.active_claims ?? [] };
-  } catch {
-    return { configured: true, error: "unreachable" };
-  }
+  // ADR-017 割接：数据源 = coord-gateway /claims（lib/coord-gateway.ts），三态契约不变。
+  const result = await fetchActiveClaims();
+  if (!result.configured) return { configured: false };
+  if ("error" in result) return { configured: true, error: result.error };
+  return { configured: true, active_claims: result.claims };
 }
 
 async function readGithub(): Promise<PulsePayload["github"]> {

@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import { parse } from "yaml";
 import { accessUser, ownerMatches } from "@/lib/access";
 import { readRepoFile } from "@/lib/repo-files";
+import { coordConfigKey, fetchActiveClaims } from "@/lib/coord-gateway";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -65,33 +66,25 @@ async function loadMyAgents(email: string): Promise<RegistryAgent[]> {
   return (doc.agents ?? []).filter((a) => ownerMatches(a.owner, email) && a.active !== false);
 }
 
-/** coord /status → agent_id 到 {resource_id, heartbeat, ttl} 的租约映射。不可达→null。 */
+/** coord-gateway /claims → agent_id 到 {resource_id, heartbeat, ttl} 的租约映射
+ *  （ADR-017 割接，lib/coord-gateway.ts）。不可达 → configured:true + 空映射。 */
 async function loadLeases(): Promise<{
   configured: boolean;
   byAgent: Map<string, { resource_id: string; last_heartbeat_at: string; ttl_seconds: number }>;
 }> {
-  const baseUrl = process.env["COORD_SERVICE_URL"];
-  if (!baseUrl) return { configured: false, byAgent: new Map() };
-  try {
-    const res = await fetch(`${baseUrl}/status`, { signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS), cache: "no-store" });
-    if (!res.ok) return { configured: true, byAgent: new Map() };
-    const body = (await res.json()) as {
-      active_claims?: Array<{ resource_id?: string; agent_id?: string; last_heartbeat_at?: string; ttl_seconds?: number }>;
-    };
-    const byAgent = new Map<string, { resource_id: string; last_heartbeat_at: string; ttl_seconds: number }>();
-    for (const c of body.active_claims ?? []) {
-      if (c.agent_id && c.resource_id && c.last_heartbeat_at) {
-        byAgent.set(c.agent_id, {
-          resource_id: c.resource_id,
-          last_heartbeat_at: c.last_heartbeat_at,
-          ttl_seconds: c.ttl_seconds ?? 10800,
-        });
-      }
+  const result = await fetchActiveClaims();
+  if (!result.configured) return { configured: false, byAgent: new Map() };
+  const byAgent = new Map<string, { resource_id: string; last_heartbeat_at: string; ttl_seconds: number }>();
+  if ("claims" in result) {
+    for (const c of result.claims) {
+      byAgent.set(c.agent_id, {
+        resource_id: c.resource_id,
+        last_heartbeat_at: c.last_heartbeat_at,
+        ttl_seconds: c.ttl_seconds ?? 10800,
+      });
     }
-    return { configured: true, byAgent };
-  } catch {
-    return { configured: true, byAgent: new Map() };
   }
+  return { configured: true, byAgent };
 }
 
 /** 我开的 open PR（stale 标记）+ 我近期已合并 PR 的 flow-time 中位。login 缺失时空。 */
@@ -165,7 +158,7 @@ export async function GET(req: Request) {
   const user = await accessUser(req.headers);
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
 
-  const key = `${user.email}|${process.env["COORD_SERVICE_URL"] ?? ""}|${process.env["GITHUB_TOKEN"] ? "t" : ""}`;
+  const key = `${user.email}|${coordConfigKey()}|${process.env["GITHUB_TOKEN"] ? "t" : ""}`;
   if (cache && cache.key === key && cache.expiresAt > Date.now()) return NextResponse.json(cache.payload);
 
   const mine = await loadMyAgents(user.email);

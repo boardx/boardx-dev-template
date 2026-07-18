@@ -1,8 +1,11 @@
-// cycle.ts 单测（ADR-014 统一时钟）：周期锚定必须确定、跨机器一致。
+// GET /api/coord/time（ADR-014 权威时钟，p29-F10 stage-2 迁自 coord-service）。
+// 纯函数测试逐条移植自 packages/coord-service/test/unit/cycle.test.ts——迁移的
+// 验收标准就是"旧测试在新家全绿"（ADR-014 语义零变更）。
+import { SELF } from "cloudflare:test";
 import { describe, it, expect } from "vitest";
-import { cycleStart, cycleId, describeCycle, CYCLE_HOURS } from "../../src/lib/cycle";
+import { cycleStart, cycleId, describeCycle, CYCLE_HOURS } from "../src/cycle";
 
-describe("C-cycle 时钟（权威实现）", () => {
+describe("C-cycle 时钟（权威实现，迁自 coord-service）", () => {
   it("锚定到 UTC 整点 00/03/06/09/12/15/18/21", () => {
     for (const [input, expectedHour] of [
       ["2026-07-15T00:00:00Z", 0], ["2026-07-15T02:59:59Z", 0],
@@ -41,5 +44,31 @@ describe("C-cycle 时钟（权威实现）", () => {
     const c = describeCycle(new Date("2026-07-15T09:00:00Z"));
     expect(c.elapsed_seconds).toBe(0);
     expect(c.remaining_seconds).toBe(CYCLE_HOURS * 3600);
+  });
+});
+
+describe("GET /api/coord/time 端点", () => {
+  it("公开只读、无需 token，返回 now/epoch_ms/cycle 且自洽", async () => {
+    const before = Date.now();
+    const res = await SELF.fetch("https://gw.test/api/coord/time");
+    const after = Date.now();
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      now: string;
+      epoch_ms: number;
+      cycle: { id: string; started_at: string; ends_at: string; remaining_seconds: number; elapsed_seconds: number };
+    };
+    // 服务端时刻落在请求往返窗口内（时钟活的，不是常量）
+    expect(body.epoch_ms).toBeGreaterThanOrEqual(before - 1000);
+    expect(body.epoch_ms).toBeLessThanOrEqual(after + 1000);
+    expect(new Date(body.now).getTime()).toBe(body.epoch_ms);
+    // cycle 与 now 用同一实现自洽
+    expect(body.cycle.id).toBe(describeCycle(new Date(body.now)).id);
+    expect(body.cycle.elapsed_seconds + body.cycle.remaining_seconds).toBe(CYCLE_HOURS * 3600);
+  });
+
+  it("非 GET 方法不落到时钟路由（POST → 404）", async () => {
+    const res = await SELF.fetch("https://gw.test/api/coord/time", { method: "POST" });
+    expect(res.status).toBe(404);
   });
 });

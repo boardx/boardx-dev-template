@@ -1,0 +1,339 @@
+[
+ {
+  "results": [
+   {
+    "id": "smoke-test-agent",
+    "kind": "worker",
+    "areas": null,
+    "active": 1,
+    "created_at": "2026-07-05T03:17:00.000Z"
+   },
+   {
+    "id": "wrk-claude-1",
+    "kind": "worker",
+    "areas": "[\"canvas\",\"board\",\"home-page\",\"common\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-codex-1",
+    "kind": "worker",
+    "areas": "[\"auth\",\"team\",\"room\",\"room-chat\",\"invite\",\"share\",\"ava\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-ava-1",
+    "kind": "worker",
+    "areas": "[\"ava\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-kb-1",
+    "kind": "worker",
+    "areas": "[\"knowledge-base\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-store-1",
+    "kind": "worker",
+    "areas": "[\"ai-store\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-store-2",
+    "kind": "worker",
+    "areas": "[\"ai-store\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-survey-1",
+    "kind": "worker",
+    "areas": "[\"survey\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-survey-3",
+    "kind": "worker",
+    "areas": "[\"survey\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-credits-1",
+    "kind": "worker",
+    "areas": "[\"credits\",\"billing\",\"common\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-admin-1",
+    "kind": "worker",
+    "areas": "[\"admin\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-payment-1",
+    "kind": "worker",
+    "areas": "[\"billing\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-platform-1",
+    "kind": "worker",
+    "areas": "[\"auth\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-platform-2",
+    "kind": "worker",
+    "areas": "[\"team\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-studio-1",
+    "kind": "worker",
+    "areas": "[\"studio\",\"presentations\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-admin-2",
+    "kind": "worker",
+    "areas": "[\"admin\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-nav-audit-1",
+    "kind": "worker",
+    "areas": "[\"design\",\"app-shell\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-lint-1",
+    "kind": "worker",
+    "areas": "[\"design\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-ava-p18-1",
+    "kind": "worker",
+    "areas": "[\"ai-core\",\"deep-research\",\"voice\",\"share\",\"ai-settings\",\"attachments\",\"message-actions\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-ava-p18-2",
+    "kind": "worker",
+    "areas": "[\"ai-core\",\"deep-research\",\"voice\",\"share\",\"ai-settings\",\"attachments\",\"message-actions\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-ava-p18-3",
+    "kind": "worker",
+    "areas": "[\"ai-core\",\"deep-research\",\"voice\",\"share\",\"ai-settings\",\"attachments\",\"message-actions\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-room-1",
+    "kind": "worker",
+    "areas": "[\"room\",\"room-files\",\"room-survey\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-room-2",
+    "kind": "worker",
+    "areas": "[\"room\",\"room-files\",\"room-survey\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-room-3",
+    "kind": "worker",
+    "areas": "[\"room\",\"room-files\",\"room-survey\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-codex-collab-1",
+    "kind": "worker",
+    "areas": "[\"collaboration\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "wrk-codex-canvas-1",
+    "kind": "worker",
+    "areas": "[\"canvas\",\"board\"]",
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "rev-code",
+    "kind": "reviewer",
+    "areas": null,
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "rev-e2e",
+    "kind": "reviewer",
+    "areas": null,
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "rev-feature",
+    "kind": "reviewer",
+    "areas": null,
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "rev-security",
+    "kind": "reviewer",
+    "areas": null,
+    "active": 1,
+    "created_at": "2026-07-05T04:05:41.649Z"
+   },
+   {
+    "id": "coord-main",
+    "kind": "coordinator",
+    "areas": null,
+    "active": 1,
+    "created_at": "2026-07-06T02:51:47.208Z"
+   },
+   {
+    "id": "coord-architecture",
+    "kind": "architecture-coordinator",
+    "areas": "[\"harness\",\"docs\",\"adr\",\"agent-protocol\"]",
+    "active": 1,
+    "created_at": "2026-07-08T10:18:40.716Z"
+   },
+   {
+    "id": "coord-room",
+    "kind": "module-coordinator",
+    "areas": "[\"room\",\"room-files\",\"room-survey\",\"room-chat\",\"invite\",\"share\"]",
+    "active": 1,
+    "created_at": "2026-07-08T10:18:40.716Z"
+   },
+   {
+    "id": "coord-board",
+    "kind": "module-coordinator",
+    "areas": "[\"canvas\",\"board\",\"board-header\",\"board-menu\",\"context-menu\",\"widgets\",\"studio\",\"presentations\"]",
+    "active": 1,
+    "created_at": "2026-07-08T10:18:40.716Z"
+   },
+   {
+    "id": "coord-collab",
+    "kind": "module-coordinator",
+    "areas": "[\"collaboration\"]",
+    "active": 1,
+    "created_at": "2026-07-08T10:18:40.716Z"
+   },
+   {
+    "id": "coord-ava",
+    "kind": "module-coordinator",
+    "areas": "[\"ai-core\",\"deep-research\",\"voice\",\"ai-settings\",\"attachments\",\"message-actions\",\"knowledge-base\"]",
+    "active": 1,
+    "created_at": "2026-07-08T10:18:40.716Z"
+   },
+   {
+    "id": "coord-store-admin",
+    "kind": "module-coordinator",
+    "areas": "[\"ai-store\",\"admin\"]",
+    "active": 1,
+    "created_at": "2026-07-08T10:18:40.716Z"
+   },
+   {
+    "id": "coord-survey",
+    "kind": "module-coordinator",
+    "areas": "[\"survey\"]",
+    "active": 1,
+    "created_at": "2026-07-08T10:18:40.716Z"
+   },
+   {
+    "id": "coord-platform",
+    "kind": "module-coordinator",
+    "areas": "[\"auth\",\"team\",\"home-page\",\"profile\",\"common\",\"billing\",\"credits\"]",
+    "active": 1,
+    "created_at": "2026-07-08T10:18:40.716Z"
+   },
+   {
+    "id": "coord-architecture.portal-dev-1",
+    "kind": "sub-agent",
+    "areas": "portal",
+    "active": 1,
+    "created_at": "2026-07-09T12:20:00Z"
+   },
+   {
+    "id": "coord-architecture.portal-dev-2",
+    "kind": "sub-agent",
+    "areas": "portal",
+    "active": 1,
+    "created_at": "2026-07-09T12:20:00Z"
+   },
+   {
+    "id": "coord-architecture.portal-dev-3",
+    "kind": "sub-agent",
+    "areas": "portal",
+    "active": 1,
+    "created_at": "2026-07-09T12:20:00Z"
+   },
+   {
+    "id": "wrk-survey-syj-1",
+    "kind": "worker",
+    "areas": "[\"survey\"]",
+    "active": 1,
+    "created_at": "2026-07-13T15:55:11.901Z"
+   },
+   {
+    "id": "wrk-ava-syj-1",
+    "kind": "worker",
+    "areas": "[\"ai-core\",\"deep-research\",\"ai-settings\"]",
+    "active": 1,
+    "created_at": "2026-07-13T15:55:11.901Z"
+   },
+   {
+    "id": "portal-broker",
+    "kind": "token-broker",
+    "areas": "[\"portal\"]",
+    "active": 1,
+    "created_at": "2026-07-13T17:32:19Z"
+   }
+  ],
+  "success": true,
+  "meta": {
+   "served_by": "v3-prod",
+   "served_by_region": "APAC",
+   "served_by_colo": "KIX",
+   "served_by_primary": true,
+   "timings": {
+    "sql_duration_ms": 0.7843
+   },
+   "duration": 0.7843,
+   "changes": 0,
+   "last_row_id": 0,
+   "changed_db": false,
+   "size_after": 118784,
+   "rows_read": 45,
+   "rows_written": 0,
+   "total_attempts": 1
+  }
+ }
+]

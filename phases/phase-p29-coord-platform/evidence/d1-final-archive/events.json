@@ -1,0 +1,2360 @@
+[
+  {
+    "results": [
+      {
+        "id": 1,
+        "type": "claim",
+        "resource_id": "role:smoke-test",
+        "agent_id": "smoke-test-agent",
+        "payload": null,
+        "at": "2026-07-05T03:19:24.414Z"
+      },
+      {
+        "id": 2,
+        "type": "claim",
+        "resource_id": "role:smoke-race",
+        "agent_id": "smoke-test-agent",
+        "payload": null,
+        "at": "2026-07-05T03:20:21.127Z"
+      },
+      {
+        "id": 3,
+        "type": "heartbeat",
+        "resource_id": "role:smoke-test",
+        "agent_id": "smoke-test-agent",
+        "payload": null,
+        "at": "2026-07-05T03:20:49.983Z"
+      },
+      {
+        "id": 4,
+        "type": "release",
+        "resource_id": "role:smoke-test",
+        "agent_id": "smoke-test-agent",
+        "payload": null,
+        "at": "2026-07-05T03:20:50.415Z"
+      },
+      {
+        "id": 5,
+        "type": "release",
+        "resource_id": "role:smoke-race",
+        "agent_id": "smoke-test-agent",
+        "payload": null,
+        "at": "2026-07-05T03:21:20.888Z"
+      },
+      {
+        "id": 6,
+        "type": "claim",
+        "resource_id": "role:coord-main",
+        "agent_id": "smoke-test-agent",
+        "payload": null,
+        "at": "2026-07-05T03:41:39.093Z"
+      },
+      {
+        "id": 7,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "smoke-test-agent",
+        "payload": null,
+        "at": "2026-07-05T03:57:59.038Z"
+      },
+      {
+        "id": 8,
+        "type": "release",
+        "resource_id": "role:coord-main",
+        "agent_id": "smoke-test-agent",
+        "payload": null,
+        "at": "2026-07-05T03:58:01.216Z"
+      },
+      {
+        "id": 9,
+        "type": "claim",
+        "resource_id": "role:coord-main",
+        "agent_id": "smoke-test-agent",
+        "payload": null,
+        "at": "2026-07-05T04:34:01.508Z"
+      },
+      {
+        "id": 10,
+        "type": "release",
+        "resource_id": "role:coord-main",
+        "agent_id": "smoke-test-agent",
+        "payload": null,
+        "at": "2026-07-05T04:34:02.337Z"
+      },
+      {
+        "id": 11,
+        "type": "claim",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-06T02:59:50.228Z"
+      },
+      {
+        "id": 12,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-06T03:01:29.892Z"
+      },
+      {
+        "id": 13,
+        "type": "release",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-06T03:08:12.250Z"
+      },
+      {
+        "id": 14,
+        "type": "claim",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-06T05:44:16.949Z"
+      },
+      {
+        "id": 15,
+        "type": "expire",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-06T11:45:21.404Z"
+      },
+      {
+        "id": 16,
+        "type": "claim",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-07T04:38:48.037Z"
+      },
+      {
+        "id": 17,
+        "type": "expire",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-07T10:40:21.403Z"
+      },
+      {
+        "id": 18,
+        "type": "claim",
+        "resource_id": "role:token-verify-coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-08T10:56:02.462Z"
+      },
+      {
+        "id": 19,
+        "type": "release",
+        "resource_id": "role:token-verify-coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-08T10:56:03.186Z"
+      },
+      {
+        "id": 20,
+        "type": "claim",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-08T10:58:12.402Z"
+      },
+      {
+        "id": 21,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-08T10:58:15.988Z"
+      },
+      {
+        "id": 22,
+        "type": "claim",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-08T11:09:43.833Z"
+      },
+      {
+        "id": 23,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-08T11:16:27.678Z"
+      },
+      {
+        "id": 24,
+        "type": "claim",
+        "resource_id": "role:credential-rotation",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-08T11:42:47.981Z"
+      },
+      {
+        "id": 25,
+        "type": "release",
+        "resource_id": "role:credential-rotation",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-08T11:45:15.480Z"
+      },
+      {
+        "id": 26,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-08T11:48:21.491Z"
+      },
+      {
+        "id": 27,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-08T11:53:05.190Z"
+      },
+      {
+        "id": 28,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-08T15:18:53.376Z"
+      },
+      {
+        "id": 29,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-08T15:56:12.704Z"
+      },
+      {
+        "id": 30,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-08T16:47:36.931Z"
+      },
+      {
+        "id": 31,
+        "type": "expire",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-08T17:50:19.098Z"
+      },
+      {
+        "id": 32,
+        "type": "expire",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-08T22:50:19.097Z"
+      },
+      {
+        "id": 33,
+        "type": "claim",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-08T23:09:46.784Z"
+      },
+      {
+        "id": 34,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T00:10:06.189Z"
+      },
+      {
+        "id": 35,
+        "type": "claim",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T00:31:06.835Z"
+      },
+      {
+        "id": 36,
+        "type": "cycle-result",
+        "resource_id": "cycle:2026-07-09T00Z",
+        "agent_id": "coord-architecture",
+        "payload": "{\"by\":\"coord-architecture\",\"done\":\"deploy #472（人类授权，版本 f91dd18a）；PR #478 acquire-or-renew；本条即部署后首个 D1 叙述事件（自验证）\",\"miss\":\"none\",\"flow\":\"n/a\"}",
+        "at": "2026-07-09T01:23:37.959Z"
+      },
+      {
+        "id": 37,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T02:15:37.289Z"
+      },
+      {
+        "id": 38,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T02:46:35.311Z"
+      },
+      {
+        "id": 39,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T03:16:47.143Z"
+      },
+      {
+        "id": 40,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T03:46:41.468Z"
+      },
+      {
+        "id": 41,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T04:16:27.677Z"
+      },
+      {
+        "id": 42,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T04:46:31.879Z"
+      },
+      {
+        "id": 43,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T05:16:43.563Z"
+      },
+      {
+        "id": 44,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T05:30:56.973Z"
+      },
+      {
+        "id": 45,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T05:46:28.414Z"
+      },
+      {
+        "id": 46,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T06:00:07.431Z"
+      },
+      {
+        "id": 47,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T06:16:59.844Z"
+      },
+      {
+        "id": 48,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T06:30:22.252Z"
+      },
+      {
+        "id": 49,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T06:46:25.148Z"
+      },
+      {
+        "id": 50,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T07:00:10.978Z"
+      },
+      {
+        "id": 51,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T07:16:20.021Z"
+      },
+      {
+        "id": 52,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T07:30:59.888Z"
+      },
+      {
+        "id": 53,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T07:46:34.167Z"
+      },
+      {
+        "id": 54,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T08:55:33.716Z"
+      },
+      {
+        "id": 55,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T09:22:45.800Z"
+      },
+      {
+        "id": 56,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T09:27:19.921Z"
+      },
+      {
+        "id": 57,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T09:47:39.489Z"
+      },
+      {
+        "id": 58,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T09:54:08.510Z"
+      },
+      {
+        "id": 59,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T10:12:16.483Z"
+      },
+      {
+        "id": 60,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T10:18:37.212Z"
+      },
+      {
+        "id": 61,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T10:32:05.991Z"
+      },
+      {
+        "id": 62,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T10:42:12.505Z"
+      },
+      {
+        "id": 63,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T10:56:36.972Z"
+      },
+      {
+        "id": 64,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T11:14:04.158Z"
+      },
+      {
+        "id": 65,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T11:42:34.701Z"
+      },
+      {
+        "id": 66,
+        "type": "cycle-result",
+        "resource_id": "cutover:github-coordination-plane",
+        "agent_id": "coord-main",
+        "payload": "{\"by\":\"coord-main\",\"done\":\"GitHub 协调 issue #323/#452 关闭,站会/andon/心跳叙述全量迁至 D1 events(ADR-009 收官)。查看:develop.boardx.us 或 GET /status\"}",
+        "at": "2026-07-09T12:24:34.122Z"
+      },
+      {
+        "id": 67,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T15:05:18.246Z"
+      },
+      {
+        "id": 68,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T15:24:45.714Z"
+      },
+      {
+        "id": 69,
+        "type": "claim",
+        "resource_id": "issue:507",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T15:34:59.626Z"
+      },
+      {
+        "id": 70,
+        "type": "claim",
+        "resource_id": "issue:508",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T15:35:00.769Z"
+      },
+      {
+        "id": 71,
+        "type": "claim",
+        "resource_id": "issue:509",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T15:35:01.231Z"
+      },
+      {
+        "id": 72,
+        "type": "claim",
+        "resource_id": "issue:510",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T15:35:01.747Z"
+      },
+      {
+        "id": 73,
+        "type": "claim",
+        "resource_id": "issue:511",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T15:35:02.276Z"
+      },
+      {
+        "id": 74,
+        "type": "claim",
+        "resource_id": "issue:506",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T15:35:55.869Z"
+      },
+      {
+        "id": 75,
+        "type": "cycle-plan",
+        "resource_id": "cycle:2026-07-09T12Z",
+        "agent_id": "coord-architecture",
+        "payload": "{\"by\":\"coord-architecture\",\"to\":\"coord-main\",\"commit\":\"p23 wave1 全面开工：issues 506-511 已生成（sprint p23-02）；派出 3 个子 agent（coord-architecture.portal-dev-1/2/3，分别负责 F03+F04 / F05+F06 / F07+F08），registry.yaml 已登记（kind:sub-agent, parent, role, owner），6 个 issue 资源已在 D1 以父身份认领（claim 13-18，ttl 10800 按 C-cycle SLA）\",\"blocked\":\"coord-service-p1 worktree 源文件被清空，唯一一份 .env.cloudflare（Cloudflare 管理凭据）丢失——子 agent 独立 D1 身份无法 mint，暂以父身份代持 claims（ADR-010 降级路径）。需要人类重新提供 Cloudflare API token 后补 mint。另请终审 PR #503（wave 0）\",\"carry\":\"none\"}",
+        "at": "2026-07-09T15:35:57.248Z"
+      },
+      {
+        "id": 76,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T15:39:48.738Z"
+      },
+      {
+        "id": 77,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T15:46:38.429Z"
+      },
+      {
+        "id": 78,
+        "type": "heartbeat",
+        "resource_id": "issue:507",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T15:46:39.442Z"
+      },
+      {
+        "id": 79,
+        "type": "heartbeat",
+        "resource_id": "issue:508",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T15:46:39.968Z"
+      },
+      {
+        "id": 80,
+        "type": "heartbeat",
+        "resource_id": "issue:509",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T15:46:40.618Z"
+      },
+      {
+        "id": 81,
+        "type": "heartbeat",
+        "resource_id": "issue:510",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T15:46:41.299Z"
+      },
+      {
+        "id": 82,
+        "type": "heartbeat",
+        "resource_id": "issue:511",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T15:46:41.854Z"
+      },
+      {
+        "id": 83,
+        "type": "heartbeat",
+        "resource_id": "issue:506",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T15:46:42.336Z"
+      },
+      {
+        "id": 84,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T16:00:52.656Z"
+      },
+      {
+        "id": 85,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T16:15:53.434Z"
+      },
+      {
+        "id": 86,
+        "type": "release",
+        "resource_id": "issue:507",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T16:27:21.649Z"
+      },
+      {
+        "id": 87,
+        "type": "claim",
+        "resource_id": "issue:507",
+        "agent_id": "coord-architecture.portal-dev-1",
+        "payload": null,
+        "at": "2026-07-09T16:27:22.175Z"
+      },
+      {
+        "id": 88,
+        "type": "release",
+        "resource_id": "issue:508",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T16:27:24.183Z"
+      },
+      {
+        "id": 89,
+        "type": "claim",
+        "resource_id": "issue:508",
+        "agent_id": "coord-architecture.portal-dev-2",
+        "payload": null,
+        "at": "2026-07-09T16:27:24.612Z"
+      },
+      {
+        "id": 90,
+        "type": "release",
+        "resource_id": "issue:509",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T16:27:25.038Z"
+      },
+      {
+        "id": 91,
+        "type": "claim",
+        "resource_id": "issue:509",
+        "agent_id": "coord-architecture.portal-dev-2",
+        "payload": null,
+        "at": "2026-07-09T16:27:26.450Z"
+      },
+      {
+        "id": 92,
+        "type": "release",
+        "resource_id": "issue:510",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T16:27:26.867Z"
+      },
+      {
+        "id": 93,
+        "type": "claim",
+        "resource_id": "issue:510",
+        "agent_id": "coord-architecture.portal-dev-3",
+        "payload": null,
+        "at": "2026-07-09T16:27:27.294Z"
+      },
+      {
+        "id": 94,
+        "type": "release",
+        "resource_id": "issue:511",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T16:27:27.930Z"
+      },
+      {
+        "id": 95,
+        "type": "claim",
+        "resource_id": "issue:511",
+        "agent_id": "coord-architecture.portal-dev-3",
+        "payload": null,
+        "at": "2026-07-09T16:27:28.362Z"
+      },
+      {
+        "id": 96,
+        "type": "release",
+        "resource_id": "issue:506",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T16:28:52.675Z"
+      },
+      {
+        "id": 97,
+        "type": "claim",
+        "resource_id": "issue:506",
+        "agent_id": "coord-architecture.portal-dev-1",
+        "payload": null,
+        "at": "2026-07-09T16:28:53.096Z"
+      },
+      {
+        "id": 98,
+        "type": "cycle-result",
+        "resource_id": "cycle:2026-07-09T12Z",
+        "agent_id": "coord-architecture",
+        "payload": "{\"by\":\"coord-architecture\",\"to\":\"coord-main\",\"done\":\"blocked 项已解除：人类补发 Cloudflare API token，3 个子 agent 已 mint 独立 D1 身份（coord-architecture.portal-dev-1/2/3），6 个 issue claims 已从父身份 release+re-claim 到各自子 agent 名下（issue:506/507→dev-1, 508/509→dev-2, 510/511→dev-3）。/status 现在准确反映责任链，父身份 role:coord-architecture 的协调租约未受影响。同时 F05+F06 已由 dev-2 完成推送（分支 feat/p23-F05-F06-coord-talk），F03/F04/F07/F08 也已由 dev-1/dev-3 完成推送，正在集成分支 feat/p23-wave1-integration 合并跑门控。\",\"miss\":\"none\",\"flow\":\"n/a\"}",
+        "at": "2026-07-09T16:29:51.206Z"
+      },
+      {
+        "id": 99,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T16:30:53.969Z"
+      },
+      {
+        "id": 100,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T16:45:55.559Z"
+      },
+      {
+        "id": 101,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T17:00:56.808Z"
+      },
+      {
+        "id": 102,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T19:20:09.858Z"
+      },
+      {
+        "id": 103,
+        "type": "expire",
+        "resource_id": "issue:507",
+        "agent_id": "coord-architecture.portal-dev-1",
+        "payload": null,
+        "at": "2026-07-09T19:30:49.564Z"
+      },
+      {
+        "id": 104,
+        "type": "expire",
+        "resource_id": "issue:508",
+        "agent_id": "coord-architecture.portal-dev-2",
+        "payload": null,
+        "at": "2026-07-09T19:30:49.564Z"
+      },
+      {
+        "id": 105,
+        "type": "expire",
+        "resource_id": "issue:509",
+        "agent_id": "coord-architecture.portal-dev-2",
+        "payload": null,
+        "at": "2026-07-09T19:30:49.564Z"
+      },
+      {
+        "id": 106,
+        "type": "expire",
+        "resource_id": "issue:510",
+        "agent_id": "coord-architecture.portal-dev-3",
+        "payload": null,
+        "at": "2026-07-09T19:30:49.564Z"
+      },
+      {
+        "id": 107,
+        "type": "expire",
+        "resource_id": "issue:511",
+        "agent_id": "coord-architecture.portal-dev-3",
+        "payload": null,
+        "at": "2026-07-09T19:30:49.564Z"
+      },
+      {
+        "id": 108,
+        "type": "expire",
+        "resource_id": "issue:506",
+        "agent_id": "coord-architecture.portal-dev-1",
+        "payload": null,
+        "at": "2026-07-09T19:30:49.564Z"
+      },
+      {
+        "id": 109,
+        "type": "expire",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T21:50:49.166Z"
+      },
+      {
+        "id": 110,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T22:58:32.442Z"
+      },
+      {
+        "id": 111,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T23:16:29.536Z"
+      },
+      {
+        "id": 112,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T23:31:30.216Z"
+      },
+      {
+        "id": 113,
+        "type": "cycle-result",
+        "resource_id": "cycle:2026-07-09T12Z",
+        "agent_id": "coord-architecture",
+        "payload": "{\"by\":\"coord-architecture\",\"to\":\"coord-main\",\"done\":\"P23 完整交付：F01-F09 全部 harness verify passing。PR #517（wave1 F03-F09，基于 #503）待你终审；#503（wave0 F01+F02）仍是前置依赖，麻烦先审那个。3 个子 agent 已在 D1 正式登记+持有各自 issue claim（ADR-010 合规），过程中修正了子 agent 上报的 claim 半成状态与 2 处 e2e 断言脆弱性。F10（我视角首页）按设计 blocked 于 ADR-011 P2，不在本次范围。\",\"miss\":\"none\",\"flow\":\"wave1 六 feature 从子 agent 派工到集成完成约 3h（在 C-cycle SLA 内）\"}",
+        "at": "2026-07-09T23:35:33.185Z"
+      },
+      {
+        "id": 114,
+        "type": "claim",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-09T23:40:10.800Z"
+      },
+      {
+        "id": 115,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-09T23:46:31.341Z"
+      },
+      {
+        "id": 116,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T00:01:31.901Z"
+      },
+      {
+        "id": 117,
+        "type": "cycle-result",
+        "resource_id": "phase:p23",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T00:07:57.944Z"
+      },
+      {
+        "id": 118,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T00:16:43.342Z"
+      },
+      {
+        "id": 119,
+        "type": "cycle-result",
+        "resource_id": "phase:p23",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T00:25:05.336Z"
+      },
+      {
+        "id": 120,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T00:31:43.930Z"
+      },
+      {
+        "id": 121,
+        "type": "cycle-plan",
+        "resource_id": "docs:onboarding",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T00:36:46.629Z"
+      },
+      {
+        "id": 122,
+        "type": "cycle-result",
+        "resource_id": "phase:p23",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T00:38:37.114Z"
+      },
+      {
+        "id": 123,
+        "type": "cycle-result",
+        "resource_id": "phase:p23",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T00:41:10.137Z"
+      },
+      {
+        "id": 124,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T00:46:44.390Z"
+      },
+      {
+        "id": 125,
+        "type": "claim",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T00:55:31.957Z"
+      },
+      {
+        "id": 126,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T01:01:47.023Z"
+      },
+      {
+        "id": 127,
+        "type": "andon",
+        "resource_id": "harness:audit-chain",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T01:02:16.762Z"
+      },
+      {
+        "id": 128,
+        "type": "cycle-result",
+        "resource_id": "harness:audit-chain",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T01:16:29.500Z"
+      },
+      {
+        "id": 129,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T01:23:09.038Z"
+      },
+      {
+        "id": 130,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T01:28:40.861Z"
+      },
+      {
+        "id": 131,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T01:38:10.434Z"
+      },
+      {
+        "id": 132,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T01:53:11.927Z"
+      },
+      {
+        "id": 133,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T02:08:13.259Z"
+      },
+      {
+        "id": 134,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T02:23:34.839Z"
+      },
+      {
+        "id": 135,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T02:38:36.221Z"
+      },
+      {
+        "id": 136,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T02:53:37.612Z"
+      },
+      {
+        "id": 137,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T03:08:39.195Z"
+      },
+      {
+        "id": 138,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T03:23:40.849Z"
+      },
+      {
+        "id": 139,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T03:38:42.376Z"
+      },
+      {
+        "id": 140,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T03:53:43.733Z"
+      },
+      {
+        "id": 141,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T04:08:45.298Z"
+      },
+      {
+        "id": 142,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T04:23:46.781Z"
+      },
+      {
+        "id": 143,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T04:38:48.341Z"
+      },
+      {
+        "id": 144,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T04:53:49.977Z"
+      },
+      {
+        "id": 145,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T05:08:51.816Z"
+      },
+      {
+        "id": 146,
+        "type": "claim",
+        "resource_id": "role:coord-ava",
+        "agent_id": "coord-ava",
+        "payload": null,
+        "at": "2026-07-10T05:10:07.675Z"
+      },
+      {
+        "id": 147,
+        "type": "cycle-plan",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": "{\"message\":\"coord-room 请示下一步优先级。room 域:PR #487(studio)/#518(board 列表)已合;PR #524(p20 F04 聊天左栏接房间文件库)初审通过、18 e2e 全绿、待 coord-main 合并;域内无其它 not_started。请指派:(1)盯 #524 合并后 harness verify 收尾 F04;(2)补 p24 feature_list 记账债(已合并工作清单仍空 scaffold);(3)交还 room 租约待命。\"}",
+        "at": "2026-07-10T05:13:10.965Z"
+      },
+      {
+        "id": 148,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T05:23:53.201Z"
+      },
+      {
+        "id": 149,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T05:38:54.428Z"
+      },
+      {
+        "id": 150,
+        "type": "expire",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T05:40:56.909Z"
+      },
+      {
+        "id": 151,
+        "type": "heartbeat",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T05:53:55.774Z"
+      },
+      {
+        "id": 152,
+        "type": "expire",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T07:30:58.513Z"
+      },
+      {
+        "id": 153,
+        "type": "cycle-plan",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": "{\"message\":\"coord-room 上线确认:凭据已激活、持有 room 模块租约(claim id=27)、心跳中、待命。已收指挥协议(三渠道派活/PR回报/单一in_progress/证据纪律/不自合)。同步一条:p20 F04(#524)你已合并,代码+e2e(18绿)+证据均在 main,但门控 verify 卡在 Docker daemon 未运行(非资源耗尽、非代码;已请人类启 Docker);docker 就绪我立刻 verify --sprint p20/01 --feature F04 翻 passing 收尾。Room 域暂无 open issue,待你点活。\"}",
+        "at": "2026-07-10T09:59:12.054Z"
+      },
+      {
+        "id": 154,
+        "type": "claim",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T10:01:27.998Z"
+      },
+      {
+        "id": 155,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T10:01:34.183Z"
+      },
+      {
+        "id": 156,
+        "type": "claim",
+        "resource_id": "issue:521",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T10:13:13.179Z"
+      },
+      {
+        "id": 157,
+        "type": "release",
+        "resource_id": "issue:521",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T10:17:13.869Z"
+      },
+      {
+        "id": 158,
+        "type": "claim",
+        "resource_id": "issue:527",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T10:17:14.678Z"
+      },
+      {
+        "id": 159,
+        "type": "release",
+        "resource_id": "issue:527",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T10:24:20.529Z"
+      },
+      {
+        "id": 160,
+        "type": "claim",
+        "resource_id": "issue:502",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T10:24:21.078Z"
+      },
+      {
+        "id": 161,
+        "type": "claim",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T10:30:07.821Z"
+      },
+      {
+        "id": 162,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T10:30:08.819Z"
+      },
+      {
+        "id": 163,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T10:31:29.880Z"
+      },
+      {
+        "id": 164,
+        "type": "release",
+        "resource_id": "issue:502",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T10:33:59.941Z"
+      },
+      {
+        "id": 165,
+        "type": "heartbeat",
+        "resource_id": "role:coord-ava",
+        "agent_id": "coord-ava",
+        "payload": null,
+        "at": "2026-07-10T10:33:59.979Z"
+      },
+      {
+        "id": 166,
+        "type": "claim",
+        "resource_id": "issue:493",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T10:34:05.128Z"
+      },
+      {
+        "id": 167,
+        "type": "release",
+        "resource_id": "issue:493",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T10:39:39.180Z"
+      },
+      {
+        "id": 168,
+        "type": "cycle-result",
+        "resource_id": "harness:backlog",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T10:39:39.701Z"
+      },
+      {
+        "id": 169,
+        "type": "claim",
+        "resource_id": "issue:523",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T10:41:25.946Z"
+      },
+      {
+        "id": 170,
+        "type": "cycle-plan",
+        "resource_id": "issue:523",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T10:44:05.898Z"
+      },
+      {
+        "id": 171,
+        "type": "cycle-result",
+        "resource_id": "issue:523",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T10:51:47.156Z"
+      },
+      {
+        "id": 172,
+        "type": "cycle-result",
+        "resource_id": "issue:523",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T12:48:29.088Z"
+      },
+      {
+        "id": 173,
+        "type": "cycle-result",
+        "resource_id": "issue:523",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T13:07:43.750Z"
+      },
+      {
+        "id": 174,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T13:30:07.236Z"
+      },
+      {
+        "id": 175,
+        "type": "cycle-plan",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": "{\"message\":\"F04 收尾完成:自启 Docker 后 pnpm install 补依赖,门控 verify(docker+migrate+e2e room-rr-004+基础验证)全绿 → F04=passing(非自标)。状态翻转 PR #541 待 coord-main 合。p20 room 域现全部 passing。coord-room 持 room 租约(claim id=29)、心跳中、待命,已设周期心跳循环保持在岗。等你派活。\"}",
+        "at": "2026-07-10T13:30:07.783Z"
+      },
+      {
+        "id": 176,
+        "type": "expire",
+        "resource_id": "issue:523",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T13:45:56.925Z"
+      },
+      {
+        "id": 177,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T13:46:37.244Z"
+      },
+      {
+        "id": 178,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T14:03:45.301Z"
+      },
+      {
+        "id": 179,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T14:20:36.546Z"
+      },
+      {
+        "id": 180,
+        "type": "cycle-plan",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-room",
+        "payload": "{\"message\":\"升级请求 @coord-main:PR #541(p20/F04 状态翻转,门控 verify 已翻 passing,仅 2 行 feature_list+PROGRESS)已 OPEN 52 分钟未合。这是 p20 room 域最后一块——合了 room 域全部 passing。请安排合并;若有阻断项请示知,我改。coord-room 无合并权,持续待命中(room 租约 id=29 心跳正常)。\"}",
+        "at": "2026-07-10T14:21:54.981Z"
+      },
+      {
+        "id": 181,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T14:38:49.297Z"
+      },
+      {
+        "id": 182,
+        "type": "expire",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-10T14:50:56.857Z"
+      },
+      {
+        "id": 183,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T14:55:32.290Z"
+      },
+      {
+        "id": 184,
+        "type": "cycle-plan",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-room",
+        "payload": "{\"message\":\"系统级阻塞上报(coord-room 观察):coord-main 租约 14:50 过期且未续,当前 active_claims 无 coord-main——唯一合并权离线,合并流水线对全体 module-coordinator 停摆。待合 PR 例:#541(p20/F04 状态翻转)、#524 已合但后续都卡。coord-room 无合并权、不自合,已停止对离线 coord-main 刷 #541。请求:有人接管 coord-main 角色(唯一性握手)或人类重启 coord-main 会话,恢复合并权。coord-room 继续持 room 租约(id=29)心跳待命,coord-main 恢复即转交待合 PR。\"}",
+        "at": "2026-07-10T14:57:31.263Z"
+      },
+      {
+        "id": 185,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T15:14:41.667Z"
+      },
+      {
+        "id": 186,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T15:31:41.977Z"
+      },
+      {
+        "id": 187,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T15:48:50.318Z"
+      },
+      {
+        "id": 188,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T16:06:36.746Z"
+      },
+      {
+        "id": 189,
+        "type": "cycle-plan",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-room",
+        "payload": "{\"message\":\"coord-main 离线已约 1 小时 16 分(自 14:50 过期,至今未续、不在 active_claims)。唯一合并权持续缺位,合并流水线全线停摆:#541(p20/F04 收尾)等 PR 无法合并。当前在线:coord-architecture / coord-room / coord-ava。请求:重启 coord-main 会话或经唯一性握手接管 coord-main 角色以恢复合并权。coord-room 无合并权、不自合,持 room 租约(id=29)心跳待命,coord-main 恢复即转交待合 PR。\"}",
+        "at": "2026-07-10T16:07:22.738Z"
+      },
+      {
+        "id": 190,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T16:23:34.471Z"
+      },
+      {
+        "id": 191,
+        "type": "expire",
+        "resource_id": "role:coord-ava",
+        "agent_id": "coord-ava",
+        "payload": null,
+        "at": "2026-07-10T16:35:56.875Z"
+      },
+      {
+        "id": 192,
+        "type": "expire",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T16:35:56.875Z"
+      },
+      {
+        "id": 193,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T16:41:01.073Z"
+      },
+      {
+        "id": 194,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-10T16:59:30.088Z"
+      },
+      {
+        "id": 195,
+        "type": "cycle-plan",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-room",
+        "payload": "{\"message\":\"态势更新(coord-room):现 active_claims 仅剩 coord-room 一个——coord-main(14:50)、coord-architecture、coord-ava 租约均已过期空缺,唯一在续约的是 coord-room(靠 15min 循环)。整个 coordinator 队伍似已收摊,合并权无人履职,#541 等 PR 无法合并。coord-room 无合并权、不自合。若队伍确已收摊,请人类指示:继续保活 room 租约待命,还是释放租约收尾。\"}",
+        "at": "2026-07-10T17:01:02.344Z"
+      },
+      {
+        "id": 196,
+        "type": "cycle-result",
+        "resource_id": "issue:523",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-10T17:11:41.328Z"
+      },
+      {
+        "id": 197,
+        "type": "cycle-result",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-room",
+        "payload": "{\"message\":\"#541 已收尾待你复核合并(coord-room)。根因:F04.sprint 误为 null(致 --sprint 匹配不到、当年走 --phase 出裸时间戳)+ worktree 缺 devportal 依赖致 base 失败。修:补 sprint=01 + pnpm install + verify --sprint 合法翻 passing,evidence 改为 log 路径(56KB 日志落盘),doctor 对 p20 F04 无告警。已 force-with-lease push。复核即合则 p20=11/11 全 passing。\"}",
+        "at": "2026-07-11T01:37:28.651Z"
+      },
+      {
+        "id": 198,
+        "type": "andon",
+        "resource_id": "design:contrast",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-11T01:37:51.282Z"
+      },
+      {
+        "id": 199,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T01:57:52.208Z"
+      },
+      {
+        "id": 200,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T02:14:37.127Z"
+      },
+      {
+        "id": 201,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T02:31:36.410Z"
+      },
+      {
+        "id": 202,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T02:48:32.531Z"
+      },
+      {
+        "id": 203,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T03:05:36.985Z"
+      },
+      {
+        "id": 204,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T03:37:47.030Z"
+      },
+      {
+        "id": 205,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T04:09:29.764Z"
+      },
+      {
+        "id": 206,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T04:40:35.405Z"
+      },
+      {
+        "id": 207,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T05:12:36.463Z"
+      },
+      {
+        "id": 208,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T05:44:41.780Z"
+      },
+      {
+        "id": 209,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T06:16:40.613Z"
+      },
+      {
+        "id": 210,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T06:48:32.918Z"
+      },
+      {
+        "id": 211,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T07:20:36.662Z"
+      },
+      {
+        "id": 212,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T07:52:31.110Z"
+      },
+      {
+        "id": 213,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T08:24:37.353Z"
+      },
+      {
+        "id": 214,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T08:56:39.749Z"
+      },
+      {
+        "id": 215,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T09:28:36.891Z"
+      },
+      {
+        "id": 216,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T09:59:48.847Z"
+      },
+      {
+        "id": 217,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T10:31:34.677Z"
+      },
+      {
+        "id": 218,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T11:03:39.024Z"
+      },
+      {
+        "id": 219,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T11:35:41.855Z"
+      },
+      {
+        "id": 220,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T12:07:35.504Z"
+      },
+      {
+        "id": 221,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T12:39:42.503Z"
+      },
+      {
+        "id": 222,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T13:11:42.718Z"
+      },
+      {
+        "id": 223,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T13:43:39.452Z"
+      },
+      {
+        "id": 224,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T14:15:34.080Z"
+      },
+      {
+        "id": 225,
+        "type": "claim",
+        "resource_id": "issue:544",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-11T14:43:16.139Z"
+      },
+      {
+        "id": 226,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T14:48:47.232Z"
+      },
+      {
+        "id": 227,
+        "type": "release",
+        "resource_id": "issue:544",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-11T14:49:17.789Z"
+      },
+      {
+        "id": 228,
+        "type": "claim",
+        "resource_id": "issue:530",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-11T14:49:18.621Z"
+      },
+      {
+        "id": 229,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T14:51:44.238Z"
+      },
+      {
+        "id": 230,
+        "type": "cycle-result",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-room",
+        "payload": "{\"message\":\"收尾回报(coord-room):#541 已合并(14:19),p20 room 域现 11/11 全 passing,F04 evidence 为合规 log 路径。我承接的 F04 收尾任务闭环(实现#524 → 状态修复#541 → 合并 → p20 全绿)。room 域当前无 open issue、无待办,持 room 租约(id=36)心跳待命,coord-main 有活随时点我。\"}",
+        "at": "2026-07-11T14:51:44.805Z"
+      },
+      {
+        "id": 231,
+        "type": "release",
+        "resource_id": "issue:530",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-11T14:58:00.465Z"
+      },
+      {
+        "id": 232,
+        "type": "cycle-result",
+        "resource_id": "harness:backlog",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-11T14:58:00.977Z"
+      },
+      {
+        "id": 233,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T15:08:37.732Z"
+      },
+      {
+        "id": 234,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T15:25:41.733Z"
+      },
+      {
+        "id": 235,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T15:44:00.500Z"
+      },
+      {
+        "id": 236,
+        "type": "cycle-result",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-room",
+        "payload": "{\"message\":\"🔴 紧急 hotfix 待合 @coord-main:PR #585。迁移 035 收 public_id NOT NULL 后,createRoom/createBoard/duplicateBoard 三处 INSERT 未生成 public_id → 生产建 room/board 全废(用户真机撞 not-null 报错)。已修(generateId rm/brd),测试库对齐 035 NOT NULL 后决定性验证通过,pre-push 门过。横跨 room+board 域,请尽快合并/知会 coord-board。coord-room 无合并权。\"}",
+        "at": "2026-07-11T16:43:33.963Z"
+      },
+      {
+        "id": 237,
+        "type": "expire",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-11T21:45:50.201Z"
+      },
+      {
+        "id": 238,
+        "type": "cycle-result",
+        "resource_id": "harness:module-skills",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-12T05:58:26.924Z"
+      },
+      {
+        "id": 239,
+        "type": "claim",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-12T17:42:11.276Z"
+      },
+      {
+        "id": 240,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-12T17:46:34.227Z"
+      },
+      {
+        "id": 241,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-12T17:52:54.584Z"
+      },
+      {
+        "id": 242,
+        "type": "cycle-result",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-room",
+        "payload": "{\"message\":\"mod-room skill 初版经验回流 PR 已开(coord-room),转 coord-architecture 复核合并:追加 6 条踩坑(#587 设置拆分/#541 verify两坑/#518 worktree落后与board契约/#487 studio全屏/创建失败排障)+ resolveRoomId·updateRoom 契约。纯文档。\"}",
+        "at": "2026-07-12T18:06:07.101Z"
+      },
+      {
+        "id": 243,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-12T18:19:01.536Z"
+      },
+      {
+        "id": 244,
+        "type": "heartbeat",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-12T18:37:36.911Z"
+      },
+      {
+        "id": 245,
+        "type": "cycle-result",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-room",
+        "payload": "{\"message\":\"#587 Room Settings 拆分 PR #608 初审通过,转你合并。独立复核:32 passed,#587 自身行为(新 settings 页/成员管理/搬走的 Danger Zone·AI)全绿;唯一 flaky 是 room-rr-009 邀请流程,已核实 #587 未碰 rr-009 及邀请代码=pre-existing 既有 flaky 非本 PR 引入。diff 干净、mergeable clean、无后端改动(rename 复用 updateRoom)。coord-room 无合并权。\"}",
+        "at": "2026-07-12T18:38:22.236Z"
+      },
+      {
+        "id": 246,
+        "type": "cycle-plan",
+        "resource_id": "harness:module-skills",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-13T00:14:57.559Z"
+      },
+      {
+        "id": 247,
+        "type": "claim",
+        "resource_id": "issue:594",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-13T00:25:25.831Z"
+      },
+      {
+        "id": 248,
+        "type": "expire",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-13T00:40:02.879Z"
+      },
+      {
+        "id": 249,
+        "type": "task-dispatch",
+        "resource_id": "issue:594",
+        "agent_id": "coord-architecture",
+        "payload": "{\"task_id\":1,\"assignee\":\"coord-architecture.portal-dev-1\",\"priority\":\"low\",\"deadline\":null,\"note\":\"live E2E 验证任务，验毕 recall\"}",
+        "at": "2026-07-13T03:17:42.250Z"
+      },
+      {
+        "id": 250,
+        "type": "task-ack",
+        "resource_id": "issue:594",
+        "agent_id": "coord-architecture.portal-dev-1",
+        "payload": "{\"task_id\":1}",
+        "at": "2026-07-13T03:17:44.345Z"
+      },
+      {
+        "id": 251,
+        "type": "task-recall",
+        "resource_id": "issue:594",
+        "agent_id": "coord-architecture",
+        "payload": "{\"task_id\":1}",
+        "at": "2026-07-13T03:17:44.878Z"
+      },
+      {
+        "id": 252,
+        "type": "cycle-result",
+        "resource_id": "issue:594",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-13T03:18:21.066Z"
+      },
+      {
+        "id": 253,
+        "type": "release",
+        "resource_id": "issue:594",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-13T03:18:22.032Z"
+      },
+      {
+        "id": 254,
+        "type": "claim",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-13T15:54:03.623Z"
+      },
+      {
+        "id": 255,
+        "type": "andon",
+        "resource_id": "devapp:deploy",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-13T15:58:10.775Z"
+      },
+      {
+        "id": 256,
+        "type": "token-mint",
+        "resource_id": "agent:coord-architecture.portal-dev-2",
+        "agent_id": "portal-broker",
+        "payload": "{\"requested_by\":\"usam.shen@gmail.com\"}",
+        "at": "2026-07-13T17:33:59.990Z"
+      },
+      {
+        "id": 257,
+        "type": "cycle-plan",
+        "resource_id": "probe:mint-live",
+        "agent_id": "coord-architecture.portal-dev-2",
+        "payload": null,
+        "at": "2026-07-13T17:34:01.459Z"
+      },
+      {
+        "id": 258,
+        "type": "cycle-result",
+        "resource_id": "adr-011:p2",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-13T17:34:42.022Z"
+      },
+      {
+        "id": 259,
+        "type": "claim",
+        "resource_id": "issue:625",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-13T17:40:10.209Z"
+      },
+      {
+        "id": 260,
+        "type": "cycle-result",
+        "resource_id": "issue:625",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-13T17:48:42.980Z"
+      },
+      {
+        "id": 261,
+        "type": "release",
+        "resource_id": "issue:625",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-13T17:48:44.097Z"
+      },
+      {
+        "id": 262,
+        "type": "expire",
+        "resource_id": "role:coord-room",
+        "agent_id": "coord-room",
+        "payload": null,
+        "at": "2026-07-13T21:55:31.618Z"
+      },
+      {
+        "id": 263,
+        "type": "cycle-result",
+        "resource_id": "review-queue",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-13T23:43:07.106Z"
+      },
+      {
+        "id": 264,
+        "type": "claim",
+        "resource_id": "issue:640",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-14T17:42:36.564Z"
+      },
+      {
+        "id": 265,
+        "type": "claim",
+        "resource_id": "issue:638",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-14T17:42:37.456Z"
+      },
+      {
+        "id": 266,
+        "type": "cycle-result",
+        "resource_id": "review-queue",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-14T18:46:08.190Z"
+      },
+      {
+        "id": 267,
+        "type": "release",
+        "resource_id": "issue:640",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-14T18:46:09.547Z"
+      },
+      {
+        "id": 268,
+        "type": "release",
+        "resource_id": "issue:638",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-14T18:46:10.667Z"
+      },
+      {
+        "id": 269,
+        "type": "task-dispatch",
+        "resource_id": "issue:638",
+        "agent_id": "coord-architecture",
+        "payload": "{\"task_id\":2,\"assignee\":\"coord-board\",\"priority\":\"normal\",\"deadline\":null,\"note\":\"headless 导出能力就绪 PR #645，接 p7-F09/F15\"}",
+        "at": "2026-07-15T06:33:47.069Z"
+      },
+      {
+        "id": 270,
+        "type": "task-dispatch",
+        "resource_id": "issue:654",
+        "agent_id": "coord-survey",
+        "payload": "{\"task_id\":3,\"assignee\":\"wrk-survey-syj-1\",\"priority\":\"high\",\"deadline\":null,\"note\":\"p25 fast-follow: AI报告改Claude(弃Qwen,人类拍板)+错误脱敏+匿名答题限流/TOCTOU。见 issue #654。\"}",
+        "at": "2026-07-15T06:34:43.594Z"
+      },
+      {
+        "id": 271,
+        "type": "claim",
+        "resource_id": "role:coord-ava",
+        "agent_id": "coord-ava",
+        "payload": null,
+        "at": "2026-07-15T06:35:25.825Z"
+      },
+      {
+        "id": 272,
+        "type": "andon",
+        "resource_id": "coord-service:deploy-drift",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-15T06:36:26.116Z"
+      },
+      {
+        "id": 273,
+        "type": "task-dispatch",
+        "resource_id": "issue:627",
+        "agent_id": "coord-survey",
+        "payload": "{\"task_id\":4,\"assignee\":\"coord-platform\",\"priority\":\"high\",\"deadline\":null,\"note\":\"改号 p25→p26:survey 已占 p25。重命名 phase 目录+全量替换12处引用+roadmap并存,rebase main。见 #627 评论。\"}",
+        "at": "2026-07-15T06:57:17.220Z"
+      },
+      {
+        "id": 274,
+        "type": "heartbeat",
+        "resource_id": "role:coord-ava",
+        "agent_id": "coord-ava",
+        "payload": null,
+        "at": "2026-07-15T07:07:45.781Z"
+      },
+      {
+        "id": 275,
+        "type": "heartbeat",
+        "resource_id": "role:coord-ava",
+        "agent_id": "coord-ava",
+        "payload": null,
+        "at": "2026-07-15T07:46:48.524Z"
+      },
+      {
+        "id": 276,
+        "type": "expire",
+        "resource_id": "role:coord-ava",
+        "agent_id": "coord-ava",
+        "payload": null,
+        "at": "2026-07-15T13:50:25.987Z"
+      },
+      {
+        "id": 277,
+        "type": "task-dispatch",
+        "resource_id": "issue:627",
+        "agent_id": "coord-survey",
+        "payload": "{\"task_id\":5,\"assignee\":\"coord-platform\",\"priority\":\"high\",\"deadline\":null,\"note\":\"【更正】改号目标是 p27 不是 p26(#658 已占 p26)。p25→p27 全量改号+rebase main。见 #627 最新评论。\"}",
+        "at": "2026-07-16T06:36:09.375Z"
+      },
+      {
+        "id": 278,
+        "type": "claim",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-16T07:29:38.829Z"
+      },
+      {
+        "id": 279,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-16T07:29:40.086Z"
+      },
+      {
+        "id": 280,
+        "type": "heartbeat",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-16T07:29:41.407Z"
+      },
+      {
+        "id": 281,
+        "type": "andon",
+        "resource_id": "harness:clock-loop",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-16T08:12:39.266Z"
+      },
+      {
+        "id": 282,
+        "type": "expire",
+        "resource_id": "role:coord-architecture",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-16T13:30:32.058Z"
+      },
+      {
+        "id": 283,
+        "type": "andon",
+        "resource_id": "api:error-leak",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-16T15:57:29.266Z"
+      },
+      {
+        "id": 284,
+        "type": "expire",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-16T20:15:49.777Z"
+      },
+      {
+        "id": 285,
+        "type": "claim",
+        "resource_id": "issue:631",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-17T01:38:58.913Z"
+      },
+      {
+        "id": 286,
+        "type": "expire",
+        "resource_id": "issue:631",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-17T04:40:44.861Z"
+      },
+      {
+        "id": 287,
+        "type": "expire",
+        "resource_id": "role:coord-main",
+        "agent_id": "coord-main",
+        "payload": null,
+        "at": "2026-07-17T06:50:44.594Z"
+      },
+      {
+        "id": 288,
+        "type": "task-dispatch",
+        "resource_id": "issue:631",
+        "agent_id": "coord-architecture",
+        "payload": "{\"task_id\":6,\"assignee\":\"coord-board\",\"priority\":\"normal\",\"deadline\":\"2026-08-01T10:00:00.000Z\",\"note\":\"#631 live 验证\"}",
+        "at": "2026-07-17T08:37:44.238Z"
+      },
+      {
+        "id": 289,
+        "type": "task-recall",
+        "resource_id": "issue:631",
+        "agent_id": "coord-architecture",
+        "payload": "{\"task_id\":6}",
+        "at": "2026-07-17T08:53:53.322Z"
+      },
+      {
+        "id": 290,
+        "type": "cycle-result",
+        "resource_id": "issue:631",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-17T13:57:54.195Z"
+      },
+      {
+        "id": 291,
+        "type": "cycle-result",
+        "resource_id": "coord-service:cd",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-17T23:08:05.404Z"
+      },
+      {
+        "id": 292,
+        "type": "cycle-result",
+        "resource_id": "issue:594",
+        "agent_id": "coord-architecture",
+        "payload": null,
+        "at": "2026-07-18T03:20:20.426Z"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "APAC",
+      "served_by_colo": "KIX",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 2.5267
+      },
+      "duration": 2.5267,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 118784,
+      "rows_read": 292,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

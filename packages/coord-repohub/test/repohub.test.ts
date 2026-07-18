@@ -499,6 +499,28 @@ describe("F10-pre tasks 收件箱（迁自 coord-service #614/#631）", () => {
     expect((await post("/tasks/import", { tasks: [{ id: 1 }] })).status).toBe(422);
     expect((await post("/tasks/import", { tasks: "x" })).status).toBe(422);
   });
+
+  it("import 内容一致性（coord-main #732 复核）：同 id 同内容幂等 skipped；同 id 不同内容 409 列出冲突字段", async () => {
+    const row = {
+      id: 9101, issue: 710, assignee: "wrk-consist", priority: "normal", deadline: null,
+      note: "原始内容", status: "pending", created_by: "coord-main",
+      created_at: "2026-07-16T00:00:00Z", acked_at: null, updated_at: "2026-07-16T00:00:00Z",
+    };
+    expect(await (await post("/tasks/import", { tasks: [row] })).json()).toEqual({ ok: true, imported: 1, skipped: 0 });
+    // 同 id 同内容重跑 = 幂等 skipped
+    expect(await (await post("/tasks/import", { tasks: [row] })).json()).toEqual({ ok: true, imported: 0, skipped: 1 });
+    // 同 id 不同内容 = 两个来源在讲不同历史 → 409 大声失败，列出冲突 id 与差异字段
+    const drifted = { ...row, assignee: "wrk-other", status: "done" };
+    const conflict = await post("/tasks/import", { tasks: [drifted] });
+    expect(conflict.status).toBe(409);
+    const body = await conflict.json<{ error: string; task_id: number; mismatched_fields: string[] }>();
+    expect(body.error).toBe("import_conflict");
+    expect(body.task_id).toBe(9101);
+    expect(body.mismatched_fields.sort()).toEqual(["assignee", "status"]);
+    // 409 后存量行未被覆盖（导入绝不静默改写历史）
+    const kept = await (await SELF.fetch(`${BASE}/tasks?assignee=wrk-consist`)).json<{ tasks: Task[] }>();
+    expect(kept.tasks[0]).toMatchObject({ id: 9101, assignee: "wrk-consist", status: "pending" });
+  });
 });
 
 async function fetchClaim(base: string, agent: string, resource: string): Promise<Response> {

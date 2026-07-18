@@ -144,13 +144,13 @@ function CoordinatorsCard() {
   );
 }
 
-// ---- coord-service /status cards (slices 2 & 3) ------------------------------
-// ADR-009 之后 GitHub 上不再有协调评论可看，这两张卡是人类看"谁此刻持有什么租约、
-// 协调层最近发生了什么"的唯一窗口。数据来自 /api/admin/coordination/status（服务端
-// 代理 coord-service 的公开 GET /status），30s 轮询。
+// ---- coord-gateway status cards (slices 2 & 3) --------------------------------
+// ADR-009/ADR-017 之后 GitHub 上不再有协调评论可看，这两张卡是人类看"谁此刻持有什么
+// 租约、协调层最近发生了什么"的唯一窗口。数据来自 /api/admin/coordination/status
+// （服务端聚合 coord-gateway RepoHub 的 /claims + /events），30s 轮询。
 
 interface ActiveClaim {
-  id: number;
+  lease_id: string;
   resource_id: string;
   resource_type: string;
   agent_id: string;
@@ -160,11 +160,11 @@ interface ActiveClaim {
 }
 
 interface CoordEvent {
-  id: number;
+  event_id: string;
   type: string;
   resource_id: string;
   agent_id: string;
-  payload: string | null;
+  payload: unknown;
   at: string;
 }
 
@@ -211,7 +211,7 @@ function useCoordStatus() {
           setError(null);
         }
       } catch {
-        if (!cancelled) setError("coord_service_unavailable");
+        if (!cancelled) setError("coord_gateway_unavailable");
       } finally {
         if (!cancelled && initial) setLoading(false);
       }
@@ -269,14 +269,14 @@ function StatusCardBody({
         role="alert"
         className="rounded-8 border border-destructive/30 bg-destructive/5 p-3 text-13 text-destructive"
       >
-        Couldn&apos;t reach coord-service. Try refreshing.
+        Couldn&apos;t reach coord-gateway. Try refreshing.
       </div>
     );
   }
   if (!configured) {
     return (
       <p data-testid={`unconfigured-${testidPrefix}`} className="text-13 text-muted-foreground">
-        COORD_SERVICE_URL is not configured on this deployment — live coordination data unavailable.
+        COORD_GATEWAY_URL/COORD_API_TOKEN/COORD_REPO are not configured on this deployment — live coordination data unavailable (coord-service retired, ADR-017).
       </p>
     );
   }
@@ -306,7 +306,7 @@ function ActiveClaimsCard({ status }: { status: ReturnType<typeof useCoordStatus
         <ul className="space-y-1">
           {claims.map((claim) => (
             <li
-              key={claim.id}
+              key={claim.lease_id}
               className="flex items-center justify-between gap-2 rounded-8 px-2 py-1.5 transition-colors duration-200 hover:bg-muted"
             >
               <div className="min-w-0">
@@ -342,7 +342,7 @@ function RecentEventsCard({ status }: { status: ReturnType<typeof useCoordStatus
         <ul className="max-h-80 space-y-1 overflow-y-auto">
           {events.map((event) => (
             <li
-              key={event.id}
+              key={event.event_id}
               className="flex items-center justify-between gap-2 rounded-8 px-2 py-1.5 transition-colors duration-200 hover:bg-muted"
             >
               <div className="min-w-0">
@@ -363,7 +363,7 @@ function RecentEventsCard({ status }: { status: ReturnType<typeof useCoordStatus
   );
 }
 
-function CoordServiceCards() {
+function CoordGatewayCards() {
   const status = useCoordStatus();
   return (
     <>
@@ -382,7 +382,7 @@ export function CoordinationDashboard() {
       </p>
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
         <CoordinatorsCard />
-        <CoordServiceCards />
+        <CoordGatewayCards />
       </div>
     </div>
   );

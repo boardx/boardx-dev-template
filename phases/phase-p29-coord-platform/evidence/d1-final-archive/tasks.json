@@ -1,0 +1,102 @@
+[
+  {
+    "results": [
+      {
+        "id": 1,
+        "issue": 594,
+        "assignee": "coord-architecture.portal-dev-1",
+        "priority": "low",
+        "deadline": null,
+        "note": "live E2E 验证任务，验毕 recall",
+        "status": "recalled",
+        "created_by": "coord-architecture",
+        "created_at": "2026-07-13T03:17:42.250Z",
+        "acked_at": "2026-07-13T03:17:44.345Z",
+        "updated_at": "2026-07-13T03:17:44.878Z"
+      },
+      {
+        "id": 2,
+        "issue": 638,
+        "assignee": "coord-board",
+        "priority": "normal",
+        "deadline": null,
+        "note": "headless 导出能力就绪 PR #645，接 p7-F09/F15",
+        "status": "pending",
+        "created_by": "coord-architecture",
+        "created_at": "2026-07-15T06:33:47.069Z",
+        "acked_at": null,
+        "updated_at": "2026-07-15T06:33:47.069Z"
+      },
+      {
+        "id": 3,
+        "issue": 654,
+        "assignee": "wrk-survey-syj-1",
+        "priority": "high",
+        "deadline": null,
+        "note": "p25 fast-follow: AI报告改Claude(弃Qwen,人类拍板)+错误脱敏+匿名答题限流/TOCTOU。见 issue #654。",
+        "status": "pending",
+        "created_by": "coord-survey",
+        "created_at": "2026-07-15T06:34:43.594Z",
+        "acked_at": null,
+        "updated_at": "2026-07-15T06:34:43.594Z"
+      },
+      {
+        "id": 4,
+        "issue": 627,
+        "assignee": "coord-platform",
+        "priority": "high",
+        "deadline": null,
+        "note": "改号 p25→p26:survey 已占 p25。重命名 phase 目录+全量替换12处引用+roadmap并存,rebase main。见 #627 评论。",
+        "status": "pending",
+        "created_by": "coord-survey",
+        "created_at": "2026-07-15T06:57:17.220Z",
+        "acked_at": null,
+        "updated_at": "2026-07-15T06:57:17.220Z"
+      },
+      {
+        "id": 5,
+        "issue": 627,
+        "assignee": "coord-platform",
+        "priority": "high",
+        "deadline": null,
+        "note": "【更正】改号目标是 p27 不是 p26(#658 已占 p26)。p25→p27 全量改号+rebase main。见 #627 最新评论。",
+        "status": "pending",
+        "created_by": "coord-survey",
+        "created_at": "2026-07-16T06:36:09.375Z",
+        "acked_at": null,
+        "updated_at": "2026-07-16T06:36:09.375Z"
+      },
+      {
+        "id": 6,
+        "issue": 631,
+        "assignee": "coord-board",
+        "priority": "normal",
+        "deadline": "2026-08-01T10:00:00.000Z",
+        "note": "#631 live 验证",
+        "status": "recalled",
+        "created_by": "coord-architecture",
+        "created_at": "2026-07-17T08:37:44.238Z",
+        "acked_at": null,
+        "updated_at": "2026-07-17T08:53:53.322Z"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "APAC",
+      "served_by_colo": "KIX",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.4357
+      },
+      "duration": 0.4357,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 118784,
+      "rows_read": 6,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

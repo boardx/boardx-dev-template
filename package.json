@@ -18,7 +18,6 @@
   },
   "devDependencies": {
     "@repo/coord-protocol": "workspace:*",
-    "@repo/coord-service": "workspace:*",
     "@rollup/rollup-darwin-arm64": "^4.62.2",
     "@types/node": "^22.0.0",
     "tsx": "^4.19.0",

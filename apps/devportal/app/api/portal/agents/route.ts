@@ -6,11 +6,11 @@ import { NextResponse } from "next/server";
 import { parse } from "yaml";
 import { accessUser, ownerMatches } from "@/lib/access";
 import { readRepoFile } from "@/lib/repo-files";
+import { coordConfigKey, fetchActiveClaims } from "@/lib/coord-gateway";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
-const UPSTREAM_TIMEOUT_MS = 5_000;
 const CACHE_TTL_MS = 30_000;
 
 interface RegistryAgent {
@@ -55,20 +55,15 @@ async function loadRegistry(): Promise<RegistryAgent[] | null> {
 }
 
 async function loadLeases(): Promise<{ configured: boolean; byAgent: Map<string, string> }> {
-  const baseUrl = process.env["COORD_SERVICE_URL"];
-  if (!baseUrl) return { configured: false, byAgent: new Map() };
-  try {
-    const res = await fetch(`${baseUrl}/status`, { signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS), cache: "no-store" });
-    if (!res.ok) return { configured: true, byAgent: new Map() };
-    const body = (await res.json()) as { active_claims?: Array<{ resource_id?: string; agent_id?: string }> };
-    const byAgent = new Map<string, string>();
-    for (const c of body.active_claims ?? []) {
-      if (c.agent_id && c.resource_id) byAgent.set(c.agent_id, c.resource_id);
-    }
-    return { configured: true, byAgent };
-  } catch {
-    return { configured: true, byAgent: new Map() };
+  // ADR-017 割接：租约读面 = coord-gateway（lib/coord-gateway.ts）。问不到时保持
+  // configured:true + 空映射（本路由的租约只是标注位，registry 树仍完整可用）。
+  const result = await fetchActiveClaims();
+  if (!result.configured) return { configured: false, byAgent: new Map() };
+  const byAgent = new Map<string, string>();
+  if ("claims" in result) {
+    for (const c of result.claims) byAgent.set(c.agent_id, c.resource_id);
   }
+  return { configured: true, byAgent };
 }
 
 function buildGroups(agents: RegistryAgent[], leases: Map<string, string>, viewerEmail: string): DeveloperGroup[] {
@@ -120,7 +115,7 @@ function buildGroups(agents: RegistryAgent[], leases: Map<string, string>, viewe
 }
 
 function cacheKey(viewerEmail: string): string {
-  return [process.env["COORD_SERVICE_URL"] ?? "", process.env["GITHUB_REPO"] ?? "", viewerEmail].join("|");
+  return [coordConfigKey(), viewerEmail].join("|");
 }
 
 export async function GET(req: Request) {

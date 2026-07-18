@@ -22,9 +22,10 @@ description: >
 
 ### Step 1 — 唯一性握手（防双 coordinator）
 
-**2026-07-08 起（ADR-009）**：唯一性由 coord-service (D1) 裁定，需要
-`COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN` 凭据（没有就先找人类领取，无凭据无法
-担任 coordinator）：
+**ADR-009 语义；2026-07-18 起载体 = coord-gateway（按仓 RepoHub DO，ADR-017）**：
+唯一性由 gateway 裁定，需要 `COORD_GATEWAY_URL`/`COORD_API_TOKEN`/`COORD_REPO`
+凭据（devportal 自助领取或找人类，无凭据无法担任 coordinator；旧 COORD_SERVICE_*
+已退役）：
 ```bash
 pnpm harness lock-status                      # 权威状态：谁持有、心跳多久前
 pnpm harness lock-acquire --session <会话标识>  # 原子认领（被占且新鲜会被拒绝）
