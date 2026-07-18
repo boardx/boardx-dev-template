@@ -95,7 +95,7 @@
       "title": "反向投影：租约→GitHub check/status，andon→阻断 commit status",
       "user_visible_behavior": "issue 被认领后，其关联 PR/issue 上出现 GitHub 原生 check/status（持有者、租约新鲜度、TTL 剩余）；andon 停线（仅 maintainer 级身份可发）使 main 上待合并 PR 的 required status 变红从而阻断合并；解除后恢复。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "03",
       "owner": null,
       "capability": "CAP-DATA",
       "verification": [
@@ -112,7 +112,7 @@
       "title": "MCP server + CLI：agent 接入面",
       "user_visible_behavior": "任何支持 MCP 的 agent 配置一个 URL 即获得工具集：claim_issue/heartbeat/release/get_realtime_status/get_ready_work/submit_evidence；npx CLI 提供同能力（connect/claim/status）；按 docs/coord-platform/quickstart.md，一个全新 agent 会话 5 分钟内完成接入→认领→撞车 409 演示。",
       "status": "not_started",
-      "sprint": null,
+      "sprint": "03",
       "owner": null,
       "capability": "CAP-WEB",
       "verification": [

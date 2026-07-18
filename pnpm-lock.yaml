@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@repo/coord-cli':
+        specifier: workspace:*
+        version: link:packages/coord-cli
       '@repo/coord-service':
         specifier: workspace:*
         version: link:packages/coord-service
