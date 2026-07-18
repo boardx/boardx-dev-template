@@ -4,16 +4,20 @@ import { useEffect, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
+  BarChart3,
+  Check,
   ChevronLeft,
   Clock3,
   FileText,
   History,
+  ImageIcon,
   Plus,
   RefreshCw,
   Save,
   Send,
   Sparkles,
   Trash2,
+  Type,
 } from "lucide-react";
 import type {
   SurveyReportCategoryInput,
@@ -24,13 +28,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ProfessionalReportDocument } from "@/components/survey/professional-report-document";
+import { SurveyReportOutputPreview } from "@/components/survey/survey-report-output-preview";
 import {
   addCustomReportCategory,
   moveReportCategory,
   normalizeCategoryOrder,
   updateReportCategory,
 } from "@/lib/survey-report-category-plan";
+import { SURVEY_REPORT_CHART_TEMPLATES } from "@/lib/survey-report-chart-templates";
 import type { SurveyReportGenerationStatus } from "@/lib/survey-report-generation";
 import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
 
@@ -58,6 +63,23 @@ interface SurveyVersionedReportComposerProps {
   onBackToDesign: () => void;
   onOpenCollect: () => void;
 }
+
+const OUTPUT_OPTIONS = [
+  { value: "image", label: "图片", icon: ImageIcon },
+  { value: "chart", label: "图表", icon: BarChart3 },
+  { value: "text", label: "文本", icon: Type },
+] as const;
+
+const CHART_TEMPLATE_LABELS = {
+  "line-simple": "基础折线图",
+  "bar-simple": "基础柱状图",
+  "pie-simple": "基础饼图",
+  "scatter-simple": "基础散点图",
+  radar: "雷达图",
+  funnel: "漏斗图",
+  gauge: "仪表盘",
+  "heatmap-cartesian": "热力图",
+} as const;
 
 function generationLabel(generation?: SurveyReportGenerationStatus) {
   if (!generation?.latestArtifact) {
@@ -95,7 +117,6 @@ function formatVersionTime(value: string) {
 export function SurveyVersionedReportComposer({
   survey,
   plan,
-  professionalReport,
   generation,
   saving,
   classifying,
@@ -186,11 +207,11 @@ export function SurveyVersionedReportComposer({
 
       <section
         data-testid="report-template-builder"
-        className="grid min-w-0 gap-4 xl:grid-cols-[240px_minmax(300px,0.8fr)_minmax(420px,1.2fr)]"
+        className="grid min-w-0 gap-4 overflow-x-hidden xl:h-[calc(100vh-11rem)] xl:max-h-[calc(100vh-11rem)] xl:grid-cols-[240px_minmax(360px,0.9fr)_minmax(480px,1.1fr)]"
       >
         <aside
           data-testid="report-module-list"
-          className="min-w-0 self-start overflow-hidden border border-border bg-background xl:sticky xl:top-4"
+          className="flex min-w-0 flex-col self-start overflow-hidden border border-border bg-background xl:h-full"
         >
           <div className="border-b border-border px-4 py-4">
             <div className="flex items-center justify-between gap-2">
@@ -203,7 +224,7 @@ export function SurveyVersionedReportComposer({
               </Button>
             </div>
           </div>
-          <div className="grid gap-px bg-border">
+          <div className="grid min-h-0 gap-px overflow-y-auto bg-border">
             {categories.map((category, index) => {
               const active = category.id === selectedCategory?.id;
               return (
@@ -241,7 +262,7 @@ export function SurveyVersionedReportComposer({
 
         <main
           data-testid="report-requirement-panel"
-          className="min-w-0 self-start border border-border bg-background"
+          className="flex min-w-0 flex-col self-start overflow-hidden border border-border bg-background xl:h-full"
         >
           {selectedCategory ? (
             <>
@@ -289,7 +310,7 @@ export function SurveyVersionedReportComposer({
                 </div>
               </div>
 
-              <div className="grid gap-5 p-5">
+              <div className="grid min-h-0 gap-5 overflow-y-auto p-5">
                 <div className="grid gap-2">
                   <Label htmlFor="report-category-name">章节标题</Label>
                   <Input
@@ -299,6 +320,79 @@ export function SurveyVersionedReportComposer({
                     onChange={(event) => patchSelected({ name: event.target.value })}
                   />
                 </div>
+
+                <div className="grid gap-2">
+                  <Label>章节输出</Label>
+                  <div
+                    data-testid="report-output-type"
+                    role="group"
+                    aria-label="章节输出类型"
+                    className="grid grid-cols-3 border border-border bg-secondary/30 p-1"
+                  >
+                    {OUTPUT_OPTIONS.map((option) => {
+                      const active = selectedCategory.outputType === option.value;
+                      const Icon = option.icon;
+                      return (
+                        <Button
+                          key={option.value}
+                          type="button"
+                          size="sm"
+                          variant={active ? "default" : "ghost"}
+                          aria-pressed={active}
+                          className="min-w-0 rounded-md px-2"
+                          onClick={() => patchSelected({
+                            outputType: option.value,
+                            inputModes: [option.value],
+                            chartTemplateId:
+                              option.value === "chart"
+                                ? selectedCategory.chartTemplateId ?? "line-simple"
+                                : undefined,
+                          })}
+                        >
+                          <Icon className="h-4 w-4 shrink-0" strokeWidth={1.7} />
+                          <span className="truncate">{option.label}</span>
+                          {active ? <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={2} /> : null}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {selectedCategory.outputType === "chart" ? (
+                  <div className="grid gap-2">
+                    <Label>图表模板</Label>
+                    <div
+                      role="group"
+                      aria-label="图表模板"
+                      className="grid grid-cols-2 gap-2"
+                    >
+                      {SURVEY_REPORT_CHART_TEMPLATES.map((template) => {
+                        const active =
+                          (selectedCategory.chartTemplateId ?? "line-simple") === template.id;
+                        return (
+                          <Button
+                            key={template.id}
+                            type="button"
+                            variant={active ? "default" : "outline"}
+                            aria-pressed={active}
+                            className="h-auto min-w-0 justify-between whitespace-normal px-3 py-2 text-left"
+                            onClick={() => patchSelected({ chartTemplateId: template.id })}
+                          >
+                            <span className="min-w-0">
+                              <span className="block text-12 font-semibold">
+                                {CHART_TEMPLATE_LABELS[template.id]}
+                              </span>
+                              <span className="mt-0.5 block text-10 font-normal">
+                                {template.id}
+                              </span>
+                            </span>
+                            {active ? <Check className="h-4 w-4 shrink-0" strokeWidth={2} /> : null}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="border-l-2 border-foreground bg-secondary/50 px-4 py-3">
                   <div className="flex items-center gap-2">
@@ -371,15 +465,17 @@ export function SurveyVersionedReportComposer({
 
         <aside
           data-testid="report-preview-panel"
-          className="min-w-0 self-start overflow-hidden border border-border bg-background xl:sticky xl:top-4"
+          className="flex min-w-0 flex-col self-start overflow-hidden border border-border bg-background xl:h-full"
         >
           <div
             data-testid="report-generation-status"
+            role="status"
+            aria-live="polite"
             className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4"
           >
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-14 font-bold text-foreground">报告预览</h3>
+                <h3 className="text-14 font-bold text-foreground">章节预览</h3>
                 <Badge variant={reportState.variant}>{reportState.label}</Badge>
               </div>
               <p className="mt-1 text-11 leading-5 text-muted-foreground">{reportState.detail}</p>
@@ -392,16 +488,19 @@ export function SurveyVersionedReportComposer({
             ) : null}
           </div>
 
-          <div className="max-h-[45rem] min-h-96 overflow-y-auto bg-secondary/20">
-            {professionalReport ? (
-              <ProfessionalReportDocument report={professionalReport} />
+          <div className="min-h-96 min-w-0 overflow-y-auto bg-secondary/20 p-5 xl:min-h-0 xl:flex-1">
+            {selectedCategory ? (
+              <SurveyReportOutputPreview
+                category={selectedCategory}
+                responseCount={survey.responses}
+              />
             ) : (
               <div className="grid min-h-96 place-items-center px-8 text-center">
                 <div>
                   <FileText className="mx-auto h-8 w-8 text-muted-foreground" strokeWidth={1.3} />
-                  <h4 className="mt-4 text-15 font-bold text-foreground">尚无报告版本</h4>
+                  <h4 className="mt-4 text-15 font-bold text-foreground">尚无章节</h4>
                   <p className="mx-auto mt-2 max-w-sm text-12 leading-6 text-muted-foreground">
-                    保存章节要求并点击生成。没有新答卷或要求变化时，系统会直接复用相同版本。
+                    添加章节后可在这里预览当前输出配置。
                   </p>
                 </div>
               </div>
