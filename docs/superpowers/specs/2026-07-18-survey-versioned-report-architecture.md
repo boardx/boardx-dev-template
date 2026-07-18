@@ -64,15 +64,41 @@ flowchart LR
 
 ```text
 sourceRevision = hash(schemaVersion + normalizedSurvey + normalizedResponses)
-requirementHash = hash(normalizedNaturalLanguageRequirement)
+requirementHash = hash(
+  normalizedTitle +
+  outputType +
+  chartTemplateId? +
+  normalizedNaturalLanguageRequirement
+)
 artifactKey = sourceRevision + requirementHash + templateVersion
 reportVersion = immutable identifier for a successful generated artifact
 ```
 
 - 归一化必须稳定排序，避免数据库返回顺序造成无意义新修订。
+- `requirementHash` 必须包含归一化后的章节标题、唯一输出类型（`image`、`chart` 或
+  `text`）、图表章节选定的可选白名单 `chartTemplateId`，以及归一化后的自然语言要求；
+  未选图表模板时省略 `chartTemplateId`。
 - 不把 `generatedAt` 放入内容哈希。
 - 数据库记录变化但分析语义不变时不应产生新修订。
 - 失败任务可以重试，但不能覆盖同键的成功产物。
+
+## Compatibility and Migration
+
+- 读取旧章节时，若 `outputType` 缺失或不是有效的 `image`、`chart`、`text`，必须归一化为
+  `text`，以保持既有章节的文本生成语义。
+- 迁移期旧 `inputModes` 只保留为单值兼容投影：最多保留一个与归一化后 `outputType` 对应的
+  值，不能继续表示多输出或驱动新契约；新保存的数据不再依赖该字段。
+- 旧章节的模块提示合并为自然语言要求；既有成功报告继续可读，迁移不得覆盖不可变产物。
+
+## Chart Contract and Persistence Safety
+
+- 持久化时只允许保存产品维护的白名单 `chartTemplateId` 与归一化后的 `outputType`；服务端
+  必须拒绝任意 ECharts `option` 对象、脚本、`formatter` 函数和外部 URL。浏览器提交的模板
+  标识必须再次经过服务端白名单校验。
+- 预览可以使用白名单模板的安全样例数据，但样例值只能用于草稿预览，绝不能写入事实库、
+  证据索引、报告产物或报告版本。
+- 右栏的 `Option JSON` 必须展示当前模板对应的完整只读 JSON，并提供复制操作；它不是可编辑
+  的配置入口，也不能借此绕过上述白名单和执行内容校验。
 
 ## F16 Contract
 
@@ -80,7 +106,9 @@ F16 是完整、可独立使用的产品增量：
 
 - 桌面端章节列表、报告要求、报告预览形成清晰的横向工作区。
 - 用户只编辑章节标题、一个输出类型和自然语言要求；每章必须且只能输出图片、图表或文本。
-- 图表从白名单 Apache ECharts 官方模板中选择，右栏同时提供效果预览和只读 Option JSON。
+- 图表从白名单 Apache ECharts 官方模板中选择，右栏同时提供效果预览、完整只读 Option JSON
+  和复制操作；持久化只接受白名单 `chartTemplateId`，拒绝任意 Option、脚本、formatter 函数
+  和外部 URL。
 - 服务端以整份问卷和全部授权答卷创建版本化事实库。
 - 新数据只产生 stale 状态；用户主动更新才生成新版本。
 - 当前确定性证据聚合器继续生成真实统计和可验证报告。

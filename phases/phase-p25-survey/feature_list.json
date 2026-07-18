@@ -374,7 +374,7 @@
       "priority": 1,
       "area": "survey",
       "title": "版本化事实库与精简报告编排器",
-      "user_visible_behavior": "每个报告章节只能选择图片、图表或文本中的一种；图表可从常用 ECharts 模板中选择，右侧同屏显示效果预览和只读 Option JSON。章节要求仍为自然语言，生成时从整份问卷和全部授权答卷自主获取证据；输出契约变化后须主动生成不可变新版本。",
+      "user_visible_behavior": "每个报告章节只能选择图片、图表或文本中的一种；图表可从常用 ECharts 模板中选择，右侧同屏显示效果预览、完整只读 Option JSON 并支持复制。章节要求仍为自然语言，生成时从整份问卷和全部授权答卷自主获取证据；官方样例值只能用于草稿预览，不能进入证据或报告产物；输出契约变化后须主动生成不可变新版本。",
       "design_ref": "requirements/15-versioned-fact-base-report-composer.md；docs/superpowers/specs/2026-07-18-survey-versioned-report-architecture.md；2026-07-18 用户确认",
       "status": "passing",
       "sprint": "16",
