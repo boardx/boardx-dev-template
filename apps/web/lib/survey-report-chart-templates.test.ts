@@ -22,6 +22,7 @@ describe("survey report chart templates", () => {
 
   it("only exposes serializable allowlisted options", () => {
     expect(SURVEY_REPORT_CHART_TEMPLATES).toHaveLength(8);
+    expect(new Set(SURVEY_REPORT_CHART_TEMPLATES.map((template) => template.id)).size).toBe(8);
     for (const template of SURVEY_REPORT_CHART_TEMPLATES) {
       const json = JSON.stringify(template.option);
       expect(json).not.toContain("function");

@@ -297,6 +297,7 @@ GET response:
 {
   report: ProfessionalSurveyReportDocument;
   preview: boolean;
+  selectedArtifactId: string | null;
   generation: SurveyReportGenerationStatus;
 }
 ```
@@ -453,15 +454,18 @@ git commit -m "feat(survey): simplify report chapter requirements"
 **Interfaces:**
 - Consumes: `ReportCategoryPlanDraft`, `ProfessionalSurveyReportDocument`, and `SurveyReportGenerationStatus`.
 - Produces stable UI test IDs:
-  - `report-template-builder`
-  - `report-module-list`
-  - `report-requirement-panel`
-  - `report-requirement-input`
-  - `report-preview-panel`
-  - `report-generation-status`
-  - `report-version-history`
-  - `save-report-plan`
-  - `generate-versioned-report`
+  - composer:
+    - `report-template-builder`
+    - `report-module-list`
+    - `report-requirement-panel`
+    - `report-requirement-input`
+    - `report-preview-panel`
+    - `report-generation-status`
+    - `save-report-plan`
+    - `generate-versioned-report`
+  - analysis report:
+    - `professional-report-document`
+    - `report-version-history`
 
 - [x] **Step 1: Write the failing F16 Playwright test**
 
@@ -480,7 +484,7 @@ const [requirement, preview] = await Promise.all([
 expect(requirement!.x).toBeLessThan(preview!.x);
 ```
 
-It saves a requirement, generates once, generates again, and asserts the second response has `reused: true` and only one version. It submits another response, asserts GET returns `stale: true`, then clicks update and asserts two immutable versions.
+It saves a requirement, generates once, generates again, and asserts the second response has `reused: true` and only one version. It submits another response, asserts GET returns `stale: true`, then clicks update and asserts two immutable versions. The composer asserts that complete report content and history are absent; the `分析报告` workspace asserts that both are present and owns exact artifact selection.
 
 - [x] **Step 2: Run F16 Playwright and verify RED**
 

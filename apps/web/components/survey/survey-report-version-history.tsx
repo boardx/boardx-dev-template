@@ -9,6 +9,7 @@ import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional
 interface SurveyReportVersionHistoryProps {
   generation?: SurveyReportGenerationStatus;
   report?: ProfessionalSurveyReportDocument;
+  disabled?: boolean;
   onSelectVersion: (artifactId: string) => Promise<boolean>;
 }
 
@@ -31,6 +32,7 @@ function initialVersionId(generation?: SurveyReportGenerationStatus) {
 export function SurveyReportVersionHistory({
   generation,
   report,
+  disabled = false,
   onSelectVersion,
 }: SurveyReportVersionHistoryProps) {
   const [selectedVersionId, setSelectedVersionId] = useState(() => initialVersionId(generation));
@@ -56,7 +58,7 @@ export function SurveyReportVersionHistory({
   const selectedSampleSize = report?.methodology.sampleSize ?? selectedVersion?.responseCount ?? 0;
 
   async function selectVersion(artifactId: string) {
-    if (artifactId === selectedVersionId || selectingVersionId) return;
+    if (disabled || artifactId === selectedVersionId || selectingVersionId) return;
     setSelectingVersionId(artifactId);
     try {
       const loaded = await onSelectVersion(artifactId);
@@ -98,7 +100,7 @@ export function SurveyReportVersionHistory({
               key={version.id}
               type="button"
               aria-current={selected ? "true" : undefined}
-              disabled={Boolean(selectingVersionId)}
+              disabled={disabled || Boolean(selectingVersionId)}
               className="flex w-full items-center justify-between gap-3 border-b border-border bg-background px-5 py-3 text-left transition-colors last:border-b-0 hover:bg-secondary disabled:cursor-wait disabled:bg-disabled disabled:text-disabled-foreground"
               onClick={() => void selectVersion(version.id)}
             >

@@ -41,3 +41,14 @@
 - Delivery PR: `#716`（目标 `main`，ready，mergeable），只 `Closes #715`、`Refs #648`。
 - Umbrella 回链: `#648` 已追加 `#715` / `#716` 与 F17 后续顺序。
 - 下一步最佳动作: 等待 `#716` review/CI/merge；合并前不开始 F17。
+
+### 2026-07-18 19:15:41
+- 本轮目标: 按最终确认的方案 1，将报告模板收敛为单一输出章节与右栏配置预览。
+- 已完成: 每章只能选择图片、图表或文本；图表支持 8 个白名单 ECharts 模板、
+  非空效果预览、完整只读 Option JSON 和复制；完整报告与不可变历史仅在“分析报告”。
+- 运行过的验证: Data 91 项、Web 154 项、design lint、Web typecheck、F16 Playwright、
+  harness doctor 和 `./init.sh` 的 69/69 项基础验证均通过。
+- 已记录证据: `evidence/survey-report-single-output-desktop.png`；原 `F16.verify.log`
+  仍由首次合法 harness 门禁维护，passing 状态下 verify 按设计跳过且不覆写日志。
+- 已知风险或未解决问题: 无 F16 blocker；F17 LangGraph 自主分析仍不属于本 PR。
+- 下一步最佳动作: 完成 Task 5 与全分支审查，推送更新现有 PR `#716`。

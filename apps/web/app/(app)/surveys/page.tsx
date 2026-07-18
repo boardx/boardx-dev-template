@@ -2973,6 +2973,7 @@ function WorkspaceReportWorkbench({
         key={survey.id}
         generation={generation}
         report={professionalReport}
+        disabled={generating}
         onSelectVersion={onSelectVersion}
       />
 
