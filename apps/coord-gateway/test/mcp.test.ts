@@ -137,7 +137,8 @@ describe("mcp tools/call 全链路", () => {
     const upsert = (n: number) =>
       SELF.fetch("https://gw.test/api/coord/repos/boardx/boardx-dev-template/mirror/upsert", {
         method: "POST",
-        headers: AUTH,
+        // F08 返工：/mirror/upsert 是管理写端点（COORD_ADMIN_TOKEN），普通 token 401
+        headers: { authorization: "Bearer test-admin-token", "content-type": "application/json" },
         body: JSON.stringify({
           kind: "issue",
           data: { number: n, state: "open", title: `ready issue ${n}`, labels: ["status:ready-for-dev"], assignees: [] },

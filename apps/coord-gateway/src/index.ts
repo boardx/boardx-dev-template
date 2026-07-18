@@ -1,10 +1,17 @@
 // coord-gateway：webhook ingest（签名校验 → Queues 削峰 → DO 幂等消费）
-// + REST 网关（bearer 鉴权 → 转发 RepoHub DO）。F08 落地后 bearer 换按仓 scoped token。
+// + REST 网关（bearer 鉴权 → 转发 RepoHub DO）。F08：按仓 scoped token 优先，
+// COORD_API_TOKEN 保留为 ops 万能钥匙；mint/revoke 走 COORD_ADMIN_TOKEN 管理面（auth.ts）。
 import { RepoHub } from "@repo/coord-repohub";
 import { verifyWebhookSignature } from "./signature";
 import { toIngestBody, type QueuedWebhook } from "./mapping";
 import { runProjectionTick } from "./projection";
 import { handleMcp } from "./mcp";
+import {
+  authorizeRepoAccess,
+  bindScopedAgentRequest,
+  isAllowedRestSubpath,
+  requireAdmin,
+} from "./auth";
 
 export { RepoHub };
 
@@ -53,23 +60,28 @@ async function handleWebhook(req: Request, env: Env): Promise<Response> {
   return json(202, { ok: true, queued: true });
 }
 
-// andon 管理路由（F06）：独立 COORD_ADMIN_TOKEN 把守——停线是 maintainer 特权，
-// 普通 COORD_API_TOKEN 不可发。缺配置 fail-closed（同 webhook secret 纪律）。
-async function handleAndonAdmin(req: Request, env: Env, repo: string, subpath: string): Promise<Response> {
-  if (!env.COORD_ADMIN_TOKEN) return json(503, { error: "admin_token_not_configured" });
-  const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${env.COORD_ADMIN_TOKEN}`) return json(401, { error: "unauthorized" });
+// 管理路由（F06 andon / F08 tokens）：独立 COORD_ADMIN_TOKEN 把守——maintainer 特权，
+// 普通 COORD_API_TOKEN 不可发。鉴权细节在 auth.ts（requireAdmin，fail-closed）。
+async function handleAdmin(req: Request, env: Env, repo: string, subpath: string): Promise<Response> {
+  const denied = requireAdmin(req, env);
+  if (denied) return denied;
   return repoStub(env, repo).fetch(new Request(`https://repohub${subpath}`, req));
 }
 
 async function handleRest(req: Request, env: Env, url: URL): Promise<Response> {
-  if (!env.COORD_API_TOKEN) return json(503, { error: "api_token_not_configured" });
-  const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${env.COORD_API_TOKEN}`) return json(401, { error: "unauthorized" });
   const m = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)(\/.*)$/);
   if (!m) return json(404, { error: "not_found" });
+  // 可达面 allowlist（F08 返工）：普通 token（scoped/API）只触达协调端点；
+  // /mirror/upsert（admin 面，上面已路由）、/webhook/ingest、/projector/*、/tokens*
+  // 等内部/管理写端点一律 404。内部消费者（Queues/投影 cron）走 DO stub 不经此处。
+  if (!isAllowedRestSubpath(req.method, m[3]!)) return json(404, { error: "not_found" });
+  const access = await authorizeRepoAccess(req, env, `${m[1]}/${m[2]}`);
+  if (!access.granted) return access.response;
+  // agent_id 强绑定（#721）：scoped token 不得在 body 里自证他人身份
+  const bound = await bindScopedAgentRequest(req, access.principal);
+  if (bound instanceof Response) return bound;
   return repoStub(env, `${m[1]}/${m[2]}`).fetch(
-    new Request(new URL(m[3]! + url.search, url.origin), req),
+    new Request(new URL(m[3]! + url.search, url.origin), bound),
   );
 }
 
@@ -86,7 +98,16 @@ export default {
       return handleWebhook(req, env);
     const andon = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)(\/andon)$/);
     if (req.method === "POST" && andon)
-      return handleAndonAdmin(req, env, `${andon[1]}/${andon[2]}`, andon[3]!);
+      return handleAdmin(req, env, `${andon[1]}/${andon[2]}`, andon[3]!);
+    // token 管理面（F08）：mint/revoke/list 是 maintainer 特权（COORD_ADMIN_TOKEN）
+    const tok = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)(\/tokens(?:\/(?:mint|revoke))?)$/);
+    if (tok && ((req.method === "POST" && tok[3] !== "/tokens") || (req.method === "GET" && tok[3] === "/tokens")))
+      return handleAdmin(req, env, `${tok[1]}/${tok[2]}`, tok[3]!);
+    // 镜像回填（F04 backfill-mirror.sh）是管理写端点（F08 返工挂 admin 面）：
+    // 常规镜像增量走 webhook→Queues→DO stub，不经此路由
+    const mir = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)(\/mirror\/upsert)$/);
+    if (req.method === "POST" && mir)
+      return handleAdmin(req, env, `${mir[1]}/${mir[2]}`, mir[3]!);
     if (url.pathname.startsWith("/api/coord/repos/")) return handleRest(req, env, url);
     // MCP 接入面（F07）：逻辑全在 src/mcp.ts，这里只做路由（降低与并行改动的冲突面）
     const mcp = url.pathname.match(/^\/api\/coord\/mcp\/([^/]+)\/([^/]+)$/);

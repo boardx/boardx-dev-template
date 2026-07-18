@@ -78,10 +78,12 @@ export function JoinTab() {
     window.open(url, "_blank", "noopener");
   }
 
-  // ADR-011 P2 自助领取：第 5 步进入时拉"我的身份"清单；mint 后明文只显示一次
+  // ADR-011 P2 自助领取：第 5 步进入时拉"我的身份"清单；mint 后明文只显示一次。
+  // F08：同一入口第二通道——按仓 scoped token（coord-gateway，token 权威在 RepoHub DO）。
   const [myAgents, setMyAgents] = useState<Array<{ id: string; kind: string }> | null>(null);
   const [brokerReady, setBrokerReady] = useState(true);
-  const [minted, setMinted] = useState<{ agentId: string; token: string } | null>(null);
+  const [gatewayReady, setGatewayReady] = useState(true);
+  const [minted, setMinted] = useState<{ agentId: string; token: string; target: string } | null>(null);
   const [minting, setMinting] = useState<string | null>(null);
   const [tokenCopied, setTokenCopied] = useState(false);
 
@@ -89,40 +91,52 @@ export function JoinTab() {
     try {
       const res = await portalFetch("/api/portal/my-tokens");
       if (!res || !res.ok) return;
-      const body = (await res.json()) as { broker_configured: boolean; agents: Array<{ id: string; kind: string }> };
+      const body = (await res.json()) as {
+        broker_configured: boolean;
+        gateway_configured?: boolean;
+        agents: Array<{ id: string; kind: string }>;
+      };
       setBrokerReady(body.broker_configured);
+      setGatewayReady(Boolean(body.gateway_configured));
       setMyAgents(body.agents);
     } catch {
       /* 保持 null → 显示引导而非报错 */
     }
   }
 
-  async function mintToken(agentId: string) {
-    setMinting(agentId);
+  async function mintToken(agentId: string, target: "coord-service" | "coord-gateway" = "coord-service") {
+    setMinting(`${target}:${agentId}`);
     try {
       const res = await portalFetch("/api/portal/my-tokens");
       if (!res) return; // 401 重新认证中
       const post = await fetch("/api/portal/my-tokens", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agent_id: agentId }),
+        body: JSON.stringify({ agent_id: agentId, target }),
       });
       if (!post.ok) return;
-      const body = (await post.json()) as { agent_id: string; token: string };
-      setMinted({ agentId: body.agent_id, token: body.token });
+      const body = (await post.json()) as { agent_id: string; token: string; target?: string };
+      setMinted({ agentId: body.agent_id, token: body.token, target: body.target ?? target });
     } finally {
       setMinting(null);
     }
   }
 
+  const GATEWAY_URL = "https://coord-gateway.boardx.workers.dev";
+
+  function mintedLines(m: { token: string; target: string }): string[] {
+    return m.target === "coord-gateway"
+      ? [`export COORD_GATEWAY_URL=${GATEWAY_URL}`, `export COORD_API_TOKEN=${m.token}`]
+      : [
+          "export COORD_SERVICE_URL=https://coord-service-staging.boardx.workers.dev",
+          `export COORD_SERVICE_TOKEN=${m.token}`,
+        ];
+  }
+
   async function copyMinted() {
     if (!minted) return;
-    const lines = [
-      `export COORD_SERVICE_URL=https://coord-service-staging.boardx.workers.dev`,
-      `export COORD_SERVICE_TOKEN=${minted.token}`,
-    ].join("\n");
     try {
-      await navigator.clipboard.writeText(lines);
+      await navigator.clipboard.writeText(mintedLines(minted).join("\n"));
       setTokenCopied(true);
       setTimeout(() => setTokenCopied(false), 2000);
     } catch { /* 页面上可手动选取 */ }
@@ -226,9 +240,14 @@ export function JoinTab() {
                 {myAgents.map((a) => (
                   <li key={a.id} className="flex items-center justify-between gap-2 rounded-8 border border-border bg-surface-2 px-3 py-2">
                     <span className="text-13 text-foreground">🤖 {a.id}<span className="ml-2 text-11 text-muted-foreground">{a.kind}</span></span>
-                    <Button size="sm" variant="secondary" disabled={!brokerReady || minting === a.id} onClick={() => void mintToken(a.id)} data-testid={`mint-${a.id}`}>
-                      {minting === a.id ? "生成中…" : "领取 / 轮换 token"}
-                    </Button>
+                    <span className="flex shrink-0 gap-2">
+                      <Button size="sm" variant="secondary" disabled={!brokerReady || minting === `coord-service:${a.id}`} onClick={() => void mintToken(a.id)} data-testid={`mint-${a.id}`}>
+                        {minting === `coord-service:${a.id}` ? "生成中…" : "领取 / 轮换 token"}
+                      </Button>
+                      <Button size="sm" variant="secondary" disabled={!gatewayReady || minting === `coord-gateway:${a.id}`} onClick={() => void mintToken(a.id, "coord-gateway")} data-testid={`mint-repo-${a.id}`}>
+                        {minting === `coord-gateway:${a.id}` ? "生成中…" : "领取仓库 token"}
+                      </Button>
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -236,14 +255,16 @@ export function JoinTab() {
             {!brokerReady && myAgents !== null && (
               <p className="text-11 text-muted-foreground">发放通道未配置（COORD_BROKER_TOKEN）——找仓库所有者接通后即可自助领取。</p>
             )}
+            {!gatewayReady && myAgents !== null && (
+              <p className="text-11 text-muted-foreground">仓库 token 通道未配置（COORD_GATEWAY_ADMIN_TOKEN）——接通后可领取按仓 scoped 的 coord-gateway token（F08）。</p>
+            )}
             {minted && (
               <div className="space-y-2 rounded-8 border border-destructive/40 bg-destructive/5 p-3" data-testid="minted-token">
                 <p className="text-13 font-medium text-foreground">
-                  ⚠️ {minted.agentId} 的新 token——**只显示这一次**，立即保存到本机凭据文件；旧 token 已失效。
+                  ⚠️ {minted.agentId} 的新{minted.target === "coord-gateway" ? "仓库 scoped " : " "}token——**只显示这一次**，立即保存到本机凭据文件{minted.target === "coord-gateway" ? "；只对本仓 API/MCP 有效，吊销即时生效" : "；旧 token 已失效"}。
                 </p>
                 <div className="break-all rounded-8 bg-muted p-2 font-mono text-11 text-foreground">
-                  export COORD_SERVICE_URL=https://coord-service-staging.boardx.workers.dev<br />
-                  export COORD_SERVICE_TOKEN={minted.token}
+                  {mintedLines(minted).map((l) => (<span key={l}>{l}<br /></span>))}
                 </div>
                 <Button size="sm" onClick={() => void copyMinted()}>{tokenCopied ? "已复制 ✓" : "复制两行命令"}</Button>
                 <p className="text-11 text-muted-foreground">

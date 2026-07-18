@@ -3,6 +3,7 @@
 // 不引第三方 SDK：约束是①保持零运行时依赖纪律②工具全部是 RepoHub DO 的薄封装，
 // 引 SDK 的复杂度大于收益。协议语义来源：docs/coord-platform/protocol/*.md。
 import type { Env } from "./index";
+import { authorizeRepoAccess, bindScopedAgentArgs, type RepoPrincipal } from "./auth";
 
 interface JsonRpcRequest {
   jsonrpc?: string;
@@ -280,14 +281,11 @@ export async function handleMcp(
   owner: string,
   repo: string,
 ): Promise<Response> {
-  // 鉴权同 REST：缺配置 fail-closed 503（禁止静默 fail-open），坏 token 401
-  if (!env.COORD_API_TOKEN) {
-    return new Response(JSON.stringify({ error: "api_token_not_configured" }), { status: 503 });
-  }
-  const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${env.COORD_API_TOKEN}`) {
-    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
-  }
+  // 鉴权同 REST（auth.ts 共用矩阵）：缺配置 fail-closed 503，坏 token 401，
+  // scoped token（F08）经该仓 DO 实时 verify——跨仓 403，已吊销 401
+  const access = await authorizeRepoAccess(req, env, `${owner}/${repo}`);
+  if (!access.granted) return access.response;
+  const principal: RepoPrincipal = access.principal;
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "method_not_allowed" }), { status: 405 });
   }
@@ -323,7 +321,12 @@ export async function handleMcp(
       if (typeof name !== "string" || !TOOLS.some((t) => t.name === name)) {
         return rpcError(id, -32602, `Unknown tool: ${String(name)}`);
       }
-      const args = (rpc.params?.["arguments"] ?? {}) as Args;
+      const rawArgs = (rpc.params?.["arguments"] ?? {}) as Args;
+      // agent_id 强绑定（#721）：scoped token 的工具参数不得自证他人身份——
+      // 不一致 403 token_agent_mismatch，缺省注入 token 在册身份（claim_issue/
+      // heartbeat/release/submit_evidence 等全部带 agent_id 的工具统一覆盖）
+      const args = bindScopedAgentArgs(principal, rawArgs);
+      if (args instanceof Response) return args;
       const stub = env.REPOHUB.get(env.REPOHUB.idFromName(`${owner}/${repo}`));
       const r = await callTool(stub, name, args);
       return toolResult(id, r.body, r.isError);

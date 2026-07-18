@@ -65,6 +65,17 @@ CREATE TABLE IF NOT EXISTS evidence_manifests (
 CREATE INDEX IF NOT EXISTS idx_evidence_resource
   ON evidence_manifests(resource_id);
 
+-- 按仓 scoped agent token（F08）：只存 sha256 hex，绝不存明文。
+-- token 明文只在 mint 响应里出现一次；verify 每次实时查本表（吊销即时生效，无缓存）。
+-- "按仓 scope"天然成立：token 只在其所属仓的 DO 里有记录，跨仓 verify 查无 → 拒绝。
+CREATE TABLE IF NOT EXISTS agent_tokens (
+  token_hash TEXT PRIMARY KEY,               -- sha256(明文) hex，唯一存储形态
+  owner      TEXT NOT NULL,                  -- 领取人（问责锚点，ADR-011）
+  agent_id   TEXT NOT NULL,                  -- token 代表的 agent 身份
+  created_at TEXT NOT NULL,
+  revoked_at TEXT                            -- 非 NULL = 已吊销（不删行，留审计）
+);
+
 -- issue/PR 镜像：关键字段拉平便于过滤，全量 JSON 保真（F04）
 CREATE TABLE IF NOT EXISTS mirror_items (
   kind        TEXT NOT NULL,                -- issue | pr
