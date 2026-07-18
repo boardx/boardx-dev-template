@@ -184,11 +184,14 @@ test("generates one ordered artifact per saved template chapter", async ({
   await page.goto(`/surveys?survey=${survey.id}&step=report`);
   await expect(page.getByTestId("survey-professional-report-workbench"))
     .toBeVisible();
-  await expect(page.getByTestId("professional-report-outline"))
+  await expect(page.getByTestId("professional-report-outline")).toHaveCount(0);
+  await expect(page.getByTestId("professional-report-reading-surface"))
+    .toBeVisible();
+  await expect(page.getByTestId("professional-report-document"))
     .toContainText("管理层决策摘要");
-  await expect(page.getByTestId("professional-report-outline"))
+  await expect(page.getByTestId("professional-report-document"))
     .toContainText("安全信任结构");
-  await expect(page.getByTestId("professional-report-outline"))
+  await expect(page.getByTestId("professional-report-document"))
     .toContainText("购买决策场景");
   await expect(page.getByTestId("professional-report-document"))
     .not.toContainText("执行摘要");
@@ -208,7 +211,7 @@ test("generates one ordered artifact per saved template chapter", async ({
   });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
-  await expect(page.locator("#report-chapter-select")).toBeVisible();
+  await expect(page.locator("#report-chapter-select")).toHaveCount(0);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth

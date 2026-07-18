@@ -5,12 +5,14 @@ import { Download, Link2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProfessionalReportDocument } from "./professional-report-document";
 import { SurveyReportVersionHistory } from "./survey-report-version-history";
-import { reportOutlineItems } from "@/lib/survey-report-reading";
 import type { SurveyReportGenerationStatus } from "@/lib/survey-report-generation";
-import type { PublicTemplateDrivenSurveyReport } from "@/lib/survey-template-report";
+import {
+  isTemplateDrivenSurveyReport,
+  type SurveyReportDocument,
+} from "@/lib/survey-report-document";
 
 interface SurveyProfessionalReportWorkbenchProps {
-  report: PublicTemplateDrivenSurveyReport;
+  report: SurveyReportDocument;
   generation?: SurveyReportGenerationStatus;
   generating: boolean;
   error: string;
@@ -45,7 +47,10 @@ export function SurveyProfessionalReportWorkbench({
   onExportWord,
 }: SurveyProfessionalReportWorkbenchProps) {
   const [shareStatus, setShareStatus] = useState("");
-  const outline = reportOutlineItems(report);
+  const responseCount = isTemplateDrivenSurveyReport(report)
+    ? report.sample.responseCount
+    : report.methodology.sampleSize;
+  const chapterCount = report.chapters.length;
 
   async function shareReport() {
     try {
@@ -80,9 +85,8 @@ export function SurveyProfessionalReportWorkbench({
               {report.title}
             </h2>
             <p className="mt-1 text-12 text-muted-foreground">
-              {report.sample.responseCount} 份有效答卷 · {
-                outline.length
-              } 个模板章节 · 生成于 {formatGeneratedAt(report.generatedAt)}
+              {responseCount} 份有效答卷 · {chapterCount} 个模板章节 · 生成于{" "}
+              {formatGeneratedAt(report.generatedAt)}
             </p>
           </div>
 
@@ -130,7 +134,7 @@ export function SurveyProfessionalReportWorkbench({
               size="sm"
               disabled={generating}
               onClick={onGenerateReport}
-              className="h-9 gap-2 bg-foreground px-3 text-background hover:bg-foreground/90"
+              className="h-9 gap-2 bg-foreground px-3 text-background transition-colors duration-200 hover:bg-foreground/90"
             >
               <Sparkles className="h-4 w-4" strokeWidth={1.6} />
               {generating ? "生成中" : "重新生成"}
@@ -153,76 +157,14 @@ export function SurveyProfessionalReportWorkbench({
         </p>
       ) : null}
 
-      <div className="mx-auto grid max-w-6xl gap-4 px-4 py-5 xl:grid-cols-[14rem_minmax(0,1fr)] xl:items-start xl:px-0">
-        <div className="xl:hidden">
-          <label htmlFor="report-chapter-select" className="sr-only">
-            选择报告章节
-          </label>
-          <select
-            id="report-chapter-select"
-            className="h-10 w-full border border-border bg-background px-3 text-13"
-            defaultValue=""
-            onChange={(event) => {
-              if (event.target.value) {
-                document.getElementById(
-                  `report-chapter-${event.target.value}`
-                )?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }
-            }}
-          >
-            <option value="" disabled>跳转到章节</option>
-            {outline.map((item, index) => (
-              <option key={item.id} value={item.id}>
-                {String(index + 1).padStart(2, "0")} {item.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <nav
-          aria-label="报告目录"
-          data-testid="professional-report-outline"
-          className="sticky top-4 hidden border border-border bg-background xl:block"
-        >
-          <div className="border-b border-border px-4 py-3">
-            <p className="text-13 font-semibold">报告目录</p>
-            <p className="mt-1 text-11 text-muted-foreground">
-              按已保存模板顺序
-            </p>
-          </div>
-          <ol>
-            {outline.map((item, index) => (
-              <li key={item.id} className="border-b border-border last:border-b-0">
-                <a
-                  href={`#report-chapter-${item.id}`}
-                  data-testid={`report-outline-${item.id}`}
-                  className="grid grid-cols-[28px_minmax(0,1fr)] gap-2 px-4 py-3 transition-colors hover:bg-secondary"
-                >
-                  <span className="text-11 font-semibold text-muted-foreground">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <span>
-                    <span className="block text-13 font-semibold text-foreground">
-                      {item.label}
-                    </span>
-                    <span className="mt-0.5 block text-11 text-muted-foreground">
-                      {item.outputType === "chart"
-                        ? "数据图表"
-                        : item.outputType === "image"
-                          ? "研究视觉"
-                          : "分析结论"}
-                    </span>
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ol>
-        </nav>
-
+      <main
+        data-testid="professional-report-reading-surface"
+        className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6"
+      >
         <div className="min-w-0 overflow-hidden border border-border bg-background shadow-sm">
           <ProfessionalReportDocument report={report} />
         </div>
-      </div>
+      </main>
     </div>
   );
 }

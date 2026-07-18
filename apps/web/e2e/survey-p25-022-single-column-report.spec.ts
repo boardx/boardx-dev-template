@@ -5,9 +5,9 @@ async function register(page: Page) {
   const response = await page.request.post("/api/auth/register", {
     data: {
       firstName: "Survey",
-      lastName: "F21",
+      lastName: "F22",
       email:
-        `p25_f21_${Date.now()}_${Math.floor(Math.random() * 1e6)}`
+        `p25_f22_${Date.now()}_${Math.floor(Math.random() * 1e6)}`
         + "@example.com",
       password: "secret123",
       agreeTerms: true,
@@ -20,16 +20,17 @@ test.afterAll(async () => {
   await closePool();
 });
 
-test("opens and regenerates the template-driven report from the designer", async ({
+test("renders the template report as one centered reading surface", async ({
   page,
 }) => {
   test.slow();
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await register(page);
 
   const created = await page.request.post("/api/surveys", {
     data: {
-      title: "报告入口回归问卷",
-      description: "验证分析报告入口使用模板驱动生成流程。",
+      title: "单列报告阅读问卷",
+      description: "验证分析报告只展示模板驱动正文。",
       questions: [
         {
           title: "你最关注哪个改进方向？",
@@ -57,13 +58,12 @@ test("opens and regenerates the template-driven report from the designer", async
       },
     },
   })).status()).toBe(201);
-
   expect((await page.request.patch(
     `/api/surveys/${survey.id}/report-categories`,
     {
       data: {
-        title: "管理层改进优先级报告",
-        description: "按模板生成管理层可执行结论。",
+        title: "管理层改进报告",
+        description: "按模板章节生成。",
         categories: [
           {
             id: "priority-summary",
@@ -81,7 +81,6 @@ test("opens and regenerates the template-driven report from the designer", async
       },
     }
   )).status()).toBe(200);
-
   expect((await page.request.post(
     `/api/surveys/${survey.id}/professional-report`,
     { data: { model: "qwen-e2e-report" } }
@@ -89,34 +88,55 @@ test("opens and regenerates the template-driven report from the designer", async
 
   const legacyRequests: string[] = [];
   page.on("request", (request) => {
-    if (
-      request.method() === "POST"
-      && new URL(request.url()).pathname.endsWith("/ai-report")
-    ) {
-      legacyRequests.push(request.url());
+    if (new URL(request.url()).pathname.endsWith("/ai-report")) {
+      legacyRequests.push(`${request.method()} ${request.url()}`);
     }
   });
-  await page.goto(`/surveys?survey=${survey.id}&step=design`);
-  await page.getByTestId("workflow-report").click();
 
-  await expect(page).toHaveURL(
-    new RegExp(`survey=${survey.id}.*step=report`)
-  );
+  await page.goto(`/surveys?survey=${survey.id}&step=report`);
   await expect(page.getByTestId("survey-professional-report-workbench"))
-    .toBeVisible({ timeout: 20_000 });
+    .toBeVisible();
+  await expect(page.getByTestId("professional-report-reading-surface"))
+    .toBeVisible();
+  await expect(page.getByTestId("professional-report-document"))
+    .toContainText("改进优先级摘要");
   await expect(page.getByTestId("professional-report-outline")).toHaveCount(0);
-  await expect(page.getByTestId("professional-report-document"))
-    .toContainText("改进优先级摘要");
-  await expect(page.getByTestId("generate-ai-report")).toHaveCount(0);
-  await expect(page.getByTestId("ai-report-error")).toHaveCount(0);
+  await expect(page.locator("#report-chapter-select")).toHaveCount(0);
+  await expect(page.getByText("报告 AI", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "重新生成" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "PDF" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Word" })).toBeVisible();
 
-  const regenerated = page.waitForResponse((response) =>
-    response.request().method() === "POST"
-    && new URL(response.url()).pathname.endsWith("/professional-report")
-  );
-  await page.getByRole("button", { name: "重新生成" }).click();
-  expect((await regenerated).status()).toBe(200);
-  await expect(page.getByTestId("professional-report-document"))
-    .toContainText("改进优先级摘要");
+  const readingSurface = await page
+    .getByTestId("professional-report-reading-surface")
+    .boundingBox();
+  expect(readingSurface).not.toBeNull();
+  expect(readingSurface!.width).toBeGreaterThan(760);
+  expect(readingSurface!.width).toBeLessThanOrEqual(1120);
   expect(legacyRequests).toEqual([]);
+
+  await page.screenshot({
+    path:
+      "../../phases/phase-p25-survey/sprints/sprint-22/evidence/report-single-column-desktop.png",
+    fullPage: true,
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await expect(page.getByTestId("professional-report-reading-surface"))
+    .toBeVisible();
+  await expect(page.getByTestId("professional-report-outline")).toHaveCount(0);
+  await expect(page.locator("#report-chapter-select")).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    )
+  ).toBe(true);
+  expect(legacyRequests).toEqual([]);
+
+  await page.screenshot({
+    path:
+      "../../phases/phase-p25-survey/sprints/sprint-22/evidence/report-single-column-mobile.png",
+    fullPage: true,
+  });
 });

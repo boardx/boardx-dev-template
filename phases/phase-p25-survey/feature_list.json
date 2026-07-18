@@ -501,6 +501,32 @@
       ],
       "evidence": "evidence/F21.verify.log @ 2026-07-18T21:51:28.110Z",
       "notes": "独立 bug feature，Refs #648，追加到 PR #757；仅修复设计器报告入口路由，不删除旧结果统计页。"
+    },
+    {
+      "id": "F22",
+      "priority": 1,
+      "area": "survey",
+      "title": "收敛分析报告为单列阅读页",
+      "user_visible_behavior": "用户进入分析报告时只看到居中的模板驱动报告正文；左侧章节目录、移动端章节选择器和右侧报告 AI 均移除，顶部版本、分享、导出与重新生成操作保留；页面不再请求旧 ai-report 接口。",
+      "design_ref": "requirements/21-single-column-report-reading.md；2026-07-19 用户截图确认",
+      "status": "in_progress",
+      "sprint": "22",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F19",
+        "F21"
+      ],
+      "wave": 19,
+      "verification": [
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "E2E_PORT=62648 COLLAB_WS_PORT=62649 pnpm --filter @repo/web exec playwright test e2e/survey-p25-022-single-column-report.spec.ts",
+        "pnpm harness doctor --phase p25",
+        "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-22/evidence/F22.verify.log"
+      ],
+      "evidence": "",
+      "notes": "独立 UI feature，Refs #648，追加到 PR #757；只收敛报告阅读布局和移除旧报告读取，不改报告生成契约。"
     }
   ]
 }

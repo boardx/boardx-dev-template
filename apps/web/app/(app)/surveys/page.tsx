@@ -71,7 +71,6 @@ import {
 } from "@/lib/survey-report-generation";
 import type { PlannedReportBlock } from "@/lib/survey-report-planner";
 import {
-  isTemplateDrivenSurveyReport,
   type SurveyReportDocument,
 } from "@/lib/survey-report-document";
 import { isExactReportVersionResponse } from "@/lib/survey-report-version-navigation";
@@ -2933,10 +2932,7 @@ function WorkspaceReportWorkbench({
     setExportStatus("Word 专业报告已开始下载。");
   }
 
-  if (
-    professionalReport
-    && isTemplateDrivenSurveyReport(professionalReport)
-  ) {
+  if (professionalReport) {
     return (
       <SurveyProfessionalReportWorkbench
         report={professionalReport}
@@ -4366,21 +4362,6 @@ export default function SurveysPage() {
     professionalReportRequestStateRef.current = next;
     setProfessionalReportRequestStateBySurveyId(next);
   }
-
-  useEffect(() => {
-    if (!currentSurveyId || generatedReportsBySurveyId[currentSurveyId]) return;
-    let cancelled = false;
-    void fetch(`/api/surveys/${currentSurveyId}/ai-report`)
-      .then((response) => (response.ok ? response.json() : null))
-      .then((payload) => {
-        if (cancelled || !payload?.report) return;
-        setGeneratedReportsBySurveyId((items) => ({ ...items, [currentSurveyId]: payload.report }));
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [currentSurveyId, generatedReportsBySurveyId]);
 
   useEffect(() => {
     if (
