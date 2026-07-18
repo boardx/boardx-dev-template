@@ -2,20 +2,23 @@
 #
 # This is a Pages project (static assets in ./public + Pages Functions in
 # ./functions), NOT a Worker. It is deployed independently of apps/web and of
-# coord-service — its own URL, its own lifecycle.
+# coord-gateway — its own URL, its own lifecycle.
 #
 #   pnpm --filter @repo/coord-dashboard deploy
 #     → wrangler pages deploy public --project-name coord-dashboard
 #
-# COORD_SERVICE_URL is read by functions/api/status.ts. It is optional: the
-# function falls back to the staging URL below when unset. To point the
-# dashboard at a different coord-service, set it as a Pages project variable
-# (Cloudflare dashboard → Pages → coord-dashboard → Settings → Variables) or via
-#   wrangler pages deploy public --project-name coord-dashboard \
-#     --var COORD_SERVICE_URL:https://coord-service-staging.boardx.workers.dev
+# 2026-07-18 cutover (p29-F10 stage-2, ADR-017): the read plane moved from the
+# retired coord-service public /status to coord-gateway's authenticated
+# /claims + /events. functions/api/status.ts reads:
+#   COORD_GATEWAY_URL / COORD_REPO   non-sensitive, declared below
+#   COORD_API_TOKEN                  gateway bearer — encrypted Pages secret:
+#     wrangler pages secret put COORD_API_TOKEN --project-name coord-dashboard
+# Until all three are present the dashboard renders an honest "not configured"
+# empty state. Env changes must be atomic with deploys (mod-devportal incident).
 name = "coord-dashboard"
 pages_build_output_dir = "public"
 compatibility_date = "2024-11-01"
 
 [vars]
-COORD_SERVICE_URL = "https://coord-service-staging.boardx.workers.dev"
+COORD_GATEWAY_URL = "https://coord-gateway.boardx.workers.dev"
+COORD_REPO = "boardx/boardx-dev-template"

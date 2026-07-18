@@ -18,7 +18,7 @@ export function ActiveAgentsCard({ state, coord, freshAt }: { state: PortalCardS
     <PortalCard
       title="现在谁在干活"
       state={state}
-      unconfiguredHint="协调数据源未配置（COORD_SERVICE_URL）——接线后此卡显示活跃 agent 与心跳状态。"
+      unconfiguredHint="协调数据源未配置（COORD_GATEWAY_URL/COORD_API_TOKEN）——接线后此卡显示活跃 agent 与心跳状态。"
       freshAt={freshAt}
     >
       {claims.length === 0 ? (

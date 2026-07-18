@@ -4,7 +4,7 @@ P23 Developer Portal 的 Cloudflare 原生部署（#523 Track A）。**自包含
 零跨目录 import、零内部包依赖；与 `apps/web` 的产品面 portal 是有意的双份
 （数据源/门禁不同，共享代码会把两平面重新缠住，见 ADR-013 姊妹决策 #523）。
 
-- 数据：GitHub Contents API（phases/registry）+ coord-service `/status` + GitHub REST
+- 数据：GitHub Contents API（phases/registry）+ coord-gateway RepoHub 读面（claims/events，ADR-017）+ GitHub REST
 - 门禁：Cloudflare Access（GitHub 登录），`lib/access.ts` 对 `Cf-Access-Jwt-Assertion`
   验签（团队证书端点）；**pages.dev 直连无 Access 上下文 → API 一律 401**
 

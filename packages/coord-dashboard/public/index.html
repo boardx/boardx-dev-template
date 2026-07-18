@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Coordination Dashboard · coord-service</title>
-  <meta name="description" content="Live read-only view of the agent coordination plane (coord-service D1 atomic-lock service)." />
+  <title>Coordination Dashboard · coord-gateway</title>
+  <meta name="description" content="Live read-only view of the agent coordination plane (coord-gateway RepoHub Durable Object, ADR-017)." />
   <style>
     :root {
       --bg: #0b0e14;
@@ -100,7 +100,7 @@
     <div class="meta-row">
       <span id="status-ind"><span class="dot live" id="dot"></span><span id="status-text">connecting…</span></span>
       <span>updated <span class="ago" id="updated">—</span></span>
-      <span>source <code>coord-service /status</code></span>
+      <span>source <code>coord-gateway /claims + /events</code></span>
       <button class="refresh-btn" id="refresh" type="button">↻ refresh</button>
     </div>
 
@@ -134,8 +134,8 @@
 
     <footer>
       Live read-only view of the coordination plane — who holds which lease and the recent coordination event stream, straight from
-      coord-service's public <code>/status</code>. Refreshes every 30s. This is an observability surface: it does not mutate state.<br>
-      Coordination authority is the D1 atomic-lock service (ADR-009). Write operations (claim / heartbeat / release / verdict / narrative events) require a bearer token and happen through <code>pnpm harness lock-*</code>, not here.
+      coord-gateway's RepoHub DO (<code>/claims</code> + <code>/events</code>, proxied server-side with a Pages secret). Refreshes every 30s. This is an observability surface: it does not mutate state.<br>
+      Coordination authority is the per-repo RepoHub Durable Object behind coord-gateway (ADR-017; protocol semantics per ADR-009). Write operations (claim / heartbeat / release / verdict / narrative events) require a bearer token and happen through <code>pnpm harness lock-*</code>, not here.
     </footer>
   </div>
 
@@ -246,13 +246,18 @@
         .then(function (res) {
           var nowMs = Date.now();
           if (!res.ok || res.body.error) {
-            setStatus(false, "coord-service unreachable");
-            showBanner("Couldn't reach coord-service" + (res.body && res.body.upstream ? ' (<code>' + esc(res.body.upstream) + "</code>)" : "") + ". Tables below hold the last successful fetch; retrying every 30s.");
+            setStatus(false, "coord-gateway unreachable");
+            showBanner("Couldn't reach coord-gateway" + (res.body && res.body.upstream ? ' (<code>' + esc(res.body.upstream) + "</code>)" : "") + ". Tables below hold the last successful fetch; retrying every 30s.");
             document.getElementById("updated").textContent = new Date(nowMs).toLocaleTimeString();
             return;
           }
-          showBanner("");
-          setStatus(true, "live");
+          if (res.body.configured === false) {
+            setStatus(false, "not configured");
+            showBanner("Read plane not configured: set <code>COORD_GATEWAY_URL</code>/<code>COORD_REPO</code> vars and the <code>COORD_API_TOKEN</code> secret on the Pages project (coord-service retired, ADR-017).");
+          } else {
+            showBanner("");
+            setStatus(true, "live");
+          }
           renderClaims(res.body.active_claims || [], nowMs);
           renderEvents(res.body.recent_events || [], nowMs);
           document.getElementById("updated").textContent = new Date(nowMs).toLocaleTimeString();

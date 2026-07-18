@@ -2,7 +2,7 @@
 // p23/F08 — 性能：按 开发者→agents 配对分组 + C-cycle 周期报告。
 // 界面契约 = p23 ui-signoff confirmed 的原型 PerfTab 三层结构：
 //   👤 开发者分组头（人类，绝不作为 agent 行出现）→ 🤖 agents 行 → sub-agent 按 parent 缩进（└）。
-// 数据源：/api/portal/agents（registry.yaml 按 owner 分组 + coord-service 租约标注）。
+// 数据源：/api/portal/agents（registry.yaml 按 owner 分组 + coord-gateway 租约标注，ADR-017）。
 // 诚实降级：per-agent flow-time / 周期承诺当前无数据源 → 列显示"数据积累中"（不造假）；
 // coord_configured:false → 整列省略"当前租约"；C-cycle 周期报告无 Web 数据源 → unconfigured 态。
 import { portalFetch } from "@/lib/portal-fetch";
@@ -133,7 +133,7 @@ export function PerfTab() {
               </tbody>
             </table>
             {!showLease && (
-              <p className="mt-2 text-11 text-muted-foreground">当前租约列未显示：COORD_SERVICE_URL 未配置（部署中间态，不是故障）。</p>
+              <p className="mt-2 text-11 text-muted-foreground">当前租约列未显示：COORD_GATEWAY_URL/COORD_API_TOKEN 未配置（部署中间态，不是故障）。</p>
             )}
           </div>
         )}

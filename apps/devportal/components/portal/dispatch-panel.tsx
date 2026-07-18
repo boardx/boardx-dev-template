@@ -1,6 +1,6 @@
 "use client";
 // DispatchPanel — 门户派工看板（#594 P3）：全队任务队列 +（有资格者）派工表单。
-// 数据源 /api/portal/dispatch（服务端 broker 代调 coord-service）。无派工资格的人
+// 数据源 /api/portal/dispatch（服务端 broker 代调 coord-gateway，ADR-017）。无派工资格的人
 // 只看队列不显示表单；broker/队列未配置 → 诚实降级提示，不虚构。
 import { useEffect, useState, useCallback } from "react";
 import { portalFetch } from "@/lib/portal-fetch";
