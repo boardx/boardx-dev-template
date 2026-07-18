@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   buildSurveyReportSourceSnapshot,
   hashSurveyReportRequirement,
@@ -91,5 +92,21 @@ describe("survey report source revisions", () => {
   it("normalizes whitespace before hashing requirements", () => {
     expect(hashSurveyReportRequirement("先结论  后证据"))
       .toBe(hashSurveyReportRequirement("  先结论\n后证据  "));
+  });
+});
+
+describe("survey report version persistence migration", () => {
+  it("creates reusable source snapshots and a unique ready artifact key", () => {
+    const sql = readFileSync(
+      new URL("../migrations/048_survey_report_versions.sql", import.meta.url),
+      "utf8"
+    );
+
+    expect(sql).toContain("CREATE TABLE IF NOT EXISTS survey_report_source_snapshots");
+    expect(sql).toContain("UNIQUE (survey_id, content_hash)");
+    expect(sql).toContain("source_revision");
+    expect(sql).toContain("requirement_hash");
+    expect(sql).toContain("template_version");
+    expect(sql).toContain("WHERE status = 'ready'");
   });
 });
