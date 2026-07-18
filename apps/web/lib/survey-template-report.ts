@@ -70,6 +70,18 @@ export interface TemplateDrivenSurveyReport {
   chapters: TemplateDrivenReportChapter[];
 }
 
+export type PublicTemplateDrivenReportChapter =
+  | Exclude<TemplateDrivenReportChapter, { outputType: "image" }>
+  | (Omit<
+      Extract<TemplateDrivenReportChapter, { outputType: "image" }>,
+      "assetKey"
+    > & { assetUrl: string });
+
+export interface PublicTemplateDrivenSurveyReport
+  extends Omit<TemplateDrivenSurveyReport, "chapters"> {
+  chapters: PublicTemplateDrivenReportChapter[];
+}
+
 function normalizedRequirement(
   category: SurveyReportCategoryPlanInput["categories"][number]
 ): string {
@@ -194,5 +206,26 @@ export function assembleTemplateDrivenReport(input: {
     templateSnapshot: input.snapshot,
     sample: input.sample,
     chapters: input.chapters,
+  };
+}
+
+export function materializeReportAssetUrls(
+  report: TemplateDrivenSurveyReport,
+  surveyId: string | number,
+  artifactId: string
+): PublicTemplateDrivenSurveyReport {
+  return {
+    ...report,
+    chapters: report.chapters.map((chapter) => {
+      if (chapter.outputType !== "image") return chapter;
+      const { assetKey: _assetKey, ...publicChapter } = chapter;
+      return {
+        ...publicChapter,
+        assetUrl:
+          `/api/surveys/${encodeURIComponent(String(surveyId))}`
+          + `/professional-report/${encodeURIComponent(artifactId)}`
+          + `/images/${encodeURIComponent(chapter.assetId)}`,
+      };
+    }),
   };
 }

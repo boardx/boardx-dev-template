@@ -409,4 +409,32 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
     const modelRequest = mocks.callQwenJson.mock.calls[0]?.[0];
     expect(JSON.stringify(modelRequest)).not.toContain(canary);
   });
+
+  it("does not publish a partial version when a template chapter fails evidence validation", async () => {
+    mocks.claimSurveyReportGeneration.mockReset().mockResolvedValue({
+      status: "claimed",
+      sessionId: "20000000-0000-4000-8000-000000000041",
+    });
+    mocks.callQwenJson.mockResolvedValue({
+      headline: "无效结论",
+      claims: [{
+        statement: "没有来源的结论",
+        evidenceId: "missing-evidence",
+        value: 99,
+        denominator: 100,
+      }],
+    });
+
+    const response = await POST(reportRequest(), params);
+
+    expect(response?.status).toBe(500);
+    expect(mocks.createVersionedSurveyReportArtifact).not.toHaveBeenCalled();
+    expect(mocks.completeSurveyReportGenerationClaim).not.toHaveBeenCalled();
+    expect(mocks.releaseSurveyReportGenerationClaim).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: "20000000-0000-4000-8000-000000000041",
+        errorMessage: "report_text_evidence_invalid",
+      })
+    );
+  });
 });

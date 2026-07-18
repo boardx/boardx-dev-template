@@ -3,6 +3,7 @@ import type { SurveyReportCategoryPlanInput } from "@repo/data";
 import {
   assembleTemplateDrivenReport,
   buildSurveyReportTemplateSnapshot,
+  materializeReportAssetUrls,
   validateTemplateDrivenReport,
   type TemplateDrivenReportChapter,
 } from "./survey-template-report";
@@ -177,5 +178,34 @@ describe("template-driven survey report contract", () => {
     expect(report).not.toHaveProperty("executiveSummary");
     expect(report).not.toHaveProperty("methodology");
     expect(report).not.toHaveProperty("actions");
+  });
+
+  it("exposes authorized image URLs without leaking storage object keys", () => {
+    const report = assembleTemplateDrivenReport({
+      title: "经营诊断报告",
+      generatedAt: "2026-07-19T00:00:00.000Z",
+      sourceRevision: "source-revision-1",
+      snapshot: buildSurveyReportTemplateSnapshot(reportPlan),
+      chapters: [textChapter, chartChapter, imageChapter],
+      allowedEvidenceRefs: new Set([
+        "question-1-top",
+        "question-1-distribution",
+      ]),
+      sample: {
+        responseCount: 13,
+        questionCount: 8,
+        confidence: "medium",
+      },
+    });
+
+    const publicReport = materializeReportAssetUrls(report, 59, "artifact-id");
+
+    expect(publicReport.chapters[2]).toMatchObject({
+      assetId: "asset-visual",
+      assetUrl:
+        "/api/surveys/59/professional-report/artifact-id/images/asset-visual",
+    });
+    expect(publicReport.chapters[2]).not.toHaveProperty("assetKey");
+    expect(JSON.stringify(publicReport)).not.toContain("survey-reports/");
   });
 });
