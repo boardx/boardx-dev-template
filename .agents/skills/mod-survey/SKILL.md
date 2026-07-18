@@ -41,6 +41,9 @@ phases/phase-p13-survey
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-19：数据库驱动返回的 Survey 问题 ID 在运行时可能是字符串，即使 TypeScript 类型声明为数字；
+  报告证据白名单等跨边界比较必须先用 `Number(...)` 归一化，并用真实数据库 E2E 覆盖，避免合法问题被误判为
+  未授权证据（出处：phase-p25 F19 / issue #648）。
 - 2026-07-18：专业报告生成必须以稳定的 `sourceRevision + requirementHash + templateVersion`
   作为不可变产物键；GET 只读取或复用已有版本，新答卷只把当前报告标记为 stale，只有用户显式生成
   才创建新版本，且浏览器端不接收全量原始答卷（出处：phase-p25 F16 / issue #648）。

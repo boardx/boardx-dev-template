@@ -30,7 +30,7 @@ export interface StoredSurveyReportImage {
   caption: string;
 }
 
-function wanImageUrl(payload: unknown): string {
+function wanImageUrl(payload: unknown, imageBaseUrl: string): string {
   if (!payload || typeof payload !== "object") {
     throw new Error("wan_image_response_invalid");
   }
@@ -56,6 +56,18 @@ function wanImageUrl(payload: unknown): string {
       ) {
         const image = String((item as { image?: unknown }).image ?? "").trim();
         if (image.startsWith("https://")) return image;
+        try {
+          const candidate = new URL(image);
+          const configured = new URL(imageBaseUrl);
+          if (
+            candidate.origin === configured.origin
+            && ["127.0.0.1", "localhost"].includes(candidate.hostname)
+          ) {
+            return image;
+          }
+        } catch {
+          continue;
+        }
       }
     }
   }
@@ -107,7 +119,10 @@ export async function generateAndStoreSurveyReportImage(
     throw new Error(`wan_image_generation_failed:${generationResponse.status}`);
   }
 
-  const temporaryUrl = wanImageUrl(await generationResponse.json());
+  const temporaryUrl = wanImageUrl(
+    await generationResponse.json(),
+    imageBaseUrl
+  );
   const imageResponse = await fetchImpl(temporaryUrl, {
     method: "GET",
     signal: AbortSignal.timeout(30_000),

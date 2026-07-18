@@ -174,7 +174,8 @@ async function generateChartChapter(
     }),
   }) as ChartChapterResult;
   const question = candidates.find(
-    (candidate) => candidate.questionId === Number(result.questionId)
+    (candidate) =>
+      Number(candidate.questionId) === Number(result.questionId)
   );
   const rows = question ? distributionFor(question) : undefined;
   if (!question || !rows?.length) {

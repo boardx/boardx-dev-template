@@ -58,6 +58,7 @@ loadWorktreeEnv();
 // loadWorktreeEnv() 已把 .env / apps/web/.env.local 里的值灌进 process.env，这里直接读。
 const PORT = process.env.E2E_PORT || "3000";
 const COLLAB_WS_PORT = process.env.COLLAB_WS_PORT || "3001";
+const SURVEY_REPORT_AI_STUB_PORT = String(Number(PORT) + 2000);
 function preferIpv4Loopback(value: string | undefined): string | undefined {
   return value?.replaceAll("localhost", "127.0.0.1");
 }
@@ -110,8 +111,12 @@ export default defineConfig({
         ...loopbackEnv("S3_ENDPOINT"),
         AVA_DEFAULT_MODEL_ID: "stub:default",
         NEXT_PUBLIC_AVA_DEFAULT_MODEL_ID: "stub:default",
-        DASHSCOPE_API_KEY: "",
-        QWEN_API_KEY: "",
+        DASHSCOPE_API_KEY: "e2e-survey-report-key",
+        QWEN_API_KEY: "e2e-survey-report-key",
+        DASHSCOPE_BASE_URL:
+          `http://127.0.0.1:${SURVEY_REPORT_AI_STUB_PORT}/compatible-mode/v1`,
+        DASHSCOPE_IMAGE_BASE_URL:
+          `http://127.0.0.1:${SURVEY_REPORT_AI_STUB_PORT}/api/v1`,
         WEBHOOK_SECRET: E2E_WEBHOOK_SECRET,
       },
     },
@@ -121,6 +126,13 @@ export default defineConfig({
       reuseExistingServer: true,
       timeout: 120_000,
       env: { ...process.env, COLLAB_WS_PORT },
+    },
+    {
+      command: "node server/survey-report-ai-stub.mjs",
+      url: `http://127.0.0.1:${SURVEY_REPORT_AI_STUB_PORT}/health`,
+      reuseExistingServer: true,
+      timeout: 120_000,
+      env: { ...process.env, SURVEY_REPORT_AI_STUB_PORT },
     },
   ],
 });
