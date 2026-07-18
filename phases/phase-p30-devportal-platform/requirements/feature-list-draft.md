@@ -1,5 +1,25 @@
 # p30 feature_list 起草提案（requirement-author，待 ui-signoff 后转正）
 
+> **【勘误注记，2026-07-19 转正时追加——正文保留原样作历史追溯，以下表述已过期】**
+> 1. 正文与 §7/G4、requirements/README.md 中「signoff pending」「#750（批次 3）未合并」
+>    等前提已全部失效：实况是 #746/#750/#752 已合并、`../ui-signoff.md` 已 `confirmed`
+>    （yanbin shen，2026-07-19，签核范围批 1-3）；**批 4（P4/P5/调度中心，#753）亦已于
+>    2026-07-19 由人类补签**。转正门控已放行，本文件已按文末「转正步骤」转正为权威
+>    `../feature_list.json`——**本文件自此仅为需求追溯档案，不再是提案**。
+> 2. **UC-19 排除勘误（coord-main #751 转正约束 1，§6 对应扩充）**：§6 排除项漏列
+>    「UC-19 平台后台管理（admin 标签，@usamshen 固定平台管理员）」——其后台管理界面
+>    无任何已签核 UI 批次原型（批 1-4 均不含 admin 视图），依 ADR-003 排除出本 phase
+>    权威清单，不静默丢项；重进条件 = 补出后台管理界面原型并经人类补签 ui-signoff 后
+>    另立 feature。已同步写入 `../feature_list.json` 顶部 `exclusions` 区。
+>    UC-14 归属一并点名：由 p29 F04/F09 已交付基础承接，p30 内的按项目分片归 F04
+>    （见其 notes）。
+> 3. **§7 缺口拍板结果**：G1 已解（批 4 补签，F23 回归清单）；G2 已解（调度中心 UI
+>    随批 4 补签，F15 恢复完整范围含调度中心）；G3 拍板 = 沿继承视图内嵌无新版式
+>    （F18 免关卡，出新版式须停下走 signoff）；G4 已解（#750 已合并）；
+>    G5 拍板 = 影子周期取「24 小时或一个 C-cycle 的较长者」（F10 verification 已写实）；
+>    G6 拍板 = 租户 #2 用 agentic-harness-template 仓（GitHub App 安装为前置人工步骤，
+>    F04/F20/F21 已按此写实）。
+
 > **状态：提案（draft），不是权威。** 依 ADR-003，`ui-signoff.md` 顶部 `status` 仍为
 > `pending`，因此本次产出是提案文档而非 `feature_list.json`。人类完成 UI 签核后，
 > 由 coordinator 按文末「转正步骤」把本提案转成权威 `../feature_list.json`。

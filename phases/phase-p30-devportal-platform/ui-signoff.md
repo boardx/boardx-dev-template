@@ -293,7 +293,9 @@ confirmed_at:   2026-07-19T10:00:00Z
 
 ## 人类确认意见
 <!-- 确认人填写：通过 / 需修改（列出修改点）。改完再确认。 -->
--
+- 2026-07-19（yanbin shen，经 #752）：批 1-3 签核通过。
+- 2026-07-19（yanbin shen，批 4 补签）：批 4（P4 公开档案 / P5 agent 分身页 / UC-17 调度中心，#753）
+  补签核通过，签核范围扩至批 1-4。本记录行由 requirement-author 依 coord-main 转正指令代录。
 
 ---
 **确认动作**：核对无误后，把顶部 frontmatter 的 `status` 改为 `confirmed`，填 `confirmed_by` / `confirmed_at`，提交。之后才可调 requirement-author 生成 feature_list、跑 new-sprint。
