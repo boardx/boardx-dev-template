@@ -8,7 +8,8 @@
     "pages:build": "npx @cloudflare/next-on-pages@1",
     "typecheck": "tsc --noEmit",
     "lint": "echo 'lint: ok'",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "@cloudflare/next-on-pages": "^1.13.5",
+    "@playwright/test": "^1.47.0",
     "@types/node": "^22.5.0",
     "@types/react": "^18.3.4",
     "autoprefixer": "^10.4.20",
