@@ -36,6 +36,10 @@ import {
   updateReportCategory,
 } from "@/lib/survey-report-category-plan";
 import { SURVEY_REPORT_CHART_TEMPLATES } from "@/lib/survey-report-chart-templates";
+import {
+  getReportGenerationEligibility,
+  getReportGenerationStatus,
+} from "@/lib/survey-report-composer-state";
 import type { SurveyReportGenerationStatus } from "@/lib/survey-report-generation";
 
 interface ReportComposerSurvey {
@@ -77,38 +81,6 @@ const CHART_TEMPLATE_LABELS = {
   gauge: "仪表盘",
   "heatmap-cartesian": "热力图",
 } as const;
-
-function generationLabel(
-  generation: SurveyReportGenerationStatus | undefined,
-  draftDirty: boolean
-) {
-  if (draftDirty) {
-    return {
-      label: "草稿未保存",
-      detail: "当前预览包含未保存变化；保存后再判断报告版本状态。",
-      variant: "outline" as const,
-    };
-  }
-  if (!generation?.latestArtifact) {
-    return { label: "尚未生成", detail: "保存要求后，手动生成首个可追溯报告版本。", variant: "muted" as const };
-  }
-  if (generation.stale) {
-    const count = generation.latestArtifact.newResponseCount;
-    return {
-      label: "数据有更新",
-      detail: count > 0 ? `新增 ${count} 份答卷，当前展示最近成功版本。` : "事实库已变化，建议生成新版本。",
-      variant: "destructive" as const,
-    };
-  }
-  if (generation.requirementChanged) {
-    return {
-      label: "要求已修改",
-      detail: "当前展示最近成功版本，保存并生成后应用新要求。",
-      variant: "outline" as const,
-    };
-  }
-  return { label: "最新版本", detail: "当前报告与问卷事实库及章节要求一致。", variant: "success" as const };
-}
 
 function formatVersionTime(value: string) {
   const date = new Date(value);
@@ -152,7 +124,12 @@ export function SurveyVersionedReportComposer({
   const selectedCategory =
     categories.find((category) => category.id === selectedCategoryId) ?? categories[0];
   const draftDirty = !areSurveyReportCategoryPlansEqual(draft, plan);
-  const reportState = generationLabel(generation, draftDirty);
+  const generationEligibility = getReportGenerationEligibility({
+    draftDirty,
+    saving,
+    generating,
+  });
+  const reportState = getReportGenerationStatus(generation, draftDirty);
 
   function patchSelected(patch: Partial<SurveyReportCategoryInput>) {
     if (!selectedCategory) return;
@@ -443,7 +420,7 @@ export function SurveyVersionedReportComposer({
                     data-testid="save-report-plan"
                     type="button"
                     variant="outline"
-                    disabled={saving}
+                    disabled={saving || generating}
                     onClick={() => onSavePlan(draft)}
                   >
                     <Save className="h-4 w-4" strokeWidth={1.7} />
@@ -452,17 +429,26 @@ export function SurveyVersionedReportComposer({
                   <Button
                     data-testid="generate-versioned-report"
                     type="button"
-                    disabled={generating}
-                    onClick={onGenerateReport}
+                    disabled={!generationEligibility.canGenerate}
+                    onClick={() => {
+                      if (generationEligibility.canGenerate) onGenerateReport();
+                    }}
                   >
                     <RefreshCw className={generating ? "h-4 w-4 animate-spin" : "h-4 w-4"} strokeWidth={1.7} />
                     {generating
                       ? "生成中..."
+                      : !generationEligibility.canGenerate
+                        ? "请先保存要求"
                       : generation?.latestArtifact
                         ? "生成新版本"
                         : "生成报告"}
                   </Button>
                 </div>
+                {!generationEligibility.canGenerate && generationEligibility.message ? (
+                  <p data-testid="report-generation-eligibility" className="text-11 text-muted-foreground">
+                    {generationEligibility.message}
+                  </p>
+                ) : null}
               </div>
             </>
           ) : (

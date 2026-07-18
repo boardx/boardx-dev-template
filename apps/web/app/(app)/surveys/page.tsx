@@ -4457,6 +4457,27 @@ export default function SurveysPage() {
     }
   }
 
+  async function refreshWorkspaceProfessionalReport(surveyId: number): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/surveys/${surveyId}/professional-report`);
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || !payload?.generation) return false;
+      if (payload.report) {
+        setProfessionalReportsBySurveyId((items) => ({
+          ...items,
+          [surveyId]: payload.report as ProfessionalSurveyReportDocument,
+        }));
+      }
+      setProfessionalReportGenerationBySurveyId((items) => ({
+        ...items,
+        [surveyId]: payload.generation as SurveyReportGenerationStatus,
+      }));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async function classifyWorkspaceReportCategories(surveyId: number) {
     setWorkspaceReportClassifying(true);
     setWorkspaceTemplateStatus("");
@@ -4494,7 +4515,12 @@ export default function SurveysPage() {
       }
       const saved = payload.reportCategoryPlan as ReportCategoryPlanDraft;
       setReportCategoryPlansBySurveyId((items) => ({ ...items, [surveyId]: saved }));
-      setWorkspaceTemplateStatus("报告结构已保存。生成正式报告时会按分类顺序输出。");
+      const refreshed = await refreshWorkspaceProfessionalReport(surveyId);
+      setWorkspaceTemplateStatus(
+        refreshed
+          ? "报告结构已保存，正式报告状态已刷新。"
+          : "报告结构已保存，但正式报告状态刷新失败，请稍后重试。"
+      );
     } catch {
       setWorkspaceTemplateError("报告结构保存失败，请稍后重试。");
     } finally {
