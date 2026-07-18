@@ -1,0 +1,42 @@
+# Independent E2E Verification — F03/F04/F05 (p29 sprint-02)
+# Run by: coord-main独立验证员 | Date: 2026-07-18
+# Branch: main (post-fetch, no PR #720 merged)
+
+## ENVIRONMENT
+- feature_list.json read: F03/F04/F05 all status=not_started (PR #720 NOT merged)
+- pnpm install run first (coord-projection symlink was missing in coord-gateway/node_modules)
+
+## F03: pnpm --filter coord-gateway test
+EXIT CODE: 0
+8 tests passed in test/gateway.test.ts
+(Note: required `pnpm install` first — coord-projection symlink missing pre-install; this is env, not code)
+
+## F03: curl -sf https://coord-gateway.boardx.workers.dev/api/coord/healthz | jq -e '.ok == true and .webhook_configured == true'
+EXIT CODE: 0
+Output: true
+
+## F04: pnpm --filter @repo/coord-repohub test
+EXIT CODE: 0
+12 tests passed in test/repohub.test.ts
+
+## F04: bash phases/phase-p29-coord-platform/scripts/verify-mirror-consistency.sh
+EXIT CODE: 1
+Error: /verify-mirror-consistency.sh: line 9: COORD_API_TOKEN: 需要 env COORD_API_TOKEN
+(Script requires Cloudflare-managed secret COORD_API_TOKEN not available locally)
+
+## F05: pnpm --filter @repo/coord-repohub test -- --grep lease
+EXIT CODE: 1
+Error: CACError: Unknown option `--grep`
+vitest 2.1.9 does NOT support --grep; correct flag is -t (e.g., vitest run -t "lease")
+Confirmed with: pnpm --filter @repo/coord-repohub test -- -t lease → exit 0, 3 tests passed
+
+## F05: bash phases/phase-p29-coord-platform/scripts/verify-claim-race.sh
+EXIT CODE: 1
+Error: line 8: COORD_API_TOKEN: 需要 env COORD_API_TOKEN
+(Script requires Cloudflare-managed secret COORD_API_TOKEN not available locally)
+(Script also has 75s sleep for TTL expiry — not runnable without live credentials)
+
+## SUMMARY
+F03: PASS (both cmds exit 0 after pnpm install)
+F04: BLOCKED — cmd1 pass, cmd2 exit 1 (missing COORD_API_TOKEN secret)
+F05: FAIL — cmd1 exit 1 (--grep unsupported in vitest 2.x; wrong flag in feature_list.json), cmd2 exit 1 (missing COORD_API_TOKEN)
