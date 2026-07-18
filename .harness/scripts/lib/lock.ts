@@ -8,11 +8,13 @@ export interface CoordinatorLock {
   startedAt: string;
   lastHeartbeat: string;
   note?: string;
-  /** Phase 3 opt-in dual-write: the coord-service claim id backing this lock,
-   *  if COORD_SERVICE_URL/COORD_SERVICE_TOKEN are configured. Local-only
-   *  runtime state (this file is gitignored) — safe to add without any
-   *  cross-session compatibility concern. */
-  remoteClaimId?: number;
+  /** The coord-gateway lease id (`lse_...`) backing this lock, if
+   *  COORD_GATEWAY_URL/COORD_API_TOKEN/COORD_REPO are configured (ADR-017
+   *  cutover; the retired coord-service era stored a numeric D1 claim id
+   *  here). Local-only runtime state (this file is gitignored) — safe to
+   *  change shape without any cross-session compatibility concern; a legacy
+   *  numeric value is treated as "no usable remote lease". */
+  remoteClaimId?: string | number;
 }
 
 /** 超过这么久没心跳，视为 stale（进程已死/会话已结束），允许新 coordinator 抢占。 */
