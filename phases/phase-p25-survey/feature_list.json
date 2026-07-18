@@ -404,7 +404,7 @@
       "title": "LangGraph 自主报告分析文件系统",
       "user_visible_behavior": "用户主动生成或更新报告时，系统从只读的整卷事实库中自主检索所需题目和答卷证据，由专业分析模块形成可追溯结论；相同输入直接复用报告，失败、超时或预算耗尽时保留最近成功版本并提供明确可重试状态。",
       "design_ref": "requirements/16-langgraph-autonomous-report-analysis.md；docs/superpowers/specs/2026-07-18-survey-versioned-report-architecture.md",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "17",
       "owner": "wrk-survey-1",
       "capability": "CAP-AI",
@@ -421,7 +421,7 @@
         "pnpm --filter @repo/web exec playwright test e2e/survey-p25-017-langgraph-report-analysis.spec.ts",
         "pnpm harness doctor --phase p25"
       ],
-      "evidence": "",
+      "evidence": "evidence/F17.verify.log @ 2026-07-18T16:02:34.950Z",
       "notes": "仅在 F16 合并后复用 Survey 交付 worktree，同步最新 main 并切换到独立 F17 分支和 Delivery PR；生产 Web/API 使用 StateBackend、StoreBackend 或受控虚拟 backend，不使用宿主机 FilesystemBackend。PR 只 Closes F17 feature issue，并 Refs #648。"
     },
     {

@@ -184,4 +184,25 @@ describe("survey report agent adapter", () => {
     expect(result.stopReason).toBe("evidence_validation_failed");
     expect(result.claims).toEqual([]);
   });
+
+  it("uses a deterministic evidence-bound chapter generator for stub models", async () => {
+    const result = await generateSurveyReportAgentClaims({
+      snapshot,
+      categories,
+      evidence,
+      modelId: "stub:survey-report",
+    });
+
+    expect(result.status).toBe("ready");
+    expect(result.claims).toEqual([
+      expect.objectContaining({
+        evidenceId: "question-101-top",
+        value: 1,
+        denominator: 2,
+      }),
+    ]);
+    expect(result.audit.sourceReads).toContain(
+      "/source/survey-source.jsonl"
+    );
+  });
 });

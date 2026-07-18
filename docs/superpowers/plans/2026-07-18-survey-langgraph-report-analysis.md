@@ -315,4 +315,3 @@ Update sprint progress and handoff with the artifact key behavior, virtual path 
 git add apps/web/e2e/survey-p25-017-langgraph-report-analysis.spec.ts phases/phase-p25-survey/sprints/sprint-17 phases/phase-p25-survey/feature_list.json phases/phase-p25-survey/progress.md
 git commit -m "test(survey): verify autonomous report analysis"
 ```
-

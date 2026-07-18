@@ -1,0 +1,1013 @@
+$ pnpm --filter @repo/ai run test -- survey-report-agent
+[exit 0]
+
+> @repo/ai@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/ai
+> vitest run "--" "survey-report-agent"
+
+
+ RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/ai
+
+ ✓ src/studioGenerator.test.ts  (4 tests) 8ms
+ ✓ src/surveyReportWorkspace.test.ts  (4 tests) 11ms
+ ✓ src/sttProvider.test.ts  (6 tests) 67ms
+ ✓ src/index.test.ts  (12 tests) 18ms
+ ✓ src/qwenProvider.test.ts  (6 tests) 79ms
+ ✓ src/anthropicProvider.test.ts  (13 tests) 173ms
+ ✓ src/surveyReportAgent.test.ts  (3 tests) 67ms
+
+ Test Files  7 passed (7)
+      Tests  48 passed (48)
+   Start at  00:01:25
+   Duration  2.28s (transform 1.00s, setup 0ms, collect 2.65s, tests 423ms, environment 2ms, prepare 2.72s)
+
+
+
+$ pnpm --filter @repo/ai run typecheck
+[exit 0]
+
+> @repo/ai@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/ai
+> tsc --noEmit
+
+
+
+$ pnpm --filter @repo/web run test -- survey-report
+[exit 0]
+
+> @repo/web@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web
+> vitest run "--" "survey-report"
+
+
+ RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web
+
+ ✓ lib/survey-report-evidence.test.ts  (4 tests) 9ms
+ ✓ lib/canvas-snap.test.ts  (14 tests) 17ms
+ ✓ app/api/admin/coordination/status/route.test.ts  (6 tests) 51ms
+ ✓ app/api/ai-store/items/[id]/route.test.ts  (2 tests) 16ms
+ ✓ lib/api/handler.test.ts  (10 tests) 48ms
+ ✓ app/api/ai-store/items/skills-versioning.route.test.ts  (2 tests) 29ms
+ ✓ app/api/ava/threads/[id]/route.test.ts  (4 tests) 27ms
+ ✓ lib/survey-professional-report.test.ts  (4 tests) 17ms
+ ✓ lib/collab-bus.test.ts  (4 tests) 8ms
+ ✓ app/api/ava/threads/[id]/share/route.test.ts  (5 tests) 21ms
+ ✓ lib/survey-report-generation.test.ts  (3 tests) 7ms
+ ✓ lib/utils.test.ts  (30 tests) 178ms
+ ✓ lib/report-export.test.ts  (1 test) 37ms
+ ✓ app/api/collab/config/route.test.ts  (3 tests) 21ms
+ ✓ lib/feedback.test.ts  (2 tests) 7ms
+ ✓ lib/survey-report-layout.test.ts  (3 tests) 6ms
+ ✓ app/api/boards/[id]/ai-chat/route.test.ts  (3 tests) 120ms
+ ✓ lib/survey-report-category-plan.test.ts  (1 test) 5ms
+ ✓ lib/survey-report-agent-adapter.test.ts  (4 tests) 574ms
+ ✓ lib/agents.test.ts  (5 tests) 6ms
+ ✓ lib/ava-agents.test.ts  (3 tests) 15ms
+ ✓ lib/qwen.test.ts  (1 test) 80ms
+ ✓ lib/viewport.test.ts  (4 tests) 5ms
+ ✓ lib/ava-legacy-compat.test.ts  (6 tests) 18ms
+ ✓ lib/health.test.ts  (1 test) 15ms
+ ✓ app/api/v1/chat/handleRequestAIChat/route.test.ts  (2 tests) 60ms
+
+ Test Files  26 passed (26)
+      Tests  127 passed (127)
+   Start at  00:01:30
+   Duration  6.00s (transform 2.60s, setup 4ms, collect 18.11s, tests 1.40s, environment 11ms, prepare 10.10s)
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+stderr | app/api/admin/coordination/status/route.test.ts > GET /api/admin/coordination/status > 502 when upstream fetch throws (network failure / timeout)
+[admin/coordination/status] coord-gateway fetch failed Error: fetch failed
+    at /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web/app/api/admin/coordination/status/route.test.ts:99:15
+    at mockCall (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+spy@2.0.0/node_modules/@vitest/spy/dist/index.js:61:17)
+    at spy (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/tinyspy@3.0.2/node_modules/tinyspy/dist/index.js:45:80)
+    at Module.GET (/Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web/app/api/admin/coordination/status/route.ts:42:7)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web/app/api/admin/coordination/status/route.test.ts:102:17
+    at runTest (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:939:11)
+    at runSuite (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+    at runSuite (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+    at runFiles (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1152:5)
+
+stderr | app/api/boards/[id]/ai-chat/route.test.ts > POST /api/boards/:id/ai-chat — 画布内容触发词过滤（code-reviewer 复审修复） > 触发词出现在 question 本身（非画布内容）时，仍保留网关原有的确定性失败态
+[api] unhandled Error: stub provider: 强制失败（测试触发）
+    at Object.streamChat (/Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/ai/src/gateway.ts:224:13)
+    at streamChat.next (<anonymous>)
+    at Module.POST (/Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web/app/api/boards/[id]/ai-chat/route.ts:89:22)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web/app/api/boards/[id]/ai-chat/route.test.ts:62:17
+    at runTest (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:939:11)
+    at runSuite (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+    at runSuite (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+    at runFiles (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1152:5)
+    at startTests (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1161:3)
+
+
+
+$ pnpm --filter @repo/web run typecheck
+[exit 0]
+
+> @repo/web@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web
+> tsc --noEmit
+
+
+
+$ pnpm --filter @repo/web exec playwright test e2e/survey-p25-017-langgraph-report-analysis.spec.ts
+[exit 0]
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › survey-p25-017-langgraph-report-analysis.spec.ts:16:5 › LangGraph report chapters share one fact snapshot and recover from model failure (28.3s)
+
+  Slow test file: [chromium] › survey-p25-017-langgraph-report-analysis.spec.ts (28.3s)
+  Consider splitting slow test files to speed up parallel execution
+  1 passed (45.6s)
+[2m[WebServer] [22m(node:59178) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59193) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m<w> [webpack.cache.PackFileCacheStrategy] Restoring pack from /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web/.next/cache/webpack/server-development.pack.gz failed: TypeError: Cannot read properties of undefined (reading 'hasStartTime')
+[2m[WebServer] [22m(node:59374) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+(node:59377) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:59377) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59470) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59481) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59483) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59495) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59507) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59517) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59873) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59874) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59875) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59877) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59905) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59906) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59907) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+$ pnpm harness doctor --phase p25
+[exit 0]
+
+> boardx-dev-template@ harness /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base
+> tsx .harness/scripts/cli.ts "doctor" "--phase" "p25"
+
+doctor：体检 1 个 phase — 0 FAIL / 0 WARN
+✓ 审计链完整：所有 passing 都有真实非空证据，派生视图与源一致。
+
+
+
+[BASE VERIFY] $ pnpm -w run verify:base
+[exit 0]
+
+> boardx-dev-template@ verify:base /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base
+> turbo run typecheck lint test
+
+• Packages in scope: @repo/agent-core, @repo/ai, @repo/auth, @repo/canvas, @repo/collab, @repo/coord-cli, @repo/coord-dashboard, @repo/coord-gateway, @repo/coord-projection, @repo/coord-protocol, @repo/coord-repohub, @repo/data, @repo/devportal, @repo/export, @repo/memory, @repo/orchestrator, @repo/queue, @repo/storage, @repo/tools, @repo/web, @repo/workflow-worker
+• Running typecheck, lint, test in 21 packages
+• Remote caching disabled
+@repo/coord-protocol:test: cache hit, replaying logs 3e05026088bf2bb2
+@repo/data:lint: cache hit, replaying logs 995fec89d5788bd3
+@repo/coord-protocol:test:
+@repo/coord-protocol:test: > @repo/coord-protocol@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-protocol
+@repo/coord-protocol:test: > vitest run
+@repo/coord-protocol:test:
+@repo/coord-protocol:test:
+@repo/coord-protocol:test:  RUN  v2.1.9 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-protocol
+@repo/coord-protocol:test:
+@repo/coord-protocol:test:  ✓ test/protocol.test.ts (19 tests) 200ms
+@repo/coord-protocol:test:  ✓ test/client.test.ts (20 tests) 398ms
+@repo/coord-protocol:test:
+@repo/data:lint:
+@repo/data:lint: > @repo/data@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/data
+@repo/data:lint: > echo 'lint: ok'
+@repo/data:lint:
+@repo/data:lint: lint: ok
+@repo/coord-protocol:test:  Test Files  2 passed (2)
+@repo/coord-protocol:test:       Tests  39 passed (39)
+@repo/coord-protocol:test:    Start at  23:58:17
+@repo/coord-protocol:test:    Duration  5.37s (transform 733ms, setup 0ms, collect 1.30s, tests 597ms, environment 1ms, prepare 3.68s)
+@repo/coord-protocol:test:
+@repo/devportal:lint: cache hit, replaying logs 1cc5ad7d409cb589
+@repo/devportal:lint:
+@repo/devportal:lint: > @repo/devportal@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/devportal
+@repo/devportal:lint: > echo 'lint: ok'
+@repo/devportal:lint:
+@repo/devportal:lint: lint: ok
+@repo/coord-cli:test: cache hit, replaying logs b17698185116da03
+@repo/coord-cli:test:
+@repo/coord-cli:test: > @repo/coord-cli@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-cli
+@repo/coord-cli:test: > vitest run
+@repo/coord-cli:test:
+@repo/coord-cli:test:
+@repo/coord-cli:test:  RUN  v2.1.9 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-cli
+@repo/coord-cli:test:
+@repo/coord-cli:test:  ✓ test/cli.test.ts (14 tests) 790ms
+@repo/coord-cli:test:    ✓ connect > token 从 env 读，healthz 通过后写配置 449ms
+@repo/coord-cli:test:
+@repo/coord-cli:test:  Test Files  1 passed (1)
+@repo/coord-cli:test:       Tests  14 passed (14)
+@repo/coord-cli:test:    Start at  23:57:45
+@repo/coord-cli:test:    Duration  3.99s (transform 573ms, setup 0ms, collect 677ms, tests 790ms, environment 0ms, prepare 636ms)
+@repo/coord-cli:test:
+@repo/canvas:typecheck: cache hit, replaying logs af5ac31a2797d5c0
+@repo/canvas:typecheck:
+@repo/canvas:typecheck: > @repo/canvas@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/canvas
+@repo/canvas:typecheck: > tsc --noEmit
+@repo/canvas:typecheck:
+@repo/web:lint: cache hit, replaying logs 385f840d4028e3dd
+@repo/web:lint:
+@repo/web:lint: > @repo/web@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web
+@repo/web:lint: > bash scripts/lint-design.sh
+@repo/web:lint:
+@repo/web:lint: · 扫描范围：app/ + components/（含 ava/ai-store/surveys/admin/studio/presentations 等模块）
+@repo/web:lint: ✓ token 对比度：全部色面/文字对过线（中性 ≥4.5:1，状态色 ≥3:1，明暗两套）
+@repo/web:lint: · API 错误泄漏门控：0 泄漏
+@repo/web:lint: ⚠ LABEL-LANG-MIX(同文件内中英混用，警告，不拦截；修复归属 phase-p17 reskin)：
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:180:  { id: "understand-file", label: "理解文件", prompt: "帮我理解这份材料，并总结关键结论。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:181:  { id: "draft-email", label: "起草邮件", prompt: "帮我起草一封项目进展同步邮件。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:182:  { id: "summarize-trends", label: "总结趋势", prompt: "帮我总结最近用户反馈中的主要趋势。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:183:  { id: "brainstorm", label: "头脑风暴", prompt: "围绕这个目标帮我头脑风暴 5 个可执行方案。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:200:    label: "深度研究",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:206:    label: "用户研究",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:213:  { id: "make-tasks", label: "拆成任务", prompt: "把上面的建议拆成可执行任务，并按优先级排序。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:214:  { id: "find-risks", label: "识别风险", prompt: "基于上面的回复，列出主要风险和缓解措施。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:215:  { id: "shorten", label: "压缩摘要", prompt: "把上面的回复压缩成 5 条要点。" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2996:  if (diffDays === 0) return { key: "today", label: "Today" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2997:  if (diffDays === 1) return { key: "yesterday", label: "Yesterday" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2998:  if (diffDays < 7) return { key: "last-7-days", label: "Last 7 days" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ava/page.tsx:2999:  return { key: "older", label: "Older" };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:288:  { label: "文本", types: ["short_text", "text", "email", "number", "phone"] },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:289:  { label: "选择", types: ["single", "multiple", "dropdown"] },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:290:  { label: "量表", types: ["rating", "linear_scale", "nps"] },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:291:  { label: "时间与文件", types: ["date", "time", "file"] },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:548:      label: "Purpose",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:555:      label: "Audience",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:562:      label: "Decision",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:569:      label: "Information",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:576:      label: "Constraints",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:656:    { id: "design", label: "设计问卷", desc: "题目与元数据", icon: ClipboardList },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:657:    { id: "template", label: "报告模板", desc: "分类与模块组件", icon: FileText },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:658:    { id: "collect", label: "发布回收", desc: "链接与回收规则", icon: Send },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:659:    { id: "answer", label: "查看答题", desc: "答题页与样本", icon: Eye },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:660:    { id: "report", label: "分析报告", desc: "洞察与导出", icon: BarChart3 },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:665:      ? { label: "我的问卷" }
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:667:        ? { label: "问卷模版" }
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:876:      label: "Design",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:882:      label: "Report Blocks",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:888:      label: "Collect",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:894:      label: "Report",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:900:      label: "Responses",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1029:              { id: "all", label: "全部答卷", meta: `${survey.responses} 份` },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1030:              { id: "today", label: "今日提交", meta: `${Math.min(18, survey.responses)} 份` },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1031:              { id: "review", label: "需复核", meta: survey.responses ? "待检查" : "0 份" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1032:              { id: "flagged", label: "已标记", meta: "0 份" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1033:              { id: "invalid", label: "无效答卷", meta: "0 份" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:3004:                      : section.chart?.rows ?? [{ label: "待生成", value: 0 }];
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:4601:                    label: "Survey Agent",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:4606:                    label: "Report Agent",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:4611:                    label: "Publish",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:4877:      { id: "design", label: "设计问卷", description: "题目与元数据" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:4878:      { id: "template", label: "报告模板", description: "分类与模块组件" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:4879:      { id: "collect", label: "发布回收", description: "链接与回收规则" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:4880:      { id: "answer", label: "查看答题", description: "答题页与样本" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/page.tsx:4881:      { id: "report", label: "分析报告", description: "洞察与导出" },
+@repo/web:lint: ⚠ LABEL-LANG-MIX(跨文件中英混用，警告，不拦截；修复归属 phase-p17 reskin)：以下文件整体用中文 label，而以下文件整体用英文 label，同一层级 UI 组件的文案语言应统一：
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/surveys/[id]/results/page.tsx:743:                      { label: "平均", value: reportMetrics.avgCompletion },
+@repo/web:lint:     LABEL-LANG-MIX: components/board/board-canvas.tsx:190:  { value: "sans-serif", label: "无衬线" },
+@repo/web:lint:     LABEL-LANG-MIX: components/board/sync-status.tsx:14:  synced: { label: "已同步", dot: "bg-tag-green", text: "text-success" },
+@repo/web:lint:     LABEL-LANG-MIX: components/studio/studio-panel.tsx:29:  { type: "audio", label: "音频概览", icon: AudioLines },
+@repo/web:lint:     LABEL-LANG-MIX: components/survey/survey-home-dashboard.tsx:46:    label: "WHY · 为什么",
+@repo/web:lint:     LABEL-LANG-MIX: components/survey/survey-navigation-sidebar.tsx:16:  { id: "home", label: "主页", group: "工作台", icon: Home },
+@repo/web:lint:     LABEL-LANG-MIX: components/survey/survey-versioned-report-composer.tsx:64:    return { label: "尚未生成", detail: "保存要求后，手动生成首个可追溯报告版本。", variant: "muted" as const };
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/account/page.tsx:15:  { key: "personal", label: "Personal info", icon: User },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/admin-home.tsx:113:        { testKey: "users", label: "Total users", stat: stats.users },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/admin-tabs.tsx:8:  { key: "overview", label: "Overview", href: "/admin" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/ai-store/featured/page.tsx:33:  { key: "", label: "All approved" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/admin/ai-store/review/page.tsx:37:  { key: "", label: "All" },
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/ai-store/_components/store-navigation.tsx:20:    label: "Discover",
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/credits/page.tsx:237:              <SummaryCard value={fmt(wallet.balance)} label="Current balance" />
+@repo/web:lint:     LABEL-LANG-MIX: app/(app)/rooms/[id]/layout.tsx:27:  { key: "boards", label: "Boards", segment: "boards" },
+@repo/web:lint:     LABEL-LANG-MIX: components/app-shell/sidebar.tsx:45:  { label: "Home", icon: Home, href: "/" },
+@repo/web:lint:   示例（Board 工具条 vs Sidebar 导航）：见 components/board/board-canvas.tsx 与 components/app-shell/sidebar.tsx
+@repo/web:lint: ✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性/文案语言一致性）
+@repo/coord-cli:lint: cache hit, replaying logs ab31b3dc0c1a1f7f
+@repo/coord-cli:lint:
+@repo/coord-cli:lint: > @repo/coord-cli@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-cli
+@repo/coord-cli:lint: > echo 'lint: ok'
+@repo/coord-cli:lint:
+@repo/coord-cli:lint: lint: ok
+@repo/canvas:lint: cache hit, replaying logs 7dad24cb3d6821c0
+@repo/canvas:lint:
+@repo/canvas:lint: > @repo/canvas@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/canvas
+@repo/canvas:lint: > echo 'lint: ok'
+@repo/canvas:lint:
+@repo/canvas:lint: lint: ok
+@repo/ai:build: cache hit, replaying logs 2be6c81122979a85
+@repo/ai:build:
+@repo/ai:build: > @repo/ai@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/ai
+@repo/ai:build: > tsc --noEmit
+@repo/ai:build:
+@repo/queue:build: cache hit, replaying logs cabf54bf75571e7f
+@repo/queue:build:
+@repo/queue:build: > @repo/queue@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/queue
+@repo/queue:build: > tsc --noEmit
+@repo/queue:build:
+@repo/devportal:typecheck: cache hit, replaying logs e2d3799c6c339d58
+@repo/devportal:typecheck:
+@repo/devportal:typecheck: > @repo/devportal@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/devportal
+@repo/devportal:typecheck: > tsc --noEmit
+@repo/devportal:typecheck:
+@repo/devportal:test: cache hit, replaying logs abe55756c6882d04
+@repo/devportal:test:
+@repo/devportal:test: > @repo/devportal@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/devportal
+@repo/devportal:test: > vitest run --passWithNoTests
+@repo/devportal:test:
+@repo/devportal:test:
+@repo/devportal:test:  RUN  v2.1.9 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/devportal
+@repo/devportal:test:
+@repo/devportal:test: include: **/*.{test,spec}.?(c|m)[jt]s?(x)
+@repo/devportal:test: No test files found, exiting with code 0
+@repo/devportal:test:
+@repo/devportal:test: exclude:  **/node_modules/**, **/dist/**, **/cypress/**, **/.{idea,git,cache,output,temp}/**, **/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*
+@repo/ai:typecheck: cache hit, replaying logs 39b5060ca1256938
+@repo/ai:typecheck:
+@repo/ai:typecheck: > @repo/ai@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/ai
+@repo/ai:typecheck: > tsc --noEmit
+@repo/ai:typecheck:
+@repo/coord-repohub:lint: cache hit, replaying logs ebb4024252d4637c
+@repo/coord-repohub:lint:
+@repo/coord-repohub:lint: > @repo/coord-repohub@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-repohub
+@repo/coord-repohub:lint: > echo 'lint: ok'
+@repo/coord-repohub:lint:
+@repo/coord-repohub:lint: lint: ok
+@repo/ai:lint: cache hit, replaying logs e056b268a1ebf0cf
+@repo/ai:lint:
+@repo/ai:lint: > @repo/ai@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/ai
+@repo/ai:lint: > echo 'lint: ok'
+@repo/ai:lint:
+@repo/ai:lint: lint: ok
+@repo/coord-protocol:build: cache hit, replaying logs bb5cf17ce083be61
+@repo/coord-protocol:build:
+@repo/coord-protocol:build: > @repo/coord-protocol@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-protocol
+@repo/coord-protocol:build: > tsc --noEmit
+@repo/coord-protocol:build:
+@repo/ai:test: cache hit, replaying logs 94c73b54ea1d5595
+@repo/ai:test:
+@repo/ai:test: > @repo/ai@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/ai
+@repo/ai:test: > vitest run
+@repo/ai:test:
+@repo/ai:test:
+@repo/ai:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/ai
+@repo/ai:test:
+@repo/ai:test:  ✓ src/studioGenerator.test.ts  (4 tests) 8ms
+@repo/ai:test:  ✓ src/qwenProvider.test.ts  (6 tests) 66ms
+@repo/ai:test:  ✓ src/surveyReportWorkspace.test.ts  (4 tests) 31ms
+@repo/ai:test:  ✓ src/index.test.ts  (12 tests) 19ms
+@repo/ai:test:  ✓ src/sttProvider.test.ts  (6 tests) 249ms
+@repo/ai:test:  ✓ src/anthropicProvider.test.ts  (13 tests) 483ms
+@repo/ai:test:  ✓ src/surveyReportAgent.test.ts  (3 tests) 910ms
+@repo/ai:test:
+@repo/ai:test:  Test Files  7 passed (7)
+@repo/ai:test:       Tests  48 passed (48)
+@repo/ai:test:    Start at  23:57:30
+@repo/ai:test:    Duration  9.23s (transform 1.67s, setup 1ms, collect 10.17s, tests 1.77s, environment 2ms, prepare 5.23s)
+@repo/ai:test:
+@repo/coord-cli:typecheck: cache hit, replaying logs e951ca18e89fc612
+@repo/coord-cli:typecheck:
+@repo/coord-cli:typecheck: > @repo/coord-cli@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-cli
+@repo/coord-cli:typecheck: > tsc --noEmit
+@repo/coord-cli:typecheck:
+@repo/coord-projection:build: cache hit, replaying logs a6cd4564afa3cf44
+@repo/coord-projection:build:
+@repo/coord-projection:build: > @repo/coord-projection@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-projection
+@repo/coord-projection:build: > tsc --noEmit
+@repo/coord-projection:build:
+@repo/tools:typecheck: cache hit, replaying logs 4e0f868579597534
+@repo/tools:typecheck:
+@repo/tools:typecheck: > @repo/tools@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/tools
+@repo/tools:typecheck: > tsc --noEmit
+@repo/tools:typecheck:
+@repo/coord-gateway:lint: cache hit, replaying logs fa9667fffe9923eb
+@repo/coord-gateway:lint:
+@repo/coord-gateway:lint: > @repo/coord-gateway@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway
+@repo/coord-gateway:lint: > echo 'lint: ok'
+@repo/coord-gateway:lint:
+@repo/coord-gateway:lint: lint: ok
+@repo/storage:build: cache hit, replaying logs e8a7d50616a9f077
+@repo/storage:build:
+@repo/storage:build: > @repo/storage@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/storage
+@repo/storage:build: > tsc --noEmit
+@repo/storage:build:
+@repo/collab:test: cache hit, replaying logs a3ed4c9124ac75c4
+@repo/collab:test:
+@repo/collab:test: > @repo/collab@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/collab
+@repo/collab:test: > vitest run
+@repo/collab:test:
+@repo/collab:test:
+@repo/collab:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/collab
+@repo/collab:test:
+@repo/collab:test:  ✓ src/index.test.ts  (14 tests) 143ms
+@repo/collab:test:
+@repo/collab:test:  Test Files  1 passed (1)
+@repo/collab:test:       Tests  14 passed (14)
+@repo/collab:test:    Start at  23:57:47
+@repo/collab:test:    Duration  3.89s (transform 342ms, setup 0ms, collect 551ms, tests 143ms, environment 0ms, prepare 996ms)
+@repo/collab:test:
+@repo/memory:lint: cache hit, replaying logs fad00aab7844cd2d
+@repo/memory:lint:
+@repo/memory:lint: > @repo/memory@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/memory
+@repo/memory:lint: > echo 'lint: ok'
+@repo/memory:lint:
+@repo/memory:lint: lint: ok
+@repo/memory:build: cache hit, replaying logs 5a15780b50f5eb12
+@repo/memory:build:
+@repo/memory:build: > @repo/memory@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/memory
+@repo/memory:build: > tsc --noEmit
+@repo/memory:build:
+@repo/coord-protocol:typecheck: cache hit, replaying logs 55da2515687d720c
+@repo/coord-protocol:typecheck:
+@repo/coord-protocol:typecheck: > @repo/coord-protocol@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-protocol
+@repo/coord-protocol:typecheck: > tsc --noEmit
+@repo/coord-protocol:typecheck:
+@repo/collab:build: cache hit, replaying logs c26d7be8f66dc39c
+@repo/collab:build:
+@repo/collab:build: > @repo/collab@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/collab
+@repo/collab:build: > tsc --noEmit
+@repo/collab:build:
+@repo/memory:test: cache hit, replaying logs 830b6299defa4b59
+@repo/memory:test:
+@repo/memory:test: > @repo/memory@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/memory
+@repo/memory:test: > vitest run
+@repo/memory:test:
+@repo/memory:test:
+@repo/memory:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/memory
+@repo/memory:test:
+@repo/memory:test:  ✓ src/index.test.ts  (13 tests) 61ms
+@repo/memory:test:
+@repo/memory:test:  Test Files  1 passed (1)
+@repo/memory:test:       Tests  13 passed (13)
+@repo/memory:test:    Start at  23:57:54
+@repo/memory:test:    Duration  3.01s (transform 180ms, setup 0ms, collect 183ms, tests 61ms, environment 1ms, prepare 815ms)
+@repo/memory:test:
+@repo/queue:lint: cache hit, replaying logs 5bc7260371971490
+@repo/queue:lint:
+@repo/queue:lint: > @repo/queue@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/queue
+@repo/queue:lint: > echo 'lint: ok'
+@repo/queue:lint:
+@repo/queue:lint: lint: ok
+@repo/queue:typecheck: cache hit, replaying logs 7d26594ea34f1385
+@repo/queue:typecheck:
+@repo/queue:typecheck: > @repo/queue@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/queue
+@repo/queue:typecheck: > tsc --noEmit
+@repo/queue:typecheck:
+@repo/export:lint: cache hit, replaying logs 444caaf3aeb2ed6f
+@repo/export:lint:
+@repo/export:lint: > @repo/export@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/export
+@repo/export:lint: > echo 'lint: ok'
+@repo/export:lint:
+@repo/export:lint: lint: ok
+@repo/auth:lint: cache hit, replaying logs c8f2813f7a386a67
+@repo/auth:typecheck: cache hit, replaying logs b2997e91adfc5f82
+@repo/auth:lint:
+@repo/auth:lint: > @repo/auth@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/auth
+@repo/auth:lint: > echo 'lint: ok'
+@repo/auth:lint:
+@repo/auth:lint: lint: ok
+@repo/auth:typecheck:
+@repo/auth:typecheck: > @repo/auth@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/auth
+@repo/auth:typecheck: > tsc --noEmit
+@repo/auth:typecheck:
+@repo/coord-protocol:lint: cache hit, replaying logs aad0da1b24488f07
+@repo/coord-protocol:lint:
+@repo/coord-protocol:lint: > @repo/coord-protocol@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-protocol
+@repo/coord-protocol:lint: > echo 'lint: ok'
+@repo/coord-protocol:lint:
+@repo/coord-protocol:lint: lint: ok
+@repo/auth:build: cache hit, replaying logs 2818274f6342adcc
+@repo/auth:build:
+@repo/auth:build: > @repo/auth@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/auth
+@repo/auth:build: > tsc --noEmit
+@repo/auth:build:
+@repo/workflow-worker:lint: cache hit, replaying logs 43652832df48219d
+@repo/workflow-worker:lint:
+@repo/workflow-worker:lint: > @repo/workflow-worker@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/workflow-worker
+@repo/workflow-worker:lint: > echo 'lint: ok'
+@repo/workflow-worker:lint:
+@repo/workflow-worker:lint: lint: ok
+@repo/export:test: cache hit, replaying logs a2308cd251f3ff09
+@repo/export:test:
+@repo/export:test: > @repo/export@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/export
+@repo/export:test: > vitest run
+@repo/export:test:
+@repo/export:test:
+@repo/export:test:  RUN  v2.1.9 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/export
+@repo/export:test:
+@repo/export:test:  ✓ src/index.test.ts (9 tests) 311ms
+@repo/export:test:
+@repo/export:test:  Test Files  1 passed (1)
+@repo/export:test:       Tests  9 passed (9)
+@repo/export:test:    Start at  23:57:36
+@repo/export:test:    Duration  4.02s (transform 348ms, setup 0ms, collect 1.32s, tests 311ms, environment 0ms, prepare 692ms)
+@repo/export:test:
+@repo/canvas:build: cache hit, replaying logs d5861edb75ab508e
+@repo/canvas:build:
+@repo/canvas:build: > @repo/canvas@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/canvas
+@repo/canvas:build: > tsc --noEmit
+@repo/canvas:build:
+@repo/collab:typecheck: cache hit, replaying logs 2eed9420f813da9c
+@repo/collab:typecheck:
+@repo/collab:typecheck: > @repo/collab@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/collab
+@repo/collab:typecheck: > tsc --noEmit
+@repo/collab:typecheck:
+@repo/agent-core:lint: cache hit, replaying logs 52521afadc9f8e84
+@repo/agent-core:lint:
+@repo/agent-core:lint: > @repo/agent-core@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/agent-core
+@repo/agent-core:lint: > echo 'lint: ok'
+@repo/agent-core:lint:
+@repo/agent-core:lint: lint: ok
+@repo/tools:test: cache hit, replaying logs a786d616d94598b4
+@repo/tools:test:
+@repo/tools:test: > @repo/tools@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/tools
+@repo/tools:test: > vitest run
+@repo/tools:test:
+@repo/tools:test:
+@repo/tools:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/tools
+@repo/tools:test:
+@repo/tools:test:  ✓ src/index.test.ts  (12 tests) 268ms
+@repo/tools:test:
+@repo/tools:test:  Test Files  1 passed (1)
+@repo/tools:test:       Tests  12 passed (12)
+@repo/tools:test:    Start at  23:57:48
+@repo/tools:test:    Duration  3.69s (transform 112ms, setup 0ms, collect 168ms, tests 268ms, environment 0ms, prepare 734ms)
+@repo/tools:test:
+@repo/collab:lint: cache hit, replaying logs 6c9189b2822aa37a
+@repo/collab:lint:
+@repo/collab:lint: > @repo/collab@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/collab
+@repo/collab:lint: > echo 'lint: ok'
+@repo/collab:lint:
+@repo/collab:lint: lint: ok
+@repo/agent-core:build: cache hit, replaying logs 1f4db98f7cd506d3
+@repo/agent-core:build:
+@repo/agent-core:build: > @repo/agent-core@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/agent-core
+@repo/agent-core:build: > tsc --noEmit
+@repo/agent-core:build:
+@repo/agent-core:test: cache hit, replaying logs 116092d246a0f5e0
+@repo/agent-core:test:
+@repo/agent-core:test: > @repo/agent-core@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/agent-core
+@repo/agent-core:test: > vitest run
+@repo/agent-core:test:
+@repo/agent-core:test:
+@repo/agent-core:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/agent-core
+@repo/agent-core:test:
+@repo/agent-core:test:  ✓ src/index.test.ts  (3 tests) 33ms
+@repo/agent-core:test:
+@repo/agent-core:test:  Test Files  1 passed (1)
+@repo/agent-core:test:       Tests  3 passed (3)
+@repo/agent-core:test:    Start at  23:58:02
+@repo/agent-core:test:    Duration  2.54s (transform 113ms, setup 0ms, collect 152ms, tests 33ms, environment 0ms, prepare 805ms)
+@repo/agent-core:test:
+@repo/coord-projection:lint: cache hit, replaying logs 4aefefb71c0564ca
+@repo/coord-projection:lint:
+@repo/coord-projection:lint: > @repo/coord-projection@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-projection
+@repo/coord-projection:lint: > echo 'lint: ok'
+@repo/coord-projection:lint:
+@repo/coord-projection:lint: lint: ok
+@repo/tools:build: cache hit, replaying logs 89aa2c095788a45e
+@repo/tools:build:
+@repo/tools:build: > @repo/tools@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/tools
+@repo/tools:build: > tsc --noEmit
+@repo/tools:build:
+@repo/tools:lint: cache hit, replaying logs bc8bb31c41e988c0
+@repo/tools:lint:
+@repo/tools:lint: > @repo/tools@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/tools
+@repo/tools:lint: > echo 'lint: ok'
+@repo/tools:lint:
+@repo/tools:lint: lint: ok
+@repo/orchestrator:lint: cache hit, replaying logs 7be768b011ad717a
+@repo/orchestrator:lint:
+@repo/orchestrator:lint: > @repo/orchestrator@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/orchestrator
+@repo/orchestrator:lint: > echo 'lint: ok'
+@repo/orchestrator:lint:
+@repo/orchestrator:lint: lint: ok
+@repo/coord-projection:typecheck: cache hit, replaying logs 39adc55fab3d3054
+@repo/coord-projection:typecheck:
+@repo/coord-projection:typecheck: > @repo/coord-projection@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-projection
+@repo/coord-projection:typecheck: > tsc --noEmit
+@repo/coord-projection:typecheck:
+@repo/memory:typecheck: cache hit, replaying logs 84ffba2d3c36d828
+@repo/memory:typecheck:
+@repo/memory:typecheck: > @repo/memory@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/memory
+@repo/memory:typecheck: > tsc --noEmit
+@repo/memory:typecheck:
+@repo/storage:typecheck: cache hit, replaying logs b79244c167ec8240
+@repo/storage:typecheck:
+@repo/storage:typecheck: > @repo/storage@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/storage
+@repo/storage:typecheck: > tsc --noEmit
+@repo/storage:typecheck:
+@repo/export:typecheck: cache hit, replaying logs f0762893e935161c
+@repo/export:typecheck:
+@repo/export:typecheck: > @repo/export@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/export
+@repo/export:typecheck: > tsc --noEmit
+@repo/export:typecheck:
+@repo/auth:test: cache hit, replaying logs d8a978f9c9c91a93
+@repo/auth:test:
+@repo/auth:test: > @repo/auth@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/auth
+@repo/auth:test: > vitest run
+@repo/auth:test:
+@repo/auth:test:
+@repo/auth:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/auth
+@repo/auth:test:
+@repo/auth:test:  ✓ src/index.test.ts  (15 tests) 2912ms
+@repo/auth:test:
+@repo/auth:test:  Test Files  1 passed (1)
+@repo/auth:test:       Tests  15 passed (15)
+@repo/auth:test:    Start at  23:57:34
+@repo/auth:test:    Duration  6.22s (transform 364ms, setup 0ms, collect 551ms, tests 2.91s, environment 0ms, prepare 1.17s)
+@repo/auth:test:
+@repo/coord-projection:test: cache hit, replaying logs 8f157b98f5bca411
+@repo/coord-projection:test:
+@repo/coord-projection:test: > @repo/coord-projection@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-projection
+@repo/coord-projection:test: > vitest run
+@repo/coord-projection:test:
+@repo/coord-projection:test:
+@repo/coord-projection:test:  RUN  v2.1.9 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-projection
+@repo/coord-projection:test:
+@repo/coord-projection:test: [vpw:debug] Adding `enable_nodejs_tty_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-projection:test: [vpw:debug] Adding `enable_nodejs_fs_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-projection:test: [vpw:debug] Adding `enable_nodejs_http_modules` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-projection:test: [vpw:debug] Adding `enable_nodejs_perf_hooks_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-projection:test: [vpw:info] Starting single runtime for vitest.config.ts...
+@repo/coord-projection:test: [mf:warn] The latest compatibility date supported by the installed Cloudflare Workers Runtime is "2026-03-10",
+@repo/coord-projection:test: but you've requested "2026-07-01". Falling back to "2026-03-10"...
+@repo/coord-projection:test: Cannot optimize dependency: vitest > @vitest/snapshot > magic-string, present in 'ssr.optimizeDeps.include'
+@repo/coord-projection:test: Cannot optimize dependency: vitest > @vitest/expect > chai, present in 'ssr.optimizeDeps.include'
+@repo/coord-projection:test: stderr | test/github-app.test.ts > 应用层 applyCalls > status 与 check-run 打到正确端点；单条失败不中断整批
+@repo/coord-projection:test: [coord-projection] apply 失败（继续整批）: POST https://api.github.com/repos/boardx/boardx-dev-template/statuses/badbad Error: github_api_422
+@repo/coord-projection:test:     at Module.applyCalls (/Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-projection/src/apply.ts:55:26)
+@repo/coord-projection:test:     at /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-projection/test/github-app.test.ts:110:15
+@repo/coord-projection:test:     at Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5
+@repo/coord-projection:test:     at runTest (Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)
+@repo/coord-projection:test:     at runSuite (Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+@repo/coord-projection:test:     at runSuite (Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+@repo/coord-projection:test:     at runFiles (Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)
+@repo/coord-projection:test:     at startTests (Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)
+@repo/coord-projection:test:     at Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/vitest@2.1.9_@types+node@22.20.1_jsdom@26.1.0_canvas@3.2.3_/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11
+@repo/coord-projection:test:     at withEnv (Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/vitest@2.1.9_@types+node@22.20.1_jsdom@26.1.0_canvas@3.2.3_/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:90:5)
+@repo/coord-projection:test:
+@repo/coord-projection:test:  ✓ test/github-app.test.ts (4 tests) 1289ms
+@repo/coord-projection:test:  ✓ test/engine.test.ts (7 tests) 10ms
+@repo/coord-projection:test:
+@repo/coord-projection:test:  Test Files  2 passed (2)
+@repo/coord-projection:test:       Tests  11 passed (11)
+@repo/coord-projection:test:    Start at  23:57:58
+@repo/coord-projection:test:    Duration  14.98s (transform 379ms, setup 0ms, collect 402ms, tests 1.30s, environment 0ms, prepare 1.39s)
+@repo/coord-projection:test:
+@repo/coord-projection:test: [vpw:debug] Shutting down runtimes...
+@repo/coord-projection:test: [vpw:debug] Disposing remote proxy sessions...
+@repo/storage:lint: cache hit, replaying logs de5ddf684dcb2c4f
+@repo/storage:lint:
+@repo/storage:lint: > @repo/storage@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/storage
+@repo/storage:lint: > echo 'lint: ok'
+@repo/storage:lint:
+@repo/storage:lint: lint: ok
+@repo/storage:test: cache hit, replaying logs a1ac30abc3c080dc
+@repo/storage:test:
+@repo/storage:test: > @repo/storage@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/storage
+@repo/storage:test: > vitest run
+@repo/storage:test:
+@repo/storage:test:
+@repo/storage:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/storage
+@repo/storage:test:
+@repo/storage:test:  ✓ src/index.test.ts  (23 tests) 105ms
+@repo/storage:test:
+@repo/storage:test:  Test Files  1 passed (1)
+@repo/storage:test:       Tests  23 passed (23)
+@repo/storage:test:    Start at  23:57:35
+@repo/storage:test:    Duration  4.78s (transform 340ms, setup 0ms, collect 1.49s, tests 105ms, environment 0ms, prepare 840ms)
+@repo/storage:test:
+@repo/queue:test: cache hit, replaying logs 359cc9117440ace0
+@repo/queue:test:
+@repo/queue:test: > @repo/queue@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/queue
+@repo/queue:test: > vitest run
+@repo/queue:test:
+@repo/queue:test:
+@repo/queue:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/queue
+@repo/queue:test:
+@repo/queue:test:  ✓ src/index.test.ts  (4 tests) 11ms
+@repo/queue:test:
+@repo/queue:test:  Test Files  1 passed (1)
+@repo/queue:test:       Tests  4 passed (4)
+@repo/queue:test:    Start at  23:58:05
+@repo/queue:test:    Duration  4.65s (transform 118ms, setup 0ms, collect 846ms, tests 11ms, environment 0ms, prepare 760ms)
+@repo/queue:test:
+@repo/canvas:test: cache hit, replaying logs 680e433158fbb318
+@repo/canvas:test:
+@repo/canvas:test: > @repo/canvas@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/canvas
+@repo/canvas:test: > vitest run
+@repo/canvas:test:
+@repo/canvas:test:
+@repo/canvas:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/canvas
+@repo/canvas:test:
+@repo/canvas:test:  ✓ src/index.test.ts  (25 tests) 20ms
+@repo/canvas:test:
+@repo/canvas:test:  Test Files  1 passed (1)
+@repo/canvas:test:       Tests  25 passed (25)
+@repo/canvas:test:    Start at  23:58:17
+@repo/canvas:test:    Duration  4.75s (transform 116ms, setup 0ms, collect 150ms, tests 20ms, environment 0ms, prepare 709ms)
+@repo/canvas:test:
+@repo/agent-core:typecheck: cache hit, replaying logs 441b7caa706e6309
+@repo/agent-core:typecheck:
+@repo/agent-core:typecheck: > @repo/agent-core@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/agent-core
+@repo/agent-core:typecheck: > tsc --noEmit
+@repo/agent-core:typecheck:
+@repo/data:test: cache hit, replaying logs b665340b038db5f8
+@repo/data:test:
+@repo/data:test: > @repo/data@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/data
+@repo/data:test: > vitest run
+@repo/data:test:
+@repo/data:test:
+@repo/data:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/data
+@repo/data:test:
+@repo/data:test:  ✓ src/aiStore.migrationAudit.test.ts  (4 tests) 8ms
+@repo/data:test:  ✓ src/migrateHelpers.test.ts  (6 tests) 108ms
+@repo/data:test:  ✓ src/aiStore.skillsVersioning.test.ts  (4 tests) 9ms
+@repo/data:test:  ✓ src/aiStore.teamIsolation.test.ts  (5 tests) 15ms
+@repo/data:test:  ✓ src/aiStore.test.ts  (18 tests) 14ms
+@repo/data:test:  ✓ src/ids.test.ts  (8 tests) 212ms
+@repo/data:test:  ✓ src/dockerComposePersistence.test.ts  (2 tests) 10ms
+@repo/data:test:  ✓ src/survey-source-contract.test.ts  (3 tests) 54ms
+@repo/data:test:  ✓ src/board.test.ts  (11 tests) 8ms
+@repo/data:test:  ✓ src/survey-report-version.test.ts  (5 tests) 244ms
+@repo/data:test:  ✓ src/roomChat.test.ts  (5 tests) 11ms
+@repo/data:test:  ✓ src/survey.test.ts  (5 tests) 6ms
+@repo/data:test:  ✓ src/avaChat.test.ts  (5 tests) 5ms
+@repo/data:test:  ✓ src/index.test.ts  (3 tests) 4ms
+@repo/data:test:  ✓ src/rooms.test.ts  (2 tests) 5ms
+@repo/data:test:
+@repo/data:test:  Test Files  15 passed (15)
+@repo/data:test:       Tests  86 passed (86)
+@repo/data:test:    Start at  23:58:30
+@repo/data:test:    Duration  9.97s (transform 3.84s, setup 0ms, collect 41.51s, tests 713ms, environment 15ms, prepare 10.31s)
+@repo/data:test:
+@repo/data:typecheck: cache hit, replaying logs 6e91e72ec320ae52
+@repo/data:typecheck:
+@repo/data:typecheck: > @repo/data@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/data
+@repo/data:typecheck: > tsc --noEmit
+@repo/data:typecheck:
+@repo/data:build: cache hit, replaying logs 6d94b5be6f98d119
+@repo/data:build:
+@repo/data:build: > @repo/data@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/data
+@repo/data:build: > tsc --noEmit
+@repo/data:build:
+@repo/coord-repohub:test: cache hit, replaying logs 2f31d82ec0d7841c
+@repo/coord-repohub:test:
+@repo/coord-repohub:test: > @repo/coord-repohub@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-repohub
+@repo/coord-repohub:test: > vitest run
+@repo/coord-repohub:test:
+@repo/coord-repohub:test:
+@repo/coord-repohub:test:  RUN  v2.1.9 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-repohub
+@repo/coord-repohub:test:
+@repo/coord-repohub:test: [vpw:debug] Adding `enable_nodejs_tty_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-repohub:test: [vpw:debug] Adding `enable_nodejs_fs_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-repohub:test: [vpw:debug] Adding `enable_nodejs_http_modules` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-repohub:test: [vpw:debug] Adding `enable_nodejs_perf_hooks_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-repohub:test: [vpw:info] Starting single runtime for vitest.config.ts...
+@repo/coord-repohub:test: [mf:warn] The latest compatibility date supported by the installed Cloudflare Workers Runtime is "2026-03-10",
+@repo/coord-repohub:test: but you've requested "2026-07-01". Falling back to "2026-03-10"...
+@repo/coord-repohub:test: Cannot optimize dependency: vitest > @vitest/snapshot > magic-string, present in 'ssr.optimizeDeps.include'
+@repo/coord-repohub:test: Cannot optimize dependency: vitest > @vitest/expect > chai, present in 'ssr.optimizeDeps.include'
+@repo/coord-repohub:test: workerd/io/worker.c++:1150: info: console warning; message = An event handler returned a value of type "number" that will be ignored. Event handlers should not have a return value.
+@repo/coord-repohub:test: workerd/io/worker.c++:1150: info: console warning; message = An event handler returned a value of type "number" that will be ignored. Event handlers should not have a return value.
+@repo/coord-repohub:test: workerd/io/worker.c++:1150: info: console warning; message = An event handler returned a value of type "number" that will be ignored. Event handlers should not have a return value.
+@repo/coord-repohub:test:  ✓ test/repohub.test.ts (28 tests) 4259ms
+@repo/coord-repohub:test:    ✓ F06 andon 状态 + 投影游标 > raise → 状态 active + andon.raised 事件；重复 raise 409；clear → 恢复 + andon.cleared 318ms
+@repo/coord-repohub:test:
+@repo/coord-repohub:test:  Test Files  1 passed (1)
+@repo/coord-repohub:test:       Tests  28 passed (28)
+@repo/coord-repohub:test:    Start at  23:58:27
+@repo/coord-repohub:test:    Duration  16.48s (transform 1.03s, setup 0ms, collect 994ms, tests 4.26s, environment 1ms, prepare 1.14s)
+@repo/coord-repohub:test:
+@repo/coord-repohub:test: [vpw:debug] Shutting down runtimes...
+@repo/coord-repohub:test: [vpw:debug] Disposing remote proxy sessions...
+@repo/coord-repohub:typecheck: cache hit, replaying logs 20072e9cb8ba1e81
+@repo/coord-repohub:typecheck:
+@repo/coord-repohub:typecheck: > @repo/coord-repohub@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-repohub
+@repo/coord-repohub:typecheck: > tsc --noEmit
+@repo/coord-repohub:typecheck:
+@repo/coord-repohub:build: cache hit, replaying logs 8fcb70e6697b51df
+@repo/coord-repohub:build:
+@repo/coord-repohub:build: > @repo/coord-repohub@0.1.0 build /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/coord-repohub
+@repo/coord-repohub:build: > tsc --noEmit
+@repo/coord-repohub:build:
+@repo/orchestrator:test: cache hit, replaying logs f46d0fff2cce849f
+@repo/orchestrator:test:
+@repo/orchestrator:test: > @repo/orchestrator@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/orchestrator
+@repo/orchestrator:test: > vitest run
+@repo/orchestrator:test:
+@repo/orchestrator:test:
+@repo/orchestrator:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/orchestrator
+@repo/orchestrator:test:
+@repo/orchestrator:test:  ✓ src/orchestrator.test.ts  (3 tests) 296ms
+@repo/orchestrator:test:
+@repo/orchestrator:test:  Test Files  1 passed (1)
+@repo/orchestrator:test:       Tests  3 passed (3)
+@repo/orchestrator:test:    Start at  23:58:28
+@repo/orchestrator:test:    Duration  2.64s (transform 180ms, setup 0ms, collect 257ms, tests 296ms, environment 0ms, prepare 802ms)
+@repo/orchestrator:test:
+@repo/orchestrator:typecheck: cache hit, replaying logs 823a3537173ed2a4
+@repo/orchestrator:typecheck:
+@repo/orchestrator:typecheck: > @repo/orchestrator@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/orchestrator
+@repo/orchestrator:typecheck: > tsc --noEmit
+@repo/orchestrator:typecheck:
+@repo/web:typecheck: cache hit, replaying logs cd214a50a3d6f68f
+@repo/web:typecheck:
+@repo/web:typecheck: > @repo/web@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web
+@repo/web:typecheck: > tsc --noEmit
+@repo/web:typecheck:
+@repo/workflow-worker:test: cache hit, replaying logs 496825f9711ca198
+@repo/workflow-worker:test:
+@repo/workflow-worker:test: > @repo/workflow-worker@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/workflow-worker
+@repo/workflow-worker:test: > vitest run
+@repo/workflow-worker:test:
+@repo/workflow-worker:test:
+@repo/workflow-worker:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/workflow-worker
+@repo/workflow-worker:test:
+@repo/workflow-worker:test:  ✓ src/job.test.ts  (3 tests) 4ms
+@repo/workflow-worker:test:  ✓ src/kbFileJob.test.ts  (2 tests) 5ms
+@repo/workflow-worker:test:  ✓ src/studioJob.test.ts  (2 tests) 48ms
+@repo/workflow-worker:test:  ✓ src/presentationRevisionJob.test.ts  (4 tests) 50ms
+@repo/workflow-worker:test:
+@repo/workflow-worker:test:  Test Files  4 passed (4)
+@repo/workflow-worker:test:       Tests  11 passed (11)
+@repo/workflow-worker:test:    Start at  23:58:48
+@repo/workflow-worker:test:    Duration  7.21s (transform 905ms, setup 0ms, collect 9.33s, tests 107ms, environment 1ms, prepare 2.20s)
+@repo/workflow-worker:test:
+@repo/workflow-worker:typecheck: cache hit, replaying logs 46864c4101094d6d
+@repo/workflow-worker:typecheck:
+@repo/workflow-worker:typecheck: > @repo/workflow-worker@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/workflow-worker
+@repo/workflow-worker:typecheck: > tsc --noEmit
+@repo/workflow-worker:typecheck:
+@repo/web:test: cache hit, replaying logs 9ee674023417f38f
+@repo/web:test:
+@repo/web:test: > @repo/web@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web
+@repo/web:test: > vitest run
+@repo/web:test:
+@repo/web:test: [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+@repo/web:test:
+@repo/web:test:  RUN  v2.0.0 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web
+@repo/web:test:
+@repo/web:test:  ✓ lib/canvas-snap.test.ts  (14 tests) 19ms
+@repo/web:test:  ✓ lib/survey-report-evidence.test.ts  (4 tests) 14ms
+@repo/web:test: stderr | app/api/admin/coordination/status/route.test.ts > GET /api/admin/coordination/status > 502 when upstream fetch throws (network failure / timeout)
+@repo/web:test: [admin/coordination/status] coord-gateway fetch failed Error: fetch failed
+@repo/web:test:     at /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web/app/api/admin/coordination/status/route.test.ts:99:15
+@repo/web:test:     at mockCall (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+spy@2.0.0/node_modules/@vitest/spy/dist/index.js:61:17)
+@repo/web:test:     at spy (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/tinyspy@3.0.2/node_modules/tinyspy/dist/index.js:45:80)
+@repo/web:test:     at Module.GET (/Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web/app/api/admin/coordination/status/route.ts:42:7)
+@repo/web:test:     at processTicksAndRejections (node:internal/process/task_queues:105:5)
+@repo/web:test:     at /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web/app/api/admin/coordination/status/route.test.ts:102:17
+@repo/web:test:     at runTest (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:939:11)
+@repo/web:test:     at runSuite (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runSuite (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runFiles (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1152:5)
+@repo/web:test:
+@repo/web:test:  ✓ app/api/admin/coordination/status/route.test.ts  (6 tests) 168ms
+@repo/web:test:  ✓ lib/api/handler.test.ts  (10 tests) 107ms
+@repo/web:test:  ✓ app/api/ava/threads/[id]/route.test.ts  (4 tests) 27ms
+@repo/web:test:  ✓ app/api/ai-store/items/[id]/route.test.ts  (2 tests) 32ms
+@repo/web:test:  ✓ app/api/ai-store/items/skills-versioning.route.test.ts  (2 tests) 91ms
+@repo/web:test:  ✓ lib/survey-professional-report.test.ts  (4 tests) 13ms
+@repo/web:test:  ✓ lib/collab-bus.test.ts  (4 tests) 9ms
+@repo/web:test:  ✓ app/api/ava/threads/[id]/share/route.test.ts  (5 tests) 104ms
+@repo/web:test:  ✓ lib/survey-report-generation.test.ts  (3 tests) 10ms
+@repo/web:test:  ✓ lib/utils.test.ts  (30 tests) 161ms
+@repo/web:test:  ✓ lib/report-export.test.ts  (1 test) 320ms
+@repo/web:test:  ✓ lib/survey-report-layout.test.ts  (3 tests) 6ms
+@repo/web:test:  ✓ lib/feedback.test.ts  (2 tests) 7ms
+@repo/web:test:  ✓ app/api/collab/config/route.test.ts  (3 tests) 67ms
+@repo/web:test: stderr | app/api/boards/[id]/ai-chat/route.test.ts > POST /api/boards/:id/ai-chat — 画布内容触发词过滤（code-reviewer 复审修复） > 触发词出现在 question 本身（非画布内容）时，仍保留网关原有的确定性失败态
+@repo/web:test: [api] unhandled Error: stub provider: 强制失败（测试触发）
+@repo/web:test:     at Object.streamChat (/Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/packages/ai/src/gateway.ts:224:13)
+@repo/web:test:     at streamChat.next (<anonymous>)
+@repo/web:test:     at Module.POST (/Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web/app/api/boards/[id]/ai-chat/route.ts:89:22)
+@repo/web:test:     at processTicksAndRejections (node:internal/process/task_queues:105:5)
+@repo/web:test:     at /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web/app/api/boards/[id]/ai-chat/route.test.ts:62:17
+@repo/web:test:     at runTest (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:939:11)
+@repo/web:test:     at runSuite (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runSuite (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1095:15)
+@repo/web:test:     at runFiles (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1152:5)
+@repo/web:test:     at startTests (file:///Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@vitest+runner@2.0.0/node_modules/@vitest/runner/dist/index.js:1161:3)
+@repo/web:test:
+@repo/web:test:  ✓ app/api/boards/[id]/ai-chat/route.test.ts  (3 tests) 121ms
+@repo/web:test:  ✓ lib/survey-report-category-plan.test.ts  (1 test) 4ms
+@repo/web:test:  ✓ lib/survey-report-agent-adapter.test.ts  (4 tests) 745ms
+@repo/web:test:  ✓ lib/agents.test.ts  (5 tests) 7ms
+@repo/web:test:  ✓ lib/qwen.test.ts  (1 test) 309ms
+@repo/web:test:  ✓ lib/ava-agents.test.ts  (3 tests) 8ms
+@repo/web:test:  ✓ lib/viewport.test.ts  (4 tests) 9ms
+@repo/web:test:  ✓ lib/health.test.ts  (1 test) 8ms
+@repo/web:test:  ✓ lib/ava-legacy-compat.test.ts  (6 tests) 12ms
+@repo/web:test:  ✓ app/api/v1/chat/handleRequestAIChat/route.test.ts  (2 tests) 58ms
+@repo/web:test:
+@repo/web:test:  Test Files  26 passed (26)
+@repo/web:test:       Tests  127 passed (127)
+@repo/web:test:    Start at  23:58:49
+@repo/web:test:    Duration  12.55s (transform 3.33s, setup 4ms, collect 32.75s, tests 2.44s, environment 16ms, prepare 18.29s)
+@repo/web:test:
+@repo/coord-gateway:typecheck: cache hit, replaying logs 83518052b4757f4d
+@repo/coord-gateway:typecheck:
+@repo/coord-gateway:typecheck: > @repo/coord-gateway@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway
+@repo/coord-gateway:typecheck: > tsc --noEmit
+@repo/coord-gateway:typecheck:
+@repo/coord-gateway:test: cache hit, replaying logs 202e3847da33cf5f
+@repo/coord-gateway:test:
+@repo/coord-gateway:test: > @repo/coord-gateway@0.1.0 test /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway
+@repo/coord-gateway:test: > node scripts/run-tests.mjs
+@repo/coord-gateway:test:
+@repo/coord-gateway:test:
+@repo/coord-gateway:test:  RUN  v2.1.9 /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway
+@repo/coord-gateway:test:
+@repo/coord-gateway:test: [vpw:debug] Adding `enable_nodejs_tty_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-gateway:test: [vpw:debug] Adding `enable_nodejs_fs_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-gateway:test: [vpw:debug] Adding `enable_nodejs_http_modules` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-gateway:test: [vpw:debug] Adding `enable_nodejs_perf_hooks_module` compatibility flag during tests as this feature is needed to support the Vitest runner.
+@repo/coord-gateway:test: [vpw:info] Starting single runtime for vitest.config.ts...
+@repo/coord-gateway:test: [mf:warn] The latest compatibility date supported by the installed Cloudflare Workers Runtime is "2026-03-10",
+@repo/coord-gateway:test: but you've requested "2026-07-01". Falling back to "2026-03-10"...
+@repo/coord-gateway:test: Cannot optimize dependency: vitest > @vitest/snapshot > magic-string, present in 'ssr.optimizeDeps.include'
+@repo/coord-gateway:test: Cannot optimize dependency: vitest > @vitest/expect > chai, present in 'ssr.optimizeDeps.include'
+@repo/coord-gateway:test: workerd/io/worker.c++:1150: info: console warning; message = An event handler returned a value of type "number" that will be ignored. Event handlers should not have a return value.
+@repo/coord-gateway:test:  ✓ test/gateway.test.ts (11 tests) 932ms
+@repo/coord-gateway:test: workerd/io/worker.c++:2441: info: uncaught exception; source = Uncaught; stack = Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test:     at Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@cloudflare+vitest-pool-workers@0.12.21_@cloudflare+workers-types@4.20260702.1_@vitest+runner_lvb332fykozsqjuntdeh6l6g7m/node_modules/@cloudflare/vitest-pool-workers/dist/worker/lib/cloudflare/test-internal.mjs:542:15
+@repo/coord-gateway:test: workerd/jsg/exception.c++:146: info: Annotating with brokenness; internalMessage = jsg.Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.; brokennessReason = broken.inputGateBroken
+@repo/coord-gateway:test: workerd/io/io-context.c++:435: info: uncaught exception; exception = workerd/jsg/_virtual_includes/iterator/workerd/jsg/value.h:1480: failed: broken.inputGateBroken; jsg.Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test: stack: 1020397c7 1019894f3 10198200b 10197f243 1019787bf 101a51def 101a54943 101a54657 10372bd0b 101a54fa4 101a56deb 101a56a0b 10372bd0b
+@repo/coord-gateway:test: workerd/io/io-context.c++:435: info: uncaught exception; exception = workerd/jsg/_virtual_includes/iterator/workerd/jsg/value.h:1480: failed: broken.inputGateBroken; jsg.Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test: stack: 1020397c7 1019894f3 10198200b 10197f243 1019787bf 101a51def 101a54943 101a54657 10372bd0b 101a54fa4 101982fcc 100fa5940 101aeaf4c 101aebb4f 10372bd0b 101962524 101962a64
+@repo/coord-gateway:test: workerd/io/worker.c++:2441: info: uncaught exception; source = Uncaught (in promise); stack = Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test:     at Object.queue (/Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts:159:19)
+@repo/coord-gateway:test: workerd/io/io-context.c++:435: info: uncaught exception; exception = workerd/jsg/_virtual_includes/iterator/workerd/jsg/value.h:1480: failed: jsg.Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test: stack: 101b63198
+@repo/coord-gateway:test:  ✓ test/auth.test.ts (13 tests) 1642ms
+@repo/coord-gateway:test:    ✓ scoped token auth（F08） > REST 可达面 allowlist：内部/管理写端点对普通 token 一律 404 449ms
+@repo/coord-gateway:test: workerd/io/worker.c++:2441: info: uncaught exception; source = Uncaught; stack = Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test:     at Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@cloudflare+vitest-pool-workers@0.12.21_@cloudflare+workers-types@4.20260702.1_@vitest+runner_lvb332fykozsqjuntdeh6l6g7m/node_modules/@cloudflare/vitest-pool-workers/dist/worker/lib/cloudflare/test-internal.mjs:542:15
+@repo/coord-gateway:test: workerd/jsg/exception.c++:146: info: Annotating with brokenness; internalMessage = jsg.Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.; brokennessReason = broken.inputGateBroken
+@repo/coord-gateway:test: workerd/io/io-context.c++:435: info: uncaught exception; exception = workerd/jsg/_virtual_includes/iterator/workerd/jsg/value.h:1480: failed: broken.inputGateBroken; jsg.Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test: stack: 1020397c7 1019894f3 10198200b 10197f243 1019787bf 101a51def 101a54943 101a54657 10372bd0b 101a54fa4 101a56deb 101a56a0b 10372bd0b
+@repo/coord-gateway:test: workerd/io/io-context.c++:435: info: uncaught exception; exception = workerd/jsg/_virtual_includes/iterator/workerd/jsg/value.h:1480: failed: broken.inputGateBroken; jsg.Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test: stack: 1020397c7 1019894f3 10198200b 10197f243 1019787bf 101a51def 101a54943 101a54657 10372bd0b 101a54fa4 101982fcc 100fa5940 101aeaf4c 101aebb4f 10372bd0b 101962524 101962a64
+@repo/coord-gateway:test: workerd/io/io-context.c++:435: info: uncaught exception; exception = workerd/jsg/_virtual_includes/iterator/workerd/jsg/value.h:1480: failed: broken.inputGateBroken; jsg.Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test: stack: 1020397c7 1019894f3 10198200b 10197f243 1019787bf 101a51def 101a54943 101a54657 10372bd0b 101a54fa4 101982fcc 100fa5940 101aeaf4c 101aebb4f 10372bd0b 101962524 101962a64
+@repo/coord-gateway:test: workerd/io/io-context.c++:435: info: uncaught exception; exception = workerd/jsg/_virtual_includes/iterator/workerd/jsg/value.h:1480: failed: broken.inputGateBroken; jsg.Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test: stack: 1020397c7 1019894f3 10198200b 10197f243 1019787bf 101a51def 101a54943 101a54657 10372bd0b 101a54fa4 101982fcc 100fa5940 101aeaf4c 101aebb4f 10372bd0b 101962524 101962a64
+@repo/coord-gateway:test: workerd/io/worker-entrypoint.c++:425: info: exception = workerd/jsg/_virtual_includes/iterator/workerd/jsg/value.h:1480: failed: remote.broken.inputGateBroken; jsg.Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test: stack: 1020397c7 1019894f3 10198200b 10197f243 1019787bf 101a51def 101a54943 101a54657 10372bd0b 101a54fa4 101982fcc 100fa5940 101aeaf4c 101aebb4f 10372bd0b 101962524 101962a64 101963948 10196430c 101d8d2a3 100f37f80 1021d2773 10372bd0b 1021d1d08 100f37f80 101aeb1c0 101aeb6af 10372bd0b 10372be7b 101963cc3 10372bd0b 10372c91f
+@repo/coord-gateway:test: workerd/io/worker-entrypoint.c++:425: info: exception = workerd/jsg/_virtual_includes/iterator/workerd/jsg/value.h:1480: failed: remote.broken.inputGateBroken; jsg.Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test: stack: 1020397c7 1019894f3 10198200b 10197f243 1019787bf 101a51def 101a54943 101a54657 10372bd0b 101a54fa4 101982fcc 100fa5940 101aeaf4c 101aebb4f 10372bd0b 101962524 101962a64 101963948 10196430c 101d8d2a3 100f37f80 1021d2773 10372bd0b 1021d1d08 100f37f80 101aeb1c0 101aeb6af 10372bd0b 10372be7b 101963cc3 10372bd0b 10372c91f
+@repo/coord-gateway:test: workerd/io/worker.c++:2441: info: uncaught exception; source = Uncaught (in promise); stack = Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test: workerd/io/io-context.c++:435: info: uncaught exception; exception = workerd/jsg/_virtual_includes/iterator/workerd/jsg/value.h:1480: failed: jsg.Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test: stack: 101aeaf4c 101aebb4f 10372bd0b 101962524 101962a64
+@repo/coord-gateway:test:  ✓ test/mcp.test.ts (10 tests) 1182ms
+@repo/coord-gateway:test:    ✓ mcp tools/call 全链路 > get_realtime_status 汇总 issues+prs+active_claims；get_ready_work 排除已认领 322ms
+@repo/coord-gateway:test: workerd/io/worker.c++:2441: info: uncaught exception; source = Uncaught; stack = Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test:     at Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/node_modules/.pnpm/@cloudflare+vitest-pool-workers@0.12.21_@cloudflare+workers-types@4.20260702.1_@vitest+runner_lvb332fykozsqjuntdeh6l6g7m/node_modules/@cloudflare/vitest-pool-workers/dist/worker/lib/cloudflare/test-internal.mjs:542:15
+@repo/coord-gateway:test: workerd/jsg/exception.c++:146: info: Annotating with brokenness; internalMessage = jsg.Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.; brokennessReason = broken.inputGateBroken
+@repo/coord-gateway:test: workerd/io/io-context.c++:435: info: uncaught exception; exception = workerd/jsg/_virtual_includes/iterator/workerd/jsg/value.h:1480: failed: broken.inputGateBroken; jsg.Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test: stack: 1020397c7 1019894f3 10198200b 10197f243 1019787bf 101a51def 101a54943 101a54657 10372bd0b 101a54fa4 101a56deb 101a56a0b 10372bd0b
+@repo/coord-gateway:test: workerd/io/io-context.c++:435: info: uncaught exception; exception = workerd/jsg/_virtual_includes/iterator/workerd/jsg/value.h:1480: failed: broken.inputGateBroken; jsg.Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test: stack: 1020397c7 1019894f3 10198200b 10197f243 1019787bf 101a51def 101a54943 101a54657 10372bd0b 101a54fa4 101982fcc 100fa5940 101aeaf4c 101aebb4f 10372bd0b 101962524 101962a64
+@repo/coord-gateway:test: workerd/io/worker.c++:2441: info: uncaught exception; source = Uncaught (in promise); stack = Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test: workerd/io/io-context.c++:435: info: uncaught exception; exception = workerd/jsg/_virtual_includes/iterator/workerd/jsg/value.h:1480: failed: jsg.Error: /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/coord-gateway/src/index.ts changed, invalidating this Durable Object. Please retry the `DurableObjectStub#fetch()` call.
+@repo/coord-gateway:test: stack: 101aeaf4c 101aebb4f 10372bd0b 101962524 101962a64
+@repo/coord-gateway:test:  ✓ test/tasks.test.ts (9 tests) 1507ms
+@repo/coord-gateway:test:    ✓ tasks 收件箱可见性（GET /tasks） > scoped token：缺省注入本人收件箱；指定他人/assignee=* → 403 inbox_is_private 319ms
+@repo/coord-gateway:test:    ✓ tasks ack/complete（scoped 面 + agent_id 强绑定） > scoped 本人 ack → acked（空 body {} 即可，agent_id 由 gateway 注入）；complete → done + 事件可见 378ms
+@repo/coord-gateway:test:  ✓ test/time.test.ts (7 tests) 85ms
+@repo/coord-gateway:test:
+@repo/coord-gateway:test:  Test Files  5 passed (5)
+@repo/coord-gateway:test:       Tests  50 passed (50)
+@repo/coord-gateway:test:    Start at  23:58:44
+@repo/coord-gateway:test:    Duration  18.16s (transform 1.46s, setup 0ms, collect 3.48s, tests 5.35s, environment 0ms, prepare 1.37s)
+@repo/coord-gateway:test:
+@repo/coord-gateway:test: [vpw:debug] Shutting down runtimes...
+@repo/coord-gateway:test: [vpw:debug] Disposing remote proxy sessions...
+
+ Tasks:    73 successful, 73 total
+Cached:    73 cached, 73 total
+  Time:    2.008s >>> FULL TURBO
+
+turbo 2.5.0

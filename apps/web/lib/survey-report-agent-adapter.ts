@@ -129,6 +129,30 @@ async function generateChapterWithGateway({
   evidence,
 }: SurveyReportChapterGeneratorInput): Promise<SurveyReportChapterDraft> {
   const retrievedRecords = retrieveChapterRecords(chapter, tools);
+  if (modelId.startsWith("stub:")) {
+    const claim = evidence.claims[0];
+    if (!claim) {
+      return {
+        conclusion: "",
+        evidenceRefs: [],
+        limitations: evidence.limitations,
+        recommendation: "",
+      };
+    }
+    return {
+      conclusion: `${chapter.title}：${claim.statement}`,
+      evidenceRefs: [
+        {
+          evidenceId: claim.id,
+          value: claim.value,
+          denominator: claim.denominator,
+        },
+      ],
+      limitations: evidence.limitations,
+      recommendation: "扩大有效样本，并在下一轮报告中复核该方向性信号。",
+    };
+  }
+
   let response = "";
   for await (const token of defaultGateway.streamChat({
     modelId,
