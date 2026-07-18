@@ -26,6 +26,50 @@ describe("resolveStorageConfig", () => {
     expect(cfg.endpoint).toBe("http://minio.internal:9000");
     expect(cfg.bucket).toBe("custom-bucket");
   });
+
+  it("生产环境缺 S3 凭据时 fail-fast，不回退默认口令", () => {
+    expect(() => resolveStorageConfig({ NODE_ENV: "production" } as NodeJS.ProcessEnv)).toThrow(
+      /S3_ACCESS_KEY \/ S3_SECRET_KEY/
+    );
+    expect(() =>
+      resolveStorageConfig({
+        NODE_ENV: "production",
+        S3_ACCESS_KEY: "prod-key",
+      } as NodeJS.ProcessEnv)
+    ).toThrow(/S3_SECRET_KEY/);
+    expect(() =>
+      resolveStorageConfig({
+        NODE_ENV: "production",
+        S3_SECRET_KEY: "prod-secret",
+      } as NodeJS.ProcessEnv)
+    ).toThrow(/S3_ACCESS_KEY/);
+  });
+
+  it("生产环境空串/空白凭据同样视为缺失", () => {
+    expect(() =>
+      resolveStorageConfig({
+        NODE_ENV: "production",
+        S3_ACCESS_KEY: "  ",
+        S3_SECRET_KEY: "",
+      } as NodeJS.ProcessEnv)
+    ).toThrow(/S3_ACCESS_KEY \/ S3_SECRET_KEY/);
+  });
+
+  it("生产环境凭据齐全时正常解析，不再使用默认口令", () => {
+    const cfg = resolveStorageConfig({
+      NODE_ENV: "production",
+      S3_ACCESS_KEY: "prod-key",
+      S3_SECRET_KEY: "prod-secret",
+    } as NodeJS.ProcessEnv);
+    expect(cfg.accessKeyId).toBe("prod-key");
+    expect(cfg.secretAccessKey).toBe("prod-secret");
+  });
+
+  it("非生产环境保留本地 MinIO 默认凭据便利", () => {
+    const cfg = resolveStorageConfig({ NODE_ENV: "development" } as NodeJS.ProcessEnv);
+    expect(cfg.accessKeyId).toBe("boardx");
+    expect(cfg.secretAccessKey).toBe("boardx123");
+  });
 });
 
 describe("buildKbObjectKey", () => {
