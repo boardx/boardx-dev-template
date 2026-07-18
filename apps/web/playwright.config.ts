@@ -110,6 +110,8 @@ export default defineConfig({
         ...loopbackEnv("S3_ENDPOINT"),
         AVA_DEFAULT_MODEL_ID: "stub:default",
         NEXT_PUBLIC_AVA_DEFAULT_MODEL_ID: "stub:default",
+        DASHSCOPE_API_KEY: "",
+        QWEN_API_KEY: "",
         WEBHOOK_SECRET: E2E_WEBHOOK_SECRET,
       },
     },

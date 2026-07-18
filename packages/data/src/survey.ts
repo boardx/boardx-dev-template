@@ -100,6 +100,16 @@ export interface SurveyReportTemplate extends SurveyReportTemplateInput {
 }
 
 export type ReportInputMode = "text" | "chat" | "chart" | "image";
+export type SurveyReportOutputType = "image" | "chart" | "text";
+export type SurveyReportChartTemplateId =
+  | "line-simple"
+  | "bar-simple"
+  | "pie-simple"
+  | "scatter-simple"
+  | "radar"
+  | "funnel"
+  | "gauge"
+  | "heatmap-cartesian";
 export type SurveyReportChartType =
   | "bar" | "grouped_bar" | "stacked_bar" | "line" | "area" | "pie" | "doughnut" | "rose"
   | "scatter" | "radar" | "heatmap" | "treemap" | "funnel" | "gauge" | "waterfall"
@@ -121,7 +131,9 @@ export interface SurveyReportCategoryInput {
   description: string;
   requirement?: string;
   questionIds: number[];
-  inputModes: ReportInputMode[];
+  outputType: SurveyReportOutputType;
+  inputModes: [SurveyReportOutputType];
+  chartTemplateId?: SurveyReportChartTemplateId;
   chartType?: SurveyReportChartType;
   chartStyle?: SurveyReportChartStyle;
   chartConfig?: SurveyReportChartConfig;
@@ -168,17 +180,43 @@ const REPORT_TEMPLATE_COLS =
 const REPORT_CATEGORY_PLAN_COLS =
   'id, survey_id, category_plan AS "categoryPlan", created_at, updated_at';
 
-const REPORT_INPUT_MODES = new Set<ReportInputMode>(["text", "chat", "chart", "image"]);
-const REPORT_CHART_TYPES = new Set<SurveyReportChartType>([
-  "bar", "grouped_bar", "stacked_bar", "line", "area", "pie", "doughnut", "rose", "scatter", "radar",
-  "heatmap", "treemap", "funnel", "gauge", "waterfall", "histogram", "boxplot", "matrix", "kpi", "text",
+const REPORT_OUTPUT_TYPES = new Set<SurveyReportOutputType>(["image", "chart", "text"]);
+const REPORT_CHART_TEMPLATE_IDS = new Set<SurveyReportChartTemplateId>([
+  "line-simple",
+  "bar-simple",
+  "pie-simple",
+  "scatter-simple",
+  "radar",
+  "funnel",
+  "gauge",
+  "heatmap-cartesian",
 ]);
 const REPORT_CHART_STYLES = new Set<SurveyReportChartStyle>(["auto", "business", "minimal", "editorial", "presentation", "dark"]);
 
-function cleanReportInputModes(raw: unknown): ReportInputMode[] {
-  if (!Array.isArray(raw)) return ["text"];
-  const modes = raw.filter((item): item is ReportInputMode => REPORT_INPUT_MODES.has(item as ReportInputMode));
-  return Array.from(new Set(modes)).slice(0, 4).length ? Array.from(new Set(modes)).slice(0, 4) : ["text"];
+function cleanReportOutputType(raw: unknown): SurveyReportOutputType {
+  return REPORT_OUTPUT_TYPES.has(raw as SurveyReportOutputType)
+    ? raw as SurveyReportOutputType
+    : "text";
+}
+
+function cleanChartTemplateId(raw: unknown): SurveyReportChartTemplateId {
+  return REPORT_CHART_TEMPLATE_IDS.has(raw as SurveyReportChartTemplateId)
+    ? raw as SurveyReportChartTemplateId
+    : "line-simple";
+}
+
+function chartTypeForTemplate(templateId: SurveyReportChartTemplateId): SurveyReportChartType {
+  const chartTypes: Record<SurveyReportChartTemplateId, SurveyReportChartType> = {
+    "line-simple": "line",
+    "bar-simple": "bar",
+    "pie-simple": "pie",
+    "scatter-simple": "scatter",
+    radar: "radar",
+    funnel: "funnel",
+    gauge: "gauge",
+    "heatmap-cartesian": "heatmap",
+  };
+  return chartTypes[templateId];
 }
 
 function cleanReportChartConfig(raw: unknown): SurveyReportChartConfig {
@@ -200,16 +238,6 @@ function stableCategoryId(name: string, index: number): string {
   return slug ? `cat-${index + 1}-${slug.slice(0, 32)}` : `cat-${index + 1}`;
 }
 
-function inferReportInputModes(questions: SurveyQuestion[]): ReportInputMode[] {
-  const types = new Set(questions.map((question) => question.type));
-  const modes = new Set<ReportInputMode>();
-  if ([...types].some((type) => ["single", "multiple", "dropdown", "rating", "linear_scale", "nps", "number"].includes(type))) modes.add("chart");
-  if ([...types].some((type) => ["text", "short_text"].includes(type))) modes.add("text");
-  if (types.has("file")) modes.add("image");
-  modes.add("text");
-  return (["image", "chart", "text"] as ReportInputMode[]).filter((mode) => modes.has(mode));
-}
-
 export function defaultSurveyReportCategoryPlan(title: string, questions: SurveyQuestion[] = []): SurveyReportCategoryPlanInput {
   const buckets = new Map<string, SurveyQuestion[]>();
   questions.forEach((question, index) => {
@@ -225,8 +253,8 @@ export function defaultSurveyReportCategoryPlan(title: string, questions: Survey
       description: `围绕「${name}」下的 ${items.length} 个问题生成报告内容。`,
       requirement: `面向决策者分析「${name}」，先给结论，再展示证据、样本边界和行动建议。`,
       questionIds: items.map((question) => question.id),
-      inputModes: inferReportInputModes(items),
-      chartType: items.some((question) => ["single", "multiple", "dropdown", "rating", "linear_scale", "nps", "number"].includes(question.type)) ? "bar" : undefined,
+      outputType: "text",
+      inputModes: ["text"],
       prompt: `基于「${name}」分类下的题目和答卷数据生成专业分析。`,
       order: index + 1,
       isCustom: false,
@@ -261,14 +289,20 @@ export function cleanSurveyReportCategoryPlan(input: unknown, surveyTitle: strin
       requirementParts.join("\n") ||
       `面向决策者分析「${name}」，先给结论，再展示证据、样本边界和行动建议。`
     ).slice(0, 2000);
+    const outputType = cleanReportOutputType(item.outputType);
+    const chartTemplateId = outputType === "chart"
+      ? cleanChartTemplateId(item.chartTemplateId)
+      : undefined;
     return {
       id: String(item.id ?? stableCategoryId(name, index)).trim().slice(0, 80),
       name,
       description: String(item.description ?? "").trim().slice(0, 240),
       requirement,
       questionIds,
-      inputModes: cleanReportInputModes(item.inputModes),
-      chartType: REPORT_CHART_TYPES.has(item.chartType as SurveyReportChartType) ? item.chartType as SurveyReportChartType : undefined,
+      outputType,
+      inputModes: [outputType] as [SurveyReportOutputType],
+      chartTemplateId,
+      chartType: outputType === "chart" ? chartTypeForTemplate(chartTemplateId!) : undefined,
       chartStyle: REPORT_CHART_STYLES.has(item.chartStyle as SurveyReportChartStyle) ? item.chartStyle as SurveyReportChartStyle : "auto",
       chartConfig: cleanReportChartConfig(item.chartConfig),
       dataPrompt: String(item.dataPrompt ?? "").trim().slice(0, 1000),
@@ -288,6 +322,27 @@ export function cleanSurveyReportCategoryPlan(input: unknown, surveyTitle: strin
     title: String(body.title ?? fallback.title).trim().slice(0, 120) || fallback.title,
     description: String(body.description ?? fallback.description).trim().slice(0, 300) || fallback.description,
     categories,
+  };
+}
+
+export function normalizePersistedSurveyReportCategoryPlanOutputContract(
+  plan: SurveyReportCategoryPlanInput
+): SurveyReportCategoryPlanInput {
+  return {
+    ...plan,
+    categories: plan.categories.map((category) => {
+      const outputType = cleanReportOutputType(category.outputType);
+      const chartTemplateId = outputType === "chart"
+        ? cleanChartTemplateId(category.chartTemplateId)
+        : undefined;
+      return {
+        ...category,
+        outputType,
+        inputModes: [outputType],
+        chartTemplateId,
+        chartType: outputType === "chart" ? chartTypeForTemplate(chartTemplateId!) : undefined,
+      };
+    }),
   };
 }
 
@@ -313,9 +368,39 @@ export async function getSurveyReportCategoryPlan(surveyId: number): Promise<Sur
   return row ? { id: row.id, survey_id: row.survey_id, ...row.categoryPlan, created_at: row.created_at, updated_at: row.updated_at } : undefined;
 }
 
+export async function readSurveyReportCategoryPlan(
+  surveyId: number,
+  surveyTitle: string,
+  questions: SurveyQuestion[] = []
+): Promise<SurveyReportCategoryPlanInput> {
+  const existing = await getSurveyReportCategoryPlan(surveyId);
+  if (!existing?.categories.length) {
+    return defaultSurveyReportCategoryPlan(surveyTitle, questions);
+  }
+  return normalizePersistedSurveyReportCategoryPlanOutputContract({
+    title: existing.title,
+    description: existing.description,
+    categories: existing.categories,
+  });
+}
+
 export async function ensureSurveyReportCategoryPlan(surveyId: number, surveyTitle: string, questions: SurveyQuestion[] = []): Promise<SurveyReportCategoryPlan> {
   const existing = await getSurveyReportCategoryPlan(surveyId);
-  if (existing?.categories.length) return existing;
+  if (existing?.categories.length) {
+    const normalized = normalizePersistedSurveyReportCategoryPlanOutputContract({
+      title: existing.title,
+      description: existing.description,
+      categories: existing.categories,
+    });
+    if (JSON.stringify(normalized) === JSON.stringify({
+      title: existing.title,
+      description: existing.description,
+      categories: existing.categories,
+    })) {
+      return existing;
+    }
+    return upsertSurveyReportCategoryPlan(surveyId, normalized);
+  }
   return upsertSurveyReportCategoryPlan(surveyId, defaultSurveyReportCategoryPlan(surveyTitle, questions));
 }
 

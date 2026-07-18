@@ -2,6 +2,7 @@ import type {
   ReportInputMode,
   SurveyReportCategoryInput,
   SurveyReportCategoryPlanInput,
+  SurveyReportChartTemplateId,
   SurveyReportChartType,
 } from "@repo/data";
 
@@ -30,6 +31,7 @@ export interface ReportComposerPreviewSection {
   text?: { headline: string; bullets: string[] };
   chart?: {
     title: string;
+    templateId?: SurveyReportChartTemplateId;
     type?: SurveyReportChartType;
     style?: SurveyReportCategoryInput["chartStyle"];
     config?: SurveyReportCategoryInput["chartConfig"];
@@ -49,6 +51,119 @@ export interface ReportComposerPreview {
   description: string;
   executiveSummary: string[];
   sections: ReportComposerPreviewSection[];
+}
+
+const CHART_TYPE_BY_TEMPLATE: Record<SurveyReportChartTemplateId, SurveyReportChartType> = {
+  "line-simple": "line",
+  "bar-simple": "bar",
+  "pie-simple": "pie",
+  "scatter-simple": "scatter",
+  radar: "radar",
+  funnel: "funnel",
+  gauge: "gauge",
+  "heatmap-cartesian": "heatmap",
+};
+
+const REPORT_INPUT_MODE_ORDER: ReportInputMode[] = ["text", "chat", "chart", "image"];
+
+function stableCategoryFields(category: SurveyReportCategoryInput) {
+  const chartConfig = category.chartConfig;
+  return [
+    category.id,
+    category.name,
+    category.description,
+    category.requirement ?? null,
+    category.questionIds,
+    category.outputType,
+    category.inputModes[0],
+    category.chartTemplateId ?? null,
+    category.chartType ?? null,
+    category.chartStyle ?? null,
+    chartConfig
+      ? [
+          chartConfig.primaryColor,
+          chartConfig.maxDimensions,
+          chartConfig.sort,
+          chartConfig.showLabels,
+          chartConfig.showLegend,
+          chartConfig.orientation,
+        ]
+      : null,
+    category.dataPrompt ?? null,
+    REPORT_INPUT_MODE_ORDER.map((mode) => category.modulePrompts?.[mode] ?? null),
+    category.prompt,
+    category.order,
+    category.isCustom,
+  ];
+}
+
+function stablePlanFields(plan: SurveyReportCategoryPlanInput) {
+  return [
+    plan.title,
+    plan.description,
+    orderedReportCategories(plan).map(stableCategoryFields),
+  ];
+}
+
+export function areSurveyReportCategoryPlansEqual(
+  left: SurveyReportCategoryPlanInput,
+  right: SurveyReportCategoryPlanInput
+): boolean {
+  return JSON.stringify(stablePlanFields(left)) === JSON.stringify(stablePlanFields(right));
+}
+
+function buildTextPreview(
+  category: SurveyReportCategoryInput,
+  survey: ComposerSurvey,
+  requirement: string
+): NonNullable<ReportComposerPreviewSection["text"]> {
+  return {
+    headline: `${category.name} 的报告要求`,
+    bullets: [
+      requirement,
+      `系统将在生成时从整份问卷和 ${survey.responses} 份授权答卷中检索所需证据。`,
+      "正式报告会记录证据、限制条件和可执行建议。",
+    ],
+  };
+}
+
+function buildImagePreview(
+  category: SurveyReportCategoryInput,
+  requirement: string
+): NonNullable<ReportComposerPreviewSection["image"]> {
+  return {
+    title: `${category.name} 图片要求`,
+    prompt: requirement,
+  };
+}
+
+function buildChartPreview(
+  category: SurveyReportCategoryInput,
+  survey: ComposerSurvey,
+  requirement: string
+): NonNullable<ReportComposerPreviewSection["chart"]> {
+  const templateId = category.chartTemplateId ?? "line-simple";
+  return {
+    title: `${category.name} 图表预览`,
+    templateId,
+    type: CHART_TYPE_BY_TEMPLATE[templateId],
+    style: category.chartStyle,
+    config: category.chartConfig,
+    dataPrompt: category.dataPrompt,
+    prompt: requirement,
+    sampleSize: survey.responses,
+    isSimulated: true,
+    appliedConstraints: [requirement],
+    rows: [
+      { label: "Mon", value: 150 },
+      { label: "Tue", value: 230 },
+      { label: "Wed", value: 224 },
+      { label: "Thu", value: 218 },
+      { label: "Fri", value: 135 },
+      { label: "Sat", value: 147 },
+      { label: "Sun", value: 260 },
+    ],
+  };
 }
 
 export function orderedReportCategories(plan: SurveyReportCategoryPlanInput): SurveyReportCategoryInput[] {
@@ -90,6 +205,7 @@ export function addCustomReportCategory(
         description: "从整份问卷和全部授权答卷中自主检索证据。",
         requirement: `面向决策者分析「${name}」，先给结论，再展示证据、样本边界和行动建议。`,
         questionIds: [],
+        outputType: "text",
         inputModes: ["text"],
         prompt: `围绕「${name}」生成专业报告内容。`,
         order: nextOrder,
@@ -125,6 +241,7 @@ export function buildReportComposerPreview(
       category.requirement?.trim() ||
       category.prompt?.trim() ||
       `面向决策者分析「${category.name}」，先给结论，再展示证据、样本边界和行动建议。`;
+    const outputType = category.outputType ?? "text";
     return {
       id: category.id,
       order: category.order,
@@ -133,15 +250,16 @@ export function buildReportComposerPreview(
       requirement,
       sourceScope: "整份问卷与全部授权答卷",
       questionCount: questions.length,
-      inputModes: ["text"],
-      text: {
-        headline: `${category.name} 的报告要求`,
-        bullets: [
-          requirement,
-          `系统将在生成时从 ${questions.length} 个问题和 ${survey.responses} 份授权答卷中检索所需证据。`,
-          "正式报告会记录证据、限制条件和可执行建议。",
-        ],
-      },
+      inputModes: [outputType],
+      text: outputType === "text"
+        ? buildTextPreview(category, survey, requirement)
+        : undefined,
+      image: outputType === "image"
+        ? buildImagePreview(category, requirement)
+        : undefined,
+      chart: outputType === "chart"
+        ? buildChartPreview(category, survey, requirement)
+        : undefined,
     };
   });
 

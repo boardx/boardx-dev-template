@@ -374,7 +374,7 @@
       "priority": 1,
       "area": "survey",
       "title": "版本化事实库与精简报告编排器",
-      "user_visible_behavior": "问卷管理者只需为每个报告章节填写标题和一段自然语言要求，即可在同屏预览基于整份问卷和全部授权答卷生成的报告；页面不再要求逐题绑定、输出模块、图表样式或 JSON 映射。问卷或答卷未变化时复用现有报告，新数据只提示“数据有更新”，用户主动更新后生成不可变新版本且旧版本仍可查看。",
+      "user_visible_behavior": "每个报告章节只能选择图片、图表或文本中的一种；图表可从常用 ECharts 模板中选择，右侧同屏显示效果预览、完整只读 Option JSON 并支持复制。图表章节仅持久化有效白名单 chartTemplateId，图片和文本章节省略该字段；章节要求仍为自然语言，生成时从整份问卷和全部授权答卷自主获取证据；官方样例值只能用于草稿预览，不能进入证据或报告产物；输出契约变化后须主动生成不可变新版本。",
       "design_ref": "requirements/15-versioned-fact-base-report-composer.md；docs/superpowers/specs/2026-07-18-survey-versioned-report-architecture.md；2026-07-18 用户确认",
       "status": "passing",
       "sprint": "16",
@@ -388,12 +388,13 @@
       "verification": [
         "pnpm --filter @repo/data run test -- survey-report-version",
         "pnpm --filter @repo/web run test -- survey-report",
+        "pnpm --filter @repo/web run test -- survey-report-chart-templates survey-report-category-plan",
         "pnpm --filter @repo/web run lint",
         "pnpm --filter @repo/web run typecheck",
         "pnpm --filter @repo/web exec playwright test e2e/survey-p25-016-versioned-report-composer.spec.ts",
         "pnpm harness doctor --phase p25"
       ],
-      "evidence": "evidence/F16.verify.log @ 2026-07-18T04:08:37.011Z",
+      "evidence": "evidence/F16.verify.log @ 2026-07-18T13:19:39.379Z",
       "notes": "独立 Delivery PR；使用现有确定性证据聚合路径完成事实库修订、产物键、stale 状态和版本历史，不在本 feature 引入 LangGraph。PR 只 Closes #715，并 Refs #648。"
     },
     {

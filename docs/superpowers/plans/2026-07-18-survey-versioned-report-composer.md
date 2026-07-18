@@ -62,7 +62,7 @@ export interface SurveyReportSourceSnapshot {
   surveyId: number;
   sourceRevision: string;
   contentHash: string;
-  schemaVersion: "survey-source-v1";
+  schemaVersion: "survey-source-v2";
   generatedAt: string;
   responseCount: number;
   sourceData: Record<string, unknown>;
@@ -297,6 +297,7 @@ GET response:
 {
   report: ProfessionalSurveyReportDocument;
   preview: boolean;
+  selectedArtifactId: string | null;
   generation: SurveyReportGenerationStatus;
 }
 ```
@@ -357,9 +358,9 @@ GET must:
 5. return the latest successful artifact report, or an unpersisted deterministic preview when no artifact exists;
 6. never call Qwen and never include `sourceData` or raw responses in JSON.
 
-- [x] **Step 4: Implement POST with cache reuse**
+- [x] **Step 4: Implement POST with cache reuse and a generation claim**
 
-POST must additionally require `canManageSurveyScope`. It builds the same artifact key and returns the existing artifact before creating a session or calling Qwen. On cache miss, it creates one session, generates evidence-bound claims, builds the professional report, persists a ready immutable artifact, then returns refreshed generation status. Qwen failure uses the deterministic evidence report and records a warning without deleting prior artifacts.
+POST must additionally require `canManageSurveyScope`. It builds the same artifact key and returns the existing artifact before creating a session or calling Qwen. On cache miss, it atomically claims the artifact key before creating a session or invoking Qwen. The claimant generates evidence-bound claims, builds the professional report, persists a ready immutable artifact, and completes the claim. A concurrent request for an active claim returns `202 in_progress`; a stale claim can be taken over after its lease expires. Qwen failure uses the deterministic evidence report, releases the claim, and records a warning without deleting prior artifacts.
 
 - [x] **Step 5: Run focused and route-adjacent tests**
 
@@ -453,15 +454,18 @@ git commit -m "feat(survey): simplify report chapter requirements"
 **Interfaces:**
 - Consumes: `ReportCategoryPlanDraft`, `ProfessionalSurveyReportDocument`, and `SurveyReportGenerationStatus`.
 - Produces stable UI test IDs:
-  - `report-template-builder`
-  - `report-module-list`
-  - `report-requirement-panel`
-  - `report-requirement-input`
-  - `report-preview-panel`
-  - `report-generation-status`
-  - `report-version-history`
-  - `save-report-plan`
-  - `generate-versioned-report`
+  - composer:
+    - `report-template-builder`
+    - `report-module-list`
+    - `report-requirement-panel`
+    - `report-requirement-input`
+    - `report-preview-panel`
+    - `report-generation-status`
+    - `save-report-plan`
+    - `generate-versioned-report`
+  - analysis report:
+    - `professional-report-document`
+    - `report-version-history`
 
 - [x] **Step 1: Write the failing F16 Playwright test**
 
@@ -480,7 +484,7 @@ const [requirement, preview] = await Promise.all([
 expect(requirement!.x).toBeLessThan(preview!.x);
 ```
 
-It saves a requirement, generates once, generates again, and asserts the second response has `reused: true` and only one version. It submits another response, asserts GET returns `stale: true`, then clicks update and asserts two immutable versions.
+It saves a requirement, generates once, generates again, and asserts the second response has `reused: true` and only one version. It submits another response, asserts GET returns `stale: true`, then clicks update and asserts two immutable versions. The composer asserts that complete report content and history are absent; the `分析报告` workspace asserts that both are present and owns exact artifact selection.
 
 - [x] **Step 2: Run F16 Playwright and verify RED**
 
@@ -502,10 +506,18 @@ Desktop layout:
 report-module-list | report-requirement-panel | report-preview-panel
 ```
 
-The requirement panel contains only chapter title, chapter description, one natural-language requirement textarea, save, and generate/update. The preview panel renders the latest `ProfessionalReportDocument`, or a zero-artifact prompt. Generation status shows “最新”, “数据有更新”, or “要求已修改”; version history is a native disclosure controlled by an icon/text button.
+The composer contains only the chapter list, chapter requirement editor, chapter effect
+preview, and a short generation summary. It does not render the complete
+`ProfessionalReportDocument` or own version selection. `分析报告` renders
+`WorkspaceReportWorkbench`, which owns the complete report and a bounded, scrollable
+immutable version history. Selecting a historical version uses exact artifact selection
+and replaces the displayed report only after that exact version loads successfully;
+failed or mismatched responses leave the current report unchanged.
 
-At widths below `xl`, the order is chapters, requirement, preview, then the collapsed history inside
-the preview panel. No fixed-height nested scroller may hide the primary controls.
+At widths below `xl`, the composer order is chapters, requirement, preview, then the
+generation summary. The analysis report keeps its version list scrollable without
+hiding the complete report or primary controls. No fixed-height nested scroller may
+hide the primary controls.
 
 - [x] **Step 5: Update superseded F12 UI assertions**
 
