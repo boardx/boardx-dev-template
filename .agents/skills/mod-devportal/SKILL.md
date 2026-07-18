@@ -37,6 +37,13 @@ issue #523/#543；wrangler.toml 头注；apps/devportal/README.md
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-19：p30-F02 D3 阶段 2 灰度落地——`middleware.ts` 是「谁需要登录」的唯一事实源
+  （matcher 只含 /me*、/p/*；公开层四路由零鉴权）；身份读取统一走 `lib/session.ts` 的
+  getSessionUser（OAuth session cookie 优先，Access JWT 回退，灰度期双栈）；公开层防回退
+  由 `tests/public-layer-static.test.ts` 静态断言把守（import 闭包内禁 lib/access /
+  next/headers / cookie 读取，改公开层组件先看它）。新增 Pages secret：SESSION_SECRET、
+  GITHUB_OAUTH_CLIENT_SECRET（原子纪律：先 put 再合）。Access 收缩到治理面是人类 dashboard
+  操作，代码侧不删任何 Access 配置（出处：p30-F02 PR）。
 - 2026-07-18：p29 全周期三条协调层经验（出处：p29 sprint01-05 evidence + PR #697-#737）：
   ①「全部合并了」类转述必须逐 PR 锚定核验（gh pr view --json state），#733 曾被误当已合并，
   差点造成协调层双权威窗口（P23 postmortem §9 的跨会话版）；②vitest 2 不认 --grep，

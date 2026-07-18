@@ -17,6 +17,11 @@
 #   （env 原子纪律：先 put 此 secret，再合入引用它的代码——禁止先删后合/先合后补）
 # GITHUB_TOKEN（细粒度只读 PAT）是 Pages 加密 secret——
 #   pnpm exec wrangler pages secret put GITHUB_TOKEN --project-name devportal
+#   GITHUB_OAUTH_CLIENT_SECRET  GitHub App（4328933）OAuth client secret（p30-F02）：
+#   pnpm exec wrangler pages secret put GITHUB_OAUTH_CLIENT_SECRET --project-name devportal
+#   SESSION_SECRET  OAuth session cookie 的 HMAC 密钥（≥32 字节随机串，p30-F02）：
+#   pnpm exec wrangler pages secret put SESSION_SECRET --project-name devportal
+#   （env 原子纪律：两个 secret 都先 put，再合入本 PR——先删后合/先合后补都会被 CD 踩中）
 name = "devportal"
 pages_build_output_dir = ".vercel/output/static"
 # ⚠️ 不要低于 2024-11-11：fetch 的 cache:"no-store" 选项要求该日期起的运行时，
@@ -39,6 +44,10 @@ compatibility_flags = ["nodejs_compat"]
 COORD_GATEWAY_URL = "https://coord-gateway.boardx.workers.dev"
 GITHUB_REPO = "boardx/boardx-dev-template"
 CF_ACCESS_TEAM_DOMAIN = "https://boardx.cloudflareaccess.com"
+# p30-F02（D3 阶段 2）：GitHub App OAuth 的 client id（非敏感；client secret 与
+# SESSION_SECRET 是 Pages 加密 secret，见文件头）。callback URL 已在 GitHub App 侧
+# 注册为 https://develop.boardx.us/api/coord/oauth/github/callback。
+GITHUB_OAUTH_CLIENT_ID = "Iv23liQagpQveTxbavkR"
 # CF_ACCESS_AUD：Access 应用的 audience tag（拿到后填上即启用 aud 严格校验，
 # 见 lib/access.ts——当前 API token 无 Access 读权限，从 dashboard 的
 # Zero Trust → Access → Applications → develop.boardx.us 应用详情可查）
