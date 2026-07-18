@@ -3,6 +3,7 @@
 import { RepoHub } from "@repo/coord-repohub";
 import { verifyWebhookSignature } from "./signature";
 import { toIngestBody, type QueuedWebhook } from "./mapping";
+import { runProjectionTick } from "./projection";
 
 export { RepoHub };
 
@@ -11,6 +12,12 @@ export interface Env {
   WEBHOOK_QUEUE: Queue<QueuedWebhook>;
   GITHUB_WEBHOOK_SECRET?: string;
   COORD_API_TOKEN?: string;
+  // andon 是 maintainer 特权：独立 secret，普通 API token 不可发（F06）
+  COORD_ADMIN_TOKEN?: string;
+  // 反向投影（F06）：GitHub App 凭据 + 投影目标仓（逗号分隔）
+  GITHUB_APP_ID?: string;
+  GITHUB_APP_PRIVATE_KEY?: string;
+  PROJECTION_REPOS?: string;
 }
 
 function json(status: number, body: unknown): Response {
@@ -45,6 +52,15 @@ async function handleWebhook(req: Request, env: Env): Promise<Response> {
   return json(202, { ok: true, queued: true });
 }
 
+// andon 管理路由（F06）：独立 COORD_ADMIN_TOKEN 把守——停线是 maintainer 特权，
+// 普通 COORD_API_TOKEN 不可发。缺配置 fail-closed（同 webhook secret 纪律）。
+async function handleAndonAdmin(req: Request, env: Env, repo: string, subpath: string): Promise<Response> {
+  if (!env.COORD_ADMIN_TOKEN) return json(503, { error: "admin_token_not_configured" });
+  const auth = req.headers.get("authorization");
+  if (auth !== `Bearer ${env.COORD_ADMIN_TOKEN}`) return json(401, { error: "unauthorized" });
+  return repoStub(env, repo).fetch(new Request(`https://repohub${subpath}`, req));
+}
+
 async function handleRest(req: Request, env: Env, url: URL): Promise<Response> {
   if (!env.COORD_API_TOKEN) return json(503, { error: "api_token_not_configured" });
   const auth = req.headers.get("authorization");
@@ -67,8 +83,16 @@ export default {
       });
     if (req.method === "POST" && url.pathname === "/api/coord/webhooks/github")
       return handleWebhook(req, env);
+    const andon = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)(\/andon)$/);
+    if (req.method === "POST" && andon)
+      return handleAndonAdmin(req, env, `${andon[1]}/${andon[2]}`, andon[3]!);
     if (url.pathname.startsWith("/api/coord/repos/")) return handleRest(req, env, url);
     return json(404, { error: "not_found" });
+  },
+
+  // 反向投影 cron（F06）：每 tick 逐仓 事件→引擎→GitHub→游标。编排在 projection.ts。
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(runProjectionTick(env));
   },
 
   // Queues 消费者：逐条转发对应仓库的 DO 幂等入口。DO 侧按 delivery GUID 去重，

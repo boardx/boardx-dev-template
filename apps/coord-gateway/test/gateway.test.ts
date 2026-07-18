@@ -107,6 +107,7 @@ describe("消费者幂等（F03 核心断言）", () => {
         pull_request: {
           number: 705, state: "open", merged: false, draft: false,
           title: "feat(p29/F04+F05): RepoHub DO",
+          body: "Closes #698",
           head: { sha: "abc1234" }, mergeable: true, mergeable_state: "clean",
           labels: [{ name: "status:in-review" }], assignees: [],
         },
@@ -121,7 +122,57 @@ describe("消费者幂等（F03 核心断言）", () => {
     expect(pr["mergeable"]).toBe("MERGEABLE");
     expect(pr["merge_state"]).toBe("CLEAN");
     expect(pr["head_sha"]).toBe("abc1234");
+    expect(pr["body"]).toBe("Closes #698"); // 投影靠它做 lease→PR 关联（F06）
     expect(typeof pr["mirrored_at"]).toBe("string");
+  });
+});
+
+describe("andon 管理路由（F06：maintainer 特权，独立 secret）", () => {
+  const path = "https://gw.test/api/coord/repos/boardx/boardx-dev-template/andon";
+  const raise = {
+    action: "raise", agent_id: "coord-main", severity: "stop-merge", scope: "repo",
+    reason: "main 基础验证挂了，停线（issue #999）",
+  };
+
+  it("无 token 401；普通 API token 也是 401（andon 不可用普通 token 发）", async () => {
+    expect((await SELF.fetch(path, { method: "POST", body: JSON.stringify(raise) })).status).toBe(401);
+    const r = await SELF.fetch(path, {
+      method: "POST",
+      headers: { authorization: "Bearer test-api-token", "content-type": "application/json" },
+      body: JSON.stringify(raise),
+    });
+    expect(r.status).toBe(401);
+  });
+
+  it("缺 COORD_ADMIN_TOKEN 配置 → 503 fail-closed", async () => {
+    const req = new Request(path, {
+      method: "POST",
+      headers: { authorization: "Bearer test-admin-token", "content-type": "application/json" },
+      body: JSON.stringify(raise),
+    });
+    const r = await worker.fetch(req, { ...env, COORD_ADMIN_TOKEN: undefined });
+    expect(r.status).toBe(503);
+  });
+
+  it("正确 admin token → 停线生效，GET /andon 可见状态变化，clear 后恢复", async () => {
+    const admin = { authorization: "Bearer test-admin-token", "content-type": "application/json" };
+    const r = await SELF.fetch(path, { method: "POST", headers: admin, body: JSON.stringify(raise) });
+    expect(r.status).toBe(200);
+    expect((await r.json<Record<string, unknown>>())["active"]).toBe(true);
+
+    // 读路径走普通 REST token 即可（读不是特权）
+    const state = await (
+      await SELF.fetch(path, { headers: { authorization: "Bearer test-api-token" } })
+    ).json<{ active: boolean; andons: Array<Record<string, unknown>> }>();
+    expect(state.active).toBe(true);
+    expect(state.andons[0]).toMatchObject({ scope: "repo", severity: "stop-merge", raised_by: "coord-main" });
+
+    const clear = await SELF.fetch(path, {
+      method: "POST", headers: admin,
+      body: JSON.stringify({ action: "clear", agent_id: "coord-main", scope: "repo", reason: "已修复，恢复合并（issue #999）" }),
+    });
+    expect(clear.status).toBe(200);
+    expect((await clear.json<Record<string, unknown>>())["active"]).toBe(false);
   });
 });
 

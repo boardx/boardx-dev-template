@@ -77,6 +77,10 @@ export class RepoHub extends DurableObject {
       if (req.method === "POST" && rel) return this.release(rel[1]!, await req.json());
       if (req.method === "GET" && p === "/claims") return this.listActiveLeases();
       if (req.method === "GET" && p === "/events") return this.listEvents(url);
+      if (req.method === "POST" && p === "/andon") return this.andonAction(await req.json());
+      if (req.method === "GET" && p === "/andon") return this.andonStatus();
+      if (req.method === "GET" && p === "/projector/cursor") return this.cursorGet();
+      if (req.method === "PUT" && p === "/projector/cursor") return this.cursorPut(await req.json());
       if (req.method === "POST" && p === "/mirror/upsert") return this.mirrorUpsert(await req.json());
       if (req.method === "POST" && p === "/webhook/ingest") return this.webhookIngest(await req.json());
       const rt = p.match(/^\/realtime\/(issues|prs)$/);
@@ -229,6 +233,84 @@ export class RepoHub extends DurableObject {
     });
   }
 
+  // ---------- Andon（F06） ----------
+  // 权限（仅 maintainer 级可发）在 gateway 层由独立 COORD_ADMIN_TOKEN 把守；
+  // DO 只管状态机与 payload 合法性——校验规则与 coord-protocol validateEvent
+  // 的 andon 分支保持一致（reason≥10、scope ∈ repo|module:<name>、raise 时
+  // severity 必须 stop-merge），events.md §Andon 是权威。
+
+  private andonAction(body: unknown): Response {
+    const b = body as Record<string, unknown> | null;
+    const action = b?.["action"];
+    const agentId = b?.["agent_id"];
+    const reason = b?.["reason"];
+    const scope = b?.["scope"];
+    const errors: string[] = [];
+    if (action !== "raise" && action !== "clear") errors.push('action 必须是 "raise" | "clear"');
+    if (typeof agentId !== "string" || agentId.length === 0) errors.push("agent_id 必须是非空字符串");
+    if (typeof reason !== "string" || reason.length < 10) errors.push("reason 长度必须 ≥10（须含可查证锚点）");
+    if (typeof scope !== "string" || !(scope === "repo" || /^module:[\w-]+$/.test(scope)))
+      errors.push("scope 必须是 repo 或 module:<name>");
+    if (action === "raise" && b?.["severity"] !== "stop-merge")
+      errors.push('severity 必须是 "stop-merge"');
+    if (errors.length > 0) return json(422, { error: "invalid_andon_request", details: errors });
+
+    const s = scope as string;
+    const now = iso(Date.now());
+    const current = [...this.sql.exec(`SELECT active FROM andon_state WHERE scope=?`, s)][0];
+    if (action === "raise") {
+      if (current && current["active"] === 1)
+        return json(409, { error: "andon_already_active", scope: s });
+      this.sql.exec(
+        `INSERT INTO andon_state (scope,active,severity,reason,raised_by,raised_at,cleared_at)
+         VALUES (?,1,'stop-merge',?,?,?,NULL)
+         ON CONFLICT(scope) DO UPDATE SET
+           active=1, severity='stop-merge', reason=excluded.reason,
+           raised_by=excluded.raised_by, raised_at=excluded.raised_at, cleared_at=NULL`,
+        s, reason as string, agentId as string, now,
+      );
+      this.emit("andon.raised", s, agentId as string, {
+        scope: s, reason, severity: "stop-merge",
+      });
+    } else {
+      if (!current || current["active"] !== 1)
+        return json(409, { error: "andon_not_active", scope: s });
+      this.sql.exec(`UPDATE andon_state SET active=0, cleared_at=? WHERE scope=?`, now, s);
+      this.emit("andon.cleared", s, agentId as string, { scope: s, reason });
+    }
+    return this.andonStatus();
+  }
+
+  private andonStatus(): Response {
+    const rows = [...this.sql.exec(`SELECT * FROM andon_state WHERE active=1 ORDER BY scope`)];
+    return json(200, {
+      active: rows.length > 0, // 任一 scope 停线即整体停线（投影阻断的判定口径）
+      andons: rows.map((r) => ({
+        scope: r["scope"], severity: r["severity"], reason: r["reason"],
+        raised_by: r["raised_by"], raised_at: r["raised_at"],
+      })),
+    });
+  }
+
+  // ---------- 投影游标（F06） ----------
+
+  private cursorGet(): Response {
+    const row = [...this.sql.exec(`SELECT value FROM projector_state WHERE key='cursor'`)][0];
+    return json(200, { cursor: row ? (row["value"] as string) : null });
+  }
+
+  private cursorPut(body: unknown): Response {
+    const cursor = (body as Record<string, unknown> | null)?.["cursor"];
+    if (typeof cursor !== "string" || cursor.length === 0)
+      return json(422, { error: "invalid_cursor" });
+    this.sql.exec(
+      `INSERT INTO projector_state (key,value) VALUES ('cursor',?)
+       ON CONFLICT(key) DO UPDATE SET value=excluded.value`,
+      cursor,
+    );
+    return json(200, { ok: true, cursor });
+  }
+
   // ---------- Mirror（F04） ----------
 
   private mirrorUpsert(body: unknown): Response {
@@ -319,8 +401,10 @@ export class RepoHub extends DurableObject {
 }
 
 function rowToItem(row: MirrorRow): Record<string, unknown> {
+  const data = JSON.parse(row.data) as Record<string, unknown>;
   return {
     kind: row.kind,
+    body: typeof data["body"] === "string" ? data["body"] : null, // 投影解析 "Closes #N" 关联（F06）
     number: row.number,
     state: row.state,
     title: row.title,

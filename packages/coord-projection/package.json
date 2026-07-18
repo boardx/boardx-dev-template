@@ -1,0 +1,23 @@
+{
+  "name": "@repo/coord-projection",
+  "version": "0.1.0",
+  "private": true,
+  "description": "反向投影引擎：RepoHub 事件流 → GitHub check/status（lease→coord/lease check，andon→coord/andon 阻断 status）（F06）",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "echo 'lint: ok'"
+  },
+  "devDependencies": {
+    "typescript": "*",
+    "vitest": "^2.0.0",
+    "@cloudflare/vitest-pool-workers": "^0.12.0",
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "wrangler": "^4.0.0",
+    "@types/node": "*"
+  }
+}
