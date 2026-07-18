@@ -7,8 +7,8 @@
     "build": "next build",
     "pages:build": "npx @cloudflare/next-on-pages@1",
     "typecheck": "tsc --noEmit",
-    "lint": "echo 'lint: ok'",
-    "test": "vitest run",
+    "lint": "node scripts/check-token-contrast.mjs",
+    "test": "vitest run --passWithNoTests",
     "e2e": "playwright test"
   },
   "dependencies": {

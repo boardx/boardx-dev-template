@@ -80,6 +80,13 @@ issue #523/#543；wrangler.toml 头注；apps/devportal/README.md
   next/headers / cookie 读取，改公开层组件先看它）。新增 Pages secret：SESSION_SECRET、
   GITHUB_OAUTH_CLIENT_SECRET（原子纪律：先 put 再合）。Access 收缩到治理面是人类 dashboard
   操作，代码侧不删任何 Access 配置（出处：p30-F02 PR）。
+- 2026-07-19：p30 批次 5 视觉对齐（暖深主题）三条：①devportal 全组件走语义 token，换主题 =
+  只改 globals.css 一处（token 名不动、值换色板），四批视图零组件改动自动换肤——新视图严禁
+  组件内散落 hex，否则失去这个能力；②ADR-013 对比度门控已本地化：
+  `apps/devportal/scripts/check-token-contrast.mjs` 接在 `pnpm --filter @repo/devportal lint`，
+  改 token 必跑；设计稿最弱灰 #6b5f4f 不过 AA，已制度性排除出文字用途（只准做边框/装饰）；
+  ③在 dev server 运行中跑 `pnpm build` 会踩坏 `.next` 导致 edge sandbox 500 + 静态 chunk 404，
+  先停 dev 再 build（出处：p30 批次 5 PR）。
 - 2026-07-18：p29 全周期三条协调层经验（出处：p29 sprint01-05 evidence + PR #697-#737）：
   ①「全部合并了」类转述必须逐 PR 锚定核验（gh pr view --json state），#733 曾被误当已合并，
   差点造成协调层双权威窗口（P23 postmortem §9 的跨会话版）；②vitest 2 不认 --grep，

@@ -37,7 +37,7 @@ const REFRESH_MS = 30_000;
 /** 语义心跳状态点：<5min 新鲜 / <30min 渐旧 / ≥30min 陈旧（复用 coord-dashboard 阈值）。 */
 function HeartbeatDot({ minutes }: { minutes: number }) {
   if (minutes < 5) return <span aria-label="心跳新鲜" title="心跳新鲜（<5 分钟）" className="inline-block h-2 w-2 shrink-0 rounded-full bg-success" />;
-  if (minutes < 30) return <span aria-label="心跳渐旧" title="心跳渐旧（<30 分钟）" className="inline-block h-2 w-2 shrink-0 rounded-full bg-tag-yellow ring-1 ring-border" />;
+  if (minutes < 30) return <span aria-label="心跳渐旧" title="心跳渐旧（<30 分钟）" className="inline-block h-2 w-2 shrink-0 rounded-full bg-accent-amber" />;
   return <span aria-label="心跳陈旧" title="心跳陈旧（≥30 分钟）" className="inline-block h-2 w-2 shrink-0 rounded-full bg-destructive" />;
 }
 

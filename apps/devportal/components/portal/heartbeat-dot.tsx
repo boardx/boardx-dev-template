@@ -5,7 +5,7 @@ export function HeartbeatDot({ minutes }: { minutes: number }) {
     return <span aria-label="心跳新鲜" title={`最后心跳 ${formatMinutes(minutes)}前（<5 分钟 新鲜）`} className="inline-block h-2 w-2 shrink-0 rounded-full bg-success" />;
   }
   if (minutes < 30) {
-    return <span aria-label="心跳渐旧" title={`最后心跳 ${formatMinutes(minutes)}前（<30 分钟 渐旧）`} className="inline-block h-2 w-2 shrink-0 rounded-full bg-tag-yellow ring-1 ring-border" />;
+    return <span aria-label="心跳渐旧" title={`最后心跳 ${formatMinutes(minutes)}前（<30 分钟 渐旧）`} className="inline-block h-2 w-2 shrink-0 rounded-full bg-accent-amber" />;
   }
   return <span aria-label="心跳陈旧" title={`最后心跳 ${formatMinutes(minutes)}前（≥30 分钟 陈旧）`} className="inline-block h-2 w-2 shrink-0 rounded-full bg-destructive" />;
 }

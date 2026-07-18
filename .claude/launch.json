@@ -2,11 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "web",
-      "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd apps/web && npx next dev -p $PORT"],
-      "port": 3000,
-      "autoPort": true
+      "name": "devportal",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@repo/devportal", "dev"],
+      "port": 3400
     }
   ]
 }
