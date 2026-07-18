@@ -5,13 +5,16 @@
 //    ——谁在本周期承诺了什么、上周期完成率；
 // 2. gh pr list——open PR 的等待时长（SLA：新 PR 同周期内要有首个 review 结论）、
 //    近 24h merged PR 的 开出→合并 流动时间（提案唯一成功指标）；
-// 3. coord-service GET /status（设了 COORD_SERVICE_URL 才查；这是公开只读端点，
-//    无需 token）——active_claims 的心跳年龄，SLA "in_progress 无进展"的权威数据源。
+// 3. coord-gateway GET /claims（2026-07-18 割接，ADR-017：权威从 coord-service D1
+//    切到 RepoHub DO；需 COORD_GATEWAY_URL/COORD_API_TOKEN/COORD_REPO）——活跃租约
+//    的心跳年龄，SLA "in_progress 无进展"的权威数据源。
 //
-// 周期时钟：UTC 整点 00/03/06/09/12/15/18/21 锚定，cycle id = 起始时刻 ISO8601。
+// 周期时钟：UTC 整点 00/03/06/09/12/15/18/21 锚定，cycle id = 起始时刻 ISO8601
+// （与 gateway GET /api/coord/time 同一 ADR-014 实现；tick.ts 负责漂移告警）。
 import { sh } from "./lib/sh";
 import { log } from "./lib/log";
 import type { Args } from "./lib/args";
+import { createCoordClientFromEnv } from "@repo/coord-protocol/client";
 
 const CYCLE_HOURS = 3;
 const WORK_CYCLE_LABEL = "coordination:work-cycle";
@@ -88,16 +91,12 @@ function listPrs(state: "open" | "merged", limit: number): PrSummary[] {
 }
 
 async function fetchActiveClaims(): Promise<Array<{ resource_id: string; agent_id: string; last_heartbeat_at: string }> | null> {
-  const baseUrl = process.env["COORD_SERVICE_URL"];
-  if (!baseUrl) return null;
-  try {
-    const res = await fetch(`${baseUrl}/status`, { signal: AbortSignal.timeout(5_000) });
-    if (!res.ok) return null;
-    const body = (await res.json()) as { active_claims?: Array<{ resource_id: string; agent_id: string; last_heartbeat_at: string }> };
-    return body.active_claims ?? [];
-  } catch {
-    return null;
-  }
+  // 三态纪律（ADR-006 判例）：未配置/问不到 → null（调用方明示"跳过"），绝不塌缩成空闲
+  const client = createCoordClientFromEnv();
+  if (!client) return null;
+  const outcome = await client.listActiveClaims();
+  if (outcome.kind === "error") return null;
+  return outcome.leases;
 }
 
 export async function cycleReport(_args: Args): Promise<void> {
@@ -154,14 +153,14 @@ export async function cycleReport(_args: Args): Promise<void> {
       (medianFlow === null ? "无数据" : `${medianFlow.toFixed(1)}h`)
   );
 
-  // 4. coord-service active_claims（权威租约状态）
+  // 4. coord-gateway 活跃租约（权威租约状态，RepoHub DO）
   const claims = await fetchActiveClaims();
   if (claims === null) {
-    log.info("coord-service：COORD_SERVICE_URL 未配置或不可达——跳过租约健康检查。");
+    log.info("coord-gateway：COORD_GATEWAY_URL/COORD_API_TOKEN/COORD_REPO 未配置或不可达——跳过租约健康检查。");
   } else if (claims.length === 0) {
-    log.info("coord-service：无活跃租约。");
+    log.info("coord-gateway：无活跃租约。");
   } else {
-    log.info(`coord-service 活跃租约（${claims.length} 个）：`);
+    log.info(`coord-gateway 活跃租约（${claims.length} 个）：`);
     for (const c of claims) {
       const heartbeatAgeMinutes = (now.getTime() - new Date(c.last_heartbeat_at).getTime()) / 60_000;
       const flag = heartbeatAgeMinutes > 30 ? "⚠ " : "";
