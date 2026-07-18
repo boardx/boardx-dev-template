@@ -13,17 +13,17 @@ description: >
 > 代码在哪、什么不能破坏、前人踩过什么坑。
 
 ## 一句话定位
-开发过程本身的基础设施：feature 门控/verify/doctor/lock/sync CLI、协作协议文档、coord-service——本模块的用户是全体 agent 和人类开发者。
+开发过程本身的基础设施：feature 门控/verify/doctor/lock/sync CLI、协作协议文档、coord 平台（coord-gateway/RepoHub/protocol）——本模块的用户是全体 agent 和人类开发者。
 
 ## 代码地图
 - CLI：`.harness/scripts/`（verify/doctor/claim/lock/module-lock/sync…）
 - 协议文档：`.harness/instructions/`；ADR：`docs/adr/`（#596 起全局目录,含索引）
-- 协调服务：`packages/coord-service`（Workers+D1）+ `packages/coord-dashboard`
+- 协调平台：`apps/coord-gateway` + `packages/coord-repohub|coord-protocol|coord-projection`（ADR-017）+ `packages/coord-dashboard`；旧 `packages/coord-service` 已删除（2026-07-18 割接，D1 归档在 p29 evidence/d1-final-archive）
 
 ## 关键契约与不变量（改代码前必读）
 - passing 只能由 `verify --sprint` 翻转（ADR-012 D5）；证据必须真实落盘且进 git。
 - doctor 是审计链权威（pre-push 按触碰 phase 门控）。
-- 协调权威在 D1（ADR-009）；属主判定信 token 不信 --session（#502）。
+- 协调权威在 coord-gateway/RepoHub DO（ADR-009 语义 + ADR-017 载体）；属主判定信 token 不信 --session（#502）。
 - 改门控工具本身 = 高危变更，需要显式授权，绝不悄悄改。
 
 ## 关联阶段 / ADR / 文档
@@ -36,6 +36,7 @@ ADR-001/003/005/009/010/011/012/013；docs/postmortems/postmortem-p23-false-pass
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-18：协调层割接 coord-gateway（p29-F10，ADR-017）——`packages/coord-service` 整目录 + `deploy-coord-service.yml` 删除，`COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN` 全面退役；lock-*/module-lock-*/tick/cycle-report 一律走 `COORD_GATEWAY_URL`/`COORD_API_TOKEN`/`COORD_REPO`（参考客户端 `@repo/coord-protocol/client`）。ADR-014 权威时钟迁到 gateway `GET /api/coord/time`（cycle 计算逐行搬运，语义零变更）。D1 审计史归档 `phases/phase-p29-coord-platform/evidence/d1-final-archive/`（agents 已剥离 token_hash——public 仓不入库凭据派生物）。
 - 2026-07-17：coord-service 补了 CD（deploy-coord-service.yml，Closes andon #272/#290 根因）。此前它是**唯一没有 CD 的部署目标**，手动 wrangler deploy → 两个分支 last-write-wins 互相覆盖（#629 部署覆盖掉 #614 的 tasks 路由，线上收件箱静默消失）。CD 只从 main 部署、串行不取消，从根本消除竞争；冒烟检查带**部署漂移探针**（/time 存在 + /tasks 返 401 而非 404）。铁律推论：**协调权威绝不手动部署**，改代码走 PR 合 main 触发 CD。
 - 2026-07-10：P23 假 passing 事件——verify --phase 模式断审计链（postmortem 全文必读）。
 - 2026-07-10：doctor 首跑全仓 85 FAIL——手抄清单/人肉纪律必然漂移，能机器判定的绝不留给人。

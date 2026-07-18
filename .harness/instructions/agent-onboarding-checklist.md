@@ -5,12 +5,14 @@
 > bootstrap 告诉你怎么走，本清单告诉你哪些线不能踩。
 
 > ⚠️ **2026-07-09 起（ADR-009 + ADR-010）读本文前先知道两件事**：
-> 1. **协调权威已迁到 coord-service (D1)**，不再是 GitHub issue/label。本文下方仍有
->    多处把 issue/label 描述成"协调权威"的表述，那是 ADR-009 之前的历史框架——认领/
->    心跳/租约现在一律走 `pnpm harness lock-*` / `module-lock-*`（需 coord-service
->    凭据），GitHub 只保留 feature 规格 + 人类可读叙述用途。以 ADR-009 为准。
+> 1. **协调权威不在 GitHub issue/label**（ADR-009），**2026-07-18 起载体 =
+>    coord-gateway / 按仓 RepoHub DO**（ADR-017；旧 coord-service D1 已退役删除）。
+>    本文下方仍有多处把 issue/label 描述成"协调权威"的表述，那是 ADR-009 之前的
+>    历史框架——认领/心跳/租约现在一律走 `pnpm harness lock-*` / `module-lock-*`
+>    （需 `COORD_GATEWAY_URL`/`COORD_API_TOKEN`/`COORD_REPO` 凭据，devportal 自助
+>    领取），GitHub 只保留 feature 规格 + 人类可读叙述用途。
 > 2. **组织模型见 ADR-010**：三级 coordinator（main/module/architecture）+ 角色子
->    agent（必须登记进 coord-service）+ 全员 3h 性能周期 + 防断链。人类开发者带
+>    agent（必须在协调层登记）+ 全员 3h 性能周期 + 防断链。人类开发者带
 >    agent 加入看 `human-developer-onboarding.md`。
 
 > 维护者：architecture-coordinator（`coord-architecture`，见 registry.yaml）。目标读者
@@ -31,10 +33,9 @@
    没有条目 → 见下方"新增身份"一节，不要自行编号硬凑。
 4. **`docs/adr/ADR-004-issues-as-coordination-bus.md`** +
    **`ADR-005-shared-checkout-isolation.md`** +
-   **`ADR-006-coord-service-d1-gating.md`**——三条决定"你能怎么碰 git/GitHub"的
-   硬约束：状态机权威在哪、共享工作目录的隔离规则、认领动作的可选原子性增强
-   （`COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN` 未配置 = 完全不受影响，两个都配了
-   才会额外问一次 D1）。
+   **`ADR-006-coord-service-d1-gating.md`**（历史）+ **`ADR-017`**——三条决定
+   "你能怎么碰 git/GitHub"的硬约束：状态机权威在哪、共享工作目录的隔离规则、
+   认领动作的原子性（ADR-017 起由按仓 RepoHub DO 的单线程执行结构性保证）。
 5. 按自己的 `kind` 再读对应角色文档：
    - `worker` → `.harness/instructions/parallel-dev-workflow.md` §5（执行循环）+
      要认领的那个 `phases/<phase>/feature_list.json` 条目（行为契约 + 验收命令）。

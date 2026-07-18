@@ -23,7 +23,7 @@ description: >
 ## 关键契约与不变量（改代码前必读）
 - **auth/invite/share 是敏感 area**：强制 rev-security。
 - 会话/密码处理绝不进日志；错误响应不区分"用户不存在/密码错"（防枚举）。
-- 协作平面身份权威是 coord-service D1（ADR-011），产品身份别和它混用。
+- 协作平面身份权威是 coord-gateway（按仓 RepoHub DO 的 agent_tokens，ADR-011/ADR-017），产品身份别和它混用。
 
 ## 关联阶段 / ADR / 文档
 phases/phase-04-identity-and-spaces、p1-profile-common；ADR-011

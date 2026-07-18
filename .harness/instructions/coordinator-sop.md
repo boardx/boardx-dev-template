@@ -83,7 +83,7 @@
 
 ## 铁律（任何层都不可违反）
 1. **verdict 权威**：`review:*-ok` 只能由 coordinator 编排的 reviewer 产出。发现来路不明的 verdict → 摘除 + 留言，以可核验事实（git ls-tree、命令退出码）重裁。
-2. **coordinator 唯一**：唯一性由 coord-service (D1) 的 `role:coord-main` claim 裁定（2026-07-08 起，ADR-009；此前的 `coordination:lease` issue 心跳机制已退役，见下方生命周期章节）；接管协调前先向存量协调会话广播；双 coordinator 结论冲突时，以可核验事实为准，并立即收敛为单 coordinator。
+2. **coordinator 唯一**：唯一性由 coord-gateway（按仓 RepoHub DO）的 `role:coord-main` 租约裁定（协议语义 2026-07-08 起 ADR-009；载体 2026-07-18 起 ADR-017，旧 coord-service D1 已退役；此前的 `coordination:lease` issue 心跳机制已退役，见下方生命周期章节）；接管协调前先向存量协调会话广播；双 coordinator 结论冲突时，以可核验事实为准，并立即收敛为单 coordinator。
 3. **合并独占**：只有 coordinator 执行合并；review 全绿 + CI 绿 + up-to-date 缺一不可（CI 因基础设施不可用时，合并冻结并升级人类，不得以"本地验过"绕行）。
 4. **证据实测**：任何"已验证/已入库"声称都用 `git ls-tree` / `git show` / 退出码实测，不信任 diff 注释、progress 叙述或打分。
 5. **共享主 checkout 隔离**：任何要落地写文件/提交的会话（含 coordinator 自己）一律
@@ -95,13 +95,13 @@
    明确时限的通牒，再据此回收/升级——不能只是内部判断"再等等"或"已经提醒过了"就不再
    跟进。这条对 coord-main 和全体 module-coordinator 一视同仁，没有"层级更高就可以裸等"
    这回事（人类反馈直接触发，2026-07-07）。
-7. **coord-service 是唯一协调权威（2026-07-08 起，取代本条旧文）**：`lock-*`/
-   `module-lock-*` 必须配置 `COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN` 才能使用，
-   未配置直接报错——不存在降级回 GitHub 的路径（GitHub 协调面已整体退役）。
-   权威（D1）联系不上时 acquire fail-closed 拒绝执行，`--force` 仅限人类授权的
-   抢占仪式。见 ADR-009（`docs/adr/
-   ADR-009-github-coordination-plane-retirement.md`）；本条 2026-07-08 之前的
-   opt-in 版本见 ADR-006（保留为历史决策记录）。
+7. **coord-gateway（RepoHub DO）是唯一协调权威（2026-07-18 起，ADR-017 割接；
+   取代本条旧文的 coord-service）**：`lock-*`/`module-lock-*` 必须配置
+   `COORD_GATEWAY_URL`/`COORD_API_TOKEN`/`COORD_REPO` 才能使用，未配置直接报错——
+   不存在降级回 GitHub 的路径（GitHub 协调面已整体退役），旧 `COORD_SERVICE_*`
+   凭据配了也不会被读取。权威联系不上时 acquire fail-closed 拒绝执行，`--force`
+   仅限人类授权的抢占仪式。见 ADR-017 与 ADR-009（协议语义）；更早的 opt-in 版本
+   见 ADR-006（保留为历史决策记录）。
 8. **破坏性清理操作需要显式人类/coord-main 授权，任何会话都不能仅凭自己判断"逻辑
    可靠"就执行**：`pnpm harness sweep-docker --apply`（删容器+卷）、以及其它任何
    对共享基础设施做删除/回收类操作的命令，一律先跑不带 `--apply` 的只读巡检、把
@@ -119,7 +119,8 @@
    （active-features.json）不是审计对象，in-repo 的 PROGRESS.md 才是。
 
 10. **统一时钟 + loop 纪律（2026-07-16 起，ADR-014）**：协调决策一律以
-   coord-service `GET /time` 为准（现在几点/当前哪个周期/租约还新鲜吗），**不信本机
+   coord-gateway `GET /api/coord/time` 为准（现在几点/当前哪个周期/租约还新鲜吗；
+   时钟实现随 ADR-017 割接原样迁自 coord-service，语义零变更），**不信本机
    `date`**——机器时钟漂移会让你误判租约新鲜度与周期边界，`harness tick` 会在漂移
    >60s 时告警。**每个层级都必须有 loop**：coord-main 5 分钟、module-coordinator
    15 分钟、sub-agent/worker 15 分钟，每个 loop 跑 `pnpm harness tick`（权威时钟+
@@ -127,12 +128,13 @@
    ——只有后者没有前者，就是"coord-architecture 租约静默过期 8 小时"的成因。
    席位按 ttl 正常过期是**诚实信号**，不得调大 ttl 或替人代跑心跳来掩盖失联。
 
-11. **协调权威（coord-service）绝不手动部署（2026-07-17 起）**：coord-service 有了
-   CD（deploy-coord-service.yml）——改它的代码一律走 PR 合 main 触发自动部署，
-   **不再 `wrangler deploy`**。手动部署会 last-write-wins 互相覆盖（#629 覆盖 #614
-   的 tasks 路由、线上收件箱静默消失，andon #272/#290）。CD 冒烟带部署漂移探针
-   （/time 存在 + /tasks 返 401 而非 404），漂移当场红。这条对 devportal/devapp
-   同理——**有 CD 的目标不手动部署**，把"从哪个 checkout 部署"的竞争彻底消灭。
+11. **协调权威绝不手动部署（2026-07-17 起；ADR-017 后主体 = coord-gateway）**：
+   coord-gateway 有 CD（deploy-coord-gateway.yml）——改它的代码一律走 PR 合 main
+   触发自动部署，**不再 `wrangler deploy`**。手动部署会 last-write-wins 互相覆盖
+   （coord-service 时代的 #629 覆盖 #614 tasks 路由、线上收件箱静默消失，andon
+   #272/#290——该服务与其 CD 已随 ADR-017 割接删除，教训保留）。CD 冒烟带部署
+   漂移探针 + 退避重试（#714），漂移当场红。这条对 devportal/devapp 同理——
+   **有 CD 的目标不手动部署**，把"从哪个 checkout 部署"的竞争彻底消灭。
 
 ## 事故分诊速查（来自实战）
 - CI 秒级失败 + steps 空 → 账单/runner，非代码（2026-07-04 账单事故）。
@@ -153,10 +155,10 @@
 ## 生命周期（启动/退位/抢占）
 coordinator 是**单例角色**，由会话通过启动仪式认领，不是常驻 subagent。
 完整仪式见 `.agents/skills/coordinator/SKILL.md`（唯一性握手 → 认领广播 → 冷启动读总线 →
-挂监控 → SOP 循环）。要点（**2026-07-08 起按 ADR-009 切换到 coord-service**）：
-- **唯一性来源**：D1 的 `role:coord-main` claim（`pnpm harness lock-acquire --session
-  <id>`，需要 `COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN` 凭据）。认领是服务端
-  `uq_active_claim` 唯一索引上的原子 INSERT——两个会话抢，恰好一个成功。
+挂监控 → SOP 循环）。要点（**ADR-009 语义；2026-07-18 起载体 = coord-gateway，ADR-017**）：
+- **唯一性来源**：按仓 RepoHub DO 的 `role:coord-main` 租约（`pnpm harness
+  lock-acquire --session <id>`，需要 `COORD_GATEWAY_URL`/`COORD_API_TOKEN`/
+  `COORD_REPO` 凭据）。认领由 DO 单线程串行执行原子裁定——两个会话抢，恰好一个成功。
   ~~label 为 `coordination:lease` 的专用 issue + heartbeat 评论~~ 已退役，存量
   issue 保留为历史记录。
 - **心跳**：每个 L2 tick 跑 `pnpm harness lock-acquire --session <id>`（acquire-or-renew

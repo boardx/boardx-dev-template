@@ -47,9 +47,10 @@ pnpm harness tick --session coord-<你的模块>
 
 ### Step 2 — 唯一性握手（同模块防双协调）
 
-**2026-07-08 起（ADR-009）**：唯一性由 coord-service (D1) 的 `role:coord-<module>`
-claim 裁定，需要 `COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN` 凭据（没有就先找人类或
-coord-main 领取，无凭据无法担任 module-coordinator）：
+**ADR-009 语义；2026-07-18 起载体 = coord-gateway（按仓 RepoHub DO，ADR-017）**：
+唯一性由 gateway 的 `role:coord-<module>` 租约裁定，需要 `COORD_GATEWAY_URL`/
+`COORD_API_TOKEN`/`COORD_REPO` 凭据（devportal 自助领取或找 coord-main，无凭据无法
+担任 module-coordinator；旧 COORD_SERVICE_* 已退役）：
 ```bash
 pnpm harness module-lock-status --module <name>   # 权威状态：谁持有、心跳多久前
 ```

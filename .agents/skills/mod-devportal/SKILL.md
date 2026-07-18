@@ -17,7 +17,8 @@ description: >
 
 ## 代码地图
 - 全部代码：`apps/devportal/`（零 @repo 依赖、零越界 import——刻意自包含）
-- 适配层：`lib/access.ts`（Access JWT 验签）、`lib/repo-files.ts`（GitHub Contents 替代 fs）、`lib/portal-fetch.ts`（401 自动重认证）
+- 适配层：`lib/access.ts`（Access JWT 验签）、`lib/repo-files.ts`（GitHub Contents 替代 fs）、`lib/portal-fetch.ts`（401 自动重认证）、`lib/coord-gateway.ts`（协调面读的唯一入口：gateway claims/events，ADR-017）
+- 数据源：GitHub Contents/REST + coord-gateway（RepoHub DO；`COORD_GATEWAY_URL`+`GITHUB_REPO` vars，`COORD_API_TOKEN`/`COORD_GATEWAY_ADMIN_TOKEN` 加密 secret）——旧 coord-service（COORD_SERVICE_*）已于 2026-07-18 退役
 - 部署：`wrangler.toml`（唯一配置事实源）+ CD deploy-devportal.yml
 
 ## 关键契约与不变量（改代码前必读）
@@ -36,6 +37,7 @@ issue #523/#543；wrangler.toml 头注；apps/devportal/README.md
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-18：协调层割接 coord-gateway（p29-F10 stage-2，ADR-017）——COORD_SERVICE_URL var、COORD_BROKER_TOKEN/COORD_DISPATCH_TOKEN secret 全部退役；my-tokens 只剩 coord-gateway 按仓 scoped 通道（响应不再有 broker_configured 字段）；coordination/agents/my-home/pulse 的租约读面统一走 `lib/coord-gateway.ts`（gateway /claims+/events 需 bearer，不再有公开 /status）。Pages 侧残留的两个旧 secret 由人类在 dashboard 删除，代码已不读。
 - 2026-07-12：compatibility_date 2024-11-01 < cache 选项门槛 → 所有出站 fetch 抛异常，全数据源 unreachable（#593）。toml 入仓沿用项目现值，别抄模板。
 - 2026-07-11：先删 secrets 等 toml 接管，被 CD 中途部署踩中断供——env 变更原子性（记忆已固化）。
 - 2026-07-12：Access 会话过期（24h）曾被渲染成"数据源不可达"（#588 修复：401 自动整页重认证）。
