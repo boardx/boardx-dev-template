@@ -21,6 +21,7 @@
 | 7 | 按什么流程干活 | 开工流程 | claim → 读上下文 → 实现 → verify 门控 → PR 规范 |
 | 8 | 规则的权威在哪 | 各处链接 | feature_list.json / requirements/ / ui-signoff.md / session-handoff.md / AGENTS.md |
 | 9 | 属于哪个总追踪 Issue | Parent Tracking Issue | roadmap phase 的可选 `tracking_issue` |
+| 10 | 这个任务的 story 出处 | Story | `spec_ref`（2026-07-19 起必填；指回 requirements/ 具体章节，形成需求→feature→issue 闭环） |
 
 ## Body 结构（生成顺序）
 
@@ -31,6 +32,10 @@ https://github.com/<repo>/issues/<tracking_issue>
 
 ## 交付契约（user_visible_behavior）
 <user_visible_behavior 原文>
+
+## Story
+<spec_ref 解析成的链接，指向 requirements/<文件>#<章节ID>；缺失时渲染醒目提示
+（历史存量 feature，claim/verify 已在新建时强制要求，不应再出现新缺口）>
 
 ## 验证（完成的唯一标准：每条命令退出码 0）
 - [ ] `<verification[0]>`

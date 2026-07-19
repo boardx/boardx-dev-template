@@ -5,6 +5,8 @@
 
 import { loadFeatureList, saveFeatureList, findFeature, writeActiveFeatures } from "./lib/features";
 import { refreshProgress } from "./lib/progress";
+import { loadHarnessConfig } from "./lib/config";
+import { resolveSpecRef } from "./lib/spec-ref";
 import { req } from "./lib/args";
 import { log, die } from "./lib/log";
 import type { Args } from "./lib/args";
@@ -16,6 +18,20 @@ export function claim(args: Args): void {
 
   const fl = loadFeatureList(phaseId);
   const f = findFeature(fl, featureId);
+  const cfg = loadHarnessConfig();
+
+  // 保护 0：没有可追溯的 story（requirements/ 下的章节）不能开工（人类拍板 2026-07-19）。
+  // 认领是"开始工作"的第一个机械动作，是堵住"无 story 就动手"最早也最便宜的地方。
+  if (cfg.gates.spec_ref_required) {
+    const r = resolveSpecRef(phaseId, f.spec_ref);
+    if (!r.ok) {
+      die(
+        `${featureId} 不能认领：${r.reason}\n` +
+          `  先在 phases/phase-${phaseId}-*/requirements/ 下补一份 story（用 .harness/templates/requirements.template.md），` +
+          `再把 feature_list.json 里 ${featureId} 的 spec_ref 填成 "<文件名>.md#R<n>"。`
+      );
+    }
+  }
 
   // 保护 1：不能认领已被他人持有的 feature
   if (f.owner !== null && f.owner !== owner) {

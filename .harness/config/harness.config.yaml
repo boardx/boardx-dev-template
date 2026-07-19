@@ -21,6 +21,7 @@ gates:
   single_in_progress: true        # 强制"同时只有一个 in_progress"
   passing_is_irreversible: true   # 禁止从 passing 回退
   evidence_required: true         # 没有 evidence 不允许标 passing
+  spec_ref_required: true         # 没有可追溯的 requirements story 不允许 claim / 标 passing（2026-07-19）
 
 quality:
   evaluator_rubric: .harness/rubrics/evaluator-rubric.md

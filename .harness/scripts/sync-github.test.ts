@@ -1,3 +1,5 @@
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildIssueBody,
@@ -6,6 +8,7 @@ import {
   partitionTitleMatches,
   projectionMarker,
 } from "./sync-github";
+import { PHASES_DIR } from "./lib/paths";
 import type { Feature, FeatureList } from "./lib/types";
 
 function makeFeature(overrides: Partial<Feature> = {}): Feature {
@@ -59,6 +62,34 @@ describe("buildIssueBody", () => {
     expect(isProjectedBody(body, "p27", "F01")).toBe(true);
     // marker 是 per-feature 的：不会误认别的 feature 的投影
     expect(isProjectedBody(body, "p27", "F02")).toBe(false);
+  });
+
+  describe("Story section（人类拍板 2026-07-19：闭环延伸到 GitHub）", () => {
+    it("缺 spec_ref → 醒目提示，不是静默省略", () => {
+      const feature = makeFeature(); // 无 spec_ref
+      const featureList: FeatureList = { phase: "p27", features: [feature] };
+      const body = buildIssueBody(feature, "p27", "01", "boardx/boardx-dev-template", featureList);
+      expect(body).toContain("## Story");
+      expect(body).toContain("⚠ 缺少可追溯的 story");
+    });
+
+    it("有效 spec_ref → 渲染指向 requirements 文件的链接 + 章节 ID", () => {
+      const phaseDir = join(PHASES_DIR, "phase-zz-sync-test-fixture");
+      const reqDir = join(phaseDir, "requirements");
+      mkdirSync(reqDir, { recursive: true });
+      writeFileSync(join(reqDir, "auth.md"), "## R3 验收线索\n内容", "utf8");
+      try {
+        const feature = makeFeature({ spec_ref: "auth.md#R3" });
+        const featureList: FeatureList = { phase: "zz-sync-test", features: [feature] };
+        const body = buildIssueBody(feature, "zz-sync-test", "01", "boardx/boardx-dev-template", featureList);
+        expect(body).toContain("[requirements/auth.md]");
+        expect(body).toContain("requirements/auth.md");
+        expect(body).toContain("`R3`");
+        expect(body).not.toContain("⚠ 缺少可追溯的 story");
+      } finally {
+        rmSync(phaseDir, { recursive: true, force: true });
+      }
+    });
   });
 });
 
