@@ -587,6 +587,7 @@
       "area": "survey",
       "title": "统一五步工作流视觉系统",
       "user_visible_behavior": "用户在设计问卷、报告模板、发布回收、查看答题和分析报告之间切换时，导航下方统一使用满屏工作区、相同的标题操作区、页面留白和面板样式；设计页不再重复返回栏，专业报告正文仍保持居中阅读宽度。",
+      "spec_ref": "24-unified-workflow-visual-system.md#用户可见行为",
       "design_ref": "requirements/24-unified-workflow-visual-system.md；docs/superpowers/specs/2026-07-19-survey-workflow-visual-unification-design.md；GitHub #805",
       "status": "in_progress",
       "sprint": "25",
