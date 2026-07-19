@@ -150,14 +150,41 @@ dashboard 时发现"有活但协调层里没有对应 agent"会追溯到你。
 ## 3.5 启用你的 agent：第一条消息发什么
 
 身份、凭据、租约都就绪后，启动你的 agent（Claude Code 或任何能读写 git+GitHub
-的工具），**第一条消息**照这个模板发：
+的工具）之前，**先想清楚这个 agent 是哪一级**（§1 的三级协调者）——第一条消息
+必须点名角色，不能只说"加入开发"就让它自己猜，否则它默认按 worker 走
+`agent-bootstrap.md`，永远不会去挂 coordinator/module-coordinator 该有的 loop
+（5 分钟 / 15 分钟，见 `coordinator`/`module-coordinator` skill），也不会去做
+唯一性握手——**这是本节修订前的真实缺口**：模板只有一份、只指向 worker 路径，
+派它当 module lead 的人也是照抄这份模板，结果新起的"module coordinator"从没
+真正认领过角色、没挂 loop，形同虚设。三选一，照对应模板发：
 
+**① 这个 agent 是 main coordinator**（全仓唯一）：
 ```
-你现在加入 BoardX 开发。先读 .harness/instructions/agent-bootstrap.md，
-按它逐步执行。你的信息：
-- 身份 id：coord-<模块>          （已在 registry.yaml 注册）
+你现在是 BoardX 的 main coordinator。先用 coordinator skill 走完整启动仪式
+（唯一性握手 + 挂 5 分钟 loop），不要跳过任何一步。你的信息：
+- 身份 id：coord-main（已在 registry.yaml 注册）
 - 凭据文件：.harness/state/.cache/coord-credentials.json
-- 负责范围：<模块> 模块，先做 phases/<阶段>/feature_list.json 的 <Fxx>
+有任何一步的完成标志达不到，停下来问我，不要猜。
+```
+
+**② 这个 agent 是某模块的 module coordinator**：
+```
+你现在是 BoardX <模块> 模块的 coordinator。先用 module-coordinator skill
+走完整启动仪式（唯一性握手 + 挂 15 分钟 loop），不要跳过任何一步。你的信息：
+- 身份 id：coord-<模块>（已在 registry.yaml 注册）
+- 凭据文件：.harness/state/.cache/coord-credentials.json
+- 负责范围：<模块> 模块
+有任何一步的完成标志达不到，停下来问我，不要猜。
+```
+
+**③ 这个 agent 是干活的 worker**（不担任何协调角色）：
+```
+你现在加入 BoardX 开发，做 <模块> 模块的一个 feature。先读
+.harness/instructions/agent-bootstrap.md，按它逐步执行（含挂 15 分钟 loop）。
+你的信息：
+- 身份 id：wrk-<模块>-<n>（已在 registry.yaml 注册）
+- 凭据文件：.harness/state/.cache/coord-credentials.json
+- 任务：phases/<阶段>/feature_list.json 的 <Fxx>
 有任何一步的完成标志达不到，停下来问我，不要猜。
 ```
 
@@ -165,11 +192,12 @@ dashboard 时发现"有活但协调层里没有对应 agent"会追溯到你。
 
 1. **凭据只给路径，不贴值**。token 明文一旦出现在聊天记录 / issue / PR 里就视为
    泄露，必须去 Cloudflare 轮换（2026-07-09 发生过一次真实泄露，成本是全量换发）。
-2. **`agent-bootstrap.md` 是 agent 的执行书**——从冷启动阅读、环境自检、接协调
-   平面、认领 feature，到 verify 交付、3h 周期汇报、会话退出收尾，每步带完成
-   标志和"前人踩过的坑"清单。你不需要逐条教它，指过去即可。
+2. **角色 skill / `agent-bootstrap.md` 是 agent 的执行书**——从冷启动阅读、环境
+   自检、接协调平面、挂 loop，到认领 feature、verify 交付、3h 周期汇报、会话
+   退出收尾，每步带完成标志和"前人踩过的坑"清单。你不需要逐条教它，指过去即可。
 3. **验收它是否真的接入了**：打开 https://develop.boardx.us/portal 的"实时协调"，
-   能看到它的租约 = 真的在协调平面上；看不到 = 它只是在你的会话里空转。
+   能看到它的租约 = 真的在协调平面上（三个角色都应该有租约，包括 worker）；
+   看不到 = 它只是在你的会话里空转，没有真正走完启动仪式。
 
 ## 4. 性能管理：每个 agent 都按 3 小时周期被度量
 
@@ -210,7 +238,8 @@ flow time 趋势）。
 2. [ ] 读本文 + ADR-010 + ADR-009/ADR-017（协调权威在 coord-gateway/RepoHub）+ `module-coordinator/SKILL.md`。
 3. [ ] 给 module coordinator 在 registry.yaml 建身份（PR + review）。
 4. [ ] 在 devportal 自助领取 coord-gateway 按仓 token（只显示一次，只存 gitignored 文件）。
-5. [ ] 启动你的 agent，第一条消息用 §3.5 模板指它读 `agent-bootstrap.md`。
+5. [ ] 启动你的 agent，第一条消息用 §3.5 对应角色的模板（main coordinator /
+   module coordinator / worker 三选一，不要都发 worker 模板）。
 6. [ ] 在 develop.boardx.us/portal"实时协调"里确认它的租约可见。
 7. [ ] 派子 agent 前，先给它登记身份 + 协调层 claim。
 8. [ ] 每 3 小时周期发 cycle-plan / cycle-result，接受 flow-time 度量。
