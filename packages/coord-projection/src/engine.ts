@@ -113,16 +113,33 @@ const INTENT_EMOJI: Record<string, string> = {
   "intent.decide": "⚖️",
 };
 
+// scoped agent 完全掌控 payload 里的自由文本字段（summary/reason/note/...，甚至能塞
+// 任意 key，validateIntentRequest 只检查必填字段存在，不禁止多余字段）以及 agent_id
+// 本身（受 token 身份绑定但格式不限）。这些值原样拼进 GitHub 评论 Markdown 会让
+// scoped agent 靠换行 + markdown 语法伪造出一条看起来像"人类已拍板/新事件"的假评论，
+// 还能借 @mention/#issue 引用触发真实 GitHub 通知——独立安全审 #772 阻断项，修复：
+// 剥离换行（防止注入的文本另起一行伪造新的评论结构）+ 反引号包裹成行内代码
+// （GitHub 在代码 span 内不解析 @mention/#引用/**加粗** 等 markdown，从根上失效）。
+function sanitizeInline(v: string): string {
+  const collapsed = v.replace(/\r\n|\r|\n/g, " ").trim();
+  // 反引号包裹前转义内部反引号，防止提前闭合代码 span 后剩余内容又被当 markdown 解析
+  const escaped = collapsed.replace(/`/g, "'");
+  return escaped.length > 0 ? `\`${escaped}\`` : "`(空)`";
+}
+
 // intent.* 事件 → 结构化 GitHub issue 评论正文（p30/F09，events.md §Intents）。
 // 纯格式化，无 IO；payload 字段直接铺开，devportal talk tab 与 GitHub 镜像看到同一份内容。
+// 除固定的 emoji/type/at 外，其余一切来自请求方的内容（agent_id、payload 的 key 与
+// value）在拼接前一律经 sanitizeInline——type 是校验过的封闭枚举，at 是服务端生成的
+// ISO 时间戳，两者可信，不需要转义。
 function intentCommentBody(ev: ProjectionEvent): string {
   const emoji = INTENT_EMOJI[ev.type] ?? "💬";
-  const lines = [`${emoji} **${ev.type}** · \`${ev.agent_id}\` · ${ev.at}`, ""];
+  const lines = [`${emoji} **${ev.type}** · ${sanitizeInline(ev.agent_id)} · ${ev.at}`, ""];
   for (const [k, v] of Object.entries(ev.payload)) {
     if (v === null || v === undefined || v === "") continue;
-    lines.push(`- **${k}**: ${String(v)}`);
+    lines.push(`- ${sanitizeInline(k)}: ${sanitizeInline(String(v))}`);
   }
-  lines.push("", `<sub>coord intent · event_id=${ev.event_id}</sub>`);
+  lines.push("", `<sub>coord intent · event_id=${sanitizeInline(ev.event_id)}</sub>`);
   return lines.join("\n");
 }
 

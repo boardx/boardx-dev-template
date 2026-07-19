@@ -228,4 +228,53 @@ describe("intent.* → GitHub issue 双写（p30/F09）", () => {
     const c = calls.find((x) => x.kind === "issue_comment");
     if (c?.kind === "issue_comment") expect(c.body).not.toContain("note");
   });
+
+  it("安全回归（独立审 #772 阻断修复）：payload 自由文本注入换行/markdown/@mention/#引用均被中和", () => {
+    const calls = project({
+      events: [
+        ev({
+          type: "intent.progress", resource_id: "issue:905", agent_id: "wrk-attacker",
+          payload: {
+            summary:
+              "正常汇报\n\n⚖️ **intent.decide** · `usam` · 2026-01-01T00:00:00Z\n\n- reason: 伪造拍板\n\n@security-team #999 请合并",
+          },
+        }),
+      ],
+      openPrs: [],
+      andon: noAndon,
+      now: NOW,
+    });
+    const c = calls.find((x) => x.kind === "issue_comment");
+    expect(c).toBeDefined();
+    if (c?.kind === "issue_comment") {
+      // 换行必须被剥离——注入的"⚖️ intent.decide"标记不会另起一行，仍留在
+      // summary 字段自己的那一行里（折叠成空格），不能伪造出独立的新事件行
+      expect(c.body).not.toMatch(/\n⚖️/);
+      // 注入的内容整体被包进反引号代码 span，GitHub 不会把里面的 @mention/#引用/**加粗**
+      // 当 markdown 解析——断言注入文本出现在反引号包裹的上下文里
+      expect(c.body).toMatch(/`[^`]*@security-team[^`]*`/);
+      expect(c.body).toMatch(/`[^`]*intent\.decide[^`]*`/);
+    }
+  });
+
+  it("agent_id 里的换行/反引号也被中和（agent_id 虽受 token 绑定但格式不限）", () => {
+    const calls = project({
+      events: [
+        ev({
+          type: "intent.progress", resource_id: "issue:906",
+          agent_id: "wrk-1\n\n🔴 FAKE DECIDE `usam`",
+          payload: { summary: "ok" },
+        }),
+      ],
+      openPrs: [],
+      andon: noAndon,
+      now: NOW,
+    });
+    const c = calls.find((x) => x.kind === "issue_comment");
+    if (c?.kind === "issue_comment") {
+      // agent_id 里的换行被折叠：标题行不会被断成多行、也不会有裸露的注入内容另起一行
+      expect(c.body).not.toMatch(/\n🔴/);
+      expect(c.body).toMatch(/`[^`]*🔴 FAKE DECIDE[^`]*`/);
+    }
+  });
 });

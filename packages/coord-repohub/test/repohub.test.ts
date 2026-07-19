@@ -615,6 +615,32 @@ describe("p30/F09 三层意图消息协议", () => {
     expect(r.thread_status).toBe("awaiting_decision");
   });
 
+  it("安全回归（独立审 #772 阻断修复）：escalate 之后任何人发 intent.accept 都不能解除 awaiting_decision——只有 intent.decide 能", async () => {
+    await post("/intents", {
+      type: "intent.escalate", resource_id: "issue:904", agent_id: "module-coord",
+      payload: { reason: "需要人类确认降级方案（issue #904）", escalated_to: "usam" },
+    });
+    const beforeAccept = await (await SELF.fetch(`${BASE}/intents?resource_id=issue:904`)).json<{ thread_status: string }>();
+    expect(beforeAccept.thread_status).toBe("awaiting_decision");
+
+    // scoped agent（无 admin token）发的 accept 不得伪造成"已拍板"——绕过 decide 的 admin 门禁
+    const accepted = await post("/intents", {
+      type: "intent.accept", resource_id: "issue:904", agent_id: "wrk-attacker",
+      payload: { note: "我自己批准了" },
+    });
+    expect(accepted.status).toBe(201);
+    const afterAccept = await (await SELF.fetch(`${BASE}/intents?resource_id=issue:904`)).json<{ thread_status: string }>();
+    expect(afterAccept.thread_status).toBe("awaiting_decision"); // 关键断言：accept 不解除等待拍板
+
+    // 只有真正的 decide 才能解除
+    await post("/intents", {
+      type: "intent.decide", resource_id: "issue:904", agent_id: "usam",
+      payload: { reason: "按方案 A 拍板通过", issue_ref: "#904", decision: "approved" },
+    });
+    const afterDecide = await (await SELF.fetch(`${BASE}/intents?resource_id=issue:904`)).json<{ thread_status: string }>();
+    expect(afterDecide.thread_status).toBe("closed");
+  });
+
   it("下行链：人拍板 decide 后 thread_status = closed（已闭环）；再 assign 广播不回退闭环判定", async () => {
     await post("/intents", {
       type: "intent.escalate", resource_id: "issue:903", agent_id: "module-coord",
