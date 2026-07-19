@@ -4,7 +4,7 @@
 - 仓库根目录: `/Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base`
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F24 / 统一五步工作流持久壳层
+- 当前最高优先级未完成功能: 无，F24 已 passing
 - 当前 blocker: 无
 
 ## 会话记录
@@ -18,6 +18,6 @@
   - Web lint、typecheck 通过。
   - F20、F22、F24 Playwright 通过；F21 联合运行超时后单独复跑通过。
 - 已记录证据: `evidence/persistent-workflow-shell.png`。
-- 提交记录: 待提交。
-- 已知风险或未解决问题: 无业务契约变更；待执行 Harness 最终门禁。
-- 下一步最佳动作: 提交 F24 后运行 `pnpm harness verify --sprint p25/24 --feature F24`。
+- 提交记录: `cfd24b6 feat(survey): keep workflow shell persistent`。
+- 已知风险或未解决问题: 无业务契约变更；F24 完整 Harness 门禁已通过。
+- 下一步最佳动作: 推送分支并更新 PR #757。

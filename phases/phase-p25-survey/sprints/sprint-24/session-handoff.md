@@ -1,7 +1,7 @@
 # 会话交接 — Sprint p25/24
 
 ## 当前已验证
-- F24 局部实现已验证：lint、typecheck、新增 Playwright 均通过。
+- F24 已由 Harness 门控为 passing：lint、typecheck、新增 Playwright、doctor 和 `verify:base` 均通过。
 - F20 统一设计入口、F21 报告入口、F22 单列报告回归均通过。
 
 ## 本轮改动
@@ -10,10 +10,10 @@
 - 新增 F24 需求、E2E 和截图证据。
 
 ## 仍损坏或未验证
-- 尚未执行 Harness 最终门禁，F24 仍为 `in_progress`。
+- 无。
 
 ## 下一步最佳动作
-- 提交当前独立 feature，执行 Harness verify，确认自动转为 passing。
+- 推送当前分支并更新 PR #757。
 
 ## 命令
 - 启动:`pnpm -w run dev`
