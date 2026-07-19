@@ -32,7 +32,8 @@ import {
 import type { CoordinatorLock } from "./lib/lock";
 import type { Args } from "./lib/args";
 import { createCoordClientFromEnv } from "@repo/coord-protocol/client";
-import type { CoordClient, CoordCallError } from "@repo/coord-protocol/client";
+import { requireClient as requireClientShared, errDetail } from "./lib/coord-client";
+import type { CoordClient } from "@repo/coord-protocol/client";
 
 const REMOTE_RESOURCE_ID = "role:coord-main";
 const REMOTE_RESOURCE_TYPE = "coordinator-role";
@@ -44,13 +45,7 @@ const ENV_HINT =
   "COORD_SERVICE_TOKEN 已随 coord-service 退役（ADR-017），配了也不会被读取。";
 
 function requireClient(): CoordClient {
-  const client = createCoordClientFromEnv();
-  if (!client) die(ENV_HINT);
-  return client;
-}
-
-function errDetail(e: CoordCallError): string {
-  return e.status !== undefined ? `HTTP ${e.status}` : `网络异常：${e.message}`;
+  return requireClientShared(ENV_HINT);
 }
 
 /** release 的 handoff_note：--note 优先；缺省生成规范默认文案（≥10 字符，含身份与时间语境）。 */

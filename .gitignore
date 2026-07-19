@@ -10,6 +10,9 @@ dist/
 # module-coordinator dual-write 记账（coord-service claim id 缓存，非权威，见
 # .harness/scripts/lib/module-lock-state.ts）
 .harness/state/module-lock-*.json
+# dep-graph.md：pnpm harness dep-graph 每次运行都从 feature_list.json 重新生成，
+# 提交静态快照只会过期误导（2026-07-19 压缩：曾两周未重跑却仍躺在 git 里当权威看）
+.harness/state/dep-graph.md
 
 # Next.js / 全栈骨架
 .next/
