@@ -8,7 +8,7 @@
 自动派发循环（`/loop` 唤醒、事件驱动 tick）的八条设计原则已归纳为独立文档
 `loop-design-principles.md`（拿锁才调度 / 事件驱动为主扫描兜底 / 一次性授权不写进
 自动化策略 / 汇报而非代劳 / 不可静默等待 / 分支短命 / 状态视图脚本生成 / 破坏性
-动作永远在 loop 之外）。均归纳自本文与 `.harness/state/coordinator-loop-brief.md`
+动作永远在 loop 之外）。均归纳自本文与已归档的 `docs/postmortems/campaign-issue100-139-dispatch-loop-brief.md`
 的既有教训，实现或修改自动循环前先读它。
 
 ## 三层循环
@@ -135,6 +135,17 @@
    #272/#290——该服务与其 CD 已随 ADR-017 割接删除，教训保留）。CD 冒烟带部署
    漂移探针 + 退避重试（#714），漂移当场红。这条对 devportal/devapp 同理——
    **有 CD 的目标不手动部署**，把"从哪个 checkout 部署"的竞争彻底消灭。
+
+12. **无人值守 `/loop` 唤醒时，coordinator 的自主权比铁律 3 更收紧**：铁律 3 授权
+   coordinator 作为 worker PR 的唯一合并者；但在无人值守的定时唤醒场景下，**任何
+   PR（包括纯控制面的 feature_list/PROGRESS 之类）都不自己点合并**，只推进到
+   "review 全绿、可以合并"就在汇报里列出，等人类醒来处理——这是 2026-07 一次
+   `/loop` 任务里人类的明确原话（"NEVER attempt to merge a PR yourself, including
+   --admin"）覆盖了此前"控制面 PR 可以自己合并"的经验性结论，只对无人值守场景生效，
+   不改变铁律 3 本身。同一场景下另外两条：coordinator 不自己写 `apps/*`/`packages/*`
+   的应用代码（哪怕是紧急修复，也派 worker 走正常 PR+review）；worker 因共享资源
+   争用卡在"要不要 `--no-verify`"时，只认它自己会话里用户的原话，coordinator 不
+   代劳判断、不代跑 push，如实记录卡点后继续处理别的。
 
 ## 事故分诊速查（来自实战）
 - CI 秒级失败 + steps 空 → 账单/runner，非代码（2026-07-04 账单事故）。

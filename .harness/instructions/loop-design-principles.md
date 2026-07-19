@@ -1,6 +1,6 @@
 # Loop 设计八原则 — coordinator 自动派发循环
 
-> 归纳自 `.harness/state/coordinator-loop-brief.md`（下称 loop-brief）与本目录
+> 归纳自已归档的 `docs/postmortems/campaign-issue100-139-dispatch-loop-brief.md`（下称 loop-brief）与本目录
 > `coordinator-sop.md` 的既有教训——**只做归纳，不造新规**。每条原则的权威出处见
 > 条目末尾括号；本文与出处原文冲突时，以出处为准。
 > 适用对象：任何实现、修改或执行 coordinator 自动循环（`/loop` 定时唤醒、事件驱动

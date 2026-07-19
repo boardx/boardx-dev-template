@@ -1,7 +1,8 @@
 // sweep-unblock.ts — 扫描所有 phase 的 blocked feature，depends_on 全部 passing 就自动回填 not_started。
 // 修的是这个漏洞：coordinator 的"新解锁"扫描要求 status != blocked，但从没有一步专门
 // 把"依赖已解除的 blocked feature"转回 not_started —— 过去只能靠人工发现（见
-// .harness/state/coordinator-loop-brief.md 教训记录）。这个脚本让这一步可重复、可自动跑。
+// docs/postmortems/campaign-issue100-139-dispatch-loop-brief.md 教训记录）。
+// 这个脚本让这一步可重复、可自动跑。
 import { loadRoadmap } from "./lib/roadmap";
 import { loadFeatureList, saveFeatureList } from "./lib/features";
 import { refreshProgress } from "./lib/progress";

@@ -1,5 +1,6 @@
 // lock.ts — coordinator 互斥登记（防多个 /loop coordinator 并行调度互相踩踏）。
-// 见 .harness/state/coordinator-loop-brief.md §0 安全边界。
+// 安全边界见 coordinator-sop.md 铁律 12；历史全文见
+// docs/postmortems/campaign-issue100-139-dispatch-loop-brief.md。
 import { readFileSync, writeFileSync, existsSync, unlinkSync } from "node:fs";
 import { COORDINATOR_LOCK_PATH } from "./paths";
 
