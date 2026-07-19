@@ -1,0 +1,123 @@
+$ pnpm --filter @repo/web run lint
+[exit 0]
+
+> @repo/web@0.1.0 lint /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web
+> bash scripts/lint-design.sh
+
+· 扫描范围：app/ + components/（含 ava/ai-store/surveys/admin/studio/presentations 等模块）
+✓ token 对比度：全部色面/文字对过线（中性 ≥4.5:1，状态色 ≥3:1，明暗两套）
+· API 错误泄漏门控：0 泄漏
+⚠ LABEL-LANG-MIX(同文件内中英混用，警告，不拦截；修复归属 phase-p17 reskin)：
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:180:  { id: "understand-file", label: "理解文件", prompt: "帮我理解这份材料，并总结关键结论。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:181:  { id: "draft-email", label: "起草邮件", prompt: "帮我起草一封项目进展同步邮件。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:182:  { id: "summarize-trends", label: "总结趋势", prompt: "帮我总结最近用户反馈中的主要趋势。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:183:  { id: "brainstorm", label: "头脑风暴", prompt: "围绕这个目标帮我头脑风暴 5 个可执行方案。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:200:    label: "深度研究",
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:206:    label: "用户研究",
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:213:  { id: "make-tasks", label: "拆成任务", prompt: "把上面的建议拆成可执行任务，并按优先级排序。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:214:  { id: "find-risks", label: "识别风险", prompt: "基于上面的回复，列出主要风险和缓解措施。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:215:  { id: "shorten", label: "压缩摘要", prompt: "把上面的回复压缩成 5 条要点。" },
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2996:  if (diffDays === 0) return { key: "today", label: "Today" };
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2997:  if (diffDays === 1) return { key: "yesterday", label: "Yesterday" };
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2998:  if (diffDays < 7) return { key: "last-7-days", label: "Last 7 days" };
+    LABEL-LANG-MIX: app/(app)/ava/page.tsx:2999:  return { key: "older", label: "Older" };
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:313:  { label: "文本", types: ["short_text", "text", "email", "number", "phone"] },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:314:  { label: "选择", types: ["single", "multiple", "dropdown"] },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:315:  { label: "量表", types: ["rating", "linear_scale", "nps"] },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:316:  { label: "时间与文件", types: ["date", "time", "file"] },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:573:      label: "Purpose",
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:580:      label: "Audience",
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:587:      label: "Decision",
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:594:      label: "Information",
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:601:      label: "Constraints",
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:681:    { id: "design", label: "设计问卷", desc: "题目与元数据", icon: ClipboardList },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:682:    { id: "template", label: "报告模板", desc: "分类与模块组件", icon: FileText },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:683:    { id: "collect", label: "发布回收", desc: "链接与回收规则", icon: Send },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:684:    { id: "answer", label: "查看答题", desc: "答题页与样本", icon: Eye },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:685:    { id: "report", label: "分析报告", desc: "洞察与导出", icon: BarChart3 },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:690:      ? { label: "我的问卷" }
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:692:        ? { label: "问卷模版" }
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:891:      label: "Design",
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:897:      label: "Report Blocks",
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:903:      label: "Collect",
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:909:      label: "Report",
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:915:      label: "Responses",
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1044:              { id: "all", label: "全部答卷", meta: `${survey.responses} 份` },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1045:              { id: "today", label: "今日提交", meta: `${Math.min(18, survey.responses)} 份` },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1046:              { id: "review", label: "需复核", meta: survey.responses ? "待检查" : "0 份" },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1047:              { id: "flagged", label: "已标记", meta: "0 份" },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:1048:              { id: "invalid", label: "无效答卷", meta: "0 份" },
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:3074:                      : section.chart?.rows ?? [{ label: "待生成", value: 0 }];
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:4918:                    label: "Survey Agent",
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:4923:                    label: "Report Agent",
+    LABEL-LANG-MIX: app/(app)/surveys/page.tsx:4928:                    label: "Publish",
+⚠ LABEL-LANG-MIX(跨文件中英混用，警告，不拦截；修复归属 phase-p17 reskin)：以下文件整体用中文 label，而以下文件整体用英文 label，同一层级 UI 组件的文案语言应统一：
+    LABEL-LANG-MIX: app/(app)/surveys/[id]/results/page.tsx:743:                      { label: "平均", value: reportMetrics.avgCompletion },
+    LABEL-LANG-MIX: components/board/board-canvas.tsx:190:  { value: "sans-serif", label: "无衬线" },
+    LABEL-LANG-MIX: components/board/sync-status.tsx:14:  synced: { label: "已同步", dot: "bg-tag-green", text: "text-success" },
+    LABEL-LANG-MIX: components/studio/studio-panel.tsx:29:  { type: "audio", label: "音频概览", icon: AudioLines },
+    LABEL-LANG-MIX: components/survey/survey-home-dashboard.tsx:46:    label: "WHY · 为什么",
+    LABEL-LANG-MIX: components/survey/survey-navigation-sidebar.tsx:16:  { id: "home", label: "主页", group: "工作台", icon: Home },
+    LABEL-LANG-MIX: components/survey/survey-versioned-report-composer.tsx:70:  { value: "image", label: "图片", icon: ImageIcon },
+    LABEL-LANG-MIX: app/(app)/account/page.tsx:15:  { key: "personal", label: "Personal info", icon: User },
+    LABEL-LANG-MIX: app/(app)/admin/admin-home.tsx:113:        { testKey: "users", label: "Total users", stat: stats.users },
+    LABEL-LANG-MIX: app/(app)/admin/admin-tabs.tsx:8:  { key: "overview", label: "Overview", href: "/admin" },
+    LABEL-LANG-MIX: app/(app)/admin/ai-store/featured/page.tsx:33:  { key: "", label: "All approved" },
+    LABEL-LANG-MIX: app/(app)/admin/ai-store/review/page.tsx:37:  { key: "", label: "All" },
+    LABEL-LANG-MIX: app/(app)/ai-store/_components/store-navigation.tsx:20:    label: "Discover",
+    LABEL-LANG-MIX: app/(app)/credits/page.tsx:237:              <SummaryCard value={fmt(wallet.balance)} label="Current balance" />
+    LABEL-LANG-MIX: app/(app)/rooms/[id]/layout.tsx:27:  { key: "boards", label: "Boards", segment: "boards" },
+    LABEL-LANG-MIX: components/app-shell/sidebar.tsx:45:  { label: "Home", icon: Home, href: "/" },
+  示例（Board 工具条 vs Sidebar 导航）：见 components/board/board-canvas.tsx 与 components/app-shell/sidebar.tsx
+✓ design lint: 全部通过（颜色/间距/原生元素/微交互/无障碍/状态完整性/文案语言一致性）
+
+
+$ pnpm --filter @repo/web run typecheck
+[exit 0]
+
+> @repo/web@0.1.0 typecheck /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base/apps/web
+> tsc --noEmit
+
+
+
+$ E2E_PORT=62668 COLLAB_WS_PORT=62669 pnpm --filter @repo/web exec playwright test e2e/survey-p25-024-persistent-workflow-shell.spec.ts
+[exit 0]
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › survey-p25-024-persistent-workflow-shell.spec.ts:76:5 › workflow tabs keep one persistent shell and only replace content below (17.0s)
+
+  Slow test file: [chromium] › survey-p25-024-persistent-workflow-shell.spec.ts (17.0s)
+  Consider splitting slow test files to speed up parallel execution
+  1 passed (23.4s)
+[2m[WebServer] [22m(node:7650) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:7656) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:7695) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:7696) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7706) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7706) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:7885) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:7884) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+$ pnpm harness doctor --phase p25
+[exit 0]
+
+> boardx-dev-template@ harness /Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base
+> tsx .harness/scripts/cli.ts "doctor" "--phase" "p25"
+
+doctor：体检 1 个 phase — 0 FAIL / 0 WARN
+✓ 审计链完整：所有 passing 都有真实非空证据，派生视图与源一致。
+
+
+$ git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-24/evidence/F24.verify.log
+[exit 128]
+fatal: path 'phases/phase-p25-survey/sprints/sprint-24/evidence/F24.verify.log' does not exist in 'HEAD'

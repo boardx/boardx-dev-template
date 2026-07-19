@@ -554,6 +554,32 @@
       ],
       "evidence": "evidence/F23.verify.log @ 2026-07-19T00:31:02.080Z",
       "notes": "独立 bug feature，Refs #648，追加到 PR #757；只修复无答卷生成边界和用户提示，不放宽真实答卷约束。"
+    },
+    {
+      "id": "F24",
+      "priority": 1,
+      "area": "survey",
+      "title": "统一五步工作流持久壳层",
+      "user_visible_behavior": "用户在设计问卷、报告模板、发布回收、查看答题和分析报告之间切换时，返回区、问卷标识和五步 Tab 保持原位且不被重新创建，只替换 Tab 下方的步骤内容；直接刷新任一步骤深链接仍恢复统一壳层和正确选中态。",
+      "design_ref": "requirements/23-persistent-workflow-shell.md；2026-07-19 用户三张对比截图",
+      "status": "in_progress",
+      "sprint": "24",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F20",
+        "F22"
+      ],
+      "wave": 21,
+      "verification": [
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "E2E_PORT=62668 COLLAB_WS_PORT=62669 pnpm --filter @repo/web exec playwright test e2e/survey-p25-024-persistent-workflow-shell.spec.ts",
+        "pnpm harness doctor --phase p25",
+        "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-24/evidence/F24.verify.log"
+      ],
+      "evidence": null,
+      "notes": "独立 UI feature，Refs #648，追加到 PR #757；只统一五步工作流外壳和切换行为，不修改各步骤业务契约。"
     }
   ]
 }

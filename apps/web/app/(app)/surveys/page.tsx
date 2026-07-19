@@ -737,41 +737,31 @@ function WorkspaceShell({
 
         <section className="min-w-0 overflow-auto">
           <div className={focusedMode ? "" : "lg:min-w-survey-workbench"}>
-          {!hideHeader && <header className="sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
+          {!hideHeader && <header
+            data-testid={inSurveyWorkflow ? "survey-workflow-header" : undefined}
+            className="sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-3 backdrop-blur"
+          >
             {inSurveyWorkflow ? (
               <div className="grid gap-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  {active === "report" ? (
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="outline" className="bg-secondary">Survey Workflow</Badge>
-                        {currentSurvey ? <span className="truncate text-13 text-muted-foreground">{currentSurvey.title}</span> : null}
-                      </div>
-                      <h1 className="mt-1 text-22 font-bold tracking-normal">分析报告</h1>
-                    </div>
-                  ) : (
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="outline" className="bg-secondary">
-                          Survey Workflow
-                        </Badge>
-                        {currentSurvey ? (
-                          <span className="truncate text-13 text-muted-foreground">{currentSurvey.title}</span>
-                        ) : null}
-                      </div>
-                      <div className="mt-1 flex flex-wrap items-baseline gap-3">
-                        <h1 className="text-22 font-bold tracking-normal">{activeNav.label}</h1>
-                        <p className="text-13 text-muted-foreground">{headerCopy[active]}</p>
-                      </div>
-                    </div>
-                  )}
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="bg-secondary">
+                      Survey Workflow
+                    </Badge>
+                    {currentSurvey ? (
+                      <span className="truncate text-14 font-semibold text-foreground">{currentSurvey.title}</span>
+                    ) : null}
+                  </div>
                   <Button type="button" variant="outline" size="sm" className="h-9 gap-1.5 rounded-lg px-3 text-13" onClick={() => onNavigate("workspace")}>
                     <ChevronLeft className="h-4 w-4" strokeWidth={1.6} />
                     返回列表
                   </Button>
                 </div>
 
-                <div className="grid gap-2 border-t border-border pt-3 md:grid-cols-5">
+                <div data-testid="survey-workflow-tabs" className="grid gap-2 border-t border-border pt-3 md:grid-cols-5">
+                  <span data-testid="survey-editor-stepper" className="sr-only">
+                    五步工作流导航
+                  </span>
                   {workflowSteps.map((step, index) => {
                     const Icon = step.icon;
                     const isActive = step.id === active;
@@ -5196,43 +5186,13 @@ export default function SurveysPage() {
         ...(template.tags ?? []),
       ].join(" ").toLowerCase().includes(q);
     });
-    const editorWorkflowSteps: Array<{
-      id: Exclude<WorkspaceTarget, "workspace">;
-      label: string;
-      description: string;
-    }> = [
-      { id: "design", label: "设计问卷", description: "题目与元数据" },
-      { id: "template", label: "报告模板", description: "分类与模块组件" },
-      { id: "collect", label: "发布回收", description: "链接与回收规则" },
-      { id: "answer", label: "查看答题", description: "答题页与样本" },
-      { id: "report", label: "分析报告", description: "洞察与导出" },
-    ];
-    const openEditorWorkflowStep = (target: Exclude<WorkspaceTarget, "workspace">) => {
-      if (target === "design") {
-        setView("edit");
-        return;
-      }
-      if (target === "answer" && editingSurveyId == null) {
-        setView("preview");
-        return;
-      }
-      if (editingSurveyId == null) {
-        setEditorActionMessage("请先发布问卷，再进入后续工作流。");
-        return;
-      }
-      if (target === "report") {
-        window.location.href = `/surveys?survey=${editingSurveyId}&step=report`;
-        return;
-      }
-      void navigateWorkspace(target);
-    };
     return (
       <WorkspaceShell
         active={isTemplateEditor ? "template" : "design"}
         currentSurvey={currentSurveyForNavigation}
         workflowMode={!isTemplateEditor}
         templateLibraryMode={isTemplateEditor}
-        hideHeader
+        hideHeader={isTemplateEditor}
         hideSidebar={isTemplateEditor}
         onCreateWithAi={() => openEditor({ withAi: true })}
         onCreateBlank={() => openTemplateEditor()}
@@ -5365,42 +5325,6 @@ export default function SurveysPage() {
             </p>
           )}
           </div>
-          {!isTemplateEditor && (
-            <div data-testid="survey-editor-stepper" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-              {editorWorkflowSteps.map((step, index) => {
-                const isActive = step.id === "design";
-                return (
-                  <Button
-                    key={step.id}
-                    data-testid={`workflow-${step.id}`}
-                    type="button"
-                    variant="outline"
-                    aria-current={isActive ? "step" : undefined}
-                    onClick={() => openEditorWorkflowStep(step.id)}
-                    className={[
-                      "h-auto min-h-14 justify-start gap-2 rounded-lg px-3 py-2 text-left",
-                      isActive
-                        ? "!border-foreground !bg-foreground !text-background hover:!bg-foreground/90 hover:!text-background"
-                        : "border-border bg-background hover:border-foreground/40",
-                    ].join(" ")}
-                  >
-                    <span className={isActive
-                      ? "grid h-7 w-7 shrink-0 place-items-center rounded-md bg-background/15 text-11 font-bold text-background"
-                      : "grid h-7 w-7 shrink-0 place-items-center rounded-md bg-secondary text-11 font-bold text-foreground"}
-                    >
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-13 font-semibold">{step.label}</span>
-                      <span className={isActive ? "block text-11 font-normal text-background/70" : "block text-11 font-normal text-muted-foreground"}>
-                        {step.description}
-                      </span>
-                    </span>
-                  </Button>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         {created && (
@@ -6521,7 +6445,7 @@ export default function SurveysPage() {
       currentSurvey={currentSurveyForNavigation}
       workflowMode={workspaceView !== "workspace"}
       templateLibraryMode={workbenchTab === "templates"}
-      hideHeader={workspaceView === "workspace" || workspaceView === "template"}
+      hideHeader={workspaceView === "workspace"}
       onCreateWithAi={openCreateChooser}
       onCreateFromScene={() => void navigateWorkspace("template")}
       onCreateBlank={() => (workbenchTab === "templates" ? openTemplateEditor() : openCreateChooser())}
