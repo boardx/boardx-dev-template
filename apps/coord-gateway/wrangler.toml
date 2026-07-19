@@ -40,6 +40,12 @@ class_name = "RepoHub"
 name = "DIRECTORY"
 class_name = "PlatformDirectory"
 
+# CoordBrain（R1 影子模式，p30-F10）：每仓一个，与 RepoHub 同 worker。只读观察 +
+# 记录 coord.shadow.* 决策事件，零写 API（brain.ts 头注有全代码路径审计说明）。
+[[durable_objects.bindings]]
+name = "COORDBRAIN"
+class_name = "CoordBrain"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["RepoHub"]
@@ -48,3 +54,7 @@ new_sqlite_classes = ["RepoHub"]
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["PlatformDirectory"]
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["CoordBrain"]

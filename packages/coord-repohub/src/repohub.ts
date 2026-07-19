@@ -855,6 +855,9 @@ function rowToItem(row: MirrorRow): Record<string, unknown> {
     head_sha: row.head_sha,
     mergeable: row.mergeable,
     merge_state: row.merge_state,
+    // 创建时间（GitHub 原始载荷透传，追加字段，向后兼容）：CoordBrain PR 超时催办
+    // 判定（p30-F10）需要"等待了多久"，唯一数据源是这个时间戳。
+    created_at: typeof data["created_at"] === "string" ? data["created_at"] : null,
     labels: JSON.parse(row.labels),
     assignees: JSON.parse(row.assignees),
     mirrored_at: row.mirrored_at, // 新鲜度锚点：响应必带（F04）
