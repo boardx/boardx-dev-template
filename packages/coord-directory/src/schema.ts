@@ -63,7 +63,8 @@ CREATE TABLE IF NOT EXISTS enrollments (
   enrollment_id TEXT PRIMARY KEY,            -- enr_<ULID>，不可变
   agent_id      TEXT NOT NULL,
   project_id    TEXT NOT NULL,
-  token_ref     TEXT,                        -- scoped token 引用（token_hash_prefix），可空=未发 token
+  token_ref     TEXT,                        -- scoped token 引用（token_hash_prefix），可空=未发 token；
+                                              -- 格式由 directory.ts TOKEN_REF_RE 强制校验（#770 跟进 2/3）
   status        TEXT NOT NULL,               -- active | revoked
   created_at    TEXT NOT NULL,
   revoked_at    TEXT                         -- status=revoked 时必有
@@ -77,7 +78,8 @@ CREATE TABLE IF NOT EXISTS events (
   event_id    TEXT PRIMARY KEY,              -- evt_<ULID>，严格递增
   type        TEXT NOT NULL,
   resource_id TEXT NOT NULL,
-  agent_id    TEXT NOT NULL,                 -- 操作者（admin 面自报 actor，缺省 "admin"）
+  agent_id    TEXT NOT NULL,                 -- ⚠️ 不可信自报提示，非鉴权主体：admin 面自报 actor，
+                                              -- 缺省 "admin"，服务端零校验（#770 跟进 1/3，见 directory.ts actorOf）
   at          TEXT NOT NULL,
   payload     TEXT NOT NULL                  -- JSON
 );

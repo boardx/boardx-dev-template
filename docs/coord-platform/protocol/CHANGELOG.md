@@ -38,6 +38,14 @@ PlatformDirectory——Project/Engineer/Membership/Agent/Enrollment 领域模型
 - 版本判定：与 task.\* 先例（0.1.1）同理——仅扩事件类型集合，wire 上的
   `protocol` 字段维持 `"coord/0.1"` 不动，按语义化是 **patch（0.1.2）**。
 
+**澄清补记（2026-07-19，#770 跟进 1/3，不改 wire format，不升版本号）**：
+`directory.*` 事件信封里的 `actor`（存于 `events.agent_id` 列）是**请求体自报字段，
+服务端零校验**——当前单一 admin token 场景本就无法区分真实操作者，任何调用方都能
+在请求体填任意 `actor` 值。这个字段只能当人工排障的「提示」用，**不是鉴权主体，
+不能作为问责证据**。未来接入按人凭据（OAuth/scoped token）后，`actor` 必须从
+gateway 鉴权后的主体派生，而不是继续信任请求体（`packages/coord-directory/src/directory.ts`
+`actorOf()`）。
+
 ## coord/0.1.1 — 2026-07-18
 
 **加法扩展（非破坏）：task.\* 事件四类型**（F10 前置：tasks 收件箱与派工 broker

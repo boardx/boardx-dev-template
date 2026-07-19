@@ -5,6 +5,13 @@ name = "coord-directory"
 main = "src/index.ts"
 compatibility_date = "2026-07-01"
 
+# fail-closed 标志位（#770 跟进 3/3）：src/index.ts 的独立测试 host 靠这个变量放行
+# /directory/* 写路径。只有本地 wrangler dev / vitest（走本文件）会设置它；
+# apps/coord-gateway 生产部署有自己的 wrangler.toml，不含这个变量、也不经过本文件的
+# fetch handler——即便真被误配置指过去，缺了这个变量也会 fail-closed 拒绝写请求。
+[vars]
+COORD_DIRECTORY_TEST_HOST = "1"
+
 [[durable_objects.bindings]]
 name = "DIRECTORY"
 class_name = "PlatformDirectory"

@@ -42,6 +42,12 @@ const HANDLE_RE = /^[a-z0-9][a-z0-9-]{0,38}$/;
 const AGENT_SEGMENT_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const AGENT_NAME_MAX = 128;
 
+// enrollments.token_ref 格式校验（#770 跟进 2/3）：只接受 hash 前缀形态，
+// 把「只存 hash 前缀，绝不存明文/完整 token」从注释约定变成代码不变量。
+// 真实 token（GitHub PAT/scoped token/JWT 等）远比这更长、且含 `_`/`.`/大写等
+// 字符，格式上天然被拒；不做「黑名单猜 token 长相」，只做「白名单认前缀形态」。
+const TOKEN_REF_RE = /^[0-9a-f]{6,16}$/;
+
 // ---------- 行类型 ----------
 
 interface ProjectRow {
@@ -123,7 +129,14 @@ function str(o: Obj | null, key: string): string | undefined {
   return typeof v === "string" && v.length > 0 ? v : undefined;
 }
 
-/** 操作者（审计归因）：admin 面自报 actor，缺省 "admin"。 */
+/**
+ * ⚠️ 不可信自报提示字段，非鉴权主体（#770 跟进 1/3）：`actor` 由请求体自报，
+ * 服务端零校验——当前单一 admin token 场景下本就无法区分主体，任何调用方
+ * 都可以在请求体里填任意 actor 值。events.agent_id 列存的就是这个自报值，
+ * 只能当「提示」用于人工排障，绝不能当鉴权/问责证据使用。
+ * 未来按人凭据接入（OAuth/scoped token）后，actor 必须从鉴权主体派生
+ * （例如 gateway 校验后的 engineer/agent 身份），而不是继续信任请求体。
+ */
 function actorOf(o: Obj | null): string {
   return str(o, "actor") ?? "admin";
 }
@@ -556,6 +569,11 @@ export class PlatformDirectory extends DurableObject {
     const project = this.projectByRef(projectRef);
     if (!project) return json(404, { error: "unknown_project", project: projectRef });
     const tokenRef = str(b, "token_ref") ?? null;
+    if (tokenRef !== null && !TOKEN_REF_RE.test(tokenRef))
+      return json(422, {
+        error: "invalid_token_ref",
+        details: ["token_ref 只接受 hash 前缀格式 ^[0-9a-f]{6,16}$；只存 hash 前缀，绝不存明文/完整 token"],
+      });
 
     const existing = [...this.sql.exec<EnrollmentRow>(
       `SELECT * FROM enrollments WHERE agent_id=? AND project_id=?`, agentId, project.project_id,

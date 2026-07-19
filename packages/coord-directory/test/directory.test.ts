@@ -266,6 +266,46 @@ describe("Enrollment：agent×项目 + token 引用", () => {
     expect((await post("/directory/enrollments", { agent_id: a["agent_id"], project: "no-such" })).status).toBe(404);
     expect((await post("/directory/enrollments", {})).status).toBe(422);
   });
+
+  // #770 跟进 2/3：token_ref 格式校验——只接受 hash 前缀形态，拒绝明文/完整 token/过长字符串
+  it("token_ref 格式校验：合法 hash 前缀通过，完整 token / 过长 / 非法字符被拒 422", async () => {
+    const s = await seed("e3");
+    const a = (await j(await post("/directory/agents", { owner: s.handle, name: "tokened" })))["agent"] as Obj;
+    const agentId = a["agent_id"] as string;
+
+    // 合法：6~16 位小写十六进制 hash 前缀
+    const ok = await post("/directory/enrollments", { agent_id: agentId, project: s.slug, token_ref: "a1b2c3" });
+    expect(ok.status).toBe(201);
+    expect(((await j(ok))["enrollment"] as Obj)["token_ref"]).toBe("a1b2c3");
+
+    // 非法：完整 GitHub PAT 形态（含下划线、超长）
+    const s2 = await seed("e3b");
+    const a2 = (await j(await post("/directory/agents", { owner: s2.handle, name: "tokened2" })))["agent"] as Obj;
+    const fullToken = await post("/directory/enrollments", {
+      agent_id: a2["agent_id"], project: s2.slug,
+      token_ref: "ghp_1234567890abcdefghijklmnopqrstuvwxyz01",
+    });
+    expect(fullToken.status).toBe(422);
+    expect((await j(fullToken))["error"]).toBe("invalid_token_ref");
+
+    // 非法：过长的纯 hex（超过 16 位上限，即便字符集合法也拒）
+    const tooLong = await post("/directory/enrollments", {
+      agent_id: a2["agent_id"], project: s2.slug,
+      token_ref: "0123456789abcdef0123456789abcdef",
+    });
+    expect(tooLong.status).toBe(422);
+    expect((await j(tooLong))["error"]).toBe("invalid_token_ref");
+
+    // 非法：太短 / 含大写 / 含非 hex 字符
+    expect((await post("/directory/enrollments", { agent_id: a2["agent_id"], project: s2.slug, token_ref: "ab" })).status).toBe(422);
+    expect((await post("/directory/enrollments", { agent_id: a2["agent_id"], project: s2.slug, token_ref: "ABCDEF12" })).status).toBe(422);
+    expect((await post("/directory/enrollments", { agent_id: a2["agent_id"], project: s2.slug, token_ref: "not-hex!" })).status).toBe(422);
+
+    // 未提供 token_ref 仍合法（可空 = 未发 token）
+    const noToken = await post("/directory/enrollments", { agent_id: a2["agent_id"], project: s2.slug });
+    expect(noToken.status).toBe(201);
+    expect(((await j(noToken))["enrollment"] as Obj)["token_ref"]).toBeNull();
+  });
 });
 
 describe("三答完整性（§1 设计推论）", () => {
@@ -333,5 +373,52 @@ describe("入口纪律", () => {
       method: "POST", headers: { "content-type": "application/json" }, body: "{oops",
     });
     expect(bad.status).toBe(400);
+  });
+});
+
+// #770 跟进 3/3：独立测试 host 的写路径 fail-closed 断言。SELF.fetch 走本包
+// wrangler.toml（已设 COORD_DIRECTORY_TEST_HOST="1"），上面所有写路径测试都已经
+// 隐式证明「带标志位时正常放行」；这里直接调 default export 的 fetch，手工构造
+// 缺标志位/标志位错误的 env，验证 fail-closed 生效——不触达 DO（没给真实 DIRECTORY
+// binding 也能通过，因为应在到达 stub.fetch 之前就被拦截）。
+describe("独立测试 host fail-closed（#770 跟进 3/3）", () => {
+  it("缺少 COORD_DIRECTORY_TEST_HOST 标志时，写路径一律 403，不转发给 DO", async () => {
+    const worker = await import("../src/index");
+    const req = new Request(`${BASE}/directory/projects`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ slug: "should-not-write-1" }),
+    });
+    // 故意不传 DIRECTORY binding：若代码在拦截前就往下走，会因为 env.DIRECTORY
+    // 未定义而抛异常（而非返回预期的 403），测试也能借此发现「拦截被绕过」。
+    const res = await worker.default.fetch(req, {} as never);
+    expect(res.status).toBe(403);
+    expect((await res.json<Obj>())["error"]).toBe("test_host_writes_disabled");
+  });
+
+  it("标志位值不是 \"1\"（如 \"true\"/\"0\"/空字符串）同样 fail-closed", async () => {
+    const worker = await import("../src/index");
+    for (const flag of ["true", "0", "", "TRUE"]) {
+      const req = new Request(`${BASE}/directory/projects`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ slug: `should-not-write-${flag || "empty"}` }),
+      });
+      const res = await worker.default.fetch(req, { COORD_DIRECTORY_TEST_HOST: flag } as never);
+      expect(res.status).toBe(403);
+    }
+  });
+
+  it("GET 读路径不受标志位影响（无标志位仍会尝试转发给 DO，只是写路径被拦）", async () => {
+    const worker = await import("../src/index");
+    const req = new Request(`${BASE}/directory/projects`, { method: "GET" });
+    // 没给真实 DIRECTORY binding，读路径会继续往下走到 env.DIRECTORY.get(...)
+    // 而抛异常——用异常（而非 403）证明 GET 没有被写路径的 fail-closed 逻辑拦截。
+    await expect(worker.default.fetch(req, {} as never)).rejects.toThrow();
+  });
+
+  it("带上正确标志位则放行写路径（与 SELF 环境一致，转发给真实 DO）", async () => {
+    const res = await post("/directory/projects", { slug: "flagged-write-ok" });
+    expect(res.status).toBe(201);
   });
 });
