@@ -34,6 +34,6 @@
 | p27 | AI Store | in_progress | 0 | 0 | 0 | 17 |
 | p28 | platform-accounts-gap2 | not_started | 1 | 0 | 0 | 0 |
 | p29 | coord-platform | not_started | 0 | 0 | 0 | 10 |
-| p30 | devportal-platform | not_started | 1 | 0 | 0 | 0 |
+| p30 | devportal-platform | not_started | 24 | 0 | 0 | 0 |
 
 _最近聚合:2026-07-18T16:08:48.032Z_

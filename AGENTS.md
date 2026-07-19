@@ -22,6 +22,11 @@
 如果 `init.sh` 的验证失败,**停下来先修基础状态**,不要在坏的基础上叠新功能。
 
 ## 开工流程(每轮会话开始)
+0. **先确认角色,角色决定 loop 策略,不可跳过**:人类要你当 main coordinator →
+   先用 `coordinator` skill(挂 5 分钟 loop);当某模块的 module coordinator →
+   先用 `module-coordinator` skill(挂 15 分钟 loop);都不是 → 你是 worker,
+   loop 由 `agent-bootstrap.md` 第 3.5 步挂(15 分钟)。三条路径都跑
+   `pnpm harness tick`,没有第四种"不挂 loop"的角色。
 1. 读当前 sprint 的 `progress.md` 和 `session-handoff.md`。
 2. 读当前 sprint 的 `active-features.json`(派生视图),找到唯一 `in_progress` 的 feature。
 3. 只做那一个 feature。做完用验证命令证明,再收尾。

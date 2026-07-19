@@ -96,6 +96,44 @@ describe("GitHub App 认证", () => {
     const auth = createGitHubAppAuth({ appId: "12345", privateKey: privatePem, fetchImpl });
     await expect(auth.installationToken("x", "y")).rejects.toThrow("github_api_404");
   });
+
+  // p30/F05：安装流场景——回调只有 installation_id，没有 owner/repo。
+  it("installationTokenById：跳过仓解析，直接按 id 换 token 且可缓存", async () => {
+    const requests: string[] = [];
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      requests.push(url);
+      if (/\/app\/installations\/4821\/access_tokens$/.test(url))
+        return Response.json({ token: `ghs_${requests.length}`, expires_at: new Date(Date.now() + 3600_000).toISOString() }, { status: 201 });
+      return Response.json({ error: "unexpected" }, { status: 500 });
+    }) as typeof fetch;
+    const auth = createGitHubAppAuth({ appId: "12345", privateKey: privatePem, fetchImpl });
+    const t1 = await auth.installationTokenById(4821);
+    expect(requests).toHaveLength(1); // 无仓解析请求，直接拿 token
+    const t2 = await auth.installationTokenById(4821);
+    expect(t2).toBe(t1);
+    expect(requests).toHaveLength(1); // 命中缓存
+  });
+
+  it("getInstallation：返回 installation # + 账户 + 权限清单（安装回执）", async () => {
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (/\/app\/installations\/4821$/.test(url))
+        return Response.json({
+          id: 4821,
+          account: { login: "usamshen", type: "User" },
+          permissions: { contents: "read", issues: "write", pull_requests: "write" },
+        });
+      return Response.json({ error: "unexpected" }, { status: 500 });
+    }) as typeof fetch;
+    const auth = createGitHubAppAuth({ appId: "12345", privateKey: privatePem, fetchImpl });
+    const inst = await auth.getInstallation(4821);
+    expect(inst).toEqual({
+      id: 4821,
+      account: { login: "usamshen", type: "User" },
+      permissions: { contents: "read", issues: "write", pull_requests: "write" },
+    });
+  });
 });
 
 describe("应用层 applyCalls", () => {
@@ -119,5 +157,21 @@ describe("应用层 applyCalls", () => {
     expect(seen[1]!.url).toContain("/repos/boardx/boardx-dev-template/statuses/aaa1111");
     expect(seen[2]!.url).toContain("/repos/boardx/boardx-dev-template/check-runs");
     expect(seen[2]!.body).toMatchObject({ name: "coord/lease", head_sha: "aaa1111", conclusion: "success" });
+  });
+
+  it("issue_comment（p30/F09 意图消息双写）打到 /issues/:n/comments，body 透传", async () => {
+    const seen: Array<{ url: string; method: string; body: Record<string, unknown> }> = [];
+    const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      seen.push({ url: String(input), method: String(init?.method), body: JSON.parse(String(init?.body)) });
+      return Response.json({ id: 1 }, { status: 201 });
+    }) as typeof fetch;
+    const r = await applyCalls({
+      owner: "boardx", repo: "boardx-dev-template", token: "ghs_x", fetchImpl,
+      calls: [{ kind: "issue_comment", issue_number: 900, body: "📨 **intent.assign** · `coord-main`" }],
+    });
+    expect(r).toEqual({ applied: 1, failed: 0 });
+    expect(seen[0]!.method).toBe("POST");
+    expect(seen[0]!.url).toBe("https://api.github.com/repos/boardx/boardx-dev-template/issues/900/comments");
+    expect(seen[0]!.body).toEqual({ body: "📨 **intent.assign** · `coord-main`" });
   });
 });

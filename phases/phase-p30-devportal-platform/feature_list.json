@@ -1,21 +1,450 @@
 {
   "phase": "p30",
+  "exclusions": [
+    {
+      "id": "UC-19",
+      "title": "平台后台管理（admin 标签，@usamshen 固定平台管理员）",
+      "reason": "后台管理界面无任何已签核 UI 批次原型（批 1-4 均不含 admin 视图），依 ADR-003 不得入权威清单；显式排除，不静默丢项（coord-main #751 转正约束 1）。",
+      "reentry": "补出后台管理界面原型（平台角色权限矩阵 / 只增审计日志视图）并经人类补签 ui-signoff 后，另立 feature 收录。@usamshen 固定管理员「配置写死不可 UI 移除」的约束届时随 feature 落地。"
+    },
+    {
+      "id": "DRAFT-§6",
+      "title": "其余排除项（计费 / 多 org / RAG / D3 阶段 3 摘除 Access / backlog 独立视图 / agent 审批队列独立视图 / W1-W4·W7 既有页重构 / 移动端·多语言·邮件通道）",
+      "reason": "见 requirements/feature-list-draft.md §6（引用依据均为 requirements 原文）。",
+      "reentry": "各条按 §6 所列条件另立 phase/feature。"
+    }
+  ],
   "features": [
     {
       "id": "F01",
       "priority": 1,
-      "area": "orchestrator",
-      "title": "示例:健康检查端点",
-      "user_visible_behavior": "GET /api/health 返回 200 且 body 为 {\"ok\": true}",
+      "area": "coord",
+      "title": "平台目录 DO：Project/Membership/Enrollment 领域模型",
+      "user_visible_behavior": "coord-gateway 挂载平台级目录 DO（PlatformDirectory，单例；与按仓分片的 RepoHub 互补），持久化 Project（slug/可见性/模块划分/SLA/门禁策略）、Engineer（@handle 全局唯一）、Membership（owner/maintainer/approver/contributor × pending/active/suspended）、Agent（owner 必填/parent 可空/心跳时间戳，内部主键不可变 ULID，D6）、Enrollment（agent×项目 + scoped token 引用）。GET /api/coord/directory/projects|engineers|agents 返回真实数据；任意 agent 行都能回答「哪个项目的？属于哪个人类？parent 是谁？」；写路径仅限身份/授权/审批/派工（三条铁律）。",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "pnpm --filter @repo/coord-directory test",
+        "curl -sf https://coord-gateway.boardx.workers.dev/api/coord/directory/projects -H \"Authorization: Bearer $COORD_API_TOKEN\" | jq -e '.projects | type == \"array\"'",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-directory-invariants.sh"
+      ],
+      "evidence": "",
+      "notes": "@repo/coord-directory 为新包（状态机合法/非法迁移、@handle 唯一性、ULID 不可变、owner 必填约束全覆盖），包创建前 verification 显式红。RepoHub 已按仓天然分片，本 feature 只补「平台级目录」这一层，不动 RepoHub 内部。凭据沿用 coord-gateway 认证栈，不引入新长期密钥。敏感 area，挂 rev-security。"
+    },
+    {
+      "id": "F02",
+      "priority": 1,
+      "area": "auth",
+      "title": "GitHub OAuth 登录（D3 阶段 2：公开层免登录 + 工作区 OAuth，原子灰度）",
+      "user_visible_behavior": "devportal 公开层（/explore、/projects/:slug、/u/:handle、/a/:handle/:agent）免登录可访问且组件零身份读取、零 Access header 依赖；工作区与个人层（/p/:slug/*、/me*）走 GitHub OAuth（复用 p29-F08 OAuth 栈），Access 收缩为只罩治理面；切换在同一个 PR 内「先加后删」原子完成（env 原子纪律）；#588 的 401 整页重认证行为不回退。",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "verification": [
+        "curl -sf https://develop.boardx.us/explore | grep -q 'explore-directory'",
+        "curl -s -o /dev/null -w '%{http_code}' https://develop.boardx.us/me | grep -qE '^(301|302|401)$'",
+        "pnpm --filter devportal test",
+        "test -f apps/devportal/e2e/p30/auth-gray.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/auth-gray.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "原子灰度是验收核心：部署窗口内不允许出现「Access 已删、OAuth 未生效」中间态（CD 活跃时先删后合会被踩中，mod-devportal 事故已固化）。实现时须在 devportal test 落地公开层静态断言用例（公开层组件禁止 import lib/access.ts / 读 cookie），否则第 3 条只是空跑。e2e spec 待写：OAuth 登录 → /me 200；登出 → /explore 仍 200。阶段 3「摘除 Access」不在本 phase（见 exclusions/DRAFT-§6）。"
+    },
+    {
+      "id": "F03",
+      "priority": 1,
+      "area": "devportal",
+      "title": "/p/:slug 路由化 + 成员鉴权（服务端角色裁剪 + 无权限态）",
+      "user_visible_behavior": "/p/:slug/{pulse,work,coord,talk,people,settings} 按 slug 从目录 DO 解析项目并按登录者 Membership 服务端裁剪：contributor 访问 /p/:slug/settings 看到整页拒绝态（gov-no-access，引导 ✋ 举手），owner/maintainer 看到治理台；批次 2 的页内「视角开关」mock 被真实 membership 判定替换；非成员访问私有项目工作区得到无权限态而非数据泄漏；顶栏项目切换器列出登录者的真实项目。",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "pnpm --filter devportal lint && pnpm --filter devportal build",
+        "test -f apps/devportal/e2e/p30/workspace-authz.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/workspace-authz.spec.ts",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-authz-api.sh"
+      ],
+      "evidence": "",
+      "notes": "裁剪必须发生在服务端（API 层），前端隐藏不算过（假阳性防护）。e2e spec 待写，锚定批 2 真实 testid：contributor → [data-testid=gov-no-access] 可见且 governance-console 治理操作不可见；owner → governance-console 可见；断言含从切换器真实点击路径进入 /p/:slug（testing-standards「能被导航到」）。M1 侧栏切换器同步从「过滤三栏」改为导航到 /p/:slug（批次 1 已知偏差兑现）。"
+    },
+    {
+      "id": "F04",
+      "priority": 1,
+      "area": "coord",
+      "title": "工作区数据按项目分片（需求/sprint/对话流入项目 DO）",
+      "user_visible_behavior": "需求（requirements 流水线条目）、sprint 面板数据、talk 对话流全部迁入按项目分片的存储（RepoHub DO 或项目子空间），两个项目命名空间的工作区互不可见对方数据；项目间隔离升级兑现（N3：一个项目的数据量/故障不拖垮另一个项目的工作区）。",
+      "status": "not_started",
+      "sprint": "01",
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "pnpm --filter @repo/coord-repohub test",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-tenant-isolation.sh"
+      ],
+      "evidence": "",
+      "notes": "【UC-14 归属点名（coord-main #751 约束 2）】UC-14「GitHub 实时镜像」由 p29 F04（RepoHub 镜像 + /realtime/*）与 F09（devportal WS 实时化）已交付基础承接；p30 范围内的「按项目分片」归本 feature。隔离验证用 DO 级合成命名空间即可完成（W1 不依赖真实租户 #2）；真实租户 soak：G6 已拍板租户 #2 = agentic-harness-template 仓（其 GitHub App 安装为前置人工步骤），接入后由 verify-tenant-isolation.sh 的后补断言段覆盖。迁移存量单项目数据时留导出归档（沿 p29-F10 的 D1 归档模式）。"
+    },
+    {
+      "id": "F05",
+      "priority": 2,
+      "area": "platform",
+      "title": "GitHub App 多仓安装流：/onboard 接真（UC-01 接入体检真实现）",
+      "user_visible_behavior": "/onboard 三步向导接真：①「跳转 GitHub 安装」发起真实 GitHub App（App 4328933）安装授权，返回真实 installation 回执（install-receipt 显示 installation # + 账户 + 权限清单）；② repo 列表来自该 installation 的真实仓库，admin 权限徽章按 GitHub collaborator permission 真实判定，非 admin 禁用；③ 自动体检由后端逐项回报事件驱动（webhook 连通 / issues·PR 镜像种子真实灌入 / CODEOWNERS·CONTRIBUTING 检查 / 分支保护检查，警告不阻塞），checkup-item-<id> 的 data-state 跟随真实进度；完成后项目出现在目录 DO 中成为租户、coord-agent 归属确立，「进入工作区」落 /p/:slug/settings；全程目标 ≤5 分钟。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "pnpm --filter coord-gateway test",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-onboard-checkup.sh",
+        "test -f apps/devportal/e2e/p30/onboard.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/onboard.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "p29-F03 的 App 与 webhook ingest 是单仓的，本 feature 把它扩成「安装即租户注册」多仓流（installation/installation_repositories 事件 → 目录 DO 写入的单测归 coord-gateway test）。onboard-elapsed 显示真实耗时而非静态 3m42s。e2e spec 待写，锚定批 3 testid：onboard-step-{1,2,3} 真实点击路径、admin-badge-*/not-admin-* 与真实权限一致、onboard-done 与 enter-workspace 出现。"
+    },
+    {
+      "id": "F06",
+      "priority": 2,
+      "area": "platform",
+      "title": "加入审批流 + SLA：P2 join 向导与 W6 审批队列接真（UC-04）",
+      "user_visible_behavior": "P2 招募页「加入这个项目」三步接真：GitHub 登录（F02）→ 选角色/模块 + 自介 → 提交后 Membership 进 pending，join-pending 显示真实 SLA 24h 倒计时；自动开 onboarding issue 跟踪（GitHub 双写）；W6 审批队列显示真实待审申请与 SLA 倒计时徽章（≤4h 变红），owner 批准/驳回即改 Membership 状态并入只增审计；批准后成员初始信任级 Probation，/me 出现 onboarding 清单（F14 消费）；超时未审自动升级进 owner 待拍板流；其后该成员的 agent enroll 即生效无需再审批（D2）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WORKFLOW",
+      "verification": [
+        "pnpm --filter @repo/coord-directory test",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-join-flow.sh",
+        "test -f apps/devportal/e2e/p30/join-approve.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/join-approve.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "pending→active/rejected 状态机 + SLA 超时升级事件单测归 @repo/coord-directory。SLA 兑现记录同时喂给 P2 公开区（F21）。审批动作全部入审计 + GitHub issue 双写（N5）。e2e spec 待写，锚定批 2 testid：join-cta → join-step-{1,2,3} → join-pending/join-sla-countdown；owner 视角 approval-row-* → approve-* → approval-decided-*。"
+    },
+    {
+      "id": "F07",
+      "priority": 2,
+      "area": "auth",
+      "title": "enroll 真实现：命名空间 / 一次性 token / 首心跳点亮（UC-06）",
+      "user_visible_behavior": "/me/agents enroll 向导接真：① @handle/agent-name 在自己命名空间真实查重（err-ns-dup 由服务端判定），运行时选择供应商中立；② 一次性 token mint-on-reveal（继承 p29-F08 scoped token 栈，关闭不可找回），复制接入命令可用；③「等首个心跳」由真实心跳事件点亮（first-heartbeat-waiting → first-heartbeat-live，WS 推送非 mock 定时器），车队实时新增一行；无审批等待（D2）；轮换/暂停/退役接真——轮换与退役走输入全名解锁的确认弹窗，吊销后旧 token 即时 401；sub-agent 点号命名归属沿 parent 追溯。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-AUTH",
+      "verification": [
+        "pnpm --filter coord-gateway test",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-enroll-heartbeat.sh",
+        "test -f apps/devportal/e2e/p30/enroll.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/enroll.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "aha moment（redesign §6），首心跳点亮延迟应 ≤ 数秒（WS，N2）。enroll API 查重 409、mint-on-reveal 一次性、revoke 即时失效单测归 coord-gateway。e2e spec 待写，锚定批 1 testid：enroll-open → enroll-step-{1,2,3} → 后台 curl 打真心跳 → first-heartbeat-live 点亮 → fleet-row-* 新增；rotate-confirm 输入全名解锁（confirm-dialog 的 ${testid}-confirm 动态拼接在 e2e 落地时核实参，coord-main #751 备注）。敏感 area，挂 rev-security。"
+    },
+    {
+      "id": "F08",
+      "priority": 2,
+      "area": "devportal",
+      "title": "/me 三栏真数据 + D4 登录落点（UC-09）",
+      "user_visible_behavior": "/me 三栏接真：待拍板@我（跨项目真实 decide 请求按 SLA 排序）/ 我卡住的 PR（真实 RepoHub 镜像的 mergeable/checks 判定，催办按钮产生真实事件）/ 我的 agent 异常（真实心跳丢失）；下方各项目一行式脉搏为真实数据；侧栏切换器红点为真实计数且点击导航到 /p/:slug；登录默认落点为 /me，且记住上次停留（D4 两条行为，批次 1 已知偏差兑现）；每卡四态齐全（loading/空/降级/无权限，N1）。",
       "status": "not_started",
       "sprint": null,
       "owner": null,
       "capability": "CAP-WEB",
       "verification": [
-        "curl -sf http://localhost:3000/api/health | jq -e '.ok == true'"
+        "pnpm --filter devportal lint && pnpm --filter devportal build",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-me-live.sh",
+        "test -f apps/devportal/e2e/p30/me-workbench.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/me-workbench.spec.ts"
       ],
       "evidence": "",
-      "notes": "把示例替换成你自己的功能。粒度=一次会话能完成。"
+      "notes": "「10 秒知道该干什么」。晨报条（morning-brief）本 feature 保留占位/降级态，叙事内容属 R4 后的 F19——边界写死避免范围蔓延。e2e spec 待写，锚定批 1 testid：登录后 URL 落 /me；col-decisions/col-stuck-prs/col-agent-anomalies 有真数据行；switcher-badge-<slug> 计数与注入事实一致；点击切换器 → URL /p/:slug。"
+    },
+    {
+      "id": "F09",
+      "priority": 2,
+      "area": "coord",
+      "title": "三层意图消息协议 v1（UC-11：assign…decide，CHANGELOG 演进）",
+      "user_visible_behavior": "coord-protocol 包扩展六意图 assign/accept/progress/blocker/escalate/decide 的 wire format（TS 类型 + 运行时校验，合法/非法样例全覆盖），docs/coord-platform/protocol/ 新增 intents.md 且 CHANGELOG 记录版本演进；消息落 append-only 事件日志并双写 GitHub issue；上行链 sub→module→coord→👤（decide 进待拍板）与下行链（拍板→coord 广播→自动继续）在事件流可见；talk 对话流按 👤/🤖/待拍板过滤展示真实消息，线程闭环状态可视（等待拍板/已闭环）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "pnpm --filter @repo/coord-protocol test",
+        "test -f docs/coord-platform/protocol/intents.md && grep -q 'decide' docs/coord-platform/protocol/CHANGELOG.md",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-intent-chain.sh"
+      ],
+      "evidence": "",
+      "notes": "协议语义继承 ADR-009/017（events 唯一可信历史）。这是 F13 信箱与 C 线 R2-R4 的消息底座，先行于它们。"
+    },
+    {
+      "id": "F10",
+      "priority": 2,
+      "area": "coord",
+      "title": "R1：CoordBrain 影子模式（只读观察 + 零误判周期）",
+      "user_visible_behavior": "CoordBrain DO（每项目一个，与 RepoHub 同 worker）上线但只读：Cron tick 对全部机械 SOP 规则（全绿可合并判定 / ready-for-dev 派工判定 / PR 超时催办判定 / stale 租约回收判定 / andon 冻结判定）产出「它将做的决策」写入 coord.shadow.* 事件流，绝不执行；devportal 可见影子决策列表供人核对；跑满一个完整工作周期（G5 已拍板：24 小时或一个 C-cycle，取长者）后，影子决策与人类实际决策的对照记录归档，误判数为零。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "pnpm --filter @repo/coord-brain test",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-shadow-cycle.sh",
+        "curl -sf https://coord-gateway.boardx.workers.dev/api/coord/brain/shadow -H \"Authorization: Bearer $COORD_API_TOKEN\" | jq -e '.decisions | type == \"array\"'"
+      ],
+      "evidence": "",
+      "notes": "C 线闸门：R2-R5 全部以本 feature 的零误判台账为前置（保序 R1→R2→R3→R4→R5 严格串行，前级未 passing 不得开工后级；每级自带一键降回人工且降级方向永远 fail-open 到人）。周期参数已拍板（G5）：影子事件流时间跨度 ≥24h 且覆盖 ≥1 个完整 C-cycle（取长者），断言写实在 verify-shadow-cycle.sh。@repo/coord-brain 为新包（五类机械规则纯函数单测，含边界样例——andon 活跃时合并判定必须为冻结）。人类核对流程写进 evidence/R1-shadow-audit.md，不允许「自评零误判」。实现载体优先评估 Cloudflare Agents SDK。"
+    },
+    {
+      "id": "F11",
+      "priority": 3,
+      "area": "coord",
+      "title": "R2：机械合并接管（全绿自动合并 + 一键降回人工）",
+      "user_visible_behavior": "required checks 绿 + review verdict 齐 + up-to-date + 无 andon 的 PR 由 CoordBrain 用 GitHub App token 自动合并；每次自动合并产生审计事件 + PR 评论（GitHub 侧可见落点）；andon 活跃时冻结一切合并并可见「冻结中」状态；治理台一键「降回人工合并」开关即时生效（fail-open 到人）；Probation 成员的前 3 个 PR 强制人工 review，机械合并对其不生效（UC-02 规则）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WORKFLOW",
+      "verification": [
+        "pnpm --filter @repo/coord-brain test",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-auto-merge.sh",
+        "test -f apps/devportal/e2e/p30/takeover-switch.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/takeover-switch.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "前置：F10 零误判台账归档（保序）。把「PR 等待时长主动追踪催办」一并机械化（超阈值自动催办事件）。合并权双轨：开关开=DO、关=人——同一时刻只有一个主体有合并权，开关状态入审计。e2e spec 待写：治理台开关翻到人工 → brain 状态接口 mode=manual。"
+    },
+    {
+      "id": "F12",
+      "priority": 3,
+      "area": "coord",
+      "title": "R3：派工接管（tasks 下发 + 租约仲裁 + 开关）",
+      "user_visible_behavior": "ready-for-dev 且无活跃租约的 issue 由 CoordBrain 按 registry/模块亲和自动下发 tasks 到目标 agent 信箱；工程师在 sprint 面板「认领 → 派我的 agent」走同一服务端路径（原子租约，恰好一个成功，并发撞车 409）；stale 租约由 dispatcher 起草回收请求进待拍板（UC-13）；治理台一键降回人工派工。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WORKFLOW",
+      "verification": [
+        "pnpm --filter @repo/coord-brain test && pnpm --filter @repo/coord-repohub test",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-dispatch.sh",
+        "test -f apps/devportal/e2e/p30/claim-dispatch.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/claim-dispatch.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "前置：F11（保序）。复用 p29-F05 原子租约原语，本 feature 是其「谁来发起」的接管。降级开关同 F11 模式。e2e spec 待写：sprint 面板真实点击「认领 → 派我的 agent」→ 租约卡出现。"
+    },
+    {
+      "id": "F13",
+      "priority": 3,
+      "area": "coord",
+      "title": "agent 直达信箱（UC-12：平台消息总线 + 回执对齐 + 定时唤醒）",
+      "user_visible_behavior": "agent 间长文对齐消息走平台总线（替代外部 session 通信）：发送→送达→已读→回执对齐四状态可查，「回执对齐 ✓」后才算闭环；支持 ScheduleWakeup 定时唤醒；消息可携带 GitHub 对象引用 chips（PR·CI 状态·sprint 进度，渲染为实时数据而非快照）；收件 agent 离线时暂存，下次心跳投递；信箱内容在 devportal 对 owner 可见。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "pnpm --filter @repo/coord-repohub test",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-mailbox.sh"
+      ],
+      "evidence": "",
+      "notes": "依赖 F09 意图协议的信封格式。这是把「coord-main 与 module-coordinator 靠本地 session 传话」的现状搬进平台的关键一步。信箱状态机 + 离线暂存单测归 @repo/coord-repohub。"
+    },
+    {
+      "id": "F14",
+      "priority": 3,
+      "area": "devportal",
+      "title": "新成员 onboarding 5 步清单（UC-05：/me 顶部，深链 + 自动完成检测）",
+      "user_visible_behavior": "批准入项的新成员在 /me 顶部看到 5 步清单，每步深链：①读 quickstart（学习中心既有页）②enroll 第一个 agent（→F07 向导）③看花名册三层结构（→W5）④sprint 面板认领 good-first-issue（→F12 路径）⑤第一个 PR 合并；②④⑤由真实事件自动打勾（enroll 成功/租约建立/PR merged），①③由访问行为或手动确认打勾；全程 ✋ 举手求助入口可用（D5 轻量原语，琥珀色，进待拍板，24h 无回应自动升级）；5 步全完成后清单收起，标记「正式解锁开发」。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "pnpm --filter devportal lint && pnpm --filter devportal build",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-onboarding-steps.sh",
+        "test -f apps/devportal/e2e/p30/onboarding-checklist.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/onboarding-checklist.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "✋ raise-concern 原语在本 feature 首次落地（发起端），治理台展示端已在批次 2（raise-hand-list）；24h 自动升级的定时逻辑归 F15 的 1h SLA loop 执行，这里只建事件。e2e spec 待写：清单每步深链真实点击可达目标页；✋ 举手 → 待拍板列表出现琥珀条目。"
+    },
+    {
+      "id": "F15",
+      "priority": 3,
+      "area": "coord",
+      "title": "@platform/dispatcher 五 loop + 调度中心（UC-17）",
+      "user_visible_behavior": "全平台唯一 dispatcher 按五个固定周期跑巡检——1m 心跳&租约扫描 / 5m PR·CI 巡检 / 15m stale 租约处置 / 1h SLA 审计+性能快照 / 24h C-cycle 报告；产出「当前定位到的问题」清单（严重度+已采取动作）；动作全部为起草/通知类并路由给对应项目的 coord-agent，永不直接改项目内状态；/platform/dispatcher 调度中心接真：五 loop 卡显示真实上次运行时间/下次倒计时/上轮扫描计数，问题列表按严重度徽章展示且「已采取动作」全部为起草/通知/路由类并标注路由目标 coord-agent；非 admin 访问得到无权限态（服务端判定，N1 第四态）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WORKFLOW",
+      "verification": [
+        "pnpm --filter @repo/coord-brain test",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-dispatcher-loops.sh",
+        "test -f apps/devportal/e2e/p30/dispatcher-center.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/dispatcher-center.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "「永不直接改项目内状态」是不变量，用类型/单测双重锁死（dispatcher 路由规则单测：任何动作产出都是 draft/notify 类型，不含直接状态写）。批 4 已补签（2026-07-19），调度中心 UI 恢复入本 feature 完整范围。e2e spec 待写，锚定批 4 testid：dispatcher-center / dispatcher-loops / loop-card-loop-{1m,5m,15m,1h,24h} / loop-{last,next}-* / dispatcher-issues / issue-severity-* / issue-action-* / dispatcher-no-access（真实实现为服务端判定非 admin，非页内 mock 开关）。1h loop 顺带执行 F14 的 ✋ 24h 升级与 F06 的审批 SLA 超时升级。「手动重跑 loop/忽略问题」干预入口按批 4 已知偏差暂不做，UC-17 只定义展示语义。"
+    },
+    {
+      "id": "F16",
+      "priority": 3,
+      "area": "devportal",
+      "title": "通知分级与降噪（UC-18：拍板>andon>卡住>站会>巡检，红点只计最高级）",
+      "user_visible_behavior": "通知中心跨项目聚合，五级分级 拍板 > andon > 卡住 > 站会 > 巡检；巡检类默认折叠；侧栏与项目切换器红点只计最高级（有拍板只显拍板计数，不叠加）；通知点击深链到对应落点（待拍板卡/andon 面板/PR）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "pnpm --filter devportal lint && pnpm --filter devportal build",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-notify-ranking.sh",
+        "test -f apps/devportal/e2e/p30/notifications.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/notifications.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "P6 是 ♻️（升级既有通知样式，非 🆕），按 ADR-003 严格文义可不走 UI 先行；批 4 补签未含 P6 新原型，本 feature 沿既有通知样式升级，若实现中出现新版式诉求必须停下走 ui-signoff。e2e spec 待写：从侧栏红点真实点击进通知中心，断言排序与折叠；点一条通知 → URL 到达深链目标。"
+    },
+    {
+      "id": "F17",
+      "priority": 4,
+      "area": "coord",
+      "title": "R4：LLM 判断面接入（wsx-ai provider + 待拍板摘要/为什么需要我）",
+      "user_visible_behavior": "CoordBrain 经 wsx-ai provider 接口（默认 Workers AI 托管开源模型，可插拔外接更强模型）获得 LLM 判断面：待拍板请求自动附摘要与「为什么需要我?」推理（/me 决策卡可展开，decision-why-* 显示真实推理而非 mock）；LLM 结论只能产出「起草/建议/摘要」，进入写路径必须过机械规则或人（非功能硬约束）；摘要生成失败时降级为无摘要但流程不断；治理台一键关闭 LLM 面回到纯机械+人。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-DATA",
+      "verification": [
+        "pnpm --filter @repo/coord-brain test",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-llm-judgment.sh",
+        "test -f apps/devportal/e2e/p30/decision-why.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/decision-why.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "前置：F12（保序）。写路径守卫单测：构造 LLM 输出直接触发写 → 被拒；摘要生成失败 → 决策请求仍投递。本 feature 只建 provider 接入 + 待拍板摘要一个消费者；需求分析（F18）、晨报/命令条（F19）是后续消费者，不塞进本 feature。实现载体优先评估 Cloudflare Agents SDK。"
+    },
+    {
+      "id": "F18",
+      "priority": 4,
+      "area": "platform",
+      "title": "需求提交流水线（UC-07：五节点可视化 + 容量校验）",
+      "user_visible_behavior": "项目工作区 sprint 需求 tab 表单（或命令条「提需求:」，F19）提交需求 → coord-agent LLM 分析综合（查重/拆解/影响面/容量建议，经 F17 provider）→ 人工审核（通过/驳回，驳回项落 backlog 列表可查——边界②最小承接）→ 通过自动下发为 GitHub issues 进当前 sprint；五节点流水线可视化（提交→coord 分析→人工审核→下发 issues→开发）实时反映每条需求所处节点；下发时校验 sprint 容量（超容量建议阻塞下发并提示，边界④）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WORKFLOW",
+      "verification": [
+        "pnpm --filter @repo/coord-brain test",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-req-pipeline.sh",
+        "test -f apps/devportal/e2e/p30/req-pipeline.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/req-pipeline.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "需求 tab 与流水线视图属 W2/W4 ✅ 继承区内嵌（G3）：沿用继承视图内嵌、无新版式；若实现中出现新版式诉求必须停下走 ui-signoff（批 4 补签未含此项新原型）。分析结论是「建议」，过不过全在人（写路径守卫同 F17）。"
+    },
+    {
+      "id": "F19",
+      "priority": 4,
+      "area": "devportal",
+      "title": "晨报叙事 + 命令条（UC-09 晨报 / UC-10，意图覆盖显式化）",
+      "user_visible_behavior": "/me 晨报条显示 coord-agent 叙事式晨报（「今天只需管 N 件事」+行动按钮，内容来自真实三栏数据经 F17 生成）；底部常驻命令条任意页面可用：「提需求:xxx」直接建需求进 F18 流水线、「哪里卡了」返回堵点摘要+跳转、「性能怎么样」叙事回答；支持的意图清单显式陈列（边界⑤，在命令条帮助里可见），无法处理的显式告知「已入 coord 队列」并真实入队（不沉默失败）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "pnpm --filter devportal lint && pnpm --filter devportal build",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-command-bar.sh",
+        "test -f apps/devportal/e2e/p30/morning-and-commandbar.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/morning-and-commandbar.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "晨报与命令条都是 F17 的消费者；晨报数字必须与三栏事实一致（防 LLM 幻觉：计数由代码算，LLM 只做叙事包装）。e2e spec 待写：morning-brief 文本含真实计数 N 且与三栏行数一致；命令条提需求 → 跳转/提示；帮助面板列出意图清单。"
+    },
+    {
+      "id": "F20",
+      "priority": 4,
+      "area": "devportal",
+      "title": "P1 项目目录接真数据（活跃度自动生成，不可购买位次）",
+      "user_visible_behavior": "/explore 项目卡来自目录 DO 的真实租户：合并火花线/活跃度分档由 GitHub 数据自动生成（分档规则代码化，「活跃度自动排序，不可购买位次」），招募徽章反映项目真实招募状态，👤/🤖 分开计数为真；筛选/搜索作用于真实数据集；点击卡进 /projects/:slug 按 slug 取数（批次 3 已知偏差兑现，不再全是 boardx 模板）；公开层免登录（D3，F02）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "pnpm --filter devportal lint && pnpm --filter devportal build",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-explore-live.sh",
+        "test -f apps/devportal/e2e/p30/explore.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/explore.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "活跃度分档规则（高/中/低阈值）在本 feature 定义并入文档。依赖 F05 提供 ≥2 个真实租户；G6 已拍板：租户 #2 = agentic-harness-template 仓（其 GitHub App 安装为前置人工步骤）。e2e spec 待写，锚定批 3 testid：explore-grid 卡数==目录项目数；explore-card-<slug> 点击 → URL /projects/<slug> 且内容随 slug 变；筛选后 explore-result-count 正确。"
+    },
+    {
+      "id": "F21",
+      "priority": 4,
+      "area": "devportal",
+      "title": "P2 招募页接真数据（GitHub 聚合 ≤60s，不可自填）",
+      "user_visible_behavior": "/projects/:slug 全区接真：README 摘要来自真实仓库；活跃度证明区（近 12 周合并火花线/flow-time 中位/andon 响应中位）由 GitHub 数据自动生成且整区保留「不可自填」标注；需要帮助的模块卡与 good-first 计数为真；成员头像墙 👤/🤖 计数来自目录 DO；审批 SLA 兑现记录来自 F06 真实审批史（承诺/中位/兑现率）；数据新鲜度 ≤60s 并标注「更新于 X 秒前」；公开层零身份读取（D3）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "pnpm --filter devportal lint && pnpm --filter devportal build",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-project-home-live.sh",
+        "test -f apps/devportal/e2e/p30/project-home.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/project-home.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "聚合器与 F20 共用（一次建设两处消费）。「活跃度证明不可自填」靠无写入接口保证，不是前端禁用。跨仓聚合抽查以租户 #2（agentic-harness-template，G6 已拍板）为对照仓。e2e spec 待写，锚定批 2 testid：activity-proof/proof-autogen-note/sla-record 可见且数值非 mock 常量；从 /explore 真实点击路径到达本页。"
+    },
+    {
+      "id": "F22",
+      "priority": 4,
+      "area": "devportal",
+      "title": "性能页跨项目化（UC-15：👤/🤖 分表，D1 可见性裁剪）",
+      "user_visible_behavior": "/me/performance 分双表：👤 工程师表（项目数/PR 合并/flow-time/拍板响应/趋势，跨项目聚合）与 🤖 agent 表（达成率/吞吐/异常，按 owner 配对归因）；数据源为 F15 的 1h 性能快照；聚合指标默认仅本人与相关项目 owner/maintainer 可见，他人访问得到无权限态（D1，服务端裁剪同 F03 机制）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "pnpm --filter devportal lint && pnpm --filter devportal build",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-perf-visibility.sh",
+        "test -f apps/devportal/e2e/p30/performance.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/performance.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "M3 为 ♻️（既有性能页升级），无新版式诉求则不需新 signoff；若出现新版式需求必须停下走 ui-signoff（p29-F09 的 ADR-003 纪律原文）。e2e spec 待写：双表可见，agent 行带 owner 归因；跨项目列 >1 项目时正确聚合。"
+    },
+    {
+      "id": "F23",
+      "priority": 5,
+      "area": "devportal",
+      "title": "公开档案 + agent 数字分身页（UC-16：/u/:handle、/a/:handle/:agent）",
+      "user_visible_behavior": "/u/:handle 工程师公开档案：贡献事实默认公开；聚合指标 opt-in 且区间化展示（如「flow-time 中位 6-12h」），未 opt-in 访客看不到聚合指标（服务端判定 viewer，公开层组件零身份读取 D3）；/a/:handle/:agent 分身页默认全公开——归属 owner、parent 树、授权项目、性能、最近事件（软件资产无隐私权）；agent 改名后旧链路由 ULID 不断链（D6）；两页均公开层免登录（D3）。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WEB",
+      "verification": [
+        "pnpm --filter devportal lint && pnpm --filter devportal build",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-profile-optin.sh",
+        "test -f apps/devportal/e2e/p30/public-profiles.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/public-profiles.spec.ts"
+      ],
+      "evidence": "",
+      "notes": "批 4 已补签（2026-07-19，P4/P5 原型 + 人类确认），本 feature 回归权威清单。e2e spec 待写，锚定批 4 testid：public-profile / optin-toggle / profile-metrics / metrics-optin-note / profile-metrics-hidden / profile-agents；agent-twin / twin-full-id / twin-public-badge / twin-owner-card / twin-tree / twin-enrollments / twin-perf / twin-events；从花名册/车队行真实点击进两页；opt-in 开关翻转后档案区块变化（真实实现落库 + 服务端判定，非批 4 原型的本地状态）。聚合指标区间分档规则（对数档/固定档）在本 feature 定义并入文档（批 4 已知偏差）；scope 展示词表以 p29-F08 scoped token 实现为准。"
+    },
+    {
+      "id": "F24",
+      "priority": 5,
+      "area": "coord",
+      "title": "R5：唯一性移交（role:coord-main 由 CoordBrain 持有）",
+      "user_visible_behavior": "role:coord-main（本仓）由常驻 CoordBrain 持有并自续心跳，笔记本合盖车队不失指挥；本地人类会话降级为可来可走的 module-coordinator/worker，启动时不再抢 coord-main；人类保留 andon 与治理台最终控制：治理台一键把任意接管层级（R2/R3/R4/R5）降回人工，降级即时生效且入审计；移交与降级动作均产生事件 + GitHub 可见落点。",
+      "status": "not_started",
+      "sprint": null,
+      "owner": null,
+      "capability": "CAP-WORKFLOW",
+      "verification": [
+        "pnpm harness lock-status 2>&1 | grep -qi 'coord-brain\\|CoordBrain'",
+        "bash phases/phase-p30-devportal-platform/scripts/verify-handover-resilience.sh",
+        "pnpm harness doctor --phase p30"
+      ],
+      "evidence": "",
+      "notes": "整个 C 线的终点，前置 R1-R4 全 passing + R1 台账零误判。降级方向 fail-open 到人，绝不 fail-open 到自动（coord-resident 原文）。移交当日人类值守窗口由 coordinator 排期。"
     }
   ]
 }

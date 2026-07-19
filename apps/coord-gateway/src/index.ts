@@ -2,11 +2,15 @@
 // + REST 网关（bearer 鉴权 → 转发 RepoHub DO）。F08：按仓 scoped token 优先，
 // COORD_API_TOKEN 保留为 ops 万能钥匙；mint/revoke 走 COORD_ADMIN_TOKEN 管理面（auth.ts）。
 import { RepoHub } from "@repo/coord-repohub";
+import { PlatformDirectory } from "@repo/coord-directory";
 import { describeCycle } from "./cycle";
+import { handleDirectory } from "./directory";
 import { verifyWebhookSignature } from "./signature";
 import { toIngestBody, type QueuedWebhook } from "./mapping";
 import { runProjectionTick } from "./projection";
+import { CoordBrain, runShadowTick } from "./brain";
 import { handleMcp } from "./mcp";
+import { handleInstallationWebhook, handleOnboard } from "./onboard";
 import {
   authorizeRepoAccess,
   bindScopedAgentRequest,
@@ -17,10 +21,14 @@ import {
 } from "./auth";
 import { handleStreamRoute } from "./stream";
 
-export { RepoHub };
+export { RepoHub, PlatformDirectory, CoordBrain };
 
 export interface Env {
   REPOHUB: DurableObjectNamespace;
+  // 平台目录单例 DO（p30/F01）：Project/Membership/Enrollment 领域模型
+  DIRECTORY: DurableObjectNamespace;
+  // CoordBrain：R1 影子模式（p30-F10），每仓一个，只读观察 + 记录，零写 API（见 brain.ts 头注）
+  COORDBRAIN: DurableObjectNamespace;
   WEBHOOK_QUEUE: Queue<QueuedWebhook>;
   GITHUB_WEBHOOK_SECRET?: string;
   COORD_API_TOKEN?: string;
@@ -30,6 +38,8 @@ export interface Env {
   GITHUB_APP_ID?: string;
   GITHUB_APP_PRIVATE_KEY?: string;
   PROJECTION_REPOS?: string;
+  // CoordBrain 派工亲和表（可选，JSON：模块标签 → 建议 assignee；缺省 {}）
+  COORD_BRAIN_AFFINITY?: string;
 }
 
 function json(status: number, body: unknown): Response {
@@ -41,6 +51,30 @@ function json(status: number, body: unknown): Response {
 
 function repoStub(env: Env, repo: string): DurableObjectStub {
   return env.REPOHUB.get(env.REPOHUB.idFromName(repo));
+}
+
+function brainStub(env: Env, repo: string): DurableObjectStub {
+  return env.COORDBRAIN.get(env.COORDBRAIN.idFromName(repo));
+}
+
+// 影子决策只读面（R1，p30-F10）：GET 专用，复用与 REST 协调面同款鉴权
+// （authorizeRepoAccess：ops 万能钥匙 或 该仓 scoped token），但转发目标是
+// CoordBrain DO 而非 RepoHub——路由必须在 handleRest 之前拦截，否则会被当作
+// 未知 RepoHub 子路径 404。全程只读（GET），无写操作。
+async function handleShadowDecisions(req: Request, env: Env, repo: string, url: URL): Promise<Response> {
+  if (req.method !== "GET") return json(404, { error: "not_found" });
+  const access = await authorizeRepoAccess(req, env, repo);
+  if (!access.granted) return access.response;
+  return brainStub(env, repo).fetch(new Request(`https://do/shadow/decisions${url.search}`, req));
+}
+
+// 影子周期跨度只读面（R1，p30-F10）：verify-shadow-cycle.sh 消费，判定是否已满足
+// G5 拍板门槛（≥24h 且 ≥1 完整 C-cycle）。同样只读、同款鉴权。
+async function handleShadowCycleStatus(req: Request, env: Env, repo: string): Promise<Response> {
+  if (req.method !== "GET") return json(404, { error: "not_found" });
+  const access = await authorizeRepoAccess(req, env, repo);
+  if (!access.granted) return access.response;
+  return brainStub(env, repo).fetch(new Request("https://do/shadow/cycle-status", req));
 }
 
 async function handleWebhook(req: Request, env: Env): Promise<Response> {
@@ -57,6 +91,15 @@ async function handleWebhook(req: Request, env: Env): Promise<Response> {
   if (!deliveryId || !event) return json(400, { error: "missing_webhook_headers" });
 
   const payload = JSON.parse(body) as Record<string, unknown>;
+
+  // 安装流（p30/F05，UC-01）：installation(created)/installation_repositories(added) 没有
+  // 顶层 repository 字段（是多仓事件），走独立处理——安装即注册为租户，直调目录 DO，
+  // 不入 WEBHOOK_QUEUE（那条队列是「按仓镜像增量」语义，装机事件不是镜像事件）。
+  if (event === "installation" || event === "installation_repositories") {
+    const result = await handleInstallationWebhook(env, event, payload);
+    return json(202, result);
+  }
+
   const repoFull = ((payload["repository"] ?? {}) as Record<string, unknown>)["full_name"];
   if (typeof repoFull !== "string") return json(400, { error: "missing_repository" });
 
@@ -70,6 +113,51 @@ async function handleAdmin(req: Request, env: Env, repo: string, subpath: string
   const denied = requireAdmin(req, env);
   if (denied) return denied;
   return repoStub(env, repo).fetch(new Request(`https://repohub${subpath}`, req));
+}
+
+// 意图消息面（p30/F09）：GET 走 scoped/ops 读（同 /events），POST 按 type 分层鉴权——
+// intent.decide 是人类拍板动作，与 andon 同级门禁（独立 COORD_ADMIN_TOKEN，scoped/ops
+// token 一律拒绝，防任何 agent 假冒人类拍板伪造 decide、静默关闭协调线程）；其余五类
+// （assign/accept/progress/blocker/escalate）走 scoped token + agent_id 强绑定（#721 同模式），
+// 与其它协调端点一致——普通 agent 只能以自己的身份发消息，不能自证他人。
+async function handleIntents(req: Request, env: Env, repo: string, url: URL): Promise<Response> {
+  if (req.method === "GET") {
+    const access = await authorizeRepoAccess(req, env, repo);
+    if (!access.granted) return access.response;
+    return repoStub(env, repo).fetch(new Request(`https://repohub/intents${url.search}`, req));
+  }
+  if (req.method !== "POST") return json(404, { error: "not_found" });
+
+  const text = await req.text();
+  let parsed: unknown = null;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    /* 交给 DO 报 invalid_json */
+  }
+  const type =
+    parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)["type"]
+      : undefined;
+
+  if (type === "intent.decide") {
+    const denied = requireAdmin(req, env);
+    if (denied) return denied;
+    return repoStub(env, repo).fetch(new Request("https://repohub/intents", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: text,
+    }));
+  }
+
+  const access = await authorizeRepoAccess(req, env, repo);
+  if (!access.granted) return access.response;
+  const bound = await bindScopedAgentRequest(
+    new Request(req.url, { method: "POST", headers: req.headers, body: text }),
+    access.principal,
+  );
+  if (bound instanceof Response) return bound;
+  return repoStub(env, repo).fetch(new Request("https://repohub/intents", bound));
 }
 
 async function handleRest(req: Request, env: Env, url: URL): Promise<Response> {
@@ -136,11 +224,38 @@ export default {
       if (req.method === "GET" && tasks[3] === "/tasks" && isAdminBearer(req, env))
         return handleAdmin(req, env, `${tasks[1]}/${tasks[2]}`, `/tasks${url.search}`);
     }
+    // 工作区分片管理写面（p30/F04）：需求审核 + sprint 面板 upsert 是
+    // COORD_ADMIN_TOKEN 特权（同 tasks 派工先例）；scoped 写面走下方 REST allowlist
+    const wsAdmin = url.pathname.match(
+      /^\/api\/coord\/repos\/([^/]+)\/([^/]+)(\/(?:sprint-items\/upsert|requirements\/[\w-]+\/review))$/,
+    );
+    if (req.method === "POST" && wsAdmin)
+      return handleAdmin(req, env, `${wsAdmin[1]}/${wsAdmin[2]}`, wsAdmin[3]!);
     // WS 实时流 + 一次性 ticket（F09）：逻辑全在 src/stream.ts，这里只做路由
     const stream = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)\/(stream|stream-ticket)$/);
     if (stream)
       return handleStreamRoute(req, env, `${stream[1]}/${stream[2]}`, stream[3] as "stream" | "stream-ticket", url);
+    // CoordBrain 影子决策只读面（R1，p30-F10）：转发目标是 CoordBrain DO，必须
+    // 在通用 /api/coord/repos/ 转发（handleRest，目标固定 RepoHub）之前拦截。
+    const shadow = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)\/shadow-decisions$/);
+    if (shadow) return handleShadowDecisions(req, env, `${shadow[1]}/${shadow[2]}`, url);
+    const shadowCycle = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)\/shadow-cycle-status$/);
+    if (shadowCycle) return handleShadowCycleStatus(req, env, `${shadowCycle[1]}/${shadowCycle[2]}`);
+    // 意图消息面（p30/F09）：POST 按 type 分层鉴权（decide=admin，其余=scoped），
+    // GET 聚合读；逻辑见 handleIntents 顶部注释。放在通用 REST 之前独立路由。
+    const intents = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)(\/intents)$/);
+    if (intents) return handleIntents(req, env, `${intents[1]}/${intents[2]}`, url);
     if (url.pathname.startsWith("/api/coord/repos/")) return handleRest(req, env, url);
+    // 平台目录面（p30/F01）：逻辑全在 src/directory.ts，这里只做路由
+    if (url.pathname.startsWith("/api/coord/directory/")) return handleDirectory(req, env, url);
+    // 运维便捷面：默认仓（PROJECTION_REPOS 首项）的影子决策，免拼仓名
+    // （feature_list.json F10 verification 的字面路径）。鉴权同上，只读。
+    if (req.method === "GET" && url.pathname === "/api/coord/brain/shadow") {
+      const repo = (env.PROJECTION_REPOS ?? "boardx/boardx-dev-template").split(",")[0]!.trim();
+      return handleShadowDecisions(req, env, repo, url);
+    }
+    // 项目接入向导面（p30/F05，/onboard 接真）：逻辑全在 src/onboard.ts，这里只做路由
+    if (url.pathname.startsWith("/api/coord/onboard/")) return handleOnboard(req, env, url);
     // MCP 接入面（F07）：逻辑全在 src/mcp.ts，这里只做路由（降低与并行改动的冲突面）
     const mcp = url.pathname.match(/^\/api\/coord\/mcp\/([^/]+)\/([^/]+)$/);
     if (mcp) return handleMcp(req, env, mcp[1]!, mcp[2]!);
@@ -148,12 +263,17 @@ export default {
   },
 
   // 反向投影 cron（F06）：每 tick 逐仓 事件→引擎→GitHub→游标。编排在 projection.ts。
+  // + CoordBrain 影子 tick（R1，p30-F10）：同一 cron 顺带跑五类机械 SOP 规则的
+  // 只读判定，结果写本仓 CoordBrain 的 shadow_events（零外部写 API，见 brain.ts）。
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(runProjectionTick(env));
+    ctx.waitUntil(runShadowTick(env));
   },
 
   // Queues 消费者：逐条转发对应仓库的 DO 幂等入口。DO 侧按 delivery GUID 去重，
   // 因此 Queues 的 at-least-once 重投递不会产生重复镜像事件。
+  // 毒消息（持续非 ok/非 422）重试 max_retries 次后进 coord-webhook-dlq（#712，
+  // wrangler.toml dead_letter_queue）。DLQ 处置约定：人工重放，暂无自动消费者。
   async queue(batch: MessageBatch<QueuedWebhook>, env: Env): Promise<void> {
     for (const msg of batch.messages) {
       const res = await repoStub(env, msg.body.repo).fetch("https://repohub/webhook/ingest", {

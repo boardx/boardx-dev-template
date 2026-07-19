@@ -1,10 +1,18 @@
 "use client";
-// p30 UI 先行共享件：三色身份 chip、mock 加载/空态演示开关、页头。
-// ⚠️ 仅服务 p30 原型页（/me、/me/agents、/p/:slug/people），mock 由 lib/mock/p30.ts 供给。
+// p30 共享件：三色身份 chip、mock 加载/空态演示开关、页头。
+// TRI_COLOR/IdentityChip 是纯展示 token（非数据），p30/F08 起真实数据页面
+// （me-workbench.tsx）也依赖它们——本文件本身不含 mock 数据，可被真实路径 import；
+// 真正的 mock 数据集中在 lib/mock/p30.ts（该文件头注禁止真实路径 import）。
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { TRI_COLOR } from "@/lib/mock/p30";
+
+/** 三色体系（N6，全站一致）：👤 人类 = tag-blue；🤖 agent = tag-purple；项目 = tag-green。 */
+export const TRI_COLOR = {
+  human: "bg-tag-blue text-foreground",
+  agent: "bg-tag-purple text-foreground",
+  project: "bg-tag-green text-foreground",
+} as const;
 
 /** 三色体系 chip（N6）：👤 tag-blue / 🤖 tag-purple / 项目 tag-green。 */
 export function IdentityChip({ kind, children, className }: { kind: keyof typeof TRI_COLOR; children: ReactNode; className?: string }) {

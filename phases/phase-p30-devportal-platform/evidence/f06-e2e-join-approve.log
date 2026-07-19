@@ -1,0 +1,14 @@
+
+Running 9 tests using 2 workers
+
+  ✓  1 p30/auth-gray.spec.ts:24:5 › 公开层：未登录访问 /explore → 200 且目录可见（零鉴权零身份读取） (590ms)
+  ✓  3 p30/auth-gray.spec.ts:30:5 › 个人层：未登录访问 /me → 302 到 OAuth 登录（保留 return_to）或 401 (682ms)
+  ✓  4 p30/auth-gray.spec.ts:40:5 › 工作区：未登录访问 /p/boardx/settings 同样被挡（302/401） (5ms)
+  ✓  2 p30/join-approve.spec.ts:26:7 › P2 join 向导（UC-04） › 未登录：join-cta 打开向导，step1 显示真实 GitHub 登录链接（非 mock 按钮） (1.5s)
+  ✓  5 p30/auth-gray.spec.ts:45:5 › mock 会话：注入签名 session cookie → /me 200；登出 → /explore 仍 200 (1.1s)
+  ✓  6 p30/join-approve.spec.ts:42:7 › P2 join 向导（UC-04） › 已登录 + 目录未配置：如实显示「已登录」与「目录服务未接入」，不假装能提交 (997ms)
+  ✓  7 p30/join-approve.spec.ts:69:7 › P2 join 向导（UC-04） › 表单校验：模块未选 / 自介太短 → 行内错误提示，不允许提交 (393ms)
+  ✓  8 p30/join-approve.spec.ts:87:7 › W6 审批队列（owner 视角） › 未登录访问治理台被中间件挡（302/401，工作区要求会话） (27ms)
+  ✓  9 p30/join-approve.spec.ts:92:7 › W6 审批队列（owner 视角） › 已登录 + 目录未配置：审批队列如实报「未接入」，不展示假数据 (1.9s)
+
+  9 passed (7.9s)

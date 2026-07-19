@@ -9,8 +9,13 @@
 >
 > **写到什么程度算够** → 对照 `.harness/rubrics/ready-for-dev.md`（终点线是它，不是字数）。
 >
+> **人类拍板 2026-07-19**：每个 feature 必须能追溯到本文件夹里的一个 story 章节
+> （`feature_list.json` 的 `spec_ref` 字段，格式 `<文件名>.md#R<n>`）。没有可追溯
+> story 的 feature 不能被 `claim`、不能被 `verify` 门控为 passing；has_ui 阶段
+> 若没有对应 requirements，即便 UI signoff 已确认也不能开 sprint（见 `lib/ui-signoff.ts`）。
+>
 > 需求多时按领域拆成多份 `*.md`；**拆分后本文件保留为索引**：列出各文件与建议
-> 阅读顺序。章节 ID（R1…Rn）在每份文件内独立编号，feature 的 `spec_ref` 用
+> 阅读顺序。章节 ID（R1…Rn）在每份文件内独立编号，`spec_ref` 用
 > `<文件名>#R3` 形式引用，标题可改、ID 不改。
 
 ## R1 背景 / 为什么做
@@ -29,7 +34,8 @@
 ## R4 界面线索（has_ui 阶段必填，纯后端阶段删除本节）
 - 这块需求有界面吗？涉及哪些页面/入口？
 - 线框/参考/竞品截图（有就贴路径或链接；没有写"待 UI 先行阶段产出"）
-- 提醒：has_ui 阶段的 feature 清单要等真实 UI 经人类确认（ui-signoff）后才定稿。
+- 提醒：has_ui 阶段的 feature 清单要等真实 UI 经人类确认（ui-signoff）后才定稿，
+  且 ui-signoff 现在也要求本 requirements 文件夹有真实内容（不能是裸模板）。
 
 ## R5 非功能约束（没有特殊要求就写「无」，不许留空——留空 = agent 自选默认值）
 - 性能/规模预期：

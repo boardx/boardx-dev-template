@@ -25,11 +25,36 @@ binding = "WEBHOOK_QUEUE"
 queue = "coord-webhook-events"
 max_batch_size = 25
 max_retries = 5
+# DLQ（#712）：持续失败（非 ok、非 422）的消息 5 次重试后落入死信队列，
+# 不再静默丢弃。处置约定：人工重放（wrangler queues 查看 + 重发），暂无
+# 自动消费者——镜像可由后续 webhook 自愈，DLQ 只是可观测落点。
+# 队列由 CD 的 ensure-queue 步骤幂等创建（deploy-coord-gateway.yml）。
+dead_letter_queue = "coord-webhook-dlq"
 
 [[durable_objects.bindings]]
 name = "REPOHUB"
 class_name = "RepoHub"
 
+# 平台目录单例（p30/F01）：与按仓分片的 RepoHub 互补的平台级 DO
+[[durable_objects.bindings]]
+name = "DIRECTORY"
+class_name = "PlatformDirectory"
+
+# CoordBrain（R1 影子模式，p30-F10）：每仓一个，与 RepoHub 同 worker。只读观察 +
+# 记录 coord.shadow.* 决策事件，零写 API（brain.ts 头注有全代码路径审计说明）。
+[[durable_objects.bindings]]
+name = "COORDBRAIN"
+class_name = "CoordBrain"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["RepoHub"]
+
+# 新 class 用新 tag 追加（别改旧 tag——migrations 是只增历史）
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["PlatformDirectory"]
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["CoordBrain"]

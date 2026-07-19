@@ -19,7 +19,11 @@ evidence 文件被 gitignore 挡在仓库外导致"指向空气的引用"、feat
 中被手改绕过 verify 门控、双 coordinator 并行产出冲突 review 结论——这类教训写进 ADR
 的背景段（事故即背景），规则本身进决策段，未来质疑规则时可直接回溯事故现场。
 
-> 模板见 [adr.template.md](.harness/templates/adr.template.md)。本 skill 讲怎么写得有用。
+> **起号用 `pnpm harness new-adr --title "<标题>" [--layer methodology|project]`**，
+> 不要手翻 README.md 数下一个号再手写文件——ADR-018 真实撞过号（两个在飞分支各自
+> 读到同一句"新 ADR 从 X 起"的提示，直到合并才发现冲突）。new-adr 原子取号 +
+> scaffold + 索引登记一步做完，模板本体见 [adr.template.md](.harness/templates/adr.template.md)。
+> 本 skill 讲怎么写得有用。
 
 ---
 

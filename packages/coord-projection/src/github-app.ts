@@ -10,8 +10,19 @@ export interface GitHubAppAuthOptions {
   now?: () => number; // 注入时钟：过期缓存可测试
 }
 
+export interface GitHubAppInstallation {
+  id: number;
+  account: { login: string; type: string } | null;
+  permissions: Record<string, string>;
+}
+
 export interface GitHubAppAuth {
   installationToken(owner: string, repo: string): Promise<string>;
+  // p30/F05：按 installation id 直接换 token（安装流场景——回调只带 installation_id，
+  // 尚无 owner/repo 上下文；与 installationToken 共用同一 JWT/缓存机制）。
+  installationTokenById(installationId: number): Promise<string>;
+  // 安装回执（installation # + 账户 + 权限清单）：JWT 鉴权读，非 installation token。
+  getInstallation(installationId: number): Promise<GitHubAppInstallation>;
 }
 
 const enc = new TextEncoder();
@@ -63,6 +74,25 @@ export function createGitHubAppAuth(opts: GitHubAppAuthOptions): GitHubAppAuth {
   const installationIds = new Map<string, number>();
   const tokens = new Map<string, CachedToken>();
 
+  async function freshJwt(): Promise<string> {
+    keyPromise ??= importPkcs8(opts.privateKey);
+    return appJwt(opts.appId, await keyPromise, now());
+  }
+
+  async function tokenForInstallationId(cacheKey: string, instId: number): Promise<string> {
+    const cached = tokens.get(cacheKey);
+    if (cached && cached.expiresAtMs - EXPIRY_MARGIN_MS > now()) return cached.token;
+    const jwt = await freshJwt();
+    const tok = await ghJson(
+      `${apiBase}/app/installations/${instId}/access_tokens`, { method: "POST" }, jwt,
+    );
+    if (typeof tok["token"] !== "string") throw new Error("github_token_missing");
+    const expiresAtMs =
+      typeof tok["expires_at"] === "string" ? Date.parse(tok["expires_at"]) : now() + 55 * 60 * 1000;
+    tokens.set(cacheKey, { token: tok["token"], expiresAtMs });
+    return tok["token"];
+  }
+
   async function ghJson(url: string, init: RequestInit, jwt: string): Promise<Record<string, unknown>> {
     const res = await fetchImpl(url, {
       ...init,
@@ -83,9 +113,7 @@ export function createGitHubAppAuth(opts: GitHubAppAuthOptions): GitHubAppAuth {
       const cached = tokens.get(cacheKey);
       if (cached && cached.expiresAtMs - EXPIRY_MARGIN_MS > now()) return cached.token;
 
-      keyPromise ??= importPkcs8(opts.privateKey);
-      const jwt = await appJwt(opts.appId, await keyPromise, now());
-
+      const jwt = await freshJwt();
       let instId = installationIds.get(cacheKey);
       if (instId === undefined) {
         const inst = await ghJson(`${apiBase}/repos/${owner}/${repo}/installation`, {}, jwt);
@@ -93,15 +121,28 @@ export function createGitHubAppAuth(opts: GitHubAppAuthOptions): GitHubAppAuth {
         instId = inst["id"];
         installationIds.set(cacheKey, instId);
       }
+      return tokenForInstallationId(cacheKey, instId);
+    },
 
-      const tok = await ghJson(
-        `${apiBase}/app/installations/${instId}/access_tokens`, { method: "POST" }, jwt,
-      );
-      if (typeof tok["token"] !== "string") throw new Error("github_token_missing");
-      const expiresAtMs =
-        typeof tok["expires_at"] === "string" ? Date.parse(tok["expires_at"]) : now() + 55 * 60 * 1000;
-      tokens.set(cacheKey, { token: tok["token"], expiresAtMs });
-      return tok["token"];
+    // p30/F05：安装流回调只带 installation_id（无 owner/repo）——直接换 token。
+    async installationTokenById(installationId: number): Promise<string> {
+      return tokenForInstallationId(`inst:${installationId}`, installationId);
+    },
+
+    // 安装回执：installation # + 账户 + 权限清单（JWT 鉴权读，非 installation token）。
+    async getInstallation(installationId: number): Promise<GitHubAppInstallation> {
+      const jwt = await freshJwt();
+      const inst = await ghJson(`${apiBase}/app/installations/${installationId}`, {}, jwt);
+      const account = inst["account"] as Record<string, unknown> | undefined;
+      const permissions = inst["permissions"] as Record<string, string> | undefined;
+      return {
+        id: installationId,
+        account:
+          account && typeof account["login"] === "string"
+            ? { login: account["login"] as string, type: typeof account["type"] === "string" ? (account["type"] as string) : "User" }
+            : null,
+        permissions: permissions ?? {},
+      };
     },
   };
 }

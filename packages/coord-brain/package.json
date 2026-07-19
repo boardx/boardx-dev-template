@@ -1,0 +1,20 @@
+{
+  "name": "@repo/coord-brain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CoordBrain 五类机械 SOP 规则的纯函数实现（R1 影子模式，p30-F10）：全绿可合并 / ready-for-dev 派工 / PR 超时催办 / stale 租约回收 / andon 冻结。零 IO，输入=状态快照，输出=决策结构体。",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "echo 'lint: ok'"
+  },
+  "devDependencies": {
+    "typescript": "*",
+    "vitest": "*",
+    "@types/node": "*"
+  }
+}

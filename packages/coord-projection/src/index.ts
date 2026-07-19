@@ -4,9 +4,15 @@ export {
   project,
   type ProjectionEvent,
   type OpenPr,
+  type ActiveLease,
   type AndonState,
   type GithubCall,
   type ProjectionInput,
 } from "./engine";
-export { createGitHubAppAuth, type GitHubAppAuth, type GitHubAppAuthOptions } from "./github-app";
+export {
+  createGitHubAppAuth,
+  type GitHubAppAuth,
+  type GitHubAppAuthOptions,
+  type GitHubAppInstallation,
+} from "./github-app";
 export { applyCalls, type ApplyOptions, type ApplyResult } from "./apply";

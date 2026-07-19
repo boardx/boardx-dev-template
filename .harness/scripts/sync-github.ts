@@ -8,6 +8,7 @@ import { parse } from "yaml";
 import { HARNESS_DIR, findPhaseDir } from "./lib/paths";
 import { loadRoadmap } from "./lib/roadmap";
 import { loadFeatureList, featuresForSprint } from "./lib/features";
+import { resolveSpecRef } from "./lib/spec-ref";
 import { sh } from "./lib/sh";
 import { req } from "./lib/args";
 import { log } from "./lib/log";
@@ -26,7 +27,7 @@ interface SyncCfg {
   status_actions: Record<string, StatusActions>;
 }
 
-interface ProjectedIssue {
+export interface ProjectedIssue {
   number: number;
   title: string;
   body: string;
@@ -40,8 +41,34 @@ function loadCfg(): SyncCfg {
   return raw;
 }
 
-function projectionMarker(phaseId: string, featureId: string): string {
+export function projectionMarker(phaseId: string, featureId: string): string {
   return `<!-- ${PROJECTION_MARKER_PREFIX} ${phaseId}/${featureId} -->`;
+}
+
+/** issue body 是否带本 feature 的投影 marker——sync 只允许动带 marker 的 issue（#713）。 */
+export function isProjectedBody(body: string, phaseId: string, featureId: string): boolean {
+  return body.includes(projectionMarker(phaseId, featureId));
+}
+
+/** 把同标题的 issue 分成「真投影」与「标题碰撞的非 sync issue」。
+ *  marker 判定用 **GitHub 上的现存 body**（不是我们即将写入的 body）——
+ *  #713 的根因就是 edit 后用新 body（必带 marker）回填判定，把守卫击穿。
+ *  无 marker 的 issue 一律归入 collisions，sync 对它们不 edit / 不 close / 不加 label（fail-safe）。 */
+export function partitionTitleMatches(
+  matches: ProjectedIssue[],
+  phaseId: string,
+  featureId: string,
+): { projection: ProjectedIssue | null; collisions: ProjectedIssue[] } {
+  const projection = matches.find((i) => isProjectedBody(i.body, phaseId, featureId)) ?? null;
+  const collisions = matches.filter((i) => !isProjectedBody(i.body, phaseId, featureId));
+  return { projection, collisions };
+}
+
+/** close 分支的纯决策（可单测）：无投影不关、已关不重关、绝不 reopen（#526/#713）。 */
+export function decideClose(issue: ProjectedIssue | null): "skip-missing" | "skip-closed" | "close" {
+  if (issue === null) return "skip-missing";
+  if (issue.state.toLowerCase() === "closed") return "skip-closed";
+  return "close";
 }
 
 /** 把同阶段 "F0x" / 跨阶段 "pN:F0x" 依赖渲染为带当前状态的可读行。
@@ -79,6 +106,16 @@ export function buildIssueBody(
   const phaseDir = basename(findPhaseDir(phaseId));
   const blob = (p: string) => `https://github.com/${repo}/blob/main/${p}`;
   const evidencePath = `phases/${phaseDir}/sprints/sprint-${sprintId}/evidence/${f.id}.verify.log`;
+
+  // Story：把闭环延伸到 GitHub（人类拍板 2026-07-19）。GitHub 渲染的 markdown 标题
+  // 锚点是有损派生的（strip 标点/转小写/CJK 处理不稳），不可靠指哪打哪，所以链接到
+  // 文件本身、章节 ID 用文字标出，而不是拼一个 #anchor 赌它命中。
+  const storyLine = (() => {
+    const r = resolveSpecRef(phaseId, f.spec_ref);
+    if (!r.ok) return `⚠ 缺少可追溯的 story（${r.reason}）——历史存量，新 feature 已被 claim/verify 强制要求`;
+    const [file, section] = f.spec_ref!.split("#");
+    return `[requirements/${file}](${blob(`phases/${phaseDir}/requirements/${file}`)}) — 章节 \`${section}\``;
+  })();
   const parentSection = trackingIssue == null
     ? []
     : [
@@ -97,6 +134,10 @@ export function buildIssueBody(
     `## 交付契约（user_visible_behavior）`,
     ``,
     f.user_visible_behavior,
+    ``,
+    `## Story`,
+    ``,
+    storyLine,
     ``,
     `## 验证（完成的唯一标准：每条命令退出码 0）`,
     ``,
@@ -145,30 +186,28 @@ export function buildIssueBody(
   ].join("\n");
 }
 
-/** 通过 title 搜索 issue（apply 模式下执行；dry-run 只打印意图）。
- *  返回完整投影字段（number/title/body/state）：body 供 marker 校验（避免误关非 sync issue），
- *  state 供 close 幂等判断（已 CLOSED 不重复关，也绝不重开——#526）。 */
-function findIssueByTitle(repo: string, title: string, apply: boolean): ProjectedIssue | null {
-  if (!apply) return null; // dry-run 不实际查询
+/** 通过 title 搜索**全部**精确同名 issue（apply 模式下执行；dry-run 返回空）。
+ *  返回完整投影字段（number/title/body/state）：body 供 marker 校验（避免误动非 sync issue），
+ *  state 供 close 幂等判断（已 CLOSED 不重复关，也绝不重开——#526）。
+ *  返回数组而非首个匹配：标题碰撞时首个匹配可能是人工 issue，marker 判定必须在全量上做（#713）。 */
+function findIssuesByTitle(repo: string, title: string, apply: boolean): ProjectedIssue[] {
+  if (!apply) return []; // dry-run 不实际查询
   // --state all：含已关闭 issue，否则幂等检查会漏掉 closed issue 而重复创建
   const r = sh(
     `gh issue list --repo ${JSON.stringify(repo)} --state all --search ${JSON.stringify(title)} --json number,title,body,state --limit 10`
   );
-  if (r.code !== 0) return null;
+  if (r.code !== 0) return [];
   try {
     const items = JSON.parse(r.stdout) as ProjectedIssue[];
-    const match = items.find((i) => i.title === title);
-    return match ?? null;
+    return items.filter((i) => i.title === title);
   } catch {
-    return null;
+    return [];
   }
 }
 
 /** 通过 title + body marker 搜索投影 issue（close 前使用，避免误关非 sync issue）。 */
 function findProjectedIssue(repo: string, title: string, phaseId: string, featureId: string, apply: boolean): ProjectedIssue | null {
-  const issue = findIssueByTitle(repo, title, apply);
-  if (!issue) return null;
-  return issue.body.includes(projectionMarker(phaseId, featureId)) ? issue : null;
+  return partitionTitleMatches(findIssuesByTitle(repo, title, apply), phaseId, featureId).projection;
 }
 
 export function syncGithub(args: Args): void {
@@ -260,17 +299,24 @@ export function syncGithub(args: Args): void {
 
       // 幂等 + 收敛：不存在则创建；已存在则更新 body（文件是权威，投影必须跟着文件走——
       // 否则改了模版/notes/verification，存量 issue 永远停在旧信息上）。
-      const existing = findIssueByTitle(cfg.repo, title, apply);
-      // close 用的投影 issue：edit 后 body 已带 marker（我们刚写入）；create 分支下方回填。
-      let issueForClose: ProjectedIssue | null = existing?.body.includes(projectionMarker(phaseId, f.id))
-        ? existing
-        : null;
+      // #713：所有会 edit/close 的路径统一先验 marker（用 GitHub 上的现存 body 判定），
+      // 无 marker 的同名 issue 是标题碰撞的人工 issue——一律不动，也不创建同名新 issue（fail-safe）。
+      const matches = findIssuesByTitle(cfg.repo, title, apply);
+      const { projection: existing, collisions } = partitionTitleMatches(matches, phaseId, f.id);
+      for (const c of collisions) {
+        log.warn(
+          `Issue #${c.number} 与投影标题精确碰撞但 body 无 marker ${projectionMarker(phaseId, f.id)}` +
+            `——按非 sync issue 处理，不 edit / 不 close。若它是 legacy 投影 issue，请人工在 body 补 marker 后重跑 sync。`
+        );
+      }
+      let issueForClose: ProjectedIssue | null = null;
       if (apply && existing !== null) {
         run(
           `gh issue edit --repo ${cfg.repo} ${existing.number} --body-file ${JSON.stringify(bodyFile)}`,
           `更新 Issue #${existing.number} body: ${title}`
         );
-        // edit 已把带 marker 的 body 写回，close 阶段据此放行。
+        // existing 在 edit 前就已验过 marker（partitionTitleMatches），
+        // 这里只是把最新 body 带上供 close 阶段复用，不改变 marker 判定结论（#713）。
         issueForClose = { ...existing, body };
         // #526：存量 issue 的 label 也要 reconcile——此前 edit 只更新 body，状态 label
         // 永远停在创建时刻（p23 的 #506-511 就是这样漏掉 status:merged 的）。
@@ -292,6 +338,10 @@ export function syncGithub(args: Args): void {
             `label reconcile #${existing.number} → [${f.status}]`
           );
         }
+      } else if (apply && collisions.length > 0) {
+        // 有同名人工 issue 且无真投影：不创建同名新 issue（避免撞名双胞胎让人混淆），
+        // 也不动人工 issue。该 feature 本轮不投影，靠上面的 warn 提示人工处置（#713）。
+        log.warn(`跳过创建 "${title}"：存在同名非 sync issue（见上方 warn），本轮不投影该 feature。`);
       } else {
         const createCmd =
           `gh issue create --repo ${cfg.repo} --title ${JSON.stringify(title)} ` +
@@ -327,15 +377,16 @@ export function syncGithub(args: Args): void {
         // 只关带 marker 的投影 issue（避免误关非 sync issue，#653）；
         // 幂等 + 不重开（#526）。
         const issue = issueForClose ?? findProjectedIssue(cfg.repo, title, phaseId, f.id, apply);
+        const closeAction = decideClose(issue);
         if (!apply) {
           // dry-run 时打印意图（无法预知 issue number）
           run(
             `gh issue close --repo ${cfg.repo} <issue-number-for: ${JSON.stringify(title)}>`,
             `关闭已 passing 的 Issue: ${title}`
           );
-        } else if (issue === null) {
+        } else if (issue === null || closeAction === "skip-missing") {
           log.warn(`找不到带 ${projectionMarker(phaseId, f.id)} 的投影 Issue for "${title}"，跳过关闭`);
-        } else if (issue.state.toLowerCase() === "closed") {
+        } else if (closeAction === "skip-closed") {
           // 幂等：已关的不重复关；反向（issue 被误关但 feature 未 passing）不自动重开（#526）
           log.info(`Issue #${issue.number} 已关闭，跳过重复关闭: ${title}`);
         } else {

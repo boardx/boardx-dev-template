@@ -4,6 +4,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { findPhaseDir } from "./paths";
 import { loadRoadmap } from "./roadmap";
+import { hasRequirementsCoverage } from "./spec-ref";
 
 export const UI_SIGNOFF_FILE = "ui-signoff.md";
 
@@ -33,6 +34,20 @@ export function phaseHasUi(phaseId: string): boolean {
  */
 export function assertUiSignedOff(phaseId: string): void {
   if (!phaseHasUi(phaseId)) return; // 后端/逻辑阶段不受此关卡约束
+
+  // 人类拍板 2026-07-19：signoff 本身不算数——即便有人把 status 手改成 confirmed，
+  // 没有对应的 requirements story 覆盖，这里仍然不放行。UI 先行确认的是"界面对不对"，
+  // 不能替代"这块界面背后有没有一个真实需求"；两个人（人类）+机器（这条检查）都要把关。
+  const coverage = hasRequirementsCoverage(phaseId);
+  if (!coverage.ok) {
+    throw new Error(
+      `Phase ${phaseId} 是 UI 相关阶段，UI signoff 即便已确认也不能通过：缺少对应的 requirements story。\n` +
+        `  原因：${coverage.reason}\n` +
+        `  流程：先在 phases/phase-${phaseId}-*/requirements/ 下用 .harness/templates/requirements.template.md ` +
+        `写清楚这块 UI 背后的需求（R1-R8），再回到 ui-signoff.md 确认。`
+    );
+  }
+
   const status = readUiSignoffStatus(phaseId);
   if (status === "confirmed") return;
   const hint =

@@ -174,5 +174,14 @@ export function isAllowedRestSubpath(method: string, sub: string): boolean {
   if (sub === "/andon") return method === "GET"; // raise/clear 走 COORD_ADMIN_TOKEN 管理面
   if (sub === "/stream" || sub.startsWith("/stream/")) return method === "GET";
   if (sub.startsWith("/realtime/")) return method === "GET";
+  // 工作区分片（p30/F04）：需求提交/推进 + talk append 归 scoped 面
+  // （POST body 的 agent_id 经 bindScopedAgentRequest 强绑定）；
+  // 审核（/requirements/:id/review）与面板写（/sprint-items/upsert）
+  // 是 COORD_ADMIN_TOKEN 管理面（index.ts 先行路由），普通透传一律 404
+  if (sub === "/requirements") return true; // GET 列表 / POST 提交
+  if (/^\/requirements\/[\w-]+$/.test(sub)) return method === "GET";
+  if (/^\/requirements\/[\w-]+\/advance$/.test(sub)) return method === "POST";
+  if (sub === "/talk") return true; // GET 流 / POST append
+  if (sub === "/sprint-items") return method === "GET";
   return false;
 }

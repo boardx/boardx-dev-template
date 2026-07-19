@@ -25,22 +25,25 @@ export async function applyCalls(opts: ApplyOptions): Promise<ApplyResult> {
   let failed = 0;
 
   for (const call of opts.calls) {
-    const [url, body] =
-      call.kind === "commit_status"
-        ? [
-            `${repoBase}/statuses/${call.sha}`,
-            { state: call.state, context: call.context, description: call.description },
-          ]
-        : [
-            `${repoBase}/check-runs`,
-            {
-              name: call.name,
-              head_sha: call.head_sha,
-              status: "completed",
-              conclusion: call.conclusion,
-              output: { title: call.title, summary: call.summary },
-            },
-          ];
+    let url: string;
+    let body: Record<string, unknown>;
+    if (call.kind === "commit_status") {
+      url = `${repoBase}/statuses/${call.sha}`;
+      body = { state: call.state, context: call.context, description: call.description };
+    } else if (call.kind === "check_run") {
+      url = `${repoBase}/check-runs`;
+      body = {
+        name: call.name,
+        head_sha: call.head_sha,
+        status: "completed",
+        conclusion: call.conclusion,
+        output: { title: call.title, summary: call.summary },
+      };
+    } else {
+      // issue_comment（p30/F09 意图消息双写）
+      url = `${repoBase}/issues/${call.issue_number}/comments`;
+      body = { body: call.body };
+    }
     try {
       const res = await fetchImpl(url, {
         method: "POST",

@@ -44,15 +44,25 @@ description: >
 
 ---
 
-## 转换公式：模糊需求 → feature 三元组
+## 转换公式：模糊需求 → feature 四元组
 
-每个 feature 必须同时产出三样东西，缺一不可：
+每个 feature 必须同时产出四样东西，缺一不可（**人类拍板 2026-07-19**：新增
+`spec_ref`，此前是三元组）：
 
-| 三元组 | 问题 | 反面（不可接受） |
+| 四元组 | 问题 | 反面（不可接受） |
 |--------|------|----------------|
+| `spec_ref` | 这个 feature 的 story 出处在哪？ | 空 = claim/verify 直接拒绝（机械门控，见下） |
 | `user_visible_behavior` | 用户/系统做什么操作，能观察到什么结果？ | "支持登录"（不可观察） |
 | `verification`（可执行命令） | 用什么命令能证明上面这句为真？ | "测试通过"（没给命令） |
 | `evidence`（证据落盘位） | 证据写到哪？ | 留空 = 没完成 |
+
+`spec_ref` 格式：`<requirements/ 下的文件名>.md#R<n>`（如 `auth.md#R3`），指向你
+自己刚在 `requirements/*.md` 里用 `requirements.template.md` 的 R1-R8 编号写下的
+那个章节——**这是你本人这一步的产出物，不是转述别处已有的东西**。写 feature 之前
+先确认对应章节已经落在 requirements 文件里，编不出 spec_ref 说明需求还没写够，
+回头先补 R1-R8（尤其 R3 的负路径、R5 的非功能约束，这两处最容易被跳过）。
+机械门控（`.harness/scripts/lib/spec-ref.ts`）：`claim` 认领时、`verify` 门控 passing
+时都会重新解析 spec_ref——文件不存在 / 章节找不到，两处都拒绝，不是只在这一步查一次。
 
 两条附加纪律：
 - **证据可入库（L1）**：`evidence` 路径必须能提交进 git 树（不被根 `.gitignore` 挡住，
@@ -84,10 +94,12 @@ description: >
 "系统要有健康检查功能，要稳定可靠。"
 ```
 
-✅ 转换后（可验证三元组）：
+✅ 转换后（可验证四元组，`spec_ref` 指回 requirements/platform.md 里你先写下的
+「健康检查」章节 R3）：
 ```json
 {
   "id": "F03",
+  "spec_ref": "platform.md#R3",
   "user_visible_behavior": "GET /api/health 返回 HTTP 200，body 为 {\"ok\":true}",
   "verification": [
     "curl -sf localhost:3000/api/health | jq -e '.ok == true'"

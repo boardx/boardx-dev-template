@@ -11,11 +11,12 @@
       "sprint": null,
       "owner": null,
       "capability": "CAP-WEB",
+      "spec_ref": "00-overview.md#R1",
       "verification": [
         "curl -sf http://localhost:3000/api/health | jq -e '.ok == true'"
       ],
       "evidence": "",
-      "notes": "把示例替换成你自己的功能。粒度=一次会话能完成。"
+      "notes": "把示例替换成你自己的功能。粒度=一次会话能完成。spec_ref 必填（2026-07-19 起 claim/verify 门控）：指向 requirements/ 下对应 story 的章节 ID，格式 <文件名>.md#R<n>。"
     }
   ]
 }

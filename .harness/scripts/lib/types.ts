@@ -19,6 +19,9 @@ export interface Feature {
   wave?: number;
   /** 设计参照（prototype 锚点 / mockup 路径 / 已确认 UI 组件路径）；投影进 issue 供实现者定位 */
   design_ref?: string;
+  /** story 出处：`<requirements 文件名>#R<n>`，指向 phases/<phase>/requirements/ 下的具体章节。
+   *  2026-07-19 起新 feature 硬性要求（claim/verify 双重门控）；历史 feature 缺失时 doctor 报 WARN 不报 FAIL。 */
+  spec_ref?: string;
   verification: string[];
   evidence: string;
   notes: string;

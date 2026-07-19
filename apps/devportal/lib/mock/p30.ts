@@ -2,12 +2,10 @@
 // 不得被任何真实数据路径 import）。三个界面（M1 /me、M2 /me/agents、W5 /p/:slug/people）
 // 的全部数据都集中在这里，方便人类核对与后续删除。
 //
-// 三色体系（N6，全站一致）：👤 人类 = tag-blue；🤖 agent = tag-purple；项目 = tag-green。
-export const TRI_COLOR = {
-  human: "bg-tag-blue text-foreground",
-  agent: "bg-tag-purple text-foreground",
-  project: "bg-tag-green text-foreground",
-} as const;
+// TRI_COLOR 是纯展示 token 不是 mock 数据，p30/F08 把它连同 IdentityChip 一起挪去了
+// components/p30/shared.tsx（该文件不含 mock 数据，可被真实路径 import）。这里保留
+// re-export 只为不破坏尚未真实化的批次（M2/W5）里可能存在的旧 import 路径。
+export { TRI_COLOR } from "@/components/p30/shared";
 
 /** 当前登录者（mock）：@usamshen。D6：agent 标识 = @handle/agent-name。 */
 export const MOCK_ME = { handle: "usamshen", name: "Usam Shen" } as const;
@@ -536,3 +534,459 @@ export const MOCK_TOKEN_AUDIT: readonly MockTokenAudit[] = [
   { id: "t3", at: "2026-07-16T11:05:00Z", action: "revoke", agentId: "@usamshen/legacy-syncer", actor: "@usamshen", note: "agent 退役，吊销即时生效" },
   { id: "t4", at: "2026-07-15T09:30:00Z", action: "mint", agentId: "@kaiwei/starter", actor: "@kaiwei", note: "onboarding 第 2 步 enroll" },
 ] as const;
+
+// ================= 批次 3（P1 目录·探索页 + P3 项目接入向导）=================
+// ⚠️ 同头部声明：p30 UI 先行 mock，feature 实现时替换；不得被真实数据路径 import。
+
+// ---------------- P1 /explore 项目目录·探索页（UC-03 目录侧，访客可见，D3） ----------------
+// 公开层：零身份读取、零 Access header 依赖——任何访客看到的都一样。
+
+export type ExploreActivity = "high" | "medium" | "low";
+
+export interface MockExploreProject {
+  slug: string;
+  name: string;
+  tagline: string;
+  /** 语言徽章（来自 GitHub linguist，mock） */
+  languages: readonly string[];
+  /** 活跃度档（由合并火花线自动分档，不可自填） */
+  activity: ExploreActivity;
+  /** 近 12 周合并火花线数据（自动生成自 GitHub） */
+  sparkline: readonly number[];
+  /** 是否开放招募（UC-03） */
+  recruiting: boolean;
+  /** 需要帮助的模块 chips */
+  helpModules: readonly string[];
+  /** 👤/🤖 分开计数（UC-03） */
+  humans: number;
+  agents: number;
+}
+
+export const EXPLORE_ACTIVITY_LABEL: Record<ExploreActivity, string> = {
+  high: "高活跃",
+  medium: "中活跃",
+  low: "低活跃",
+};
+
+export const MOCK_EXPLORE_PROJECTS: readonly MockExploreProject[] = [
+  {
+    slug: "boardx",
+    name: "BoardX",
+    tagline: "AI 协作白板——人与 agent 车队在同一块板上交付软件",
+    languages: ["TypeScript"],
+    activity: "high",
+    sparkline: [4, 7, 5, 9, 12, 8, 11, 14, 10, 16, 13, 18],
+    recruiting: true,
+    helpModules: ["collab", "survey", "devportal"],
+    humans: 3,
+    agents: 9,
+  },
+  {
+    slug: "acme-crm",
+    name: "Acme CRM",
+    tagline: "中小团队销售流水线——商机、报表与自动跟进",
+    languages: ["TypeScript", "Python"],
+    activity: "medium",
+    sparkline: [3, 5, 4, 6, 2, 5, 7, 4, 6, 3, 5, 4],
+    recruiting: true,
+    helpModules: ["pipeline", "reports"],
+    humans: 2,
+    agents: 5,
+  },
+  {
+    slug: "pixel-forge",
+    name: "Pixel Forge",
+    tagline: "浏览器端 2D 渲染引擎——WebGL 批渲染与素材管线",
+    languages: ["TypeScript", "Go"],
+    activity: "high",
+    sparkline: [8, 11, 9, 13, 15, 12, 14, 17, 13, 16, 19, 21],
+    recruiting: true,
+    helpModules: ["renderer", "assets"],
+    humans: 4,
+    agents: 11,
+  },
+  {
+    slug: "ledgerly",
+    name: "Ledgerly",
+    tagline: "开源复式记账内核——面向 SaaS 的可嵌入账本",
+    languages: ["Python"],
+    activity: "medium",
+    sparkline: [2, 4, 3, 5, 4, 6, 3, 4, 5, 3, 4, 6],
+    recruiting: false,
+    helpModules: [],
+    humans: 2,
+    agents: 3,
+  },
+  {
+    slug: "orbit-docs",
+    name: "Orbit Docs",
+    tagline: "从代码注释生成可交互 API 文档站",
+    languages: ["Rust"],
+    activity: "low",
+    sparkline: [1, 0, 2, 1, 0, 1, 2, 0, 1, 1, 0, 1],
+    recruiting: false,
+    helpModules: [],
+    humans: 1,
+    agents: 2,
+  },
+] as const;
+
+/** 目录筛选项（本地过滤即可） */
+export const EXPLORE_LANGUAGES = ["TypeScript", "Python", "Go", "Rust"] as const;
+
+// ---------------- P3 /onboard 项目接入向导（UC-01，发起人 = repo admin 视角） ----------------
+// 三步：① 安装 GitHub App → ② 选 repo → ③ 自动体检（警告不阻塞）。目标耗时 ≤5 分钟。
+
+/** ① 安装回执（mock）：GitHub App 安装成功后的确认信息 */
+export const MOCK_GH_INSTALL = {
+  installationId: 4821,
+  account: "usamshen",
+  permissions: ["仓库只读镜像", "webhook 事件", "commit status 写入"],
+  installedAt: "2026-07-18T09:12:00Z",
+} as const;
+
+export interface MockOnboardRepo {
+  fullName: string;
+  slug: string;
+  description: string;
+  language: string;
+  /** 发起人是否 GitHub admin（UC-01 前置；非 admin 禁用） */
+  isAdmin: boolean;
+  private: boolean;
+}
+
+export const MOCK_ONBOARD_REPOS: readonly MockOnboardRepo[] = [
+  { fullName: "usamshen/pixel-forge", slug: "pixel-forge", description: "浏览器端 2D 渲染引擎", language: "TypeScript", isAdmin: true, private: false },
+  { fullName: "usamshen/ledgerly", slug: "ledgerly", description: "开源复式记账内核", language: "Python", isAdmin: true, private: false },
+  { fullName: "usamshen/home-lab", slug: "home-lab", description: "个人 homelab 配置（私有）", language: "Shell", isAdmin: true, private: true },
+  { fullName: "acme-inc/crm-core", slug: "crm-core", description: "Acme CRM 主仓（你是 write，非 admin）", language: "TypeScript", isAdmin: false, private: true },
+  { fullName: "oss-guild/orbit-docs", slug: "orbit-docs", description: "API 文档生成器（你是 read，非 admin）", language: "Rust", isAdmin: false, private: false },
+] as const;
+
+/** ③ 自动体检项（UC-01：webhook / 镜像种子 / CODEOWNERS·CONTRIBUTING / 分支保护；警告不阻塞） */
+export interface MockCheckupItem {
+  id: string;
+  label: string;
+  /** 校验结果：ok = ✅；warn = ⚠️ 琥珀（不阻塞） */
+  result: "ok" | "warn";
+  /** 完成后的明细行（ok 的证据 / warn 的说明） */
+  detail: string;
+  /** warn 项的补救指引（「稍后在治理台补」） */
+  remedy?: string;
+  /** mock 动画时长（ms）：逐项实时校验的节奏 */
+  durationMs: number;
+}
+
+export const MOCK_CHECKUP_ITEMS: readonly MockCheckupItem[] = [
+  {
+    id: "webhook",
+    label: "webhook 连通",
+    result: "ok",
+    detail: "PING → 回执 214ms · push / pull_request / issues / status 四类事件已订阅",
+    durationMs: 1400,
+  },
+  {
+    id: "mirror-seed",
+    label: "issues · PR 镜像种子",
+    result: "ok",
+    detail: "已灌入 128 条 issues + 37 条 PR（含 CI·review·mergeable 快照）",
+    durationMs: 2600,
+  },
+  {
+    id: "modules-init",
+    label: "CODEOWNERS · CONTRIBUTING 模块划分初始化",
+    result: "warn",
+    detail: "未找到 CODEOWNERS——模块划分暂以顶层目录代替（renderer/assets/docs）",
+    remedy: "稍后在治理台补：settings → 模块划分，补文件后自动重扫",
+    durationMs: 1800,
+  },
+  {
+    id: "branch-protection",
+    label: "分支保护检查",
+    result: "warn",
+    detail: "main 未开启 required reviews——agent PR 将无人工门禁",
+    remedy: "稍后在治理台补：一键生成推荐保护规则（需 repo admin 在 GitHub 确认）",
+    durationMs: 1200,
+  },
+] as const;
+
+/** 完成横幅（mock）：目标耗时 ≤5 分钟（UC-01） */
+export const MOCK_ONBOARD_DONE = {
+  banner: "项目已成为租户，coord-agent 归属已确立",
+  elapsed: "3m42s",
+  target: "≤5 分钟",
+} as const;
+// ================= 批次 4（P4 公开档案 + P5 Agent 分身页 + UC-17 调度中心）=================
+// ⚠️ 同头部声明：p30 UI 先行 mock，feature 实现时替换；不得被真实数据路径 import。
+
+// ---------------- P4 /u/:handle 工程师公开档案（UC-16，D1） ----------------
+// D1：贡献事实默认公开；聚合指标 opt-in 且区间化；D3：公开层零身份假设（演示开关除外）。
+
+export interface MockProfileProject {
+  slug: string;
+  name: string;
+  role: RosterMember["role"];
+  /** 参与起始（ISO 日期） */
+  since: string;
+  prsMerged: number;
+  modules: readonly string[];
+}
+
+export interface MockMergeEvent {
+  id: string;
+  projectSlug: string;
+  prNumber: number;
+  title: string;
+  mergedAt: string;
+}
+
+/** 聚合指标（D1：opt-in 公开时必须区间化展示，不给精确值） */
+export interface MockRangedMetric {
+  id: string;
+  label: string;
+  /** 区间化展示值，如 "6-12h" */
+  range: string;
+  note: string;
+}
+
+export interface MockPublicProfile {
+  handle: string;
+  name: string;
+  joinedAt: string;
+  trust: RosterMember["trust"];
+  bio: string;
+  /** 贡献事实区（默认公开） */
+  projects: readonly MockProfileProject[];
+  mergeTimeline: readonly MockMergeEvent[];
+  /** 聚合指标区（opt-in 且区间化；optInPublic=false 时整区隐藏） */
+  optInPublic: boolean;
+  rangedMetrics: readonly MockRangedMetric[];
+  /** 名下 agents 缩略行（链到 P5） */
+  agents: readonly { id: string; heartbeat: FleetHeartbeat; doing: string }[];
+}
+
+export const MOCK_PUBLIC_PROFILE: MockPublicProfile = {
+  handle: "usamshen",
+  name: "Usam Shen",
+  joinedAt: "2026-06-02",
+  trust: "Core",
+  bio: "BoardX owner · 带一支 agent 车队做 agentic 开发的实验场",
+  projects: [
+    { slug: "boardx", name: "BoardX", role: "owner", since: "2026-06-02", prsMerged: 214, modules: ["devportal", "harness", "collab"] },
+    { slug: "acme-crm", name: "Acme CRM", role: "maintainer", since: "2026-07-01", prsMerged: 12, modules: ["pipeline"] },
+  ],
+  mergeTimeline: [
+    { id: "mt1", projectSlug: "boardx", prNumber: 747, title: "fix(coord): 清协调层技术债——DLQ/TTL", mergedAt: "2026-07-18T17:03:00Z" },
+    { id: "mt2", projectSlug: "boardx", prNumber: 746, title: "feat(p30/ui): UI 先行第二批——招募页 + 治理台", mergedAt: "2026-07-18T16:29:00Z" },
+    { id: "mt3", projectSlug: "boardx", prNumber: 741, title: "chore(p29): sprint-05 verify——p29 收官", mergedAt: "2026-07-18T15:58:00Z" },
+    { id: "mt4", projectSlug: "boardx", prNumber: 738, title: "feat(p30): devportal-platform kickoff", mergedAt: "2026-07-18T14:32:00Z" },
+    { id: "mt5", projectSlug: "acme-crm", prNumber: 86, title: "fix(pipeline): 商机阶段回退清理提醒", mergedAt: "2026-07-17T11:40:00Z" },
+  ],
+  optInPublic: true,
+  rangedMetrics: [
+    { id: "rm1", label: "flow-time 中位（认领→合并）", range: "6-12h", note: "近 30 天，跨全部参与项目" },
+    { id: "rm2", label: "拍板响应中位", range: "1-4h", note: "决策请求 @我 → 回应" },
+    { id: "rm3", label: "月合并吞吐", range: "40-60 PR", note: "含名下 agent 产出（归因到 owner）" },
+    { id: "rm4", label: "andon 响应", range: "<30min", note: "拉停 → 首次处置动作" },
+  ],
+  agents: [
+    { id: "@usamshen/coord-main", heartbeat: "fresh", doing: "BoardX 派工仲裁中" },
+    { id: "@usamshen/portal-dev-1", heartbeat: "fresh", doing: "p30 UI 先行第四批实现中" },
+    { id: "@usamshen/feature-implementer-b", heartbeat: "stale", doing: "⚠ 心跳丢失 42 分钟" },
+  ],
+};
+
+// ---------------- P5 /a/:handle/:agent Agent 数字分身页（UC-16，D6） ----------------
+// D1：agent 分身页默认全公开——软件资产无隐私权。
+
+export interface MockTwinTreeNode {
+  id: string;
+  /** 是否当前页主体 */
+  self: boolean;
+  doing: string;
+  heartbeat: FleetHeartbeat;
+  subs: readonly MockTwinTreeNode[];
+}
+
+export interface MockTwinEnrollment {
+  projectSlug: string;
+  projectName: string;
+  scope: string;
+  tokenStatus: MockFleetAgent["tokenStatus"];
+  enrolledAt: string;
+}
+
+export type TwinEventKind = "lease" | "evidence" | "andon" | "heartbeat" | "enroll";
+
+export interface MockTwinEvent {
+  id: string;
+  at: string;
+  kind: TwinEventKind;
+  text: string;
+}
+
+export interface MockAgentTwin {
+  /** 完整标识 @handle/agent-name（D6：owner 命名空间唯一，内部主键 ULID 不可变） */
+  id: string;
+  ulid: string;
+  runtime: MockFleetAgent["runtime"];
+  createdAt: string;
+  lifecycle: FleetLifecycle;
+  heartbeat: FleetHeartbeat;
+  heartbeatMin: number;
+  owner: { handle: string; name: string };
+  /** parent 为 null = 顶层 agent；sub 用点号延伸 */
+  parentId: string | null;
+  tree: MockTwinTreeNode;
+  enrollments: readonly MockTwinEnrollment[];
+  perf: { attainmentPct: number; throughputPerWeek: number; anomalies30d: number };
+  events: readonly MockTwinEvent[];
+}
+
+export const MOCK_AGENT_TWIN: MockAgentTwin = {
+  id: "@usamshen/portal-dev-1",
+  ulid: "01J2ZK8Q4WPTX0N9V3E5H7MRSD",
+  runtime: "Claude Code",
+  createdAt: "2026-07-02",
+  lifecycle: "active",
+  heartbeat: "fresh",
+  heartbeatMin: 2,
+  owner: { handle: "usamshen", name: "Usam Shen" },
+  parentId: null,
+  tree: {
+    id: "@usamshen/portal-dev-1",
+    self: true,
+    doing: "p30 UI 先行第四批实现中（持 F31 租约）",
+    heartbeat: "fresh",
+    subs: [
+      { id: "@usamshen/portal-dev-1.reviewer", self: false, doing: "PR 自审：typecheck + 对照 signoff 清单", heartbeat: "fresh", subs: [] },
+      {
+        id: "@usamshen/portal-dev-1.e2e",
+        self: false,
+        doing: "跑 devportal 冒烟基线（空闲）",
+        heartbeat: "aging",
+        subs: [{ id: "@usamshen/portal-dev-1.e2e.shooter", self: false, doing: "Playwright 截图流水线", heartbeat: "aging", subs: [] }],
+      },
+    ],
+  },
+  enrollments: [
+    { projectSlug: "boardx", projectName: "BoardX", scope: "coord.read work.claim evidence.write", tokenStatus: "健康", enrolledAt: "2026-07-02" },
+    { projectSlug: "acme-crm", projectName: "Acme CRM", scope: "coord.read", tokenStatus: "3 天后到期", enrolledAt: "2026-07-10" },
+  ],
+  perf: { attainmentPct: 92, throughputPerWeek: 11, anomalies30d: 1 },
+  events: [
+    { id: "te1", at: "2026-07-19T08:41:00Z", kind: "lease", text: "取得 F31 实现租约（boardx，TTL 2h，自动续约中）" },
+    { id: "te2", at: "2026-07-19T08:12:00Z", kind: "evidence", text: "F30 证据落盘：typecheck + build 输出 + 5 张截图" },
+    { id: "te3", at: "2026-07-19T07:55:00Z", kind: "heartbeat", text: "心跳恢复（此前渐旧 11 分钟：本地网络抖动）" },
+    { id: "te4", at: "2026-07-18T22:30:00Z", kind: "andon", text: "遵从 andon：boardx merge 队列拉停期间挂起合并请求" },
+    { id: "te5", at: "2026-07-10T09:00:00Z", kind: "enroll", text: "enroll 进 Acme CRM（scope: coord.read，只读观察）" },
+  ],
+};
+
+export const TWIN_EVENT_ICON: Record<TwinEventKind, string> = {
+  lease: "🔒",
+  evidence: "📎",
+  andon: "🅰️",
+  heartbeat: "💓",
+  enroll: "🪪",
+};
+
+// ---------------- /platform/dispatcher 调度中心（UC-17，平台 admin 视角） ----------------
+// @platform/dispatcher：只做跨项目巡检 + 事实定位并路由给各项目 coord-agent，
+// 永不直接改项目内状态——所以「已采取动作」全部是起草/通知类。
+
+export interface MockDispatcherLoop {
+  id: string;
+  /** 周期展示值："1m" | "5m" | "15m" | "1h" | "24h" */
+  cadence: string;
+  name: string;
+  desc: string;
+  lastRunMinAgo: number;
+  /** 下次运行倒计时（秒，mock 静态起点） */
+  nextInSec: number;
+  /** 上一轮扫过的对象数 */
+  scanned: number;
+  /** 上一轮产出的定位问题数 */
+  found: number;
+}
+
+export const MOCK_DISPATCHER_LOOPS: readonly MockDispatcherLoop[] = [
+  { id: "loop-1m", cadence: "1m", name: "心跳 & 租约扫描", desc: "全平台 agent 心跳新鲜度 + 活跃租约 TTL 巡检", lastRunMinAgo: 0, nextInSec: 34, scanned: 23, found: 1 },
+  { id: "loop-5m", cadence: "5m", name: "PR · CI 巡检", desc: "各项目 PR 队列等待时长 + CI 红灯聚合", lastRunMinAgo: 2, nextInSec: 154, scanned: 11, found: 2 },
+  { id: "loop-15m", cadence: "15m", name: "stale 租约处置", desc: "心跳丢失的持租约 agent → 起草回收请求进待拍板", lastRunMinAgo: 9, nextInSec: 340, scanned: 6, found: 1 },
+  { id: "loop-1h", cadence: "1h", name: "SLA 审计 + 性能快照", desc: "审批/拍板 SLA 兑现核对；固化 👤/🤖 性能快照", lastRunMinAgo: 24, nextInSec: 2145, scanned: 4, found: 0 },
+  { id: "loop-24h", cadence: "24h", name: "C-cycle 报告", desc: "跨项目日报：吞吐/堵点/异常趋势，投递给各 coord-agent 与 owner", lastRunMinAgo: 502, nextInSec: 34_600, scanned: 2, found: 0 },
+] as const;
+
+export type DispatcherSeverity = "critical" | "warning" | "info";
+
+export interface MockDispatcherIssue {
+  id: string;
+  severity: DispatcherSeverity;
+  projectSlug: string;
+  loopId: string;
+  text: string;
+  /** 已采取动作——只能是起草/通知/路由类（dispatcher 永不直接改项目内状态） */
+  action: string;
+  atMinAgo: number;
+  routedTo: string;
+}
+
+export const MOCK_DISPATCHER_ISSUES: readonly MockDispatcherIssue[] = [
+  {
+    id: "di1",
+    severity: "critical",
+    projectSlug: "boardx",
+    loopId: "loop-1m",
+    text: "@usamshen/feature-implementer-b 心跳丢失 42 分钟，仍持有 F17 实现租约",
+    action: "已起草租约回收请求 → 送 @usamshen/coord-main 待拍板队列；已通知 owner @usamshen",
+    atMinAgo: 3,
+    routedTo: "@usamshen/coord-main",
+  },
+  {
+    id: "di2",
+    severity: "critical",
+    projectSlug: "acme-crm",
+    loopId: "loop-5m",
+    text: "andon 拉停已持续 37 分钟且无处置动作，2 个全绿 PR 被阻塞",
+    action: "已向 @lichen/coord-crm 发送处置提醒；同步在 owner 待拍板卡追加「为什么需要我」摘要",
+    atMinAgo: 6,
+    routedTo: "@lichen/coord-crm",
+  },
+  {
+    id: "di3",
+    severity: "warning",
+    projectSlug: "boardx",
+    loopId: "loop-5m",
+    text: "PR #741 等 review 已 26h（超项目阈值 24h），reviewer @lichen 未响应",
+    action: "已起草催办评论（草稿）→ 交 @usamshen/coord-main 决定是否发出；未直接评论",
+    atMinAgo: 12,
+    routedTo: "@usamshen/coord-main",
+  },
+  {
+    id: "di4",
+    severity: "warning",
+    projectSlug: "acme-crm",
+    loopId: "loop-15m",
+    text: "@usamshen/crm-migrator scoped token 3 天后到期，无轮换计划",
+    action: "已通知 owner @usamshen（车队管理台深链）；到期前 24h 将升级提醒",
+    atMinAgo: 41,
+    routedTo: "@usamshen",
+  },
+  {
+    id: "di5",
+    severity: "info",
+    projectSlug: "boardx",
+    loopId: "loop-1h",
+    text: "审批 SLA 兑现 11/12（30 天），1 例超时已在治理台留痕",
+    action: "已写入性能快照；无需人工动作",
+    atMinAgo: 24,
+    routedTo: "快照存档",
+  },
+] as const;
+
+export const DISPATCHER_SEVERITY_STYLE: Record<DispatcherSeverity, { label: string; cls: string }> = {
+  critical: { label: "严重", cls: "bg-destructive text-destructive-foreground" },
+  warning: { label: "警示", cls: "bg-tag-yellow text-foreground" },
+  info: { label: "记录", cls: "bg-muted text-muted-foreground" },
+};
