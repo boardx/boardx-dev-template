@@ -10,6 +10,7 @@ import { toIngestBody, type QueuedWebhook } from "./mapping";
 import { runProjectionTick } from "./projection";
 import { CoordBrain, runShadowTick } from "./brain";
 import { handleMcp } from "./mcp";
+import { handleInstallationWebhook, handleOnboard } from "./onboard";
 import {
   authorizeRepoAccess,
   bindScopedAgentRequest,
@@ -90,6 +91,15 @@ async function handleWebhook(req: Request, env: Env): Promise<Response> {
   if (!deliveryId || !event) return json(400, { error: "missing_webhook_headers" });
 
   const payload = JSON.parse(body) as Record<string, unknown>;
+
+  // 安装流（p30/F05，UC-01）：installation(created)/installation_repositories(added) 没有
+  // 顶层 repository 字段（是多仓事件），走独立处理——安装即注册为租户，直调目录 DO，
+  // 不入 WEBHOOK_QUEUE（那条队列是「按仓镜像增量」语义，装机事件不是镜像事件）。
+  if (event === "installation" || event === "installation_repositories") {
+    const result = await handleInstallationWebhook(env, event, payload);
+    return json(202, result);
+  }
+
   const repoFull = ((payload["repository"] ?? {}) as Record<string, unknown>)["full_name"];
   if (typeof repoFull !== "string") return json(400, { error: "missing_repository" });
 
@@ -195,6 +205,8 @@ export default {
       const repo = (env.PROJECTION_REPOS ?? "boardx/boardx-dev-template").split(",")[0]!.trim();
       return handleShadowDecisions(req, env, repo, url);
     }
+    // 项目接入向导面（p30/F05，/onboard 接真）：逻辑全在 src/onboard.ts，这里只做路由
+    if (url.pathname.startsWith("/api/coord/onboard/")) return handleOnboard(req, env, url);
     // MCP 接入面（F07）：逻辑全在 src/mcp.ts，这里只做路由（降低与并行改动的冲突面）
     const mcp = url.pathname.match(/^\/api\/coord\/mcp\/([^/]+)\/([^/]+)$/);
     if (mcp) return handleMcp(req, env, mcp[1]!, mcp[2]!);

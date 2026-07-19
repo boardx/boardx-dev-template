@@ -37,6 +37,16 @@ issue #523/#543；wrangler.toml 头注；apps/devportal/README.md
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-19：p30-F05 /onboard 接真——GitHub App 安装流的 CSRF 防护与 OAuth 登录流
+  同构：安装链接（`https://github.com/apps/<slug>/installations/new?state=<nonce>`）
+  与登录 authorize 一样只需一次性 nonce 签入 HttpOnly cookie，回调核对 query.state
+  与 cookie 解出的 nonce 一致即可，直接复用 `lib/oauth.ts` 的 signState/verifyState
+  （新增 `lib/onboard.ts` 只是包了一层不同的 cookie 名/Path，未重新发明）；GitHub App
+  的「Setup URL」必须指到一个 **Route Handler**（`/api/coord/onboard/callback`）而不是
+  页面本身——RSC 页面组件无法在渲染时清 cookie，回调必须走能返回带 header 的 Response
+  的路由，校验完再 302 到 `/onboard?installation_id=`（同 F02 OAuth callback 模式）。
+  `/onboard` 因为需要发起人真实 GitHub 身份判定 admin 权限，从"批次 3 无身份读取"的
+  原型假设转为 middleware matcher 内的受保护路由（出处：p30-F05 PR）。
 - 2026-07-19：p30-F02 D3 阶段 2 灰度落地——`middleware.ts` 是「谁需要登录」的唯一事实源
   （matcher 只含 /me*、/p/*；公开层四路由零鉴权）；身份读取统一走 `lib/session.ts` 的
   getSessionUser（OAuth session cookie 优先，Access JWT 回退，灰度期双栈）；公开层防回退

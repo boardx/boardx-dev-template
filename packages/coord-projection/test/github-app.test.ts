@@ -96,6 +96,44 @@ describe("GitHub App 认证", () => {
     const auth = createGitHubAppAuth({ appId: "12345", privateKey: privatePem, fetchImpl });
     await expect(auth.installationToken("x", "y")).rejects.toThrow("github_api_404");
   });
+
+  // p30/F05：安装流场景——回调只有 installation_id，没有 owner/repo。
+  it("installationTokenById：跳过仓解析，直接按 id 换 token 且可缓存", async () => {
+    const requests: string[] = [];
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      requests.push(url);
+      if (/\/app\/installations\/4821\/access_tokens$/.test(url))
+        return Response.json({ token: `ghs_${requests.length}`, expires_at: new Date(Date.now() + 3600_000).toISOString() }, { status: 201 });
+      return Response.json({ error: "unexpected" }, { status: 500 });
+    }) as typeof fetch;
+    const auth = createGitHubAppAuth({ appId: "12345", privateKey: privatePem, fetchImpl });
+    const t1 = await auth.installationTokenById(4821);
+    expect(requests).toHaveLength(1); // 无仓解析请求，直接拿 token
+    const t2 = await auth.installationTokenById(4821);
+    expect(t2).toBe(t1);
+    expect(requests).toHaveLength(1); // 命中缓存
+  });
+
+  it("getInstallation：返回 installation # + 账户 + 权限清单（安装回执）", async () => {
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (/\/app\/installations\/4821$/.test(url))
+        return Response.json({
+          id: 4821,
+          account: { login: "usamshen", type: "User" },
+          permissions: { contents: "read", issues: "write", pull_requests: "write" },
+        });
+      return Response.json({ error: "unexpected" }, { status: 500 });
+    }) as typeof fetch;
+    const auth = createGitHubAppAuth({ appId: "12345", privateKey: privatePem, fetchImpl });
+    const inst = await auth.getInstallation(4821);
+    expect(inst).toEqual({
+      id: 4821,
+      account: { login: "usamshen", type: "User" },
+      permissions: { contents: "read", issues: "write", pull_requests: "write" },
+    });
+  });
 });
 
 describe("应用层 applyCalls", () => {
