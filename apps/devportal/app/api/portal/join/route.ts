@@ -21,6 +21,11 @@ export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 const ALLOWED_ROLES = ["contributor", "approver", "maintainer"];
+// 与 lib/mock/p30.ts 的 JOIN_MODULES 同一份枚举，但服务端不 import mock 文件
+// （该文件头部声明"不得被任何真实数据路径 import"）——独立维护一份权威白名单，
+// 拒绝任意字符串（防止自由文本落进 modules 字段，双重收窄注入面 + 数据整洁）。
+const ALLOWED_MODULES = new Set(["collab", "survey", "devportal", "board", "canvas", "其他"]);
+const INTRO_MAX_LENGTH = 500;
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -66,8 +71,10 @@ export async function POST(req: Request) {
   };
   const project = typeof body.project === "string" ? body.project : "";
   const role = typeof body.role === "string" ? body.role : "";
-  const modules = Array.isArray(body.modules) ? body.modules.filter((m): m is string => typeof m === "string") : [];
-  const intro = typeof body.intro === "string" ? body.intro : "";
+  const modules = Array.isArray(body.modules)
+    ? [...new Set(body.modules.filter((m): m is string => typeof m === "string" && ALLOWED_MODULES.has(m)))]
+    : [];
+  const intro = typeof body.intro === "string" ? body.intro.slice(0, INTRO_MAX_LENGTH) : "";
 
   if (!project) return NextResponse.json({ error: "missing_project" }, { status: 400 });
   if (!ALLOWED_ROLES.includes(role)) return NextResponse.json({ error: "invalid_role" }, { status: 422 });

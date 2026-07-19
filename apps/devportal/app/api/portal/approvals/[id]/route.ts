@@ -4,7 +4,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/session";
 import { directoryWriteConfigured, listProjectMemberships, transitionMembership } from "@/lib/directory";
-import { commentOnboardingIssue } from "@/lib/onboarding-issue";
+import { commentOnboardingIssue, sanitizeInline } from "@/lib/onboarding-issue";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -41,9 +41,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   if (target.onboarding_issue_url) {
     const verdict = action === "approve" ? "✓ 已批准（初始 Probation）" : "✗ 已驳回";
+    // session.login 来自 GitHub OAuth（GitHub 用户名字符集本身就窄），但拼进 issue 评论前
+    // 仍统一过 sanitizeInline——防御纵深，不依赖上游身份提供方的字符集假设。
     await commentOnboardingIssue(
       target.onboarding_issue_url,
-      `${verdict} · by @${session.login} · 已入只增审计（directory.membership.transitioned）`,
+      `${verdict} · by @${sanitizeInline(session.login)} · 已入只增审计（directory.membership.transitioned）`,
     );
   }
 
