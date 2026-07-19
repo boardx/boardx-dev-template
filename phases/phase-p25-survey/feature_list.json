@@ -589,7 +589,7 @@
       "user_visible_behavior": "用户在设计问卷、报告模板、发布回收、查看答题和分析报告之间切换时，导航下方统一使用满屏工作区、相同的标题操作区、页面留白和面板样式；设计页不再重复返回栏，专业报告正文仍保持居中阅读宽度。",
       "spec_ref": "24-unified-workflow-visual-system.md#R1",
       "design_ref": "requirements/24-unified-workflow-visual-system.md；docs/superpowers/specs/2026-07-19-survey-workflow-visual-unification-design.md；GitHub #805",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "25",
       "owner": "wrk-survey-1",
       "capability": "CAP-WEB",
@@ -604,7 +604,7 @@
         "pnpm harness doctor --phase p25",
         "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-25/evidence/F25.verify.log"
       ],
-      "evidence": "",
+      "evidence": "evidence/F25.verify.log @ 2026-07-19T18:35:32.434Z",
       "notes": "独立 UI feature，Issue #805；从 PR #757 分支派生 stacked PR，仅统一视觉框架，不修改业务契约。"
     }
   ]
