@@ -37,6 +37,56 @@ issue #523/#543；wrangler.toml 头注；apps/devportal/README.md
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-19：p30-F05 /onboard 接真——GitHub App 安装流的 CSRF 防护与 OAuth 登录流
+  同构：安装链接（`https://github.com/apps/<slug>/installations/new?state=<nonce>`）
+  与登录 authorize 一样只需一次性 nonce 签入 HttpOnly cookie，回调核对 query.state
+  与 cookie 解出的 nonce 一致即可，直接复用 `lib/oauth.ts` 的 signState/verifyState
+  （新增 `lib/onboard.ts` 只是包了一层不同的 cookie 名/Path，未重新发明）；GitHub App
+  的「Setup URL」必须指到一个 **Route Handler**（`/api/coord/onboard/callback`）而不是
+  页面本身——RSC 页面组件无法在渲染时清 cookie，回调必须走能返回带 header 的 Response
+  的路由，校验完再 302 到 `/onboard?installation_id=`（同 F02 OAuth callback 模式）。
+  `/onboard` 因为需要发起人真实 GitHub 身份判定 admin 权限，从"批次 3 无身份读取"的
+  原型假设转为 middleware matcher 内的受保护路由（出处：p30-F05 PR）。
+- 2026-07-19：p30/F02 灰度期跟进（#769，rev-security 非阻断项收尾）——session cookie
+  TTL 7d→24h + `__Host-` 前缀（要求 Secure+Path=/+无 Domain，本 cookie 三者已满足，
+  只改名不改属性）+ middleware 静默续期（剩余寿命 < 半程 TTL 时重签 Set-Cookie，
+  `lib/session.ts` 新增 `resolveSession`，`getSessionUser` 降级为薄封装）；
+  `lib/access.ts` 的 Access JWT 回退栈 `CF_ACCESS_AUD` 从"配置了才校验"补上"未配置
+  时每进程 warn 一次"（向后兼容：仍不强制拒绝，只是从静默变可观测）；「轮换
+  SESSION_SECRET = 紧急全员登出」写进 README.md 运维小节——这是当前唯一现成的服务端
+  session 吊销手段（无黑名单，Access 回退通道不受影响）。
+- 2026-07-19：p30-F08 /me 真数据落地（stacked on 已合并的 F01/F02）——①依赖分支若已在
+  开工说明书写好之后合并进 main，先 `git fetch origin main` + 查 `gh pr view <n> --json
+  state,mergedAt,baseRefName` 再决定 base 分支，不要机械按说明书里的旧分支名 base（本次
+  F02 #766 在任务下发后已合并，改 base 到 origin/main 省掉一层 stack，见 feedback_check_
+  worktree_fresh_before_gap_analysis 同款教训）。②`lib/mock/p30.ts` 头注写死「不得被
+  真实数据路径 import」，但其中 `TRI_COLOR`/`IdentityChip` 其实是纯展示 token 不是数据——
+  真实化某个 p30 UI 页面时把这类纯展示件挪到 `components/p30/shared.tsx`（本就不含 mock
+  数据，可安全 import），mock 文件只保留纯 mock 数据集，re-export 一份保持旧引用不炸。
+  ③ GITHUB_TOKEN 是只读 PAT（wrangler.toml 头注写明），任何「真实事件」类交互（如按钮
+  点击要留痕）不能指望它去 POST GitHub 评论/状态；already-established 的写路径是
+  `lib/dispatch.ts` 同款 broker 模式（COORD_GATEWAY_ADMIN_TOKEN 直接 POST coord-gateway
+  `/tasks`，产生真实 `task.dispatched` 事件），复用它而不是新开一条写权限面。④p30/F01
+  的目录（memberships 行）目前是空的引导期状态（无自动迁移/无 bootstrap 数据）——「无
+  项目成员资格」的无权限态判定只在**查到明确的 engineer_handle 且其在本项目没有
+  active/pending membership** 时才拒绝，查无该 handle（尚未纳入目录）一律放行，否则会
+  把唯一真实用户也拒之门外。⑤`pnpm --filter devportal exec tsx <phases 目录下的 .ts>`
+  会因该目录最近的 package.json 无 `"type":"module"` 而把顶层 await 当 CJS 报错——写成
+  `async function main() {...}; main()`，不要用顶层 await。
+- 2026-07-19：p30-F02 D3 阶段 2 灰度落地——`middleware.ts` 是「谁需要登录」的唯一事实源
+  （matcher 只含 /me*、/p/*；公开层四路由零鉴权）；身份读取统一走 `lib/session.ts` 的
+  getSessionUser（OAuth session cookie 优先，Access JWT 回退，灰度期双栈）；公开层防回退
+  由 `tests/public-layer-static.test.ts` 静态断言把守（import 闭包内禁 lib/access /
+  next/headers / cookie 读取，改公开层组件先看它）。新增 Pages secret：SESSION_SECRET、
+  GITHUB_OAUTH_CLIENT_SECRET（原子纪律：先 put 再合）。Access 收缩到治理面是人类 dashboard
+  操作，代码侧不删任何 Access 配置（出处：p30-F02 PR）。
+- 2026-07-19：p30 批次 5 视觉对齐（暖深主题）三条：①devportal 全组件走语义 token，换主题 =
+  只改 globals.css 一处（token 名不动、值换色板），四批视图零组件改动自动换肤——新视图严禁
+  组件内散落 hex，否则失去这个能力；②ADR-013 对比度门控已本地化：
+  `apps/devportal/scripts/check-token-contrast.mjs` 接在 `pnpm --filter @repo/devportal lint`，
+  改 token 必跑；设计稿最弱灰 #6b5f4f 不过 AA，已制度性排除出文字用途（只准做边框/装饰）；
+  ③在 dev server 运行中跑 `pnpm build` 会踩坏 `.next` 导致 edge sandbox 500 + 静态 chunk 404，
+  先停 dev 再 build（出处：p30 批次 5 PR）。
 - 2026-07-18：p29 全周期三条协调层经验（出处：p29 sprint01-05 evidence + PR #697-#737）：
   ①「全部合并了」类转述必须逐 PR 锚定核验（gh pr view --json state），#733 曾被误当已合并，
   差点造成协调层双权威窗口（P23 postmortem §9 的跨会话版）；②vitest 2 不认 --grep，

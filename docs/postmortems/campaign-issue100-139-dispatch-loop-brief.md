@@ -1,3 +1,16 @@
+> **归档说明（2026-07-19 压缩）**：这是 issue #100-139「40 个 issue 全部
+> passing」那一轮自动派发战役的原始作战手册，已完成多时（项目现在是 700+ issue、
+> p29/p30 阶段）。**仍然通用的操作性教训已经分流**：
+> - Loop 8 原则（拿锁/事件驱动/分支短命等）→ `.harness/instructions/loop-design-principles.md`
+> - "coordinator 无人值守时不自己合并 PR / 不自己写应用代码" → `.harness/instructions/coordinator-sop.md` 铁律 12
+> - docker compose 孤儿栈教训 → ADR-007 + coordinator-sop.md + parallel-dev-workflow.md
+> - 依赖图改脚本生成（不再手写）→ `pnpm harness dep-graph`，产物不再入库（见 .gitignore 说明）
+>
+> 本文件保留作**战役叙述的历史记录**（具体 issue 号、codex 分工、后台任务 ID 等
+> 战役专属细节，对当前工作已无参考价值，故不再放在 `.harness/state/` 冒充现行状态）。
+>
+> ---
+
 # Coordinator 自动派发循环 — 每次唤醒执行的职责
 
 > 这是 `/loop` 定时唤醒 coordinator 时要跑的完整流程。目的：issue #100-139 里任何一个

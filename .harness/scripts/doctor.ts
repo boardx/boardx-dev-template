@@ -11,6 +11,7 @@ import { join, relative } from "node:path";
 import { findPhaseDir, sprintDir, PROGRESS_PATH, REPO_ROOT } from "./lib/paths";
 import { loadFeatureList, countByStatus } from "./lib/features";
 import { loadRoadmap } from "./lib/roadmap";
+import { resolveSpecRef } from "./lib/spec-ref";
 import { sh } from "./lib/sh";
 import { log } from "./lib/log";
 import type { Args } from "./lib/args";
@@ -134,6 +135,19 @@ function checkOrphanInProgress(phaseId: string, findings: Finding[]): void {
   }
 }
 
+/** spec_ref 门控（人类拍板 2026-07-19）。只查 in_progress——claim/verify 已经在
+ *  两端把关，这里是"审阅时再确认一次"的第三道门，不对已 passing 的历史存量倒查
+ *  （216 个历史 feature 从未被要求过 spec_ref，倒查会制造无意义的 FAIL 风暴，
+ *  与 passing_is_irreversible 的精神相悖）。in_progress 说明有人正在动它，
+ *  此时缺 story 是 FAIL 级——按闭环要求，不该走到这一步都还没有。 */
+function checkSpecRef(phaseId: string, f: Feature, findings: Finding[]): void {
+  if (f.status !== "in_progress") return;
+  const r = resolveSpecRef(phaseId, f.spec_ref);
+  if (!r.ok) {
+    findings.push({ level: "FAIL", phase: phaseId, msg: `${f.id} 正在 in_progress 但没有可追溯的 story：${r.reason}` });
+  }
+}
+
 export function doctor(args: Args): void {
   const only = args.opts["phase"] ?? null;
   const rm = loadRoadmap();
@@ -156,6 +170,7 @@ export function doctor(args: Args): void {
     }
     for (const f of fl.features) {
       if (f.status === "passing") checkPassingEvidence(id, f, findings);
+      checkSpecRef(id, f, findings);
     }
     checkProgressRow(id, findings);
     checkRoadmapDrift(id, findings);

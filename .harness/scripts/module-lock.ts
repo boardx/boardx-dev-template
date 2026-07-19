@@ -20,8 +20,8 @@
 //   DO alarm 最终会过期回收）。
 import { req } from "./lib/args";
 import { log, die } from "./lib/log";
-import { createCoordClientFromEnv } from "@repo/coord-protocol/client";
-import type { CoordClient, CoordCallError } from "@repo/coord-protocol/client";
+import { requireClient as requireClientShared, errDetail } from "./lib/coord-client";
+import type { CoordClient } from "@repo/coord-protocol/client";
 import {
   readModuleRemoteClaimId,
   writeModuleRemoteClaimId,
@@ -38,20 +38,12 @@ function resourceId(moduleName: string): string {
 }
 
 function requireClient(): CoordClient {
-  const client = createCoordClientFromEnv();
-  if (!client) {
-    die(
-      "COORD_GATEWAY_URL/COORD_API_TOKEN/COORD_REPO 未配置。2026-07-18 起 coord-gateway" +
-        "（RepoHub DO，ADR-017）是协调租约的唯一权威——没有凭据就无法认领/心跳/退位。" +
-        "按仓 scoped token 走 devportal 自助领取（p29-F08）；旧 COORD_SERVICE_URL/" +
-        "COORD_SERVICE_TOKEN 已随 coord-service 退役（ADR-017），配了也不会被读取。"
-    );
-  }
-  return client;
-}
-
-function errDetail(e: CoordCallError): string {
-  return e.status !== undefined ? `HTTP ${e.status}` : `网络异常：${e.message}`;
+  return requireClientShared(
+    "COORD_GATEWAY_URL/COORD_API_TOKEN/COORD_REPO 未配置。2026-07-18 起 coord-gateway" +
+      "（RepoHub DO，ADR-017）是协调租约的唯一权威——没有凭据就无法认领/心跳/退位。" +
+      "按仓 scoped token 走 devportal 自助领取（p29-F08）；旧 COORD_SERVICE_URL/" +
+      "COORD_SERVICE_TOKEN 已随 coord-service 退役（ADR-017），配了也不会被读取。"
+  );
 }
 
 export async function moduleLockStatus(args: Args): Promise<void> {

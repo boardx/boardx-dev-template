@@ -95,3 +95,23 @@ tasks 收件箱（语义等价 coord-service `0002_tasks.sql`，#614）迁入 Re
 - **存量导入不产事件**：D1 → DO 的割接导入（`/tasks/import`，admin 面，幂等
   INSERT OR IGNORE 保留原 id）是审计回填，不是活跃协调信号；历史事件留存于
   D1 归档（F10 割接产物）。
+
+## Workspace（coord/0.1.3：工作区分片事件，p30/F04）
+
+需求流水线条目 / sprint 面板数据 / talk 对话流迁入按项目分片的 RepoHub DO 后，
+每个写操作 emit 对应事件（同仓 DO 天然分片，跨项目互不可见）：
+
+- `requirement.submitted`：需求提交（scoped 面，agent_id 强绑定）。payload 必含
+  `requirement_id`；`resource_id` 为 `requirement:<id>`。
+- `requirement.advanced`：流水线前向推进（scoped 面）。payload 必含
+  `requirement_id` + 推进后的 `status`（`analyzing | in_review`）。
+- `requirement.dispatched` / `requirement.rejected`：审核动作（admin 面，
+  maintainer 特权）。payload 必含 `requirement_id`；dispatched 可带下发的
+  `issue` 号。
+- 需求五态：`submitted → analyzing → in_review → dispatched`（提交→分析→审核→
+  下发），`rejected` 为审核拒绝终态；只许前向推进，非法迁移 409，不产生事件。
+- `sprint.upserted`：sprint 面板条目写入/更新（admin 面）。payload 必含
+  `sprint` + `item_id`；`resource_id` 为 `sprint:<sprint>/<item_id>`。
+- `talk.posted`：对话流追加（scoped 面，agent_id 强绑定；append-only，无编辑/
+  删除面）。payload 必含 `message_id`（`tlk_<ULID>`，时间序）；`resource_id` 为
+  `talk:<message_id>`。

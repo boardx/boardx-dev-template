@@ -34,4 +34,15 @@ pnpm exec wrangler pages deploy .vercel/output/static --branch main
 
 `CF_ACCESS_AUD` 配置后 JWT 验证将同时校验 audience（防团队域下多 Access 应用互通）。
 aud tag 在 Zero Trust dashboard 的应用详情页；当前部署 API token 无 Access 读权限，
-待人类提供后在 wrangler.toml 取消注释即启用，无需改代码。
+待人类提供后在 wrangler.toml 取消注释即启用，无需改代码。未配置时仅验 issuer+签名，
+`lib/access.ts` 每进程输出一次 `console.warn` 提醒（不阻断部署——向后兼容策略，#769）。
+
+## 会话运维（#769）
+
+- OAuth session cookie（`__Host-devportal_session`）TTL 24h，活跃用户在剩余寿命
+  < 12h 时由 middleware 静默续期（重签并 Set-Cookie），不会中途掉线。
+- **紧急全员登出**：轮换 `SESSION_SECRET`（`wrangler pages secret put SESSION_SECRET
+  --project-name devportal` 换新随机串）会让所有已签发 session JWT 验签失败，是当前
+  唯一现成的服务端吊销手段（无 session 黑名单/撤销列表）。代价：全员（含 Access 回退
+  通道之外的 OAuth 登录用户）需重新走一次 GitHub OAuth；Access JWT 回退通道不受影响
+  （生命周期由 Cloudflare Access 自己管，不吃 SESSION_SECRET）。

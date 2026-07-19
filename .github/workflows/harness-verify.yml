@@ -24,6 +24,18 @@ on:
         description: "跑全量浏览器 e2e（e2e-full）"
         type: boolean
         default: true
+      # #675 取证对照用：playwright 并发度降/升档（playwright.config.ts 里是 workers: 1，
+      # CLI --workers 优先级更高）。schedule 触发时 inputs 为空，回落到 '1' 即现状。
+      e2e_workers:
+        description: "playwright --workers（#675 对照实验用，默认与 config 一致）"
+        type: string
+        default: "1"
+      # #675 取证对照用：dev server 的 V8 老生代堆上限（MB）。ubuntu-latest 是 4c16G，
+      # 默认给 ~75% = 12288。想对照“不加参数的原行为”就 dispatch 时填 0。
+      e2e_node_heap_mb:
+        description: "dev server --max-old-space-size（MB，0 = 不加该参数）"
+        type: string
+        default: "12288"
 
 jobs:
   verify:
@@ -211,11 +223,58 @@ jobs:
         run: pnpm --filter @repo/web exec playwright install --with-deps chromium
       # kb/studio/presentation 的异步生成链路（入队→worker 消费→回写状态）依赖
       # workflow-worker 进程；不起它，相关 e2e（kb-001/presentations/studio）会稳定超时。
+      #
+      # #675 取证仪表（这一步只加观测与对照旋钮，不动测试本身，也不改成生产构建——
+      # next build 的构建期 DCE 会剃光 e2e 测试后门，见 #666/#675）：
+      #   1. NODE_OPTIONS --max-old-space-size：dev server 由 playwright webServer 起
+      #      （`next dev`，env 是 `...process.env` 透传，见 apps/web/playwright.config.ts），
+      #      所以 step 级 env 能到达 dev server 及其 static-paths-worker 子进程。
+      #      若雪崩消失/推迟 → 内存假设成立。dispatch 传 0 可关闭，对照原行为。
+      #   2. 内存采样：后台循环每 30s 把所有 node/next 进程的 RSS+etime+argv 和系统
+      #      free -m 追加进 memlog.txt。dev server 的 PID 在 playwright 内部拿不到，
+      #      所以不追单个 PID，改为每轮 ps 全量过滤——顺带能看到 static-paths-worker
+      #      等子进程各自的占用，比单 PID 信息更全。
+      #   3. --workers 降/升档参数化：区分「内存耗尽」vs「并发编译竞态」的第二轮对照。
       - name: Playwright e2e（全量：auth/team/room/canvas/profile/board + 各功能模块；webServer 自动起 next dev，先后台起 workflow-worker）
+        env:
+          E2E_WORKERS: ${{ inputs.e2e_workers || '1' }}
+          E2E_NODE_HEAP_MB: ${{ inputs.e2e_node_heap_mb || '12288' }}
         run: |
           set -euo pipefail
+          if [ "$E2E_NODE_HEAP_MB" != "0" ]; then
+            export NODE_OPTIONS="--max-old-space-size=${E2E_NODE_HEAP_MB}"
+            echo "○ NODE_OPTIONS=$NODE_OPTIONS（#675 内存对照开）"
+          else
+            echo "○ 未设置 NODE_OPTIONS（#675 对照组：原行为）"
+          fi
+          # RSS 采样循环（#675 取证）：memlog.txt 无论成败都随 artifact 上传。
+          (
+            while true; do
+              {
+                echo "=== $(date -u +%FT%TZ) ==="
+                ps -eo pid,ppid,rss,etime,args --sort=-rss | awk 'NR==1 || /[n]ode|[n]ext/' | head -30
+                free -m
+              } >> memlog.txt
+              sleep 30
+            done
+          ) &
+          MEMLOG_PID=$!
           pnpm --filter @repo/workflow-worker start &
-          pnpm --filter @repo/web exec playwright test
+          pnpm --filter @repo/web exec playwright test --workers "$E2E_WORKERS"
+          kill "$MEMLOG_PID" 2>/dev/null || true
+
+      # #675 取证：内存采样与 playwright 现场无论成败都上传（绿跑的 memlog 同样有用——
+      # 是校准 timeout-minutes 与内存基线的第一份健康样本）。
+      - name: 上传 #675 诊断 artifact（memlog + playwright 现场）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-full-diagnostics-${{ github.run_id }}
+          path: |
+            memlog.txt
+            apps/web/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
 
       # 拉停线绳（#665）：e2e-full 曾连红 12 次、每次烧 5.7h 而无人察觉——因为它只在
       # 定时任务跑、PR 上永远 skipping，没有任何人被叫醒。红了就必须有人知道：开一个

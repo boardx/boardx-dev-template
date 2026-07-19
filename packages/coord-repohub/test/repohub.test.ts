@@ -317,6 +317,30 @@ describe("F08 agent tokens（按仓 scoped token 权威表）", () => {
   });
 });
 
+describe("平台目录事件转发（p30/F07：/relay/event）", () => {
+  it("directory.* 前缀放行：落库 + 可通过 /events 查到", async () => {
+    const r = await post("/relay/event", {
+      type: "directory.agent.heartbeat",
+      resource_id: "agent:agt_relay1",
+      agent_id: "agt_relay1",
+      payload: { agent_id: "agt_relay1", at: "2026-07-19T00:00:00Z" },
+    });
+    expect(r.status).toBe(202);
+    const events = await (await SELF.fetch(`${BASE}/events?limit=500`)).json<{ events: Array<Record<string, unknown>> }>();
+    const hit = events.events.find(
+      (e) => e["type"] === "directory.agent.heartbeat" && e["resource_id"] === "agent:agt_relay1",
+    );
+    expect(hit).toBeTruthy();
+    expect((hit!["payload"] as Record<string, unknown>)["agent_id"]).toBe("agt_relay1");
+  });
+
+  it("非 directory.* 前缀 / 缺字段 → 422（防误用把本仓变成任意事件注入口）", async () => {
+    expect((await post("/relay/event", { type: "lease.claimed", resource_id: "x", agent_id: "y", payload: {} })).status).toBe(422);
+    expect((await post("/relay/event", { type: "directory.agent.heartbeat", agent_id: "y", payload: {} })).status).toBe(422);
+    expect((await post("/relay/event", { type: "directory.agent.heartbeat", resource_id: "x", payload: {} })).status).toBe(422);
+  });
+});
+
 describe("F09 WS 实时流", () => {
   type WireEvent = { protocol: string; event_id: string; type: string; resource_id: string; payload: Record<string, unknown> };
 
@@ -555,6 +579,115 @@ describe("deliveries 保留窗口清理（#712）", () => {
   });
 });
 
+describe("p30/F09 三层意图消息协议", () => {
+  const intent = (over: Record<string, unknown> = {}) =>
+    post("/intents", {
+      type: "intent.progress",
+      resource_id: "issue:900",
+      agent_id: "wrk-i1",
+      payload: { summary: "推进中" },
+      ...over,
+    });
+
+  it("非法请求 422：未知 type / 缺字段 / 坏 payload", async () => {
+    expect((await intent({ type: "intent.unknown" })).status).toBe(422);
+    expect((await intent({ resource_id: undefined })).status).toBe(422);
+    expect((await intent({ payload: { summary: "" } })).status).toBe(422);
+  });
+
+  it("合法请求 201 + 落 append-only events（GET /events 可见）", async () => {
+    const r = await intent();
+    expect(r.status).toBe(201);
+    const body = await r.json<{ ok: boolean; event: Record<string, unknown> }>();
+    expect(body.ok).toBe(true);
+    expect(body.event["type"]).toBe("intent.progress");
+    const all = await (await SELF.fetch(`${BASE}/events?limit=500`)).json<{ events: Array<Record<string, unknown>> }>();
+    expect(all.events.some((e) => e["event_id"] === body.event["event_id"])).toBe(true);
+  });
+
+  it("GET /intents?resource_id= 聚合返回该资源的意图消息链（按 event_id 排序）", async () => {
+    await post("/intents", {
+      type: "intent.assign", resource_id: "issue:901", agent_id: "coord-main",
+      payload: { target_agent_id: "wrk-i2", target_resource_id: "issue:901", note: null },
+    });
+    await post("/intents", {
+      type: "intent.progress", resource_id: "issue:901", agent_id: "wrk-i2",
+      payload: { summary: "开工" },
+    });
+    const r = await SELF.fetch(`${BASE}/intents?resource_id=issue:901`);
+    expect(r.status).toBe(200);
+    const body = await r.json<{ resource_id: string; thread_status: string; events: Array<Record<string, unknown>> }>();
+    expect(body.resource_id).toBe("issue:901");
+    expect(body.events.map((e) => e["type"])).toEqual(["intent.assign", "intent.progress"]);
+    expect(body.thread_status).toBe("open"); // 未 escalate/decide/accept 过
+  });
+
+  it("GET /intents 缺 resource_id → 400", async () => {
+    expect((await SELF.fetch(`${BASE}/intents`)).status).toBe(400);
+  });
+
+  it("上行链：blocker→escalate 后 thread_status = awaiting_decision（等待拍板）", async () => {
+    await post("/intents", {
+      type: "intent.blocker", resource_id: "issue:902", agent_id: "wrk-i3",
+      payload: { reason: "依赖服务挂了，卡住了（issue #902）" },
+    });
+    await post("/intents", {
+      type: "intent.escalate", resource_id: "issue:902", agent_id: "module-coord",
+      payload: { reason: "需要人类确认降级方案（issue #902）", escalated_to: "usam" },
+    });
+    const r = await (await SELF.fetch(`${BASE}/intents?resource_id=issue:902`)).json<{ thread_status: string }>();
+    expect(r.thread_status).toBe("awaiting_decision");
+  });
+
+  it("安全回归（独立审 #772 阻断修复）：escalate 之后任何人发 intent.accept 都不能解除 awaiting_decision——只有 intent.decide 能", async () => {
+    await post("/intents", {
+      type: "intent.escalate", resource_id: "issue:904", agent_id: "module-coord",
+      payload: { reason: "需要人类确认降级方案（issue #904）", escalated_to: "usam" },
+    });
+    const beforeAccept = await (await SELF.fetch(`${BASE}/intents?resource_id=issue:904`)).json<{ thread_status: string }>();
+    expect(beforeAccept.thread_status).toBe("awaiting_decision");
+
+    // scoped agent（无 admin token）发的 accept 不得伪造成"已拍板"——绕过 decide 的 admin 门禁
+    const accepted = await post("/intents", {
+      type: "intent.accept", resource_id: "issue:904", agent_id: "wrk-attacker",
+      payload: { note: "我自己批准了" },
+    });
+    expect(accepted.status).toBe(201);
+    const afterAccept = await (await SELF.fetch(`${BASE}/intents?resource_id=issue:904`)).json<{ thread_status: string }>();
+    expect(afterAccept.thread_status).toBe("awaiting_decision"); // 关键断言：accept 不解除等待拍板
+
+    // 只有真正的 decide 才能解除
+    await post("/intents", {
+      type: "intent.decide", resource_id: "issue:904", agent_id: "usam",
+      payload: { reason: "按方案 A 拍板通过", issue_ref: "#904", decision: "approved" },
+    });
+    const afterDecide = await (await SELF.fetch(`${BASE}/intents?resource_id=issue:904`)).json<{ thread_status: string }>();
+    expect(afterDecide.thread_status).toBe("closed");
+  });
+
+  it("下行链：人拍板 decide 后 thread_status = closed（已闭环）；再 assign 广播不回退闭环判定", async () => {
+    await post("/intents", {
+      type: "intent.escalate", resource_id: "issue:903", agent_id: "module-coord",
+      payload: { reason: "需要人类确认拍板范围（issue #903）", escalated_to: "usam" },
+    });
+    const decided = await post("/intents", {
+      type: "intent.decide", resource_id: "issue:903", agent_id: "usam",
+      payload: { reason: "按方案 A 拍板通过", issue_ref: "#903", decision: "approved" },
+    });
+    expect(decided.status).toBe(201);
+    const afterDecide = await (await SELF.fetch(`${BASE}/intents?resource_id=issue:903`)).json<{ thread_status: string }>();
+    expect(afterDecide.thread_status).toBe("closed");
+
+    // 广播 assign（下行→module→sub 自动继续）不是「新一轮 escalate」，闭环判定不回退
+    await post("/intents", {
+      type: "intent.assign", resource_id: "issue:903", agent_id: "coord-main",
+      payload: { target_agent_id: "wrk-i4", target_resource_id: "issue:903", note: "按拍板结果继续" },
+    });
+    const afterAssign = await (await SELF.fetch(`${BASE}/intents?resource_id=issue:903`)).json<{ thread_status: string }>();
+    expect(afterAssign.thread_status).toBe("closed");
+  });
+});
+
 async function fetchClaim(base: string, agent: string, resource: string): Promise<Response> {
   return SELF.fetch(`${base}/claims`, {
     method: "POST",
@@ -562,3 +695,151 @@ async function fetchClaim(base: string, agent: string, resource: string): Promis
     body: JSON.stringify(claimBody(agent, resource)),
   });
 }
+
+describe("p30/F04 工作区分片：需求流水线 / sprint 面板 / talk 对话流", () => {
+  const j = <T>(r: Response) => r.json<T>();
+
+  it("需求五态 happy path：提交→分析→审核→下发，每步 emit 对应事件", async () => {
+    const created = await j<{ requirement: Record<string, unknown> }>(
+      await post("/requirements", { title: "需要 backlog 独立视图", body: "详见 use-cases UC-07", agent_id: "wrk-req-1" }),
+    );
+    const id = created.requirement["id"] as string;
+    expect(id).toMatch(/^req_/);
+    expect(created.requirement["status"]).toBe("submitted");
+
+    // submitted → analyzing（可附分析产出）
+    let r = await post(`/requirements/${id}/advance`, { agent_id: "wrk-req-1", analysis: "拆 2 个 feature" });
+    expect(r.status).toBe(200);
+    expect((await j<{ requirement: Record<string, unknown> }>(r)).requirement["status"]).toBe("analyzing");
+    // analyzing → in_review
+    r = await post(`/requirements/${id}/advance`, { agent_id: "wrk-req-1" });
+    expect((await j<{ requirement: Record<string, unknown> }>(r)).requirement["status"]).toBe("in_review");
+    // in_review 不能再 advance（审核结论走 review 面）
+    expect((await post(`/requirements/${id}/advance`, { agent_id: "wrk-req-1" })).status).toBe(409);
+    // 审核通过 → dispatched + 关联 issue
+    r = await post(`/requirements/${id}/review`, { action: "approve", issue: 901, agent_id: "coord-main" });
+    expect(r.status).toBe(200);
+    const done = (await j<{ requirement: Record<string, unknown> }>(r)).requirement;
+    expect(done["status"]).toBe("dispatched");
+    expect(done["issue"]).toBe(901);
+    expect(done["analysis"]).toBe("拆 2 个 feature");
+    // 终态不可再审
+    expect((await post(`/requirements/${id}/review`, { action: "reject" })).status).toBe(409);
+
+    const events = await j<{ events: Array<Record<string, unknown>> }>(await SELF.fetch(`${BASE}/events?limit=500`));
+    const mine = events.events.filter((e) => e["resource_id"] === `requirement:${id}`);
+    expect(mine.map((e) => e["type"])).toEqual([
+      "requirement.submitted", "requirement.advanced", "requirement.advanced", "requirement.dispatched",
+    ]);
+  });
+
+  it("需求审核拒绝 → rejected 终态；非法入参 422；状态过滤查询", async () => {
+    const { requirement } = await j<{ requirement: Record<string, unknown> }>(
+      await post("/requirements", { title: "越权需求", body: "", agent_id: "wrk-req-2" }),
+    );
+    const id = requirement["id"] as string;
+    await post(`/requirements/${id}/advance`, { agent_id: "wrk-req-2" });
+    await post(`/requirements/${id}/advance`, { agent_id: "wrk-req-2" });
+    const r = await post(`/requirements/${id}/review`, { action: "reject", review_note: "范围过大，拆分后重提" });
+    expect(r.status).toBe(200);
+    expect((await j<{ requirement: Record<string, unknown> }>(r)).requirement["status"]).toBe("rejected");
+    // 拒绝后不能推进
+    expect((await post(`/requirements/${id}/advance`, { agent_id: "wrk-req-2" })).status).toBe(409);
+
+    expect((await post("/requirements", { title: "", body: "", agent_id: "a" })).status).toBe(422);
+    expect((await post("/requirements", { title: "缺 body", agent_id: "a" })).status).toBe(422);
+    expect((await post("/requirements", { title: "缺 agent", body: "" })).status).toBe(422);
+    expect((await post(`/requirements/${id}/review`, { action: "postpone" })).status).toBe(422);
+    expect((await SELF.fetch(`${BASE}/requirements?status=banana`)).status).toBe(400);
+
+    const rejected = await j<{ requirements: Array<Record<string, unknown>> }>(
+      await SELF.fetch(`${BASE}/requirements?status=rejected`),
+    );
+    expect(rejected.requirements.map((x) => x["id"])).toContain(id);
+    expect((await SELF.fetch(`${BASE}/requirements/req_NOPE`)).status).toBe(404);
+  });
+
+  it("sprint 面板 upsert 幂等更新 + 按 sprint 过滤 + emit sprint.upserted", async () => {
+    const item = { sprint: "p30/01", item_id: "F04", title: "工作区分片", status: "in_progress", assignee: "wrk-1", data: { area: "coord" } };
+    expect((await post("/sprint-items/upsert", item)).status).toBe(200);
+    expect((await post("/sprint-items/upsert", { ...item, status: "review", assignee: null })).status).toBe(200);
+    expect((await post("/sprint-items/upsert", { sprint: "p31/01", item_id: "F01", title: "别的 sprint", status: "not_started" })).status).toBe(200);
+    expect((await post("/sprint-items/upsert", { sprint: "p30/01" })).status).toBe(422);
+
+    const cur = await j<{ items: Array<Record<string, unknown>> }>(await SELF.fetch(`${BASE}/sprint-items?sprint=p30%2F01`));
+    expect(cur.items).toHaveLength(1);
+    expect(cur.items[0]).toMatchObject({ item_id: "F04", status: "review", assignee: null });
+    expect((cur.items[0]!["data"] as Record<string, unknown>)["area"]).toBe("coord");
+
+    const events = await j<{ events: Array<Record<string, unknown>> }>(await SELF.fetch(`${BASE}/events?limit=500`));
+    expect(events.events.filter((e) => e["type"] === "sprint.upserted").length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("talk append-only：ULID 时间序 + since 续传 + needs_human + 长度上限 422", async () => {
+    const a = await j<{ message: Record<string, unknown> }>(
+      await post("/talk", { agent_id: "wrk-t1", body: "第一条：开工" }),
+    );
+    const b = await j<{ message: Record<string, unknown> }>(
+      await post("/talk", { agent_id: "wrk-t2", body: "第二条：需要人类拍板", needs_human: true }),
+    );
+    expect(a.message["message_id"]).toMatch(/^tlk_/);
+    expect((a.message["message_id"] as string) < (b.message["message_id"] as string)).toBe(true);
+
+    const all = await j<{ messages: Array<Record<string, unknown>> }>(await SELF.fetch(`${BASE}/talk`));
+    const ids = all.messages.map((m) => m["message_id"] as string);
+    expect(ids).toEqual([...ids].sort());
+    expect(all.messages.find((m) => m["message_id"] === b.message["message_id"])!["needs_human"]).toBe(true);
+
+    const tail = await j<{ messages: Array<Record<string, unknown>> }>(
+      await SELF.fetch(`${BASE}/talk?since=${a.message["message_id"] as string}`),
+    );
+    expect(tail.messages.map((m) => m["message_id"])).toContain(b.message["message_id"]);
+    expect(tail.messages.map((m) => m["message_id"])).not.toContain(a.message["message_id"]);
+
+    expect((await post("/talk", { agent_id: "wrk-t1", body: "" })).status).toBe(422);
+    expect((await post("/talk", { agent_id: "wrk-t1", body: "x".repeat(4001) })).status).toBe(422);
+    expect((await post("/talk", { body: "缺 agent_id" })).status).toBe(422);
+  });
+
+  it("【隔离核心断言】两个项目命名空间互不可见：boardx/boardx-dev-template vs agentic-harness/agentic-harness-template", async () => {
+    const A = BASE; // boardx/boardx-dev-template
+    const B = "https://repohub.test/repos/agentic-harness/agentic-harness-template";
+    const postTo = (base: string, path: string, body: unknown) =>
+      SELF.fetch(`${base}${path}`, {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+      });
+
+    // 并发向两命名空间各写 talk + requirement（N3：互不阻塞、互不串线）
+    const [ta, tb, ra, rb] = await Promise.all([
+      postTo(A, "/talk", { agent_id: "wrk-a", body: "A 项目内部讨论" }),
+      postTo(B, "/talk", { agent_id: "wrk-b", body: "B 项目内部讨论" }),
+      postTo(A, "/requirements", { title: "A 的需求", body: "", agent_id: "wrk-a" }),
+      postTo(B, "/requirements", { title: "B 的需求", body: "", agent_id: "wrk-b" }),
+    ]);
+    for (const r of [ta, tb, ra, rb]) expect(r.status).toBe(201);
+    const msgA = (await ta.json<{ message: { message_id: string } }>()).message.message_id;
+    const msgB = (await tb.json<{ message: { message_id: string } }>()).message.message_id;
+    const reqA = (await ra.json<{ requirement: { id: string } }>()).requirement.id;
+    const reqB = (await rb.json<{ requirement: { id: string } }>()).requirement.id;
+
+    // 交叉读：A 的数据在 B 不可见（404/不在列表），反之亦然
+    const talkB = await j<{ messages: Array<{ message_id: string }> }>(await SELF.fetch(`${B}/talk`));
+    expect(talkB.messages.map((m) => m.message_id)).not.toContain(msgA);
+    expect(talkB.messages.map((m) => m.message_id)).toContain(msgB);
+    const talkA = await j<{ messages: Array<{ message_id: string }> }>(await SELF.fetch(`${A}/talk`));
+    expect(talkA.messages.map((m) => m.message_id)).not.toContain(msgB);
+
+    expect((await SELF.fetch(`${B}/requirements/${reqA}`)).status).toBe(404);
+    expect((await SELF.fetch(`${A}/requirements/${reqB}`)).status).toBe(404);
+
+    // sprint 面板同理：A 写入的条目 B 查不到
+    await postTo(A, "/sprint-items/upsert", { sprint: "p30/01", item_id: "ISO-1", title: "A 独有", status: "done" });
+    const sprintB = await j<{ items: Array<{ item_id: string }> }>(await SELF.fetch(`${B}/sprint-items?sprint=p30%2F01`));
+    expect(sprintB.items.map((i) => i.item_id)).not.toContain("ISO-1");
+
+    // 事件流也分片：B 的事件流不含 A 的资源
+    const evB = await j<{ events: Array<{ resource_id: string }> }>(await SELF.fetch(`${B}/events?limit=500`));
+    expect(evB.events.map((e) => e.resource_id)).not.toContain(`talk:${msgA}`);
+    expect(evB.events.map((e) => e.resource_id)).toContain(`talk:${msgB}`);
+  });
+});

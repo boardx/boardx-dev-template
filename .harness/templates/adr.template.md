@@ -1,4 +1,4 @@
-# ADR {{ADR_ID}}: {{ADR_TITLE}}
+# {{ADR_ID}}: {{ADR_TITLE}}
 
 - 状态: Proposed | Accepted | Superseded
 - 适用层：方法论（可移植）| 项目实现（专属）——二选一

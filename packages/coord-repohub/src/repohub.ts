@@ -10,6 +10,7 @@ import {
   validateClaimRequest,
   validateReleaseRequest,
   validateEvidenceManifest,
+  validateIntentRequest,
   type ClaimRequest,
   type EvidenceManifest,
   type Lease,
@@ -18,6 +19,8 @@ import {
 } from "@repo/coord-protocol";
 import { SCHEMA } from "./schema";
 import { ulid } from "./ulid";
+import { handleWorkspace } from "./workspace";
+import { deriveThreadStatus } from "./intents";
 
 interface LeaseRow {
   [key: string]: string | number | null;
@@ -123,6 +126,7 @@ export class RepoHub extends DurableObject {
       if (req.method === "GET" && p === "/evidence") return this.listEvidence(url);
       if (req.method === "POST" && p === "/mirror/upsert") return this.mirrorUpsert(await req.json());
       if (req.method === "POST" && p === "/webhook/ingest") return this.webhookIngest(await req.json());
+      if (req.method === "POST" && p === "/relay/event") return this.relayEvent(await req.json());
       if (req.method === "POST" && p === "/tokens/mint") return this.tokenMint(await req.json());
       if (req.method === "POST" && p === "/tokens/revoke") return this.tokenRevoke(await req.json());
       if (req.method === "POST" && p === "/tokens/verify") return this.tokenVerify(await req.json());
@@ -130,6 +134,8 @@ export class RepoHub extends DurableObject {
       if (req.method === "POST" && p === "/tasks") return this.taskDispatch(await req.json());
       if (req.method === "GET" && p === "/tasks") return this.taskList(url);
       if (req.method === "POST" && p === "/tasks/import") return this.taskImport(await req.json());
+      if (req.method === "POST" && p === "/intents") return this.intentCreate(await req.json());
+      if (req.method === "GET" && p === "/intents") return this.listIntents(url);
       const tt = p.match(/^\/tasks\/(\d+)\/(ack|complete|recall)$/);
       if (req.method === "POST" && tt)
         return this.taskTransition(Number(tt[1]), tt[2] as "ack" | "complete" | "recall", await req.text());
@@ -139,6 +145,11 @@ export class RepoHub extends DurableObject {
       if (req.method === "GET" && rt) return this.realtimeList(rt[1] === "prs" ? "pr" : "issue", url);
       const one = p.match(/^\/realtime\/prs\/(\d+)$/);
       if (req.method === "GET" && one) return this.realtimeOne("pr", Number(one[1]));
+      // 工作区分片三面（p30/F04）：需求流水线 / sprint 面板 / talk 对话流，逻辑全在 workspace.ts
+      const ws = await handleWorkspace(
+        { sql: this.sql, emit: (t, r, a, pl) => this.emit(t, r, a, pl) }, req, url,
+      );
+      if (ws) return ws;
       return json(404, { error: "not_found" });
     } catch (e) {
       if (e instanceof SyntaxError) return json(400, { error: "invalid_json" });
@@ -272,7 +283,9 @@ export class RepoHub extends DurableObject {
 
   // ---------- Events ----------
 
-  private emit(type: EventType, resourceId: string, agentId: string, payload: Record<string, unknown>): void {
+  private emit(
+    type: EventType, resourceId: string, agentId: string, payload: Record<string, unknown>,
+  ): { protocol: typeof PROTOCOL; event_id: string; type: EventType; resource_id: string; agent_id: string; at: string; payload: Record<string, unknown> } {
     const event = {
       protocol: PROTOCOL,
       event_id: `evt_${ulid()}`,
@@ -286,12 +299,13 @@ export class RepoHub extends DurableObject {
       `INSERT INTO events (event_id,type,resource_id,agent_id,at,payload) VALUES (?,?,?,?,?,?)`,
       event.event_id, type, resourceId, agentId, event.at, JSON.stringify(payload),
     );
-    // F09：入库后向所有活跃 WS 连接广播同一信封（events.md wire format）。
+    // F09（p29，WS 实时流）：入库后向所有活跃 WS 连接广播同一信封（events.md wire format）。
     // send 失败 = 连接已死，由运行时的 close 流程回收，不影响事件落库。
     const wire = JSON.stringify(event);
     for (const ws of this.ctx.getWebSockets()) {
       try { ws.send(wire); } catch { /* 死连接，忽略 */ }
     }
+    return event;
   }
 
   private listEvents(url: URL): Response {
@@ -533,6 +547,31 @@ export class RepoHub extends DurableObject {
     const row = [...this.sql.exec<MirrorRow>(`SELECT * FROM mirror_items WHERE kind=? AND number=?`, kind, number)][0];
     if (!row) return json(404, { error: "not_mirrored" });
     return json(200, rowToItem(row));
+  }
+
+  // ---------- 平台目录事件转发（p30/F07） ----------
+  // PlatformDirectory 是平台单例 DO，没有自己的 WS 广播面；本仓的 RepoHub 已经
+  // 有一条真实的 WS 通道（F09，emit() 落库后广播给全部活跃连接）。gateway 在
+  // Directory 写入成功后把同一枚事件转发到这里复用广播——devportal 的
+  // useCoordStream 不需要多接一路 WS，「等首个心跳」点亮走的是这条已验证的通道，
+  // 不是前端定时器。只放行 directory.* 前缀，防止把本仓变成任意事件注入口。
+  private relayEvent(body: unknown): Response {
+    const b = body as Record<string, unknown> | null;
+    const type = b?.["type"];
+    const resourceId = b?.["resource_id"];
+    const agentId = b?.["agent_id"];
+    const payload = b?.["payload"];
+    if (typeof type !== "string" || !type.startsWith("directory."))
+      return json(422, { error: "invalid_relay_type" });
+    if (typeof resourceId !== "string" || resourceId.length === 0)
+      return json(422, { error: "invalid_relay_resource_id" });
+    if (typeof agentId !== "string" || agentId.length === 0)
+      return json(422, { error: "invalid_relay_agent_id" });
+    const safePayload = payload && typeof payload === "object" && !Array.isArray(payload)
+      ? (payload as Record<string, unknown>)
+      : {};
+    this.emit(type as EventType, resourceId, agentId, safePayload);
+    return json(202, { ok: true });
   }
 
   // ---------- Agent tokens（F08：按仓 scoped token，DO 是唯一权威） ----------
@@ -806,6 +845,38 @@ export class RepoHub extends DurableObject {
     return json(200, { ok: true, imported, skipped });
   }
 
+  // ---------- Intents（p30/F09：三层意图消息协议 v1，events.md §Intents） ----------
+  // 六类意图消息＝一类特殊事件（type 前缀 intent.），复用 emit() 的 append-only 落库 +
+  // WS 广播机制——不新增存储路径。鉴权分层在 gateway 层（intent.decide 要求
+  // COORD_ADMIN_TOKEN，其余五类走 scoped token + agent_id 强绑定），DO 只管
+  // payload 合法性（validateIntentRequest，单一出口同 validateEvent 的 intent 分支）。
+  // GitHub issue 双写不在这里——由 coord-projection 的反向投影 cron 消费 events 产出，
+  // 与 andon/lease 的投影同一条流水线（apply.ts 新增 issue_comment 调用类型）。
+
+  private intentCreate(body: unknown): Response {
+    const v = validateIntentRequest(body);
+    if (!v.ok) return json(422, { error: "invalid_intent_request", details: v.errors });
+    const b = body as { type: EventType; resource_id: string; agent_id: string; payload: Record<string, unknown> };
+    const event = this.emit(b.type, b.resource_id, b.agent_id, b.payload);
+    return json(201, { ok: true, event });
+  }
+
+  /** GET /intents?resource_id= — 按 resource_id 聚合的意图消息链（devportal talk tab 消费）。
+   *  thread_status 由最新一条 decide/accept（对比最新 escalate）推导，见 intents.ts。 */
+  private listIntents(url: URL): Response {
+    const resourceId = url.searchParams.get("resource_id");
+    if (!resourceId) return json(400, { error: "missing_resource_id" });
+    const rows = [...this.sql.exec<{ event_id: string; type: string; resource_id: string; agent_id: string; at: string; payload: string }>(
+      `SELECT * FROM events WHERE resource_id=? AND type LIKE 'intent.%' ORDER BY event_id`, resourceId,
+    )];
+    const events = rows.map((r) => ({ ...r, payload: JSON.parse(r.payload) as Record<string, unknown> }));
+    return json(200, {
+      resource_id: resourceId,
+      thread_status: deriveThreadStatus(events),
+      events,
+    });
+  }
+
   // ---------- helpers ----------
 
   private activeLease(resourceId: string): LeaseRow | undefined {
@@ -855,6 +926,9 @@ function rowToItem(row: MirrorRow): Record<string, unknown> {
     head_sha: row.head_sha,
     mergeable: row.mergeable,
     merge_state: row.merge_state,
+    // 创建时间（GitHub 原始载荷透传，追加字段，向后兼容）：CoordBrain PR 超时催办
+    // 判定（p30-F10）需要"等待了多久"，唯一数据源是这个时间戳。
+    created_at: typeof data["created_at"] === "string" ? data["created_at"] : null,
     labels: JSON.parse(row.labels),
     assignees: JSON.parse(row.assignees),
     mirrored_at: row.mirrored_at, // 新鲜度锚点：响应必带（F04）

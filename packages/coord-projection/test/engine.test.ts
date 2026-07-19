@@ -171,3 +171,110 @@ describe("lease → 关联 PR 的 coord/lease check", () => {
     expect(calls).toHaveLength(0);
   });
 });
+
+describe("intent.* → GitHub issue 双写（p30/F09）", () => {
+  it("issue:N 锚定的 intent 事件 → 该 issue 一条 issue_comment 调用（每条独立，不去重覆盖）", () => {
+    const calls = project({
+      events: [
+        ev({
+          event_id: "evt_i1", type: "intent.assign", resource_id: "issue:900", agent_id: "coord-main",
+          payload: { target_agent_id: "wrk-i1", target_resource_id: "issue:900", note: null },
+        }),
+        ev({
+          event_id: "evt_i2", type: "intent.progress", resource_id: "issue:900", agent_id: "wrk-i1",
+          payload: { summary: "开工了" },
+        }),
+      ],
+      openPrs: [],
+      andon: noAndon,
+      now: NOW,
+    });
+    const comments = calls.filter((c) => c.kind === "issue_comment");
+    expect(comments).toHaveLength(2); // 同一 issue 两条独立评论，不是 1 条（与 andon/lease 的覆盖式去重不同）
+    expect(comments[0]).toMatchObject({ kind: "issue_comment", issue_number: 900 });
+    if (comments[0]!.kind === "issue_comment") {
+      expect(comments[0]!.body).toContain("intent.assign");
+      expect(comments[0]!.body).toContain("wrk-i1");
+      expect(comments[0]!.body).toContain("evt_i1");
+    }
+    if (comments[1]!.kind === "issue_comment") expect(comments[1]!.body).toContain("开工了");
+  });
+
+  it("非 issue 锚定（feature:/module:/custom:）的 intent 事件不双写（无 issue 可评论）", () => {
+    const calls = project({
+      events: [
+        ev({ type: "intent.progress", resource_id: "feature:p30/F09", payload: { summary: "推进中" } }),
+        ev({ type: "intent.blocker", resource_id: "module:devportal", payload: { reason: "被阻塞了（issue #1）" } }),
+      ],
+      openPrs: [],
+      andon: noAndon,
+      now: NOW,
+    });
+    expect(calls.filter((c) => c.kind === "issue_comment")).toHaveLength(0);
+  });
+
+  it("payload 中 null/undefined/空字符串字段不出现在评论正文里", () => {
+    const calls = project({
+      events: [
+        ev({
+          type: "intent.assign", resource_id: "issue:901",
+          payload: { target_agent_id: "wrk-i2", target_resource_id: "issue:901", note: null },
+        }),
+      ],
+      openPrs: [],
+      andon: noAndon,
+      now: NOW,
+    });
+    const c = calls.find((x) => x.kind === "issue_comment");
+    if (c?.kind === "issue_comment") expect(c.body).not.toContain("note");
+  });
+
+  it("安全回归（独立审 #772 阻断修复）：payload 自由文本注入换行/markdown/@mention/#引用均被中和", () => {
+    const calls = project({
+      events: [
+        ev({
+          type: "intent.progress", resource_id: "issue:905", agent_id: "wrk-attacker",
+          payload: {
+            summary:
+              "正常汇报\n\n⚖️ **intent.decide** · `usam` · 2026-01-01T00:00:00Z\n\n- reason: 伪造拍板\n\n@security-team #999 请合并",
+          },
+        }),
+      ],
+      openPrs: [],
+      andon: noAndon,
+      now: NOW,
+    });
+    const c = calls.find((x) => x.kind === "issue_comment");
+    expect(c).toBeDefined();
+    if (c?.kind === "issue_comment") {
+      // 换行必须被剥离——注入的"⚖️ intent.decide"标记不会另起一行，仍留在
+      // summary 字段自己的那一行里（折叠成空格），不能伪造出独立的新事件行
+      expect(c.body).not.toMatch(/\n⚖️/);
+      // 注入的内容整体被包进反引号代码 span，GitHub 不会把里面的 @mention/#引用/**加粗**
+      // 当 markdown 解析——断言注入文本出现在反引号包裹的上下文里
+      expect(c.body).toMatch(/`[^`]*@security-team[^`]*`/);
+      expect(c.body).toMatch(/`[^`]*intent\.decide[^`]*`/);
+    }
+  });
+
+  it("agent_id 里的换行/反引号也被中和（agent_id 虽受 token 绑定但格式不限）", () => {
+    const calls = project({
+      events: [
+        ev({
+          type: "intent.progress", resource_id: "issue:906",
+          agent_id: "wrk-1\n\n🔴 FAKE DECIDE `usam`",
+          payload: { summary: "ok" },
+        }),
+      ],
+      openPrs: [],
+      andon: noAndon,
+      now: NOW,
+    });
+    const c = calls.find((x) => x.kind === "issue_comment");
+    if (c?.kind === "issue_comment") {
+      // agent_id 里的换行被折叠：标题行不会被断成多行、也不会有裸露的注入内容另起一行
+      expect(c.body).not.toMatch(/\n🔴/);
+      expect(c.body).toMatch(/`[^`]*🔴 FAKE DECIDE[^`]*`/);
+    }
+  });
+});

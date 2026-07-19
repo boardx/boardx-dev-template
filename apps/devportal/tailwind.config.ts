@@ -9,6 +9,13 @@ const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      // 字体三件套（设计稿：Inter 正文 / JetBrains Mono 数据 / Newsreader 斜体叙事标题），
+      // 变量由 app/layout.tsx 的 next/font 注入。
+      fontFamily: {
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
+        serif: ["var(--font-serif)", "Georgia", "serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -35,6 +42,11 @@ const config: Config = {
           dark: "hsl(var(--surface-dark))",
           "dark-2": "hsl(var(--surface-dark-2))",
           "dark-foreground": "hsl(var(--surface-dark-foreground))",
+        },
+        // 强调琥珀（项目/coord 高亮，设计稿 #f0b429）
+        "accent-amber": {
+          DEFAULT: "hsl(var(--accent-amber))",
+          foreground: "hsl(var(--accent-amber-foreground))",
         },
         // 语义柔彩（标签/状态-soft 底色）
         tag: {
@@ -79,8 +91,21 @@ const config: Config = {
         "10.5": "42px",
         "11.5": "46px",
         "15": "60px",
+        "58": "232px",
         "62": "248px",
         "85": "340px",
+      },
+      // 入场动画（设计稿 fadeIn/slideUp；reduced-motion 由 globals.css 兜底禁用）
+      keyframes: {
+        "dp-fade-in": { from: { opacity: "0" }, to: { opacity: "1" } },
+        "dp-slide-up": {
+          from: { opacity: "0", transform: "translateY(8px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+      },
+      animation: {
+        "fade-in": "dp-fade-in 0.25s ease both",
+        "slide-up": "dp-slide-up 0.3s ease both",
       },
       maxWidth: {
         brand: "420px",

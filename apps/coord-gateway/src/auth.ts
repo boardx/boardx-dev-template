@@ -100,6 +100,31 @@ export async function authorizeRepoAccess(
   return deny(json(403, { error: "token_verification_failed", upstream_status: res.status }));
 }
 
+/** 平台目录/心跳自证共用：scoped token 跨 PROJECTION_REPOS 逐仓 verify，返回该
+ *  token 在 RepoHub 记录的 agent_id/owner（用于强绑定判断）；查无/已吊销 → null。
+ *  目录是「平台级只读物」+「agent 自证心跳」的共用面，天然可跨已接入仓复用同一把
+ *  scoped token（p30/F01 directory.ts 的读面鉴权与 p30/F07 心跳自证共用本函数，
+ *  避免两处重复实现同一遍历逻辑）。 */
+export async function verifyScopedAcrossRepos(
+  bearer: string,
+  env: Env,
+): Promise<{ agentId: string; owner: string } | null> {
+  const repos = (env.PROJECTION_REPOS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const hash = await sha256Hex(bearer);
+  for (const repo of repos) {
+    const res = await env.REPOHUB.get(env.REPOHUB.idFromName(repo)).fetch("https://repohub/tokens/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token_hash: hash }),
+    });
+    if (res.status === 200) {
+      const v = (await res.json()) as { agent_id: string; owner: string };
+      return { agentId: v.agent_id, owner: v.owner };
+    }
+  }
+  return null;
+}
+
 // ---------- agent_id 强绑定（F08 返工，#721）----------
 // scoped token 的 agent 身份以 DO 在册记录为准，请求侧自证一律不信：
 // body/工具参数里的 agent_id 与 token 身份不一致 → 403 token_agent_mismatch；
@@ -174,5 +199,14 @@ export function isAllowedRestSubpath(method: string, sub: string): boolean {
   if (sub === "/andon") return method === "GET"; // raise/clear 走 COORD_ADMIN_TOKEN 管理面
   if (sub === "/stream" || sub.startsWith("/stream/")) return method === "GET";
   if (sub.startsWith("/realtime/")) return method === "GET";
+  // 工作区分片（p30/F04）：需求提交/推进 + talk append 归 scoped 面
+  // （POST body 的 agent_id 经 bindScopedAgentRequest 强绑定）；
+  // 审核（/requirements/:id/review）与面板写（/sprint-items/upsert）
+  // 是 COORD_ADMIN_TOKEN 管理面（index.ts 先行路由），普通透传一律 404
+  if (sub === "/requirements") return true; // GET 列表 / POST 提交
+  if (/^\/requirements\/[\w-]+$/.test(sub)) return method === "GET";
+  if (/^\/requirements\/[\w-]+\/advance$/.test(sub)) return method === "POST";
+  if (sub === "/talk") return true; // GET 流 / POST append
+  if (sub === "/sprint-items") return method === "GET";
   return false;
 }

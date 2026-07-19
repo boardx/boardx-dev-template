@@ -291,6 +291,54 @@ confirmed_at:   2026-07-19T10:00:00Z
 - 卡片四态中本批交付 loading + 空态；降级/无权限态沿用 `PortalCard` 既有语义，在 feature 实现时接入。
 - ~~第二批（P2 招募页、W6 治理台等 §6 序 3/4）未含在本批。~~ → 第二批已交付，见下方「UI 范围清单（第二批）」。
 
+## 批次 5：视觉对齐（DevPortal Platform.dc.html 实现）
+
+> 人类在 Claude Design 定稿视觉原型后的系统性视觉对齐批次：**结构/交互/文案/testid 零变更，
+> 纯视觉层换设计语言**。权威视觉源已入库：
+> `requirements/design/DevPortal-Platform.dc.html`。**视觉变更需人类复核确认**
+> （frontmatter status 覆盖批 1-4 交互签核，本批视觉是否达标由人类/coordinator 裁）。
+
+### 变更范围
+- **主题层单源**（`apps/devportal/app/globals.css`）：全部语义 token 值切换为设计稿暖深色板
+  （bg `#171310` / 卡面 `#1c1712` / 正文 `#f3ece0` / 主强调橙 `#ff8659` / 琥珀 `#f0b429` /
+  teal `#7dd3c0` / 警示 `#e0665a`），token 名不变 → 全部组件自动换肤；新增
+  `--accent-amber(-foreground)` token 对；`.dark` 与 `:root` 同值（单主题防漂移）。
+  设计稿 hex → token 对照表见 globals.css 头注。
+- **字体**：next/font 接入 Inter（正文）/ JetBrains Mono（数据、slug、handle）/
+  Newsreader 斜体（晨报叙事、招募页 tagline）；tailwind `font-sans/mono/serif` 映射。
+- **门户外壳**（新 `components/portal/nav-shell.tsx`，root layout 挂载）：232px 固定侧栏，
+  三层分区（个人层 / 平台层 / 项目工作区·boardx）+ uppercase 小字距分区标签 + 选中态 +
+  渐变 logo 品牌块（DevPortal / agentic 协作平台双行）+ 底部用户块；`<lg` 收起为顶部品牌条
+  （U8 无横向溢出）。新增 testid：`portal-sidebar`（既有 testid 全部不动）。
+- **三色体系重映射**（token 值层，类名不变）：👤 human → 长春花蓝系深底、
+  🤖 agent → teal `#7dd3c0` 系深底、项目 → 琥珀 `#f0b429` 系深底；chip 文字一律
+  `text-foreground`（≥8.4:1）。状态点升级：心跳「渐旧」与体检「警告」点从柔彩
+  tag-yellow 改亮琥珀 `bg-accent-amber`（暗底上可见）。
+- **动画**：fadeIn / slideUp keyframes（主区入场 + 晨报卡），`prefers-reduced-motion` 全局禁用。
+- **对比度门控（ADR-013）**：`check-token-contrast.mjs` 移植为
+  `apps/devportal/scripts/check-token-contrast.mjs` 并接入 `pnpm --filter @repo/devportal lint`
+  （原 lint 为空壳 echo）；另做全量文本/底面组合矩阵校验（证据在 PR body）。
+
+### v2 截图（1440px，`ui-preview/`）
+- [v2 /me 工作台](ui-preview/v2-m1-me-workbench.png) · [v2 车队](ui-preview/v2-m2-fleet-console.png) ·
+  [v2 花名册](ui-preview/v2-w5-people-roster.png) · [v2 招募页](ui-preview/v2-p2-project-home.png) ·
+  [v2 治理台](ui-preview/v2-w6-governance.png) · [v2 目录](ui-preview/v2-p1-explore.png) ·
+  [v2 接入向导](ui-preview/v2-p3-onboard.png) · [v2 调度中心](ui-preview/v2-dispatcher.png) ·
+  [v2 公开档案](ui-preview/v2-p4-profile.png) · [v2 agent 分身页](ui-preview/v2-p5-agent-twin.png)
+
+### 偏差待拍板（批次 5）
+1. 设计稿最弱文字色 `#6b5f4f`（9.5-10px 注脚）对比度仅 2.9:1，违反 AA 红线——未采用；
+   弱文统一 `--muted-foreground #a89880`（设计稿 `#8f8271` 在 `#2a2118` 面上也只有 4.2:1，一并提亮）。
+2. 设计稿侧栏「项目工作区六 tab」（谁在干活/People/需求/对话/镜像/治理）中仅 People 与治理台
+   有既有路由；侧栏只挂真实路由（另含招募页/接入向导），其余待后续 feature 落地。
+3. `/me/performance`、通知中心（P6）无路由：侧栏以「规划中」占位条呈现（不可点），不虚构页面。
+4. 三色体系的 human 色：设计稿人类多以 teal 呈现，但任务定 🤖=teal，故 human 取设计稿
+   周边色长春花蓝（`#9db1ff` 系）保三色区分度——是否接受此映射请拍板。
+5. 「招募中」徽章沿用 tag-green（现映射为琥珀系）；设计稿中为 teal 系。如需改为 teal
+   需把该徽章从三色 token 改挂 success 系，属类名级改动，待拍板后另行小 PR。
+6. 设计稿 `#f5a524`（举手琥珀）与 `#f0b429`（项目琥珀）色距过小，soft 底形态下合并为
+   tag-yellow（琥珀黄深底）+ accent-amber 两档承载。
+
 ## 人类确认意见
 <!-- 确认人填写：通过 / 需修改（列出修改点）。改完再确认。 -->
 - 2026-07-19（yanbin shen，经 #752）：批 1-3 签核通过。

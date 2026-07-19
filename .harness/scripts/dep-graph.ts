@@ -1,7 +1,7 @@
 // dep-graph.ts — 从 feature_list.json 的 depends_on/wave/status 生成依赖图快照，写到
-// .harness/state/dep-graph.md。取代 coordinator-loop-brief.md 里手写维护、反复过期的
-// "依赖图备份"小节——那份文档多次被发现记的是几天前的状态（见教训记录），
-// 而这里跟 PROGRESS.md 一样是脚本生成、每次跑都反映当下真实状态。
+// .harness/state/dep-graph.md（不入库，见 .gitignore）。取代此前手写维护、反复过期的
+// "依赖图备份"小节（历史见 docs/postmortems/campaign-issue100-139-dispatch-loop-brief.md）——
+// 这里跟 PROGRESS.md 一样是脚本生成、每次跑都反映当下真实状态。
 import { writeFileSync } from "node:fs";
 import { loadRoadmap } from "./lib/roadmap";
 import { loadFeatureList } from "./lib/features";
@@ -45,8 +45,7 @@ export function depGraph(_args: Args): void {
     "# 依赖图快照(自动生成)",
     "",
     "> 本文件由 `pnpm harness dep-graph` 生成。手改会被覆盖。",
-    "> 取代 coordinator-loop-brief.md 里手写的「依赖图备份」小节——每次唤醒先跑一遍本命令刷新，" +
-      "别再手改那段 prose。",
+    "> 每次唤醒先跑一遍本命令刷新——不要手改这份文件，改了也会被下次生成覆盖。",
     "",
   ];
 

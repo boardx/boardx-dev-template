@@ -14,6 +14,8 @@
     "deploy": "wrangler deploy"
   },
   "dependencies": {
+    "@repo/coord-brain": "workspace:*",
+    "@repo/coord-directory": "workspace:*",
     "@repo/coord-projection": "workspace:*",
     "@repo/coord-protocol": "workspace:*",
     "@repo/coord-repohub": "workspace:*"

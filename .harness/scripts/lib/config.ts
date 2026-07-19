@@ -16,6 +16,8 @@ export interface GatesConfig {
   single_in_progress: boolean;
   passing_is_irreversible: boolean;
   evidence_required: boolean;
+  /** claim/verify 门控 spec_ref（每个 feature 必须能追溯到 requirements/ 下的一个 story 章节）。 */
+  spec_ref_required: boolean;
 }
 
 export interface QualityConfig {

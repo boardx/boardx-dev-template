@@ -3688,6 +3688,14 @@ export default function SurveysPage() {
       return;
     }
     const { survey } = await res.json();
+    setWorkspaceSurvey(survey);
+    setSurveys((items) => {
+      const existing = items.find((item) => item.id === survey.id);
+      if (existing) {
+        return items.map((item) => item.id === survey.id ? { ...item, ...survey } : item);
+      }
+      return [...items, survey];
+    });
     setEditingSurveyId(nextView === "edit" ? survey.id : null);
     setTitle(survey.title ?? "");
     setDescription(survey.description ?? "");

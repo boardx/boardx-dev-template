@@ -8,8 +8,10 @@ import {
   validateVerificationVerdict,
   validateEvent,
   validateAndonAction,
+  validateIntentRequest,
   PROTOCOL,
   EVENT_TYPES,
+  INTENT_TYPES,
 } from "../src/index";
 
 const T = "2026-07-18T03:00:00Z";
@@ -165,8 +167,27 @@ describe("VerificationVerdict", () => {
   });
 });
 
+const legalIntentPayload = (t: string): Record<string, unknown> => {
+  switch (t) {
+    case "intent.assign":
+      return { target_agent_id: "wrk-t1", target_resource_id: "issue:698", note: null };
+    case "intent.accept":
+      return { note: "收到，开始处理" };
+    case "intent.progress":
+      return { summary: "F09 协议扩展已写完，跑测试中" };
+    case "intent.blocker":
+      return { reason: "CI 环境缺依赖，阻塞验证（issue #700）" };
+    case "intent.escalate":
+      return { reason: "需要人类确认拍板范围（issue #700）", escalated_to: "usam" };
+    case "intent.decide":
+      return { reason: "按方案 A 拍板通过", issue_ref: "#700", decision: "approved" };
+    default:
+      return {};
+  }
+};
+
 describe("CoordEvent", () => {
-  it("全部封闭集合类型均可通过（andon/task 用合法 payload）", () => {
+  it("全部封闭集合类型均可通过（andon/task/workspace/intent 用合法 payload）", () => {
     for (const t of EVENT_TYPES) {
       const payload = t.startsWith("andon.")
         ? { scope: "repo", reason: "main 基础验证挂了，停线（issue #123）", severity: "stop-merge" }
@@ -174,9 +195,33 @@ describe("CoordEvent", () => {
           ? { task_id: 1, assignee: "wrk-1", priority: "normal", deadline: null, note: null }
           : t.startsWith("task.")
             ? { task_id: 1 }
-            : {};
+            : t === "requirement.advanced"
+              ? { requirement_id: "req_01ABC", status: "analyzing" }
+              : t.startsWith("requirement.")
+                ? { requirement_id: "req_01ABC" }
+                : t === "sprint.upserted"
+                  ? { sprint: "p30/01", item_id: "F04" }
+                  : t === "talk.posted"
+                    ? { message_id: "tlk_01ABC" }
+                    : t.startsWith("intent.")
+                      ? legalIntentPayload(t)
+                      : {};
       expect(validateEvent(event(t, payload)).ok, t).toBe(true);
     }
+  });
+  it("workspace 事件 payload 强校验（coord/0.1.3）：缺锚定字段/坏 status 被拒", () => {
+    expect(validateEvent(event("requirement.submitted", {})).ok).toBe(false);
+    expect(validateEvent(event("requirement.advanced", { requirement_id: "req_1" })).ok).toBe(false);
+    expect(
+      validateEvent(event("requirement.advanced", { requirement_id: "req_1", status: "shipped" })).ok,
+    ).toBe(false);
+    expect(
+      validateEvent(event("requirement.advanced", { requirement_id: "req_1", status: "in_review" })).ok,
+    ).toBe(true);
+    expect(validateEvent(event("requirement.dispatched", { requirement_id: "req_1", issue: 42 })).ok).toBe(true);
+    expect(validateEvent(event("sprint.upserted", { sprint: "p30/01" })).ok).toBe(false);
+    expect(validateEvent(event("talk.posted", {})).ok).toBe(false);
+    expect(validateEvent(event("talk.posted", { message_id: "tlk_1", needs_human: true })).ok).toBe(true);
   });
   it("task.* 缺 task_id / task.dispatched 缺 assignee 或坏 priority 被拒（coord/0.1.1）", () => {
     expect(validateEvent(event("task.acked", {})).ok).toBe(false);
@@ -220,6 +265,101 @@ describe("CoordEvent", () => {
     expect(
       validateEvent(
         event("andon.raised", { scope: "module:devportal", reason: "长度足够的理由（#1）", severity: "stop-merge" }),
+      ).ok,
+    ).toBe(true);
+  });
+});
+
+describe("Intents（coord/0.1.4，p30/F09）", () => {
+  it("intent.assign 缺 target_agent_id / 坏 target_resource_id 被拒", () => {
+    expect(validateEvent(event("intent.assign", { note: null })).ok).toBe(false);
+    expect(
+      validateEvent(
+        event("intent.assign", { target_agent_id: "wrk-t1", target_resource_id: "banana", note: null }),
+      ).ok,
+    ).toBe(false);
+    expect(
+      validateEvent(
+        event("intent.assign", { target_agent_id: "wrk-t1", target_resource_id: "issue:698", note: null }),
+      ).ok,
+    ).toBe(true);
+  });
+  it("intent.accept 无强制字段：空 payload 也合法", () => {
+    expect(validateEvent(event("intent.accept", {})).ok).toBe(true);
+  });
+  it("intent.progress 缺 summary 被拒", () => {
+    expect(validateEvent(event("intent.progress", {})).ok).toBe(false);
+    expect(validateEvent(event("intent.progress", { summary: "" })).ok).toBe(false);
+    expect(validateEvent(event("intent.progress", { summary: "推进中" })).ok).toBe(true);
+  });
+  it("intent.blocker/escalate 的 reason 必须 ≥10 字符（与 andon 同规格）", () => {
+    expect(validateEvent(event("intent.blocker", { reason: "太短" })).ok).toBe(false);
+    expect(validateEvent(event("intent.blocker", { reason: "CI 环境缺依赖，阻塞验证（#700）" })).ok).toBe(true);
+    expect(validateEvent(event("intent.escalate", { reason: "太短" })).ok).toBe(false);
+    expect(
+      validateEvent(event("intent.escalate", { reason: "需要人类确认拍板范围（#700）", escalated_to: null })).ok,
+    ).toBe(true);
+  });
+  it("intent.decide 要求 reason≥10 + issue_ref 可查证锚点；decision 非法值被拒", () => {
+    expect(validateEvent(event("intent.decide", { reason: "理由已经充分说明清楚且长度达标", issue_ref: "" })).ok).toBe(false);
+    expect(
+      validateEvent(event("intent.decide", { reason: "理由已经充分说明清楚且长度达标", issue_ref: "not-a-ref" })).ok,
+    ).toBe(false);
+    expect(
+      validateEvent(
+        event("intent.decide", { reason: "理由已经充分说明清楚且长度达标", issue_ref: "#700", decision: "maybe" }),
+      ).ok,
+    ).toBe(false);
+    expect(
+      validateEvent(
+        event("intent.decide", {
+          reason: "理由已经充分说明清楚且长度达标",
+          issue_ref: "boardx/boardx-dev-template#700",
+          decision: "approved",
+        }),
+      ).ok,
+    ).toBe(true);
+  });
+
+  it("INTENT_TYPES 是 EVENT_TYPES 的子集（六类意图消息均已注册为事件类型）", () => {
+    for (const t of INTENT_TYPES) expect(EVENT_TYPES).toContain(t);
+    expect(INTENT_TYPES).toHaveLength(6);
+  });
+
+  const intentReq = (over: Record<string, unknown> = {}) => ({
+    type: "intent.progress",
+    resource_id: "issue:698",
+    agent_id: "wrk-t1",
+    payload: { summary: "推进中" },
+    ...over,
+  });
+
+  it("validateIntentRequest：合法样例通过", () => {
+    expect(validateIntentRequest(intentReq()).ok).toBe(true);
+  });
+  it("validateIntentRequest：未知 type / 缺 resource_id·agent_id / 非法 payload 被拒", () => {
+    expect(validateIntentRequest(intentReq({ type: "intent.unknown" })).ok).toBe(false);
+    expect(validateIntentRequest({ ...intentReq(), resource_id: undefined }).ok).toBe(false);
+    expect(validateIntentRequest({ ...intentReq(), agent_id: "" }).ok).toBe(false);
+    expect(validateIntentRequest(intentReq({ payload: { summary: "" } })).ok).toBe(false);
+    expect(validateIntentRequest(intentReq({ payload: "not-an-object" })).ok).toBe(false);
+    expect(validateIntentRequest(null).ok).toBe(false);
+  });
+  it("validateIntentRequest：intent.decide 的 issue_ref/reason 规则同 validateEvent 分支（单一出口）", () => {
+    expect(
+      validateIntentRequest(
+        intentReq({
+          type: "intent.decide",
+          payload: { reason: "太短", issue_ref: "#1" },
+        }),
+      ).ok,
+    ).toBe(false);
+    expect(
+      validateIntentRequest(
+        intentReq({
+          type: "intent.decide",
+          payload: { reason: "理由已经充分说明清楚且长度达标", issue_ref: "#700", decision: "approved" },
+        }),
       ).ok,
     ).toBe(true);
   });

@@ -8,6 +8,7 @@ import { parse } from "yaml";
 import { HARNESS_DIR, findPhaseDir } from "./lib/paths";
 import { loadRoadmap } from "./lib/roadmap";
 import { loadFeatureList, featuresForSprint } from "./lib/features";
+import { resolveSpecRef } from "./lib/spec-ref";
 import { sh } from "./lib/sh";
 import { req } from "./lib/args";
 import { log } from "./lib/log";
@@ -105,6 +106,16 @@ export function buildIssueBody(
   const phaseDir = basename(findPhaseDir(phaseId));
   const blob = (p: string) => `https://github.com/${repo}/blob/main/${p}`;
   const evidencePath = `phases/${phaseDir}/sprints/sprint-${sprintId}/evidence/${f.id}.verify.log`;
+
+  // Story：把闭环延伸到 GitHub（人类拍板 2026-07-19）。GitHub 渲染的 markdown 标题
+  // 锚点是有损派生的（strip 标点/转小写/CJK 处理不稳），不可靠指哪打哪，所以链接到
+  // 文件本身、章节 ID 用文字标出，而不是拼一个 #anchor 赌它命中。
+  const storyLine = (() => {
+    const r = resolveSpecRef(phaseId, f.spec_ref);
+    if (!r.ok) return `⚠ 缺少可追溯的 story（${r.reason}）——历史存量，新 feature 已被 claim/verify 强制要求`;
+    const [file, section] = f.spec_ref!.split("#");
+    return `[requirements/${file}](${blob(`phases/${phaseDir}/requirements/${file}`)}) — 章节 \`${section}\``;
+  })();
   const parentSection = trackingIssue == null
     ? []
     : [
@@ -123,6 +134,10 @@ export function buildIssueBody(
     `## 交付契约（user_visible_behavior）`,
     ``,
     f.user_visible_behavior,
+    ``,
+    `## Story`,
+    ``,
+    storyLine,
     ``,
     `## 验证（完成的唯一标准：每条命令退出码 0）`,
     ``,

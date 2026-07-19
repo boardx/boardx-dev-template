@@ -8,7 +8,8 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-surface-dark active:bg-surface-dark-2",
+        // 暖深主题：主按钮 = 强调橙实心（hover 走透明度过渡，非状态语义；禁用态仍走 disabled token 对）
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline: "border border-input bg-background hover:bg-surface-1",
         secondary: "bg-secondary text-secondary-foreground hover:bg-muted",

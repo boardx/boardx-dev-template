@@ -38,6 +38,12 @@ importers:
 
   apps/coord-gateway:
     dependencies:
+      '@repo/coord-brain':
+        specifier: workspace:*
+        version: link:../../packages/coord-brain
+      '@repo/coord-directory':
+        specifier: workspace:*
+        version: link:../../packages/coord-directory
       '@repo/coord-projection':
         specifier: workspace:*
         version: link:../../packages/coord-projection
@@ -103,6 +109,9 @@ importers:
       '@cloudflare/next-on-pages':
         specifier: ^1.13.5
         version: 1.13.16(@cloudflare/workers-types@4.20260702.1)(next@14.2.5(@playwright/test@1.47.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(wrangler@4.107.0(@cloudflare/workers-types@4.20260702.1))
+      '@playwright/test':
+        specifier: ^1.47.0
+        version: 1.47.0
       '@types/node':
         specifier: ^22.5.0
         version: 22.20.1
@@ -358,6 +367,18 @@ importers:
         specifier: '*'
         version: 2.0.0(@types/node@22.0.0)(jsdom@26.1.0(canvas@3.2.3))
 
+  packages/coord-brain:
+    devDependencies:
+      '@types/node':
+        specifier: '*'
+        version: 22.20.1
+      typescript:
+        specifier: '*'
+        version: 5.6.2
+      vitest:
+        specifier: '*'
+        version: 2.1.9(@types/node@22.20.1)(jsdom@26.1.0(canvas@3.2.3))
+
   packages/coord-cli:
     devDependencies:
       '@types/node':
@@ -372,6 +393,31 @@ importers:
 
   packages/coord-dashboard:
     devDependencies:
+      wrangler:
+        specifier: ^4.0.0
+        version: 4.107.0(@cloudflare/workers-types@4.20260702.1)
+
+  packages/coord-directory:
+    dependencies:
+      '@repo/coord-protocol':
+        specifier: workspace:*
+        version: link:../coord-protocol
+    devDependencies:
+      '@cloudflare/vitest-pool-workers':
+        specifier: ^0.12.0
+        version: 0.12.21(@cloudflare/workers-types@4.20260702.1)(@vitest/runner@2.1.9)(@vitest/snapshot@2.1.9)(vitest@2.1.9(@types/node@22.20.1)(jsdom@26.1.0(canvas@3.2.3)))
+      '@cloudflare/workers-types':
+        specifier: ^4.20241127.0
+        version: 4.20260702.1
+      '@types/node':
+        specifier: '*'
+        version: 22.20.1
+      typescript:
+        specifier: '*'
+        version: 5.6.2
+      vitest:
+        specifier: ^2.0.0
+        version: 2.1.9(@types/node@22.20.1)(jsdom@26.1.0(canvas@3.2.3))
       wrangler:
         specifier: ^4.0.0
         version: 4.107.0(@cloudflare/workers-types@4.20260702.1)
