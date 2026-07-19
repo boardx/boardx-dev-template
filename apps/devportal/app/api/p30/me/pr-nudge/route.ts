@@ -7,8 +7,19 @@
 // coord-main）派发一条 high 优先级任务，note 里带 PR 链接与真实催办人。这是
 // 一次真实、可审计的 task.dispatched 事件（能在协调事件流里看到），不是
 // UI 假装成功。
+//
+// 安全审收尾（PR #774 review）：这是真实写路径，不是纯读聚合——补两条加固：
+//   1. 归属校验（lib/pr-nudge-guard.ts#isOwnOpenPr）：催办目标必须是 body.number
+//      对应、且是本人名下当前仍 open 的 PR，否则 403，fail-closed。
+//   2. 冷却限流（lib/pr-nudge-guard.ts#hasRecentNudge）：同一 PR 短时间内已被
+//      派过工则 429，best-effort（查询失败不阻断催办本体）。
+// 另外 body.title/body.url 是客户端完全可控的自由文本，落进 note 会进协调事件流
+// ——复用 lib/onboarding-issue.ts 已有的 sanitizeInline（同族注入问题同款修法），
+// 不再只是 .slice 截断。
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/session";
+import { sanitizeInline } from "@/lib/onboarding-issue";
+import { hasRecentNudge, isOwnOpenPr } from "@/lib/pr-nudge-guard";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -34,10 +45,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "missing_pr_number" }, { status: 400 });
   }
 
+  // 归属校验：fail-closed——查无/非 open/非本人/上游异常一律拒绝，不放行任何疑点。
+  const owns = await isOwnOpenPr(user.login, number);
+  if (!owns) return NextResponse.json({ error: "not_your_open_pr" }, { status: 403 });
+
   const gw = broker();
   if (!gw) return NextResponse.json({ error: "broker_not_configured" }, { status: 503 });
 
-  const note = `[催办 PR] ${user.login} 催办 #${number}${typeof body.title === "string" ? ` ${body.title}` : ""}${typeof body.url === "string" ? ` · ${body.url}` : ""}`.slice(0, 1900);
+  // 冷却限流：同一 PR 短时间内已派过工，拒绝重复催办（best-effort，非安全关卡）。
+  if (await hasRecentNudge(number)) {
+    return NextResponse.json({ error: "cooldown_active" }, { status: 429 });
+  }
+
+  const titlePart = typeof body.title === "string" ? ` ${sanitizeInline(body.title.slice(0, 1900))}` : "";
+  const urlPart = typeof body.url === "string" ? ` · ${sanitizeInline(body.url.slice(0, 1900))}` : "";
+  const note = `[催办 PR] ${user.login} 催办 #${number}${titlePart}${urlPart}`.slice(0, 1900);
 
   const res = await fetch(`${gw.baseUrl}/tasks`, {
     method: "POST",
