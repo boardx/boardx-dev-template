@@ -668,7 +668,9 @@ export class PlatformDirectory extends DurableObject {
       agent_id: r.agent_id,
       name: r.name,
       identifier: owner ? `@${owner.handle}/${r.name}` : r.name, // D6：@handle/agent-name
-      owner: owner ? { engineer_id: owner.engineer_id, handle: owner.handle } : null, // 属于哪个人类
+      // 属于哪个人类——github_login 是认证锚点（调用方判定"是不是我的 agent"应该用
+      // 这个字段，不能用 handle：两者是独立字段，可以不相等，见 p30/F06 #798 同款教训）。
+      owner: owner ? { engineer_id: owner.engineer_id, handle: owner.handle, github_login: owner.github_login } : null,
       parent: parent ? { agent_id: parent["agent_id"], name: parent["name"] } : null, // parent 是谁
       projects, // 哪个项目的（active enrollment 的项目 slug）
       capabilities: JSON.parse(r.capabilities),

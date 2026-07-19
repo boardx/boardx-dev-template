@@ -3,7 +3,7 @@
 // 身份记录本身保留（历史贡献与归因不删，数字分身页仍可见——D1/D6）。
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/session";
-import { gatewayEnv, getDirectoryAgent, revokeAllActiveTokens, setAgentLifecycle } from "@/lib/agents-gateway";
+import { gatewayEnv, getDirectoryAgent, isOwnAgent, revokeAllActiveTokens, setAgentLifecycle } from "@/lib/agents-gateway";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ export async function POST(req: Request, { params }: { params: { agentId: string
 
   const agent = await getDirectoryAgent(gw, params.agentId);
   if (!agent) return NextResponse.json({ error: "agent_not_found" }, { status: 404 });
-  if (agent.owner?.handle !== user.login) return NextResponse.json({ error: "not_your_agent" }, { status: 403 });
+  if (!isOwnAgent(agent, user.login)) return NextResponse.json({ error: "not_your_agent" }, { status: 403 });
 
   const revokedCount = await revokeAllActiveTokens(gw, params.agentId);
   const lc = await setAgentLifecycle(gw, params.agentId, "retire");

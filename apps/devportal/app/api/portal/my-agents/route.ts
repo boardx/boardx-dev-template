@@ -8,7 +8,7 @@
 // Directory 发的 agt_ULID 作 agent_id，见 my-agents/enroll/route.ts）。
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/session";
-import { gatewayEnv, heartbeatBucket, listMyDirectoryAgents, listRepoTokens } from "@/lib/agents-gateway";
+import { gatewayEnv, heartbeatBucket, isOwnAgent, listMyDirectoryAgents, listRepoTokens } from "@/lib/agents-gateway";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ export async function GET(req: Request) {
   const [agents, tokens] = await Promise.all([listMyDirectoryAgents(gw), listRepoTokens(gw)]);
   if (!agents) return NextResponse.json({ configured: true, error: "directory_unreachable" }, { status: 502 });
 
-  const mine = agents.filter((a) => a.owner?.handle === user.login);
+  const mine = agents.filter((a) => isOwnAgent(a, user.login));
   const fleet = mine.map((a) => {
     const myTokens = tokens.filter((t) => t.agent_id === a.agent_id);
     const active = myTokens.filter((t) => !t.revoked_at);

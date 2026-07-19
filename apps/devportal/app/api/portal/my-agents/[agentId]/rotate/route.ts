@@ -3,7 +3,7 @@
 // 不改 Directory 的身份/生命周期记录——轮换纯粹是 RepoHub token 面的事。
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/session";
-import { gatewayEnv, getDirectoryAgent, mintRepoToken, revokeAllActiveTokens } from "@/lib/agents-gateway";
+import { gatewayEnv, getDirectoryAgent, isOwnAgent, mintRepoToken, revokeAllActiveTokens } from "@/lib/agents-gateway";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ export async function POST(req: Request, { params }: { params: { agentId: string
 
   const agent = await getDirectoryAgent(gw, params.agentId);
   if (!agent) return NextResponse.json({ error: "agent_not_found" }, { status: 404 });
-  if (agent.owner?.handle !== user.login) return NextResponse.json({ error: "not_your_agent" }, { status: 403 });
+  if (!isOwnAgent(agent, user.login)) return NextResponse.json({ error: "not_your_agent" }, { status: 403 });
 
   await revokeAllActiveTokens(gw, params.agentId);
   const minted = await mintRepoToken(gw, params.agentId, user.login);

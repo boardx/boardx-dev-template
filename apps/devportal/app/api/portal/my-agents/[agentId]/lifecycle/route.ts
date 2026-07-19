@@ -4,7 +4,7 @@
 // 见 retire/route.ts）。
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/session";
-import { gatewayEnv, getDirectoryAgent, setAgentLifecycle, type LifecycleAction } from "@/lib/agents-gateway";
+import { gatewayEnv, getDirectoryAgent, isOwnAgent, setAgentLifecycle, type LifecycleAction } from "@/lib/agents-gateway";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ export async function POST(req: Request, { params }: { params: { agentId: string
 
   const agent = await getDirectoryAgent(gw, params.agentId);
   if (!agent) return NextResponse.json({ error: "agent_not_found" }, { status: 404 });
-  if (agent.owner?.handle !== user.login) return NextResponse.json({ error: "not_your_agent" }, { status: 403 });
+  if (!isOwnAgent(agent, user.login)) return NextResponse.json({ error: "not_your_agent" }, { status: 403 });
 
   const res = await setAgentLifecycle(gw, params.agentId, body.action);
   if (!res.ok) {
