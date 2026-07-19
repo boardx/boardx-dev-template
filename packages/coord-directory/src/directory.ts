@@ -16,19 +16,22 @@ import { DurableObject } from "cloudflare:workers";
 import { PROTOCOL, type EventType } from "@repo/coord-protocol";
 import { SCHEMA } from "./schema";
 import { ulid } from "./ulid";
+import { computeSlaStatus, type SlaStatus } from "./sla";
 
 // ---------- 领域常量（platform-redesign §1） ----------
 
 export const MEMBERSHIP_ROLES = ["owner", "maintainer", "approver", "contributor"] as const;
 export type MembershipRole = (typeof MEMBERSHIP_ROLES)[number];
 
-export const MEMBERSHIP_STATUSES = ["pending", "active", "suspended"] as const;
+export const MEMBERSHIP_STATUSES = ["pending", "active", "suspended", "rejected"] as const;
 export type MembershipStatus = (typeof MEMBERSHIP_STATUSES)[number];
 
-// 状态机唯一出口：pending→active（approve）→suspended（suspend）→active（reinstate）。
-// 其余一律非法（pending→suspended、重复 approve、对 pending suspend……）→ 409。
+// 状态机唯一出口：pending→active（approve）/ pending→rejected（reject，终态，p30/F06）
+// →suspended（suspend，仅 active）→active（reinstate，仅 suspended）。
+// 其余一律非法（pending→suspended、重复 approve、对 rejected 再 approve、active→reinstate……）→ 409。
 const MEMBERSHIP_TRANSITIONS = {
   approve: { from: ["pending"], to: "active" },
+  reject: { from: ["pending"], to: "rejected" },
   suspend: { from: ["active"], to: "suspended" },
   reinstate: { from: ["suspended"], to: "active" },
 } as const;
@@ -80,6 +83,9 @@ interface MembershipRow {
   engineer_id: string;
   role: string;
   status: string;
+  modules: string;
+  intro: string;
+  onboarding_issue_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -174,6 +180,8 @@ export class PlatformDirectory extends DurableObject {
       const one = p.match(/^\/directory\/agents\/(agt_[0-9A-Z]+)$/);
       if (req.method === "GET" && one) return this.getAgent(one[1]!);
       if (req.method === "GET" && p === "/directory/memberships") return this.listMemberships();
+      const msla = p.match(/^\/directory\/memberships\/(mem_[0-9A-Z]+)\/sla$/);
+      if (req.method === "GET" && msla) return this.membershipSla(msla[1]!);
       if (req.method === "GET" && p === "/directory/enrollments") return this.listEnrollments();
       if (req.method === "GET" && p === "/directory/events") return this.listEvents(url);
       // 写面（仅身份/授权/审批类，三条铁律；权限门在 gateway：COORD_ADMIN_TOKEN）
@@ -356,6 +364,12 @@ export class PlatformDirectory extends DurableObject {
     const engineer = this.engineerByRef(engineerRef);
     if (!engineer) return json(404, { error: "unknown_engineer", engineer: engineerRef });
 
+    // F06：加入向导带来的申请上下文（模块/自介），W6 审批队列展示用；全部可选。
+    const modules = jsonField(b, "modules", []);
+    if (modules instanceof Response) return modules;
+    const intro = str(b, "intro") ?? "";
+    const onboardingIssueUrl = str(b, "onboarding_issue_url") ?? null;
+
     const dup = [...this.sql.exec(
       `SELECT membership_id, status FROM memberships WHERE project_id=? AND engineer_id=?`,
       project.project_id, engineer.engineer_id,
@@ -365,14 +379,14 @@ export class PlatformDirectory extends DurableObject {
 
     const now = iso(Date.now());
     const row = [...this.sql.exec<MembershipRow>(
-      `INSERT INTO memberships (membership_id,project_id,engineer_id,role,status,created_at,updated_at)
-       VALUES (?,?,?,?,'pending',?,?) RETURNING *`,
-      `mem_${ulid()}`, project.project_id, engineer.engineer_id, role, now, now,
+      `INSERT INTO memberships (membership_id,project_id,engineer_id,role,status,modules,intro,onboarding_issue_url,created_at,updated_at)
+       VALUES (?,?,?,?,'pending',?,?,?,?,?) RETURNING *`,
+      `mem_${ulid()}`, project.project_id, engineer.engineer_id, role, modules, intro, onboardingIssueUrl, now, now,
     )][0]!;
     this.emit("directory.membership.requested", `membership:${project.slug}/${engineer.handle}`, actorOf(b), {
       membership_id: row.membership_id, project: project.slug, engineer: engineer.handle, role,
     });
-    return json(201, { membership: row });
+    return json(201, { membership: this.toMembership(row) });
   }
 
   /** 状态机迁移：approve（pending→active）/ suspend（active→suspended）/
@@ -400,19 +414,67 @@ export class PlatformDirectory extends DurableObject {
     this.emit("directory.membership.transitioned", `membership:${id}`, actorOf(b), {
       membership_id: id, action, from: spec.from, to: spec.to,
     });
-    return json(200, { membership: updated });
+    return json(200, { membership: this.toMembership(updated) });
+  }
+
+  private toMembership(r: MembershipRow): Obj {
+    return {
+      membership_id: r.membership_id,
+      project_id: r.project_id,
+      engineer_id: r.engineer_id,
+      role: r.role,
+      status: r.status,
+      modules: JSON.parse(r.modules),
+      intro: r.intro,
+      onboarding_issue_url: r.onboarding_issue_url,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    };
   }
 
   private listMemberships(): Response {
     // 目录读面的「行自答」（§1 设计推论）：membership 行直接带 slug/handle
-    const rows = [...this.sql.exec(
-      `SELECT m.*, p.slug AS project_slug, e.handle AS engineer_handle
+    const rows = [...this.sql.exec<MembershipRow & { project_slug: string; engineer_handle: string; project_sla: string }>(
+      `SELECT m.*, p.slug AS project_slug, e.handle AS engineer_handle, p.sla AS project_sla
        FROM memberships m
        JOIN projects p ON p.project_id = m.project_id
        JOIN engineers e ON e.engineer_id = m.engineer_id
        ORDER BY m.membership_id`,
     )];
-    return json(200, { memberships: rows });
+    return json(200, {
+      memberships: rows.map((r) => ({
+        ...this.toMembership(r),
+        project_slug: r.project_slug,
+        engineer_handle: r.engineer_handle,
+        // pending 行附带 SLA 现状（W6 审批队列倒计时徽章的数据源）；非 pending 不适用
+        sla: r.status === "pending" ? this.slaFor(r.created_at, r.project_sla) : null,
+      })),
+    });
+  }
+
+  /** SLA 判定单一出口：project.sla.promiseH（默认 24h）+ membership.created_at。 */
+  private slaFor(createdAt: string, projectSlaJson: string): SlaStatus {
+    let promiseH = 24;
+    try {
+      const parsed = JSON.parse(projectSlaJson) as { promiseH?: unknown };
+      if (typeof parsed.promiseH === "number" && parsed.promiseH > 0) promiseH = parsed.promiseH;
+    } catch {
+      /* 解析失败 → 用默认 24h（fail-closed 到保守值，不炸读面） */
+    }
+    return computeSlaStatus(createdAt, promiseH);
+  }
+
+  /** GET /directory/memberships/:id/sla — 轮询判定「是否已超时」（F06；供 owner 待拍板
+   *  升级流 / 未来 F10 dispatcher 消费，本 feature 只产出信号，不跑 cron）。 */
+  private membershipSla(id: string): Response {
+    const row = [...this.sql.exec<MembershipRow & { project_sla: string }>(
+      `SELECT m.*, p.sla AS project_sla FROM memberships m JOIN projects p ON p.project_id = m.project_id WHERE m.membership_id=?`,
+      id,
+    )][0];
+    if (!row) return json(404, { error: "membership_not_found" });
+    if (row.status !== "pending")
+      return json(200, { membership_id: id, status: row.status, sla: null });
+    return json(200, { membership_id: id, status: "pending", sla: this.slaFor(row.created_at, row.project_sla) });
   }
 
   // ---------- Agent ----------

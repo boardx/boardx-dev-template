@@ -3,19 +3,21 @@
 // 板块：唯一管理员与 coord-agent 绑定卡｜agent 准入策略开关（D2）｜审批队列（SLA 倒计时）｜
 // andon 面板（拉停状态一键解除 + per-person 授权名单 D5 + ✋ 举手事件琥珀区）｜token 审计表。
 // Probation 规则提示条（前 3 个 PR 强制人工 review）。
-// 「无权限态」占位：右上视角开关 mock 切到非 owner，看到的就是拒绝页（N1 第四态）。
-// ⚠️ 全部 mock（lib/mock/p30.ts）：批准/驳回/解除/授权只改本地状态，并演示「入审计」反馈。
-import { useState } from "react";
+// 「无权限态」占位：右上视角开关 mock 切到非 owner，看到的就是拒绝页（N1 第四态）；
+// 审批队列（F06 接真）：真实待审 membership + SLA 倒计时 + 批准/驳回真实调用状态迁移，
+// 详见 /api/portal/approvals；其余板块（绑定卡/准入策略/andon/token 审计）仍是 mock，出于
+// 范围纪律不在本 feature 一并接真。
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PortalCard } from "@/components/portal/portal-card";
 import { HeartbeatDot } from "@/components/portal/heartbeat-dot";
 import { ConfirmDialog } from "@/components/p30/confirm-dialog";
 import { EmptyState, IdentityChip, LoadingSkeleton, PrototypeHeader, useMockLoading } from "@/components/p30/shared";
+import { SlaBadge } from "@/components/p30/sla-countdown";
 import {
   MOCK_ACTIVE_ANDON,
   MOCK_ANDON_GRANTS,
-  MOCK_APPROVAL_QUEUE,
   MOCK_GOVERNANCE_BINDING,
   MOCK_GRANT_CANDIDATES,
   MOCK_RAISE_HANDS,
@@ -23,38 +25,53 @@ import {
   type MockAndonGrant,
 } from "@/lib/mock/p30";
 
-function slaBadge(h: number): string {
-  return h <= 4 ? "bg-destructive text-destructive-foreground" : "bg-muted text-muted-foreground";
+interface ApprovalItem {
+  membership_id: string;
+  handle: string;
+  role: string;
+  modules: string[];
+  intro: string;
+  created_at: string;
+  sla: { deadline: string; hoursLeft: number; timedOut: boolean; urgent: boolean } | null;
 }
 
-/** 审批队列一行：批准/驳回是 mock——就地翻状态并显示「已入审计」。 */
-function ApprovalRow({ id, onDecide, decided }: { id: string; decided: "approved" | "rejected" | null; onDecide: (d: "approved" | "rejected") => void }) {
-  const app = MOCK_APPROVAL_QUEUE.find((a) => a.id === id);
-  if (!app) return null;
+/** 审批队列一行：批准/驳回真实调用 /api/portal/approvals/:id（p30/F06）。 */
+function ApprovalRow({
+  item,
+  onDecide,
+  decided,
+  pending,
+}: {
+  item: ApprovalItem;
+  decided: "approved" | "rejected" | null;
+  pending: boolean;
+  onDecide: (d: "approved" | "rejected") => void;
+}) {
   return (
-    <li data-testid={`approval-row-${app.id}`} className="rounded-10 border border-border bg-surface-1 p-3 transition-colors hover:bg-surface-2">
+    <li data-testid={`approval-row-${item.membership_id}`} className="rounded-10 border border-border bg-surface-1 p-3 transition-colors hover:bg-surface-2">
       <div className="flex flex-wrap items-center gap-1.5">
-        <IdentityChip kind="human">@{app.handle}</IdentityChip>
-        <span className="text-13 font-medium text-foreground">{app.name}</span>
-        <Badge variant="secondary" className="text-11">申请 {app.role}</Badge>
-        {app.modules.map((m) => (
+        <IdentityChip kind="human">@{item.handle}</IdentityChip>
+        <Badge variant="secondary" className="text-11">申请 {item.role}</Badge>
+        {item.modules.map((m) => (
           <IdentityChip key={m} kind="project">{m}</IdentityChip>
         ))}
-        <span data-testid={`sla-badge-${app.id}`} className={`ml-auto shrink-0 rounded-full px-2 py-0.5 text-11 tabular-nums ${slaBadge(app.slaHoursLeft)}`}>
-          SLA 剩 {app.slaHoursLeft}h
-        </span>
+        {item.sla && (
+          <span data-testid={`sla-badge-${item.membership_id}`}>
+            <SlaBadge deadline={item.sla.deadline} promiseH={Math.max(1, Math.round((Date.parse(item.sla.deadline) - Date.parse(item.created_at)) / 3_600_000))} />
+          </span>
+        )}
       </div>
-      <p className="mt-2 text-12 leading-relaxed text-muted-foreground">“{app.intro}”</p>
+      <p className="mt-2 text-12 leading-relaxed text-muted-foreground">“{item.intro}”</p>
       {decided ? (
-        <p data-testid={`approval-decided-${app.id}`} className={`mt-2 text-12 font-medium ${decided === "approved" ? "text-success" : "text-destructive"}`}>
+        <p data-testid={`approval-decided-${item.membership_id}`} className={`mt-2 text-12 font-medium ${decided === "approved" ? "text-success" : "text-destructive"}`}>
           {decided === "approved" ? "✓ 已批准（初始 Probation）" : "✗ 已驳回"} · 已入审计，onboarding issue 已更新
         </p>
       ) : (
         <div className="mt-2 flex gap-2">
-          <Button size="sm" data-testid={`approve-${app.id}`} onClick={() => onDecide("approved")}>
+          <Button size="sm" disabled={pending} data-testid={`approve-${item.membership_id}`} onClick={() => onDecide("approved")}>
             批准
           </Button>
-          <Button size="sm" variant="outline" data-testid={`reject-${app.id}`} onClick={() => onDecide("rejected")}>
+          <Button size="sm" variant="outline" disabled={pending} data-testid={`reject-${item.membership_id}`} onClick={() => onDecide("rejected")}>
             驳回
           </Button>
         </div>
@@ -75,12 +92,62 @@ export function GovernanceConsole({ slug }: { slug: string }) {
   const [removeConfirm, setRemoveConfirm] = useState<string | null>(null);
   const [auditFlash, setAuditFlash] = useState<string | null>(null);
 
+  // 审批队列（F06 接真）：真实拉取 + 真实决策，其余板块仍是 mock（见文件头范围纪律说明）。
+  const [approvalItems, setApprovalItems] = useState<ApprovalItem[] | null>(null);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
+  const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
+
   const flash = (msg: string) => {
     setAuditFlash(msg);
     setTimeout(() => setAuditFlash(null), 4000);
   };
 
-  const queue = emptyDemo ? [] : MOCK_APPROVAL_QUEUE;
+  useEffect(() => {
+    if (!asOwner) return;
+    let cancelled = false;
+    setApprovalError(null);
+    fetch(`/api/portal/approvals?project=${encodeURIComponent(slug)}`)
+      .then(async (r) => {
+        if (cancelled) return;
+        if (r.status === 401) return setApprovalError("未登录，无法读取真实审批队列");
+        if (r.status === 403) return setApprovalError("无权限：你在此项目不是 owner/maintainer/approver");
+        const body = (await r.json().catch(() => ({}))) as { configured?: boolean; items?: ApprovalItem[]; error?: string };
+        if (body.configured === false) return setApprovalError("目录服务尚未在本环境接入");
+        if (body.error) return setApprovalError(`读取失败：${body.error}`);
+        setApprovalItems(body.items ?? []);
+      })
+      .catch(() => !cancelled && setApprovalError("网络错误，无法读取审批队列"));
+    return () => {
+      cancelled = true;
+    };
+  }, [asOwner, slug, refreshTick]);
+
+  const decide = async (membershipId: string, decision: "approved" | "rejected") => {
+    setDecidingId(membershipId);
+    try {
+      const res = await fetch(`/api/portal/approvals/${membershipId}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ project: slug, action: decision === "approved" ? "approve" : "reject" }),
+      });
+      if (res.ok) {
+        const item = approvalItems?.find((a) => a.membership_id === membershipId);
+        setDecisions((cur) => ({ ...cur, [membershipId]: decision }));
+        flash(`成员申请 @${item?.handle ?? membershipId} ${decision === "approved" ? "已批准" : "已驳回"}`);
+        setRefreshTick((t) => t + 1);
+      } else {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        flash(`操作失败：${body.error ?? res.status}`);
+      }
+    } catch {
+      flash("操作失败：网络错误");
+    } finally {
+      setDecidingId(null);
+    }
+  };
+
+  const queue = emptyDemo ? [] : approvalItems ?? [];
   const hands = emptyDemo ? [] : MOCK_RAISE_HANDS;
   const audit = emptyDemo ? [] : MOCK_TOKEN_AUDIT;
   const b = MOCK_GOVERNANCE_BINDING;
@@ -194,21 +261,25 @@ export function GovernanceConsole({ slug }: { slug: string }) {
             </PortalCard>
           </div>
 
-          {/* 审批队列 */}
-          <PortalCard title={`审批队列（${queue.filter((a) => !decisions[a.id]).length} 待处理）`} state="ready" wide>
-            {queue.length === 0 ? (
+          {/* 审批队列（真实数据，p30/F06） */}
+          <PortalCard title={`审批队列（${queue.filter((a) => !decisions[a.membership_id]).length} 待处理）`} state="ready" wide>
+            {approvalError ? (
+              <p data-testid="approval-error" role="alert" className="rounded-8 border border-destructive/40 bg-destructive/5 p-3 text-12 text-destructive">
+                {approvalError}
+              </p>
+            ) : !emptyDemo && approvalItems === null ? (
+              <LoadingSkeleton rows={2} />
+            ) : queue.length === 0 ? (
               <EmptyState testid="approval-empty">没有待审批的成员申请——招募页（P2）会把新申请送到这里。</EmptyState>
             ) : (
               <ul data-testid="approval-queue" className="space-y-2.5">
                 {queue.map((a) => (
                   <ApprovalRow
-                    key={a.id}
-                    id={a.id}
-                    decided={decisions[a.id] ?? null}
-                    onDecide={(d) => {
-                      setDecisions((cur) => ({ ...cur, [a.id]: d }));
-                      flash(`成员申请 @${a.handle} ${d === "approved" ? "已批准" : "已驳回"}`);
-                    }}
+                    key={a.membership_id}
+                    item={a}
+                    decided={decisions[a.membership_id] ?? null}
+                    pending={decidingId === a.membership_id}
+                    onDecide={(d) => decide(a.membership_id, d)}
                   />
                 ))}
               </ul>

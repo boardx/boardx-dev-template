@@ -148,6 +148,75 @@ describe("Membership 状态机（pending→active→suspended）", () => {
   });
 });
 
+describe("Membership rejected 终态 + SLA（p30/F06）", () => {
+  it("reject：pending→rejected 终态；rejected 后 approve/reject/suspend 全部 409", async () => {
+    const s = await seed("h1");
+    const m = (await j(await post("/directory/memberships", {
+      project: s.slug, engineer: s.handle, role: "contributor", modules: ["collab"], intro: "8 年前端",
+    })))["membership"] as Obj;
+    expect(m["modules"]).toEqual(["collab"]);
+    expect(m["intro"]).toBe("8 年前端");
+    const id = m["membership_id"] as string;
+
+    const rj = await post(`/directory/memberships/${id}/transition`, { action: "reject" });
+    expect(rj.status).toBe(200);
+    expect(((await j(rj))["membership"] as Obj)["status"]).toBe("rejected");
+
+    for (const action of ["approve", "reject", "suspend", "reinstate"]) {
+      const bad = await post(`/directory/memberships/${id}/transition`, { action });
+      expect(bad.status, action).toBe(409);
+    }
+  });
+
+  it("onboarding_issue_url 落库并在读面回显（GitHub 双写关联，N5）", async () => {
+    const s = await seed("h2");
+    const m = (await j(await post("/directory/memberships", {
+      project: s.slug, engineer: s.handle, role: "owner", onboarding_issue_url: "https://github.com/boardx/boardx-dev-template/issues/9999",
+    })))["membership"] as Obj;
+    expect(m["onboarding_issue_url"]).toBe("https://github.com/boardx/boardx-dev-template/issues/9999");
+
+    const list = (await j(await get("/directory/memberships")))["memberships"] as Obj[];
+    const row = list.find((x) => x["membership_id"] === m["membership_id"])!;
+    expect(row["onboarding_issue_url"]).toBe("https://github.com/boardx/boardx-dev-template/issues/9999");
+  });
+
+  it("GET /directory/memberships/:id/sla：pending 返回倒计时，非 pending 返回 sla:null，未知 404", async () => {
+    const s = await seed("h3");
+    const m = (await j(await post("/directory/memberships", { project: s.slug, engineer: s.handle, role: "contributor" })))["membership"] as Obj;
+    const id = m["membership_id"] as string;
+
+    const pending = await j(await get(`/directory/memberships/${id}/sla`));
+    expect(pending["status"]).toBe("pending");
+    const sla = pending["sla"] as Obj;
+    expect(sla["timedOut"]).toBe(false);
+    expect(sla["urgent"]).toBe(false);
+    expect(typeof sla["hoursLeft"]).toBe("number");
+    expect(sla["hoursLeft"] as number).toBeGreaterThan(23); // 项目默认未设 sla → 24h 兜底，刚申请剩余接近 24h
+    expect(typeof sla["deadline"]).toBe("string");
+
+    await post(`/directory/memberships/${id}/transition`, { action: "approve" });
+    const active = await j(await get(`/directory/memberships/${id}/sla`));
+    expect(active["status"]).toBe("active");
+    expect(active["sla"]).toBeNull();
+
+    expect((await get(`/directory/memberships/mem_00000000000000000000000000/sla`)).status).toBe(404);
+  });
+
+  it("列表读面附带 sla：pending 行非空、active 行为 null（项目自定义 promiseH 生效）", async () => {
+    const slug = "proj-h4";
+    const handle = "eng-h4";
+    await post("/directory/engineers", { handle, github_login: "gh-h4" });
+    await post("/directory/projects", { slug, sla: { promiseH: 4 } }); // 4h 承诺 → 立即 urgent
+    const m = (await j(await post("/directory/memberships", { project: slug, engineer: handle, role: "contributor" })))["membership"] as Obj;
+
+    const list = (await j(await get("/directory/memberships")))["memberships"] as Obj[];
+    const row = list.find((x) => x["membership_id"] === m["membership_id"])!;
+    const sla = row["sla"] as Obj;
+    expect(sla["urgent"]).toBe(true); // 4h 承诺，刚申请即 ≤4h
+    expect(sla["timedOut"]).toBe(false);
+  });
+});
+
 describe("Agent：owner 必填 + D6 命名空间", () => {
   it("缺 owner 422、未知 owner 404、enroll 201（ULID 主键，心跳空）", async () => {
     const s = await seed("d1");

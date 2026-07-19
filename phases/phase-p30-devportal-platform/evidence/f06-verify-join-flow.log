@@ -1,0 +1,7 @@
+== 0. 建 engineer + 4h SLA 承诺的项目
+== 1. 提交加入申请（modules/intro）-> pending
+== 2. SLA 端点：pending 返回真实倒计时，4h 承诺下立即 urgent
+== 3. owner 批准 -> active，SLA 端点转为 sla:null
+== 4. 另一条申请：owner 驳回 -> rejected 终态，之后任何迁移 409
+== 5. 只增审计：批准/驳回都留下 directory.membership.transitioned
+PASS: p30/F06 加入审批流 + SLA（modules/intro 落库、SLA 倒计时/urgent、approve/reject 终态、审计事件）
