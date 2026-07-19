@@ -3,6 +3,34 @@
 规格版本独立于实现版本；wire format 变更**必须**在此登记（ADR-017 §4，
 北极星 §7.5"协议即规格"）。语义化：破坏性变更升 minor（0.x 阶段）。
 
+## coord/0.1.4 — 2026-07-19
+
+**加法扩展（非破坏）：intent.\* 事件六类型**（p30/F09：三层意图消息协议 v1，
+UC-11——sub-agent → module-coordinator → coord-main → 👤 的结构化对话协议，
+详细规格见新文档 `docs/coord-platform/protocol/intents.md`）。
+
+- 事件封闭集合新增 `intent.assign` / `intent.accept` / `intent.progress` /
+  `intent.blocker` / `intent.escalate` / `intent.decide`，payload 强校验入
+  `validateEvent`（单一出口 `intentPayloadErrors`，同源复用于 RepoHub
+  `POST /intents` 请求体校验 `validateIntentRequest`）：`assign` 必含
+  `target_agent_id` + `target_resource_id`；`progress` 必含非空 `summary`；
+  `blocker`/`escalate` 必含 `reason`（≥10 字符，规格同 andon）；`decide` 必含
+  `reason` + 可查证的 `issue_ref`（`#123` 或 `owner/repo#123`）。
+- RepoHub 新增 `POST/GET /intents`：POST 落 append-only 事件（复用 `emit()`）；
+  GET `?resource_id=` 聚合返回该资源的意图消息链 + 推导的 `thread_status`
+  （`open` / `awaiting_decision` / `closed`，见 intents.md §闭环状态）。
+- coord-projection 新增 `issue_comment` 投影调用类型：`issue:N` 锚定的每条
+  intent 事件双写为该 issue 一条结构化评论（复用既有 GitHub App installation
+  token，不新增密钥）；与 andon/lease 的"按 sha 去重覆盖"不同，intent 双写是
+  "一条事件一条评论"，不去重、不幂等补投（已知残留风险，见 intents.md）。
+- 鉴权分层（gateway 层，DO 不管身份）：`intent.decide` 与 andon 同级门禁，
+  要求独立 `COORD_ADMIN_TOKEN`（scoped token/ops 万能钥匙一律 401，防伪造
+  人类拍板）；其余五类走 scoped token + `agent_id` 强绑定（#721 同模式）。
+- 版本判定：与 task.\*/directory.\*/workspace.\*（0.1.1/0.1.2/0.1.3）先例
+  同理——仅扩事件类型集合与两个新增 REST 端点，wire 上的 `protocol` 字段
+  维持 `"coord/0.1"` 不动，按语义化是 **patch（0.1.4）**。不认识 intent.*
+  的旧消费者按「未知类型忽略」前向兼容。
+
 ## coord/0.1.3 — 2026-07-19
 
 **加法扩展（非破坏）：工作区分片事件六类型**（p30/F04：需求流水线条目 /

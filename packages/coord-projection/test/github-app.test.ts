@@ -158,4 +158,20 @@ describe("应用层 applyCalls", () => {
     expect(seen[2]!.url).toContain("/repos/boardx/boardx-dev-template/check-runs");
     expect(seen[2]!.body).toMatchObject({ name: "coord/lease", head_sha: "aaa1111", conclusion: "success" });
   });
+
+  it("issue_comment（p30/F09 意图消息双写）打到 /issues/:n/comments，body 透传", async () => {
+    const seen: Array<{ url: string; method: string; body: Record<string, unknown> }> = [];
+    const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      seen.push({ url: String(input), method: String(init?.method), body: JSON.parse(String(init?.body)) });
+      return Response.json({ id: 1 }, { status: 201 });
+    }) as typeof fetch;
+    const r = await applyCalls({
+      owner: "boardx", repo: "boardx-dev-template", token: "ghs_x", fetchImpl,
+      calls: [{ kind: "issue_comment", issue_number: 900, body: "📨 **intent.assign** · `coord-main`" }],
+    });
+    expect(r).toEqual({ applied: 1, failed: 0 });
+    expect(seen[0]!.method).toBe("POST");
+    expect(seen[0]!.url).toBe("https://api.github.com/repos/boardx/boardx-dev-template/issues/900/comments");
+    expect(seen[0]!.body).toEqual({ body: "📨 **intent.assign** · `coord-main`" });
+  });
 });

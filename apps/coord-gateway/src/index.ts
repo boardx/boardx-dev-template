@@ -115,6 +115,51 @@ async function handleAdmin(req: Request, env: Env, repo: string, subpath: string
   return repoStub(env, repo).fetch(new Request(`https://repohub${subpath}`, req));
 }
 
+// 意图消息面（p30/F09）：GET 走 scoped/ops 读（同 /events），POST 按 type 分层鉴权——
+// intent.decide 是人类拍板动作，与 andon 同级门禁（独立 COORD_ADMIN_TOKEN，scoped/ops
+// token 一律拒绝，防任何 agent 假冒人类拍板伪造 decide、静默关闭协调线程）；其余五类
+// （assign/accept/progress/blocker/escalate）走 scoped token + agent_id 强绑定（#721 同模式），
+// 与其它协调端点一致——普通 agent 只能以自己的身份发消息，不能自证他人。
+async function handleIntents(req: Request, env: Env, repo: string, url: URL): Promise<Response> {
+  if (req.method === "GET") {
+    const access = await authorizeRepoAccess(req, env, repo);
+    if (!access.granted) return access.response;
+    return repoStub(env, repo).fetch(new Request(`https://repohub/intents${url.search}`, req));
+  }
+  if (req.method !== "POST") return json(404, { error: "not_found" });
+
+  const text = await req.text();
+  let parsed: unknown = null;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    /* 交给 DO 报 invalid_json */
+  }
+  const type =
+    parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)["type"]
+      : undefined;
+
+  if (type === "intent.decide") {
+    const denied = requireAdmin(req, env);
+    if (denied) return denied;
+    return repoStub(env, repo).fetch(new Request("https://repohub/intents", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: text,
+    }));
+  }
+
+  const access = await authorizeRepoAccess(req, env, repo);
+  if (!access.granted) return access.response;
+  const bound = await bindScopedAgentRequest(
+    new Request(req.url, { method: "POST", headers: req.headers, body: text }),
+    access.principal,
+  );
+  if (bound instanceof Response) return bound;
+  return repoStub(env, repo).fetch(new Request("https://repohub/intents", bound));
+}
+
 async function handleRest(req: Request, env: Env, url: URL): Promise<Response> {
   const m = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)(\/.*)$/);
   if (!m) return json(404, { error: "not_found" });
@@ -196,6 +241,10 @@ export default {
     if (shadow) return handleShadowDecisions(req, env, `${shadow[1]}/${shadow[2]}`, url);
     const shadowCycle = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)\/shadow-cycle-status$/);
     if (shadowCycle) return handleShadowCycleStatus(req, env, `${shadowCycle[1]}/${shadowCycle[2]}`);
+    // 意图消息面（p30/F09）：POST 按 type 分层鉴权（decide=admin，其余=scoped），
+    // GET 聚合读；逻辑见 handleIntents 顶部注释。放在通用 REST 之前独立路由。
+    const intents = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)(\/intents)$/);
+    if (intents) return handleIntents(req, env, `${intents[1]}/${intents[2]}`, url);
     if (url.pathname.startsWith("/api/coord/repos/")) return handleRest(req, env, url);
     // 平台目录面（p30/F01）：逻辑全在 src/directory.ts，这里只做路由
     if (url.pathname.startsWith("/api/coord/directory/")) return handleDirectory(req, env, url);
