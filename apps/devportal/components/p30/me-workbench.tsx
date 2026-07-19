@@ -245,7 +245,10 @@ export function MeWorkbench({ myProjects }: { myProjects: readonly MyProjectSumm
                 {(data?.anomalies.items ?? []).map((a) => (
                   <li key={a.id} className="rounded-10 border border-border bg-surface-1 p-3 transition-colors hover:bg-surface-2">
                     <div className="flex min-w-0 items-center gap-1.5">
-                      <span aria-hidden className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-destructive" />
+<span
+                        aria-hidden
+                        className={`h-2 w-2 shrink-0 rounded-full ${a.kind === "heartbeat-lost" ? "animate-pulse bg-destructive" : "bg-accent-amber"}`}
+                      />
                       <IdentityChip kind="agent" className="min-w-0 truncate">{a.agentId}</IdentityChip>
                     </div>
                     <p className="mt-1.5 text-13 font-medium text-foreground">心跳丢失 {a.sinceMin} 分钟</p>

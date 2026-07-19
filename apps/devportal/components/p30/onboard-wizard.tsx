@@ -64,7 +64,7 @@ function CheckupDot({ state, result }: { state: CheckState; result: CheckupResul
   return result === "ok" ? (
     <span aria-label="通过" className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-success" />
   ) : (
-    <span aria-label="警告（不阻塞）" className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-tag-yellow ring-1 ring-border" />
+    <span aria-label="警告（不阻塞）" className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-accent-amber" />
   );
 }
 

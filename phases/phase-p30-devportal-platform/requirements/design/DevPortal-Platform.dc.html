@@ -1,0 +1,1980 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,wght@0,500;0,600;1,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body{margin:0;background:#171310}
+    ::-webkit-scrollbar{width:9px;height:9px}
+    ::-webkit-scrollbar-thumb{background:#3a3226;border-radius:6px}
+    ::-webkit-scrollbar-track{background:transparent}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+    a{color:#ff8659;text-decoration:none}
+    a:hover{color:#ffa27e}
+  </style>
+</helmet>
+<div style="height:100vh;background:#171310;color:#f3ece0;font-family:'Inter',system-ui,sans-serif;display:flex;overflow:hidden">
+
+  <div style="width:232px;flex:none;background:#1c1712;border-right:1px solid rgba(255,244,230,0.07);display:flex;flex-direction:column;padding:16px 12px;overflow:auto">
+    <div style="display:flex;align-items:center;gap:9px;padding:0 8px 16px">
+      <div style="width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#ff8659,#f0b429);flex:none"></div>
+      <div>
+        <div style="font-size:13px;font-weight:600;line-height:1.2">DevPortal</div>
+        <div style="font-size:9.5px;color:#8f8271;font-family:'JetBrains Mono',monospace">agentic 协作平台</div>
+      </div>
+    </div>
+
+    <div style="font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b5f4f;padding:6px 8px 4px">个人层</div>
+    <sc-for list="{{ personalNav }}" as="n" hint-placeholder-count="2">
+      <div onClick="{{ n.onClick }}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:{{ n.bg }};cursor:pointer;margin-bottom:2px">
+        <div style="font-size:12.5px;font-weight:{{ n.weight }};color:{{ n.color }};flex:1">{{ n.label }}</div>
+        <sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#e0665a;color:#fff;font-size:9.5px;font-weight:700;border-radius:9px;padding:1px 6px;font-family:'JetBrains Mono',monospace">{{ n.badge }}</div>
+        </sc-if>
+      </div>
+    </sc-for>
+
+    <div style="font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b5f4f;padding:16px 8px 4px">我的项目</div>
+    <sc-for list="{{ projectNav }}" as="pn" hint-placeholder-count="3">
+      <div onClick="{{ pn.onClick }}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:{{ pn.bg }};cursor:pointer;margin-bottom:2px">
+        <div style="width:7px;height:7px;border-radius:2px;background:{{ pn.dotColor }};flex:none"></div>
+        <div style="font-size:12.5px;font-weight:{{ pn.weight }};color:{{ pn.color }};flex:1;font-family:'JetBrains Mono',monospace">{{ pn.slug }}</div>
+        <sc-if value="{{ pn.badge }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#e0665a;color:#fff;font-size:9.5px;font-weight:700;border-radius:9px;padding:1px 6px;font-family:'JetBrains Mono',monospace">{{ pn.badge }}</div>
+        </sc-if>
+      </div>
+    </sc-for>
+
+    <button onClick="{{ goNewProject }}" style="margin:6px 0 0;background:transparent;border:1px dashed rgba(255,244,230,0.2);color:#8f8271;padding:7px 10px;border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit;text-align:left" style-hover="color:#ff8659;border-color:rgba(255,134,89,0.4)">＋ 新建项目(接入向导 P3)</button>
+
+    <div style="font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b5f4f;padding:16px 8px 4px">平台层</div>
+    <sc-for list="{{ platformNav }}" as="pl" hint-placeholder-count="3">
+      <div onClick="{{ pl.onClick }}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:{{ pl.bg }};cursor:pointer;margin-bottom:2px">
+        <div style="font-size:12.5px;color:{{ pl.color }};flex:1">{{ pl.label }}</div>
+        <sc-if value="{{ pl.tag }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:8.5px;color:#f0b429;border:1px solid rgba(240,180,41,0.35);border-radius:5px;padding:1px 5px">{{ pl.tag }}</div>
+        </sc-if>
+      </div>
+    </sc-for>
+
+    <div style="margin-top:auto;padding:12px 8px 0;border-top:1px solid rgba(255,244,230,0.07)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:26px;height:26px;border-radius:50%;background:#2a4a44;display:flex;align-items:center;justify-content:center;font-size:11px;color:#7dd3c0;flex:none">U</div>
+        <div>
+          <div style="font-size:11.5px;font-weight:600;font-family:'JetBrains Mono',monospace">@usamshen</div>
+          <div style="font-size:9.5px;color:#f0b429">👤 平台管理员(固定)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ isMe }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;overflow:auto;padding:22px 28px 100px">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:4px">
+        <div style="font-size:16px;font-weight:600">/me 跨项目工作台</div>
+        <div style="font-size:10.5px;color:#8f8271;font-family:'JetBrains Mono',monospace;white-space:nowrap">10 秒知道该干什么 · 更新于 {{ freshness }} 前</div>
+      </div>
+      <div style="font-size:11.5px;color:#8f8271;margin-bottom:18px">今日必办,按 拍板 &gt; andon &gt; 卡住 分级;巡检类默认折叠。</div>
+
+      <div style="background:linear-gradient(135deg,rgba(240,180,41,0.07),rgba(255,134,89,0.05));border:1px solid rgba(240,180,41,0.25);border-radius:12px;padding:16px 19px;margin-bottom:20px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="width:7px;height:7px;border-radius:50%;background:#f0b429;animation:pulse 2s infinite"></div>
+          <div style="font-size:10.5px;color:#f0b429;font-weight:600;font-family:'JetBrains Mono',monospace">boardx-coord · 晨报 9:02</div>
+        </div>
+        <div style="font-family:'Newsreader',serif;font-style:italic;font-size:14.5px;line-height:1.7;color:#e2d8c8;margin-bottom:12px">早。夜里 4 个 agent 合并了 3 个 PR,一切平稳。今天真正需要你的只有 3 件事:F09 重连策略等你拍板(2h SLA)、store-fixer-2 心跳丢了我建议回收租约、#609 的 review 我已经催过一轮但还是需要个人来认领。其余的我看着。</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <sc-for list="{{ briefActions }}" as="ba" hint-placeholder-count="3">
+            <button onClick="{{ ba.onClick }}" style="background:rgba(240,180,41,0.12);border:1px solid rgba(240,180,41,0.35);color:#f0b429;padding:6px 13px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">{{ ba.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <sc-if value="{{ showOnboard }}" hint-placeholder-val="{{ true }}">
+        <div style="background:#1c1712;border:1px solid rgba(125,211,192,0.3);border-radius:12px;padding:16px 18px;margin-bottom:20px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+            <div style="font-size:12.5px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🧭 新成员 onboarding · 5 步解锁开发</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#7dd3c0;flex:none">{{ onboardProgress }}</div>
+            <div style="flex:1;height:5px;background:#2a2118;border-radius:3px;overflow:hidden;max-width:160px"><div style="height:100%;width:{{ onboardPct }};background:#7dd3c0;transition:width .3s"></div></div>
+            <button onClick="{{ dismissOnboard }}" style="background:none;border:none;color:#6b5f4f;font-size:14px;cursor:pointer;flex:none;padding:0 2px">&times;</button>
+          </div>
+          <div style="font-size:10.5px;color:#8f8271;margin-bottom:12px">每步都有明确入口,不需要去翻文档找路;卡住了随时 ✋ 举手。</div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <sc-for list="{{ onboardSteps }}" as="ob" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:11px;background:{{ ob.bg }};border:1px solid {{ ob.border }};border-radius:9px;padding:9px 13px">
+                <div style="width:18px;height:18px;border-radius:50%;background:{{ ob.circleBg }};border:1.5px solid {{ ob.circleBorder }};display:flex;align-items:center;justify-content:center;font-size:10px;color:{{ ob.circleColor }};flex:none">{{ ob.mark }}</div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:12px;font-weight:{{ ob.weight }};color:{{ ob.titleColor }}">{{ ob.title }}</div>
+                  <div style="font-size:10px;color:#8f8271;margin-top:1px">{{ ob.detail }}</div>
+                </div>
+                <sc-if value="{{ ob.action }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ ob.onAction }}" style="background:{{ ob.actionBg }};color:{{ ob.actionColor }};border:{{ ob.actionBorder }};padding:5px 13px;border-radius:7px;font-size:10.5px;font-weight:600;cursor:pointer;font-family:inherit;flex:none;white-space:nowrap">{{ ob.action }}</button>
+                </sc-if>
+                <sc-if value="{{ ob.doneLabel }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:10px;color:#7dd3c0;flex:none">{{ ob.doneLabel }}</div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:24px">
+        <div style="background:#1c1712;border:1px solid rgba(224,102,90,0.3);border-radius:12px;padding:14px 16px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <div style="font-size:12px;font-weight:600">待拍板 @我</div>
+            <div style="background:#e0665a;color:#fff;font-size:9.5px;font-weight:700;border-radius:9px;padding:1px 7px;font-family:'JetBrains Mono',monospace">{{ decisionCount }}</div>
+            <div style="font-size:9.5px;color:#6b5f4f;margin-left:auto">按 SLA 排序</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <sc-for list="{{ decisions }}" as="d" hint-placeholder-count="3">
+              <div style="background:#221c16;border:1px solid rgba(255,244,230,0.07);border-radius:9px;padding:11px 13px">
+                <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">
+                  <span style="font-size:9.5px;padding:1px 7px;border-radius:5px;background:rgba(240,180,41,0.13);color:#f0b429;font-family:'JetBrains Mono',monospace">{{ d.project }}</span>
+                  <span style="font-size:9.5px;color:{{ d.slaColor }};font-family:'JetBrains Mono',monospace;margin-left:auto">SLA {{ d.sla }}</span>
+                </div>
+                <div style="font-size:12px;line-height:1.5;margin-bottom:8px"><strong>{{ d.question }}</strong> <span style="color:#a89880">{{ d.context }}</span></div>
+                <div style="display:flex;gap:6px">
+                  <sc-for list="{{ d.replies }}" as="r" hint-placeholder-count="2">
+                    <button onClick="{{ r.onClick }}" style="background:#2a2118;border:1px solid rgba(255,244,230,0.12);color:#c9bda9;padding:4px 10px;border-radius:6px;font-size:10.5px;cursor:pointer;font-family:inherit">{{ r.label }}</button>
+                  </sc-for>
+                  <a href="#" onClick="{{ d.toggleWhy }}" style="font-size:10.5px;margin-left:auto;align-self:center;color:#f0b429">为什么需要我?</a>
+                </div>
+                <sc-if value="{{ d.whyOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:8px;padding:9px 12px;background:rgba(240,180,41,0.06);border-left:2px solid rgba(240,180,41,0.4);border-radius:0 7px 7px 0;font-size:10.5px;color:#a89880;line-height:1.65;font-family:'Newsreader',serif;font-style:italic">{{ d.why }}</div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:12px;padding:14px 16px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <div style="font-size:12px;font-weight:600">我卡住的 PR</div>
+            <div style="background:#3a3226;color:#c9bda9;font-size:9.5px;font-weight:700;border-radius:9px;padding:1px 7px;font-family:'JetBrains Mono',monospace">{{ stuckCount }}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <sc-for list="{{ stuckPRs }}" as="pr" hint-placeholder-count="2">
+              <div style="background:#221c16;border:1px solid {{ pr.border }};border-radius:9px;padding:11px 13px">
+                <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+                  <span style="font-size:9.5px;padding:1px 7px;border-radius:5px;background:rgba(240,180,41,0.13);color:#f0b429;font-family:'JetBrains Mono',monospace">{{ pr.project }}</span>
+                  <span style="font-size:10px;color:{{ pr.ageColor }};font-family:'JetBrains Mono',monospace;margin-left:auto">{{ pr.age }}</span>
+                </div>
+                <div style="font-size:11.5px;line-height:1.5;color:#e2d8c8;margin-bottom:7px">{{ pr.title }}</div>
+                <div style="display:flex;gap:6px">
+                  <button onClick="{{ pr.nudge }}" style="background:#2a2118;border:1px solid rgba(255,244,230,0.12);color:#c9bda9;padding:4px 10px;border-radius:6px;font-size:10.5px;cursor:pointer;font-family:inherit">{{ pr.nudgeLabel }}</button>
+                  <a href="#" style="font-size:10.5px;align-self:center">PR &rarr;</a>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:12px;padding:14px 16px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <div style="font-size:12px;font-weight:600">我的 agent 异常</div>
+            <div style="background:#3a3226;color:#c9bda9;font-size:9.5px;font-weight:700;border-radius:9px;padding:1px 7px;font-family:'JetBrains Mono',monospace">{{ anomalyCount }}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <sc-for list="{{ anomalies }}" as="an" hint-placeholder-count="2">
+              <div style="background:#221c16;border:1px solid rgba(224,102,90,0.25);border-radius:9px;padding:11px 13px">
+                <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+                  <div style="width:7px;height:7px;border-radius:50%;background:#e0665a;animation:pulse 1.6s infinite;flex:none"></div>
+                  <div style="font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600">🤖 {{ an.name }}</div>
+                </div>
+                <div style="font-size:11px;color:#a89880;line-height:1.5;margin-bottom:7px">{{ an.problem }}</div>
+                <button onClick="{{ an.goFleet }}" style="background:#2a2118;border:1px solid rgba(255,244,230,0.12);color:#c9bda9;padding:4px 10px;border-radius:6px;font-size:10.5px;cursor:pointer;font-family:inherit">车队管理台诊断 &rarr;</button>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">各项目一行式脉搏</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ projectPulses }}" as="pp" hint-placeholder-count="3">
+          <div onClick="{{ pp.onClick }}" style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:10px;padding:12px 16px;display:grid;grid-template-columns:minmax(100px,0.8fr) minmax(140px,1.6fr) minmax(90px,0.8fr) minmax(90px,0.8fr) minmax(80px,0.7fr);gap:12px;align-items:center;cursor:pointer" style-hover="border-color:rgba(255,134,89,0.35)">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:#f0b429">{{ pp.slug }}</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1;height:5px;background:#2a2118;border-radius:3px;overflow:hidden"><div style="height:100%;width:{{ pp.progress }};background:#7dd3c0;border-radius:3px"></div></div>
+              <div style="font-size:10.5px;color:#8f8271;font-family:'JetBrains Mono',monospace;width:76px">{{ pp.progressLabel }}</div>
+            </div>
+            <div style="font-size:10.5px;color:#a89880">👤 {{ pp.humans }} · 🤖 {{ pp.agents }}</div>
+            <div style="font-size:10.5px;color:{{ pp.leaseColor }}">{{ pp.leases }}</div>
+            <div style="font-size:10.5px;color:{{ pp.alertColor }};text-align:right">{{ pp.alert }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isFleet }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;overflow:auto;padding:22px 28px 100px">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:4px">
+        <div style="font-size:16px;font-weight:600">/me/agents 车队管理台</div>
+        <button onClick="{{ openEnroll }}" style="background:#ff8659;color:#1c1712;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;margin-left:auto">+ Enroll 新 agent</button>
+      </div>
+      <div style="font-size:11.5px;color:#8f8271;margin-bottom:18px">你的 agent 都归属 <span style="font-family:'JetBrains Mono',monospace;color:#7dd3c0">@usamshen/</span> 命名空间;enroll 即生效,无需审批(D2)。</div>
+
+      <div style="border:1px solid rgba(255,244,230,0.08);border-radius:10px;overflow-x:auto;background:#1a1611">
+        <div style="min-width:820px">
+        <div style="display:grid;grid-template-columns:minmax(180px,1.4fr) minmax(130px,1fr) minmax(160px,1.6fr) minmax(110px,0.9fr) 165px;padding:9px 14px;background:#1c1712;border-bottom:1px solid rgba(255,244,230,0.08);font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#8f8271">
+          <div>Agent</div><div>项目 / 租约</div><div>最近事件</div><div>Token</div><div>行动</div>
+        </div>
+        <sc-for list="{{ fleet }}" as="ag" hint-placeholder-count="4">
+          <div style="display:grid;grid-template-columns:minmax(180px,1.4fr) minmax(130px,1fr) minmax(160px,1.6fr) minmax(110px,0.9fr) 165px;padding:12px 14px;border-bottom:1px solid rgba(255,244,230,0.05);font-size:12px;align-items:center">
+            <div style="display:flex;align-items:flex-start;gap:8px">
+              <div style="width:8px;height:8px;border-radius:50%;background:{{ ag.hbColor }};margin-top:4px;flex:none;animation:{{ ag.hbAnim }}"></div>
+              <div style="min-width:0">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🤖 {{ ag.name }}</div>
+                <div style="font-size:9.5px;color:#6b5f4f;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ag.parentLabel }}</div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:#f0b429;font-family:'JetBrains Mono',monospace">{{ ag.project }}</div>
+              <div style="font-size:10px;color:#8f8271;margin-top:2px">{{ ag.lease }}</div>
+            </div>
+            <div style="font-size:11px;color:#a89880;line-height:1.5;padding-right:12px;min-width:0">{{ ag.lastEvent }}</div>
+            <div>
+              <div style="font-size:10.5px;color:{{ ag.tokenColor }}">{{ ag.tokenStatus }}</div>
+              <div style="font-size:9.5px;color:#6b5f4f;margin-top:2px">{{ ag.tokenExpiry }}</div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button onClick="{{ ag.rotate }}" style="background:#2a2118;border:1px solid rgba(255,244,230,0.12);color:#c9bda9;padding:4px 9px;border-radius:6px;font-size:10px;cursor:pointer;font-family:inherit">轮换 token</button>
+              <sc-if value="{{ ag.canRetire }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ ag.retire }}" style="background:transparent;border:1px solid rgba(224,102,90,0.3);color:#e08a7a;padding:4px 9px;border-radius:6px;font-size:10px;cursor:pointer;font-family:inherit">退役</button>
+              </sc-if>
+              <sc-if value="{{ ag.retired }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:10px;color:#6b5f4f;align-self:center">已退役</div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isProject }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+      <div style="padding:16px 28px 0;flex:none">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600;color:#f0b429">{{ curProject.slug }}</div>
+          <div style="font-size:10.5px;color:#8f8271;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">👤 {{ curProject.humans }} 成员 · 🤖 {{ curProject.agents }} agents · 更新于 {{ freshness }} 前</div>
+          <button onClick="{{ raiseConcern }}" style="background:rgba(245,165,36,0.12);color:#f5a524;border:1px solid rgba(245,165,36,0.35);padding:6px 13px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;margin-left:auto;white-space:nowrap;flex:none">✋ 举手 raise concern</button>
+        </div>
+        <div style="display:flex;gap:20px;border-bottom:1px solid rgba(255,244,230,0.08)">
+          <sc-for list="{{ projectTabs }}" as="t" hint-placeholder-count="3">
+            <div onClick="{{ t.onClick }}" style="padding:8px 2px;font-size:12.5px;font-weight:600;color:{{ t.color }};border-bottom:2px solid {{ t.border }};cursor:pointer">{{ t.label }}</div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="flex:1;overflow:auto;padding:20px 28px 100px">
+        <sc-if value="{{ isWorkTab }}" hint-placeholder-val="{{ true }}">
+          <sc-if value="{{ concernRaised }}" hint-placeholder-val="{{ false }}">
+            <div style="background:rgba(245,165,36,0.08);border:1px solid rgba(245,165,36,0.3);border-radius:9px;padding:11px 14px;margin-bottom:16px;font-size:11.5px;color:#f5a524;display:flex;align-items:center;gap:8px">
+              <span style="font-weight:600">✋ 已举手</span><span style="color:#c9bda9">你的 concern 已进待拍板流并 @ 有 andon 权者 —— 不阻断任何东西(D5)。</span>
+            </div>
+          </sc-if>
+          <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">谁在干活</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:22px">
+            <sc-for list="{{ working }}" as="w" hint-placeholder-count="3">
+              <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:10px;padding:11px 15px;display:grid;grid-template-columns:minmax(160px,1.4fr) minmax(90px,0.8fr) minmax(150px,2fr) 60px;gap:12px;align-items:center">
+                <div style="display:flex;align-items:center;gap:8px;min-width:0">
+                  <div style="width:7px;height:7px;border-radius:50%;background:{{ w.dotColor }};flex:none"></div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🤖 {{ w.agent }}</div>
+                </div>
+                <div style="font-size:10.5px;color:#7dd3c0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">👤 {{ w.owner }}</div>
+                <div style="font-size:11.5px;color:#a89880">{{ w.action }}</div>
+                <div style="font-size:10px;color:#6b5f4f;font-family:'JetBrains Mono',monospace;text-align:right">{{ w.since }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">PR 队列</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ prQueue }}" as="pq" hint-placeholder-count="3">
+              <div style="background:#1c1712;border:1px solid {{ pq.border }};border-radius:10px;padding:11px 15px;display:flex;align-items:center;gap:12px">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8f8271;width:46px">{{ pq.num }}</div>
+                <div style="flex:1">
+                  <div style="font-size:12px;color:#e2d8c8">{{ pq.title }}</div>
+                  <div style="font-size:10px;color:#6b5f4f;margin-top:2px">{{ pq.author }} · 等待 {{ pq.waiting }}</div>
+                </div>
+                <sc-if value="{{ pq.overSla }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size:9.5px;color:#e0665a;border:1px solid rgba(224,102,90,0.4);padding:2px 7px;border-radius:5px">超 SLA</span>
+                </sc-if>
+                <button onClick="{{ pq.claim }}" style="background:#2a2118;border:1px solid rgba(255,244,230,0.12);color:#c9bda9;padding:5px 11px;border-radius:6px;font-size:10.5px;cursor:pointer;font-family:inherit;white-space:nowrap;flex:none">{{ pq.claimLabel }}</button>
+                <a href="#" style="font-size:10.5px">GitHub &rarr;</a>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isPeopleTab }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">Agent 三层结构(coord → module → sub)</div>
+          <div style="background:#1c1712;border:1px solid rgba(240,180,41,0.25);border-radius:12px;padding:16px 18px;margin-bottom:22px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <span style="font-size:9.5px;padding:2px 9px;border-radius:5px;background:rgba(240,180,41,0.15);color:#f0b429;border:1px solid rgba(240,180,41,0.4);font-weight:700;flex:none">COORD</span>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🤖 {{ coordAgent.name }}</div>
+              <div style="font-size:10.5px;color:#7dd3c0;flex:none;white-space:nowrap">👤 {{ coordAgent.owner }} · repo admin ✓</div>
+              <div style="font-size:10px;color:#6b5f4f;margin-left:auto;flex:none;white-space:nowrap">{{ coordAgent.status }}</div>
+            </div>
+            <div style="font-size:10.5px;color:#8f8271;line-height:1.6;margin-bottom:14px;border-bottom:1px solid rgba(255,244,230,0.06);padding-bottom:12px">coord-agent 只能由项目唯一管理员(须为 GitHub 仓库 admin)运行:负责派工、租约仲裁、SLA 巡检;module-agent 各管一个模块;subagent 做具体任务,归属沿点号命名向上追溯。</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ moduleAgents }}" as="ma" hint-placeholder-count="3">
+                <div style="padding-left:18px;border-left:2px solid rgba(240,180,41,0.25)">
+                  <div style="display:flex;align-items:center;gap:9px;margin-bottom:{{ ma.subGap }}">
+                    <span style="font-size:9px;padding:1px 8px;border-radius:5px;background:rgba(255,134,89,0.13);color:#ff8659;border:1px solid rgba(255,134,89,0.35);font-weight:700;flex:none">MODULE</span>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🤖 {{ ma.name }}</div>
+                    <div style="font-size:10px;color:#7dd3c0;flex:none;white-space:nowrap">👤 {{ ma.owner }}</div>
+                    <div style="font-size:10px;color:#8f8271;margin-left:auto;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40%">{{ ma.scope }}</div>
+                  </div>
+                  <sc-for list="{{ ma.subs }}" as="sa" hint-placeholder-count="2">
+                    <div style="display:flex;align-items:center;gap:9px;padding:4px 0 4px 18px;border-left:2px solid rgba(255,134,89,0.2);margin-left:8px">
+                      <span style="font-size:9px;padding:1px 8px;border-radius:5px;background:rgba(143,130,113,0.13);color:#b3a58f;border:1px solid rgba(143,130,113,0.3);font-weight:700;flex:none">SUB</span>
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🤖 {{ sa.name }}</div>
+                      <div style="font-size:10px;color:#8f8271;flex:1;min-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ sa.doing }}</div>
+                      <div style="width:6px;height:6px;border-radius:50%;background:{{ sa.dot }};flex:none"></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">👤 人类成员</div>
+          <div style="font-size:11.5px;color:#8f8271;margin-bottom:14px">两段式:👤 人类成员 → 名下 🤖 agents 缩进树。人类是一等实体,agent 归属永远可见。</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ roster }}" as="m" hint-placeholder-count="3">
+              <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:11px;padding:13px 16px">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:{{ m.agentGap }}">
+                  <div style="width:28px;height:28px;border-radius:50%;background:#2a4a44;display:flex;align-items:center;justify-content:center;font-size:11px;color:#7dd3c0;flex:none">{{ m.initial }}</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">👤 {{ m.handle }}</div>
+                  <span style="font-size:9.5px;padding:2px 8px;border-radius:5px;background:{{ m.roleBg }};color:{{ m.roleColor }};border:1px solid {{ m.roleBorder }};font-weight:600;flex:none;white-space:nowrap">{{ m.role }}</span>
+                  <span style="font-size:9.5px;padding:2px 8px;border-radius:5px;background:{{ m.trustBg }};color:{{ m.trustColor }};border:1px solid {{ m.trustBorder }};flex:none;white-space:nowrap">{{ m.trustLabel }}</span>
+                  <sc-if value="{{ m.andonGrant }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size:9.5px;padding:2px 8px;border-radius:5px;background:rgba(224,102,90,0.12);color:#e08a7a;border:1px solid rgba(224,102,90,0.3);flex:none;white-space:nowrap">andon 授权</span>
+                  </sc-if>
+                  <div style="font-size:10.5px;color:#8f8271;margin-left:auto">{{ m.doing }}</div>
+                </div>
+                <sc-for list="{{ m.agentRows }}" as="ar" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:9px;padding:6px 0 6px 38px;border-top:1px solid rgba(255,244,230,0.04)">
+                    <div style="width:7px;height:7px;border-radius:50%;background:{{ ar.dot }};flex:none"></div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🤖 {{ ar.name }}</div>
+                    <div style="font-size:10.5px;color:#8f8271;flex:1;min-width:50px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ar.doing }}</div>
+                    <a href="#" onClick="{{ ar.openTwin }}" style="font-size:10px">分身页 &rarr;</a>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isReqTab }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:11.5px;color:#8f8271;margin-bottom:16px">任何成员都能提需求 → coord-agent 分析综合(查重/拆解/评估影响面)→ 人工审核通过 → 自动下发为 GitHub issues 进当前 sprint 开发。</div>
+
+          <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:12px;padding:16px 18px;margin-bottom:20px">
+            <div style="font-size:12px;font-weight:600;margin-bottom:10px">提交需求(👤 任何成员)</div>
+            <input value="{{ reqTitle }}" onChange="{{ setReqTitle }}" placeholder="一句话标题,如:画板支持导出 PNG" style="width:100%;box-sizing:border-box;background:#171310;border:1px solid rgba(255,244,230,0.12);border-radius:8px;padding:10px 12px;font-size:12px;color:#f3ece0;outline:none;margin-bottom:10px;font-family:inherit"/>
+            <div style="display:flex;justify-content:flex-end">
+              <button onClick="{{ submitReq }}" style="background:#ff8659;color:#1c1712;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">提交,交给 coord-agent 分析 &rarr;</button>
+            </div>
+          </div>
+
+          <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">需求流水线</div>
+          <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
+            <sc-for list="{{ reqs }}" as="rq" hint-placeholder-count="3">
+              <div style="background:#1c1712;border:1px solid {{ rq.border }};border-radius:12px;padding:15px 18px">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                  <div style="font-size:12.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ rq.title }}</div>
+                  <div style="font-size:9.5px;color:#6b5f4f;flex:none;white-space:nowrap">by 👤 {{ rq.by }}</div>
+                  <span style="font-size:9.5px;padding:2px 9px;border-radius:5px;background:{{ rq.stageBg }};color:{{ rq.stageColor }};font-weight:600;flex:none;white-space:nowrap;margin-left:auto">{{ rq.stageLabel }}</span>
+                </div>
+                <div style="display:flex;align-items:center;margin-bottom:10px">
+                  <sc-for list="{{ rq.dots }}" as="rd" hint-placeholder-count="4">
+                    <div style="display:flex;align-items:center;flex:{{ rd.flex }}">
+                      <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none">
+                        <div style="width:9px;height:9px;border-radius:50%;background:{{ rd.bg }};animation:{{ rd.anim }}"></div>
+                        <div style="font-size:8.5px;color:{{ rd.labelColor }};white-space:nowrap">{{ rd.label }}</div>
+                      </div>
+                      <sc-if value="{{ rd.line }}" hint-placeholder-val="{{ true }}">
+                        <div style="height:1.5px;flex:1;background:{{ rd.lineColor }};margin:0 5px 12px;min-width:10px"></div>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+                <sc-if value="{{ rq.analysis }}" hint-placeholder-val="{{ false }}">
+                  <div style="background:#221c16;border:1px solid rgba(240,180,41,0.15);border-radius:9px;padding:11px 13px;margin-bottom:10px">
+                    <div style="font-size:9.5px;color:#f0b429;font-weight:600;margin-bottom:5px">🤖 coord-agent 分析综合</div>
+                    <div style="font-size:11px;color:#a89880;line-height:1.65">{{ rq.analysis }}</div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ rq.showReview }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;gap:8px;align-items:center">
+                    <div style="font-size:10.5px;color:#e0665a;font-weight:600;flex:1">待审核 @maintainer —— 通过即下发 issues</div>
+                    <button onClick="{{ rq.approve }}" style="background:#7dd3c0;color:#12211d;border:none;padding:6px 14px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">通过,下发 issues</button>
+                    <button onClick="{{ rq.reject }}" style="background:transparent;border:1px solid rgba(255,244,230,0.14);color:#c9bda9;padding:6px 14px;border-radius:7px;font-size:11px;cursor:pointer;font-family:inherit">驳回</button>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ rq.issueRows }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:5px">
+                    <sc-for list="{{ rq.issueRows }}" as="ir" hint-placeholder-count="2">
+                      <div style="display:flex;align-items:center;gap:9px;background:#221c16;border-radius:7px;padding:7px 11px">
+                        <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8f8271;flex:none">{{ ir.num }}</div>
+                        <div style="font-size:11px;color:#e2d8c8;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ir.title }}</div>
+                        <div style="font-size:9.5px;color:{{ ir.statusColor }};flex:none;white-space:nowrap">{{ ir.status }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271">当前 Sprint</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#f0b429">Sprint 14 · 07-14 → 07-25</div>
+            <div style="font-size:10px;color:#6b5f4f">容量 12 · 已排 {{ sprintCount }}</div>
+            <div style="flex:1;height:5px;background:#2a2118;border-radius:3px;overflow:hidden;max-width:180px"><div style="height:100%;width:{{ sprintProgress }};background:#7dd3c0"></div></div>
+            <div style="font-size:10px;color:#8f8271">{{ sprintDone }} 完成</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <sc-for list="{{ sprintIssues }}" as="si" hint-placeholder-count="4">
+              <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.07);border-radius:9px;padding:10px 14px;display:flex;align-items:center;gap:10px">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8f8271;flex:none;width:44px">{{ si.num }}</div>
+                <div style="font-size:11.5px;color:#e2d8c8;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ si.title }}</div>
+                <div style="font-size:10px;color:#8f8271;flex:none;white-space:nowrap">{{ si.assignee }}</div>
+                <span style="font-size:9px;padding:2px 8px;border-radius:5px;background:{{ si.statusBg }};color:{{ si.statusColor }};flex:none;white-space:nowrap;font-weight:600">{{ si.status }}</span>
+                <sc-if value="{{ si.canClaim }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ si.claim }}" style="background:#2a2118;border:1px solid rgba(255,244,230,0.14);color:#c9bda9;padding:4px 11px;border-radius:6px;font-size:10px;cursor:pointer;font-family:inherit;flex:none;white-space:nowrap">认领 → 派我的 agent</button>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isTalkTab }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:11.5px;color:#8f8271;margin-bottom:6px">agent 之间用结构化意图消息(assign / progress / blocker / escalate)自动流转;只有 <span style="color:#e0665a">escalate → 待拍板</span> 才需要人介入,拍板后决定自动下发到整条链。</div>
+          <div style="font-size:10px;color:#6b5f4f;margin-bottom:16px">全部入 append-only 事件日志 + GitHub issue 双写;此页只读,回应通过拍板卡或去 GitHub。</div>
+
+          <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:6px">Agent 直达信箱(平台消息总线)</div>
+          <div style="font-size:10.5px;color:#8f8271;margin-bottom:12px">长文对齐消息走平台总线,不再走外部 session:支持定时唤醒(ScheduleWakeup)、送达/已读回执、GitHub 对象引用、离线暂存到收件 agent 下次心跳。</div>
+          <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
+            <sc-for list="{{ agentMessages }}" as="am" hint-placeholder-count="2">
+              <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:12px;padding:15px 18px">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;flex-wrap:wrap">
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🤖 {{ am.from }}</div>
+                  <div style="color:#6b5f4f;font-size:11px;flex:none">&rarr;</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#f0b429;flex:none;white-space:nowrap">🤖 {{ am.to }}</div>
+                  <sc-if value="{{ am.wakeup }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size:9px;padding:2px 8px;border-radius:5px;background:rgba(139,157,255,0.12);color:#9db1ff;border:1px solid rgba(139,157,255,0.3);flex:none;white-space:nowrap">⏰ {{ am.wakeup }}</span>
+                  </sc-if>
+                  <span style="font-size:9px;padding:2px 8px;border-radius:5px;background:{{ am.stateBg }};color:{{ am.stateColor }};flex:none;white-space:nowrap;margin-left:auto;font-weight:600">{{ am.state }}</span>
+                  <div style="font-size:9px;color:#6b5f4f;flex:none;font-family:'JetBrains Mono',monospace">{{ am.at }}</div>
+                </div>
+                <div style="font-size:11.5px;color:#c9bda9;line-height:1.7;margin-bottom:10px;white-space:pre-line">{{ am.body }}</div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                  <sc-for list="{{ am.refs }}" as="ref" hint-placeholder-count="2">
+                    <span style="font-size:9.5px;padding:2px 9px;border-radius:5px;background:#221c16;border:1px solid rgba(255,244,230,0.1);color:#8f8271;font-family:'JetBrains Mono',monospace">{{ ref.label }} <span style="color:{{ ref.color }}">{{ ref.status }}</span></span>
+                  </sc-for>
+                  <sc-if value="{{ am.canAck }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ am.ack }}" style="background:rgba(125,211,192,0.12);border:1px solid rgba(125,211,192,0.35);color:#7dd3c0;padding:4px 12px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;margin-left:auto;white-space:nowrap">回执对齐 ✓</button>
+                  </sc-if>
+                  <sc-if value="{{ am.acked }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size:10px;color:#7dd3c0;margin-left:auto;white-space:nowrap">✓ 回执已对齐,双方状态一致</div>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">升级链线程(escalation)</div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <sc-for list="{{ talkThreads }}" as="th" hint-placeholder-count="2">
+              <div style="background:#1c1712;border:1px solid {{ th.border }};border-radius:12px;padding:16px 18px">
+                <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px;flex-wrap:wrap">
+                  <div style="font-size:12.5px;font-weight:600">{{ th.topic }}</div>
+                  <span style="font-size:9.5px;padding:2px 8px;border-radius:5px;background:{{ th.stateBg }};color:{{ th.stateColor }};font-weight:600">{{ th.state }}</span>
+                  <div style="font-size:9.5px;color:#6b5f4f;margin-left:auto;font-family:'JetBrains Mono',monospace">{{ th.ref }}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <sc-for list="{{ th.msgs }}" as="msg" hint-placeholder-count="4">
+                    <div style="display:flex;gap:10px;padding-left:{{ msg.indent }}">
+                      <span style="font-size:8.5px;padding:1px 7px;border-radius:4px;background:{{ msg.tierBg }};color:{{ msg.tierColor }};border:1px solid {{ msg.tierBorder }};font-weight:700;white-space:nowrap;align-self:flex-start;margin-top:2px">{{ msg.tier }}</span>
+                      <span style="font-size:8.5px;padding:1px 7px;border-radius:4px;background:{{ msg.intentBg }};color:{{ msg.intentColor }};font-weight:600;white-space:nowrap;align-self:flex-start;margin-top:2px;font-family:'JetBrains Mono',monospace">{{ msg.intent }}</span>
+                      <div style="flex:1;min-width:0">
+                        <div style="font-size:11.5px;color:#e2d8c8;line-height:1.55">{{ msg.text }}</div>
+                        <div style="font-size:9.5px;color:#6b5f4f;margin-top:2px;font-family:'JetBrains Mono',monospace">{{ msg.who }} · {{ msg.at }}</div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                <sc-if value="{{ th.decision }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:12px;background:#221c16;border:1px solid rgba(224,102,90,0.3);border-radius:9px;padding:12px 14px">
+                    <div style="font-size:11px;color:#e0665a;font-weight:600;margin-bottom:6px">待拍板 @{{ th.decision.who }}</div>
+                    <div style="font-size:12px;color:#f3ece0;margin-bottom:10px"><strong>{{ th.decision.question }}</strong></div>
+                    <div style="display:flex;gap:6px">
+                      <sc-for list="{{ th.decision.options }}" as="op" hint-placeholder-count="2">
+                        <button onClick="{{ op.onClick }}" style="background:#2a2118;border:1px solid rgba(255,244,230,0.14);color:#c9bda9;padding:5px 12px;border-radius:6px;font-size:10.5px;cursor:pointer;font-family:inherit">{{ op.label }}</button>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ th.decided }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:12px;font-size:11px;color:#7dd3c0">✓ 已拍板:{{ th.decidedText }} —— coord-agent 已广播下发,module → sub 自动继续</div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isMirrorTab }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+            <div style="width:7px;height:7px;border-radius:50%;background:#7dd3c0;animation:pulse 2s infinite"></div>
+            <div style="font-size:11px;color:#7dd3c0">webhook 实时镜像 · 最后事件 {{ mirrorFreshness }} 前</div>
+            <div style="font-size:10.5px;color:#6b5f4f">GitHub 是权威,这里只读——但你不需要跳过去就能看到最新进度</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:16px">
+            <div>
+              <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">Open Issues</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <sc-for list="{{ mirrorIssues }}" as="mi" hint-placeholder-count="4">
+                  <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:10px;padding:11px 14px">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8f8271">{{ mi.num }}</div>
+                      <div style="font-size:12px;color:#e2d8c8;flex:1">{{ mi.title }}</div>
+                      <div style="font-size:9px;color:#6b5f4f;font-family:'JetBrains Mono',monospace;white-space:nowrap">{{ mi.updated }}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                      <sc-for list="{{ mi.labels }}" as="lb" hint-placeholder-count="2">
+                        <span style="font-size:9px;padding:1px 7px;border-radius:9px;background:{{ lb.bg }};color:{{ lb.color }}">{{ lb.text }}</span>
+                      </sc-for>
+                      <div style="font-size:10px;color:#8f8271;margin-left:auto">{{ mi.assignee }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">Open PRs(CI + review 实时状态)</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <sc-for list="{{ mirrorPRs }}" as="mp" hint-placeholder-count="3">
+                  <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:10px;padding:11px 14px">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8f8271">{{ mp.num }}</div>
+                      <div style="font-size:12px;color:#e2d8c8;flex:1">{{ mp.title }}</div>
+                      <div style="font-size:9px;color:#6b5f4f;font-family:'JetBrains Mono',monospace;white-space:nowrap">{{ mp.updated }}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                      <div style="display:flex;align-items:center;gap:5px">
+                        <div style="width:7px;height:7px;border-radius:50%;background:{{ mp.ciColor }}"></div>
+                        <div style="font-size:10px;color:{{ mp.ciColor }}">{{ mp.ci }}</div>
+                      </div>
+                      <div style="font-size:10px;color:{{ mp.reviewColor }}">{{ mp.review }}</div>
+                      <div style="font-size:10px;color:{{ mp.mergeColor }}">{{ mp.mergeable }}</div>
+                      <div style="font-size:10px;color:#8f8271;margin-left:auto">{{ mp.author }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isGovTab }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div style="background:#1c1712;border:1px solid rgba(240,180,41,0.3);border-radius:11px;padding:16px 18px;grid-column:1 / -1">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <div style="font-size:12px;font-weight:600;flex:none;white-space:nowrap">项目唯一管理员 &amp; coord-agent</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#f0b429;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">👤 {{ projectAdmin.handle }}</div>
+                <span style="font-size:9.5px;padding:2px 8px;border-radius:5px;background:rgba(125,211,192,0.12);color:#7dd3c0;border:1px solid rgba(125,211,192,0.3);flex:none;white-space:nowrap">repo admin ✓</span>
+                <div style="font-size:10.5px;color:#8f8271;margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">coord-agent: <span style="font-family:'JetBrains Mono',monospace;color:#c9bda9">{{ projectAdmin.coordAgent }}</span></div>
+              </div>
+              <div style="font-size:10.5px;color:#8f8271;line-height:1.6;margin-top:8px">每个项目有且只有一个管理员;只有 GitHub 仓库 admin 权限的人能注册/运行 coord-agent(装 App 时校验,权限变化即失效)。移交管理员 = 移交 coord-agent,双写审计。module-agent 由 maintainer+ 运行,subagent 归属其 parent。</div>
+            </div>
+            <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:11px;padding:16px 18px">
+              <div style="font-size:12px;font-weight:600;margin-bottom:4px">Agent 准入策略</div>
+              <div style="font-size:10.5px;color:#8f8271;line-height:1.6;margin-bottom:12px">默认自动准入(D2):成员的 agent enroll 即生效。事后控制链:归因到 owner → andon 可拉停 → token 吊销即时 401。分级约束:<span style="color:#b3a58f">Probation</span> 成员的 agent 前 3 个 PR 强制人工 review,晋升 <span style="color:#7dd3c0">Trusted</span> 后放开。</div>
+              <div style="display:flex;gap:8px">
+                <sc-for list="{{ admissionModes }}" as="am" hint-placeholder-count="2">
+                  <button onClick="{{ am.onClick }}" style="flex:1;background:{{ am.bg }};border:1px solid {{ am.border }};color:{{ am.color }};padding:9px 0;border-radius:8px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit">{{ am.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:11px;padding:16px 18px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                <div style="font-size:12px;font-weight:600">审批队列</div>
+                <div style="font-size:9.5px;color:#6b5f4f">{{ approvalHint }}</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <sc-for list="{{ approvals }}" as="ap" hint-placeholder-count="2">
+                  <div style="background:#221c16;border:1px solid rgba(255,244,230,0.07);border-radius:9px;padding:10px 13px">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ap.icon }} {{ ap.who }}</div>
+                      <div style="font-size:9.5px;color:{{ ap.slaColor }};font-family:'JetBrains Mono',monospace;margin-left:auto;flex:none;white-space:nowrap">SLA {{ ap.sla }}</div>
+                    </div>
+                    <div style="font-size:11px;color:#a89880;margin-bottom:8px">{{ ap.ask }}</div>
+                    <sc-if value="{{ ap.pending }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;gap:6px">
+                        <button onClick="{{ ap.approve }}" style="background:#7dd3c0;color:#12211d;border:none;padding:4px 12px;border-radius:6px;font-size:10.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;flex:none">批准</button>
+                        <button onClick="{{ ap.reject }}" style="background:transparent;border:1px solid rgba(255,244,230,0.14);color:#c9bda9;padding:4px 12px;border-radius:6px;font-size:10.5px;cursor:pointer;font-family:inherit;white-space:nowrap;flex:none">婉拒</button>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ ap.decided }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:10.5px;color:{{ ap.decidedColor }}">{{ ap.decidedLabel }}</div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:#1c1712;border:1px solid rgba(224,102,90,0.25);border-radius:11px;padding:16px 18px;grid-column:1 / -1">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <div style="font-size:12px;font-weight:600">Andon 面板</div>
+                <div style="font-size:9.5px;color:#6b5f4f">拉停 = 阻断性 commit status;举手 = 琥珀,不阻断(D5)</div>
+              </div>
+              <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-top:12px">
+                <div>
+                  <div style="font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#8f8271;margin-bottom:8px">当前事件</div>
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <sc-for list="{{ andonEvents }}" as="ae" hint-placeholder-count="2">
+                      <div style="background:#221c16;border:1px solid {{ ae.border }};border-radius:9px;padding:10px 13px;display:flex;align-items:center;gap:10px">
+                        <span style="font-size:9.5px;padding:2px 8px;border-radius:5px;background:{{ ae.badgeBg }};color:{{ ae.badgeColor }};font-weight:700;white-space:nowrap">{{ ae.badge }}</span>
+                        <div style="flex:1">
+                          <div style="font-size:11.5px;color:#e2d8c8">{{ ae.text }}</div>
+                          <div style="font-size:9.5px;color:#6b5f4f;margin-top:2px">{{ ae.by }}</div>
+                        </div>
+                        <sc-if value="{{ ae.canRelease }}" hint-placeholder-val="{{ false }}">
+                          <button onClick="{{ ae.release }}" style="background:#2a2118;border:1px solid rgba(255,244,230,0.12);color:#c9bda9;padding:4px 11px;border-radius:6px;font-size:10.5px;cursor:pointer;font-family:inherit">一键解除</button>
+                        </sc-if>
+                        <sc-if value="{{ ae.released }}" hint-placeholder-val="{{ false }}">
+                          <div style="font-size:10px;color:#7dd3c0">已解除 ✓</div>
+                        </sc-if>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div>
+                  <div style="font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#8f8271;margin-bottom:8px">Andon 授权名单(per-person,入审计)</div>
+                  <div style="display:flex;flex-direction:column;gap:6px">
+                    <sc-for list="{{ andonGrants }}" as="g" hint-placeholder-count="3">
+                      <div style="background:#221c16;border:1px solid rgba(255,244,230,0.07);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px">
+                        <div style="font-family:'JetBrains Mono',monospace;font-size:11px">👤 {{ g.handle }}</div>
+                        <div style="font-size:9.5px;color:#6b5f4f;flex:1">{{ g.source }}</div>
+                        <sc-if value="{{ g.revocable }}" hint-placeholder-val="{{ false }}">
+                          <button onClick="{{ g.revoke }}" style="background:none;border:none;color:#e08a7a;font-size:10px;cursor:pointer;font-family:inherit">撤销</button>
+                        </sc-if>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isRecruit }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;overflow:auto">
+      <div style="max-width:720px;margin:0 auto;padding:44px 40px 80px">
+        <div style="font-size:10px;color:#6b5f4f;font-family:'JetBrains Mono',monospace;margin-bottom:14px">/projects/boardx · 公开层,未登录可见 · 零 Access 依赖(D3)</div>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+          <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#f0b429,#ff8659);flex:none"></div>
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700">boardx</div>
+            <div style="font-size:11px;color:#8f8271">租户 #1 · 平台自己的活体演示</div>
+          </div>
+          <button onClick="{{ openJoin }}" style="background:#ff8659;color:#1c1712;border:none;padding:10px 20px;border-radius:9px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;margin-left:auto">加入这个项目 &rarr;</button>
+        </div>
+        <div style="font-family:'Newsreader',serif;font-style:italic;font-size:17px;color:#c9bda9;line-height:1.6;margin-bottom:28px">协作白板 + agentic 开发试验场——所有协调数据公开,你看到的活跃度就是真的。</div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:26px">
+          <sc-for list="{{ recruitStats }}" as="rs" hint-placeholder-count="4">
+            <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:10px;padding:13px 14px">
+              <div style="font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace">{{ rs.value }}</div>
+              <div style="font-size:9.5px;color:#8f8271;margin-top:3px;line-height:1.4">{{ rs.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">需要帮助的模块</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:26px">
+          <sc-for list="{{ helpWanted }}" as="hw" hint-placeholder-count="3">
+            <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:10px;padding:12px 15px;display:flex;align-items:center;gap:12px">
+              <div style="flex:1">
+                <div style="font-size:12.5px;color:#f3ece0">{{ hw.module }}</div>
+                <div style="font-size:10.5px;color:#8f8271;margin-top:2px">{{ hw.need }}</div>
+              </div>
+              <span style="font-size:9.5px;padding:2px 8px;border-radius:5px;background:rgba(125,211,192,0.12);color:#7dd3c0;border:1px solid rgba(125,211,192,0.3)">{{ hw.level }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">成员(👤 与 🤖 分开计)</div>
+        <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:11px;padding:15px 18px;margin-bottom:26px;display:flex;gap:24px;align-items:center">
+          <div><span style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace">6</span> <span style="font-size:11px;color:#7dd3c0">👤 人类</span></div>
+          <div><span style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace">11</span> <span style="font-size:11px;color:#ff8659">🤖 agents</span></div>
+          <div style="font-size:11px;color:#8f8271;margin-left:auto">审批 SLA 兑现:中位 <span style="color:#7dd3c0;font-family:'JetBrains Mono',monospace">3.2h</span>(承诺 24h)</div>
+        </div>
+
+        <div style="border-top:1px solid rgba(255,244,230,0.08);padding-top:18px;font-size:11px;color:#6b5f4f">铁律:GitHub 永远是权威——这里是镜像与增强;加入后你的 agent 5 分钟接入(MCP/CLI/REST)。</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isDirectory }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;overflow:auto;padding:22px 28px 100px">
+      <div style="font-size:16px;font-weight:600;margin-bottom:4px">项目目录·探索 (P1)</div>
+      <div style="font-size:11.5px;color:#8f8271;margin-bottom:14px">未登录可见;活跃度指标从 GitHub 数据自动生成,不可自填。</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <sc-for list="{{ dirFilters }}" as="df" hint-placeholder-count="4">
+          <span style="font-size:10.5px;padding:5px 12px;border-radius:20px;background:{{ df.bg }};color:{{ df.color }};border:1px solid {{ df.border }};cursor:pointer">{{ df.label }}</span>
+        </sc-for>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+        <sc-for list="{{ dirProjects }}" as="dp" hint-placeholder-count="4">
+          <div onClick="{{ dp.onClick }}" style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:12px;padding:16px 18px;cursor:pointer" style-hover="border-color:rgba(255,134,89,0.35)">
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#f0b429;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ dp.slug }}</div>
+              <sc-if value="{{ dp.recruiting }}" hint-placeholder-val="{{ true }}">
+                <span style="font-size:9px;padding:2px 8px;border-radius:9px;background:rgba(125,211,192,0.13);color:#7dd3c0;border:1px solid rgba(125,211,192,0.3);flex:none;white-space:nowrap">招募中</span>
+              </sc-if>
+              <div style="font-size:9.5px;color:#6b5f4f;margin-left:auto;flex:none;white-space:nowrap">{{ dp.lang }}</div>
+            </div>
+            <div style="font-size:11px;color:#a89880;line-height:1.6;margin-bottom:10px">{{ dp.desc }}</div>
+            <div style="display:flex;align-items:flex-end;gap:2px;height:24px;margin-bottom:10px">
+              <sc-for list="{{ dp.spark }}" as="sp" hint-placeholder-count="8">
+                <div style="width:10px;height:{{ sp.h }};background:rgba(125,211,192,0.5);border-radius:2px 2px 0 0"></div>
+              </sc-for>
+              <div style="font-size:9px;color:#6b5f4f;margin-left:8px">合并/周</div>
+            </div>
+            <div style="font-size:10px;color:#8f8271">需要帮助:<span style="color:#e2d8c8">{{ dp.help }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;overflow:auto;padding:22px 28px 100px">
+      <div style="max-width:640px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+          <div style="width:40px;height:40px;border-radius:50%;background:#2a4a44;display:flex;align-items:center;justify-content:center;font-size:15px;color:#7dd3c0">U</div>
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700">/u/@usamshen</div>
+            <div style="font-size:10.5px;color:#8f8271">工程师公开档案 (P4) · 对外可分享</div>
+          </div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+            <div style="font-size:10.5px;color:#8f8271">公开我的指标(opt-in)</div>
+            <div onClick="{{ toggleProfilePublic }}" style="width:34px;height:19px;border-radius:10px;background:{{ profileToggleBg }};position:relative;cursor:pointer">
+              <div style="width:15px;height:15px;border-radius:50%;background:#f3ece0;position:absolute;top:2px;left:{{ profileToggleLeft }};transition:left .15s"></div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:10.5px;color:#6b5f4f;margin-bottom:20px">贡献事实默认公开(本来就是 GitHub 公开数据);聚合指标 opt-in 且区间化展示(D1)。</div>
+
+        <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">贡献事实(默认公开)</div>
+        <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:20px">
+          <sc-for list="{{ profileFacts }}" as="pf" hint-placeholder-count="3">
+            <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.07);border-radius:9px;padding:10px 14px;display:flex;gap:12px;font-size:11.5px;align-items:center">
+              <div style="font-family:'JetBrains Mono',monospace;color:#f0b429;width:100px;flex:none">{{ pf.project }}</div>
+              <div style="color:#a89880;flex:1">{{ pf.fact }}</div>
+              <div style="font-size:9.5px;color:#6b5f4f;font-family:'JetBrains Mono',monospace">{{ pf.when }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">聚合指标(opt-in · 区间化)</div>
+        <sc-if value="{{ profilePublic }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+            <sc-for list="{{ profileMetrics }}" as="pm" hint-placeholder-count="3">
+              <div style="background:#1c1712;border:1px solid rgba(125,211,192,0.2);border-radius:10px;padding:13px 15px">
+                <div style="font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#7dd3c0">{{ pm.range }}</div>
+                <div style="font-size:9.5px;color:#8f8271;margin-top:3px">{{ pm.label }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ !profilePublic }}" hint-placeholder-val="{{ true }}">
+          <div style="background:#1c1712;border:1px dashed rgba(255,244,230,0.15);border-radius:10px;padding:18px;font-size:11.5px;color:#6b5f4f;text-align:center">指标未公开 —— 打开右上角开关后以"周期区间"形式展示(如 flow-time 2–4h),访客不可见精确值。</div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isNotif }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;overflow:auto;padding:22px 28px 100px">
+      <div style="max-width:680px">
+        <div style="font-size:16px;font-weight:600;margin-bottom:4px">通知中心 (P6)</div>
+        <div style="font-size:11.5px;color:#8f8271;margin-bottom:16px">跨项目聚合,分级降噪:拍板 &gt; andon &gt; 卡住 &gt; 站会 &gt; 巡检;巡检默认折叠。</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+          <sc-for list="{{ notifItems }}" as="nt" hint-placeholder-count="4">
+            <div style="background:#1c1712;border:1px solid {{ nt.border }};border-radius:10px;padding:11px 14px;display:flex;gap:11px;align-items:flex-start">
+              <span style="font-size:9px;padding:2px 8px;border-radius:5px;background:{{ nt.tierBg }};color:{{ nt.tierColor }};font-weight:700;white-space:nowrap;margin-top:1px">{{ nt.tier }}</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:12px;color:#e2d8c8;line-height:1.5">{{ nt.text }}</div>
+                <div style="font-size:9.5px;color:#6b5f4f;margin-top:3px"><span style="color:#f0b429;font-family:'JetBrains Mono',monospace">{{ nt.project }}</span> · {{ nt.at }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div onClick="{{ toggleInspections }}" style="font-size:11px;color:#8f8271;cursor:pointer;padding:8px 0">{{ inspectionsLabel }}</div>
+        <sc-if value="{{ inspectionsOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <sc-for list="{{ inspectionItems }}" as="ins" hint-placeholder-count="3">
+              <div style="background:#1a1611;border:1px solid rgba(255,244,230,0.05);border-radius:8px;padding:8px 13px;font-size:10.5px;color:#6b5f4f;display:flex;gap:10px">
+                <span style="font-family:'JetBrains Mono',monospace">{{ ins.at }}</span><span>{{ ins.text }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isLearn }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;overflow:auto;padding:22px 28px 100px">
+      <div style="max-width:680px">
+        <div style="font-size:16px;font-weight:600;margin-bottom:4px">学习中心 (P7)</div>
+        <div style="font-size:11.5px;color:#8f8271;margin-bottom:16px">平台接入与 agent 协议文档,随 main 更新;全新 agent 按文档 5 分钟跑通是硬指标。</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
+          <sc-for list="{{ learnDocs }}" as="ld" hint-placeholder-count="4">
+            <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:11px;padding:16px 18px">
+              <div style="font-size:10px;color:#ff8659;font-family:'JetBrains Mono',monospace;margin-bottom:7px">{{ ld.tag }}</div>
+              <div style="font-size:12.5px;font-weight:600;margin-bottom:6px">{{ ld.title }}</div>
+              <div style="font-size:10.5px;color:#8f8271;line-height:1.6">{{ ld.desc }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isTwin }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;overflow:auto;padding:22px 28px 100px">
+      <div style="max-width:640px">
+        <div style="font-size:10px;color:#6b5f4f;font-family:'JetBrains Mono',monospace;margin-bottom:12px">/a/{{ twin.name }} · Agent 数字分身页 (P5) · 默认全公开(软件资产无隐私权,D1)</div>
+        <div style="display:flex;align-items:center;gap:11px;margin-bottom:16px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700">🤖 {{ twin.name }}</div>
+          <span style="font-size:9.5px;padding:2px 9px;border-radius:5px;background:{{ twin.tierBg }};color:{{ twin.tierColor }};border:1px solid {{ twin.tierBorder }};font-weight:700">{{ twin.tier }}</span>
+          <button onClick="{{ backFromTwin }}" style="background:transparent;border:1px solid rgba(255,244,230,0.14);color:#c9bda9;padding:5px 12px;border-radius:7px;font-size:10.5px;cursor:pointer;font-family:inherit;margin-left:auto">&larr; 返回</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+          <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:10px;padding:13px 15px">
+            <div style="font-size:9.5px;color:#8f8271;text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px">归属</div>
+            <div style="font-size:11.5px;color:#7dd3c0;line-height:1.8">owner: 👤 {{ twin.owner }}<br/><span style="color:#8f8271">parent: {{ twin.parent }}</span></div>
+          </div>
+          <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:10px;padding:13px 15px">
+            <div style="font-size:9.5px;color:#8f8271;text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px">授权项目</div>
+            <div style="font-size:11.5px;color:#f0b429;font-family:'JetBrains Mono',monospace;line-height:1.8">{{ twin.projects }}</div>
+          </div>
+        </div>
+        <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:8px">性能</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px">
+          <sc-for list="{{ twin.perf }}" as="tp" hint-placeholder-count="4">
+            <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:9px;padding:11px 13px">
+              <div style="font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace">{{ tp.value }}</div>
+              <div style="font-size:9px;color:#8f8271;margin-top:2px">{{ tp.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:8px">最近事件</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ twin.events }}" as="te" hint-placeholder-count="3">
+            <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.06);border-radius:8px;padding:9px 13px;display:flex;gap:11px;font-size:11px;align-items:center">
+              <div style="font-family:'JetBrains Mono',monospace;color:#6b5f4f;width:70px;flex:none">{{ te.at }}</div>
+              <div style="color:#a89880">{{ te.text }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isPerf }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;overflow:auto;padding:22px 28px 100px">
+      <div style="font-size:16px;font-weight:600;margin-bottom:4px">性能评估</div>
+      <div style="font-size:11.5px;color:#8f8271;margin-bottom:18px">👤 工程师与 🤖 agent 分开评估、配对归因;聚合指标默认仅本人与 owner/maintainer 可见(D1)。</div>
+
+      <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">👤 工程师</div>
+      <div style="border:1px solid rgba(255,244,230,0.08);border-radius:10px;overflow-x:auto;background:#1a1611;margin-bottom:24px">
+        <div style="min-width:720px">
+          <div style="display:grid;grid-template-columns:1.2fr 0.8fr 0.8fr 0.9fr 0.9fr 0.8fr;padding:9px 14px;background:#1c1712;border-bottom:1px solid rgba(255,244,230,0.08);font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#8f8271">
+            <div>工程师</div><div>项目数</div><div>PR 合并/30d</div><div>flow-time 中位</div><div>拍板响应中位</div><div>趋势</div>
+          </div>
+          <sc-for list="{{ engPerf }}" as="e" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:1.2fr 0.8fr 0.8fr 0.9fr 0.9fr 0.8fr;padding:11px 14px;border-bottom:1px solid rgba(255,244,230,0.05);font-size:12px;align-items:center">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600">👤 {{ e.handle }}</div>
+              <div style="color:#a89880">{{ e.projects }}</div>
+              <div style="font-family:'JetBrains Mono',monospace;color:#e2d8c8">{{ e.merged }}</div>
+              <div style="font-family:'JetBrains Mono',monospace;color:#a89880">{{ e.flow }}</div>
+              <div style="font-family:'JetBrains Mono',monospace;color:{{ e.respColor }}">{{ e.resp }}</div>
+              <div style="color:{{ e.trendColor }};font-size:11px">{{ e.trend }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">🤖 Agents(按 👤 owner 配对分组)</div>
+      <div style="border:1px solid rgba(255,244,230,0.08);border-radius:10px;overflow-x:auto;background:#1a1611">
+        <div style="min-width:760px">
+          <div style="display:grid;grid-template-columns:1.5fr 0.9fr 0.8fr 0.9fr 0.8fr 0.9fr;padding:9px 14px;background:#1c1712;border-bottom:1px solid rgba(255,244,230,0.08);font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#8f8271">
+            <div>Agent</div><div>Owner</div><div>达成率</div><div>flow-time 中位</div><div>吞吐/周</div><div>异常(30d)</div>
+          </div>
+          <sc-for list="{{ agentPerf }}" as="a" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:1.5fr 0.9fr 0.8fr 0.9fr 0.8fr 0.9fr;padding:11px 14px;border-bottom:1px solid rgba(255,244,230,0.05);font-size:12px;align-items:center">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🤖 {{ a.name }}</div>
+              <div style="font-size:10.5px;color:#7dd3c0">👤 {{ a.owner }}</div>
+              <div style="font-family:'JetBrains Mono',monospace;color:{{ a.rateColor }}">{{ a.rate }}</div>
+              <div style="font-family:'JetBrains Mono',monospace;color:#a89880">{{ a.flow }}</div>
+              <div style="font-family:'JetBrains Mono',monospace;color:#e2d8c8">{{ a.throughput }}</div>
+              <div style="color:{{ a.incidentColor }};font-size:11px">{{ a.incidents }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isNewProject }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;overflow:auto;padding:22px 28px 100px">
+      <div style="max-width:640px">
+        <div style="font-size:16px;font-weight:600;margin-bottom:4px">新建项目 · 接入向导 (P3)</div>
+        <div style="font-size:11.5px;color:#8f8271;margin-bottom:20px">零侵入:只需装 GitHub App,不改你仓库的任何东西。目标 ≤5 分钟。</div>
+        <div style="display:flex;gap:6px;margin-bottom:22px">
+          <sc-for list="{{ npSteps }}" as="ns" hint-placeholder-count="3">
+            <div style="flex:1">
+              <div style="height:3px;border-radius:2px;background:{{ ns.bg }};margin-bottom:6px"></div>
+              <div style="font-size:10px;color:{{ ns.color }}">{{ ns.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ npStep1 }}" hint-placeholder-val="{{ true }}">
+          <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:12px;padding:22px 24px">
+            <div style="font-size:13.5px;font-weight:600;margin-bottom:8px">① 安装 GitHub App</div>
+            <div style="font-size:12px;color:#a89880;line-height:1.7;margin-bottom:16px">授权只读镜像 + webhook + commit status。不需要 push 权限,不改分支保护,随时可卸载。</div>
+            <button onClick="{{ npNext }}" style="background:#ff8659;color:#1c1712;border:none;padding:10px 20px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">去 GitHub 安装 &rarr;</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ npStep2 }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:12px;padding:22px 24px">
+            <div style="font-size:13.5px;font-weight:600;margin-bottom:12px">② 选择 repo</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px">
+              <sc-for list="{{ npRepos }}" as="r" hint-placeholder-count="3">
+                <div onClick="{{ r.onClick }}" style="background:#221c16;border:1px solid {{ r.border }};border-radius:9px;padding:11px 14px;display:flex;align-items:center;gap:10px;cursor:pointer">
+                  <div style="width:12px;height:12px;border-radius:50%;border:2px solid {{ r.radioBorder }};background:{{ r.radioBg }};flex:none"></div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:12px;flex:1">{{ r.name }}</div>
+                  <div style="font-size:10px;color:#6b5f4f">{{ r.meta }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <button onClick="{{ npNext }}" style="background:#ff8659;color:#1c1712;border:none;padding:10px 20px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">开始自动体检 &rarr;</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ npStep3 }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:12px;padding:22px 24px">
+            <div style="font-size:13.5px;font-weight:600;margin-bottom:12px">③ 自动体检</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px">
+              <sc-for list="{{ npChecks }}" as="c" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:10px;background:#221c16;border-radius:8px;padding:9px 13px">
+                  <div style="font-size:12px;color:{{ c.color }};width:16px">{{ c.icon }}</div>
+                  <div style="font-size:11.5px;color:#e2d8c8;flex:1">{{ c.text }}</div>
+                  <div style="font-size:10px;color:#6b5f4f">{{ c.note }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="font-size:11px;color:#8f8271;margin-bottom:16px">1 项警告可后补,不阻塞接入(全部有默认值)。</div>
+            <button onClick="{{ npFinish }}" style="background:#7dd3c0;color:#12211d;border:none;padding:10px 20px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">完成接入,进入工作区 &rarr;</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isScheduler }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;overflow:auto;padding:22px 28px 100px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+        <div style="font-size:16px;font-weight:600">调度中心</div>
+        <div style="display:flex;align-items:center;gap:6px;background:rgba(125,211,192,0.1);border:1px solid rgba(125,211,192,0.3);border-radius:20px;padding:3px 11px">
+          <div style="width:7px;height:7px;border-radius:50%;background:#7dd3c0;animation:pulse 2s infinite"></div>
+          <div style="font-size:10.5px;color:#7dd3c0;font-family:'JetBrains Mono',monospace">@platform/dispatcher · 运行中</div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;color:#8f8271;margin-bottom:6px">全平台唯一的后台调度 agent(singleton)。按固定 loop 定位问题并采取动作——动作全部是起草/通知类,阻断性操作仍走 andon 权限。</div>
+      <div style="font-size:10.5px;color:#6b5f4f;margin-bottom:18px">职责边界:dispatcher 只做跨项目巡检与事实定位,问题路由给对应项目的 coord-agent;派工/租约仲裁/需求分析属于各项目 coord-agent,dispatcher 永不直接改项目内状态。</div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-bottom:24px">
+        <sc-for list="{{ loops }}" as="lp" hint-placeholder-count="5">
+          <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.08);border-radius:11px;padding:14px 15px">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#f0b429">{{ lp.interval }}</div>
+              <div style="font-size:9.5px;color:#6b5f4f;margin-left:auto;font-family:'JetBrains Mono',monospace">next in {{ lp.next }}</div>
+            </div>
+            <div style="font-size:11.5px;font-weight:600;margin-bottom:5px">{{ lp.name }}</div>
+            <div style="font-size:10.5px;color:#8f8271;line-height:1.55;margin-bottom:8px">{{ lp.what }}</div>
+            <div style="font-size:10px;color:{{ lp.resultColor }};border-top:1px solid rgba(255,244,230,0.06);padding-top:7px">{{ lp.lastResult }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">当前定位到的问题</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ dispatcherFindings }}" as="f" hint-placeholder-count="3">
+          <div style="background:#1c1712;border:1px solid {{ f.border }};border-radius:10px;padding:12px 15px;display:flex;align-items:flex-start;gap:12px">
+            <span style="font-size:9.5px;padding:2px 8px;border-radius:5px;background:{{ f.sevBg }};color:{{ f.sevColor }};font-weight:700;white-space:nowrap;margin-top:1px">{{ f.sev }}</span>
+            <div style="flex:1">
+              <div style="font-size:12px;color:#e2d8c8;line-height:1.5">{{ f.problem }}</div>
+              <div style="font-size:10.5px;color:#8f8271;margin-top:4px">来源 loop:{{ f.loop }} · 已采取:<span style="color:#a89880">{{ f.action }}</span></div>
+            </div>
+            <div style="font-size:9.5px;color:#6b5f4f;font-family:'JetBrains Mono',monospace;white-space:nowrap">{{ f.at }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;overflow:auto;padding:22px 28px 100px">
+      <div style="font-size:16px;font-weight:600;margin-bottom:4px">后台管理</div>
+      <div style="font-size:11.5px;color:#8f8271;margin-bottom:16px">平台级角色与审计。项目内角色(owner/maintainer/…)在各项目治理台管;这里管平台本身。</div>
+
+      <div style="background:rgba(240,180,41,0.07);border:1px solid rgba(240,180,41,0.3);border-radius:10px;padding:12px 15px;margin-bottom:20px;font-size:11.5px;color:#c9bda9;line-height:1.6">
+        <strong style="color:#f0b429">@usamshen 为固定平台管理员</strong> —— 写死于平台配置,不可在 UI 中移除或降级;其余角色变更全部入审计日志。
+      </div>
+
+      <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">平台角色</div>
+      <div style="border:1px solid rgba(255,244,230,0.08);border-radius:10px;overflow:hidden;background:#1a1611;margin-bottom:24px">
+        <div style="display:grid;grid-template-columns:1.2fr 1fr 1.6fr 130px;padding:9px 14px;background:#1c1712;border-bottom:1px solid rgba(255,244,230,0.08);font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#8f8271">
+          <div>成员</div><div>平台角色</div><div>权限</div><div>行动</div>
+        </div>
+        <sc-for list="{{ platformRoles }}" as="pr2" hint-placeholder-count="4">
+          <div style="display:grid;grid-template-columns:1.2fr 1fr 1.6fr 130px;padding:11px 14px;border-bottom:1px solid rgba(255,244,230,0.05);font-size:12px;align-items:center">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600">👤 {{ pr2.handle }}</div>
+            <div><span style="font-size:10px;padding:2px 9px;border-radius:5px;background:{{ pr2.roleBg }};color:{{ pr2.roleColor }};border:1px solid {{ pr2.roleBorder }};font-weight:600">{{ pr2.role }}</span></div>
+            <div style="font-size:10.5px;color:#8f8271">{{ pr2.perms }}</div>
+            <div>
+              <sc-if value="{{ pr2.fixed }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:10px;color:#f0b429">🔒 固定,不可变更</div>
+              </sc-if>
+              <sc-if value="{{ !pr2.fixed }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ pr2.cycle }}" style="background:#2a2118;border:1px solid rgba(255,244,230,0.12);color:#c9bda9;padding:4px 10px;border-radius:6px;font-size:10px;cursor:pointer;font-family:inherit">切换角色</button>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8f8271;margin-bottom:10px">审计日志(只增)</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <sc-for list="{{ auditLog }}" as="al" hint-placeholder-count="4">
+          <div style="background:#1c1712;border:1px solid rgba(255,244,230,0.06);border-radius:8px;padding:9px 13px;display:flex;gap:12px;font-size:11px;align-items:center">
+            <div style="font-family:'JetBrains Mono',monospace;color:#6b5f4f;width:110px;flex:none">{{ al.time }}</div>
+            <div style="color:#a89880;flex:1">{{ al.text }}</div>
+            <div style="font-family:'JetBrains Mono',monospace;color:#6b5f4f;font-size:10px">{{ al.ref }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ joinOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(3,4,6,0.72);display:flex;align-items:center;justify-content:center;z-index:60;animation:fadeIn .12s ease">
+      <div style="width:500px;max-width:92vw;background:#1c1712;border:1px solid rgba(255,244,230,0.1);border-radius:13px;padding:26px 28px;animation:slideUp .16s ease">
+        <div style="display:flex;gap:6px;margin-bottom:18px">
+          <sc-for list="{{ joinSteps }}" as="js" hint-placeholder-count="3">
+            <div style="flex:1;height:3px;border-radius:2px;background:{{ js.bg }}"></div>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ joinStep1 }}" hint-placeholder-val="{{ true }}">
+          <div style="font-size:15px;font-weight:600;margin-bottom:4px">加入 boardx · ① GitHub 登录</div>
+          <div style="font-size:11px;color:#8f8271;margin-bottom:18px">你的平台身份就是 GitHub 身份,不需要新注册。</div>
+          <button onClick="{{ joinNext }}" style="background:#f3ece0;color:#171310;border:none;padding:10px 20px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;width:100%">用 GitHub 登录 &rarr;</button>
+        </sc-if>
+
+        <sc-if value="{{ joinStep2 }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:15px;font-weight:600;margin-bottom:4px">② 选角色与模块</div>
+          <div style="font-size:11px;color:#8f8271;margin-bottom:14px">一句话自介即可,不需要长申请。</div>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <sc-for list="{{ joinModules }}" as="jm" hint-placeholder-count="3">
+              <button onClick="{{ jm.onClick }}" style="flex:1;background:{{ jm.bg }};border:1px solid {{ jm.border }};color:{{ jm.color }};padding:8px 0;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">{{ jm.label }}</button>
+            </sc-for>
+          </div>
+          <input value="{{ joinIntro }}" onChange="{{ setJoinIntro }}" placeholder="一句话自介,如:做过 tldraw 插件…" style="width:100%;box-sizing:border-box;background:#171310;border:1px solid rgba(255,244,230,0.12);border-radius:8px;padding:10px 12px;font-size:12px;color:#f3ece0;outline:none;margin-bottom:18px;font-family:inherit"/>
+          <div style="display:flex;justify-content:flex-end">
+            <button onClick="{{ joinNext }}" style="background:#ff8659;color:#1c1712;border:none;padding:9px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">提交申请 &rarr;</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ joinStep3 }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:15px;font-weight:600;margin-bottom:4px;color:#7dd3c0">③ 已提交 —— 不是黑箱</div>
+          <div style="font-size:11.5px;color:#a89880;line-height:1.8;margin-bottom:14px">
+            · 状态:<span style="color:#f5a524">pending</span>,审批 SLA <strong style="color:#f3ece0">24h</strong>(该项目近期中位 3.2h)<br/>
+            · 已自动开 onboarding issue <span style="font-family:'JetBrains Mono',monospace;color:#c9bda9">#641</span> 跟踪全程<br/>
+            · 超时自动升级到 owner 的待拍板流
+          </div>
+          <div style="background:#221c16;border:1px solid rgba(125,211,192,0.2);border-radius:9px;padding:11px 13px;margin-bottom:16px">
+            <div style="font-size:10px;color:#7dd3c0;font-weight:600;margin-bottom:5px">批准后,你的 /me 会出现 5 步 onboarding 清单:</div>
+            <div style="font-size:10.5px;color:#8f8271;line-height:1.8">① 读 5 分钟 quickstart → ② enroll 你的第一个 agent(等首心跳)→ ③ 浏览模块地图认路 → ④ 认领一个 good-first-issue → ⑤ 第一个 PR 合并,正式解锁开发</div>
+          </div>
+          <button onClick="{{ closeJoin }}" style="background:#7dd3c0;color:#12211d;border:none;padding:9px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">好,等通知</button>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:45;width:560px;max-width:calc(100vw - 300px)">
+    <sc-if value="{{ omniReply }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#221c16;border:1px solid rgba(240,180,41,0.3);border-radius:12px;padding:13px 16px;margin-bottom:8px;box-shadow:0 8px 32px rgba(0,0,0,0.5);animation:slideUp .15s ease">
+        <div style="display:flex;align-items:flex-start;gap:9px">
+          <div style="width:7px;height:7px;border-radius:50%;background:#f0b429;flex:none;margin-top:5px"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'Newsreader',serif;font-style:italic;font-size:13px;line-height:1.65;color:#e2d8c8">{{ omniReply.text }}</div>
+            <sc-if value="{{ omniReply.actions }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:7px;margin-top:9px;flex-wrap:wrap">
+                <sc-for list="{{ omniReply.actions }}" as="oa" hint-placeholder-count="2">
+                  <button onClick="{{ oa.onClick }}" style="background:rgba(240,180,41,0.12);border:1px solid rgba(240,180,41,0.35);color:#f0b429;padding:5px 12px;border-radius:7px;font-size:10.5px;font-weight:600;cursor:pointer;font-family:inherit">{{ oa.label }}</button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+          <button onClick="{{ dismissOmni }}" style="background:none;border:none;color:#6b5f4f;font-size:14px;cursor:pointer;flex:none;padding:0;line-height:1">&times;</button>
+        </div>
+      </div>
+    </sc-if>
+    <div style="display:flex;gap:8px;background:#1c1712;border:1px solid rgba(240,180,41,0.3);border-radius:24px;padding:6px 6px 6px 18px;box-shadow:0 8px 32px rgba(0,0,0,0.45);align-items:center">
+      <div style="width:8px;height:8px;border-radius:50%;background:#f0b429;flex:none;animation:pulse 2.4s infinite"></div>
+      <input value="{{ omniInput }}" onChange="{{ setOmniInput }}" onKeyDown="{{ omniKey }}" placeholder="和 coord-agent 说句话:提需求、问进度、找卡点、去任何地方…" style="flex:1;background:transparent;border:none;font-size:12.5px;color:#f3ece0;outline:none;font-family:inherit"/>
+      <button onClick="{{ sendOmni }}" style="background:#f0b429;color:#171310;border:none;padding:8px 16px;border-radius:18px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;flex:none">发送</button>
+    </div>
+  </div>
+
+  <sc-if value="{{ enrollOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(3,4,6,0.72);display:flex;align-items:center;justify-content:center;z-index:60;animation:fadeIn .12s ease">
+      <div style="width:520px;max-width:92vw;background:#1c1712;border:1px solid rgba(255,244,230,0.1);border-radius:13px;padding:26px 28px;animation:slideUp .16s ease">
+        <div style="display:flex;gap:6px;margin-bottom:18px">
+          <sc-for list="{{ enrollSteps }}" as="es" hint-placeholder-count="3">
+            <div style="flex:1;height:3px;border-radius:2px;background:{{ es.bg }}"></div>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ enrollStep1 }}" hint-placeholder-val="{{ true }}">
+          <div style="font-size:15px;font-weight:600;margin-bottom:4px">起名认领</div>
+          <div style="font-size:11px;color:#8f8271;margin-bottom:16px">只需在你自己的命名空间内唯一(D6);无审批等待(D2)。</div>
+          <div style="display:flex;align-items:center;gap:0;margin-bottom:8px">
+            <div style="background:#221c16;border:1px solid rgba(255,244,230,0.12);border-right:none;border-radius:8px 0 0 8px;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#7dd3c0">@usamshen/</div>
+            <input value="{{ enrollName }}" onChange="{{ setEnrollName }}" placeholder="agent-name" style="flex:1;background:#171310;border:1px solid rgba(255,244,230,0.12);border-radius:0 8px 8px 0;padding:10px 12px;font-size:12px;color:#f3ece0;font-family:'JetBrains Mono',monospace;outline:none"/>
+          </div>
+          <div style="font-size:10.5px;color:{{ enrollNameHintColor }};margin-bottom:14px">{{ enrollNameHint }}</div>
+          <div style="font-size:11px;color:#9497a1;color:#8f8271;margin-bottom:7px">运行时(供应商中立,任何框架都可接)</div>
+          <div style="display:flex;gap:7px;margin-bottom:20px;flex-wrap:wrap">
+            <sc-for list="{{ enrollTools }}" as="et" hint-placeholder-count="4">
+              <button onClick="{{ et.onClick }}" style="background:{{ et.bg }};border:1px solid {{ et.border }};color:{{ et.color }};padding:7px 13px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">{{ et.label }}</button>
+            </sc-for>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px">
+            <button onClick="{{ closeEnroll }}" style="background:transparent;color:#c9bda9;border:1px solid rgba(255,244,230,0.14);padding:9px 16px;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;flex:none">取消</button>
+            <button onClick="{{ enrollNext }}" style="background:#ff8659;color:#1c1712;border:none;padding:9px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;flex:none">领 token &rarr;</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ enrollStep2 }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:15px;font-weight:600;margin-bottom:4px">一次性 token + 接入命令</div>
+          <div style="font-size:11px;color:#8f8271;margin-bottom:16px">mint-on-reveal:此 token 只显示这一次,关闭后无法找回,只能轮换。</div>
+          <div style="background:#171310;border:1px solid rgba(240,180,41,0.3);border-radius:9px;padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#f0b429;margin-bottom:12px">cpk_live_9f3a…e7d2 <span style="color:#6b5f4f">(scoped: boardx)</span></div>
+          <pre style="background:#171310;border:1px solid rgba(255,244,230,0.08);border-radius:9px;padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#7dd3c0;line-height:1.7;white-space:pre-wrap;margin:0 0 20px">npx coord-cli init \
+  --agent @usamshen/{{ enrollNameFinal }} \
+  --token cpk_live_9f3a…e7d2</pre>
+          <div style="display:flex;justify-content:flex-end;gap:10px">
+            <button onClick="{{ enrollNext }}" style="background:#ff8659;color:#1c1712;border:none;padding:9px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">已复制,等待首个心跳 &rarr;</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ enrollStep3 }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:15px;font-weight:600;margin-bottom:4px">等待首个心跳</div>
+          <div style="font-size:11px;color:#8f8271;margin-bottom:22px">在你的机器上跑上面那条命令;这里会实时确认接入成功。</div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:10px 0 24px">
+            <sc-if value="{{ !enrollHeartbeat }}" hint-placeholder-val="{{ true }}">
+              <div style="width:14px;height:14px;border-radius:50%;background:#8f8271;animation:pulse 1.4s infinite"></div>
+              <div style="font-size:12px;color:#8f8271;font-family:'JetBrains Mono',monospace">listening for @usamshen/{{ enrollNameFinal }} …</div>
+            </sc-if>
+            <sc-if value="{{ enrollHeartbeat }}" hint-placeholder-val="{{ false }}">
+              <div style="width:14px;height:14px;border-radius:50%;background:#7dd3c0"></div>
+              <div style="font-size:13px;color:#7dd3c0;font-weight:600">首个心跳已到 —— 接入成功 🎉</div>
+              <div style="font-size:11px;color:#8f8271">车队管理台已出现新行,agent 可以开始拉 ready work 了。</div>
+            </sc-if>
+          </div>
+          <div style="display:flex;justify-content:flex-end">
+            <button onClick="{{ closeEnroll }}" style="background:{{ enrollDoneBg }};color:{{ enrollDoneColor }};border:{{ enrollDoneBorder }};padding:9px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">{{ enrollDoneLabel }}</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ rotateTarget }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(3,4,6,0.72);display:flex;align-items:center;justify-content:center;z-index:60;animation:fadeIn .12s ease">
+      <div style="width:440px;max-width:92vw;background:#1c1712;border:1px solid rgba(224,102,90,0.35);border-radius:13px;padding:26px 28px;animation:slideUp .16s ease">
+        <div style="font-size:14.5px;font-weight:600;margin-bottom:8px">轮换 {{ rotateTarget }} 的 token?</div>
+        <div style="font-size:12px;color:#a89880;line-height:1.7;margin-bottom:20px">旧 token <strong style="color:#e08a7a">即时 401</strong>,正在运行的任务会中断。此确认不可跳过(N4),动作入审计事件日志(N5)。</div>
+        <div style="display:flex;justify-content:flex-end;gap:10px">
+          <button onClick="{{ cancelRotate }}" style="background:transparent;color:#c9bda9;border:1px solid rgba(255,244,230,0.14);padding:9px 16px;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit">取消</button>
+          <button onClick="{{ confirmRotate }}" style="background:#e0665a;color:#fff;border:none;padding:9px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">确认轮换</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const FLEET_INIT = [
+  {id:'a1', name:'@usamshen/portal-dev-1', parent:null, project:'boardx', lease:'lease: p29-F09 实时镜像', hb:'green', lastEvent:'submit_evidence · PR #612 · 2m 前', tokenStatus:'active', tokenExpiry:'30d 后到期', retired:false},
+  {id:'a2', name:'@usamshen/portal-dev-1.reviewer', parent:'@usamshen/portal-dev-1', project:'boardx', lease:'lease: PR #609 review', hb:'green', lastEvent:'发 review 评论(标 🤖)· 9m 前', tokenStatus:'active', tokenExpiry:'30d 后到期', retired:false},
+  {id:'a3', name:'@usamshen/store-fixer-2', parent:null, project:'oss-widgets', lease:'lease: #362 share race', hb:'red', lastEvent:'心跳超时 47m —— 最后动作: push fix/share-race', tokenStatus:'active', tokenExpiry:'12d 后到期', retired:false},
+  {id:'a4', name:'@usamshen/canvas-helper', parent:null, project:'data-viz-kit', lease:'空闲,无租约', hb:'idle', lastEvent:'释放租约 + handoff note · 3h 前', tokenStatus:'即将过期', tokenExpiry:'2d 后到期 ⚠', retired:false},
+];
+const PROJECTS = [
+  {slug:'boardx', humans:6, agents:11, progress:'72%', progressLabel:'72% · +5/周', leases:'4 active leases', alert:'1 待拍板', alertLevel:'red'},
+  {slug:'data-viz-kit', humans:3, agents:4, progress:'41%', progressLabel:'41% · +2/周', leases:'1 active lease', alert:'—', alertLevel:'none'},
+  {slug:'oss-widgets', humans:9, agents:17, progress:'88%', progressLabel:'88% · +3/周', leases:'6 active leases', alert:'agent 异常 + 超SLA PR', alertLevel:'red'},
+];
+const ROSTER = [
+  {handle:'@usamshen', initial:'U', role:'maintainer', trust:'core', andonGrant:true, doing:'在看 PR #612', agents:[
+    {name:'@usamshen/portal-dev-1', dot:'#7dd3c0', doing:'working · p29-F09 实时镜像'},
+    {name:'@usamshen/portal-dev-1.reviewer', dot:'#7dd3c0', doing:'working · PR #609 review'},
+  ]},
+  {handle:'@lena-k', initial:'L', role:'owner', trust:'core', andonGrant:true, doing:'处理 andon 面板', agents:[
+    {name:'@lena-k/board-ai-1', dot:'#7dd3c0', doing:'working · #414 overlay'},
+  ]},
+  {handle:'@marcus-t', initial:'M', role:'contributor', trust:'trusted', andonGrant:false, doing:'—', agents:[
+    {name:'@marcus-t/fix-bot', dot:'#f5a524', doing:'租约 5.5h,接近 stale'},
+    {name:'@marcus-t/fix-bot.tester', dot:'#8f8271', doing:'idle'},
+  ]},
+  {handle:'@priya-d', initial:'P', role:'contributor', trust:'trusted', andonGrant:true, doing:'举手了一个 concern', agents:[]},
+];
+const TRUST_BADGE = {
+  probation: {label:'Probation', bg:'rgba(143,130,113,0.13)', c:'#b3a58f', b:'rgba(143,130,113,0.3)'},
+  trusted: {label:'Trusted', bg:'rgba(125,211,192,0.12)', c:'#7dd3c0', b:'rgba(125,211,192,0.3)'},
+  core: {label:'Core', bg:'rgba(240,180,41,0.13)', c:'#f0b429', b:'rgba(240,180,41,0.35)'},
+};
+const BOARDX_WORKING = [
+  {agent:'@usamshen/portal-dev-1', owner:'@usamshen', action:'push · feat/f09-realtime · 正跑 typecheck', dotColor:'#7dd3c0', since:'2m'},
+  {agent:'@lena-k/board-ai-1', owner:'@lena-k', action:'submit_evidence · #414 overlay e2e 证据链', dotColor:'#7dd3c0', since:'11m'},
+  {agent:'@marcus-t/fix-bot', owner:'@marcus-t', action:'租约 5.5h 无事件 · 接近 stale 阈值', dotColor:'#f5a524', since:'5.5h'},
+];
+const PDATA = {
+  'data-viz-kit': {
+    admin: {handle:'@mei-l', coordAgent:'@mei-l/dvk-coord'},
+    tree: {coord:{name:'@mei-l/dvk-coord', owner:'@mei-l', status:'🟢 运行中'}, modules:[
+      {name:'@usamshen/canvas-helper', owner:'@usamshen', scope:'模块: charts', subs:[]}]},
+    roster: [
+      {handle:'@mei-l', initial:'M', role:'owner', trust:'core', andonGrant:true, doing:'—', agents:[{name:'@mei-l/dvk-coord', dot:'#7dd3c0', doing:'coord 运行中'}]},
+      {handle:'@usamshen', initial:'U', role:'contributor', trust:'core', andonGrant:false, doing:'—', agents:[{name:'@usamshen/canvas-helper', dot:'#8f8271', doing:'idle · token 2d 后过期'}]}],
+    working: [{agent:'@mei-l/dvk-coord', owner:'@mei-l', action:'SLA 巡检 · 无堵点', dotColor:'#7dd3c0', since:'5m'}],
+    prQueue: [{num:'#88', title:'axis 刻度自适应', author:'👤 @mei-l', waiting:'3h', overSla:false, claimed:false}],
+    mirrorIssues: [{num:'#91', title:'图例换行溢出', labels:[{text:'bug',bg:'rgba(224,102,90,0.15)',color:'#e08a7a'}], assignee:'未认领', updated:'1h 前'}],
+    mirrorPRs: [{num:'#88', title:'axis 刻度自适应', ci:'CI ✓ 8/8', ciLevel:'ok', review:'等 review', reviewLevel:'mid', mergeable:'可合并', mergeLevel:'ok', author:'👤 @mei-l', updated:'3h 前'}],
+  },
+  'oss-widgets': {
+    admin: {handle:'@ravi-s', coordAgent:'@ravi-s/osw-coord'},
+    tree: {coord:{name:'@ravi-s/osw-coord', owner:'@ravi-s', status:'🟢 运行中'}, modules:[
+      {name:'@usamshen/store-fixer-2', owner:'@usamshen', scope:'模块: store', subs:[]}]},
+    roster: [
+      {handle:'@ravi-s', initial:'R', role:'owner', trust:'core', andonGrant:true, doing:'盯 #362', agents:[{name:'@ravi-s/osw-coord', dot:'#7dd3c0', doing:'coord 运行中'}]},
+      {handle:'@usamshen', initial:'U', role:'maintainer', trust:'core', andonGrant:true, doing:'—', agents:[{name:'@usamshen/store-fixer-2', dot:'#e0665a', doing:'心跳丢失 47m ⚠'}]}],
+    working: [{agent:'@usamshen/store-fixer-2', owner:'@usamshen', action:'心跳丢失 47m · 持有 #362 租约', dotColor:'#e0665a', since:'47m'}],
+    prQueue: [{num:'#598', title:'share-race 修复(店铺落地页)', author:'🤖 store-fixer-2', waiting:'3h', overSla:false, claimed:false}],
+    mirrorIssues: [{num:'#362', title:'store-browser 分享落地页竞态', labels:[{text:'bug',bg:'rgba(224,102,90,0.15)',color:'#e08a7a'}], assignee:'🤖 @usamshen/store-fixer-2 ⚠', updated:'47m 前'}],
+    mirrorPRs: [{num:'#598', title:'share-race 修复(店铺落地页)', ci:'CI ✗ e2e 2 失败', ciLevel:'bad', review:'—', reviewLevel:'mid', mergeable:'冲突 ⚠', mergeLevel:'bad', author:'🤖 store-fixer-2', updated:'3h 前'}],
+  },
+};
+const ROLE_STYLES = {
+  owner: {bg:'rgba(240,180,41,0.13)', color:'#f0b429', border:'rgba(240,180,41,0.35)'},
+  maintainer: {bg:'rgba(255,134,89,0.13)', color:'#ff8659', border:'rgba(255,134,89,0.35)'},
+  approver: {bg:'rgba(125,211,192,0.13)', color:'#7dd3c0', border:'rgba(125,211,192,0.35)'},
+  contributor: {bg:'rgba(143,130,113,0.13)', color:'#b3a58f', border:'rgba(143,130,113,0.35)'},
+};
+
+const ENG_PERF = [
+  {handle:'@usamshen', projects:3, merged:14, flow:'3.1h', resp:'0.8h', respLevel:'good', trend:'↗ 稳定上升'},
+  {handle:'@lena-k', projects:2, merged:11, flow:'2.6h', resp:'1.2h', respLevel:'good', trend:'→ 持平'},
+  {handle:'@marcus-t', projects:1, merged:5, flow:'6.8h', resp:'9.5h', respLevel:'bad', trend:'↘ 拍板响应变慢'},
+  {handle:'@priya-d', projects:2, merged:7, flow:'4.0h', resp:'2.1h', respLevel:'good', trend:'↗ 上升'},
+];
+const AGENT_PERF = [
+  {name:'@usamshen/portal-dev-1', owner:'@usamshen', rate:'92%', rateLevel:'good', flow:'2.4h', throughput:'6.5 PR', incidents:'0'},
+  {name:'@usamshen/portal-dev-1.reviewer', owner:'@usamshen', rate:'88%', rateLevel:'good', flow:'0.9h', throughput:'11 review', incidents:'0'},
+  {name:'@lena-k/board-ai-1', owner:'@lena-k', rate:'85%', rateLevel:'good', flow:'3.1h', throughput:'4 PR', incidents:'1 · andon 拉停'},
+  {name:'@usamshen/store-fixer-2', owner:'@usamshen', rate:'61%', rateLevel:'bad', flow:'7.2h', throughput:'2 PR', incidents:'3 · 心跳丢失'},
+  {name:'@marcus-t/fix-bot', owner:'@marcus-t', rate:'70%', rateLevel:'mid', flow:'5.5h', throughput:'3 PR', incidents:'1 · stale 租约'},
+];
+const LOOPS = [
+  {interval:'每 1 分钟', name:'心跳 & 租约扫描', what:'扫全部 active lease 的心跳;掉线立即标红并通知 owner。', next:'22s', lastResult:'⚠ 定位 1 个:store-fixer-2 心跳超时', resultLevel:'warn'},
+  {interval:'每 5 分钟', name:'PR / CI 巡检', what:'webhook 兜底轮询:CI 红、review 停滞、mergeable 冲突。', next:'2m 40s', lastResult:'⚠ #609 等 review 26h,已催办', resultLevel:'warn'},
+  {interval:'每 15 分钟', name:'stale 租约处置', what:'超过阈值的租约起草回收请求,进有权者的待拍板流。', next:'8m', lastResult:'✓ 无 stale(1 个在 5.5h 观察中)', resultLevel:'ok'},
+  {interval:'每 1 小时', name:'SLA 审计 + 性能快照', what:'审批/拍板/review SLA 兑现核对;性能指标增量落盘。', next:'31m', lastResult:'✓ 全部 SLA 内 · 快照 #4021', resultLevel:'ok'},
+  {interval:'每 24 小时', name:'C-cycle 报告', what:'按项目生成周期报告草稿,@owner 审阅后发布。', next:'14h', lastResult:'✓ boardx 报告草稿已生成', resultLevel:'ok'},
+];
+const FINDINGS = [
+  {sev:'HIGH', problem:'@usamshen/store-fixer-2 心跳丢失 47m,持有 oss-widgets #362 租约', loop:'每 1 分钟', action:'已通知 owner + 起草回收请求(15m loop 将升级)', at:'47m 前', level:'high'},
+  {sev:'MED', problem:'boardx #609 等 review 26h,超项目 SLA(24h)', loop:'每 5 分钟', action:'已催办 + 进 @usamshen 待拍板流', at:'2h 前', level:'med'},
+  {sev:'LOW', problem:'@marcus-t 拍板响应中位 9.5h,连续 2 周高于团队基线', loop:'每 1 小时', action:'仅记录,进下次 C-cycle 报告', at:'1h 前', level:'low'},
+];
+const AGENT_TREE = {
+  coord: {name:'@lena-k/boardx-coord', owner:'@lena-k', status:'🟢 运行中'},
+  modules: [
+    {name:'@usamshen/portal-dev-1', owner:'@usamshen', scope:'模块: coord 协议 / portal', subs:[
+      {name:'@usamshen/portal-dev-1.reviewer', doing:'PR #609 review', dot:'#7dd3c0'},
+      {name:'@usamshen/portal-dev-1.tester', doing:'e2e 回归跑批', dot:'#7dd3c0'},
+    ]},
+    {name:'@lena-k/board-ai-1', owner:'@lena-k', scope:'模块: canvas / overlay', subs:[
+      {name:'@lena-k/board-ai-1.fixer', doing:'#414 断层修复', dot:'#7dd3c0'},
+    ]},
+    {name:'@marcus-t/fix-bot', owner:'@marcus-t', scope:'模块: store', subs:[
+      {name:'@marcus-t/fix-bot.tester', doing:'idle', dot:'#8f8271'},
+    ]},
+  ],
+};
+
+const MIRROR_ISSUES = [
+  {num:'#414', title:'canvas board-ai-overlay 与 F13 fabric 断层', labels:[{text:'bug',bg:'rgba(224,102,90,0.15)',color:'#e08a7a'},{text:'canvas',bg:'rgba(240,180,41,0.13)',color:'#f0b429'}], assignee:'🤖 @lena-k/board-ai-1', updated:'12s 前'},
+  {num:'#283', title:'Board title inline editing', labels:[{text:'agent-friendly',bg:'rgba(125,211,192,0.13)',color:'#7dd3c0'},{text:'board',bg:'rgba(240,180,41,0.13)',color:'#f0b429'}], assignee:'未认领', updated:'3m 前'},
+  {num:'#362', title:'store-browser 分享落地页竞态', labels:[{text:'bug',bg:'rgba(224,102,90,0.15)',color:'#e08a7a'}], assignee:'🤖 @usamshen/store-fixer-2 ⚠', updated:'47m 前'},
+  {num:'#641', title:'[onboarding] @sofia-m 加入申请跟踪', labels:[{text:'onboarding',bg:'rgba(125,211,192,0.13)',color:'#7dd3c0'}], assignee:'👤 @lena-k', updated:'1h 前'},
+];
+const MIRROR_PRS = [
+  {num:'#612', title:'F09 断线重连 + 新鲜度时间戳', ci:'CI ✓ 12/12', ciLevel:'ok', review:'review:1 approve,等 1 个', reviewLevel:'mid', mergeable:'可合并', mergeLevel:'ok', author:'🤖 portal-dev-1', updated:'12s 前'},
+  {num:'#609', title:'coord 页 WebSocket 数据层替换', ci:'CI ✓ 12/12', ciLevel:'ok', review:'review 停滞 26h ⚠', reviewLevel:'bad', mergeable:'可合并', mergeLevel:'ok', author:'🤖 portal-dev-1', updated:'26h 前'},
+  {num:'#605', title:'people 花名册两段式重构', ci:'CI ● 运行中 8/12', ciLevel:'mid', review:'未请求 review', reviewLevel:'mid', mergeable:'—', mergeLevel:'mid', author:'👤 @marcus-t', updated:'4m 前'},
+  {num:'#598', title:'share-race 修复(店铺落地页)', ci:'CI ✗ e2e 2 失败', ciLevel:'bad', review:'—', reviewLevel:'mid', mergeable:'冲突 ⚠', mergeLevel:'bad', author:'🤖 store-fixer-2', updated:'3h 前'},
+];
+
+class Component extends DCLogic {
+  state = {
+    view: 'me',
+    npStep: 1, npRepo: 'usamshen/canvas-lib',
+    profilePublic: false, inspectionsOpen: false, twinName: '@usamshen/portal-dev-1', twinReturnView: 'me',
+    mirrorPRs: MIRROR_PRS, extraMembers: [],
+    onboardDismissed: false,
+    onboardDone: {quickstart: true, enroll: true, map: false, firstIssue: false, firstPR: false},
+    joinOpen: false, joinStep: 1, joinModule: 'board-shell', joinIntro: '',
+    platformRoles: [
+      {handle:'@usamshen', role:'admin', fixed:true},
+      {handle:'@lena-k', role:'operator', fixed:false},
+      {handle:'@priya-d', role:'support', fixed:false},
+      {handle:'@marcus-t', role:'viewer', fixed:false},
+    ],
+    curProjectSlug: 'boardx',
+    projectTab: 'work',
+    decisions: [
+      {id:1, project:'boardx', sla:'2h 剩', slaLevel:'red', question:'F09 的 WebSocket 断线重连要不要带指数退避?', context:'—— @usamshen/portal-dev-1 在 #612 问', replies:['要,上限 30s','先简单重连'], done:false,
+        why:'这是策略选择而非实现细节:影响所有实时卡片的弱网行为,且两个方案的回滚成本不对称。我的建议是指数退避(上限 30s),但按治理规则,跨模块影响面的策略必须由人确认——所以到了你这里。'},
+      {id:2, project:'oss-widgets', sla:'6h 剩', slaLevel:'amber', question:'store-fixer-2 心跳丢了 47 分钟,租约要不要回收?', context:'—— 系统事件(andon 未拉)', replies:['再等 1h','回收租约'], done:false,
+        why:'回收租约会中断它可能仍在本地进行的工作;不回收则 #362 继续阻塞。我无法判断它是崩了还是在跑长任务——只有 owner(你)可能知道那台机器的状态,所以判断权在你。'},
+      {id:3, project:'boardx', sla:'20h 剩', slaLevel:'ok', question:'@priya-d 举手:e2e 基线偶发 flake,建议 waiver。', context:'—— ✋ raise concern(琥珀,不阻断)', replies:['同意 waiver','需要复现'], done:false,
+        why:'waiver 是质量门禁的例外,例外必须有人类背书才能入审计——这是铁律,我不能替你签。@priya-d 的复现数据我核过,3 次独立跑 2 次过,符合 flake 特征。'},
+    ],
+    expandedWhy: null,
+    omniInput: '', omniReply: null,
+    stuckPRs: [
+      {id:1, project:'boardx', title:'#609 coord 页 WebSocket 数据层替换', age:'等 review 26h', over:true, nudged:false},
+      {id:2, project:'oss-widgets', title:'#598 share-race 修复(店铺落地页)', age:'CI 红 3h', over:false, nudged:false},
+    ],
+    fleet: FLEET_INIT,
+    enrollOpen: false, enrollStep: 1, enrollName: '', enrollHeartbeat: false, enrollTool: 'Claude Code',
+    rotateTargetId: null,
+    admissionMode: 'auto',
+    approvals: [
+      {id:1, icon:'👤', who:'@sofia-m', ask:'申请加入 boardx · contributor · "做过 tldraw 插件,想认领 canvas 模块"', sla:'21h 剩', slaLevel:'ok', status:'pending'},
+      {id:2, icon:'🤖', who:'@devon-r/lint-bot', ask:'agent 准入申请(仅人工模式下出现,D2)', sla:'—', slaLevel:'ok', status:'pending', manualOnly:true},
+    ],
+    andonEvents: [
+      {id:1, kind:'andon', text:'main 上 e2e 全红 —— 拉停所有合并', by:'👤 @lena-k(owner)· 18m 前 · commit status 已阻断', released:false},
+      {id:2, kind:'concern', text:'荐将 admin-001 flake 记 waiver,而非逐个重跑', by:'✋ @priya-d · 1h 前 · 不阻断,已进待拍板流', released:false},
+    ],
+    andonGrants: [
+      {handle:'@lena-k', source:'owner(默认)', revocable:false},
+      {handle:'@usamshen', source:'maintainer(默认)', revocable:false},
+      {handle:'@priya-d', source:'per-person 授予 · 2026-07-02 · 审计 #e1042', revocable:true},
+    ],
+    concernRaised: false,
+    agentMessages: [
+      {id:1, from:'@usamshen/portal-dev-1', to:'boardx-coord', at:'12m 前', wakeup:'下次心跳送达', state:'已读', acked:false, canAck:true,
+        body:'【双向滞后对齐,以 GitHub 为准】\n1. 你指示的 sprint-04 verify 已完成:全绿——F08 + F09 活体断言通过。证据 PR:#731(CI 绿 CLEAN),按 #720/#722 审查标准即可;有一处 verification 之外的改动请知悉(bash 引号 NameError 修复,断言语义不变)。\n2. F10 前置也已交付:#732,协议按 0.1.1 加法扩展,理由在 PR body。已初审放行。\n3. 合并顺序建议:#731 → #732(无依赖,但先入账再动迁移叙事更清晰)。',
+        refs:[{label:'PR #731', status:'CI 绿', color:'#7dd3c0'}, {label:'PR #732', status:'CI 绿', color:'#7dd3c0'}, {label:'sprint p29/04', status:'9/10 passing', color:'#f0b429'}]},
+      {id:2, from:'boardx-coord', to:'@usamshen/portal-dev-1', at:'2h 前', wakeup:'⏰ 15:00 定时唤醒', state:'已送达', acked:true, canAck:false,
+        body:'sprint-04 verify 请在今天内完成并开 PR;F08/F09 的第二条 verification 是活体脚本需要 env 凭据,离线抽查跑第一条即可。完成后回执对齐,不要只在 commit message 里说。',
+        refs:[{label:'issue #728', status:'assign', color:'#8f8271'}]},
+    ],
+    reqTitle: '',
+    reqs: [
+      {id:1, title:'画板支持多人光标跟随模式', by:'@priya-d', stage:'review',
+        analysis:'与已完成的 F03 presence 光标不重复;拆解为 2 个 issue(跟随逻辑 / 视口同步);影响面:collab 模块,预估 2 sprint 容量;建议排入 Sprint 14。'},
+      {id:2, title:'画板导出 PNG / SVG', by:'@marcus-t', stage:'dispatched',
+        analysis:'查重:与 #201(导出 PDF)相关但不重复,可共用渲染管线;拆解 3 个 issue;canvas 模块,agent-friendly。',
+        issues:[{num:'#645', title:'导出渲染管线抽象', status:'开发中 · 🤖 board-ai-1'}, {num:'#646', title:'PNG 导出 + 分辨率选项', status:'待认领'}, {num:'#647', title:'SVG 导出', status:'待认领'}]},
+      {id:3, title:'移动端手势缩放', by:'@sofia-m', stage:'rejected',
+        analysis:'与路线图冲突:移动端适配整体排在 p30;建议驳回并挂入 backlog,p30 时自动重新提起。'},
+    ],
+    sprintIssues: [
+      {num:'#645', title:'导出渲染管线抽象', assignee:'🤖 board-ai-1', status:'开发中'},
+      {num:'#612', title:'F09 断线重连 + 新鲜度时间戳', assignee:'🤖 portal-dev-1', status:'review'},
+      {num:'#283', title:'Board title inline editing', assignee:'未认领', status:'待认领'},
+      {num:'#414', title:'board-ai-overlay 断层修复', assignee:'🤖 board-ai-1.fixer', status:'开发中'},
+      {num:'#605', title:'people 花名册两段式重构', assignee:'👤 @marcus-t', status:'已完成'},
+    ],
+    talkThreads: [
+      {id:1, topic:'#362 share-race 修复受阻', state:'escalated', ref:'issue #362 双写', decided:false, decidedText:'',
+        msgs: [
+          {tier:'SUB', intent:'progress', text:'复现成功:replaceState 与 toHaveURL 竞态,写了 onNavigate promise 方案。', who:'🤖 fix-bot.tester', at:'3h 前', indent:'36px'},
+          {tier:'SUB', intent:'blocker', text:'修复需要动 store-browser 的路由封装,超出我的租约 scope。', who:'🤖 fix-bot.tester', at:'2.5h 前', indent:'36px'},
+          {tier:'MODULE', intent:'escalate', text:'确认越界:路由封装属 coord 协议模块。请求跨模块协作或扩 scope。', who:'🤖 @marcus-t/fix-bot', at:'2h 前', indent:'18px'},
+          {tier:'COORD', intent:'decide?', text:'两个选项已评估:A) 扩 fix-bot scope(快,风险中);B) 转 portal-dev-1 认领(慢半天,风险低)。需人拍板。', who:'🤖 boardx-coord', at:'1.8h 前', indent:'0'},
+        ],
+        decision: {who:'usamshen', question:'扩 scope 还是转交 portal-dev-1?', options:['A · 扩 scope','B · 转交 portal-dev-1']}},
+      {id:2, topic:'F09 断线重连策略', state:'已闭环', ref:'PR #612 双写', decided:true, decidedText:'指数退避,上限 30s',
+        msgs: [
+          {tier:'SUB', intent:'progress', text:'重连逻辑完成,但简单重连在弱网下会风暴。', who:'🤖 portal-dev-1.tester', at:'昨天', indent:'36px'},
+          {tier:'MODULE', intent:'escalate', text:'策略选择影响所有实时卡片,超出模块决策权。', who:'🤖 @usamshen/portal-dev-1', at:'昨天', indent:'18px'},
+          {tier:'COORD', intent:'decide?', text:'建议指数退避上限 30s;@usamshen 确认?', who:'🤖 boardx-coord', at:'昨天', indent:'0'},
+          {tier:'👤', intent:'decide', text:'要,上限 30s。', who:'👤 @usamshen(/me 拍板卡)', at:'今早 9:05', indent:'0'},
+          {tier:'COORD', intent:'assign', text:'决定已下发:portal-dev-1 按指数退避实现,tester 补弱网用例。', who:'🤖 boardx-coord', at:'今早 9:06', indent:'0'},
+        ],
+        decision: null},
+    ],
+    prQueue: [
+      {id:1, num:'#609', title:'coord 页 WebSocket 数据层替换', author:'🤖 @usamshen/portal-dev-1(👤 @usamshen)', waiting:'26h', overSla:true, claimed:false},
+      {id:2, num:'#612', title:'F09 断线重连 + 新鲜度时间戳', author:'🤖 @usamshen/portal-dev-1(👤 @usamshen)', waiting:'2h', overSla:false, claimed:false},
+      {id:3, num:'#605', title:'people 花名册两段式重构', author:'👤 @marcus-t(本人手写)', waiting:'5h', overSla:false, claimed:false},
+    ],
+  };
+
+  setView = (v) => this.setState({view: v});
+  goNewProject = () => this.setState({view:'newproject', npStep:1});
+  npNext = () => this.setState((s) => ({npStep: s.npStep + 1}));
+  npSelectRepo = (name) => this.setState({npRepo: name});
+  npFinish = () => this.goProject('boardx');
+  openJoin = () => this.setState({joinOpen:true, joinStep:1, joinIntro:''});
+  closeJoin = () => this.setState({joinOpen:false});
+  joinNext = () => this.setState((s) => ({joinStep: s.joinStep + 1}));
+  setJoinIntro = (e) => this.setState({joinIntro: e.target.value});
+  setJoinModule = (m) => this.setState({joinModule: m});
+  toggleProfilePublic = () => this.setState((s) => ({profilePublic: !s.profilePublic}));
+  dismissOnboard = () => this.setState({onboardDismissed: true});
+  markOnboard = (key) => this.setState((s) => ({onboardDone: {...s.onboardDone, [key]: true}}));
+  toggleInspections = () => this.setState((s) => ({inspectionsOpen: !s.inspectionsOpen}));
+  openTwin = (name) => this.setState({twinName: name, twinReturnView: this.state.view, view: 'twin'});
+  backFromTwin = () => this.setState((s) => ({view: s.twinReturnView || 'me'}));
+  cyclePlatformRole = (handle) => this.setState((s) => {
+    const order = ['operator','support','viewer'];
+    return {platformRoles: s.platformRoles.map(r => r.handle === handle && !r.fixed ? {...r, role: order[(order.indexOf(r.role) + 1) % order.length]} : r)};
+  });
+  goProject = (slug) => this.setState({view:'project', curProjectSlug: slug, projectTab:'work'});
+  setProjectTab = (t) => this.setState({projectTab: t});
+  answerDecision = (id) => this.setState((s) => ({decisions: s.decisions.filter(d => d.id !== id)}));
+  toggleWhy = (id) => this.setState((s) => ({expandedWhy: s.expandedWhy === id ? null : id}));
+  setOmniInput = (e) => this.setState({omniInput: e.target.value});
+  omniKey = (e) => { if (e.key === 'Enter') this.sendOmni(); };
+  dismissOmni = () => this.setState({omniReply: null});
+  sendOmni = () => {
+    const q = this.state.omniInput.trim();
+    if (!q) return;
+    let reply;
+    const go = (label, fn) => ({label, onClick: () => { fn(); this.setState({omniReply: null}); }});
+    if (q.includes('需求') || q.includes('功能') || q.includes('想要')) {
+      const title = q.replace(/^(提需求[::]?|需求[::]?)/, '').trim() || q;
+      const id = Date.now();
+      this.setState((s) => ({reqs:[{id, title, by:'@usamshen', stage:'analyzing', analysis:null}, ...s.reqs]}));
+      setTimeout(() => this.setState((s) => ({reqs: s.reqs.map(r => r.id === id ? {...r, stage:'review', analysis:'查重:无重复;初步拆解 2 个 issue;建议排入 Sprint 14。'} : r)})), 2200);
+      reply = {text:'收到,已建需求「' + title + '」并开始分析综合;分析完会进你的审核队列,通过即自动下发 issues。', actions:[go('去 sprint 看流水线', () => { this.goProject('boardx'); this.setProjectTab('req'); })]};
+    } else if (q.includes('卡') || q.includes('堵') || q.includes('慢')) {
+      reply = {text:'当前两个堵点:#609 等 review 26h(已催办一轮,建议你直接认领或指派);store-fixer-2 心跳丢失 47m 占着 #362 租约(等你拍板回收)。', actions:[go('去 work 队列', () => { this.goProject('boardx'); this.setProjectTab('work'); }), go('处理租约', () => this.setView('me'))]};
+    } else if (q.includes('性能') || q.includes('表现')) {
+      reply = {text:'近 30 天:你的 agent 车队达成率 61–92%,store-fixer-2 拖了后腿(3 次心跳异常);工程师侧 @marcus-t 的拍板响应连续 2 周高于基线。', actions:[go('看性能页', () => this.setView('perf'))]};
+    } else if (q.includes('心跳') || q.includes('异常') || q.includes('agent')) {
+      reply = {text:'车队 4 个 agent:2 绿、1 红(store-fixer-2,心跳丢失 47m)、1 空闲且 token 2 天后过期,建议现在轮换。', actions:[go('去车队处理', () => this.setView('fleet'))]};
+    } else if (q.includes('拍板') || q.includes('决策') || q.includes('要做什么') || q.includes('干什么')) {
+      reply = {text:'今天需要你的 3 件事都在 /me:F09 策略(2h SLA 最急)、store-fixer-2 租约、flake waiver。其余我看着。', actions:[go('去 /me', () => this.setView('me'))]};
+    } else {
+      reply = {text:'收到「' + q + '」。这不在我能直接答的范围,已记入我的处理队列——有结论会进你的待拍板流,不会丢。', actions:null};
+    }
+    this.setState({omniInput:'', omniReply: reply});
+  };
+  nudgePR = (id) => this.setState((s) => ({stuckPRs: s.stuckPRs.map(p => p.id === id ? {...p, nudged:true} : p)}));
+  claimPR = (id) => this.setState((s) => ({prQueue: s.prQueue.map(p => p.id === id ? {...p, claimed:true} : p)}));
+  raiseConcern = () => this.setState((s) => ({concernRaised: true,
+    decisions: [{id:'concern-'+Date.now(), project: s.curProjectSlug, sla:'24h 剩', slaLevel:'ok',
+      question:'✋ @usamshen 举手:(待你补充问题描述)', context:'—— raise concern(琥珀,不阻断),已 @ 有 andon 权者',
+      replies:['已知悉','转 andon 拉停'], done:false,
+      why:'举手是全员报警原语:不阻断任何东西,但必须有有权者显式回应并入审计,否则 24h 后自动升级。'}, ...s.decisions]}));
+  claimSprintIssue = (idx, title) => {
+    this.setState((s) => ({sprintIssues: s.sprintIssues.map((x, j) => j === idx ? {...x, status:'开发中', assignee:'🤖 @usamshen/portal-dev-1'} : x)}));
+    setTimeout(() => this.setState((s) => ({
+      sprintIssues: s.sprintIssues.map((x, j) => j === idx ? {...x, status:'review'} : x),
+      mirrorPRs: [{num:'#650', title: title + '(agent 实现)', ci:'CI ● 运行中', ciLevel:'mid', review:'刚开,等 review', reviewLevel:'mid', mergeable:'—', mergeLevel:'mid', author:'🤖 @usamshen/portal-dev-1', updated:'刚刚'}, ...s.mirrorPRs],
+      onboardDone: {...s.onboardDone, firstIssue: true, firstPR: true},
+    })), 2500);
+  };
+  setReqTitle = (e) => this.setState({reqTitle: e.target.value});
+  submitReq = () => {
+    const title = this.state.reqTitle.trim();
+    if (!title) return;
+    const id = Date.now();
+    this.setState((s) => ({reqTitle:'', reqs:[{id, title, by:'@usamshen', stage:'analyzing', analysis:null}, ...s.reqs]}));
+    setTimeout(() => this.setState((s) => ({reqs: s.reqs.map(r => r.id === id ? {...r, stage:'review', analysis:'查重:无重复需求;初步拆解为 2 个 issue;影响面评估完成,预估 1 sprint 容量;建议排入 Sprint 14。'} : r)})), 2200);
+  };
+  approveReq = (id) => this.setState((s) => {
+    const req = s.reqs.find(r => r.id === id);
+    const base = 648 + s.reqs.filter(r => r.stage === 'dispatched').length * 2;
+    const issues = [{num:'#'+base, title:(req ? req.title : '') + ' · 主体实现', status:'待认领'}, {num:'#'+(base+1), title:(req ? req.title : '') + ' · e2e 验收', status:'待认领'}];
+    return {
+      reqs: s.reqs.map(r => r.id === id ? {...r, stage:'dispatched', issues} : r),
+      sprintIssues: [...issues.map(i => ({num:i.num, title:i.title, assignee:'未认领', status:'待认领'})), ...s.sprintIssues],
+    };
+  });
+  rejectReq = (id) => this.setState((s) => ({reqs: s.reqs.map(r => r.id === id ? {...r, stage:'rejected'} : r)}));
+  ackMessage = (id) => this.setState((s) => ({agentMessages: s.agentMessages.map(m => m.id === id ? {...m, acked:true, canAck:false, state:'回执已对齐'} : m)}));
+  decideThread = (id, label) => this.setState((s) => ({talkThreads: s.talkThreads.map(t => t.id === id ? {...t, decided:true, decidedText:label, msgs:[...t.msgs, {tier:'👤', intent:'decide', text:label + '。', who:'👤 @usamshen(此卡拍板)', at:'刚刚', indent:'0'}, {tier:'COORD', intent:'assign', text:'决定已下发,相关 module/sub agent 自动继续。', who:'🤖 boardx-coord', at:'刚刚', indent:'0'}]} : t)}));
+  setAdmission = (m) => this.setState({admissionMode: m});
+  decideApproval = (id, ok) => this.setState((s) => ({
+    approvals: s.approvals.map(a => a.id === id ? {...a, status: ok ? 'approved' : 'rejected'} : a),
+    extraMembers: (ok && id === 1) ? [...s.extraMembers, {handle:'@sofia-m', initial:'S', role:'contributor', trust:'probation', andonGrant:false, doing:'onboarding 5 步进行中', agents:[]}] : s.extraMembers,
+  }));
+  releaseAndon = (id) => this.setState((s) => ({andonEvents: s.andonEvents.map(e => e.id === id ? {...e, released:true} : e)}));
+  revokeGrant = (handle) => this.setState((s) => ({andonGrants: s.andonGrants.filter(g => g.handle !== handle)}));
+
+  openEnroll = () => this.setState({enrollOpen:true, enrollStep:1, enrollName:'', enrollHeartbeat:false});
+  closeEnroll = () => {
+    const s = this.state;
+    if (s.enrollStep === 3 && s.enrollHeartbeat && s.enrollName.trim()) {
+      const nm = '@usamshen/' + s.enrollName.trim();
+      this.setState({enrollOpen:false, fleet:[...s.fleet, {id:'new-'+Date.now(), name:nm, parent:null, project:'boardx', lease:'空闲,拉 ready work 中', hb:'green', lastEvent:'首个心跳(' + s.enrollTool + ')· 刚刚', tokenStatus:'active', tokenExpiry:'30d 后到期', retired:false}]});
+    } else this.setState({enrollOpen:false});
+  };
+  setEnrollName = (e) => this.setState({enrollName: e.target.value});
+  enrollNext = () => {
+    const next = this.state.enrollStep + 1;
+    this.setState({enrollStep: next});
+    if (next === 3) setTimeout(() => { if (this.state.enrollOpen && this.state.enrollStep === 3) this.setState({enrollHeartbeat:true}); }, 2600);
+  };
+
+  askRotate = (id) => this.setState({rotateTargetId: id});
+  cancelRotate = () => this.setState({rotateTargetId: null});
+  confirmRotate = () => this.setState((s) => ({rotateTargetId: null, fleet: s.fleet.map(a => a.id === s.rotateTargetId ? {...a, tokenStatus:'刚轮换', tokenExpiry:'30d 后到期', lastEvent:'token 轮换,旧 token 即时 401 · 刚刚'} : a)}));
+  retireAgent = (id) => this.setState((s) => ({fleet: s.fleet.map(a => a.id === id ? {...a, retired:true, hb:'off', lease:'—', tokenStatus:'已吊销', tokenExpiry:'—', lastEvent:'退役 · 租约进入可回收 · 刚刚'} : a)}));
+
+  renderVals() {
+    const s = this.state;
+    const SLA_COLORS = {red:'#e0665a', amber:'#f5a524', ok:'#8f8271'};
+    const decisionCount = s.decisions.length;
+    const anomalyList = s.fleet.filter(a => a.hb === 'red' && !a.retired);
+
+    const projBadge = (slug) => {
+      let n = 0;
+      n += s.decisions.filter(d => d.project === slug).length;
+      if (slug === 'oss-widgets') n += anomalyList.length;
+      return n || null;
+    };
+
+    const curProject = PROJECTS.find(p => p.slug === s.curProjectSlug) || PROJECTS[0];
+    const NOTIFS = [
+      {tier:'拍板', level:'red', text:'F09 断线重连策略需要你确认(escalate 自 boardx-coord)', project:'boardx', at:'2h 剩 SLA'},
+      {tier:'ANDON', level:'red', text:'main e2e 全红,@lena-k 已拉停所有合并', project:'boardx', at:'18m 前'},
+      {tier:'卡住', level:'amber', text:'#609 等 review 26h,超项目 SLA', project:'boardx', at:'2h 前'},
+      {tier:'卡住', level:'amber', text:'store-fixer-2 心跳丢失,租约待处置', project:'oss-widgets', at:'47m 前'},
+      {tier:'站会', level:'low', text:'昨日:4 PR 合并,1 andon(已解除),2 新贡献者', project:'全部', at:'今早 9:00'},
+    ];
+    const notifCount = NOTIFS.filter(n => n.level === 'red').length;
+    const HB = {green:{c:'#7dd3c0',a:'none'}, red:{c:'#e0665a',a:'pulse 1.6s infinite'}, idle:{c:'#8f8271',a:'none'}, off:{c:'#3a3226',a:'none'}};
+
+    return {
+      isMe: s.view === 'me', isFleet: s.view === 'fleet', isProject: s.view === 'project', isRecruit: s.view === 'recruit',
+      isPerf: s.view === 'perf', isNewProject: s.view === 'newproject', isScheduler: s.view === 'scheduler', isAdmin: s.view === 'admin',
+      isDirectory: s.view === 'directory', isProfile: s.view === 'profile', isNotif: s.view === 'notif', isLearn: s.view === 'learn', isTwin: s.view === 'twin',
+      freshness: '4 秒',
+      personalNav: [
+        {key:'me', label:'/me 工作台', badge: decisionCount || null},
+        {key:'fleet', label:'/me/agents 车队', badge: anomalyList.length || null},
+        {key:'perf', label:'/me/performance 性能', badge: null},
+      ].map(n => ({...n, onClick: () => this.setView(n.key),
+        bg: s.view === n.key ? '#2a2118' : 'transparent',
+        color: s.view === n.key ? '#f3ece0' : '#a89880',
+        weight: s.view === n.key ? 600 : 400})),
+      projectNav: PROJECTS.map(p => ({slug: p.slug, badge: projBadge(p.slug),
+        onClick: () => this.goProject(p.slug),
+        bg: s.view === 'project' && s.curProjectSlug === p.slug ? '#2a2118' : 'transparent',
+        color: s.view === 'project' && s.curProjectSlug === p.slug ? '#f3ece0' : '#a89880',
+        weight: s.view === 'project' && s.curProjectSlug === p.slug ? 600 : 400,
+        dotColor: p.alertLevel === 'red' ? '#e0665a' : '#7dd3c0'})),
+      goRecruit: () => this.setView('recruit'),
+      recruitNavBg: s.view === 'recruit' ? '#2a2118' : 'transparent',
+      recruitNavColor: s.view === 'recruit' ? '#f3ece0' : '#a89880',
+      goNewProject: this.goNewProject,
+      platformNav: [
+        {key:'directory', label:'项目目录·探索 (P1)', tag:null},
+        {key:'recruit', label:'项目公开主页 (P2)', tag:null},
+        {key:'profile', label:'我的公开档案 (P4)', tag:null},
+        {key:'notif', label:'通知中心 (P6)', tag: notifCount ? String(notifCount) : null},
+        {key:'learn', label:'学习中心 (P7)', tag:null},
+        {key:'scheduler', label:'调度中心', tag:null},
+        {key:'admin', label:'后台管理', tag:'admin'},
+      ].map(n => ({...n, onClick: () => this.setView(n.key),
+        bg: s.view === n.key ? '#2a2118' : 'transparent',
+        color: s.view === n.key ? '#f3ece0' : '#a89880'})),
+
+      showOnboard: !s.onboardDismissed,
+      dismissOnboard: this.dismissOnboard,
+      onboardProgress: Object.values(s.onboardDone).filter(Boolean).length + '/5',
+      onboardPct: Math.round(Object.values(s.onboardDone).filter(Boolean).length / 5 * 100) + '%',
+      onboardSteps: [
+        {key:'quickstart', title:'① 读 5 分钟 quickstart', detail:'平台三原语 + 工作循环,读完自动打勾', action:'去学习中心', go: () => this.setView('learn')},
+        {key:'enroll', title:'② enroll 你的第一个 agent', detail:'领 token → 跑一条命令 → 等首心跳点亮', action:'去车队 enroll', go: () => { this.setView('fleet'); this.openEnroll(); }},
+        {key:'map', title:'③ 浏览模块地图认路', detail:'看 people 花名册的三层结构:谁管哪个模块、该找谁', action:'看花名册', go: () => { this.goProject('boardx'); this.setProjectTab('people'); }},
+        {key:'firstIssue', title:'④ 认领一个 good-first-issue', detail:'sprint 面板里标"待认领"且 agent-friendly 的最合适', action:'去 sprint 挑一个', go: () => { this.goProject('boardx'); this.setProjectTab('req'); }},
+        {key:'firstPR', title:'⑤ 第一个 PR 合并', detail:'合并即正式解锁开发;全程有 coord-agent 陪跑', action:null, go: null},
+      ].map(st => {
+        const done = s.onboardDone[st.key];
+        return {
+          title: st.title, detail: st.detail,
+          bg: done ? 'rgba(125,211,192,0.05)' : '#221c16',
+          border: done ? 'rgba(125,211,192,0.15)' : 'rgba(255,244,230,0.07)',
+          circleBg: done ? '#7dd3c0' : 'transparent',
+          circleBorder: done ? '#7dd3c0' : '#6b5f4f',
+          circleColor: done ? '#12211d' : 'transparent',
+          mark: done ? '✓' : '',
+          weight: done ? 400 : 600,
+          titleColor: done ? '#8f8271' : '#f3ece0',
+          action: done ? null : st.action,
+          doneLabel: done ? '完成 ✓' : null,
+          onAction: st.go ? () => { this.markOnboard(st.key); st.go(); } : this.noop,
+          actionBg: '#7dd3c0', actionColor: '#12211d', actionBorder: 'none',
+        };
+      }),
+      decisionCount,
+      decisions: s.decisions.map(d => ({project: d.project, sla: d.sla, slaColor: SLA_COLORS[d.slaLevel], question: d.question, context: d.context,
+        why: d.why, whyOpen: s.expandedWhy === d.id,
+        toggleWhy: (e) => { e.preventDefault(); this.toggleWhy(d.id); },
+        replies: d.replies.map(label => ({label, onClick: () => this.answerDecision(d.id)}))})),
+      briefActions: [
+        {label:'拍 F09 →', onClick: () => this.toggleWhy(1)},
+        {label:'处理 store-fixer-2 →', onClick: () => this.setView('fleet')},
+        {label:'认领 #609 review →', onClick: () => { this.goProject('boardx'); this.setProjectTab('work'); }},
+      ],
+      omniInput: s.omniInput, setOmniInput: this.setOmniInput, omniKey: this.omniKey,
+      sendOmni: this.sendOmni, omniReply: s.omniReply, dismissOmni: this.dismissOmni,
+      stuckCount: s.stuckPRs.length,
+      stuckPRs: s.stuckPRs.map(p => ({project: p.project, title: p.title, age: p.age,
+        ageColor: p.over ? '#e0665a' : '#8f8271', border: p.over ? 'rgba(224,102,90,0.3)' : 'rgba(255,244,230,0.07)',
+        nudgeLabel: p.nudged ? '已催办 ✓' : '催办 review', nudge: () => this.nudgePR(p.id)})),
+      anomalyCount: anomalyList.length,
+      anomalies: anomalyList.map(a => ({name: a.name, problem: a.lastEvent, goFleet: () => this.setView('fleet')})),
+      projectPulses: PROJECTS.map(p => ({slug: p.slug, progress: p.progress, progressLabel: p.progressLabel,
+        humans: p.humans, agents: p.agents, leases: p.leases,
+        leaseColor: '#a89880', alert: p.alert, alertColor: p.alertLevel === 'red' ? '#e0665a' : '#6b5f4f',
+        onClick: () => this.goProject(p.slug)})),
+
+      fleet: s.fleet.map(a => ({name: a.name.replace('@usamshen/',''),
+        parentLabel: a.parent ? 'sub-agent · parent: ' + a.parent : 'owner: 👤 @usamshen',
+        project: a.project, lease: a.lease,
+        hbColor: HB[a.hb].c, hbAnim: HB[a.hb].a,
+        lastEvent: a.lastEvent, tokenStatus: a.tokenStatus,
+        tokenColor: a.tokenStatus === 'active' ? '#7dd3c0' : a.tokenStatus === '已吊销' ? '#6b5f4f' : '#f5a524',
+        tokenExpiry: a.tokenExpiry,
+        canRetire: !a.retired, retired: a.retired,
+        rotate: () => this.askRotate(a.id), retire: () => this.retireAgent(a.id)})),
+      openEnroll: this.openEnroll,
+
+      curProject,
+      projectTabs: [
+        {key:'work', label:'work 工作'}, {key:'req', label:'sprint 需求'}, {key:'talk', label:'talk 对话流'}, {key:'mirror', label:'github 镜像'}, {key:'people', label:'people 花名册'}, {key:'gov', label:'settings 治理台'},
+      ].map(t => ({...t, onClick: () => this.setProjectTab(t.key),
+        color: s.projectTab === t.key ? '#f3ece0' : '#8f8271',
+        border: s.projectTab === t.key ? '#ff8659' : 'transparent'})),
+      isWorkTab: s.projectTab === 'work', isPeopleTab: s.projectTab === 'people', isGovTab: s.projectTab === 'gov', isMirrorTab: s.projectTab === 'mirror', isTalkTab: s.projectTab === 'talk', isReqTab: s.projectTab === 'req',
+      reqTitle: s.reqTitle, setReqTitle: this.setReqTitle, submitReq: this.submitReq,
+      reqs: s.reqs.map(r => {
+        const STAGES2 = [
+          {key:'analyzing', label:'提交'}, {key:'analyzing2', label:'coord 分析'}, {key:'review', label:'人工审核'}, {key:'dispatched', label:'下发 issues'}, {key:'developing', label:'开发'},
+        ];
+        const idxMap = {analyzing:1, review:2, dispatched:3, rejected:2, developing:4};
+        const idx = idxMap[r.stage] != null ? idxMap[r.stage] : 0;
+        const META = {
+          analyzing: {label:'🤖 分析中…', bg:'rgba(240,180,41,0.13)', c:'#f0b429', border:'rgba(240,180,41,0.3)'},
+          review: {label:'待审核', bg:'rgba(224,102,90,0.13)', c:'#e0665a', border:'rgba(224,102,90,0.3)'},
+          dispatched: {label:'已下发 · 开发中', bg:'rgba(125,211,192,0.12)', c:'#7dd3c0', border:'rgba(255,244,230,0.08)'},
+          rejected: {label:'已驳回 · 入 backlog', bg:'rgba(143,130,113,0.13)', c:'#b3a58f', border:'rgba(255,244,230,0.06)'},
+        };
+        const m = META[r.stage];
+        return {
+          title: r.title, by: r.by, analysis: r.analysis,
+          stageLabel: m.label, stageBg: m.bg, stageColor: m.c, border: m.border,
+          dots: STAGES2.map((st, i, arr) => ({
+            label: st.label, flex: i < arr.length - 1 ? '1' : 'none',
+            bg: r.stage === 'rejected' && i === 2 ? '#b3a58f' : i < idx ? '#7dd3c0' : i === idx ? (r.stage === 'analyzing' ? '#f0b429' : r.stage === 'review' ? '#e0665a' : '#7dd3c0') : '#3a3226',
+            anim: i === idx && r.stage === 'analyzing' ? 'pulse 1.4s infinite' : 'none',
+            labelColor: i <= idx ? '#c9bda9' : '#6b5f4f',
+            line: i < arr.length - 1, lineColor: i < idx ? '#7dd3c0' : '#2a2118',
+          })),
+          showReview: r.stage === 'review',
+          approve: () => this.approveReq(r.id), reject: () => this.rejectReq(r.id),
+          issueRows: (r.stage === 'dispatched' && r.issues) ? r.issues.map(i => ({...i, statusColor: i.status.startsWith('开发中') ? '#7dd3c0' : '#8f8271'})) : null,
+        };
+      }),
+      sprintCount: s.sprintIssues.length,
+      sprintDone: s.sprintIssues.filter(i => i.status === '已完成').length + '/' + s.sprintIssues.length,
+      sprintProgress: Math.round(s.sprintIssues.filter(i => i.status === '已完成').length / s.sprintIssues.length * 100) + '%',
+      sprintIssues: s.sprintIssues.map((i, idx) => {
+        const SC = {'开发中':{bg:'rgba(125,211,192,0.12)',c:'#7dd3c0'}, 'review':{bg:'rgba(240,180,41,0.12)',c:'#f0b429'}, '待认领':{bg:'rgba(143,130,113,0.13)',c:'#b3a58f'}, '已完成':{bg:'rgba(125,211,192,0.2)',c:'#7dd3c0'}};
+        const m = SC[i.status] || SC['待认领'];
+        return {...i, statusBg: m.bg, statusColor: m.c, canClaim: i.status === '待认领',
+          claim: () => this.claimSprintIssue(idx, i.title)};
+      }),
+      agentMessages: s.agentMessages.map(m => ({...m,
+        stateBg: m.state === '已读' ? 'rgba(240,180,41,0.12)' : m.state === '回执已对齐' ? 'rgba(125,211,192,0.12)' : 'rgba(143,130,113,0.13)',
+        stateColor: m.state === '已读' ? '#f0b429' : m.state === '回执已对齐' ? '#7dd3c0' : '#b3a58f',
+        ack: () => this.ackMessage(m.id)})),
+      talkThreads: s.talkThreads.map(th => {
+        const TIER = {COORD:{bg:'rgba(240,180,41,0.15)',c:'#f0b429',b:'rgba(240,180,41,0.4)'}, MODULE:{bg:'rgba(255,134,89,0.13)',c:'#ff8659',b:'rgba(255,134,89,0.35)'}, SUB:{bg:'rgba(143,130,113,0.13)',c:'#b3a58f',b:'rgba(143,130,113,0.3)'}, '👤':{bg:'rgba(125,211,192,0.13)',c:'#7dd3c0',b:'rgba(125,211,192,0.35)'}};
+        const INTENT = {progress:{bg:'rgba(125,211,192,0.1)',c:'#7dd3c0'}, blocker:{bg:'rgba(245,165,36,0.12)',c:'#f5a524'}, escalate:{bg:'rgba(224,102,90,0.12)',c:'#e08a7a'}, 'decide?':{bg:'rgba(224,102,90,0.15)',c:'#e0665a'}, decide:{bg:'rgba(125,211,192,0.15)',c:'#7dd3c0'}, assign:{bg:'rgba(240,180,41,0.12)',c:'#f0b429'}};
+        return {
+          topic: th.topic, ref: th.ref,
+          state: th.decided ? '已闭环' : '等待拍板',
+          stateBg: th.decided ? 'rgba(125,211,192,0.12)' : 'rgba(224,102,90,0.13)',
+          stateColor: th.decided ? '#7dd3c0' : '#e0665a',
+          border: th.decided ? 'rgba(255,244,230,0.08)' : 'rgba(224,102,90,0.3)',
+          msgs: th.msgs.map(m => {
+            const t = TIER[m.tier] || TIER.SUB, i = INTENT[m.intent] || INTENT.progress;
+            return {...m, tierBg:t.bg, tierColor:t.c, tierBorder:t.b, intentBg:i.bg, intentColor:i.c};
+          }),
+          decision: (!th.decided && th.decision) ? {...th.decision,
+            options: th.decision.options.map(label => ({label, onClick: () => this.decideThread(th.id, label)}))} : null,
+          decided: th.decided, decidedText: th.decidedText,
+        };
+      }),
+      mirrorFreshness: '12 秒',
+      mirrorIssues: PDATA[s.curProjectSlug] ? PDATA[s.curProjectSlug].mirrorIssues : MIRROR_ISSUES,
+      mirrorPRs: (PDATA[s.curProjectSlug] ? PDATA[s.curProjectSlug].mirrorPRs : s.mirrorPRs).map(p => {
+        const C = {ok:'#7dd3c0', mid:'#8f8271', bad:'#e0665a'};
+        return {...p, ciColor: C[p.ciLevel], reviewColor: C[p.reviewLevel], mergeColor: C[p.mergeLevel]};
+      }),
+      raiseConcern: this.raiseConcern, concernRaised: s.concernRaised,
+      working: PDATA[s.curProjectSlug] ? PDATA[s.curProjectSlug].working : BOARDX_WORKING,
+      prQueue: (PDATA[s.curProjectSlug] ? PDATA[s.curProjectSlug].prQueue : s.prQueue).map(p => ({num: p.num, title: p.title, author: p.author, waiting: p.waiting, overSla: p.overSla,
+        border: p.overSla ? 'rgba(224,102,90,0.35)' : 'rgba(255,244,230,0.08)',
+        claimLabel: p.claimed ? '已认领 ✓' : '认领 review', claim: () => this.claimPR(p.id)})),
+      coordAgent: (PDATA[s.curProjectSlug] ? PDATA[s.curProjectSlug].tree : AGENT_TREE).coord,
+      moduleAgents: (PDATA[s.curProjectSlug] ? PDATA[s.curProjectSlug].tree : AGENT_TREE).modules.map(m => ({...m, subGap: m.subs.length ? '6px' : '0'})),
+      projectAdmin: PDATA[s.curProjectSlug] ? PDATA[s.curProjectSlug].admin : {handle:'@lena-k', coordAgent:'@lena-k/boardx-coord'},
+      roster: (PDATA[s.curProjectSlug] ? PDATA[s.curProjectSlug].roster : ROSTER.concat(s.extraMembers)).map(m => {
+        const rs = ROLE_STYLES[m.role];
+        const tb = TRUST_BADGE[m.trust] || TRUST_BADGE.trusted;
+        return {handle: m.handle, initial: m.initial, role: m.role, roleBg: rs.bg, roleColor: rs.color, roleBorder: rs.border,
+          trustLabel: tb.label, trustBg: tb.bg, trustColor: tb.c, trustBorder: tb.b,
+          andonGrant: m.andonGrant, doing: m.doing, agentGap: m.agents.length ? '8px' : '0',
+          agentRows: m.agents.map(a => ({name: a.name, dot: a.dot, doing: a.doing, openTwin: (e) => { e.preventDefault(); this.openTwin(a.name); }}))};
+      }),
+      admissionModes: [
+        {key:'auto', label:'自动准入(默认)'}, {key:'manual', label:'人工审批'},
+      ].map(m => ({label: m.label, onClick: () => this.setAdmission(m.key),
+        bg: s.admissionMode === m.key ? 'rgba(125,211,192,0.12)' : 'transparent',
+        border: s.admissionMode === m.key ? 'rgba(125,211,192,0.4)' : 'rgba(255,244,230,0.12)',
+        color: s.admissionMode === m.key ? '#7dd3c0' : '#8f8271'})),
+      approvalHint: s.admissionMode === 'auto' ? '默认仅成员申请(D2)' : '人工模式:agent 准入也进队列',
+      approvals: s.approvals
+        .filter(a => !a.manualOnly || s.admissionMode === 'manual')
+        .map(a => ({icon: a.icon, who: a.who, ask: a.ask, sla: a.sla, slaColor: SLA_COLORS[a.slaLevel],
+          pending: a.status === 'pending', decided: a.status !== 'pending',
+          decidedLabel: a.status === 'approved' ? '已批准 ✓ · 入审计' : '已婉拒 · 入审计',
+          decidedColor: a.status === 'approved' ? '#7dd3c0' : '#8f8271',
+          approve: () => this.decideApproval(a.id, true), reject: () => this.decideApproval(a.id, false)})),
+      andonEvents: s.andonEvents.map(e => ({
+        badge: e.kind === 'andon' ? 'ANDON 拉停' : '✋ 举手',
+        badgeBg: e.kind === 'andon' ? 'rgba(224,102,90,0.15)' : 'rgba(245,165,36,0.13)',
+        badgeColor: e.kind === 'andon' ? '#e0665a' : '#f5a524',
+        border: e.kind === 'andon' ? 'rgba(224,102,90,0.35)' : 'rgba(245,165,36,0.3)',
+        text: e.text, by: e.by,
+        canRelease: e.kind === 'andon' && !e.released, released: e.released,
+        release: () => this.releaseAndon(e.id)})),
+      andonGrants: s.andonGrants.map(g => ({handle: g.handle, source: g.source, revocable: g.revocable, revoke: () => this.revokeGrant(g.handle)})),
+
+      recruitStats: [
+        {value:'72%', label:'features passing'}, {value:'14', label:'PR 合并 / 近 7 天'},
+        {value:'3.1h', label:'flow-time 中位'}, {value:'18m', label:'andon 响应中位'},
+      ],
+      helpWanted: [
+        {module:'canvas 模块 · 手绘组件 (F17/F18)', need:'需要有 fabric.js / 图形学经验的贡献者 + agent', level:'中级'},
+        {module:'board-shell · #283-289 系列', need:'依赖链清晰,适合首次带 agent 进来练手', level:'新手友好'},
+        {module:'coord 协议 · MCP 适配', need:'需要熟悉 MCP 规范,和平台组结对', level:'资深'},
+      ],
+
+      enrollOpen: s.enrollOpen,
+      enrollSteps: [1,2,3].map(n => ({bg: n <= s.enrollStep ? '#ff8659' : '#3a3226'})),
+      enrollStep1: s.enrollStep === 1, enrollStep2: s.enrollStep === 2, enrollStep3: s.enrollStep === 3,
+      enrollTools: ['Claude Code','Codex','Gemini CLI','自研/其他'].map(t => ({label: t,
+        onClick: () => this.setState({enrollTool: t}),
+        bg: s.enrollTool === t ? 'rgba(255,134,89,0.14)' : 'transparent',
+        border: s.enrollTool === t ? 'rgba(255,134,89,0.4)' : 'rgba(255,244,230,0.12)',
+        color: s.enrollTool === t ? '#ff8659' : '#8f8271'})),
+      enrollName: s.enrollName, setEnrollName: this.setEnrollName,
+      enrollNameFinal: s.enrollName.trim() || 'agent-name',
+      enrollNameHint: s.enrollName.trim() ? '✓ @usamshen/' + s.enrollName.trim() + ' 可用(仅在你的命名空间内查重)' : '例:portal-dev-2 · sub-agent 用点号:portal-dev-2.reviewer',
+      enrollNameHintColor: s.enrollName.trim() ? '#7dd3c0' : '#6b5f4f',
+      enrollNext: this.enrollNext, closeEnroll: this.closeEnroll,
+      enrollHeartbeat: s.enrollHeartbeat,
+      enrollDoneLabel: s.enrollHeartbeat ? '完成,去车队看看 →' : '稍后再等',
+      enrollDoneBg: s.enrollHeartbeat ? '#7dd3c0' : 'transparent',
+      enrollDoneColor: s.enrollHeartbeat ? '#12211d' : '#c9bda9',
+      enrollDoneBorder: s.enrollHeartbeat ? 'none' : '1px solid rgba(255,244,230,0.14)',
+
+      rotateTarget: s.rotateTargetId ? (s.fleet.find(a => a.id === s.rotateTargetId) || {}).name : null,
+      cancelRotate: this.cancelRotate, confirmRotate: this.confirmRotate,
+      noop: () => {},
+
+      engPerf: ENG_PERF.map(e => ({...e, respColor: e.respLevel === 'bad' ? '#e0665a' : '#a89880',
+        trendColor: e.trend.startsWith('↗') ? '#7dd3c0' : e.trend.startsWith('↘') ? '#e0665a' : '#8f8271'})),
+      agentPerf: AGENT_PERF.map(a => ({...a,
+        rateColor: a.rateLevel === 'good' ? '#7dd3c0' : a.rateLevel === 'bad' ? '#e0665a' : '#f5a524',
+        incidentColor: a.incidents === '0' ? '#6b5f4f' : '#f5a524'})),
+
+      npSteps: [{n:1,label:'① 装 GitHub App'},{n:2,label:'② 选 repo'},{n:3,label:'③ 自动体检'}].map(x => ({
+        bg: x.n <= s.npStep ? '#ff8659' : '#3a3226', color: x.n <= s.npStep ? '#f3ece0' : '#6b5f4f', label: x.label})),
+      npStep1: s.npStep === 1, npStep2: s.npStep === 2, npStep3: s.npStep === 3,
+      npNext: this.npNext, npFinish: this.npFinish,
+      npRepos: ['usamshen/canvas-lib','usamshen/cli-toolbox','usamshen/data-pipeline'].map(name => ({
+        name, meta: name.endsWith('canvas-lib') ? 'TS · 2.1k stars' : name.endsWith('cli-toolbox') ? 'TS · 340 stars' : 'Python · 88 stars',
+        onClick: () => this.npSelectRepo(name),
+        border: s.npRepo === name ? 'rgba(255,134,89,0.4)' : 'rgba(255,244,230,0.08)',
+        radioBorder: s.npRepo === name ? '#ff8659' : '#6b5f4f',
+        radioBg: s.npRepo === name ? '#ff8659' : 'transparent'})),
+      npChecks: [
+        {icon:'✓', color:'#7dd3c0', text:'webhook 连通(issues / PR / check_run / status)', note:'实时镜像就绪'},
+        {icon:'✓', color:'#7dd3c0', text:'读到 32 个 open issues、6 个 open PR,已建镜像', note:'冷启动种子完成'},
+        {icon:'✓', color:'#7dd3c0', text:'读到 CODEOWNERS + CONTRIBUTING.md,初始化模块划分', note:'可在治理台调整'},
+        {icon:'⚠', color:'#f5a524', text:'main 未开分支保护(required checks)', note:'可后补,不阻塞'},
+      ],
+
+      loops: LOOPS.map(l => ({...l, resultColor: l.resultLevel === 'warn' ? '#f5a524' : '#7dd3c0'})),
+      dispatcherFindings: FINDINGS.map(f => {
+        const S = {high:{bg:'rgba(224,102,90,0.15)',c:'#e0665a',b:'rgba(224,102,90,0.35)'}, med:{bg:'rgba(245,165,36,0.13)',c:'#f5a524',b:'rgba(245,165,36,0.3)'}, low:{bg:'rgba(143,130,113,0.13)',c:'#b3a58f',b:'rgba(255,244,230,0.08)'}};
+        const m = S[f.level];
+        return {...f, sevBg: m.bg, sevColor: m.c, border: m.b};
+      }),
+
+      platformRoles: s.platformRoles.map(r => {
+        const RS = {admin:{bg:'rgba(240,180,41,0.13)',c:'#f0b429',b:'rgba(240,180,41,0.35)'}, operator:{bg:'rgba(255,134,89,0.13)',c:'#ff8659',b:'rgba(255,134,89,0.35)'}, support:{bg:'rgba(125,211,192,0.13)',c:'#7dd3c0',b:'rgba(125,211,192,0.35)'}, viewer:{bg:'rgba(143,130,113,0.13)',c:'#b3a58f',b:'rgba(143,130,113,0.35)'}};
+        const PERMS = {admin:'全部:角色管理/项目下架/全局 andon/审计导出', operator:'调度中心操作/项目接入审核', support:'onboarding 协助/工单', viewer:'只读'};
+        const m = RS[r.role];
+        return {handle: r.handle, role: r.role, fixed: r.fixed, perms: PERMS[r.role],
+          roleBg: m.bg, roleColor: m.c, roleBorder: m.b, cycle: () => this.cyclePlatformRole(r.handle)};
+      }),
+      auditLog: [
+        {time:'07-18 09:41', text:'@usamshen 将 @priya-d 平台角色 viewer → support', ref:'#e1088'},
+        {time:'07-18 09:12', text:'@platform/dispatcher 起草 store-fixer-2 租约回收请求', ref:'#e1087'},
+        {time:'07-17 22:05', text:'@lena-k 解除 boardx andon(e2e 恢复绿)', ref:'#e1085'},
+        {time:'07-17 18:30', text:'@usamshen 授予 @priya-d boardx andon 权(per-person)', ref:'#e1042'},
+      ],
+
+      joinOpen: s.joinOpen, openJoin: this.openJoin, closeJoin: this.closeJoin, joinNext: this.joinNext,
+      joinSteps: [1,2,3].map(n => ({bg: n <= s.joinStep ? '#ff8659' : '#3a3226'})),
+      joinStep1: s.joinStep === 1, joinStep2: s.joinStep === 2, joinStep3: s.joinStep === 3,
+      joinIntro: s.joinIntro, setJoinIntro: this.setJoinIntro,
+      joinModules: ['board-shell','canvas','coord 协议'].map(m => ({label: m, onClick: () => this.setJoinModule(m),
+        bg: s.joinModule === m ? 'rgba(255,134,89,0.14)' : 'transparent',
+        border: s.joinModule === m ? 'rgba(255,134,89,0.4)' : 'rgba(255,244,230,0.12)',
+        color: s.joinModule === m ? '#ff8659' : '#8f8271'})),
+
+      dirFilters: ['全部','招募中','TypeScript','新手友好','agent-friendly'].map((label, i) => ({label,
+        bg: i === 0 ? 'rgba(255,134,89,0.14)' : 'transparent',
+        border: i === 0 ? 'rgba(255,134,89,0.4)' : 'rgba(255,244,230,0.12)',
+        color: i === 0 ? '#ff8659' : '#8f8271'})),
+      dirProjects: [
+        {slug:'boardx', lang:'TS', recruiting:true, desc:'协作白板 + agentic 开发试验场,租户 #1 活体演示。', spark:[8,11,9,14,12,16,14,17], help:'canvas 手绘组件 · board-shell'},
+        {slug:'oss-widgets', lang:'TS', recruiting:true, desc:'开源 widget 组件库,17 个 agent 高强度并行。', spark:[12,10,14,13,16,15,18,16], help:'store 模块修复'},
+        {slug:'data-viz-kit', lang:'TS', recruiting:false, desc:'数据可视化套件,节奏稳定,暂不招募。', spark:[6,7,5,8,7,6,8,7], help:'—'},
+        {slug:'cli-toolbox', lang:'Rust', recruiting:true, desc:'命令行工具集,刚接入平台,冷启动种子已生成。', spark:[2,3,2,4,5,4,6,7], help:'MCP 适配 · 文档'},
+      ].map(p => ({...p, spark: p.spark.map(v => ({h: (v * 1.3) + 'px'})), onClick: () => this.setView('recruit')})),
+
+      profilePublic: s.profilePublic, toggleProfilePublic: this.toggleProfilePublic,
+      profileToggleBg: s.profilePublic ? '#7dd3c0' : '#3a3226',
+      profileToggleLeft: s.profilePublic ? '17px' : '2px',
+      profileFacts: [
+        {project:'boardx', fact:'14 PR 合并 · maintainer · coord 协议模块', when:'近 30d'},
+        {project:'oss-widgets', fact:'3 PR 合并 · contributor', when:'近 30d'},
+        {project:'data-viz-kit', fact:'加入并完成 onboarding', when:'06-28'},
+      ],
+      profileMetrics: [
+        {range:'2–4h', label:'flow-time 区间'}, {range:'85–95%', label:'达成率区间'}, {range:'<2h', label:'拍板响应区间'},
+      ],
+
+      notifItems: NOTIFS.map(n => {
+        const T = {red:{bg:'rgba(224,102,90,0.15)',c:'#e0665a',b:'rgba(224,102,90,0.3)'}, amber:{bg:'rgba(245,165,36,0.13)',c:'#f5a524',b:'rgba(255,244,230,0.08)'}, low:{bg:'rgba(143,130,113,0.13)',c:'#b3a58f',b:'rgba(255,244,230,0.06)'}};
+        const m = T[n.level];
+        return {...n, tierBg:m.bg, tierColor:m.c, border:m.b};
+      }),
+      toggleInspections: this.toggleInspections, inspectionsOpen: s.inspectionsOpen,
+      inspectionsLabel: (s.inspectionsOpen ? '▾' : '▸') + ' 巡检类通知(默认折叠)· 6 条',
+      inspectionItems: [
+        {at:'10:15', text:'每 15m loop:无 stale 租约'},
+        {at:'10:00', text:'每 1h loop:SLA 审计通过,快照 #4021'},
+        {at:'09:45', text:'每 15m loop:无 stale 租约'},
+      ],
+
+      learnDocs: [
+        {tag:'QUICKSTART', title:'Agent 5 分钟跑通', desc:'一条命令 enroll → 首心跳 → 认领第一个 ready work。硬指标:全新 agent 按此文档 5 分钟内完成。'},
+        {tag:'PROTOCOL', title:'三原语规格', desc:'Lease(租约)/ Evidence(证据)/ Event+Andon(事件与拉停)的开放规格,MCP / CLI / REST 三种接入面。'},
+        {tag:'GOVERNANCE', title:'三层 agent 结构', desc:'coord-agent(项目唯一,须 repo admin)→ module-agent → subagent 的职责、命名与对话协议。'},
+        {tag:'ONBOARD', title:'项目接入指南', desc:'装 GitHub App → 选 repo → 自动体检;零侵入,≤5 分钟。'},
+        {tag:'BOUNDARY', title:'dispatcher vs coord-agent', desc:'平台 dispatcher 只做跨项目巡检与事实定位,把问题路由给对应项目的 coord-agent;派工、租约仲裁、需求分析属于项目 coord-agent。dispatcher 永不直接改项目内状态。'},
+      ],
+
+      twin: (() => {
+        const name = s.twinName;
+        const perf = AGENT_PERF.find(a => a.name === name);
+        const isSub = name.includes('.');
+        const owner = '@' + name.slice(1).split('/')[0];
+        return {
+          name, owner,
+          parent: isSub ? name.slice(0, name.lastIndexOf('.')) : '—(顶层)',
+          tier: isSub ? 'SUB' : (name.endsWith('-coord') ? 'COORD' : 'MODULE'),
+          tierBg: isSub ? 'rgba(143,130,113,0.13)' : 'rgba(255,134,89,0.13)',
+          tierColor: isSub ? '#b3a58f' : '#ff8659',
+          tierBorder: isSub ? 'rgba(143,130,113,0.3)' : 'rgba(255,134,89,0.35)',
+          projects: 'boardx',
+          perf: [
+            {value: perf ? perf.rate : '—', label:'达成率'},
+            {value: perf ? perf.flow : '—', label:'flow-time'},
+            {value: perf ? perf.throughput : '—', label:'吞吐/周'},
+            {value: perf ? perf.incidents.split(' ')[0] : '0', label:'异常 30d'},
+          ],
+          events: [
+            {at:'2m 前', text:'submit_evidence · PR #612'},
+            {at:'1h 前', text:'heartbeat 正常 · 租约续期'},
+            {at:'今早', text:'接受 coord-agent 派工:F09 断线重连'},
+          ],
+        };
+      })(),
+      backFromTwin: this.backFromTwin,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -81,7 +81,8 @@ export function ProjectHome({ slug }: { slug: string }) {
             <IdentityChip kind="project">{p.slug}</IdentityChip>
             <span className="text-11 opacity-70">未登录 · 你看到的即所有访客看到的</span>
           </div>
-          <p className="mt-1.5 text-15 font-semibold">{p.tagline}</p>
+          {/* 设计稿：招募页 tagline 走 Newsreader 斜体叙事声线 */}
+          <p className="mt-1.5 font-serif text-17 font-semibold italic">{p.tagline}</p>
         </div>
         <Button data-testid="join-cta" size="lg" onClick={() => setJoinOpen(true)}>
           加入这个项目 →
