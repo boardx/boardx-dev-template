@@ -1,9 +1,11 @@
 "use client";
-// M1 /me 跨项目工作台（p30/F08：真数据落地，UC-09 / D4）。
+// M1 /me 跨项目工作台（p30/F08：真数据落地，UC-09 / D4；p30/F03：项目切换器接真实 membership）。
 // 目标体验：登录默认落点，10 秒知道该干什么。
-// 结构：侧栏项目切换器（红点计数，真实项目/单仓降级见 lib 注释）｜三栏今日必办
-// （待拍板@我 SLA 排序，可展开「为什么需要我?」/ 我卡住的 PR 催办真实事件 / 我的 agent 异常）｜
-// 每卡四态：loading（首次拉取中）/ 空（真实为零）/ 降级（上游不可达）/ 无权限（无项目成员资格）。
+// 结构：侧栏项目切换器（p30-F03：真实导航到 /p/:slug，列表来自登录者的真实 active
+// membership——listMyProjects，由 app/me/page.tsx 服务端注入，不再是单仓/mock 降级）｜
+// 三栏今日必办（待拍板@我 SLA 排序，可展开「为什么需要我?」/ 我卡住的 PR 催办真实事件 /
+// 我的 agent 异常）｜每卡四态：loading（首次拉取中）/ 空（真实为零）/ 降级（上游不可达）/
+// 无权限（无项目成员资格）。
 // 数据源：GET /api/p30/me（app/api/p30/me/route.ts，聚合 coord-gateway/GitHub/平台目录）；
 // 「晨报」按任务边界保留降级态文案，不实现叙事内容（叙事属 F19，见 phase feature_list 备注）。
 import { useCallback, useEffect, useState } from "react";
@@ -13,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { PortalCard } from "@/components/portal/portal-card";
 import { EmptyState, IdentityChip, LoadingSkeleton } from "@/components/p30/shared";
 import type { DecisionSignal, MeApiPayload } from "@/lib/p30-me-types";
+import type { MyProjectSummary } from "@/lib/workspace-authz";
 
 const REFRESH_MS = 30_000;
 
@@ -75,7 +78,7 @@ function Degraded({ testid }: { testid: string }) {
   );
 }
 
-export function MeWorkbench() {
+export function MeWorkbench({ myProjects }: { myProjects: readonly MyProjectSummary[] }) {
   const [data, setData] = useState<MeApiPayload | null>(null);
   const [errored, setErrored] = useState(false);
   const [nudged, setNudged] = useState<Record<string, "sent" | "failed">>({});
@@ -120,39 +123,34 @@ export function MeWorkbench() {
 
   return (
     <div className="mx-auto flex max-w-screen-xl gap-5 px-6 pb-14 pt-7 md:px-9">
-      {/* 侧栏项目切换器（真实红点计数；p30/F04 多租户未合并前降级为单仓一个项目） */}
+      {/* 侧栏项目切换器：真实导航到 /p/:slug（p30-F03，不再是过滤三栏的 mock 交互）。
+          列表来自登录者的真实 active membership（listMyProjects），非 mock。 */}
       <aside data-testid="project-switcher" className="hidden w-52 shrink-0 md:block">
         <p className="px-2 text-11 font-semibold uppercase tracking-wide text-muted-foreground">我的项目</p>
-        <ul className="mt-2 space-y-1">
-          {project ? (
-            <li>
-              <Link
-                href={`/p/${project.slug}`}
-                data-testid={`switcher-${project.slug}`}
-                className="flex w-full items-center justify-between gap-2 rounded-10 bg-surface-2 px-3 py-2 text-13 font-semibold text-foreground transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-tag-green ring-1 ring-border" />
-                  <span className="truncate">{project.name}</span>
-                </span>
-                {project.badgeCount > 0 && (
-                  <span
-                    data-testid={`switcher-badge-${project.slug}`}
-                    className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-destructive px-1 text-11 font-semibold tabular-nums text-destructive-foreground"
-                    title={`${project.badgeCount} 项最高级通知`}
-                  >
-                    {project.badgeCount}
+        {myProjects.length === 0 ? (
+          <div className="mt-2 px-2">
+            <EmptyState testid="switcher-empty">还没有加入任何项目——去项目目录探索（/explore）。</EmptyState>
+          </div>
+        ) : (
+          <ul className="mt-2 space-y-1">
+            {myProjects.map((p) => (
+              <li key={p.slug}>
+                <Link
+                  href={`/p/${p.slug}`}
+                  data-testid={`switcher-${p.slug}`}
+                  className="flex w-full items-center justify-between gap-2 rounded-10 px-3 py-2 text-13 text-foreground transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-tag-green ring-1 ring-border" />
+                    <span className="truncate">{p.name}</span>
                   </span>
-                )}
-              </Link>
-            </li>
-          ) : (
-            <li className="px-2 text-12 text-muted-foreground">GITHUB_REPO 未配置——单项目视图不可用。</li>
-          )}
-        </ul>
-        <p className="mt-3 border-t border-border px-2 pt-3 text-11 text-muted-foreground">
-          多项目跨仓聚合待 p30/F04（工作区分片）合并后接入。
-        </p>
+                  <span className="shrink-0 text-11 text-muted-foreground">{p.role}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-3 border-t border-border px-2 pt-3 text-11 text-muted-foreground">＋ 新建项目（接入向导 P3，后续批次）</p>
       </aside>
 
       {/* 主区 */}

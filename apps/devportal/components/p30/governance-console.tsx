@@ -1,9 +1,11 @@
 "use client";
-// W6 /p/:slug/settings 治理台（p30 UI 先行原型，UC-02 owner 视角，D2/D5）。
+// W6 /p/:slug/settings 治理台（p30-F03：服务端角色裁剪落地）。
 // 板块：唯一管理员与 coord-agent 绑定卡｜agent 准入策略开关（D2）｜审批队列（SLA 倒计时）｜
 // andon 面板（拉停状态一键解除 + per-person 授权名单 D5 + ✋ 举手事件琥珀区）｜token 审计表。
 // Probation 规则提示条（前 3 个 PR 强制人工 review）。
-// 「无权限态」占位：右上视角开关 mock 切到非 owner，看到的就是拒绝页（N1 第四态）；
+// 「无权限态」不再由本组件内部 mock 视角开关演示——服务端 resolveWorkspaceAccess()
+// 判定 forbidden 时，page.tsx 直接渲染 <WorkspaceNoAccess/>，本组件根本不会被挂载
+// （不是「拿到数据再前端隐藏」）；本组件只在服务端确认 owner/maintainer 后才挂载。
 // 审批队列（F06 接真）：真实待审 membership + SLA 倒计时 + 批准/驳回真实调用状态迁移，
 // 详见 /api/portal/approvals；其余板块（绑定卡/准入策略/andon/token 审计）仍是 mock，出于
 // 范围纪律不在本 feature 一并接真。
@@ -15,6 +17,7 @@ import { HeartbeatDot } from "@/components/portal/heartbeat-dot";
 import { ConfirmDialog } from "@/components/p30/confirm-dialog";
 import { EmptyState, IdentityChip, LoadingSkeleton, PrototypeHeader, useMockLoading } from "@/components/p30/shared";
 import { SlaBadge } from "@/components/p30/sla-countdown";
+import type { MembershipRole } from "@/lib/workspace-authz";
 import {
   MOCK_ACTIVE_ANDON,
   MOCK_ANDON_GRANTS,
@@ -80,10 +83,9 @@ function ApprovalRow({
   );
 }
 
-export function GovernanceConsole({ slug }: { slug: string }) {
+export function GovernanceConsole({ slug, viewerRole }: { slug: string; viewerRole: MembershipRole }) {
   const loading = useMockLoading();
   const [emptyDemo, setEmptyDemo] = useState(false);
-  const [asOwner, setAsOwner] = useState(true);
   const [manualAdmission, setManualAdmission] = useState(false);
   const [decisions, setDecisions] = useState<Record<string, "approved" | "rejected" | null>>({});
   const [andonActive, setAndonActive] = useState(true);
@@ -104,7 +106,9 @@ export function GovernanceConsole({ slug }: { slug: string }) {
   };
 
   useEffect(() => {
-    if (!asOwner) return;
+    // 组件只在服务端 resolveWorkspaceAccess() 确认 owner/maintainer 后才挂载
+    // （见文件头注）——不需要客户端再判一次"是不是 owner"，那是已废弃的 mock 视角
+    // 切换遗留物；此处直接拉取，403 分支仍保留作为纵深防御（API 侧独立判定）。
     let cancelled = false;
     setApprovalError(null);
     fetch(`/api/portal/approvals?project=${encodeURIComponent(slug)}`)
@@ -121,7 +125,7 @@ export function GovernanceConsole({ slug }: { slug: string }) {
     return () => {
       cancelled = true;
     };
-  }, [asOwner, slug, refreshTick]);
+  }, [slug, refreshTick]);
 
   const decide = async (membershipId: string, decision: "approved" | "rejected") => {
     setDecidingId(membershipId);
@@ -156,33 +160,12 @@ export function GovernanceConsole({ slug }: { slug: string }) {
     <div className="mx-auto max-w-content space-y-4 px-6 pb-14 pt-7 md:px-9" data-testid="governance-console">
       <PrototypeHeader
         title="治理台"
-        subtitle={`项目工作区 /p/${slug}/settings · owner 专属：准入策略 / 审批队列 / andon / token 审计`}
+        subtitle={`项目工作区 /p/${slug}/settings · 你的角色：${viewerRole}（服务端已裁剪，仅 owner/maintainer 可达此页）`}
         emptyDemo={emptyDemo}
         onToggleEmptyDemo={() => setEmptyDemo((v) => !v)}
       />
 
-      {/* mock 视角开关：核对无权限态（N1 第四态） */}
-      <div className="flex flex-wrap items-center gap-2 rounded-10 border border-dashed border-border p-2.5">
-        <span className="text-12 text-muted-foreground">原型视角开关（mock，仅供核对无权限态）：</span>
-        <Button size="sm" variant={asOwner ? "default" : "outline"} data-testid="view-as-owner" aria-pressed={asOwner} onClick={() => setAsOwner(true)}>
-          👤 owner 视角
-        </Button>
-        <Button size="sm" variant={asOwner ? "outline" : "default"} data-testid="view-as-contributor" aria-pressed={!asOwner} onClick={() => setAsOwner(false)}>
-          👤 contributor 视角（无权限）
-        </Button>
-      </div>
-
-      {!asOwner ? (
-        <div data-testid="gov-no-access" className="flex flex-col items-center gap-3 rounded-12 border border-border bg-surface-1 py-14 text-center">
-          <span aria-hidden className="text-21">🔒</span>
-          <p className="text-15 font-semibold text-foreground">治理台仅 owner / maintainer 可见</p>
-          <p className="max-w-brand text-13 leading-relaxed text-muted-foreground">
-            你当前是 contributor。治理动作（准入策略 / 审批 / andon 授权 / token 审计）需要 owner 权限——
-            有异常想反映？任何成员都可以 ✋ 举手（不阻断，进待拍板）。
-          </p>
-          <Button size="sm" variant="outline">✋ 举手反映问题</Button>
-        </div>
-      ) : loading ? (
+      {loading ? (
         <LoadingSkeleton rows={6} />
       ) : (
         <>
