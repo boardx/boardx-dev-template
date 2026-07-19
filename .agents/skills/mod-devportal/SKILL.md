@@ -47,6 +47,14 @@ issue #523/#543；wrangler.toml 头注；apps/devportal/README.md
   的路由，校验完再 302 到 `/onboard?installation_id=`（同 F02 OAuth callback 模式）。
   `/onboard` 因为需要发起人真实 GitHub 身份判定 admin 权限，从"批次 3 无身份读取"的
   原型假设转为 middleware matcher 内的受保护路由（出处：p30-F05 PR）。
+- 2026-07-19：p30/F02 灰度期跟进（#769，rev-security 非阻断项收尾）——session cookie
+  TTL 7d→24h + `__Host-` 前缀（要求 Secure+Path=/+无 Domain，本 cookie 三者已满足，
+  只改名不改属性）+ middleware 静默续期（剩余寿命 < 半程 TTL 时重签 Set-Cookie，
+  `lib/session.ts` 新增 `resolveSession`，`getSessionUser` 降级为薄封装）；
+  `lib/access.ts` 的 Access JWT 回退栈 `CF_ACCESS_AUD` 从"配置了才校验"补上"未配置
+  时每进程 warn 一次"（向后兼容：仍不强制拒绝，只是从静默变可观测）；「轮换
+  SESSION_SECRET = 紧急全员登出」写进 README.md 运维小节——这是当前唯一现成的服务端
+  session 吊销手段（无黑名单，Access 回退通道不受影响）。
 - 2026-07-19：p30-F02 D3 阶段 2 灰度落地——`middleware.ts` 是「谁需要登录」的唯一事实源
   （matcher 只含 /me*、/p/*；公开层四路由零鉴权）；身份读取统一走 `lib/session.ts` 的
   getSessionUser（OAuth session cookie 优先，Access JWT 回退，灰度期双栈）；公开层防回退
