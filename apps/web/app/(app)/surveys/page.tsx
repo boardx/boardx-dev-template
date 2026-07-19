@@ -46,6 +46,7 @@ import { SurveyNavigationSidebar, type SurveyNavigationTarget } from "@/componen
 import { SurveyOutlinePanel } from "@/components/survey/survey-outline-panel";
 import { SurveyDesignWorkbench } from "@/components/survey/survey-design-workbench";
 import { SurveyReportVersionHistory } from "@/components/survey/survey-report-version-history";
+import { SurveyProfessionalReportWorkbench } from "@/components/survey/survey-professional-report-workbench";
 import { SurveyVersionedReportComposer } from "@/components/survey/survey-versioned-report-composer";
 import {
   downloadProfessionalWordReport,
@@ -69,7 +70,9 @@ import {
   type SurveyReportGenerationStatus,
 } from "@/lib/survey-report-generation";
 import type { PlannedReportBlock } from "@/lib/survey-report-planner";
-import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
+import {
+  type SurveyReportDocument,
+} from "@/lib/survey-report-document";
 import { isExactReportVersionResponse } from "@/lib/survey-report-version-navigation";
 
 echarts.use([
@@ -734,41 +737,31 @@ function WorkspaceShell({
 
         <section className="min-w-0 overflow-auto">
           <div className={focusedMode ? "" : "lg:min-w-survey-workbench"}>
-          {!hideHeader && <header className="sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
+          {!hideHeader && <header
+            data-testid={inSurveyWorkflow ? "survey-workflow-header" : undefined}
+            className="sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-3 backdrop-blur"
+          >
             {inSurveyWorkflow ? (
               <div className="grid gap-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  {active === "report" ? (
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="outline" className="bg-secondary">Survey Workflow</Badge>
-                        {currentSurvey ? <span className="truncate text-13 text-muted-foreground">{currentSurvey.title}</span> : null}
-                      </div>
-                      <h1 className="mt-1 text-22 font-bold tracking-normal">分析报告</h1>
-                    </div>
-                  ) : (
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="outline" className="bg-secondary">
-                          Survey Workflow
-                        </Badge>
-                        {currentSurvey ? (
-                          <span className="truncate text-13 text-muted-foreground">{currentSurvey.title}</span>
-                        ) : null}
-                      </div>
-                      <div className="mt-1 flex flex-wrap items-baseline gap-3">
-                        <h1 className="text-22 font-bold tracking-normal">{activeNav.label}</h1>
-                        <p className="text-13 text-muted-foreground">{headerCopy[active]}</p>
-                      </div>
-                    </div>
-                  )}
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="bg-secondary">
+                      Survey Workflow
+                    </Badge>
+                    {currentSurvey ? (
+                      <span className="truncate text-14 font-semibold text-foreground">{currentSurvey.title}</span>
+                    ) : null}
+                  </div>
                   <Button type="button" variant="outline" size="sm" className="h-9 gap-1.5 rounded-lg px-3 text-13" onClick={() => onNavigate("workspace")}>
                     <ChevronLeft className="h-4 w-4" strokeWidth={1.6} />
                     返回列表
                   </Button>
                 </div>
 
-                <div className="grid gap-2 border-t border-border pt-3 md:grid-cols-5">
+                <div data-testid="survey-workflow-tabs" className="grid gap-2 border-t border-border pt-3 md:grid-cols-5">
+                  <span data-testid="survey-editor-stepper" className="sr-only">
+                    五步工作流导航
+                  </span>
                   {workflowSteps.map((step, index) => {
                     const Icon = step.icon;
                     const isActive = step.id === active;
@@ -2760,7 +2753,7 @@ function WorkspaceReportWorkbench({
   questions: Question[];
   categoryPlan?: ReportCategoryPlanDraft;
   generatedReport?: unknown;
-  professionalReport?: ProfessionalSurveyReportDocument;
+  professionalReport?: SurveyReportDocument;
   generation?: SurveyReportGenerationStatus;
   generating: boolean;
   error: string;
@@ -2929,7 +2922,47 @@ function WorkspaceReportWorkbench({
     setExportStatus("Word 专业报告已开始下载。");
   }
 
+  if (professionalReport) {
+    return (
+      <SurveyProfessionalReportWorkbench
+        report={professionalReport}
+        generation={generation}
+        generating={generating}
+        error={error}
+        onGenerateReport={() =>
+          onGenerateReport(
+            reportGenerationInstruction(),
+            effectiveCategoryPlan
+          )
+        }
+        onSelectVersion={onSelectVersion}
+        onLoadMoreVersions={onLoadMoreVersions}
+        onExportPdf={exportPdf}
+        onExportWord={exportWord}
+      />
+    );
+  }
+
   if (!professionalReport) {
+    if (responseCount === 0) {
+      return (
+        <section
+          data-testid="report-generation-empty-state"
+          className="border border-border bg-background px-6 py-16 text-center"
+        >
+          <h2 className="text-18 font-bold text-foreground">
+            收到至少 1 份有效答卷后可生成报告
+          </h2>
+          <p className="mx-auto mt-2 max-w-xl text-13 text-muted-foreground">
+            请先发布问卷并回收答卷。系统只使用真实答卷生成报告，不会用模拟数据填充图表或结论。
+          </p>
+          <Button type="button" className="mt-5" disabled>
+            <Sparkles className="mr-2 h-4 w-4" strokeWidth={1.6} />
+            重新生成
+          </Button>
+        </section>
+      );
+    }
     return (
       <section data-testid="professional-report-loading" className="border border-border bg-background px-8 py-16 text-center">
         <h2 className="text-18 font-bold text-foreground">正在汇总真实答卷</h2>
@@ -3174,7 +3207,9 @@ export default function SurveysPage() {
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [mode, setMode] = useState<"list" | "editor" | "template">("list");
+  const [mode, setMode] = useState<"list" | "editor" | "template">(
+    initialWorkspaceView === "design" && initialSurveyId != null ? "editor" : "list"
+  );
   const [view, setView] = useState<"edit" | "preview">("edit");
   const [editorTab, setEditorTab] = useState<"questions" | "responses" | "settings">("questions");
   const [filter, setFilter] = useState<"my" | "team">("my");
@@ -3232,7 +3267,7 @@ export default function SurveysPage() {
   const [reportTemplatesBySurveyId, setReportTemplatesBySurveyId] = useState<Record<number, ReportTemplateDraft>>({});
   const [reportCategoryPlansBySurveyId, setReportCategoryPlansBySurveyId] = useState<Record<number, ReportCategoryPlanDraft>>({});
   const [generatedReportsBySurveyId, setGeneratedReportsBySurveyId] = useState<Record<number, unknown>>({});
-  const [professionalReportsBySurveyId, setProfessionalReportsBySurveyId] = useState<Record<number, ProfessionalSurveyReportDocument>>({});
+  const [professionalReportsBySurveyId, setProfessionalReportsBySurveyId] = useState<Record<number, SurveyReportDocument>>({});
   const [professionalReportGenerationBySurveyId, setProfessionalReportGenerationBySurveyId] = useState<Record<number, SurveyReportGenerationStatus>>({});
   const professionalReportRequestStateRef = useRef<Record<number, SurveyReportRequestState>>({});
   const [professionalReportRequestStateBySurveyId, setProfessionalReportRequestStateBySurveyId] =
@@ -3321,6 +3356,10 @@ export default function SurveysPage() {
         && step
         && ["design", "template", "collect", "answer", "report"].includes(step)
       ) {
+        if (step === "design") {
+          void openSurveyDesign(surveyId);
+          return;
+        }
         setEditingSurveyId(surveyId);
         setWorkspaceView(step as Exclude<WorkspaceTarget, "workspace">);
         void loadSurveyForWorkspace(surveyId);
@@ -3649,6 +3688,14 @@ export default function SurveysPage() {
       return;
     }
     const { survey } = await res.json();
+    setWorkspaceSurvey(survey);
+    setSurveys((items) => {
+      const existing = items.find((item) => item.id === survey.id);
+      if (existing) {
+        return items.map((item) => item.id === survey.id ? { ...item, ...survey } : item);
+      }
+      return [...items, survey];
+    });
     setEditingSurveyId(nextView === "edit" ? survey.id : null);
     setTitle(survey.title ?? "");
     setDescription(survey.description ?? "");
@@ -3719,6 +3766,12 @@ export default function SurveysPage() {
     rememberAiCreateFlow(false);
     resetAiState(false);
     void loadTeams();
+  }
+
+  async function openSurveyDesign(surveyId: number) {
+    window.history.replaceState(null, "", `/surveys?survey=${surveyId}&step=design`);
+    setWorkspaceView("design");
+    await loadSurveyForEditor(surveyId, "edit");
   }
 
   async function copyEditorShareLink() {
@@ -4328,21 +4381,6 @@ export default function SurveysPage() {
   }
 
   useEffect(() => {
-    if (!currentSurveyId || generatedReportsBySurveyId[currentSurveyId]) return;
-    let cancelled = false;
-    void fetch(`/api/surveys/${currentSurveyId}/ai-report`)
-      .then((response) => (response.ok ? response.json() : null))
-      .then((payload) => {
-        if (cancelled || !payload?.report) return;
-        setGeneratedReportsBySurveyId((items) => ({ ...items, [currentSurveyId]: payload.report }));
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [currentSurveyId, generatedReportsBySurveyId]);
-
-  useEffect(() => {
     if (
       !currentSurveyId ||
       (professionalReportsBySurveyId[currentSurveyId] &&
@@ -4367,7 +4405,7 @@ export default function SurveysPage() {
         if (!resolution.accepted) return;
         setProfessionalReportRequestState(currentSurveyId, resolution.state);
         if (payload.report) {
-          setProfessionalReportsBySurveyId((items) => ({ ...items, [currentSurveyId]: payload.report as ProfessionalSurveyReportDocument }));
+          setProfessionalReportsBySurveyId((items) => ({ ...items, [currentSurveyId]: payload.report as SurveyReportDocument }));
         }
         setProfessionalReportGenerationBySurveyId((items) => ({
           ...items,
@@ -4400,6 +4438,15 @@ export default function SurveysPage() {
       return;
     }
 
+    if (target === "design") {
+      if (currentSurveyId == null) {
+        openEditor();
+        return;
+      }
+      await openSurveyDesign(currentSurveyId);
+      return;
+    }
+
     setMode("list");
     setWorkspaceView(target);
     setAiCreateFlow(false);
@@ -4415,6 +4462,11 @@ export default function SurveysPage() {
   }
 
   async function selectSurveyForWorkspace(surveyId: number, target: WorkspaceTarget = "workspace") {
+    if (target === "design") {
+      await openSurveyDesign(surveyId);
+      return;
+    }
+
     setMode("list");
     setEditingSurveyId(surveyId);
     setWorkspaceView(target);
@@ -4525,7 +4577,7 @@ export default function SurveysPage() {
       if (payload.report) {
         setProfessionalReportsBySurveyId((items) => ({
           ...items,
-          [surveyId]: payload.report as ProfessionalSurveyReportDocument,
+          [surveyId]: payload.report as SurveyReportDocument,
         }));
       }
       setProfessionalReportGenerationBySurveyId((items) => ({
@@ -4680,7 +4732,11 @@ export default function SurveysPage() {
         return;
       }
       if (!res.ok) {
-        setWorkspaceTemplateError(payload?.error ?? "正式报告生成失败");
+        setWorkspaceTemplateError(
+          payload?.error === "report_requires_responses"
+            ? "收到至少 1 份有效答卷后可生成报告。"
+            : "正式报告生成失败，请稍后重试。"
+        );
         return;
       }
       if (!payload.report || !payload.generation) {
@@ -4696,7 +4752,7 @@ export default function SurveysPage() {
       setProfessionalReportRequestState(surveyId, resolution.state);
       setProfessionalReportsBySurveyId((items) => ({
         ...items,
-        [surveyId]: payload.report as ProfessionalSurveyReportDocument,
+        [surveyId]: payload.report as SurveyReportDocument,
       }));
       setProfessionalReportGenerationBySurveyId((items) => ({
         ...items,
@@ -4752,7 +4808,7 @@ export default function SurveysPage() {
       }
       setProfessionalReportsBySurveyId((items) => ({
         ...items,
-        [surveyId]: payload.report as ProfessionalSurveyReportDocument,
+        [surveyId]: payload.report as SurveyReportDocument,
       }));
       if (payload.generation) {
         setProfessionalReportGenerationBySurveyId((items) => ({
@@ -5138,43 +5194,13 @@ export default function SurveysPage() {
         ...(template.tags ?? []),
       ].join(" ").toLowerCase().includes(q);
     });
-    const editorWorkflowSteps: Array<{
-      id: Exclude<WorkspaceTarget, "workspace">;
-      label: string;
-      description: string;
-    }> = [
-      { id: "design", label: "设计问卷", description: "题目与元数据" },
-      { id: "template", label: "报告模板", description: "分类与模块组件" },
-      { id: "collect", label: "发布回收", description: "链接与回收规则" },
-      { id: "answer", label: "查看答题", description: "答题页与样本" },
-      { id: "report", label: "分析报告", description: "洞察与导出" },
-    ];
-    const openEditorWorkflowStep = (target: Exclude<WorkspaceTarget, "workspace">) => {
-      if (target === "design") {
-        setView("edit");
-        return;
-      }
-      if (target === "answer" && editingSurveyId == null) {
-        setView("preview");
-        return;
-      }
-      if (editingSurveyId == null) {
-        setEditorActionMessage("请先发布问卷，再进入后续工作流。");
-        return;
-      }
-      if (target === "report") {
-        window.location.href = `/surveys/${editingSurveyId}/results?from=editor`;
-        return;
-      }
-      void navigateWorkspace(target);
-    };
     return (
       <WorkspaceShell
         active={isTemplateEditor ? "template" : "design"}
         currentSurvey={currentSurveyForNavigation}
         workflowMode={!isTemplateEditor}
         templateLibraryMode={isTemplateEditor}
-        hideHeader
+        hideHeader={isTemplateEditor}
         hideSidebar={isTemplateEditor}
         onCreateWithAi={() => openEditor({ withAi: true })}
         onCreateBlank={() => openTemplateEditor()}
@@ -5307,42 +5333,6 @@ export default function SurveysPage() {
             </p>
           )}
           </div>
-          {!isTemplateEditor && (
-            <div data-testid="survey-editor-stepper" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-              {editorWorkflowSteps.map((step, index) => {
-                const isActive = step.id === "design";
-                return (
-                  <Button
-                    key={step.id}
-                    data-testid={`workflow-${step.id}`}
-                    type="button"
-                    variant="outline"
-                    aria-current={isActive ? "step" : undefined}
-                    onClick={() => openEditorWorkflowStep(step.id)}
-                    className={[
-                      "h-auto min-h-14 justify-start gap-2 rounded-lg px-3 py-2 text-left",
-                      isActive
-                        ? "!border-foreground !bg-foreground !text-background hover:!bg-foreground/90 hover:!text-background"
-                        : "border-border bg-background hover:border-foreground/40",
-                    ].join(" ")}
-                  >
-                    <span className={isActive
-                      ? "grid h-7 w-7 shrink-0 place-items-center rounded-md bg-background/15 text-11 font-bold text-background"
-                      : "grid h-7 w-7 shrink-0 place-items-center rounded-md bg-secondary text-11 font-bold text-foreground"}
-                    >
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-13 font-semibold">{step.label}</span>
-                      <span className={isActive ? "block text-11 font-normal text-background/70" : "block text-11 font-normal text-muted-foreground"}>
-                        {step.description}
-                      </span>
-                    </span>
-                  </Button>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         {created && (
@@ -5366,7 +5356,7 @@ export default function SurveysPage() {
                   size="sm"
                   className="gap-1.5"
                   onClick={() => {
-                    window.location.href = `/surveys/${created.id}/results?from=editor&tab=report`;
+                    window.location.href = `/surveys?survey=${created.id}&step=report`;
                   }}
                 >
                   <FileText className="h-4 w-4" strokeWidth={1.5} />
@@ -6463,7 +6453,7 @@ export default function SurveysPage() {
       currentSurvey={currentSurveyForNavigation}
       workflowMode={workspaceView !== "workspace"}
       templateLibraryMode={workbenchTab === "templates"}
-      hideHeader={workspaceView === "workspace" || workspaceView === "template"}
+      hideHeader={workspaceView === "workspace"}
       onCreateWithAi={openCreateChooser}
       onCreateFromScene={() => void navigateWorkspace("template")}
       onCreateBlank={() => (workbenchTab === "templates" ? openTemplateEditor() : openCreateChooser())}

@@ -8,6 +8,7 @@ import {
   buildAvaObjectKey,
   validateAvaUpload,
   avaAttachmentKind,
+  buildSurveyReportImageObjectKey,
 } from "./index";
 
 describe("resolveStorageConfig", () => {
@@ -139,6 +140,26 @@ describe("buildAvaObjectKey", () => {
       fileName: "../../etc/passwd",
     });
     expect(key).toBe("ava/7/att_2/.._.._etc_passwd");
+  });
+});
+
+describe("buildSurveyReportImageObjectKey", () => {
+  it("isolates generated images by team, survey, artifact, and chapter", () => {
+    expect(buildSurveyReportImageObjectKey({
+      teamId: 7,
+      surveyId: 59,
+      artifactId: "artifact-id",
+      chapterId: "visual-summary",
+    })).toBe("survey-reports/7/59/artifact-id/visual-summary.png");
+  });
+
+  it("normalizes untrusted identifier separators", () => {
+    expect(buildSurveyReportImageObjectKey({
+      teamId: "../7",
+      surveyId: 59,
+      artifactId: "../../artifact",
+      chapterId: "visual/summary",
+    })).toBe("survey-reports/.._7/59/.._.._artifact/visual_summary.png");
   });
 });
 

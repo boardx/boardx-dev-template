@@ -32,14 +32,21 @@ import {
 } from "@/lib/survey-report-generation";
 import {
   buildProfessionalReportDocument,
-  modelSafeSurveyReportEvidence,
   rawTextResponsesFromSourceData,
   sanitizeProfessionalReportDocument,
 } from "@/lib/survey-professional-report";
 import { buildSurveyReportRequirementPayload } from "@/lib/survey-report-requirement";
-import type { AiEvidenceClaimCandidate } from "@/lib/survey-professional-report";
 import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
-import { callQwenJson } from "@/lib/qwen";
+import {
+  generateTemplateReportChapters,
+  reportEvidenceRefs,
+} from "@/lib/survey-report-chapter-generation";
+import {
+  assembleTemplateDrivenReport,
+  buildSurveyReportTemplateSnapshot,
+  materializeReportAssetUrls,
+  type TemplateDrivenSurveyReport,
+} from "@/lib/survey-template-report";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -229,9 +236,12 @@ function includeArtifactInStatus(
 
 async function artifactReport(
   artifact: SurveyReportArtifactVersion | undefined
-): Promise<ProfessionalSurveyReportDocument | undefined> {
-  const report =
-    artifact?.report as unknown as ProfessionalSurveyReportDocument | undefined;
+): Promise<
+  ProfessionalSurveyReportDocument
+  | ReturnType<typeof materializeReportAssetUrls>
+  | undefined
+> {
+  const report = artifact?.report;
   if (!artifact || !report) return undefined;
   const sourceSnapshot = await findSurveyReportSourceSnapshot(
     artifact.sourceRevision
@@ -239,8 +249,15 @@ async function artifactReport(
   if (!sourceSnapshot) {
     throw new Error("survey_report_source_snapshot_missing");
   }
+  if (report.schemaVersion === "template-driven-report-v1") {
+    return materializeReportAssetUrls(
+      report as unknown as TemplateDrivenSurveyReport,
+      artifact.surveyId,
+      artifact.id
+    );
+  }
   return sanitizeProfessionalReportDocument(
-    report,
+    report as unknown as ProfessionalSurveyReportDocument,
     rawTextResponsesFromSourceData(sourceSnapshot?.sourceData)
   );
 }
@@ -360,6 +377,16 @@ export async function POST(request: Request, { params }: { params: { id: string 
       });
     }
 
+    if (context.evidence.sample.responseCount === 0) {
+      return NextResponse.json(
+        {
+          error: "report_requires_responses",
+          minimumResponseCount: 1,
+        },
+        { status: 422 }
+      );
+    }
+
     const claim = await claimSurveyReportGeneration({
       ...artifactKey,
       sessionId: randomUUID(),
@@ -404,87 +431,61 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const session = { id: claim.sessionId };
     claimedGeneration = { artifactKey, sessionId: session.id };
     const startedAt = Date.now();
-    let aiClaims: AiEvidenceClaimCandidate[] = [];
-    let warning: string | undefined;
-    let artifactModel = model;
-    let artifactProvider = "qwen";
 
-    if (context.evidence.sample.responseCount > 0 && context.evidence.claims.length > 0) {
-      try {
-        const generated = await callQwenJson<{ claims?: AiEvidenceClaimCandidate[] }>({
-          model,
-          temperature: 0.15,
-          messages: [
-            {
-              role: "system",
-              content:
-                "你是专业调研分析师。只输出严格 JSON。不得补数、合并不同题目口径、暗示因果关系。每条结论必须原样引用给定 evidenceId、value 和 denominator。",
-            },
-            {
-              role: "user",
-              content: JSON.stringify({
-                task: "generate_evidence_bound_survey_claims",
-                requirement: context.requirementPayload,
-                requiredShape: {
-                  claims: [{
-                    statement: "结论",
-                    evidenceId: "证据ID",
-                    value: 1,
-                    denominator: 10,
-                    implication: "业务含义",
-                    recommendation: "行动建议",
-                  }],
-                },
-                evidence: modelSafeSurveyReportEvidence(context.evidence),
-              }),
-            },
-          ],
-        });
-        aiClaims = Array.isArray(generated.claims) ? generated.claims : [];
-        await createSurveyAiModelTrace({
-          id: randomUUID(),
-          sessionId: session.id,
-          provider: "qwen",
-          modelId: model,
-          prompt: {
-            sourceRevision: context.sourceSnapshot.sourceRevision,
-            requirementHash,
-            responseCount: context.sourceSnapshot.responseCount,
-          },
-          response: normalizeJsonObject(generated),
-          status: "succeeded",
-          latencyMs: Date.now() - startedAt,
-        });
-      } catch (error) {
-        warning = "千问暂不可用，已保存基于真实统计的报告版本；可稍后重新生成 AI 解读。";
-        artifactModel = "deterministic:evidence";
-        artifactProvider = "deterministic";
-        await createSurveyAiModelTrace({
-          id: randomUUID(),
-          sessionId: session.id,
-          provider: "qwen",
-          modelId: model,
-          prompt: {
-            sourceRevision: context.sourceSnapshot.sourceRevision,
-            requirementHash,
-            responseCount: context.sourceSnapshot.responseCount,
-          },
-          status: "failed",
-          errorMessage: error instanceof Error ? error.message : "model_failed",
-          latencyMs: Date.now() - startedAt,
-        });
-      }
-    }
-
+    const artifactId = randomUUID();
     const generatedAt = new Date().toISOString();
-    const report = buildProfessionalReportDocument({
+    const snapshot = buildSurveyReportTemplateSnapshot(
+      context.reportCategoryPlan
+    );
+    const chapters = await generateTemplateReportChapters({
+      snapshot,
       evidence: context.evidence,
+      sourceRevision: context.sourceSnapshot.sourceRevision,
+      teamId:
+        context.survey.team_id
+        ?? currentTeamId()
+        ?? `personal-${context.user.id}`,
+      surveyId: context.survey.id,
+      artifactId,
+      model,
+    });
+    const report = assembleTemplateDrivenReport({
+      title: snapshot.title || context.survey.title,
       generatedAt,
-      aiClaims,
-      reportPlan: context.reportCategoryPlan,
+      sourceRevision: context.sourceSnapshot.sourceRevision,
+      snapshot,
+      chapters,
+      allowedEvidenceRefs: reportEvidenceRefs(context.evidence),
+      sample: {
+        responseCount: context.evidence.sample.responseCount,
+        questionCount: context.evidence.survey.questionCount,
+        confidence: context.evidence.sample.confidence,
+      },
+    });
+    await createSurveyAiModelTrace({
+      id: randomUUID(),
+      sessionId: session.id,
+      provider: "qwen",
+      modelId: model,
+      prompt: {
+        sourceRevision: context.sourceSnapshot.sourceRevision,
+        requirementHash,
+        responseCount: context.sourceSnapshot.responseCount,
+        chapterCount: snapshot.chapters.length,
+      },
+      response: normalizeJsonObject({
+        schemaVersion: report.schemaVersion,
+        chapters: report.chapters.map((chapter) => ({
+          chapterId: chapter.chapterId,
+          outputType: chapter.outputType,
+          evidenceRefs: chapter.evidenceRefs,
+        })),
+      }),
+      status: "succeeded",
+      latencyMs: Date.now() - startedAt,
     });
     const artifact = await createVersionedSurveyReportArtifact({
-      id: randomUUID(),
+      id: artifactId,
       sessionId: session.id,
       surveyId: context.survey.id,
       sourceRevision: context.sourceSnapshot.sourceRevision,
@@ -492,8 +493,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       templateVersion: SURVEY_REPORT_TEMPLATE_VERSION,
       responseCount: context.sourceSnapshot.responseCount,
       report: normalizeJsonObject(report),
-      modelId: artifactModel,
-      provider: artifactProvider,
+      modelId: model,
+      provider: "qwen",
     });
     await completeSurveyReportGenerationClaim({
       ...artifactKey,
@@ -505,7 +506,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json({
       report: await artifactReport(artifact),
       reused: false,
-      warning,
       model: artifact.modelId,
       generation: {
         ...generationStatus({ ...context, artifacts }, requirementHash),

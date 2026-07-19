@@ -143,6 +143,7 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
       .mockResolvedValueOnce({ id: "20000000-0000-4000-8000-000000000041" })
       .mockResolvedValueOnce({ id: "20000000-0000-4000-8000-000000000042" });
     mocks.claimSurveyReportGeneration
+      .mockReset()
       .mockResolvedValueOnce({
         status: "claimed",
         sessionId: "20000000-0000-4000-8000-000000000041",
@@ -367,6 +368,21 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
     expect(secondClaim?.requirementHash).toBe(firstClaim?.requirementHash);
   });
 
+  it("returns a business error without claiming generation when there are no responses", async () => {
+    mocks.listSurveyResponses.mockResolvedValue([]);
+
+    const response = await POST(reportRequest(), params);
+
+    expect(response?.status).toBe(422);
+    await expect(response?.json()).resolves.toEqual({
+      error: "report_requires_responses",
+      minimumResponseCount: 1,
+    });
+    expect(mocks.claimSurveyReportGeneration).not.toHaveBeenCalled();
+    expect(mocks.callQwenJson).not.toHaveBeenCalled();
+    expect(mocks.createVersionedSurveyReportArtifact).not.toHaveBeenCalled();
+  });
+
   it("never sends raw text responses to the model", async () => {
     const canary = "F16_ROUTE_MODEL_CANARY_72b15";
     mocks.getSurveyWithQuestions.mockResolvedValue({
@@ -408,5 +424,33 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
     expect(response?.status).toBe(200);
     const modelRequest = mocks.callQwenJson.mock.calls[0]?.[0];
     expect(JSON.stringify(modelRequest)).not.toContain(canary);
+  });
+
+  it("does not publish a partial version when a template chapter fails evidence validation", async () => {
+    mocks.claimSurveyReportGeneration.mockReset().mockResolvedValue({
+      status: "claimed",
+      sessionId: "20000000-0000-4000-8000-000000000041",
+    });
+    mocks.callQwenJson.mockResolvedValue({
+      headline: "无效结论",
+      claims: [{
+        statement: "没有来源的结论",
+        evidenceId: "missing-evidence",
+        value: 99,
+        denominator: 100,
+      }],
+    });
+
+    const response = await POST(reportRequest(), params);
+
+    expect(response?.status).toBe(500);
+    expect(mocks.createVersionedSurveyReportArtifact).not.toHaveBeenCalled();
+    expect(mocks.completeSurveyReportGenerationClaim).not.toHaveBeenCalled();
+    expect(mocks.releaseSurveyReportGenerationClaim).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: "20000000-0000-4000-8000-000000000041",
+        errorMessage: "report_text_evidence_invalid",
+      })
+    );
   });
 });

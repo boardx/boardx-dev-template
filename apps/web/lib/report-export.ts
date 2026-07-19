@@ -420,7 +420,137 @@ function buildReportHtml(payload: ReportExportPayload) {
 </html>`;
 }
 
-export function buildProfessionalReportHtml(report: ProfessionalSurveyReportDocument) {
+function chartRowsFromOption(option: Record<string, unknown>) {
+  const series = Array.isArray(option.series)
+    ? option.series[0] as Record<string, unknown> | undefined
+    : undefined;
+  const seriesData = Array.isArray(series?.data) ? series.data : [];
+  const namedRows = seriesData.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const row = item as Record<string, unknown>;
+    return typeof row.name === "string" && Number.isFinite(Number(row.value))
+      ? [{ label: row.name, value: Number(row.value) }]
+      : [];
+  });
+  if (namedRows.length) return namedRows;
+
+  const xAxis = option.xAxis && typeof option.xAxis === "object"
+    ? option.xAxis as Record<string, unknown>
+    : undefined;
+  const labels = Array.isArray(xAxis?.data) ? xAxis.data.map(String) : [];
+  return seriesData.flatMap((value, index) =>
+    Number.isFinite(Number(value))
+      ? [{ label: labels[index] ?? String(index + 1), value: Number(value) }]
+      : []
+  );
+}
+
+function buildTemplateDrivenReportHtml(
+  report: Extract<SurveyReportDocument, { schemaVersion: string }>
+) {
+  const generatedAt = new Date(report.generatedAt).toLocaleString("zh-CN", {
+    hour12: false,
+  });
+  const chapters = report.chapters.map((chapter, index) => {
+    let output = "";
+    if (chapter.outputType === "text") {
+      output = `
+        <h3>${escapeHtml(chapter.headline)}</h3>
+        ${chapter.body.split(/\n{2,}/).filter(Boolean).map(
+          (paragraph) => `<p>${escapeHtml(paragraph)}</p>`
+        ).join("")}
+      `;
+    } else if (chapter.outputType === "chart") {
+      const rows = chartRowsFromOption(chapter.option);
+      output = `
+        <div class="chart">
+          ${rows.map((row) => `
+            <div class="bar-row">
+              <span>${escapeHtml(row.label)}</span>
+              <strong>${row.value}</strong>
+            </div>
+          `).join("")}
+        </div>
+        <p>${escapeHtml(chapter.interpretation)}</p>
+        <small>有效回答 n=${chapter.sampleSize}</small>
+      `;
+    } else {
+      output = `
+        <figure>
+          <img src="${escapeHtml(chapter.assetUrl)}" alt="${escapeHtml(chapter.altText)}" />
+          <figcaption>${escapeHtml(chapter.caption)}</figcaption>
+        </figure>
+      `;
+    }
+    return `
+      <section class="chapter">
+        <p class="eyebrow">${String(index + 1).padStart(2, "0")} / ${escapeHtml(
+          chapter.outputType === "chart"
+            ? "数据图表"
+            : chapter.outputType === "image"
+              ? "研究视觉"
+              : "分析结论"
+        )}</p>
+        <h2>${escapeHtml(chapter.title)}</h2>
+        ${output}
+        ${chapter.limitations.length
+          ? `<p class="limitation">解读限制：${escapeHtml(chapter.limitations.join(" "))}</p>`
+          : ""}
+      </section>
+    `;
+  }).join("");
+
+  return `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(report.title)}</title>
+  <style>
+    @page { size: A4 portrait; margin: 16mm 14mm 18mm; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { margin: 0; color: #171717; background: #fff; font: 13px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    main { max-width: 180mm; margin: 0 auto; }
+    .cover { min-height: 245mm; display: flex; flex-direction: column; justify-content: space-between; padding: 18mm 12mm; color: #fff; background: #171717; break-after: page; }
+    .kicker, .eyebrow { margin: 0; color: #737373; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    .kicker { color: #d4d4d4; }
+    h1 { max-width: 145mm; margin: 22mm 0 0; font-size: 34px; line-height: 1.25; }
+    h2 { margin: 4px 0 8mm; font-size: 22px; line-height: 1.35; }
+    h3 { margin: 0 0 4mm; font-size: 16px; }
+    .cover-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #525252; }
+    .cover-meta div { padding: 12px; background: #262626; }
+    .cover-meta span { display: block; color: #a3a3a3; font-size: 10px; }
+    .cover-meta strong { display: block; margin-top: 4px; font-size: 15px; }
+    .chapter { padding: 12mm 0; break-before: page; }
+    .chart { margin: 5mm 0; border-top: 1px solid #d4d4d4; }
+    .bar-row { display: grid; grid-template-columns: 1fr 24mm; gap: 4mm; padding: 3mm 0; border-bottom: 1px solid #ededed; }
+    .bar-row strong { text-align: right; }
+    figure { margin: 0; }
+    figure img { display: block; width: 100%; max-height: 118mm; object-fit: cover; }
+    figcaption, small { display: block; margin-top: 3mm; color: #737373; font-size: 10px; }
+    .limitation { margin-top: 6mm; padding: 3mm 4mm; color: #525252; background: #f5f5f5; font-size: 11px; }
+    @media screen { body { background: #ededed; } main { padding: 24px; background: #fff; } .cover { min-height: 900px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="cover">
+      <div><p class="kicker">BoardX Survey Research Report</p><h1>${escapeHtml(report.title)}</h1></div>
+      <div class="cover-meta">
+        <div><span>有效样本</span><strong>${report.sample.responseCount} 份</strong></div>
+        <div><span>模板章节</span><strong>${report.chapters.length} 个</strong></div>
+        <div><span>生成时间</span><strong>${escapeHtml(generatedAt)}</strong></div>
+      </div>
+    </section>
+    ${chapters}
+  </main>
+</body>
+</html>`;
+}
+
+export function buildProfessionalReportHtml(report: SurveyReportDocument) {
+  if (isTemplateDrivenSurveyReport(report)) {
+    return buildTemplateDrivenReportHtml(report);
+  }
   const claims = report.executiveSummary.claims.map((claim) => `
     <article class="claim">
       <p>${escapeHtml(claim.statement)}</p>
@@ -515,7 +645,7 @@ export function buildProfessionalReportHtml(report: ProfessionalSurveyReportDocu
 </html>`;
 }
 
-export function openProfessionalPdfExportWindow(report: ProfessionalSurveyReportDocument) {
+export function openProfessionalPdfExportWindow(report: SurveyReportDocument) {
   const win = window.open("", "_blank");
   if (!win) return false;
   win.document.open();
@@ -526,7 +656,7 @@ export function openProfessionalPdfExportWindow(report: ProfessionalSurveyReport
   return true;
 }
 
-export function downloadProfessionalWordReport(report: ProfessionalSurveyReportDocument) {
+export function downloadProfessionalWordReport(report: SurveyReportDocument) {
   const blob = new Blob(["\ufeff", buildProfessionalReportHtml(report)], { type: "application/msword;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -657,4 +787,7 @@ export async function downloadVisualPngReport(element: HTMLElement, filenameBase
     URL.revokeObjectURL(svgUrl);
   }
 }
-import type { ProfessionalSurveyReportDocument } from "./survey-professional-report";
+import {
+  isTemplateDrivenSurveyReport,
+  type SurveyReportDocument,
+} from "./survey-report-document";

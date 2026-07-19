@@ -423,6 +423,163 @@
       ],
       "evidence": "",
       "notes": "仅在 F16 合并后复用 Survey 交付 worktree，同步最新 main 并切换到独立 F17 分支和 Delivery PR；生产 Web/API 使用 StateBackend、StoreBackend 或受控虚拟 backend，不使用宿主机 FilesystemBackend。PR 只 Closes F17 feature issue，并 Refs #648。"
+    },
+    {
+      "id": "F19",
+      "priority": 1,
+      "area": "survey",
+      "title": "模板驱动的专业分析报告",
+      "user_visible_behavior": "用户保存报告模板并主动生成报告时，系统从同一份完整问卷事实库中为每个模板章节生成唯一的文本、ECharts 图表或图片产物；成功报告的章节数量、顺序、标题和类型与生成时模板快照逐项一致。任一章节失败时不发布部分版本并保留最近成功报告。分析报告页以专业阅读布局展示模板目录、连续章节、紧凑版本入口、分享和导出操作，且不再显示固定业务章节或常驻编辑助手。",
+      "design_ref": "requirements/18-template-driven-professional-report.md；docs/superpowers/specs/2026-07-19-template-driven-professional-report-design.md；2026-07-19 用户确认",
+      "status": "passing",
+      "sprint": "19",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F16"
+      ],
+      "wave": 16,
+      "verification": [
+        "pnpm --filter @repo/storage run test",
+        "pnpm --filter @repo/web run test -- survey-template-report survey-report-chapter-generation survey-report",
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-019-template-driven-professional-report.spec.ts",
+        "pnpm harness doctor --phase p25",
+        "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-19/evidence/F19.verify.log"
+      ],
+      "evidence": "evidence/F19.verify.log @ 2026-07-18T18:57:21.681Z",
+      "notes": "独立 Delivery PR，Refs #648。共享热点为 professional-report route、survey-professional-report.ts、report export 和 surveys/page.tsx；F17 合并前后均通过明确的章节生成接口集成，不在本 feature 修改 LangGraph runtime。"
+    },
+    {
+      "id": "F20",
+      "priority": 1,
+      "area": "survey",
+      "title": "统一问卷设计入口",
+      "user_visible_behavior": "用户从“我的问卷”进入尚无答卷问卷的设计页、从诊断模板创建问卷，或刷新 survey=<id>&step=design 深链接时，均进入同一套已确认的新式设计器；五步工作流、问卷摘要、诊断假设、连续问题画布和右侧 AI 助手保持一致，已有问卷数据不会被模板初始值覆盖。",
+      "design_ref": "requirements/19-unified-survey-design-entry.md；2026-07-19 用户确认第 3 张截图",
+      "status": "passing",
+      "sprint": "20",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F15"
+      ],
+      "wave": 17,
+      "verification": [
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "E2E_PORT=62628 COLLAB_WS_PORT=62629 pnpm --filter @repo/web exec playwright test e2e/survey-p25-020-unified-design-entry.spec.ts",
+        "pnpm harness doctor --phase p25",
+        "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-20/evidence/F20.verify.log"
+      ],
+      "evidence": "evidence/F20.verify.log @ 2026-07-18T21:13:53.016Z",
+      "notes": "在 PR #757 中作为独立小提交交付，Refs #648；仅统一 design 入口和深链接恢复，不改后续工作流与数据契约。"
+    },
+    {
+      "id": "F21",
+      "priority": 1,
+      "area": "survey",
+      "title": "修复模板驱动报告入口",
+      "user_visible_behavior": "用户从问卷设计器点击“分析报告”时进入统一工作流的模板驱动专业报告页；主动生成报告调用 professional-report 并按已保存模板组装章节，不再进入旧 results/ai-report 页面或显示 ai_report_failed。",
+      "design_ref": "requirements/20-template-report-entry-routing.md；2026-07-19 用户缺陷截图",
+      "status": "passing",
+      "sprint": "21",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F19",
+        "F20"
+      ],
+      "wave": 18,
+      "verification": [
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "E2E_PORT=62638 COLLAB_WS_PORT=62639 pnpm --filter @repo/web exec playwright test e2e/survey-p25-021-template-report-entry.spec.ts",
+        "pnpm harness doctor --phase p25",
+        "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-21/evidence/F21.verify.log"
+      ],
+      "evidence": "evidence/F21.verify.log @ 2026-07-18T21:51:28.110Z",
+      "notes": "独立 bug feature，Refs #648，追加到 PR #757；仅修复设计器报告入口路由，不删除旧结果统计页。"
+    },
+    {
+      "id": "F22",
+      "priority": 1,
+      "area": "survey",
+      "title": "收敛分析报告为单列阅读页",
+      "user_visible_behavior": "用户进入分析报告时只看到居中的模板驱动报告正文；左侧章节目录、移动端章节选择器和右侧报告 AI 均移除，顶部版本、分享、导出与重新生成操作保留；页面不再请求旧 ai-report 接口。",
+      "design_ref": "requirements/21-single-column-report-reading.md；2026-07-19 用户截图确认",
+      "status": "passing",
+      "sprint": "22",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F19",
+        "F21"
+      ],
+      "wave": 19,
+      "verification": [
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "E2E_PORT=62648 COLLAB_WS_PORT=62649 pnpm --filter @repo/web exec playwright test e2e/survey-p25-022-single-column-report.spec.ts",
+        "pnpm harness doctor --phase p25",
+        "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-22/evidence/F22.verify.log"
+      ],
+      "evidence": "evidence/F22.verify.log @ 2026-07-18T22:32:11.811Z",
+      "notes": "独立 UI feature，Refs #648，追加到 PR #757；只收敛报告阅读布局和移除旧报告读取，不改报告生成契约。"
+    },
+    {
+      "id": "F23",
+      "priority": 1,
+      "area": "survey",
+      "title": "修复无答卷报告生成错误",
+      "user_visible_behavior": "问卷没有有效答卷时，分析报告明确提示需要先回收至少 1 份答卷并禁用重新生成，不再显示 professional_report_generation_failed；绕过前端的生成请求返回可识别的业务错误且不调用模型，已有答卷的模板驱动生成保持不变。",
+      "design_ref": "requirements/22-report-generation-empty-state.md；2026-07-19 用户失败截图",
+      "status": "passing",
+      "sprint": "23",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F19",
+        "F22"
+      ],
+      "wave": 20,
+      "verification": [
+        "pnpm --filter @repo/web run test -- survey-report.route",
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "E2E_PORT=62658 COLLAB_WS_PORT=62659 pnpm --filter @repo/web exec playwright test e2e/survey-p25-023-empty-report-generation.spec.ts",
+        "pnpm harness doctor --phase p25",
+        "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-23/evidence/F23.verify.log"
+      ],
+      "evidence": "evidence/F23.verify.log @ 2026-07-19T00:31:02.080Z",
+      "notes": "独立 bug feature，Refs #648，追加到 PR #757；只修复无答卷生成边界和用户提示，不放宽真实答卷约束。"
+    },
+    {
+      "id": "F24",
+      "priority": 1,
+      "area": "survey",
+      "title": "统一五步工作流持久壳层",
+      "user_visible_behavior": "用户在设计问卷、报告模板、发布回收、查看答题和分析报告之间切换时，返回区、问卷标识和五步 Tab 保持原位且不被重新创建，只替换 Tab 下方的步骤内容；直接刷新任一步骤深链接仍恢复统一壳层和正确选中态。",
+      "design_ref": "requirements/23-persistent-workflow-shell.md；2026-07-19 用户三张对比截图",
+      "status": "passing",
+      "sprint": "24",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F20",
+        "F22"
+      ],
+      "wave": 21,
+      "verification": [
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "E2E_PORT=62668 COLLAB_WS_PORT=62669 pnpm --filter @repo/web exec playwright test e2e/survey-p25-024-persistent-workflow-shell.spec.ts",
+        "pnpm harness doctor --phase p25",
+        "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-24/evidence/F24.verify.log"
+      ],
+      "evidence": "evidence/F24.verify.log @ 2026-07-19T06:49:51.259Z",
+      "notes": "独立 UI feature，Refs #648，追加到 PR #757；只统一五步工作流外壳和切换行为，不修改各步骤业务契约。"
     }
   ]
 }

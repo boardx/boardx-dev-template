@@ -90,6 +90,25 @@ export function buildPresentationObjectKey(params: {
   return `presentations/${params.roomId}/${params.chatId}/${params.artifactId}/${safeName}`;
 }
 
+function safeObjectKeySegment(value: string | number): string {
+  return String(value).replace(/[/\\]/g, "_");
+}
+
+export function buildSurveyReportImageObjectKey(params: {
+  teamId: string | number;
+  surveyId: string | number;
+  artifactId: string;
+  chapterId: string;
+}): string {
+  return [
+    "survey-reports",
+    safeObjectKeySegment(params.teamId),
+    safeObjectKeySegment(params.surveyId),
+    safeObjectKeySegment(params.artifactId),
+    `${safeObjectKeySegment(params.chapterId)}.png`,
+  ].join("/");
+}
+
 // ─── 房间级文件库对象 key：rooms/{roomId}/files/{fileId}/{文件名}（p20-F03，uc-rr-003）──
 // 独立前缀，与 kb/、ava/ 等隔离命名空间；房间是唯一的所有权边界，chat_thread_id 不进 key
 // （它只是元数据里的来源标注，不是存储路径的一部分——同一房间文件不因线程视角不同而重复存储）。

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import {
+  SURVEY_REPORT_TEMPLATE_VERSION,
   buildSurveyReportSourceSnapshot,
   hashSurveyReportRequirement,
   type SurveyReportSourceSnapshotInput,
@@ -42,6 +43,12 @@ function response(id: number, answer: string, submittedAt: string) {
 }
 
 describe("survey report source revisions", () => {
+  it("keys artifacts by the template-driven report contract version", () => {
+    expect(SURVEY_REPORT_TEMPLATE_VERSION).toBe(
+      "template-driven-report-v1"
+    );
+  });
+
   it("reuses a source revision when only input order changes", () => {
     const firstResponse = response(1, "成分", "2026-07-18T01:00:00.000Z");
     const secondResponse = response(2, "认证", "2026-07-18T02:00:00.000Z");
