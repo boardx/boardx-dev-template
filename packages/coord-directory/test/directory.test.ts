@@ -542,16 +542,28 @@ describe("独立测试 host fail-closed（#770 跟进 3/3）", () => {
 // 没有测试守护（既有用例全部跑在「CREATE TABLE 自带全列」的全新表上，测不出
 // 这一类 drift）。用 __test__ 调试路由把当前表结构退回迁移前形状复现 500，
 // 再跑 migrate() 证明自愈，最后一条覆盖 agents.lifecycle 同款迁移。
+// ⚠️ 隔离性约束：本 describe 块里的 drop-migrated-columns 是对整个共享 DO 实例
+// 做全局 schema 操作（DROP COLUMN 不分 slug，影响这个 DO 里的所有行），不像其余
+// 用例那样靠各自独立的 slug/handle 自我隔离。安全性依赖 vitest 默认串行执行 +
+// 每个 it 内部在同一测试里把表结构 drop 了又 migrate 回来（净效果幂等）。
+// 如果以后有人给这个文件开 it.concurrent，或者把这个 describe 拆到单独文件跑
+// 并行，会在"表被 drop 期间"和其他用例的窗口期重叠，导致其他用例随机 500——
+// 千万不要给这个 describe 块开并发。
 describe("老表结构迁移自愈（#787：CREATE TABLE IF NOT EXISTS 不会补已存在表的新列）", () => {
   it("memberships 表退回迁移前形状 → INSERT 复现 500 → 补跑 migrate() → 恢复 201", async () => {
     const s = await seed("mig1");
 
     const dropRes = await post("/directory/__test__/drop-migrated-columns", {});
     expect(dropRes.status).toBe(200);
-    const dropped = (await j(dropRes))["dropped"] as string[];
+    const dropBody = await j(dropRes);
+    const dropped = dropBody["dropped"] as string[];
+    const failed = dropBody["failed"] as string[];
     expect(dropped).toEqual(
       expect.arrayContaining(["memberships.modules", "memberships.intro", "memberships.onboarding_issue_url", "agents.lifecycle"]),
     );
+    // 一个都不该失败——如果某列 DROP 静默失败，测试后面还是会"看起来复现了 #787"，
+    // 但那是巧合而不是真的构造出了老表形状，会掩盖 drop 本身失效的问题。
+    expect(failed).toEqual([]);
 
     // 复现 #787：老表结构下 INSERT 因列不存在直接抛 SQLITE_ERROR——handler 内没有
     // catch 这类运行时异常（fetch() 的 catch 只吞 SyntaxError，其余一律 rethrow），
@@ -565,14 +577,17 @@ describe("老表结构迁移自愈（#787：CREATE TABLE IF NOT EXISTS 不会补
     const migrateRes = await post("/directory/__test__/run-migrations", {});
     expect(migrateRes.status).toBe(200);
 
-    // 自愈：同一条请求现在 201，且新列真的可用（modules/intro 落库）
+    // 自愈：同一条请求现在 201，且三个新列全部真的可用（modules/intro/
+    // onboarding_issue_url 都要覆盖，不能只验证前两个漏了第三个）。
     const fixedReq = await post("/directory/memberships", {
-      project: s.slug, engineer: `@${s.handle}`, role: "contributor", modules: ["collab"], intro: "回归测试",
+      project: s.slug, engineer: `@${s.handle}`, role: "contributor",
+      modules: ["collab"], intro: "回归测试", onboarding_issue_url: "https://github.com/x/y/issues/1",
     });
     expect(fixedReq.status).toBe(201);
     const m = (await j(fixedReq))["membership"] as Obj;
     expect(m["modules"]).toEqual(["collab"]);
     expect(m["intro"]).toBe("回归测试");
+    expect(m["onboarding_issue_url"]).toBe("https://github.com/x/y/issues/1");
   });
 
   it("补跑 migrate() 本身幂等——已迁移过的表再跑一遍不报错、不影响正常写入", async () => {
