@@ -179,13 +179,25 @@ export class PlatformDirectory extends DurableObject {
     this.migrate();
   }
 
-  /** 加法迁移（p30/F07）：SQLite 无 `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`，
-   *  用「试跑一次，已存在则吞掉报错」保持幂等——同一纪律见文件头「幂等 SCHEMA」。 */
+  /** 加法迁移（p30/F07 起）：SQLite 无 `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`，
+   *  用「试跑一次，已存在则吞掉报错」保持幂等——同一纪律见文件头「幂等 SCHEMA」。
+   *  `CREATE TABLE IF NOT EXISTS` 只在表首次创建时生效；已被更早版本实例化过的表
+   *  （如生产 DO 在 F06 落地前就已建过 memberships 表）不会自动获得后续新增列，
+   *  必须逐列补 ALTER TABLE，否则 INSERT 会因列不存在而 500（#787 事故：
+   *  POST /memberships 在已 provision 的生产 DO 上报 500，根因即此）。 */
   private migrate(): void {
-    try {
-      this.sql.exec(`ALTER TABLE agents ADD COLUMN lifecycle TEXT NOT NULL DEFAULT 'active'`);
-    } catch {
-      /* 列已存在（非首次启动）——幂等 no-op */
+    const alters = [
+      `ALTER TABLE agents ADD COLUMN lifecycle TEXT NOT NULL DEFAULT 'active'`,
+      `ALTER TABLE memberships ADD COLUMN modules TEXT NOT NULL DEFAULT '[]'`,
+      `ALTER TABLE memberships ADD COLUMN intro TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE memberships ADD COLUMN onboarding_issue_url TEXT`,
+    ];
+    for (const stmt of alters) {
+      try {
+        this.sql.exec(stmt);
+      } catch {
+        /* 列已存在（非首次启动）——幂等 no-op */
+      }
     }
   }
 
