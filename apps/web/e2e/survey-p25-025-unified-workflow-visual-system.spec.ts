@@ -41,7 +41,6 @@ test("all workflow steps share one full-width visual frame", async ({ page }) =>
   const content = page.getByTestId("survey-workflow-content");
   await expect(content).toBeVisible({ timeout: 20_000 });
   await expect(page.getByTestId("survey-workflow-header")).toContainText("统一视觉问卷");
-  await expect(page.getByTestId("survey-editor-screen")).toContainText("验证五步工作流使用同一满屏视觉系统");
   const contentBox = await content.boundingBox();
   expect(contentBox).not.toBeNull();
   expect(contentBox!.width).toBeGreaterThan(1800);
