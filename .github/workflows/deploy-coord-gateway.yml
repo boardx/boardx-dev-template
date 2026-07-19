@@ -13,9 +13,16 @@ on:
   push:
     branches: [main]
     paths:
+      # 覆盖 apps/coord-gateway/package.json 的全部 @repo/coord-* 依赖——只改依赖包
+      # 不改 gateway 本体的 PR 合并后必须照样自动部署，否则修复会静默不生效
+      # （#787 事故：coord-directory 的 schema 迁移修复合并后一度没有自动部署，
+      # 生产端 500 在人工 workflow_dispatch 之前一直没解除）。
       - "apps/coord-gateway/**"
-      - "packages/coord-repohub/**"
+      - "packages/coord-brain/**"
+      - "packages/coord-directory/**"
+      - "packages/coord-projection/**"
       - "packages/coord-protocol/**"
+      - "packages/coord-repohub/**"
       - "pnpm-lock.yaml"
   workflow_dispatch: {}
 
