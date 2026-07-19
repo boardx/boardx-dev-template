@@ -188,3 +188,40 @@ export async function fetchRecentEvents(limit = 50): Promise<RecentEventsResult>
     return { configured: true, error: "unreachable" };
   }
 }
+
+// ---------- CoordBrain 影子决策（R1，p30-F10）----------
+// 只读展示：CoordBrain 只观察不执行，本函数同样只读——不存在"确认/驳回"之类的写操作。
+
+export interface ShadowDecision {
+  event_id: string;
+  tick_id: string;
+  rule: string;
+  subject_id: string;
+  decision: boolean;
+  reason: string;
+  detail: Record<string, unknown> | null;
+  at: string;
+}
+
+export type ShadowDecisionsResult =
+  | { configured: false }
+  | { configured: true; decisions: ShadowDecision[] }
+  | { configured: true; error: string };
+
+/** GET /shadow-decisions — 本仓 CoordBrain 影子决策（新的在前）。 */
+export async function fetchShadowDecisions(limit = 200): Promise<ShadowDecisionsResult> {
+  const gw = gatewayBase();
+  if (!gw) return { configured: false };
+  try {
+    const res = await fetch(`${gw.base}/shadow-decisions?limit=${limit}`, {
+      headers: { Authorization: `Bearer ${gw.token}` },
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      cache: "no-store",
+    });
+    if (!res.ok) return { configured: true, error: `upstream_${res.status}` };
+    const body = (await res.json()) as { decisions?: ShadowDecision[] };
+    return { configured: true, decisions: body.decisions ?? [] };
+  } catch {
+    return { configured: true, error: "unreachable" };
+  }
+}

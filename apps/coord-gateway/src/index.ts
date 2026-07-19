@@ -8,6 +8,7 @@ import { handleDirectory } from "./directory";
 import { verifyWebhookSignature } from "./signature";
 import { toIngestBody, type QueuedWebhook } from "./mapping";
 import { runProjectionTick } from "./projection";
+import { CoordBrain, runShadowTick } from "./brain";
 import { handleMcp } from "./mcp";
 import {
   authorizeRepoAccess,
@@ -19,12 +20,14 @@ import {
 } from "./auth";
 import { handleStreamRoute } from "./stream";
 
-export { RepoHub, PlatformDirectory };
+export { RepoHub, PlatformDirectory, CoordBrain };
 
 export interface Env {
   REPOHUB: DurableObjectNamespace;
   // 平台目录单例 DO（p30/F01）：Project/Membership/Enrollment 领域模型
   DIRECTORY: DurableObjectNamespace;
+  // CoordBrain：R1 影子模式（p30-F10），每仓一个，只读观察 + 记录，零写 API（见 brain.ts 头注）
+  COORDBRAIN: DurableObjectNamespace;
   WEBHOOK_QUEUE: Queue<QueuedWebhook>;
   GITHUB_WEBHOOK_SECRET?: string;
   COORD_API_TOKEN?: string;
@@ -34,6 +37,8 @@ export interface Env {
   GITHUB_APP_ID?: string;
   GITHUB_APP_PRIVATE_KEY?: string;
   PROJECTION_REPOS?: string;
+  // CoordBrain 派工亲和表（可选，JSON：模块标签 → 建议 assignee；缺省 {}）
+  COORD_BRAIN_AFFINITY?: string;
 }
 
 function json(status: number, body: unknown): Response {
@@ -45,6 +50,30 @@ function json(status: number, body: unknown): Response {
 
 function repoStub(env: Env, repo: string): DurableObjectStub {
   return env.REPOHUB.get(env.REPOHUB.idFromName(repo));
+}
+
+function brainStub(env: Env, repo: string): DurableObjectStub {
+  return env.COORDBRAIN.get(env.COORDBRAIN.idFromName(repo));
+}
+
+// 影子决策只读面（R1，p30-F10）：GET 专用，复用与 REST 协调面同款鉴权
+// （authorizeRepoAccess：ops 万能钥匙 或 该仓 scoped token），但转发目标是
+// CoordBrain DO 而非 RepoHub——路由必须在 handleRest 之前拦截，否则会被当作
+// 未知 RepoHub 子路径 404。全程只读（GET），无写操作。
+async function handleShadowDecisions(req: Request, env: Env, repo: string, url: URL): Promise<Response> {
+  if (req.method !== "GET") return json(404, { error: "not_found" });
+  const access = await authorizeRepoAccess(req, env, repo);
+  if (!access.granted) return access.response;
+  return brainStub(env, repo).fetch(new Request(`https://do/shadow/decisions${url.search}`, req));
+}
+
+// 影子周期跨度只读面（R1，p30-F10）：verify-shadow-cycle.sh 消费，判定是否已满足
+// G5 拍板门槛（≥24h 且 ≥1 完整 C-cycle）。同样只读、同款鉴权。
+async function handleShadowCycleStatus(req: Request, env: Env, repo: string): Promise<Response> {
+  if (req.method !== "GET") return json(404, { error: "not_found" });
+  const access = await authorizeRepoAccess(req, env, repo);
+  if (!access.granted) return access.response;
+  return brainStub(env, repo).fetch(new Request("https://do/shadow/cycle-status", req));
 }
 
 async function handleWebhook(req: Request, env: Env): Promise<Response> {
@@ -151,9 +180,21 @@ export default {
     const stream = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)\/(stream|stream-ticket)$/);
     if (stream)
       return handleStreamRoute(req, env, `${stream[1]}/${stream[2]}`, stream[3] as "stream" | "stream-ticket", url);
+    // CoordBrain 影子决策只读面（R1，p30-F10）：转发目标是 CoordBrain DO，必须
+    // 在通用 /api/coord/repos/ 转发（handleRest，目标固定 RepoHub）之前拦截。
+    const shadow = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)\/shadow-decisions$/);
+    if (shadow) return handleShadowDecisions(req, env, `${shadow[1]}/${shadow[2]}`, url);
+    const shadowCycle = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)\/shadow-cycle-status$/);
+    if (shadowCycle) return handleShadowCycleStatus(req, env, `${shadowCycle[1]}/${shadowCycle[2]}`);
     if (url.pathname.startsWith("/api/coord/repos/")) return handleRest(req, env, url);
     // 平台目录面（p30/F01）：逻辑全在 src/directory.ts，这里只做路由
     if (url.pathname.startsWith("/api/coord/directory/")) return handleDirectory(req, env, url);
+    // 运维便捷面：默认仓（PROJECTION_REPOS 首项）的影子决策，免拼仓名
+    // （feature_list.json F10 verification 的字面路径）。鉴权同上，只读。
+    if (req.method === "GET" && url.pathname === "/api/coord/brain/shadow") {
+      const repo = (env.PROJECTION_REPOS ?? "boardx/boardx-dev-template").split(",")[0]!.trim();
+      return handleShadowDecisions(req, env, repo, url);
+    }
     // MCP 接入面（F07）：逻辑全在 src/mcp.ts，这里只做路由（降低与并行改动的冲突面）
     const mcp = url.pathname.match(/^\/api\/coord\/mcp\/([^/]+)\/([^/]+)$/);
     if (mcp) return handleMcp(req, env, mcp[1]!, mcp[2]!);
@@ -161,8 +202,11 @@ export default {
   },
 
   // 反向投影 cron（F06）：每 tick 逐仓 事件→引擎→GitHub→游标。编排在 projection.ts。
+  // + CoordBrain 影子 tick（R1，p30-F10）：同一 cron 顺带跑五类机械 SOP 规则的
+  // 只读判定，结果写本仓 CoordBrain 的 shadow_events（零外部写 API，见 brain.ts）。
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(runProjectionTick(env));
+    ctx.waitUntil(runShadowTick(env));
   },
 
   // Queues 消费者：逐条转发对应仓库的 DO 幂等入口。DO 侧按 delivery GUID 去重，
