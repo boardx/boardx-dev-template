@@ -536,3 +536,52 @@ describe("独立测试 host fail-closed（#770 跟进 3/3）", () => {
     expect(res.status).toBe(201);
   });
 });
+
+// 老表迁移回归（#787）：CREATE TABLE IF NOT EXISTS 只在表首次创建时生效，已被
+// 更早版本实例化过的表不会自动获得后续 ALTER TABLE 新增列——这类 bug 之前完全
+// 没有测试守护（既有用例全部跑在「CREATE TABLE 自带全列」的全新表上，测不出
+// 这一类 drift）。用 __test__ 调试路由把当前表结构退回迁移前形状复现 500，
+// 再跑 migrate() 证明自愈，最后一条覆盖 agents.lifecycle 同款迁移。
+describe("老表结构迁移自愈（#787：CREATE TABLE IF NOT EXISTS 不会补已存在表的新列）", () => {
+  it("memberships 表退回迁移前形状 → INSERT 复现 500 → 补跑 migrate() → 恢复 201", async () => {
+    const s = await seed("mig1");
+
+    const dropRes = await post("/directory/__test__/drop-migrated-columns", {});
+    expect(dropRes.status).toBe(200);
+    const dropped = (await j(dropRes))["dropped"] as string[];
+    expect(dropped).toEqual(
+      expect.arrayContaining(["memberships.modules", "memberships.intro", "memberships.onboarding_issue_url", "agents.lifecycle"]),
+    );
+
+    // 复现 #787：老表结构下 INSERT 因列不存在直接抛 SQLITE_ERROR——handler 内没有
+    // catch 这类运行时异常（fetch() 的 catch 只吞 SyntaxError，其余一律 rethrow），
+    // 生产环境这类未捕获异常会被 Cloudflare runtime 转成 500（error code 1101，
+    // 手工 curl 复现时看到的正是这个），测试环境里则原样体现为 rejected promise。
+    await expect(
+      post("/directory/memberships", { project: s.slug, engineer: `@${s.handle}`, role: "contributor" }),
+    ).rejects.toThrow(/no column named modules/);
+
+    // 补跑迁移（模拟下一次 DO 冷启动会自动做的事）
+    const migrateRes = await post("/directory/__test__/run-migrations", {});
+    expect(migrateRes.status).toBe(200);
+
+    // 自愈：同一条请求现在 201，且新列真的可用（modules/intro 落库）
+    const fixedReq = await post("/directory/memberships", {
+      project: s.slug, engineer: `@${s.handle}`, role: "contributor", modules: ["collab"], intro: "回归测试",
+    });
+    expect(fixedReq.status).toBe(201);
+    const m = (await j(fixedReq))["membership"] as Obj;
+    expect(m["modules"]).toEqual(["collab"]);
+    expect(m["intro"]).toBe("回归测试");
+  });
+
+  it("补跑 migrate() 本身幂等——已迁移过的表再跑一遍不报错、不影响正常写入", async () => {
+    const s = await seed("mig2");
+    const first = await post("/directory/__test__/run-migrations", {});
+    expect(first.status).toBe(200);
+    const second = await post("/directory/__test__/run-migrations", {});
+    expect(second.status).toBe(200);
+    const req = await post("/directory/memberships", { project: s.slug, engineer: `@${s.handle}`, role: "contributor" });
+    expect(req.status).toBe(201);
+  });
+});
