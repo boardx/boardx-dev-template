@@ -47,6 +47,50 @@ describe("session 签发与验证", () => {
     expect((await getSessionUser(withCookie))?.via).toBe("oauth");
     expect(await getSessionUser(new Headers())).toBeNull();
   });
+
+  it("SESSION_COOKIE 带 __Host- 前缀（要求 Secure+Path=/+无 Domain，均已满足）", async () => {
+    const { SESSION_COOKIE } = await libs();
+    expect(SESSION_COOKIE.startsWith("__Host-")).toBe(true);
+  });
+
+  it("SESSION_TTL_SECONDS 收紧到 24h", async () => {
+    const { SESSION_TTL_SECONDS } = await libs();
+    expect(SESSION_TTL_SECONDS).toBe(24 * 60 * 60);
+  });
+});
+
+describe("resolveSession 静默续期", () => {
+  it("剩余寿命 > 半程 TTL → 不续期，renewedCookie 为 null", async () => {
+    const { signSession, resolveSession, SESSION_COOKIE } = await libs();
+    const token = (await signSession({ login: "usamshen" })) as string;
+    const headers = new Headers({ cookie: `${SESSION_COOKIE}=${token}` });
+    const result = await resolveSession(headers);
+    expect(result?.user.via).toBe("oauth");
+    expect(result?.renewedCookie).toBeNull();
+  });
+
+  it("剩余寿命 < 半程 TTL → 续期，renewedCookie 是新的 __Host- Set-Cookie 串", async () => {
+    const { resolveSession, SESSION_COOKIE, verifySession } = await libs();
+    // 直接构造一个「快过半」的 token：签发时把 exp 收窄到 TTL 的 10%，模拟临期会话。
+    const { SignJWT } = await import("jose");
+    const key = new TextEncoder().encode(SECRET);
+    const nearExpiry = await new SignJWT({ email: null, name: null, avatarUrl: null })
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject("usamshen")
+      .setIssuer("devportal")
+      .setIssuedAt()
+      .setExpirationTime(Math.floor(Date.now() / 1000) + 60) // 60s 剩余 << 半程 TTL
+      .sign(key);
+    const headers = new Headers({ cookie: `${SESSION_COOKIE}=${nearExpiry}` });
+    const result = await resolveSession(headers);
+    expect(result?.user.login).toBe("usamshen");
+    expect(result?.renewedCookie).toBeTruthy();
+    expect(result?.renewedCookie).toContain(SESSION_COOKIE);
+    // 续期签发的新 token 本身应能通过验证。
+    const [cookiePair] = (result?.renewedCookie as string).split(";");
+    const fresh = cookiePair?.split("=").slice(1).join("=") ?? "";
+    expect((await verifySession(fresh))?.login).toBe("usamshen");
+  });
 });
 
 describe("OAuth state 与 return_to 安全面", () => {

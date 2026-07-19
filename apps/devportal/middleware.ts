@@ -15,7 +15,7 @@
 //
 // #588 不回退：API 的 401 仍由 lib/portal-fetch.ts 触发整页重认证；此处仅管页面导航。
 import { NextResponse, type NextRequest } from "next/server";
-import { getSessionUser } from "@/lib/session";
+import { resolveSession } from "@/lib/session";
 
 export const config = {
   // 工作区 + 个人层 + 接入向导。公开层与治理面绝不进入本 matcher（改动须同步顶部注释与静态断言）。
@@ -23,8 +23,13 @@ export const config = {
 };
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
-  const user = await getSessionUser(request.headers);
-  if (user) return NextResponse.next();
+  const session = await resolveSession(request.headers);
+  if (session) {
+    const response = NextResponse.next();
+    // #769 静默续期：剩余寿命 < 半程 TTL 时重签并 Set-Cookie，活跃用户不会被 24h 硬顶下线。
+    if (session.renewedCookie) response.headers.append("set-cookie", session.renewedCookie);
+    return response;
+  }
   const returnTo = request.nextUrl.pathname + request.nextUrl.search;
   const login = new URL("/api/coord/oauth/github/login", request.url);
   login.searchParams.set("return_to", returnTo);

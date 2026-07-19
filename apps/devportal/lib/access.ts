@@ -20,15 +20,25 @@ function getJwks(): ReturnType<typeof createRemoteJWKSet> {
   return jwks;
 }
 
+let warnedMissingAud = false;
+
 /** 从请求头解析并验证 Access 身份；无 Access 上下文（如 pages.dev 直连）→ null。 */
 export async function accessUser(headers: Headers): Promise<AccessUser | null> {
   const assertion = headers.get("cf-access-jwt-assertion");
   if (!assertion) return null;
   try {
-    // aud 校验（#543）：CF_ACCESS_AUD 配置后启用严格 audience 匹配——防团队域下
-    // 新增第二个 Access 应用时 JWT 互通。未配置时仅 issuer+签名（单应用域下已锁定
-    // "本团队 Access 签发"）；aud tag 入 wrangler.toml 即生效，无需改代码。
+    // aud 校验（#543 起，#769 强校验跟进）：CF_ACCESS_AUD 配置后启用严格 audience
+    // 匹配——防团队域下新增第二个 Access 应用时 JWT 互通。未配置时仅 issuer+签名，
+    // 且每进程只警告一次（不阻断现有部署——向后兼容策略，#769）；aud tag 入
+    // wrangler.toml 即生效，无需改代码。
     const aud = process.env["CF_ACCESS_AUD"];
+    if (!aud && !warnedMissingAud) {
+      warnedMissingAud = true;
+      console.warn(
+        "[access] CF_ACCESS_AUD 未配置：Access JWT 回退验签跳过 audience 校验（仅验 issuer+签名）。" +
+          "团队域下如有多个 Access 应用共享证书端点，请配置该变量启用强校验，防跨应用 JWT 互通。",
+      );
+    }
     const { payload } = await jwtVerify(assertion, getJwks(), {
       issuer: TEAM_DOMAIN,
       ...(aud ? { audience: aud } : {}),

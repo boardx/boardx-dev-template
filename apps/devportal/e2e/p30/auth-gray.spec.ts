@@ -48,10 +48,13 @@ test("mock 会话：注入签名 session cookie → /me 200；登出 → /explor
   const context = await browser.newContext({ baseURL });
   await context.addCookies([
     {
-      name: "devportal_session",
+      // #769：cookie 名加 __Host- 前缀，同时要求 Secure（127.0.0.1 回环地址被视为
+      // 安全上下文，浏览器允许 __Host- cookie 在 http://127.0.0.1 下生效）。
+      name: "__Host-devportal_session",
       value: cookie,
       url: baseURL as string,
       httpOnly: true,
+      secure: true,
       sameSite: "Lax",
     },
   ]);
