@@ -188,74 +188,10 @@ export interface MockFleetAgent {
   lastEvent: string;
 }
 
-export const MOCK_FLEET: readonly MockFleetAgent[] = [
-  {
-    id: "@usamshen/coord-main",
-    runtime: "Claude Code",
-    heartbeat: "fresh",
-    heartbeatMin: 1,
-    lifecycle: "active",
-    projectSlug: "boardx",
-    lease: "coordination lease #352",
-    tokenStatus: "健康",
-    lastEvent: "2 分钟前 · 广播 assign F21 → module-collab",
-  },
-  {
-    id: "@usamshen/coord-main.reviewer",
-    runtime: "Claude Code",
-    heartbeat: "fresh",
-    heartbeatMin: 3,
-    lifecycle: "active",
-    projectSlug: "boardx",
-    lease: null,
-    tokenStatus: "健康",
-    lastEvent: "8 分钟前 · 完成 PR #739 初审（sub-agent，归属沿 parent 追溯）",
-  },
-  {
-    id: "@usamshen/feature-implementer-a",
-    runtime: "Claude Code",
-    heartbeat: "aging",
-    heartbeatMin: 12,
-    lifecycle: "active",
-    projectSlug: "boardx",
-    lease: "F21 实现租约",
-    tokenStatus: "健康",
-    lastEvent: "12 分钟前 · progress：F21 组件拆分完成，开始接验证",
-  },
-  {
-    id: "@usamshen/feature-implementer-b",
-    runtime: "Codex",
-    heartbeat: "stale",
-    heartbeatMin: 42,
-    lifecycle: "active",
-    projectSlug: "boardx",
-    lease: "F17 实现租约（将被回收）",
-    tokenStatus: "健康",
-    lastEvent: "42 分钟前 · 心跳丢失 ⚠ 最后动作：跑 verify 挂起",
-  },
-  {
-    id: "@usamshen/crm-migrator",
-    runtime: "Gemini CLI",
-    heartbeat: "aging",
-    heartbeatMin: 18,
-    lifecycle: "paused",
-    projectSlug: "acme-crm",
-    lease: null,
-    tokenStatus: "3 天后到期",
-    lastEvent: "1 小时前 · 因 andon 拉停被暂停",
-  },
-] as const;
-
-/** enroll 向导可选运行时（UC-06，供应商中立） */
-export const ENROLL_RUNTIMES = ["Claude Code", "Codex", "Gemini CLI", "自研"] as const;
-export type EnrollRuntime = (typeof ENROLL_RUNTIMES)[number];
-
-/** mock 一次性 token（mint-on-reveal 样式演示用，非真实凭据格式） */
-export const MOCK_ONE_TIME_TOKEN = "bxa_live_mk7Q…w2Xf（示例，关闭后不可找回）";
-
-export function mockInstallCommand(agentId: string): string {
-  return `npx boardx-agent connect --agent ${agentId} --token <一次性token>`;
-}
+// ⚠️ MOCK_FLEET / ENROLL_RUNTIMES / MOCK_ONE_TIME_TOKEN / mockInstallCommand 已随
+// p30/F07（enroll 真实现）删除——车队管理台改读 /api/portal/my-agents 真实数据，
+// enroll 向导改用 lib/agent-runtimes.ts（真实运行时清单 + 接入命令生成，非 mock）。
+// MockFleetAgent 接口仍保留：批次 4（P5 agent 分身页）的 mock 类型还在引用它的字段形状。
 
 // ---------------- W5 /p/:slug/people 花名册 ----------------
 

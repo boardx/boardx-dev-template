@@ -110,6 +110,79 @@ describe("目录写面（仅 COORD_ADMIN_TOKEN）", () => {
   });
 });
 
+describe("agent 心跳自证（p30/F07：scoped token 自打心跳 + 真实 WS 转发）", () => {
+  it("admin token 心跳仍放行（保留运维/dispatcher 直打通道）", async () => {
+    const a = await call("POST", "/directory/agents", "test-admin-token", { owner: "gw-eng", name: "hb-admin" });
+    const agentId = ((await a.json<Obj>())["agent"] as Obj)["agent_id"] as string;
+    const r = await call("POST", `/directory/agents/${agentId}/heartbeat`, "test-admin-token", {});
+    expect(r.status).toBe(200);
+  });
+
+  it("agent 自己的 scoped token 打心跳 → 200，且事件真实转发进本仓 RepoHub 事件流（非 mock 定时器）", async () => {
+    const a = await call("POST", "/directory/agents", "test-admin-token", { owner: "gw-eng", name: "hb-self" });
+    const agentId = ((await a.json<Obj>())["agent"] as Obj)["agent_id"] as string;
+
+    const mint = await SELF.fetch(`${GW}/repos/boardx/boardx-dev-template/tokens/mint`, {
+      method: "POST",
+      headers: { authorization: "Bearer test-admin-token", "content-type": "application/json" },
+      body: JSON.stringify({ agent_id: agentId, owner: "gw-eng" }),
+    });
+    const { token } = await mint.json<{ token: string }>();
+
+    const hb = await call("POST", `/directory/agents/${agentId}/heartbeat`, token, {});
+    expect(hb.status).toBe(200);
+
+    const events = await SELF.fetch(`${GW}/repos/boardx/boardx-dev-template/events?limit=500`, {
+      headers: { authorization: "Bearer test-api-token" },
+    });
+    const body = await events.json<Obj>();
+    const hit = (body["events"] as Obj[]).find(
+      (e) => e["type"] === "directory.agent.heartbeat" && (e["payload"] as Obj)["agent_id"] === agentId,
+    );
+    expect(hit, "心跳事件应转发进 RepoHub 事件流").toBeTruthy();
+  });
+
+  it("scoped token 冒充给别的 agent 打心跳 → 403（agent_id 强绑定，防越权点亮他人 fleet-row）", async () => {
+    const a1 = await call("POST", "/directory/agents", "test-admin-token", { owner: "gw-eng", name: "hb-victim" });
+    const a2 = await call("POST", "/directory/agents", "test-admin-token", { owner: "gw-eng", name: "hb-attacker" });
+    const victimId = ((await a1.json<Obj>())["agent"] as Obj)["agent_id"] as string;
+    const attackerId = ((await a2.json<Obj>())["agent"] as Obj)["agent_id"] as string;
+
+    const mint = await SELF.fetch(`${GW}/repos/boardx/boardx-dev-template/tokens/mint`, {
+      method: "POST",
+      headers: { authorization: "Bearer test-admin-token", "content-type": "application/json" },
+      body: JSON.stringify({ agent_id: attackerId, owner: "gw-eng" }),
+    });
+    const { token } = await mint.json<{ token: string }>();
+
+    const r = await call("POST", `/directory/agents/${victimId}/heartbeat`, token, {});
+    expect(r.status).toBe(403);
+  });
+
+  it("无 token / 假 token 打心跳 → 401", async () => {
+    const a = await call("POST", "/directory/agents", "test-admin-token", { owner: "gw-eng", name: "hb-anon" });
+    const agentId = ((await a.json<Obj>())["agent"] as Obj)["agent_id"] as string;
+    expect((await call("POST", `/directory/agents/${agentId}/heartbeat`, null, {})).status).toBe(401);
+    expect((await call("POST", `/directory/agents/${agentId}/heartbeat`, "fake", {})).status).toBe(401);
+  });
+});
+
+describe("agent 生命周期写面（p30/F07：仅 COORD_ADMIN_TOKEN）", () => {
+  it("admin token pause/resume 200；ops token / 无 token 401", async () => {
+    const a = await call("POST", "/directory/agents", "test-admin-token", { owner: "gw-eng", name: "lc-gw" });
+    const agentId = ((await a.json<Obj>())["agent"] as Obj)["agent_id"] as string;
+
+    const pause = await call("POST", `/directory/agents/${agentId}/lifecycle`, "test-admin-token", { action: "pause" });
+    expect(pause.status).toBe(200);
+    expect(((await pause.json<Obj>())["agent"] as Obj)["lifecycle"]).toBe("paused");
+
+    for (const token of ["test-api-token", null]) {
+      const r = await call("POST", `/directory/agents/${agentId}/lifecycle`, token, { action: "resume" });
+      expect(r.status, String(token)).toBe(401);
+    }
+  });
+});
+
 describe("目录面 allowlist", () => {
   it("未知子路径 / 内部端点样式路径 404", async () => {
     expect((await call("GET", "/directory/internal", "test-api-token")).status).toBe(404);
