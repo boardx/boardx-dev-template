@@ -134,6 +134,15 @@ export const EVENT_TYPES = [
   "requirement.rejected",
   "sprint.upserted",
   "talk.posted",
+  // coord/0.1.4（p30/F09）：三层意图消息协议 v1（UC-11）。
+  // 上行 sub→module→coord→👤（progress/blocker→escalate→decide 待拍板）；
+  // 下行 👤→coord→module→sub（assign 广播→accept 自动继续）。加法扩展，wire tag 不动。
+  "intent.assign",
+  "intent.accept",
+  "intent.progress",
+  "intent.blocker",
+  "intent.escalate",
+  "intent.decide",
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];
@@ -173,7 +182,7 @@ export interface TaskDispatchedPayload {
   note: string | null;
 }
 
-// ---------- Workspace（coord/0.1.2：p30/F04 工作区数据按项目分片） ----------
+// ---------- Workspace（coord/0.1.3：p30/F04 工作区数据按项目分片） ----------
 // 需求流水线五态：提交 → 分析 → 审核 → 下发（happy path 四段），rejected 为审核拒绝终态。
 // dispatched / rejected 均为终态；状态推进只许前向，非法迁移 409。
 
@@ -189,6 +198,62 @@ export type RequirementStatus = (typeof REQUIREMENT_STATUSES)[number];
 export const REQUIREMENT_TITLE_MAX_LENGTH = 300;
 export const REQUIREMENT_BODY_MAX_LENGTH = 10000;
 export const TALK_BODY_MAX_LENGTH = 4000; // 对话流不是日志倾倒场（同 TASK_NOTE 纪律）
+
+// ---------- Intents（coord/0.1.4：三层意图消息协议 v1，events.md §Intents） ----------
+// 六类意图消息＝一类特殊事件（type 前缀 `intent.`），payload 按类型强校验（validate.ts
+// intentPayloadErrors）。GitHub issue 双写、GET /intents 聚合、闭环状态推导见
+// docs/coord-platform/protocol/intents.md（语义权威）。
+
+export const INTENT_TYPES = [
+  "intent.assign",
+  "intent.accept",
+  "intent.progress",
+  "intent.blocker",
+  "intent.escalate",
+  "intent.decide",
+] as const;
+
+export type IntentType = (typeof INTENT_TYPES)[number];
+
+export type IntentDecision = "approved" | "rejected" | "changes_requested";
+
+/** intent.assign：下行广播，target_resource_id 复用 resource_id 命名规则（lease.md）。 */
+export interface IntentAssignPayload {
+  target_agent_id: string;
+  target_resource_id: string;
+  note: string | null;
+}
+
+/** intent.accept：接收方确认收到 assign，闭合下行一环。 */
+export interface IntentAcceptPayload {
+  note: string | null;
+}
+
+/** intent.progress：上行进度汇报，无阻断语义。 */
+export interface IntentProgressPayload {
+  summary: string;
+}
+
+/** intent.blocker：上行卡点，reason 与 andon 同规格（≥10 字符，须含可查证锚点）。 */
+export interface IntentBlockerPayload {
+  reason: string;
+}
+
+/** intent.escalate：上行升级至人类拍板点，线程进入「等待拍板」。 */
+export interface IntentEscalatePayload {
+  reason: string;
+  escalated_to: string | null;
+}
+
+/** intent.decide：人类拍板，闭合上行一环。issue_ref 是可查证锚点（P23 postmortem 铁律
+ *  的同款要求：拍板不能是裸口头承诺）；gateway 层要求 COORD_ADMIN_TOKEN 才能发起，防伪造。 */
+export interface IntentDecidePayload {
+  reason: string;
+  issue_ref: string; // "#123" 或 "owner/repo#123"
+  decision: IntentDecision | null;
+}
+
+export type ThreadStatus = "open" | "awaiting_decision" | "closed";
 
 // ---------- 校验结果 ----------
 

@@ -555,6 +555,89 @@ describe("deliveries 保留窗口清理（#712）", () => {
   });
 });
 
+describe("p30/F09 三层意图消息协议", () => {
+  const intent = (over: Record<string, unknown> = {}) =>
+    post("/intents", {
+      type: "intent.progress",
+      resource_id: "issue:900",
+      agent_id: "wrk-i1",
+      payload: { summary: "推进中" },
+      ...over,
+    });
+
+  it("非法请求 422：未知 type / 缺字段 / 坏 payload", async () => {
+    expect((await intent({ type: "intent.unknown" })).status).toBe(422);
+    expect((await intent({ resource_id: undefined })).status).toBe(422);
+    expect((await intent({ payload: { summary: "" } })).status).toBe(422);
+  });
+
+  it("合法请求 201 + 落 append-only events（GET /events 可见）", async () => {
+    const r = await intent();
+    expect(r.status).toBe(201);
+    const body = await r.json<{ ok: boolean; event: Record<string, unknown> }>();
+    expect(body.ok).toBe(true);
+    expect(body.event["type"]).toBe("intent.progress");
+    const all = await (await SELF.fetch(`${BASE}/events?limit=500`)).json<{ events: Array<Record<string, unknown>> }>();
+    expect(all.events.some((e) => e["event_id"] === body.event["event_id"])).toBe(true);
+  });
+
+  it("GET /intents?resource_id= 聚合返回该资源的意图消息链（按 event_id 排序）", async () => {
+    await post("/intents", {
+      type: "intent.assign", resource_id: "issue:901", agent_id: "coord-main",
+      payload: { target_agent_id: "wrk-i2", target_resource_id: "issue:901", note: null },
+    });
+    await post("/intents", {
+      type: "intent.progress", resource_id: "issue:901", agent_id: "wrk-i2",
+      payload: { summary: "开工" },
+    });
+    const r = await SELF.fetch(`${BASE}/intents?resource_id=issue:901`);
+    expect(r.status).toBe(200);
+    const body = await r.json<{ resource_id: string; thread_status: string; events: Array<Record<string, unknown>> }>();
+    expect(body.resource_id).toBe("issue:901");
+    expect(body.events.map((e) => e["type"])).toEqual(["intent.assign", "intent.progress"]);
+    expect(body.thread_status).toBe("open"); // 未 escalate/decide/accept 过
+  });
+
+  it("GET /intents 缺 resource_id → 400", async () => {
+    expect((await SELF.fetch(`${BASE}/intents`)).status).toBe(400);
+  });
+
+  it("上行链：blocker→escalate 后 thread_status = awaiting_decision（等待拍板）", async () => {
+    await post("/intents", {
+      type: "intent.blocker", resource_id: "issue:902", agent_id: "wrk-i3",
+      payload: { reason: "依赖服务挂了，卡住了（issue #902）" },
+    });
+    await post("/intents", {
+      type: "intent.escalate", resource_id: "issue:902", agent_id: "module-coord",
+      payload: { reason: "需要人类确认降级方案（issue #902）", escalated_to: "usam" },
+    });
+    const r = await (await SELF.fetch(`${BASE}/intents?resource_id=issue:902`)).json<{ thread_status: string }>();
+    expect(r.thread_status).toBe("awaiting_decision");
+  });
+
+  it("下行链：人拍板 decide 后 thread_status = closed（已闭环）；再 assign 广播不回退闭环判定", async () => {
+    await post("/intents", {
+      type: "intent.escalate", resource_id: "issue:903", agent_id: "module-coord",
+      payload: { reason: "需要人类确认拍板范围（issue #903）", escalated_to: "usam" },
+    });
+    const decided = await post("/intents", {
+      type: "intent.decide", resource_id: "issue:903", agent_id: "usam",
+      payload: { reason: "按方案 A 拍板通过", issue_ref: "#903", decision: "approved" },
+    });
+    expect(decided.status).toBe(201);
+    const afterDecide = await (await SELF.fetch(`${BASE}/intents?resource_id=issue:903`)).json<{ thread_status: string }>();
+    expect(afterDecide.thread_status).toBe("closed");
+
+    // 广播 assign（下行→module→sub 自动继续）不是「新一轮 escalate」，闭环判定不回退
+    await post("/intents", {
+      type: "intent.assign", resource_id: "issue:903", agent_id: "coord-main",
+      payload: { target_agent_id: "wrk-i4", target_resource_id: "issue:903", note: "按拍板结果继续" },
+    });
+    const afterAssign = await (await SELF.fetch(`${BASE}/intents?resource_id=issue:903`)).json<{ thread_status: string }>();
+    expect(afterAssign.thread_status).toBe("closed");
+  });
+});
+
 async function fetchClaim(base: string, agent: string, resource: string): Promise<Response> {
   return SELF.fetch(`${base}/claims`, {
     method: "POST",
