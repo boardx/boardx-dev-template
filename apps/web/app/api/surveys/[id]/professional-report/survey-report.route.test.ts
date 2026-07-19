@@ -143,6 +143,7 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
       .mockResolvedValueOnce({ id: "20000000-0000-4000-8000-000000000041" })
       .mockResolvedValueOnce({ id: "20000000-0000-4000-8000-000000000042" });
     mocks.claimSurveyReportGeneration
+      .mockReset()
       .mockResolvedValueOnce({
         status: "claimed",
         sessionId: "20000000-0000-4000-8000-000000000041",
@@ -365,6 +366,21 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
     const secondClaim = mocks.claimSurveyReportGeneration.mock.calls[1]?.[0];
     expect(firstClaim?.requirementHash).toBeTruthy();
     expect(secondClaim?.requirementHash).toBe(firstClaim?.requirementHash);
+  });
+
+  it("returns a business error without claiming generation when there are no responses", async () => {
+    mocks.listSurveyResponses.mockResolvedValue([]);
+
+    const response = await POST(reportRequest(), params);
+
+    expect(response?.status).toBe(422);
+    await expect(response?.json()).resolves.toEqual({
+      error: "report_requires_responses",
+      minimumResponseCount: 1,
+    });
+    expect(mocks.claimSurveyReportGeneration).not.toHaveBeenCalled();
+    expect(mocks.callQwenJson).not.toHaveBeenCalled();
+    expect(mocks.createVersionedSurveyReportArtifact).not.toHaveBeenCalled();
   });
 
   it("never sends raw text responses to the model", async () => {

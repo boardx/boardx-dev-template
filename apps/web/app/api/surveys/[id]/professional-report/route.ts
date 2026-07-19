@@ -377,6 +377,16 @@ export async function POST(request: Request, { params }: { params: { id: string 
       });
     }
 
+    if (context.evidence.sample.responseCount === 0) {
+      return NextResponse.json(
+        {
+          error: "report_requires_responses",
+          minimumResponseCount: 1,
+        },
+        { status: 422 }
+      );
+    }
+
     const claim = await claimSurveyReportGeneration({
       ...artifactKey,
       sessionId: randomUUID(),
@@ -421,9 +431,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const session = { id: claim.sessionId };
     claimedGeneration = { artifactKey, sessionId: session.id };
     const startedAt = Date.now();
-    if (context.evidence.sample.responseCount === 0) {
-      throw new Error("report_source_has_no_responses");
-    }
 
     const artifactId = randomUUID();
     const generatedAt = new Date().toISOString();

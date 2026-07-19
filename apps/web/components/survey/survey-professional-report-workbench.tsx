@@ -50,6 +50,9 @@ export function SurveyProfessionalReportWorkbench({
   const responseCount = isTemplateDrivenSurveyReport(report)
     ? report.sample.responseCount
     : report.methodology.sampleSize;
+  const currentResponseCount =
+    generation?.currentResponseCount ?? responseCount;
+  const canGenerate = currentResponseCount > 0;
   const chapterCount = report.chapters.length;
 
   async function shareReport() {
@@ -132,8 +135,11 @@ export function SurveyProfessionalReportWorkbench({
             <Button
               type="button"
               size="sm"
-              disabled={generating}
+              disabled={generating || !canGenerate}
               onClick={onGenerateReport}
+              aria-describedby={
+                canGenerate ? undefined : "report-generation-empty-state"
+              }
               className="h-9 gap-2 bg-foreground px-3 text-background transition-colors duration-200 hover:bg-foreground/90"
             >
               <Sparkles className="h-4 w-4" strokeWidth={1.6} />
@@ -147,6 +153,22 @@ export function SurveyProfessionalReportWorkbench({
           </p>
         ) : null}
       </header>
+
+      {!canGenerate ? (
+        <div
+          id="report-generation-empty-state"
+          data-testid="report-generation-empty-state"
+          role="status"
+          className="mx-auto mt-4 max-w-5xl border border-border bg-background px-4 py-3"
+        >
+          <p className="text-13 font-semibold text-foreground">
+            收到至少 1 份有效答卷后可生成报告
+          </p>
+          <p className="mt-1 text-12 text-muted-foreground">
+            请先发布问卷并回收答卷。现有报告版本会保留，系统不会使用模拟数据生成结论。
+          </p>
+        </div>
+      ) : null}
 
       {error ? (
         <p

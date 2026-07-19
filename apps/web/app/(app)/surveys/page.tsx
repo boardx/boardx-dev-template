@@ -2954,6 +2954,25 @@ function WorkspaceReportWorkbench({
   }
 
   if (!professionalReport) {
+    if (responseCount === 0) {
+      return (
+        <section
+          data-testid="report-generation-empty-state"
+          className="border border-border bg-background px-6 py-16 text-center"
+        >
+          <h2 className="text-18 font-bold text-foreground">
+            收到至少 1 份有效答卷后可生成报告
+          </h2>
+          <p className="mx-auto mt-2 max-w-xl text-13 text-muted-foreground">
+            请先发布问卷并回收答卷。系统只使用真实答卷生成报告，不会用模拟数据填充图表或结论。
+          </p>
+          <Button type="button" className="mt-5" disabled>
+            <Sparkles className="mr-2 h-4 w-4" strokeWidth={1.6} />
+            重新生成
+          </Button>
+        </section>
+      );
+    }
     return (
       <section data-testid="professional-report-loading" className="border border-border bg-background px-8 py-16 text-center">
         <h2 className="text-18 font-bold text-foreground">正在汇总真实答卷</h2>
@@ -4715,7 +4734,11 @@ export default function SurveysPage() {
         return;
       }
       if (!res.ok) {
-        setWorkspaceTemplateError(payload?.error ?? "正式报告生成失败");
+        setWorkspaceTemplateError(
+          payload?.error === "report_requires_responses"
+            ? "收到至少 1 份有效答卷后可生成报告。"
+            : "正式报告生成失败，请稍后重试。"
+        );
         return;
       }
       if (!payload.report || !payload.generation) {
