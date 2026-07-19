@@ -82,6 +82,7 @@ test -f AGENTS.md && test -x init.sh
   "priority": 4,
   "area": "orchestrator",
   "title": "简短动词短语（<50字）",
+  "spec_ref": "<requirements 下文件名>.md#R<n>",
   "user_visible_behavior": "完整的可观察行为描述（1-3句）",
   "status": "not_started",
   "sprint": null,
@@ -96,6 +97,9 @@ test -f AGENTS.md && test -x init.sh
 
 **字段约定：**
 - `id`：`F` + 两位数字，全 phase 唯一
+- `spec_ref`：**必填**（2026-07-19 起，机械门控）。指向 `requirements/` 下具体
+  章节，格式 `<文件名>.md#R<n>`。缺失或指向不存在的文件/章节 → `claim` 和
+  `verify` 都会拒绝（见 [requirement-author] 的四元组说明）。
 - `priority`：越小越重要（1 = 阻断其他所有工作的最高优先级）
 - `area`：对应代码平面（`orchestrator`/`tools`/`memory`/`agent-core`/`harness`/`ci`/`tooling`）
 - `sprint`：未分配时为 `null`；由 `pnpm harness new-sprint --features` 分配

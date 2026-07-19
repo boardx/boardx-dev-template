@@ -14,6 +14,7 @@ import {
 } from "./lib/features";
 import { refreshProgress } from "./lib/progress";
 import { loadHarnessConfig } from "./lib/config";
+import { resolveSpecRef } from "./lib/spec-ref";
 import { sh } from "./lib/sh";
 import { req } from "./lib/args";
 import { log, die } from "./lib/log";
@@ -63,16 +64,31 @@ export function verify(args: Args): void {
     const logs: string[] = [];
     let ok = true;
 
-    // 1) 逐条执行 feature.verification
-    for (const cmd of f.verification) {
-      const r = sh(cmd);
-      logs.push(`$ ${cmd}\n[exit ${r.code}]\n${r.stdout}${r.stderr}`);
-      if (r.code !== 0) {
+    // 0) spec_ref 门控（人类拍板 2026-07-19）：不给已 passing 的历史存量补跑
+    // （isBackfill 只修证据、不重新评判 spec，passing_is_irreversible 精神一致）；
+    // 对任何"正在被推向 passing"的 feature，没有可追溯的 story 就地拒绝——
+    // claim 时已经查过一次，这里是防"claim 后 requirements 文件被删/改坏"的第二道门。
+    if (!isBackfill && cfg.gates.spec_ref_required) {
+      const specCheck = resolveSpecRef(phaseId, f.spec_ref);
+      if (!specCheck.ok) {
         ok = false;
-        log.err(`失败: ${cmd}`);
-        if (cfg.verification.fail_fast) break;
-      } else {
-        log.ok(`通过: ${cmd}`);
+        logs.push(`[SPEC_REF] ${specCheck.reason}`);
+        log.err(`${f.id} 缺少可追溯的 story：${specCheck.reason}`);
+      }
+    }
+
+    // 1) 逐条执行 feature.verification
+    if (ok) {
+      for (const cmd of f.verification) {
+        const r = sh(cmd);
+        logs.push(`$ ${cmd}\n[exit ${r.code}]\n${r.stdout}${r.stderr}`);
+        if (r.code !== 0) {
+          ok = false;
+          log.err(`失败: ${cmd}`);
+          if (cfg.verification.fail_fast) break;
+        } else {
+          log.ok(`通过: ${cmd}`);
+        }
       }
     }
 
