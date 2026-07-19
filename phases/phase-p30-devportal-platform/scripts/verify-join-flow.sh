@@ -41,6 +41,10 @@ req() {
   [[ -n "$body" ]] && args+=(-d "$body")
   local status
   status="$(curl "${args[@]}" "$BASE$path")"
+  # 留存真实输出（状态码 + 响应体），不止是步骤名回显——coord-main #775 review 建议：
+  # evidence 要能独立核验"真的打过这条请求、真的拿到这个状态码"，而不是只信步骤描述。
+  echo "  -> $method $path => $status"
+  echo "     $(cat "$BODY_FILE")"
   if [[ "$status" != "$expected" ]]; then
     echo "FAIL: $method $path 期望 $expected，实际 $status" >&2
     cat "$BODY_FILE" >&2

@@ -89,6 +89,18 @@ async function readCall<T>(path: string): Promise<{ ok: true; body: T } | { ok: 
   }
 }
 
+// PlatformDirectory DO 的 error 字段一律是封闭的短代码（如 `invalid_role`/`slug_taken`/
+// `invalid_transition:pending->approved`），从不回显自由文本/异常堆栈/DB 报错——但
+// writeCall 原样透传给浏览器面向的路由响应，一旦上游未来某处不慎把校验消息/异常文本塞进
+// error 字段，就会在这里悄悄泄漏给客户端。白名单化：只放行匹配已知代码形状的值，其余一律
+// 归一成 upstream_error（coord-main #775 review 建议）。
+const SAFE_ERROR_CODE_RE = /^[a-z][a-z0-9_]*(:[a-z0-9_>-]+)?$/;
+
+function safeErrorDetail(v: string | undefined): string | undefined {
+  if (v === undefined) return undefined;
+  return SAFE_ERROR_CODE_RE.test(v) ? v : "upstream_error";
+}
+
 async function writeCall<T>(
   path: string,
   body: unknown,
@@ -105,7 +117,7 @@ async function writeCall<T>(
       cache: "no-store",
     });
     const parsed = (await res.json().catch(() => ({}))) as T & { error?: string };
-    if (!res.ok) return { ok: false, status: res.status, error: (parsed as { error?: string }).error };
+    if (!res.ok) return { ok: false, status: res.status, error: safeErrorDetail((parsed as { error?: string }).error) };
     return { ok: true, status: res.status, body: parsed };
   } catch {
     return { ok: false, status: 0, error: "unreachable" };

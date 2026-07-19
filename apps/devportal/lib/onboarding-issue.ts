@@ -20,9 +20,10 @@ const UPSTREAM_TIMEOUT_MS = 8_000;
 // 加入申请的每个自由文本字段（intro 尤其——任何走 GitHub OAuth 登录的人都能填）在拼进
 // GitHub issue 正文前一律经 sanitizeInline：否则换行 + markdown 语法能伪造出看起来像
 // "新评论/系统消息"的假结构，@mention/#issue 引用还会触发对任意第三方的真实 GitHub 通知
-// ——与 p30/F09 独立安全审 #772 阻断的 GitHub 双写注入同一族问题，修法对齐
-// packages/coord-projection/src/engine.ts 的 sanitizeInline：剥离换行 + 反引号包裹成
-// 行内代码（GitHub 在代码 span 内不解析 @mention/#引用/**加粗** 等 markdown，从根上失效）。
+// ——与 p30/F09 独立安全审 #772 阻断的 GitHub 双写注入同一族问题、同款修法（剥离换行 +
+// 反引号包裹成行内代码，GitHub 在代码 span 内不解析 @mention/#引用/**加粗** 等
+// markdown，从根上失效）；同类实现另见 #772 分支的 packages/coord-projection/src/
+// engine.ts（该 PR 尚未合并进 main，两处各自独立维护同一套手法，非共享调用）。
 // role/modules 在调用方（app/api/portal/join/route.ts）已做白名单校验，这里仍统一过一遍
 // 是防御纵深，不依赖上游校验不漏。
 function sanitizeInline(v: string): string {
