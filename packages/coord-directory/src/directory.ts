@@ -37,6 +37,16 @@ const MEMBERSHIP_TRANSITIONS = {
 } as const;
 type MembershipAction = keyof typeof MEMBERSHIP_TRANSITIONS;
 
+// Agent 生命周期状态机（p30/F07，M2 车队管理台「轮换/暂停/退役」的暂停面）：
+// pause（active→paused）/ resume（paused→active）/ retire（active|paused→retired，
+// 终态，重复 retire 409）。轮换 token 不改这里的状态——那是纯 RepoHub token 面的事。
+const AGENT_LIFECYCLE_TRANSITIONS = {
+  pause: { from: ["active"], to: "paused" },
+  resume: { from: ["paused"], to: "active" },
+  retire: { from: ["active", "paused"], to: "retired" },
+} as const;
+type AgentLifecycleAction = keyof typeof AGENT_LIFECYCLE_TRANSITIONS;
+
 export const PROJECT_VISIBILITIES = ["public", "private"] as const;
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,62}$/;
@@ -98,6 +108,7 @@ interface AgentRow {
   parent_agent_id: string | null;
   capabilities: string;
   last_heartbeat_at: string | null;
+  lifecycle: string;
   created_at: string;
   updated_at: string;
 }
@@ -165,6 +176,17 @@ export class PlatformDirectory extends DurableObject {
     super(ctx, env as never);
     this.sql = ctx.storage.sql;
     this.sql.exec(SCHEMA);
+    this.migrate();
+  }
+
+  /** 加法迁移（p30/F07）：SQLite 无 `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`，
+   *  用「试跑一次，已存在则吞掉报错」保持幂等——同一纪律见文件头「幂等 SCHEMA」。 */
+  private migrate(): void {
+    try {
+      this.sql.exec(`ALTER TABLE agents ADD COLUMN lifecycle TEXT NOT NULL DEFAULT 'active'`);
+    } catch {
+      /* 列已存在（非首次启动）——幂等 no-op */
+    }
   }
 
   // ---------- HTTP 入口（gateway 经 stub.fetch 调用） ----------
@@ -195,6 +217,8 @@ export class PlatformDirectory extends DurableObject {
       if (req.method === "POST" && hb) return this.agentHeartbeat(hb[1]!, await req.json());
       const rn = p.match(/^\/directory\/agents\/(agt_[0-9A-Z]+)\/rename$/);
       if (req.method === "POST" && rn) return this.renameAgent(rn[1]!, await req.json());
+      const lc = p.match(/^\/directory\/agents\/(agt_[0-9A-Z]+)\/lifecycle$/);
+      if (req.method === "POST" && lc) return this.setAgentLifecycle(lc[1]!, await req.json());
       if (req.method === "POST" && p === "/directory/enrollments") return this.createEnrollment(await req.json());
       const rv = p.match(/^\/directory\/enrollments\/(enr_[0-9A-Z]+)\/revoke$/);
       if (req.method === "POST" && rv) return this.revokeEnrollment(rv[1]!, await req.json());
@@ -578,6 +602,33 @@ export class PlatformDirectory extends DurableObject {
     return json(200, { agent: this.toAgent(updated) });
   }
 
+  /** 生命周期迁移：pause/resume/retire（条件 UPDATE 原子判定，非法迁移 409，见常量注释）。
+   *  轮换 token 不经此路径——那是 RepoHub 的事，本 DO 只管身份/授权面的三条铁律。 */
+  private setAgentLifecycle(id: string, body: unknown): Response {
+    const b = isObj(body) ? body : null;
+    const action = str(b, "action");
+    if (!action || !(action in AGENT_LIFECYCLE_TRANSITIONS))
+      return json(422, { error: "invalid_action", details: ["action 必须是 pause | resume | retire"] });
+    const spec = AGENT_LIFECYCLE_TRANSITIONS[action as AgentLifecycleAction];
+    const now = iso(Date.now());
+    const placeholders = spec.from.map(() => "?").join(",");
+    const updated = [...this.sql.exec<AgentRow>(
+      `UPDATE agents SET lifecycle=?, updated_at=? WHERE agent_id=? AND lifecycle IN (${placeholders}) RETURNING *`,
+      spec.to, now, id, ...spec.from,
+    )][0];
+    if (!updated) {
+      const current = [...this.sql.exec<{ lifecycle: string }>(
+        `SELECT lifecycle FROM agents WHERE agent_id=?`, id,
+      )][0];
+      if (!current) return json(404, { error: "agent_not_found" });
+      return json(409, { error: `invalid_transition:${current.lifecycle}->${spec.to}`, action });
+    }
+    this.emit("directory.agent.lifecycle_changed", `agent:${id}`, actorOf(b), {
+      agent_id: id, action, to: spec.to,
+    });
+    return json(200, { agent: this.toAgent(updated) });
+  }
+
   private getAgent(id: string): Response {
     const row = [...this.sql.exec<AgentRow>(`SELECT * FROM agents WHERE agent_id=?`, id)][0];
     if (!row) return json(404, { error: "agent_not_found" });
@@ -609,6 +660,7 @@ export class PlatformDirectory extends DurableObject {
       parent: parent ? { agent_id: parent["agent_id"], name: parent["name"] } : null, // parent 是谁
       projects, // 哪个项目的（active enrollment 的项目 slug）
       capabilities: JSON.parse(r.capabilities),
+      lifecycle: r.lifecycle ?? "active", // active | paused | retired（p30/F07）
       last_heartbeat_at: r.last_heartbeat_at,
       created_at: r.created_at,
       updated_at: r.updated_at,

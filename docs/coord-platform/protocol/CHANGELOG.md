@@ -31,6 +31,13 @@ UC-11——sub-agent → module-coordinator → coord-main → 👤 的结构化
   维持 `"coord/0.1"` 不动，按语义化是 **patch（0.1.4）**。不认识 intent.*
   的旧消费者按「未知类型忽略」前向兼容。
 
+**加法扩展（非破坏）：agent 生命周期事件**（p30/F07：enroll 向导「轮换/暂停/
+退役」新增暂停/恢复/退役状态面，轮换只动 RepoHub token 不改本状态）。
+
+- 事件封闭集合新增 `directory.agent.lifecycle_changed`。
+- 版本判定理由：与既有先例（0.1.1-0.1.3）同型——仅扩事件类型集合，wire 上的
+  `protocol` 字段维持 `"coord/0.1"` 不动，按语义化是 **patch（0.1.4）**。
+
 ## coord/0.1.3 — 2026-07-19
 
 **加法扩展（非破坏）：工作区分片事件六类型**（p30/F04：需求流水线条目 /

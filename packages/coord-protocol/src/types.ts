@@ -143,6 +143,9 @@ export const EVENT_TYPES = [
   "intent.blocker",
   "intent.escalate",
   "intent.decide",
+  // coord/0.1.4（p30/F07）：agent 生命周期（enroll 向导「轮换/暂停/退役」的暂停/
+  // 恢复/退役面，轮换只动 RepoHub token 不改本状态，退役是终态）。
+  "directory.agent.lifecycle_changed",
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];

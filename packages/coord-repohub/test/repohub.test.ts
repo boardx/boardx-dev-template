@@ -317,6 +317,30 @@ describe("F08 agent tokens（按仓 scoped token 权威表）", () => {
   });
 });
 
+describe("平台目录事件转发（p30/F07：/relay/event）", () => {
+  it("directory.* 前缀放行：落库 + 可通过 /events 查到", async () => {
+    const r = await post("/relay/event", {
+      type: "directory.agent.heartbeat",
+      resource_id: "agent:agt_relay1",
+      agent_id: "agt_relay1",
+      payload: { agent_id: "agt_relay1", at: "2026-07-19T00:00:00Z" },
+    });
+    expect(r.status).toBe(202);
+    const events = await (await SELF.fetch(`${BASE}/events?limit=500`)).json<{ events: Array<Record<string, unknown>> }>();
+    const hit = events.events.find(
+      (e) => e["type"] === "directory.agent.heartbeat" && e["resource_id"] === "agent:agt_relay1",
+    );
+    expect(hit).toBeTruthy();
+    expect((hit!["payload"] as Record<string, unknown>)["agent_id"]).toBe("agt_relay1");
+  });
+
+  it("非 directory.* 前缀 / 缺字段 → 422（防误用把本仓变成任意事件注入口）", async () => {
+    expect((await post("/relay/event", { type: "lease.claimed", resource_id: "x", agent_id: "y", payload: {} })).status).toBe(422);
+    expect((await post("/relay/event", { type: "directory.agent.heartbeat", agent_id: "y", payload: {} })).status).toBe(422);
+    expect((await post("/relay/event", { type: "directory.agent.heartbeat", resource_id: "x", payload: {} })).status).toBe(422);
+  });
+});
+
 describe("F09 WS 实时流", () => {
   type WireEvent = { protocol: string; event_id: string; type: string; resource_id: string; payload: Record<string, unknown> };
 

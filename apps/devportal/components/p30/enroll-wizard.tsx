@@ -1,17 +1,26 @@
 "use client";
-// M2 enroll 三步向导（p30 UI 先行原型，UC-06 / D2 / D6）：
-// ① 起名（@handle/agent-name 命名空间查重）+ 选运行时（供应商中立）
-// ② 一次性 token（mint-on-reveal 样式）+ 复制接入命令
-// ③ 等待首个心跳——mock 定时器 4 秒后点亮（aha moment）。
-// ⚠️ 全部 mock：token 是示例文本，心跳点亮由前端定时器模拟。
+// M2 enroll 三步向导——接真（p30/F07，UC-06 / D2 / D6）：
+// ① 起名（@handle/agent-name 命名空间查重，服务端 Directory 唯一索引兜底）+ 选运行时
+// ② mint-on-reveal：点击揭示即真实调用 /api/portal/my-agents/enroll 登记身份 + 发
+//    一次性 scoped token（继承 F08 栈），明文只这一次、关闭不可找回
+// ③ 等待首个心跳——订阅真实 coord 事件流（useCoordStream，F09 已建好的 WS 通道，
+//    p30/F07 把 Directory 心跳事件转发进同一条通道），非前端定时器；带轮询兜底。
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ENROLL_RUNTIMES, MOCK_ME, MOCK_ONE_TIME_TOKEN, mockInstallCommand, type EnrollRuntime } from "@/lib/mock/p30";
+import { useCoordStream, type CoordEvent } from "@/lib/coord-stream";
+import { ENROLL_RUNTIMES, installCommand, type EnrollRuntime } from "@/lib/agent-runtimes";
 
 type Step = 1 | 2 | 3;
+
+interface EnrollResult {
+  agentId: string;
+  identifier: string;
+  runtime: EnrollRuntime;
+  token: string;
+}
 
 function StepRail({ step }: { step: Step }) {
   const items: ReadonlyArray<{ n: Step; label: string }> = [
@@ -49,33 +58,74 @@ async function copyText(text: string): Promise<boolean> {
 }
 
 export function EnrollWizard({
+  handle,
   existingNames,
   onDone,
   onCancel,
 }: {
-  /** 我命名空间内已存在的 agent 短名（查重用，D6：仅自己空间内唯一） */
+  /** 当前登录者 handle（真实 GitHub login，来自车队管理台的 GET 响应）。 */
+  handle: string;
+  /** 我命名空间内已存在的 agent 短名（前端即时提示用；服务端唯一索引才是判定权威）。 */
   existingNames: readonly string[];
-  onDone: (fullId: string, runtime: EnrollRuntime) => void;
+  onDone: (result: EnrollResult) => void;
   onCancel: () => void;
 }) {
   const [step, setStep] = useState<Step>(1);
   const [name, setName] = useState("");
   const [runtime, setRuntime] = useState<EnrollRuntime>("Claude Code");
-  const [revealed, setRevealed] = useState(false);
+  const [minting, setMinting] = useState(false);
+  const [mintError, setMintError] = useState<string | null>(null);
+  const [result, setResult] = useState<EnrollResult | null>(null);
   const [copied, setCopied] = useState<"token" | "cmd" | null>(null);
   const [heartbeatLive, setHeartbeatLive] = useState(false);
 
   const trimmed = name.trim();
   const validFormat = /^[a-z0-9][a-z0-9-]{1,38}$/.test(trimmed);
   const duplicate = existingNames.includes(trimmed);
-  const fullId = `@${MOCK_ME.handle}/${trimmed || "…"}`;
+  const fullId = result?.identifier ?? `@${handle}/${trimmed || "…"}`;
 
-  // 第 3 步：mock 定时器模拟「首个心跳点亮」（aha moment）。真实实现时换 WS/轮询。
+  // 第 3 步：真实心跳——WS 事件命中即点亮；轮询兜底（WS 未配置/断线时不至于卡死）。
+  useCoordStream(["directory.agent.heartbeat"], (e: CoordEvent) => {
+    if (result && e.payload["agent_id"] === result.agentId) setHeartbeatLive(true);
+  });
   useEffect(() => {
-    if (step !== 3) return;
-    const t = setTimeout(() => setHeartbeatLive(true), 4000);
-    return () => clearTimeout(t);
-  }, [step]);
+    if (step !== 3 || heartbeatLive || !result) return;
+    const poll = async (): Promise<void> => {
+      try {
+        const res = await fetch("/api/portal/my-agents", { cache: "no-store" });
+        if (!res.ok) return;
+        const body = (await res.json()) as { fleet?: Array<{ agentId: string; heartbeat: string }> };
+        const mine = body.fleet?.find((a) => a.agentId === result.agentId);
+        if (mine && mine.heartbeat !== "none") setHeartbeatLive(true);
+      } catch {
+        /* 网络抖动，等下一轮 */
+      }
+    };
+    const t = setInterval(() => void poll(), 4000);
+    return () => clearInterval(t);
+  }, [step, heartbeatLive, result]);
+
+  const mintToken = async (): Promise<void> => {
+    setMinting(true);
+    setMintError(null);
+    try {
+      const res = await fetch("/api/portal/my-agents/enroll", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed, runtime }),
+      });
+      const body = (await res.json()) as Partial<EnrollResult> & { error?: string };
+      if (!res.ok) {
+        setMintError(body.error === "err-ns-dup" ? "err-ns-dup" : (body.error ?? "enroll_failed"));
+        return;
+      }
+      setResult(body as EnrollResult);
+    } catch {
+      setMintError("network_error");
+    } finally {
+      setMinting(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-surface-darkest/60 p-4 pt-14" role="presentation" onClick={onCancel}>
@@ -100,9 +150,9 @@ export function EnrollWizard({
         {step === 1 && (
           <div data-testid="enroll-step-1" className="mt-4 space-y-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="agent-name">agent 名（命名空间：@{MOCK_ME.handle}/）</Label>
+              <Label htmlFor="agent-name">agent 名（命名空间：@{handle}/）</Label>
               <div className="flex items-center gap-2">
-                <span className="shrink-0 rounded-lg bg-tag-purple px-2.5 py-2 font-mono text-13 text-foreground">@{MOCK_ME.handle}/</span>
+                <span className="shrink-0 rounded-lg bg-tag-purple px-2.5 py-2 font-mono text-13 text-foreground">@{handle}/</span>
                 <Input
                   id="agent-name"
                   data-testid="enroll-name-input"
@@ -167,24 +217,33 @@ export function EnrollWizard({
                 <span className="text-13 font-medium text-foreground">一次性 scoped token</span>
                 <Badge variant="outline" className="text-11">mint-on-reveal</Badge>
               </div>
-              {revealed ? (
+              {result ? (
                 <div data-testid="token-revealed" className="mt-2 flex flex-wrap items-center gap-2">
                   <code className="min-w-0 flex-1 break-all rounded-8 bg-surface-dark px-2.5 py-2 font-mono text-12 text-surface-dark-foreground">
-                    {MOCK_ONE_TIME_TOKEN}
+                    {result.token}
                   </code>
                   <Button
                     size="sm"
                     variant="outline"
                     data-testid="copy-token"
-                    onClick={() => void copyText(MOCK_ONE_TIME_TOKEN).then((ok) => ok && setCopied("token"))}
+                    onClick={() => void copyText(result.token).then((ok) => ok && setCopied("token"))}
                   >
                     {copied === "token" ? "已复制 ✓" : "复制"}
                   </Button>
                 </div>
               ) : (
-                <Button className="mt-2" variant="secondary" data-testid="token-reveal" onClick={() => setRevealed(true)}>
-                  点击揭示 token（仅此一次，关闭后不可找回）
-                </Button>
+                <>
+                  <Button className="mt-2" variant="secondary" data-testid="token-reveal" disabled={minting} onClick={() => void mintToken()}>
+                    {minting ? "登记中…" : "点击揭示 token（仅此一次，关闭后不可找回）"}
+                  </Button>
+                  {mintError && (
+                    <p role="alert" data-testid={mintError === "err-ns-dup" ? "err-ns-dup" : "enroll-error"} className="mt-2 text-12 text-destructive">
+                      {mintError === "err-ns-dup"
+                        ? `命名空间冲突：@${handle}/${trimmed} 已存在——返回上一步换个名字。`
+                        : "登记失败，请重试（不会重复计费或产生僵尸身份）。"}
+                    </p>
+                  )}
+                </>
               )}
               <p className="mt-2 text-12 text-destructive">⚠ 关闭本向导后 token 不可找回，只能轮换重发。</p>
             </div>
@@ -193,13 +252,16 @@ export function EnrollWizard({
               <span className="text-13 font-medium text-foreground">接入命令（在 agent 运行环境执行）</span>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <code className="min-w-0 flex-1 break-all rounded-8 bg-surface-dark px-2.5 py-2 font-mono text-12 text-surface-dark-foreground">
-                  {mockInstallCommand(fullId)}
+                  {result ? installCommand(result.identifier, result.token) : installCommand(fullId, "<一次性token>")}
                 </code>
                 <Button
                   size="sm"
                   variant="outline"
                   data-testid="copy-install-cmd"
-                  onClick={() => void copyText(mockInstallCommand(fullId)).then((ok) => ok && setCopied("cmd"))}
+                  disabled={!result}
+                  onClick={() =>
+                    result && void copyText(installCommand(result.identifier, result.token)).then((ok) => ok && setCopied("cmd"))
+                  }
                 >
                   {copied === "cmd" ? "已复制 ✓" : "复制"}
                 </Button>
@@ -210,7 +272,7 @@ export function EnrollWizard({
               <Button variant="outline" onClick={() => setStep(1)}>
                 ← 上一步
               </Button>
-              <Button data-testid="enroll-next-2" disabled={!revealed} onClick={() => setStep(3)}>
+              <Button data-testid="enroll-next-2" disabled={!result} onClick={() => setStep(3)}>
                 我已保存，等待首个心跳 →
               </Button>
             </div>
@@ -229,11 +291,10 @@ export function EnrollWizard({
               <div data-testid="first-heartbeat-waiting" className="flex flex-col items-center gap-2 rounded-10 border border-dashed border-border py-8 text-center">
                 <span aria-hidden className="h-3 w-3 animate-pulse rounded-full bg-muted-foreground" />
                 <p className="text-13 text-muted-foreground">等待 {fullId} 的首个心跳…（在 agent 环境执行接入命令后自动点亮）</p>
-                <p className="text-11 text-muted-foreground">原型说明：4 秒后由 mock 定时器模拟点亮</p>
               </div>
             )}
             <div className="flex justify-end">
-              <Button data-testid="enroll-done" disabled={!heartbeatLive} onClick={() => onDone(fullId, runtime)}>
+              <Button data-testid="enroll-done" disabled={!heartbeatLive || !result} onClick={() => result && onDone(result)}>
                 完成，回到车队 →
               </Button>
             </div>

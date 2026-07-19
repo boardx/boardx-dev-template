@@ -301,6 +301,51 @@ describe("Agent：owner 必填 + D6 命名空间", () => {
   });
 });
 
+describe("Agent 生命周期（p30/F07：暂停/恢复/退役）", () => {
+  it("默认 active；pause→paused→resume→active；未知 action 422；未知 agent 404", async () => {
+    const s = await seed("lc1");
+    const a = (await j(await post("/directory/agents", { owner: s.handle, name: "lc-worker" })))["agent"] as Obj;
+    const id = a["agent_id"] as string;
+    expect(a["lifecycle"]).toBe("active");
+
+    const p1 = await post(`/directory/agents/${id}/lifecycle`, { action: "pause" });
+    expect(p1.status).toBe(200);
+    expect(((await j(p1))["agent"] as Obj)["lifecycle"]).toBe("paused");
+
+    const r1 = await post(`/directory/agents/${id}/lifecycle`, { action: "resume" });
+    expect(r1.status).toBe(200);
+    expect(((await j(r1))["agent"] as Obj)["lifecycle"]).toBe("active");
+
+    expect((await post(`/directory/agents/${id}/lifecycle`, { action: "nope" })).status).toBe(422);
+    expect((await post(`/directory/agents/agt_00000000000000000000000000/lifecycle`, { action: "pause" })).status).toBe(404);
+  });
+
+  it("retire 是终态：active→retired 200；再次 pause/retire 均 409（非法迁移）", async () => {
+    const s = await seed("lc2");
+    const a = (await j(await post("/directory/agents", { owner: s.handle, name: "lc-retiree" })))["agent"] as Obj;
+    const id = a["agent_id"] as string;
+
+    const rt = await post(`/directory/agents/${id}/lifecycle`, { action: "retire" });
+    expect(rt.status).toBe(200);
+    expect(((await j(rt))["agent"] as Obj)["lifecycle"]).toBe("retired");
+
+    expect((await post(`/directory/agents/${id}/lifecycle`, { action: "pause" })).status).toBe(409);
+    const rt2 = await post(`/directory/agents/${id}/lifecycle`, { action: "retire" });
+    expect(rt2.status).toBe(409);
+    expect((await j(rt2))["error"]).toBe("invalid_transition:retired->retired");
+  });
+
+  it("paused agent 也能 retire（paused→retired 合法）", async () => {
+    const s = await seed("lc3");
+    const a = (await j(await post("/directory/agents", { owner: s.handle, name: "lc-pause-retire" })))["agent"] as Obj;
+    const id = a["agent_id"] as string;
+    await post(`/directory/agents/${id}/lifecycle`, { action: "pause" });
+    const rt = await post(`/directory/agents/${id}/lifecycle`, { action: "retire" });
+    expect(rt.status).toBe(200);
+    expect(((await j(rt))["agent"] as Obj)["lifecycle"]).toBe("retired");
+  });
+});
+
 describe("Enrollment：agent×项目 + token 引用", () => {
   it("登记 201 → 重复 409 → 吊销 → 重复吊销 409 → 重登记复活（ULID 不变）", async () => {
     const s = await seed("e1");

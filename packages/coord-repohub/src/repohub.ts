@@ -126,6 +126,7 @@ export class RepoHub extends DurableObject {
       if (req.method === "GET" && p === "/evidence") return this.listEvidence(url);
       if (req.method === "POST" && p === "/mirror/upsert") return this.mirrorUpsert(await req.json());
       if (req.method === "POST" && p === "/webhook/ingest") return this.webhookIngest(await req.json());
+      if (req.method === "POST" && p === "/relay/event") return this.relayEvent(await req.json());
       if (req.method === "POST" && p === "/tokens/mint") return this.tokenMint(await req.json());
       if (req.method === "POST" && p === "/tokens/revoke") return this.tokenRevoke(await req.json());
       if (req.method === "POST" && p === "/tokens/verify") return this.tokenVerify(await req.json());
@@ -546,6 +547,31 @@ export class RepoHub extends DurableObject {
     const row = [...this.sql.exec<MirrorRow>(`SELECT * FROM mirror_items WHERE kind=? AND number=?`, kind, number)][0];
     if (!row) return json(404, { error: "not_mirrored" });
     return json(200, rowToItem(row));
+  }
+
+  // ---------- 平台目录事件转发（p30/F07） ----------
+  // PlatformDirectory 是平台单例 DO，没有自己的 WS 广播面；本仓的 RepoHub 已经
+  // 有一条真实的 WS 通道（F09，emit() 落库后广播给全部活跃连接）。gateway 在
+  // Directory 写入成功后把同一枚事件转发到这里复用广播——devportal 的
+  // useCoordStream 不需要多接一路 WS，「等首个心跳」点亮走的是这条已验证的通道，
+  // 不是前端定时器。只放行 directory.* 前缀，防止把本仓变成任意事件注入口。
+  private relayEvent(body: unknown): Response {
+    const b = body as Record<string, unknown> | null;
+    const type = b?.["type"];
+    const resourceId = b?.["resource_id"];
+    const agentId = b?.["agent_id"];
+    const payload = b?.["payload"];
+    if (typeof type !== "string" || !type.startsWith("directory."))
+      return json(422, { error: "invalid_relay_type" });
+    if (typeof resourceId !== "string" || resourceId.length === 0)
+      return json(422, { error: "invalid_relay_resource_id" });
+    if (typeof agentId !== "string" || agentId.length === 0)
+      return json(422, { error: "invalid_relay_agent_id" });
+    const safePayload = payload && typeof payload === "object" && !Array.isArray(payload)
+      ? (payload as Record<string, unknown>)
+      : {};
+    this.emit(type as EventType, resourceId, agentId, safePayload);
+    return json(202, { ok: true });
   }
 
   // ---------- Agent tokens（F08：按仓 scoped token，DO 是唯一权威） ----------
