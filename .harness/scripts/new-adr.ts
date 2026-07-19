@@ -9,7 +9,7 @@ import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { REPO_ROOT } from "./lib/paths";
 import { renderTemplateFile, nowISO } from "./lib/render";
-import { adrIdNumber, findAdrIdConflicts, nextAdrId } from "./lib/adr-id";
+import { adrIdFromFileName, adrIdNumber, findAdrIdConflicts, nextAdrId } from "./lib/adr-id";
 import { req } from "./lib/args";
 import { log, die } from "./lib/log";
 import type { Args } from "./lib/args";
@@ -44,19 +44,22 @@ export function newAdr(args: Args): void {
   const indexedIds = readIndexedIds(readme);
   const adrFileNames = readdirSync(ADR_DIR).filter((f) => f.endsWith(".md") && f !== "README.md");
 
+  // 自动取号必须同时看两个来源，理由见 lib/adr-id.ts nextAdrId 的注释：只看索引表
+  // 会在"文件建了但索引表没登记"的孤儿文件场景下把号取重，自己变成新的孤儿文件
+  // ——这恰恰是本模块要防的那类占用（coord-main review 抓到，2026-07-19）。
+  const fileIds = adrFileNames.map(adrIdFromFileName).filter((x): x is string => x !== null);
+  const allKnownIds = [...indexedIds, ...fileIds].filter((x) => adrIdNumber(x) !== null);
+
   let id: string;
   if (args.opts["id"]) {
     id = args.opts["id"]!;
     if (adrIdNumber(id) === null) die(`--id "${id}" 不是合法格式，应为 "ADR-NNN"（如 ADR-019）。`);
     const conflicts = findAdrIdConflicts(id, indexedIds, adrFileNames);
     if (conflicts.length) {
-      die(
-        `--id ${id} 已被占用: ${conflicts.join("；")}。` +
-          `下一个可用: ${nextAdrId(indexedIds.filter((x) => adrIdNumber(x) !== null))}`
-      );
+      die(`--id ${id} 已被占用: ${conflicts.join("；")}。` + `下一个可用: ${nextAdrId(allKnownIds)}`);
     }
   } else {
-    id = nextAdrId(indexedIds.filter((x) => adrIdNumber(x) !== null));
+    id = nextAdrId(allKnownIds);
   }
 
   const slug = slugify(title);

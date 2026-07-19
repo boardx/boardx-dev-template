@@ -16,7 +16,22 @@ export function adrIdNumber(id: string): number | null {
   return Number.parseInt(m[1]!, 10);
 }
 
-/** 自动取号：现有 id 数字部分的 max + 1，3 位零填充（ADR-001 起的既有格式）。 */
+/** 从文件名解析出 ADR id："ADR-020-atomic-adr-numbering.md" → "ADR-020"。
+ *  不匹配（含旧序列 "0001-xxx.md"）返回 null。 */
+export function adrIdFromFileName(fileName: string): string | null {
+  const m = /^(ADR-\d+)-/.exec(fileName);
+  return m ? m[1]! : null;
+}
+
+/**
+ * 自动取号：现有 id 数字部分的 max + 1，3 位零填充（ADR-001 起的既有格式）。
+ *
+ * **必须同时传入索引表 id 和文件名解析出的 id**（README.md 索引表可能落后于
+ * docs/adr/ 目录本身——"文件建了但索引表没登记"的孤儿文件，正是本模块要防的
+ * 那类占用；只查索引表求 max 会在这种场景下把号取重，把自己变成新的孤儿文件）。
+ * 调用方通常这样合并：
+ *   nextAdrId([...indexedIds, ...adrFileNames.map(adrIdFromFileName).filter(Boolean)])
+ */
 export function nextAdrId(existingIds: string[]): string {
   let max = 0;
   for (const id of existingIds) {
