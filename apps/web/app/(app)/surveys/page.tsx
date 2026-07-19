@@ -848,7 +848,10 @@ function WorkspaceShell({
             )}
           </header>}
 
-          <div className={inSurveyWorkflow ? "p-4" : ""}>
+          <div
+            data-testid={inSurveyWorkflow ? "survey-workflow-content" : undefined}
+            className={inSurveyWorkflow ? "min-w-0 px-4 py-4 sm:px-5" : ""}
+          >
             {children}
           </div>
           </div>
@@ -5206,10 +5209,11 @@ export default function SurveysPage() {
         onCreateBlank={() => openTemplateEditor()}
         onNavigate={(target) => void navigateWorkspace(target)}
       >
-      <div data-testid={isTemplateEditor ? "template-editor-shell" : "survey-editor-screen"} className={isTemplateEditor ? "pb-8" : "mx-auto max-w-survey-editor px-4 pb-10 sm:px-6 lg:px-8"}>
+      <div data-testid={isTemplateEditor ? "template-editor-shell" : "survey-editor-screen"} className={isTemplateEditor ? "pb-8" : "w-full pb-10"}>
         <div data-testid={isTemplateEditor ? undefined : "survey-editor-shell"} className={isTemplateEditor ? "mb-4 rounded-lg border border-border bg-background" : "mb-4"}>
           <div data-testid={isTemplateEditor ? undefined : "survey-editor-reference-header"}>
-          <div data-testid="editor-command-bar" className="flex flex-wrap items-center gap-3 py-4">
+          <div data-testid={isTemplateEditor ? "editor-command-bar" : undefined} className="flex flex-wrap items-center gap-3 pb-4">
+            {isTemplateEditor ? (
             <Button
               data-testid="back-to-list"
               variant="ghost"
@@ -5227,7 +5231,7 @@ export default function SurveysPage() {
               <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
               {isTemplateEditor ? "返回模版" : "返回列表"}
             </Button>
-            {!isTemplateEditor && <Badge variant="outline" className="bg-secondary">Survey Workflow</Badge>}
+            ) : null}
             {isTemplateEditor ? (
               <div className="min-w-0 flex-1">
                 <p className="truncate text-15 font-semibold text-foreground">{title.trim() || "未命名模版"}</p>
