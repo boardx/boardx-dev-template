@@ -240,7 +240,7 @@ export function EnrollWizard({
                     <p role="alert" data-testid={mintError === "err-ns-dup" ? "err-ns-dup" : "enroll-error"} className="mt-2 text-12 text-destructive">
                       {mintError === "err-ns-dup"
                         ? `命名空间冲突：@${handle}/${trimmed} 已存在——返回上一步换个名字。`
-                        : "登记失败，请重试（不会重复计费或产生僵尸身份）。"}
+                        : "登记失败，请重试；若重试后提示命名空间冲突，可能是刚才的半成品记录残留——换个名字重试，或联系管理员处理后再用原名。"}
                     </p>
                   )}
                 </>
