@@ -22,6 +22,11 @@
 #   SESSION_SECRET  OAuth session cookie 的 HMAC 密钥（≥32 字节随机串，p30-F02）：
 #   pnpm exec wrangler pages secret put SESSION_SECRET --project-name devportal
 #   （env 原子纪律：两个 secret 都先 put，再合入本 PR——先删后合/先合后补都会被 CD 踩中）
+#   GITHUB_WRITE_TOKEN（可选，p30-F06 UC-04 加入申请 onboarding issue 双写，N5）：
+#   细粒度**写**权限 PAT（GITHUB_TOKEN 是只读，开不了 issue）。未配置时不假装能工作——
+#   加入申请仍正常进 pending，只是不自动开/更新 onboarding issue（响应里如实标注
+#   onboarding_issue.configured=false）：
+#   pnpm exec wrangler pages secret put GITHUB_WRITE_TOKEN --project-name devportal
 name = "devportal"
 pages_build_output_dir = ".vercel/output/static"
 # ⚠️ 不要低于 2024-11-11：fetch 的 cache:"no-store" 选项要求该日期起的运行时，

@@ -25,7 +25,8 @@ function directoryStub(env: Env): DurableObjectStub {
 
 // 读面 allowlist：目录是「人人可读」的平台视图（读 scoped/ops 可达）；
 // events 是只增审计读面。写路径与未知子路径都不在此列。
-const READ_SUBPATHS = /^\/(projects|engineers|memberships|enrollments|events|agents(\/agt_[0-9A-Z]+)?)$/;
+const READ_SUBPATHS =
+  /^\/(projects|engineers|memberships|enrollments|events|agents(\/agt_[0-9A-Z]+)?|memberships\/mem_[0-9A-Z]+\/sla)$/;
 
 // 写面 allowlist（admin 面）：仅身份/授权/审批类动作，逐条枚举——不整段透传，
 // 未来 DO 新增内部端点不会被动暴露。

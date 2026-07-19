@@ -14,6 +14,7 @@ export {
   type MembershipRole,
   type MembershipStatus,
 } from "./directory";
+export { computeSlaStatus, type SlaStatus } from "./sla";
 
 export interface Env {
   DIRECTORY: DurableObjectNamespace;

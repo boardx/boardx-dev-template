@@ -29,13 +29,18 @@ CREATE TABLE IF NOT EXISTS engineers (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_engineers_handle ON engineers(handle);
 
 -- Membership：engineer×project；角色 owner/maintainer/approver/contributor；
--- 状态机 pending→active→suspended（suspended→active 可复职），非法迁移 409
+-- 状态机 pending→active/rejected（rejected 终态，p30/F06）、active→suspended→active，
+-- 非法迁移 409。modules/intro/onboarding_issue_url 是 F06 加入向导的申请上下文
+-- （W6 审批队列展示用；onboarding_issue_url 是 GitHub 双写关联，N5）。
 CREATE TABLE IF NOT EXISTS memberships (
   membership_id TEXT PRIMARY KEY,            -- mem_<ULID>，不可变
   project_id    TEXT NOT NULL,
   engineer_id   TEXT NOT NULL,
   role          TEXT NOT NULL,               -- owner | maintainer | approver | contributor
-  status        TEXT NOT NULL,               -- pending | active | suspended
+  status        TEXT NOT NULL,               -- pending | active | suspended | rejected
+  modules       TEXT NOT NULL DEFAULT '[]',  -- JSON array：申请时感兴趣的模块（F06）
+  intro         TEXT NOT NULL DEFAULT '',     -- 一句话自介（F06，owner 审批时唯一可见的申请人描述）
+  onboarding_issue_url TEXT,                 -- 自动开的 onboarding issue 链接（F06 GitHub 双写，可空=未双写成功）
   created_at    TEXT NOT NULL,
   updated_at    TEXT NOT NULL
 );

@@ -234,7 +234,7 @@ export function ProjectHome({ slug }: { slug: string }) {
         </>
       )}
 
-      {joinOpen && <JoinWizard projectName={p.name} slaPromiseH={p.approvalSla.promiseH} onClose={() => setJoinOpen(false)} />}
+      {joinOpen && <JoinWizard projectSlug={slug} projectName={p.name} onClose={() => setJoinOpen(false)} />}
     </div>
   );
 }
