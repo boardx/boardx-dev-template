@@ -4,7 +4,7 @@
 - 仓库根目录: `/Users/shenyangjun/boardx/boardx-dev-template/.worktrees/p25-f16-survey-report-fact-base`
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F23 / 修复无答卷报告生成错误
+- 当前最高优先级未完成功能: 无，F23 已 passing
 - 当前 blocker: 无
 
 ## 会话记录
@@ -20,6 +20,8 @@
   - Web lint、typecheck 通过。
   - F22/F23 Playwright 联合回归 2/2 通过。
 - 已记录证据: `evidence/report-generation-empty-state.png`。
-- 提交记录: 待提交。
+- 提交记录:
+  - `0c5288d` `fix(survey): guard report generation without responses`
+  - `41ef04c` `test(survey): record F23 verification evidence`
 - 已知风险或未解决问题: 用户仍需先发布问卷并提交至少 1 份真实答卷才能生成正式报告。
-- 下一步最佳动作: 提交实现后运行 F23 Harness verify。
+- 下一步最佳动作: 推送分支并更新 PR #757。

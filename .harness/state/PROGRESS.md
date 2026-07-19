@@ -29,11 +29,11 @@
 | p22 | Room IA Realignment | not_started | 0 | 0 | 0 | 4 |
 | p23 | developer-portal | in_progress | 0 | 0 | 0 | 10 |
 | p24 | room-board-management | not_started | 0 | 0 | 0 | 0 |
-| p25 | Survey System | in_progress | 0 | 1 | 0 | 18 |
+| p25 | Survey System | in_progress | 0 | 0 | 0 | 19 |
 | p26 | ava-legacy-sync | not_started | 2 | 0 | 0 | 2 |
 | p27 | AI Store | in_progress | 0 | 0 | 0 | 17 |
 | p28 | platform-accounts-gap2 | not_started | 1 | 0 | 0 | 0 |
 | p29 | coord-platform | done | 0 | 0 | 0 | 10 |
 | p30 | devportal-platform | not_started | 24 | 0 | 0 | 0 |
 
-_最近聚合:2026-07-19T00:29:24.578Z_
+_最近聚合:2026-07-19T00:31:02.106Z_

@@ -535,7 +535,7 @@
       "title": "修复无答卷报告生成错误",
       "user_visible_behavior": "问卷没有有效答卷时，分析报告明确提示需要先回收至少 1 份答卷并禁用重新生成，不再显示 professional_report_generation_failed；绕过前端的生成请求返回可识别的业务错误且不调用模型，已有答卷的模板驱动生成保持不变。",
       "design_ref": "requirements/22-report-generation-empty-state.md；2026-07-19 用户失败截图",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "23",
       "owner": "wrk-survey-1",
       "capability": "CAP-WEB",
@@ -552,7 +552,7 @@
         "pnpm harness doctor --phase p25",
         "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-23/evidence/F23.verify.log"
       ],
-      "evidence": null,
+      "evidence": "evidence/F23.verify.log @ 2026-07-19T00:31:02.080Z",
       "notes": "独立 bug feature，Refs #648，追加到 PR #757；只修复无答卷生成边界和用户提示，不放宽真实答卷约束。"
     }
   ]
