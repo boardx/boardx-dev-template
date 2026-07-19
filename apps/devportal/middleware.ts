@@ -6,6 +6,9 @@
 //   工作区   /p/:slug/* 与个人层 /me* —— 要求会话（OAuth session cookie 优先，
 //            Access JWT 兼容回退，灰度期双栈）；无会话 → 302 到 OAuth 登录，
 //            保留 return_to（白名单化后进 HMAC state，防 open redirect）。
+//   接入向导 /onboard —— p30-F05 起同样要求会话：admin 权限判定需要发起人的真实
+//            GitHub 身份（collaborator permission 查询），批次 3 原型「无身份读取」
+//            的假设随接真失效（原型页头部注释保留仅作历史记录，不再是约束）。
 //   治理面   /portal /platform 及 /api/portal/*（Access JWT 逐路由验签，#523/#543）
 //            —— 本中间件不触碰；Access 收缩到治理面由人类在 CF dashboard 操作
 //            （阶段 2 的「删」侧不在代码内，原子灰度：本 PR 只加不删）。
@@ -15,8 +18,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSessionUser } from "@/lib/session";
 
 export const config = {
-  // 仅工作区 + 个人层。公开层与治理面绝不进入本 matcher（改动须同步顶部注释与静态断言）。
-  matcher: ["/me", "/me/:path*", "/p/:path*"],
+  // 工作区 + 个人层 + 接入向导。公开层与治理面绝不进入本 matcher（改动须同步顶部注释与静态断言）。
+  matcher: ["/me", "/me/:path*", "/p/:path*", "/onboard"],
 };
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {

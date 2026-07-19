@@ -37,6 +37,14 @@ function gatewayBase(): { base: string; token: string } | null {
   return { base: `${url.replace(/\/+$/, "")}/api/coord/repos/${repo}`, token };
 }
 
+/** onboard 面（p30-F05）：平台级端点，不挂在某个仓下——独立 base（无 GITHUB_REPO 依赖）。 */
+function onboardBase(): { base: string; token: string } | null {
+  const url = process.env["COORD_GATEWAY_URL"];
+  const token = process.env["COORD_API_TOKEN"];
+  if (!url || !token) return null;
+  return { base: `${url.replace(/\/+$/, "")}/api/coord/onboard`, token };
+}
+
 /** 缓存 key 的配置指纹（配置变了缓存必须失效）。 */
 export function coordConfigKey(): string {
   return [
@@ -221,6 +229,144 @@ export async function fetchShadowDecisions(limit = 200): Promise<ShadowDecisions
     if (!res.ok) return { configured: true, error: `upstream_${res.status}` };
     const body = (await res.json()) as { decisions?: ShadowDecision[] };
     return { configured: true, decisions: body.decisions ?? [] };
+  } catch {
+    return { configured: true, error: "unreachable" };
+  }
+}
+
+// ---------------- p30-F05：/onboard 接真代理（installation 视角） ----------------
+
+export interface OnboardRepo {
+  full_name: string;
+  owner: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  language: string | null;
+  private: boolean;
+  default_branch: string;
+  is_admin: boolean;
+}
+
+export interface OnboardInstallation {
+  installation_id: number;
+  account: { login: string; type: string } | null;
+  permissions: string[];
+  repos: OnboardRepo[];
+}
+
+export type OnboardInstallationResult =
+  | { configured: false }
+  | { configured: true; installation: OnboardInstallation }
+  | { configured: true; error: string };
+
+/** GET installation 回执 + 真实仓库列表——login 必须是**请求发起者**的真实 GitHub
+ *  身份（服务端从 session 取，绝不接受客户端自报，IDOR 修复 #776 review）：
+ *  gateway 只返回该 login 有真实 collaborator 关系的仓库，零关系仓库整条不下发；
+ *  过滤后为空（请求者与该 installation 完全无归属关系）时 gateway 直接 403，
+ *  不下发 account/permissions（同族 IDOR 收口，#776 复审——之前这两个字段无条件
+ *  返回，任意登录用户遍历 installation_id 仍能侦察"谁装了 App、授权了什么权限"）。 */
+export async function fetchOnboardInstallation(installationId: number, login: string): Promise<OnboardInstallationResult> {
+  const gw = onboardBase();
+  if (!gw) return { configured: false };
+  try {
+    const res = await fetch(`${gw.base}/installations/${installationId}?login=${encodeURIComponent(login)}`, {
+      headers: { Authorization: `Bearer ${gw.token}` },
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      cache: "no-store",
+    });
+    if (res.status === 403) return { configured: true, error: "not_a_member" };
+    if (!res.ok) return { configured: true, error: `upstream_${res.status}` };
+    return { configured: true, installation: (await res.json()) as OnboardInstallation };
+  } catch {
+    return { configured: true, error: "unreachable" };
+  }
+}
+
+export interface OnboardCheckupItem {
+  id: string;
+  label: string;
+  result: "ok" | "warn";
+  detail: string;
+  remedy?: string;
+}
+
+export type OnboardCheckupResult =
+  | { configured: false }
+  | { configured: true; items: OnboardCheckupItem[] }
+  | { configured: true; error: string };
+
+/** GET 四项真实体检（webhook / 镜像种子 / CODEOWNERS·CONTRIBUTING / 分支保护）。
+ *  login 必须是请求发起者的真实身份（服务端从 session 取）——gateway 会先核实该
+ *  login 对 owner/repo 是否有 admin 权限，非 admin 一律 403（IDOR 修复 #776 review：
+ *  此前任意登录用户可对任意仓触发体检，借平台 App token 侦察目标仓配置）。 */
+export async function fetchOnboardCheckup(params: {
+  installationId: number;
+  owner: string;
+  repo: string;
+  defaultBranch: string;
+  login: string;
+}): Promise<OnboardCheckupResult> {
+  const gw = onboardBase();
+  if (!gw) return { configured: false };
+  try {
+    const qs = new URLSearchParams({
+      installation_id: String(params.installationId),
+      owner: params.owner,
+      repo: params.repo,
+      default_branch: params.defaultBranch,
+      login: params.login,
+    });
+    const res = await fetch(`${gw.base}/checkup?${qs.toString()}`, {
+      headers: { Authorization: `Bearer ${gw.token}` },
+      signal: AbortSignal.timeout(15_000), // GitHub Contents/branch-protection 多次往返，放宽超时
+      cache: "no-store",
+    });
+    if (res.status === 403) return { configured: true, error: "not_admin" };
+    if (!res.ok) return { configured: true, error: `upstream_${res.status}` };
+    const body = (await res.json()) as { items?: OnboardCheckupItem[] };
+    return { configured: true, items: body.items ?? [] };
+  } catch {
+    return { configured: true, error: "unreachable" };
+  }
+}
+
+export type OnboardFinalizeResult =
+  | { configured: false }
+  | { configured: true; slug: string }
+  | { configured: true; error: string };
+
+/** POST finalize——幂等注册为目录项目（webhook 亦会异步做同样的事；本调用保证
+ *  用户完成体检时立刻拿到 slug，不必等 webhook 到达）。login 必须是请求发起者的
+ *  真实身份（服务端从 session 取）——gateway 会先核实该 login 对 full_name 是否有
+ *  admin 权限，非 admin 一律 403（IDOR 修复 #776 review：此前 admin 校验只在前端，
+ *  任意登录用户可直接注册任意仓造成 slug 抢注/目录污染）。 */
+export async function postOnboardFinalize(params: {
+  fullName: string;
+  private: boolean;
+  installationId: number;
+  login: string;
+}): Promise<OnboardFinalizeResult> {
+  const gw = onboardBase();
+  if (!gw) return { configured: false };
+  try {
+    const res = await fetch(`${gw.base}/finalize`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${gw.token}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        full_name: params.fullName,
+        private: params.private,
+        installation_id: params.installationId,
+        login: params.login,
+      }),
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      cache: "no-store",
+    });
+    if (res.status === 403) return { configured: true, error: "not_admin" };
+    if (!res.ok) return { configured: true, error: `upstream_${res.status}` };
+    const body = (await res.json()) as { project?: { slug?: string } };
+    if (!body.project?.slug) return { configured: true, error: "missing_slug" };
+    return { configured: true, slug: body.project.slug };
   } catch {
     return { configured: true, error: "unreachable" };
   }

@@ -48,6 +48,12 @@ CF_ACCESS_TEAM_DOMAIN = "https://boardx.cloudflareaccess.com"
 # SESSION_SECRET 是 Pages 加密 secret，见文件头）。callback URL 已在 GitHub App 侧
 # 注册为 https://develop.boardx.us/api/coord/oauth/github/callback。
 GITHUB_OAUTH_CLIENT_ID = "Iv23liQagpQveTxbavkR"
+# p30-F05：GitHub App 的公开 slug（非敏感；不是数字 App ID 4328933，也不是 OAuth
+# client id）——安装链接 https://github.com/apps/<slug>/installations/new 用它拼出。
+# 「Setup URL」需在 GitHub App 设置里登记为
+#   https://develop.boardx.us/api/coord/onboard/callback
+# ⚠️ 占位值：真实 slug 需人类从 GitHub App（4328933）设置页核对后填入并部署。
+GITHUB_APP_SLUG = "boardx-devportal"
 # CF_ACCESS_AUD：Access 应用的 audience tag（拿到后填上即启用 aud 严格校验，
 # 见 lib/access.ts——当前 API token 无 Access 读权限，从 dashboard 的
 # Zero Trust → Access → Applications → develop.boardx.us 应用详情可查）
