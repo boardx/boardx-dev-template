@@ -1,0 +1,92 @@
+$ pnpm --filter devportal lint && pnpm --filter devportal build
+[exit 0]
+
+> @repo/devportal@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/devportal
+> node scripts/check-token-contrast.mjs
+
+✓ token 对比度：全部色面/文字对过线（中性 ≥4.5:1，状态色 ≥3:1，明暗两套）
+
+> @repo/devportal@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/apps/devportal
+> next build
+
+  ▲ Next.js 14.2.5
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/3) ...
+ ✓ Generating static pages (3/3)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                    Size     First Load JS
+┌ ƒ /                                          58.5 kB         153 kB
+├ ○ /_not-found                                871 B            88 kB
+├ ƒ /a/[handle]/[agent]                        3.73 kB         112 kB
+├ ƒ /api/coord/oauth/github/callback           0 B                0 B
+├ ƒ /api/coord/oauth/github/login              0 B                0 B
+├ ƒ /api/coord/oauth/logout                    0 B                0 B
+├ ƒ /api/coord/onboard/callback                0 B                0 B
+├ ƒ /api/coord/onboard/checkup                 0 B                0 B
+├ ƒ /api/coord/onboard/finalize                0 B                0 B
+├ ƒ /api/coord/onboard/install                 0 B                0 B
+├ ƒ /api/coord/onboard/installations/[id]      0 B                0 B
+├ ƒ /api/p30/me                                0 B                0 B
+├ ƒ /api/p30/me/pr-nudge                       0 B                0 B
+├ ƒ /api/portal/agents                         0 B                0 B
+├ ƒ /api/portal/approvals                      0 B                0 B
+├ ƒ /api/portal/approvals/[id]                 0 B                0 B
+├ ƒ /api/portal/coord-stream                   0 B                0 B
+├ ƒ /api/portal/coordination                   0 B                0 B
+├ ƒ /api/portal/discussions                    0 B                0 B
+├ ƒ /api/portal/dispatch                       0 B                0 B
+├ ƒ /api/portal/dispatch/[id]/recall           0 B                0 B
+├ ƒ /api/portal/doc                            0 B                0 B
+├ ƒ /api/portal/join                           0 B                0 B
+├ ƒ /api/portal/my-agents                      0 B                0 B
+├ ƒ /api/portal/my-agents/[agentId]/lifecycle  0 B                0 B
+├ ƒ /api/portal/my-agents/[agentId]/retire     0 B                0 B
+├ ƒ /api/portal/my-agents/[agentId]/rotate     0 B                0 B
+├ ƒ /api/portal/my-agents/enroll               0 B                0 B
+├ ƒ /api/portal/my-home                        0 B                0 B
+├ ƒ /api/portal/my-tokens                      0 B                0 B
+├ ƒ /api/portal/prs                            0 B                0 B
+├ ƒ /api/portal/pulse                          0 B                0 B
+├ ƒ /api/portal/workspace/[slug]/access        0 B                0 B
+├ ƒ /api/portal/workspace/[slug]/settings      0 B                0 B
+├ ƒ /explore                                   3.19 kB         111 kB
+├ ƒ /me                                        5.6 kB          106 kB
+├ ƒ /me/agents                                 8.72 kB         110 kB
+├ ƒ /onboard                                   6.26 kB         107 kB
+├ ƒ /p/[slug]                                  158 B          87.3 kB
+├ ƒ /p/[slug]/coord                            158 B          87.3 kB
+├ ƒ /p/[slug]/people                           2.35 kB         111 kB
+├ ƒ /p/[slug]/pulse                            158 B          87.3 kB
+├ ƒ /p/[slug]/settings                         6.9 kB          115 kB
+├ ƒ /p/[slug]/talk                             158 B          87.3 kB
+├ ƒ /p/[slug]/work                             158 B          87.3 kB
+├ ƒ /platform/coord-brain                      158 B          87.3 kB
+├ ƒ /platform/dispatcher                       3.17 kB         111 kB
+├ ƒ /portal                                    158 B          87.3 kB
+├ ƒ /projects/[slug]                           6.91 kB         115 kB
+└ ƒ /u/[handle]                                3.72 kB         112 kB
++ First Load JS shared by all                  87.1 kB
+  ├ chunks/05e6949c-d9aad4e4b9e8af9d.js        53.6 kB
+  ├ chunks/32-62e44e2b5f281063.js              31.5 kB
+  └ other shared chunks (total)                1.92 kB
+
+
+ƒ Middleware                                   35.7 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+ ⚠ Using edge runtime on a page currently disables static generation for that page
+
+
+$ bash phases/phase-p30-devportal-platform/scripts/verify-me-live.sh
+[exit 1]
+== 0. /me 未登录门禁回归（D4 前提：无会话必须被拦，落点不成立就无意义）
+OK: /me 未登录 → 302
+FAIL: 需要 GITHUB_REPO / COORD_API_TOKEN / COORD_GATEWAY_ADMIN_TOKEN（活体验证凭据，验证「待拍板」新鲜度+排序）

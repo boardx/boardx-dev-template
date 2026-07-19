@@ -1,0 +1,2 @@
+$ curl -sf https://develop.boardx.us/explore | grep -q 'explore-directory'
+[exit 1]

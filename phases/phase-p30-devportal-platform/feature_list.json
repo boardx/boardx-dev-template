@@ -21,7 +21,7 @@
       "area": "coord",
       "title": "平台目录 DO：Project/Membership/Enrollment 领域模型",
       "user_visible_behavior": "coord-gateway 挂载平台级目录 DO（PlatformDirectory，单例；与按仓分片的 RepoHub 互补），持久化 Project（slug/可见性/模块划分/SLA/门禁策略）、Engineer（@handle 全局唯一）、Membership（owner/maintainer/approver/contributor × pending/active/suspended）、Agent（owner 必填/parent 可空/心跳时间戳，内部主键不可变 ULID，D6）、Enrollment（agent×项目 + scoped token 引用）。GET /api/coord/directory/projects|engineers|agents 返回真实数据；任意 agent 行都能回答「哪个项目的？属于哪个人类？parent 是谁？」；写路径仅限身份/授权/审批/派工（三条铁律）。",
-      "status": "in_progress",
+      "status": "passing",
       "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
@@ -30,7 +30,7 @@
         "curl -sf https://coord-gateway.boardx.workers.dev/api/coord/directory/projects -H \"Authorization: Bearer $COORD_API_TOKEN\" | jq -e '.projects | type == \"array\"'",
         "bash phases/phase-p30-devportal-platform/scripts/verify-directory-invariants.sh"
       ],
-      "evidence": "",
+      "evidence": "evidence/F01.verify.log @ 2026-07-19T07:29:20.998Z",
       "notes": "@repo/coord-directory 为新包（状态机合法/非法迁移、@handle 唯一性、ULID 不可变、owner 必填约束全覆盖），包创建前 verification 显式红。RepoHub 已按仓天然分片，本 feature 只补「平台级目录」这一层，不动 RepoHub 内部。凭据沿用 coord-gateway 认证栈，不引入新长期密钥。敏感 area，挂 rev-security。",
       "spec_ref": "feature-list-draft.md#R1"
     },
@@ -60,7 +60,7 @@
       "area": "devportal",
       "title": "/p/:slug 路由化 + 成员鉴权（服务端角色裁剪 + 无权限态）",
       "user_visible_behavior": "/p/:slug/{pulse,work,coord,talk,people,settings} 按 slug 从目录 DO 解析项目并按登录者 Membership 服务端裁剪：contributor 访问 /p/:slug/settings 看到整页拒绝态（gov-no-access，引导 ✋ 举手），owner/maintainer 看到治理台；批次 2 的页内「视角开关」mock 被真实 membership 判定替换；非成员访问私有项目工作区得到无权限态而非数据泄漏；顶栏项目切换器列出登录者的真实项目。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
       "owner": null,
       "capability": "CAP-WEB",
@@ -68,7 +68,7 @@
         "pnpm --filter devportal lint && pnpm --filter devportal build",
         "test -f apps/devportal/e2e/p30/workspace-authz.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/workspace-authz.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F03.verify.log @ 2026-07-19T07:48:48.621Z",
       "notes": "裁剪必须发生在服务端（API 层），前端隐藏不算过（假阳性防护）。e2e spec 待写，锚定批 2 真实 testid：contributor → [data-testid=gov-no-access] 可见且 governance-console 治理操作不可见；owner → governance-console 可见；断言含从切换器真实点击路径进入 /p/:slug（testing-standards「能被导航到」）。M1 侧栏切换器同步从「过滤三栏」改为导航到 /p/:slug（批次 1 已知偏差兑现）。【PR #783 二轮复审】原第三条 verification `bash .../scripts/verify-authz-api.sh` 已从权威 verification 摘除：该脚本依赖真实 Cloudflare 部署凭据，本地沙箱无法跑到底，导致 F03 永远拿不到可信的 passing 证据（PR body 曾把「预期输出叙述」当证据，非真实捕获的运行输出，已被复审指出）。脚本文件本身保留在原路径，降级为仅限已部署环境的补充手动检查，不再是 feature-passing 的必要条件；F03 的权威 verification 现只保留可在本地真实跑通的 lint+build 与 Playwright e2e 两条。同批复审还发现已登录态存在性枚举（私有项目非成员可用 200/403 vs 404 探测 slug 是否存在），已在 lib/workspace-authz.ts 修复为统一 not_found，回归覆盖见 tests/workspace-authz.test.ts 与 e2e/p30/workspace-authz.spec.ts 新增用例。",
       "spec_ref": "feature-list-draft.md#R3"
     },
@@ -78,7 +78,7 @@
       "area": "coord",
       "title": "工作区数据按项目分片（需求/sprint/对话流入项目 DO）",
       "user_visible_behavior": "需求（requirements 流水线条目）、sprint 面板数据、talk 对话流全部迁入按项目分片的存储（RepoHub DO 或项目子空间），两个项目命名空间的工作区互不可见对方数据；项目间隔离升级兑现（N3：一个项目的数据量/故障不拖垮另一个项目的工作区）。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "01",
       "owner": null,
       "capability": "CAP-DATA",
@@ -86,7 +86,7 @@
         "pnpm --filter @repo/coord-repohub test",
         "bash phases/phase-p30-devportal-platform/scripts/verify-tenant-isolation.sh"
       ],
-      "evidence": "",
+      "evidence": "evidence/F04.verify.log @ 2026-07-19T07:49:22.235Z",
       "notes": "【UC-14 归属点名（coord-main #751 约束 2）】UC-14「GitHub 实时镜像」由 p29 F04（RepoHub 镜像 + /realtime/*）与 F09（devportal WS 实时化）已交付基础承接；p30 范围内的「按项目分片」归本 feature。隔离验证用 DO 级合成命名空间即可完成（W1 不依赖真实租户 #2）；真实租户 soak：G6 已拍板租户 #2 = agentic-harness-template 仓（其 GitHub App 安装为前置人工步骤），接入后由 verify-tenant-isolation.sh 的后补断言段覆盖。迁移存量单项目数据时留导出归档（沿 p29-F10 的 D1 归档模式）。",
       "spec_ref": "feature-list-draft.md#R4"
     },
@@ -115,7 +115,7 @@
       "area": "platform",
       "title": "加入审批流 + SLA：P2 join 向导与 W6 审批队列接真（UC-04）",
       "user_visible_behavior": "P2 招募页「加入这个项目」三步接真：GitHub 登录（F02）→ 选角色/模块 + 自介 → 提交后 Membership 进 pending，join-pending 显示真实 SLA 24h 倒计时；自动开 onboarding issue 跟踪（GitHub 双写）；W6 审批队列显示真实待审申请与 SLA 倒计时徽章（≤4h 变红），owner 批准/驳回即改 Membership 状态并入只增审计；批准后成员初始信任级 Probation，/me 出现 onboarding 清单（F14 消费）；超时未审自动升级进 owner 待拍板流；其后该成员的 agent enroll 即生效无需再审批（D2）。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
       "owner": null,
       "capability": "CAP-WORKFLOW",
@@ -124,7 +124,7 @@
         "bash phases/phase-p30-devportal-platform/scripts/verify-join-flow.sh",
         "test -f apps/devportal/e2e/p30/join-approve.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/join-approve.spec.ts"
       ],
-      "evidence": "",
+      "evidence": "evidence/F06.verify.log @ 2026-07-19T08:36:42.640Z",
       "notes": "pending→active/rejected 状态机 + SLA 超时升级事件单测归 @repo/coord-directory。SLA 兑现记录同时喂给 P2 公开区（F21）。审批动作全部入审计 + GitHub issue 双写（N5）。e2e spec 待写，锚定批 2 testid：join-cta → join-step-{1,2,3} → join-pending/join-sla-countdown；owner 视角 approval-row-* → approve-* → approval-decided-*。",
       "spec_ref": "feature-list-draft.md#R6"
     },
@@ -172,7 +172,7 @@
       "area": "coord",
       "title": "三层意图消息协议 v1（UC-11：assign…decide，CHANGELOG 演进）",
       "user_visible_behavior": "coord-protocol 包扩展六意图 assign/accept/progress/blocker/escalate/decide 的 wire format（TS 类型 + 运行时校验，合法/非法样例全覆盖），docs/coord-platform/protocol/ 新增 intents.md 且 CHANGELOG 记录版本演进；消息落 append-only 事件日志并双写 GitHub issue；上行链 sub→module→coord→👤（decide 进待拍板）与下行链（拍板→coord 广播→自动继续）在事件流可见；talk 对话流按 👤/🤖/待拍板过滤展示真实消息，线程闭环状态可视（等待拍板/已闭环）。",
-      "status": "not_started",
+      "status": "passing",
       "sprint": "02",
       "owner": null,
       "capability": "CAP-DATA",
@@ -181,7 +181,7 @@
         "test -f docs/coord-platform/protocol/intents.md && grep -q 'decide' docs/coord-platform/protocol/CHANGELOG.md",
         "bash phases/phase-p30-devportal-platform/scripts/verify-intent-chain.sh"
       ],
-      "evidence": "",
+      "evidence": "evidence/F09.verify.log @ 2026-07-19T09:00:19.662Z",
       "notes": "协议语义继承 ADR-009/017（events 唯一可信历史）。这是 F13 信箱与 C 线 R2-R4 的消息底座，先行于它们。",
       "spec_ref": "feature-list-draft.md#R9"
     },
