@@ -1,9 +1,15 @@
 // approvals/:id — W6 批准/驳回真实调用（p30/F06）。
 //   POST { project, action: "approve" | "reject" } → 校验 owner/maintainer/approver 资格
 //   → 目录状态迁移（入只增审计，directory.membership.transitioned）→ best-effort 回写 onboarding issue。
+//
+// 身份 join 键修复：这是写路径（批准/驳回真实改变 membership 状态），曾经按
+// session.login 直接匹配 engineer_handle——与 p30/F03 修复前的漏洞同一根因，且这里
+// 后果更重（写路径权限提升：handle 恰好等于某个真实 owner/maintainer github_login 的
+// 人，能以其身份批准/驳回他人的加入申请）。现在统一走 findEngineerByGithubLogin()
+// 解出 engineer_id 后按 engineer_id 匹配。
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/session";
-import { directoryWriteConfigured, listProjectMemberships, transitionMembership } from "@/lib/directory";
+import { directoryWriteConfigured, findEngineerByGithubLogin, listProjectMemberships, transitionMembership } from "@/lib/directory";
 import { commentOnboardingIssue, sanitizeInline } from "@/lib/onboarding-issue";
 
 export const runtime = "edge";
@@ -25,8 +31,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const memberships = await listProjectMemberships(project);
   if (memberships === null) return NextResponse.json({ error: "directory_unreachable" }, { status: 502 });
 
-  const handle = session.login.toLowerCase();
-  const mine = memberships.find((m) => m.engineer_handle === handle && m.status === "active");
+  const engineer = await findEngineerByGithubLogin(session.login);
+  const mine = engineer ? memberships.find((m) => m.engineer_id === engineer.engineer_id && m.status === "active") : undefined;
   if (!mine || !APPROVER_ROLES.has(mine.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   if (!directoryWriteConfigured()) return NextResponse.json({ error: "directory_not_configured" }, { status: 503 });

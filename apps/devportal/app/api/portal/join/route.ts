@@ -4,11 +4,17 @@
 //         自动开 onboarding issue（GitHub 双写，N5，best-effort，未配置写 token 时诚实降级不阻断）
 // 门禁：GitHub 登录（F02 session，OAuth 优先 / Access 回退）。公开层没有登录 = 直接 401，
 // 前端据此显式提示「请先登录」，不假装能工作。
+//
+// 身份 join 键修复（GET 查自己现状那步）：曾经按 session.login 直接匹配
+// engineer_handle——与 p30/F03 修复前的漏洞同一根因，会让 handle 恰好等于别人
+// github_login 的登录者看到别人的申请状态（intro/角色/SLA）当成自己的。改走
+// findEngineerByGithubLogin() 解出 engineer_id 后按 engineer_id 匹配。
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/session";
 import {
   directoryReadConfigured,
   directoryWriteConfigured,
+  findEngineerByGithubLogin,
   findProjectBySlug,
   getMembershipSla,
   listProjectMemberships,
@@ -41,7 +47,8 @@ export async function GET(req: Request) {
   if (memberships === null) return NextResponse.json({ logged_in: true, handle: session.login, configured: true, error: "unreachable" });
 
   const handle = session.login.toLowerCase();
-  const mine = memberships.find((m) => m.engineer_handle === handle);
+  const engineer = await findEngineerByGithubLogin(session.login);
+  const mine = engineer ? memberships.find((m) => m.engineer_id === engineer.engineer_id) : undefined;
   if (!mine) return NextResponse.json({ logged_in: true, handle, configured: true, membership: null });
 
   const sla = mine.status === "pending" ? (await getMembershipSla(mine.membership_id))?.sla ?? mine.sla ?? null : null;
