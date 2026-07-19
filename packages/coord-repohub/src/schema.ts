@@ -105,6 +105,50 @@ CREATE TABLE IF NOT EXISTS tasks (
 -- 收件箱查询就是这一个访问模式：WHERE assignee = ? AND status = ?
 CREATE INDEX IF NOT EXISTS idx_tasks_assignee_status ON tasks(assignee, status);
 
+-- ========== 工作区分片三表（p30/F04）：需求流水线 / sprint 面板 / talk 对话流 ==========
+-- 三类工作区数据迁入本 DO 后按仓天然分片：一个项目命名空间的 DO 里根本没有
+-- 另一个项目的行，隔离由存储位置保证（同 agent_tokens 的按仓 scope 论证）。
+
+-- 需求流水线条目：五态 submitted → analyzing → in_review → dispatched，
+-- rejected 为审核拒绝终态（提交→分析→审核→下发，coord/0.1.3）
+CREATE TABLE IF NOT EXISTS requirements (
+  id           TEXT PRIMARY KEY,             -- req_<ULID>，时间序
+  title        TEXT NOT NULL,                -- ≤300
+  body         TEXT NOT NULL,                -- 原始需求正文，≤10000
+  status       TEXT NOT NULL,                -- submitted|analyzing|in_review|dispatched|rejected
+  submitted_by TEXT NOT NULL,                -- scoped 面强绑定的 agent_id
+  analysis     TEXT,                         -- 分析阶段产出（advance 时可附）
+  review_note  TEXT,                         -- 审核意见（review 时可附）
+  reviewed_by  TEXT,                         -- 审核人（admin 面自报，缺省 "admin"）
+  issue        INTEGER,                      -- 下发后关联的 GitHub issue 号
+  created_at   TEXT NOT NULL,
+  updated_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_requirements_status ON requirements(status);
+
+-- sprint 面板条目：面板是派生视图的落库形态（写面 = admin/broker），
+-- 关键字段拉平便于过滤，全量 JSON 保真（沿 mirror_items 模式）
+CREATE TABLE IF NOT EXISTS sprint_items (
+  sprint     TEXT NOT NULL,                  -- sprint 标识，如 "p30/01"
+  item_id    TEXT NOT NULL,                  -- 条目 id（feature id / issue 号等）
+  title      TEXT NOT NULL,
+  status     TEXT NOT NULL,                  -- 面板列（not_started|in_progress|…，透传不枚举）
+  assignee   TEXT,
+  data       TEXT NOT NULL,                  -- 全量 JSON
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (sprint, item_id)
+);
+
+-- talk 对话流：append-only（无编辑/删除面），message_id 为 ULID 时间序，
+-- since 续传语义同 events
+CREATE TABLE IF NOT EXISTS talk_messages (
+  message_id  TEXT PRIMARY KEY,              -- tlk_<ULID>
+  author      TEXT NOT NULL,                 -- scoped 面强绑定的 agent_id
+  body        TEXT NOT NULL,                 -- ≤4000
+  needs_human INTEGER NOT NULL DEFAULT 0,    -- 0/1：待人类拍板标记
+  at          TEXT NOT NULL
+);
+
 -- issue/PR 镜像：关键字段拉平便于过滤，全量 JSON 保真（F04）
 CREATE TABLE IF NOT EXISTS mirror_items (
   kind        TEXT NOT NULL,                -- issue | pr

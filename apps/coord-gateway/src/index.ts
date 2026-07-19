@@ -140,6 +140,13 @@ export default {
       if (req.method === "GET" && tasks[3] === "/tasks" && isAdminBearer(req, env))
         return handleAdmin(req, env, `${tasks[1]}/${tasks[2]}`, `/tasks${url.search}`);
     }
+    // 工作区分片管理写面（p30/F04）：需求审核 + sprint 面板 upsert 是
+    // COORD_ADMIN_TOKEN 特权（同 tasks 派工先例）；scoped 写面走下方 REST allowlist
+    const wsAdmin = url.pathname.match(
+      /^\/api\/coord\/repos\/([^/]+)\/([^/]+)(\/(?:sprint-items\/upsert|requirements\/[\w-]+\/review))$/,
+    );
+    if (req.method === "POST" && wsAdmin)
+      return handleAdmin(req, env, `${wsAdmin[1]}/${wsAdmin[2]}`, wsAdmin[3]!);
     // WS 实时流 + 一次性 ticket（F09）：逻辑全在 src/stream.ts，这里只做路由
     const stream = url.pathname.match(/^\/api\/coord\/repos\/([^/]+)\/([^/]+)\/(stream|stream-ticket)$/);
     if (stream)

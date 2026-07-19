@@ -562,3 +562,151 @@ async function fetchClaim(base: string, agent: string, resource: string): Promis
     body: JSON.stringify(claimBody(agent, resource)),
   });
 }
+
+describe("p30/F04 工作区分片：需求流水线 / sprint 面板 / talk 对话流", () => {
+  const j = <T>(r: Response) => r.json<T>();
+
+  it("需求五态 happy path：提交→分析→审核→下发，每步 emit 对应事件", async () => {
+    const created = await j<{ requirement: Record<string, unknown> }>(
+      await post("/requirements", { title: "需要 backlog 独立视图", body: "详见 use-cases UC-07", agent_id: "wrk-req-1" }),
+    );
+    const id = created.requirement["id"] as string;
+    expect(id).toMatch(/^req_/);
+    expect(created.requirement["status"]).toBe("submitted");
+
+    // submitted → analyzing（可附分析产出）
+    let r = await post(`/requirements/${id}/advance`, { agent_id: "wrk-req-1", analysis: "拆 2 个 feature" });
+    expect(r.status).toBe(200);
+    expect((await j<{ requirement: Record<string, unknown> }>(r)).requirement["status"]).toBe("analyzing");
+    // analyzing → in_review
+    r = await post(`/requirements/${id}/advance`, { agent_id: "wrk-req-1" });
+    expect((await j<{ requirement: Record<string, unknown> }>(r)).requirement["status"]).toBe("in_review");
+    // in_review 不能再 advance（审核结论走 review 面）
+    expect((await post(`/requirements/${id}/advance`, { agent_id: "wrk-req-1" })).status).toBe(409);
+    // 审核通过 → dispatched + 关联 issue
+    r = await post(`/requirements/${id}/review`, { action: "approve", issue: 901, agent_id: "coord-main" });
+    expect(r.status).toBe(200);
+    const done = (await j<{ requirement: Record<string, unknown> }>(r)).requirement;
+    expect(done["status"]).toBe("dispatched");
+    expect(done["issue"]).toBe(901);
+    expect(done["analysis"]).toBe("拆 2 个 feature");
+    // 终态不可再审
+    expect((await post(`/requirements/${id}/review`, { action: "reject" })).status).toBe(409);
+
+    const events = await j<{ events: Array<Record<string, unknown>> }>(await SELF.fetch(`${BASE}/events?limit=500`));
+    const mine = events.events.filter((e) => e["resource_id"] === `requirement:${id}`);
+    expect(mine.map((e) => e["type"])).toEqual([
+      "requirement.submitted", "requirement.advanced", "requirement.advanced", "requirement.dispatched",
+    ]);
+  });
+
+  it("需求审核拒绝 → rejected 终态；非法入参 422；状态过滤查询", async () => {
+    const { requirement } = await j<{ requirement: Record<string, unknown> }>(
+      await post("/requirements", { title: "越权需求", body: "", agent_id: "wrk-req-2" }),
+    );
+    const id = requirement["id"] as string;
+    await post(`/requirements/${id}/advance`, { agent_id: "wrk-req-2" });
+    await post(`/requirements/${id}/advance`, { agent_id: "wrk-req-2" });
+    const r = await post(`/requirements/${id}/review`, { action: "reject", review_note: "范围过大，拆分后重提" });
+    expect(r.status).toBe(200);
+    expect((await j<{ requirement: Record<string, unknown> }>(r)).requirement["status"]).toBe("rejected");
+    // 拒绝后不能推进
+    expect((await post(`/requirements/${id}/advance`, { agent_id: "wrk-req-2" })).status).toBe(409);
+
+    expect((await post("/requirements", { title: "", body: "", agent_id: "a" })).status).toBe(422);
+    expect((await post("/requirements", { title: "缺 body", agent_id: "a" })).status).toBe(422);
+    expect((await post("/requirements", { title: "缺 agent", body: "" })).status).toBe(422);
+    expect((await post(`/requirements/${id}/review`, { action: "postpone" })).status).toBe(422);
+    expect((await SELF.fetch(`${BASE}/requirements?status=banana`)).status).toBe(400);
+
+    const rejected = await j<{ requirements: Array<Record<string, unknown>> }>(
+      await SELF.fetch(`${BASE}/requirements?status=rejected`),
+    );
+    expect(rejected.requirements.map((x) => x["id"])).toContain(id);
+    expect((await SELF.fetch(`${BASE}/requirements/req_NOPE`)).status).toBe(404);
+  });
+
+  it("sprint 面板 upsert 幂等更新 + 按 sprint 过滤 + emit sprint.upserted", async () => {
+    const item = { sprint: "p30/01", item_id: "F04", title: "工作区分片", status: "in_progress", assignee: "wrk-1", data: { area: "coord" } };
+    expect((await post("/sprint-items/upsert", item)).status).toBe(200);
+    expect((await post("/sprint-items/upsert", { ...item, status: "review", assignee: null })).status).toBe(200);
+    expect((await post("/sprint-items/upsert", { sprint: "p31/01", item_id: "F01", title: "别的 sprint", status: "not_started" })).status).toBe(200);
+    expect((await post("/sprint-items/upsert", { sprint: "p30/01" })).status).toBe(422);
+
+    const cur = await j<{ items: Array<Record<string, unknown>> }>(await SELF.fetch(`${BASE}/sprint-items?sprint=p30%2F01`));
+    expect(cur.items).toHaveLength(1);
+    expect(cur.items[0]).toMatchObject({ item_id: "F04", status: "review", assignee: null });
+    expect((cur.items[0]!["data"] as Record<string, unknown>)["area"]).toBe("coord");
+
+    const events = await j<{ events: Array<Record<string, unknown>> }>(await SELF.fetch(`${BASE}/events?limit=500`));
+    expect(events.events.filter((e) => e["type"] === "sprint.upserted").length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("talk append-only：ULID 时间序 + since 续传 + needs_human + 长度上限 422", async () => {
+    const a = await j<{ message: Record<string, unknown> }>(
+      await post("/talk", { agent_id: "wrk-t1", body: "第一条：开工" }),
+    );
+    const b = await j<{ message: Record<string, unknown> }>(
+      await post("/talk", { agent_id: "wrk-t2", body: "第二条：需要人类拍板", needs_human: true }),
+    );
+    expect(a.message["message_id"]).toMatch(/^tlk_/);
+    expect((a.message["message_id"] as string) < (b.message["message_id"] as string)).toBe(true);
+
+    const all = await j<{ messages: Array<Record<string, unknown>> }>(await SELF.fetch(`${BASE}/talk`));
+    const ids = all.messages.map((m) => m["message_id"] as string);
+    expect(ids).toEqual([...ids].sort());
+    expect(all.messages.find((m) => m["message_id"] === b.message["message_id"])!["needs_human"]).toBe(true);
+
+    const tail = await j<{ messages: Array<Record<string, unknown>> }>(
+      await SELF.fetch(`${BASE}/talk?since=${a.message["message_id"] as string}`),
+    );
+    expect(tail.messages.map((m) => m["message_id"])).toContain(b.message["message_id"]);
+    expect(tail.messages.map((m) => m["message_id"])).not.toContain(a.message["message_id"]);
+
+    expect((await post("/talk", { agent_id: "wrk-t1", body: "" })).status).toBe(422);
+    expect((await post("/talk", { agent_id: "wrk-t1", body: "x".repeat(4001) })).status).toBe(422);
+    expect((await post("/talk", { body: "缺 agent_id" })).status).toBe(422);
+  });
+
+  it("【隔离核心断言】两个项目命名空间互不可见：boardx/boardx-dev-template vs agentic-harness/agentic-harness-template", async () => {
+    const A = BASE; // boardx/boardx-dev-template
+    const B = "https://repohub.test/repos/agentic-harness/agentic-harness-template";
+    const postTo = (base: string, path: string, body: unknown) =>
+      SELF.fetch(`${base}${path}`, {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+      });
+
+    // 并发向两命名空间各写 talk + requirement（N3：互不阻塞、互不串线）
+    const [ta, tb, ra, rb] = await Promise.all([
+      postTo(A, "/talk", { agent_id: "wrk-a", body: "A 项目内部讨论" }),
+      postTo(B, "/talk", { agent_id: "wrk-b", body: "B 项目内部讨论" }),
+      postTo(A, "/requirements", { title: "A 的需求", body: "", agent_id: "wrk-a" }),
+      postTo(B, "/requirements", { title: "B 的需求", body: "", agent_id: "wrk-b" }),
+    ]);
+    for (const r of [ta, tb, ra, rb]) expect(r.status).toBe(201);
+    const msgA = (await ta.json<{ message: { message_id: string } }>()).message.message_id;
+    const msgB = (await tb.json<{ message: { message_id: string } }>()).message.message_id;
+    const reqA = (await ra.json<{ requirement: { id: string } }>()).requirement.id;
+    const reqB = (await rb.json<{ requirement: { id: string } }>()).requirement.id;
+
+    // 交叉读：A 的数据在 B 不可见（404/不在列表），反之亦然
+    const talkB = await j<{ messages: Array<{ message_id: string }> }>(await SELF.fetch(`${B}/talk`));
+    expect(talkB.messages.map((m) => m.message_id)).not.toContain(msgA);
+    expect(talkB.messages.map((m) => m.message_id)).toContain(msgB);
+    const talkA = await j<{ messages: Array<{ message_id: string }> }>(await SELF.fetch(`${A}/talk`));
+    expect(talkA.messages.map((m) => m.message_id)).not.toContain(msgB);
+
+    expect((await SELF.fetch(`${B}/requirements/${reqA}`)).status).toBe(404);
+    expect((await SELF.fetch(`${A}/requirements/${reqB}`)).status).toBe(404);
+
+    // sprint 面板同理：A 写入的条目 B 查不到
+    await postTo(A, "/sprint-items/upsert", { sprint: "p30/01", item_id: "ISO-1", title: "A 独有", status: "done" });
+    const sprintB = await j<{ items: Array<{ item_id: string }> }>(await SELF.fetch(`${B}/sprint-items?sprint=p30%2F01`));
+    expect(sprintB.items.map((i) => i.item_id)).not.toContain("ISO-1");
+
+    // 事件流也分片：B 的事件流不含 A 的资源
+    const evB = await j<{ events: Array<{ resource_id: string }> }>(await SELF.fetch(`${B}/events?limit=500`));
+    expect(evB.events.map((e) => e.resource_id)).not.toContain(`talk:${msgA}`);
+    expect(evB.events.map((e) => e.resource_id)).toContain(`talk:${msgB}`);
+  });
+});
