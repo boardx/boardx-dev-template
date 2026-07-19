@@ -4,6 +4,7 @@
 // 纯视觉/导航 chrome：不读身份、不碰数据层（用户块为 mock，与 p30 原型同一口径）；
 // 页面内容与既有 testid 零变更。路由不存在的设计稿导航项标「规划中」，不虚构页面。
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -85,13 +86,17 @@ function isActive(pathname: string, item: NavItem): boolean {
   return item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 
-function Sidebar() {
+function Sidebar({ onNavigate, className }: { onNavigate?: () => void; className?: string }) {
   const pathname = usePathname() ?? "";
   return (
     <nav
       data-testid="portal-sidebar"
       aria-label="门户导航"
-      className="flex h-full w-58 shrink-0 flex-col overflow-y-auto border-r border-border bg-card px-3 py-4"
+      onClick={onNavigate}
+      className={cn(
+        "flex h-full w-58 shrink-0 flex-col overflow-y-auto border-r border-border bg-card px-3 py-4",
+        className
+      )}
     >
       {/* 品牌块：渐变 logo 方块 + 双行标识（设计稿顶部） */}
       <Link
@@ -138,8 +143,29 @@ function Sidebar() {
   );
 }
 
-/** 门户外壳：桌面 = 侧栏 + 滚动主区；<lg 收起侧栏只留顶部品牌条（U8 不横向溢出）。 */
+/**
+ * 门户外壳：桌面 = 侧栏 + 滚动主区；<lg 收起侧栏，顶部品牌条改带汉堡按钮，
+ * 点击后从左侧滑出同一份三层导航（抽屉 + 半透明遮罩，Esc/遮罩/选中项均可关闭）。
+ */
 export function NavShell({ children }: { children: ReactNode }) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const pathname = usePathname();
+
+  // 路由切换后自动收起抽屉，避免残留在下一页上方。
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
+
+  // 抽屉打开时 Esc 关闭。
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDrawerOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [drawerOpen]);
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <div className="hidden lg:block">
@@ -147,12 +173,49 @@ export function NavShell({ children }: { children: ReactNode }) {
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-2.25 border-b border-border bg-card px-4 py-2.5 lg:hidden">
+          <button
+            type="button"
+            aria-label="打开导航菜单"
+            aria-expanded={drawerOpen}
+            aria-controls="portal-mobile-drawer"
+            onClick={() => setDrawerOpen(true)}
+            className="-ml-1.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-foreground transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <span aria-hidden className="flex flex-col gap-1">
+              <span className="block h-0.5 w-4.5 rounded-full bg-foreground" />
+              <span className="block h-0.5 w-4.5 rounded-full bg-foreground" />
+              <span className="block h-0.5 w-4.5 rounded-full bg-foreground" />
+            </span>
+          </button>
           <span aria-hidden className="dp-brand-gradient h-5.5 w-5.5 shrink-0 rounded-md" />
           <span className="text-13 font-semibold text-foreground">DevPortal</span>
           <span className="font-mono text-10 text-muted-foreground">agentic 协作平台</span>
         </div>
         <main className="min-w-0 flex-1 overflow-y-auto animate-fade-in">{children}</main>
       </div>
+
+      {drawerOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          {/* 遮罩：点击关闭 */}
+          <button
+            type="button"
+            aria-label="关闭导航菜单"
+            onClick={() => setDrawerOpen(false)}
+            className="absolute inset-0 h-full w-full bg-background/80 backdrop-blur-sm"
+          />
+          <div id="portal-mobile-drawer" className="absolute inset-y-0 left-0 flex h-full shadow-xl animate-fade-in">
+            <Sidebar onNavigate={() => setDrawerOpen(false)} className="border-r-0" />
+            <button
+              type="button"
+              aria-label="关闭导航菜单"
+              onClick={() => setDrawerOpen(false)}
+              className="mt-4 mr-2 flex h-8 w-8 shrink-0 items-center justify-center self-start rounded-lg border border-border bg-card text-foreground transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span aria-hidden>✕</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
