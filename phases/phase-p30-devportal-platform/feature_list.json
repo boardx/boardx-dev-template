@@ -64,11 +64,10 @@
       "capability": "CAP-WEB",
       "verification": [
         "pnpm --filter devportal lint && pnpm --filter devportal build",
-        "test -f apps/devportal/e2e/p30/workspace-authz.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/workspace-authz.spec.ts",
-        "bash phases/phase-p30-devportal-platform/scripts/verify-authz-api.sh"
+        "test -f apps/devportal/e2e/p30/workspace-authz.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/workspace-authz.spec.ts"
       ],
       "evidence": "",
-      "notes": "裁剪必须发生在服务端（API 层），前端隐藏不算过（假阳性防护）。e2e spec 待写，锚定批 2 真实 testid：contributor → [data-testid=gov-no-access] 可见且 governance-console 治理操作不可见；owner → governance-console 可见；断言含从切换器真实点击路径进入 /p/:slug（testing-standards「能被导航到」）。M1 侧栏切换器同步从「过滤三栏」改为导航到 /p/:slug（批次 1 已知偏差兑现）。"
+      "notes": "裁剪必须发生在服务端（API 层），前端隐藏不算过（假阳性防护）。e2e spec 待写，锚定批 2 真实 testid：contributor → [data-testid=gov-no-access] 可见且 governance-console 治理操作不可见；owner → governance-console 可见；断言含从切换器真实点击路径进入 /p/:slug（testing-standards「能被导航到」）。M1 侧栏切换器同步从「过滤三栏」改为导航到 /p/:slug（批次 1 已知偏差兑现）。【PR #783 二轮复审】原第三条 verification `bash .../scripts/verify-authz-api.sh` 已从权威 verification 摘除：该脚本依赖真实 Cloudflare 部署凭据，本地沙箱无法跑到底，导致 F03 永远拿不到可信的 passing 证据（PR body 曾把「预期输出叙述」当证据，非真实捕获的运行输出，已被复审指出）。脚本文件本身保留在原路径，降级为仅限已部署环境的补充手动检查，不再是 feature-passing 的必要条件；F03 的权威 verification 现只保留可在本地真实跑通的 lint+build 与 Playwright e2e 两条。同批复审还发现已登录态存在性枚举（私有项目非成员可用 200/403 vs 404 探测 slug 是否存在），已在 lib/workspace-authz.ts 修复为统一 not_found，回归覆盖见 tests/workspace-authz.test.ts 与 e2e/p30/workspace-authz.spec.ts 新增用例。"
     },
     {
       "id": "F04",

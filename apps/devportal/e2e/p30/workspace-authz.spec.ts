@@ -100,6 +100,29 @@ test.describe("p30-F03 工作区服务端角色裁剪", () => {
     expect(unknown.status()).toBe(401);
   });
 
+  test("二轮复审回归：已登录但在私有项目上完全没有 membership 记录 → 404，与未知 slug 状态码不可区分（消除已登录态存在性枚举）", async ({ request }) => {
+    const cookie = await mintSessionCookie("outsider-user");
+    const known = await request.get("/api/portal/workspace/fixture-proj/access", {
+      headers: { cookie: `devportal_session=${cookie}` },
+    });
+    const unknown = await request.get("/api/portal/workspace/does-not-exist/access", {
+      headers: { cookie: `devportal_session=${cookie}` },
+    });
+    expect(known.status()).toBe(404);
+    expect(unknown.status()).toBe(404);
+    const knownBody = (await known.json()) as Record<string, unknown>;
+    const unknownBody = (await unknown.json()) as Record<string, unknown>;
+    expect(knownBody).toEqual(unknownBody);
+  });
+
+  test("二轮复审回归：outsider 访问 /p/fixture-proj/settings（治理台 minRoles 分支）同样是整页 404，不是 gov-no-access", async ({ request }) => {
+    const cookie = await mintSessionCookie("outsider-user");
+    const response = await request.get("/p/fixture-proj/settings", {
+      headers: { cookie: `devportal_session=${cookie}` },
+    });
+    expect(response.status()).toBe(404);
+  });
+
   test("公开项目非成员的角色是 public-viewer，不冒充 contributor（语义不失真）", async ({ request }) => {
     const cookie = await mintSessionCookie("outsider-user");
     const response = await request.get("/api/portal/workspace/fixture-public/access", {

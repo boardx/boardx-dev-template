@@ -1,0 +1,111 @@
+=== pnpm --filter devportal typecheck ===
+
+> @repo/devportal@0.1.0 typecheck /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-aa44a0dd1a0058d81/apps/devportal
+> tsc --noEmit
+
+
+=== pnpm --filter devportal test (vitest, includes new tests/workspace-authz.test.ts) ===
+
+> @repo/devportal@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-aa44a0dd1a0058d81/apps/devportal
+> vitest run
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v2.1.9 /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-aa44a0dd1a0058d81/apps/devportal
+
+ ✓ tests/public-layer-static.test.ts (3 tests) 4ms
+ ✓ tests/workspace-authz.test.ts (8 tests) 13ms
+ ✓ tests/session.test.ts (8 tests) 39ms
+
+ Test Files  3 passed (3)
+      Tests  19 passed (19)
+   Start at  12:23:59
+   Duration  350ms (transform 61ms, setup 0ms, collect 66ms, tests 56ms, environment 0ms, prepare 97ms)
+
+
+=== pnpm --filter devportal lint && pnpm --filter devportal build ===
+
+> @repo/devportal@0.1.0 lint /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-aa44a0dd1a0058d81/apps/devportal
+> echo 'lint: ok'
+
+lint: ok
+
+> @repo/devportal@0.1.0 build /Users/shenyanbin/Documents/projects/boardx-dev-next/.claude/worktrees/agent-aa44a0dd1a0058d81/apps/devportal
+> next build
+
+  ▲ Next.js 14.2.5
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+ ⚠ Using edge runtime on a page currently disables static generation for that page
+   Generating static pages (0/3) ...
+ ✓ Generating static pages (3/3)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                Size     First Load JS
+┌ ƒ /                                      58.2 kB         153 kB
+├ ○ /_not-found                            871 B            88 kB
+├ ƒ /a/[handle]/[agent]                    3.74 kB         115 kB
+├ ƒ /api/coord/oauth/github/callback       0 B                0 B
+├ ƒ /api/coord/oauth/github/login          0 B                0 B
+├ ƒ /api/coord/oauth/logout                0 B                0 B
+├ ƒ /api/portal/agents                     0 B                0 B
+├ ƒ /api/portal/coord-stream               0 B                0 B
+├ ƒ /api/portal/coordination               0 B                0 B
+├ ƒ /api/portal/discussions                0 B                0 B
+├ ƒ /api/portal/dispatch                   0 B                0 B
+├ ƒ /api/portal/dispatch/[id]/recall       0 B                0 B
+├ ƒ /api/portal/doc                        0 B                0 B
+├ ƒ /api/portal/my-home                    0 B                0 B
+├ ƒ /api/portal/my-tokens                  0 B                0 B
+├ ƒ /api/portal/prs                        0 B                0 B
+├ ƒ /api/portal/pulse                      0 B                0 B
+├ ƒ /api/portal/workspace/[slug]/access    0 B                0 B
+├ ƒ /api/portal/workspace/[slug]/settings  0 B                0 B
+├ ƒ /explore                               3.19 kB         114 kB
+├ ƒ /me                                    3.36 kB         114 kB
+├ ƒ /me/agents                             5.67 kB         117 kB
+├ ƒ /onboard                               3.69 kB         115 kB
+├ ƒ /p/[slug]                              158 B          87.3 kB
+├ ƒ /p/[slug]/coord                        158 B          87.3 kB
+├ ƒ /p/[slug]/people                       2.36 kB         113 kB
+├ ƒ /p/[slug]/pulse                        158 B          87.3 kB
+├ ƒ /p/[slug]/settings                     6 kB            117 kB
+├ ƒ /p/[slug]/talk                         158 B          87.3 kB
+├ ƒ /p/[slug]/work                         158 B          87.3 kB
+├ ƒ /platform/coord-brain                  158 B          87.3 kB
+├ ƒ /platform/dispatcher                   3.17 kB         114 kB
+├ ƒ /portal                                158 B          87.3 kB
+├ ƒ /projects/[slug]                       5.5 kB          116 kB
+└ ƒ /u/[handle]                            3.72 kB         115 kB
++ First Load JS shared by all              87.1 kB
+  ├ chunks/05e6949c-d9aad4e4b9e8af9d.js    53.6 kB
+  ├ chunks/32-62e44e2b5f281063.js          31.5 kB
+  └ other shared chunks (total)            1.91 kB
+
+
+ƒ Middleware                               34.1 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+=== test -f apps/devportal/e2e/p30/workspace-authz.spec.ts && pnpm --filter devportal exec playwright test e2e/p30/workspace-authz.spec.ts ===
+
+Running 10 tests using 1 worker
+
+  ✓  1 p30/workspace-authz.spec.ts:37:7 › p30-F03 工作区服务端角色裁剪 › contributor 访问 /p/fixture-proj/settings → gov-no-access 可见，governance-console 不可见 (752ms)
+  ✓  2 p30/workspace-authz.spec.ts:51:7 › p30-F03 工作区服务端角色裁剪 › owner 访问 /p/fixture-proj/settings → governance-console 可见，gov-no-access 不可见 (254ms)
+  ✓  3 p30/workspace-authz.spec.ts:65:7 › p30-F03 工作区服务端角色裁剪 › 未知 slug → 404（路由化：未知项目不返回任何页面骨架） (42ms)
+  ✓  4 p30/workspace-authz.spec.ts:73:7 › p30-F03 工作区服务端角色裁剪 › 反面测试：contributor 直接 curl 数据接口 → 403 且响应体不含 project 数据 (279ms)
+  ✓  5 p30/workspace-authz.spec.ts:83:7 › p30-F03 工作区服务端角色裁剪 › 身份混淆回归：login=owner-user 必须按 github_login 精确解析为真实 owner，不能被 handle 相同的诱饵工程师顶替 (139ms)
+  ✓  6 p30/workspace-authz.spec.ts:96:7 › p30-F03 工作区服务端角色裁剪 › 未登录不能靠 404/401 差异枚举私有项目是否存在：未知 slug 与已知私有 slug 都是 401 (21ms)
+  ✓  7 p30/workspace-authz.spec.ts:103:7 › p30-F03 工作区服务端角色裁剪 › 二轮复审回归：已登录但在私有项目上完全没有 membership 记录 → 404，与未知 slug 状态码不可区分（消除已登录态存在性枚举） (18ms)
+  ✓  8 p30/workspace-authz.spec.ts:118:7 › p30-F03 工作区服务端角色裁剪 › 二轮复审回归：outsider 访问 /p/fixture-proj/settings（治理台 minRoles 分支）同样是整页 404，不是 gov-no-access (108ms)
+  ✓  9 p30/workspace-authz.spec.ts:126:7 › p30-F03 工作区服务端角色裁剪 › 公开项目非成员的角色是 public-viewer，不冒充 contributor（语义不失真） (12ms)
+  ✓  10 p30/workspace-authz.spec.ts:136:7 › p30-F03 工作区服务端角色裁剪 › 从切换器真实点击路径进入 /p/:slug（不再是过滤三栏的 mock 交互） (776ms)
+
+  10 passed (5.1s)

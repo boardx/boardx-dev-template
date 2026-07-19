@@ -18,6 +18,14 @@
 //   3. 公开项目非成员只读态语义独立为 "public-viewer"，不得冒充 "contributor"
 //      （contributor 是真实 Membership 角色，混用会让下游代码把「路过的访客」误当成
 //      「有成员权限的人」）。
+//   4. （二轮复审）已登录态同样不能用 200(WorkspaceNoAccess)/403 vs 404 区分「私有项目
+//      存在但我不是成员」与「slug 根本不存在」——否则任意登录工程师都能靠探测状态码
+//      枚举出哪些 slug 是真实私有项目。私有项目 + 该用户在其上**完全没有 membership
+//      记录**时，一律退化成 not_found，和未知 slug 无法区分。已经在该项目上有
+//      membership 记录（哪怕是 suspended/pending，或角色不够 minRoles）的用户，本来就
+//      合法地知道项目存在（申请过/已加入），这类仍走 forbidden，不算枚举面。此决策是
+//      保守默认（未登录枚举同款处理），已获 coord-main 预授权，不等人类对 AskUserQuestion
+//      的回复。
 //
 // 数据源：coord-gateway 的平台目录读面（p30-F01，/api/coord/directory/*），用 Pages
 // 加密 secret COORD_API_TOKEN（ops 只读钥匙，服务端专用，从不下发浏览器）。未配置
@@ -133,6 +141,11 @@ export interface ResolveOpts {
  *
  * 判定顺序刻意固定：先认证、后查项目是否存在、再查 membership——未登录请求在
  * 触碰任何项目数据前就返回 unauthenticated，防止用 404/401 差异匿名枚举私有项目。
+ *
+ * 已登录态同理：私有项目上「完全没有 membership 记录」的用户拿到的必须是
+ * not_found（而非携带真实 project 的 forbidden），否则 200/403 vs 404 的差异会被
+ * 用来枚举私有项目是否存在。已有 membership 记录（任何 status）的用户走 forbidden，
+ * 因为他们已合法知道项目存在。
  */
 export async function resolveWorkspaceAccess(
   slug: string,
@@ -158,9 +171,16 @@ export async function resolveWorkspaceAccess(
   const engineer = await findEngineerByGithubLogin(user.login);
   const membership = engineer ? await findMembership(project.project_id, engineer.engineer_id) : null;
   const role = membership && membership.status === "active" ? membership.role : null;
+  // 私有项目 + 该用户在其上完全没有 membership 记录（无论 engineer 是否存在、无论
+  // status）→ 判定「不是当前认可的成员」，且必须与未知 slug 不可区分（not_found），
+  // 防止已登录态靠 200/403 vs 404 枚举私有项目存在性。已有记录（哪怕非 active）的
+  // 用户走 forbidden——他们已合法知道项目存在，不构成枚举面。
+  const noMembershipRecordAtAll = membership === null;
+  const isUnrecognizedOnPrivateProject = project.visibility === "private" && noMembershipRecordAtAll;
 
   if (opts.minRoles) {
     if (role && opts.minRoles.includes(role)) return { kind: "ok", project, role };
+    if (isUnrecognizedOnPrivateProject) return { kind: "not_found" };
     return { kind: "forbidden", project, role };
   }
 
@@ -168,6 +188,7 @@ export async function resolveWorkspaceAccess(
   if (opts.allowPublicRead && project.visibility === "public") {
     return { kind: "ok", project, role: PUBLIC_VIEWER_ROLE };
   }
+  if (isUnrecognizedOnPrivateProject) return { kind: "not_found" };
   return { kind: "forbidden", project, role: null };
 }
 
