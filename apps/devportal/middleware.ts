@@ -16,6 +16,7 @@
 // #588 不回退：API 的 401 仍由 lib/portal-fetch.ts 触发整页重认证；此处仅管页面导航。
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveSession } from "@/lib/session";
+import { lastStopCookieHeader, projectStopFromPath } from "@/lib/last-stop";
 
 export const config = {
   // 工作区 + 个人层 + 接入向导。公开层与治理面绝不进入本 matcher（改动须同步顶部注释与静态断言）。
@@ -28,6 +29,10 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     const response = NextResponse.next();
     // #769 静默续期：剩余寿命 < 半程 TTL 时重签并 Set-Cookie，活跃用户不会被 24h 硬顶下线。
     if (session.renewedCookie) response.headers.append("set-cookie", session.renewedCookie);
+    // D4「记住上次停留」（p30/F08）：已认证访问工作区 → 记下 /p/<slug>，供通用登录
+    // （无显式 return_to）时优先落点使用。只读会话，不影响 lib/session.ts。
+    const stop = projectStopFromPath(request.nextUrl.pathname);
+    if (stop) response.headers.append("set-cookie", lastStopCookieHeader(stop));
     return response;
   }
   const returnTo = request.nextUrl.pathname + request.nextUrl.search;

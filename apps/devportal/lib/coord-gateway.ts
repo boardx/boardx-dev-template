@@ -173,6 +173,51 @@ export function fetchTalkMessages(
   return fetchWorkspaceList(`/talk${qs}`, "messages");
 }
 
+// ---------- 平台目录读面（p30/F01，ADR-017）：/api/coord/directory/* ----------
+// 与 gatewayBase() 的按仓前缀不同——目录是平台单例，路径不带 {repo}。复用同一对
+// env（COORD_GATEWAY_URL + COORD_API_TOKEN，ops 万能钥匙，目录读面对它直通）。
+
+function directoryBase(): { base: string; token: string } | null {
+  const url = process.env["COORD_GATEWAY_URL"];
+  const token = process.env["COORD_API_TOKEN"];
+  if (!url || !token) return null;
+  return { base: `${url.replace(/\/+$/, "")}/api/coord/directory`, token };
+}
+
+export interface DirectoryMembership {
+  membership_id: string;
+  project_id: string;
+  engineer_id: string;
+  role: string;
+  status: "pending" | "active" | "suspended" | string;
+  project_slug: string;
+  engineer_handle: string;
+}
+
+export type MembershipsResult =
+  | { configured: false }
+  | { configured: true; memberships: DirectoryMembership[] }
+  | { configured: true; error: string };
+
+/** GET /memberships — 平台全部 membership 行（自带 project_slug/engineer_handle，
+ *  见 packages/coord-directory 的「行自答」设计）。p30/F08 用它做 /me 的项目成员资格判定。 */
+export async function fetchDirectoryMemberships(): Promise<MembershipsResult> {
+  const dir = directoryBase();
+  if (!dir) return { configured: false };
+  try {
+    const res = await fetch(`${dir.base}/memberships`, {
+      headers: { Authorization: `Bearer ${dir.token}` },
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      cache: "no-store",
+    });
+    if (!res.ok) return { configured: true, error: `upstream_${res.status}` };
+    const body = (await res.json()) as { memberships?: DirectoryMembership[] };
+    return { configured: true, memberships: body.memberships ?? [] };
+  } catch {
+    return { configured: true, error: "unreachable" };
+  }
+}
+
 export type RecentEventsResult =
   | { configured: false }
   | { configured: true; events: CoordEvent[] }

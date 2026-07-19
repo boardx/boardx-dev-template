@@ -55,6 +55,24 @@ issue #523/#543；wrangler.toml 头注；apps/devportal/README.md
   时每进程 warn 一次"（向后兼容：仍不强制拒绝，只是从静默变可观测）；「轮换
   SESSION_SECRET = 紧急全员登出」写进 README.md 运维小节——这是当前唯一现成的服务端
   session 吊销手段（无黑名单，Access 回退通道不受影响）。
+- 2026-07-19：p30-F08 /me 真数据落地（stacked on 已合并的 F01/F02）——①依赖分支若已在
+  开工说明书写好之后合并进 main，先 `git fetch origin main` + 查 `gh pr view <n> --json
+  state,mergedAt,baseRefName` 再决定 base 分支，不要机械按说明书里的旧分支名 base（本次
+  F02 #766 在任务下发后已合并，改 base 到 origin/main 省掉一层 stack，见 feedback_check_
+  worktree_fresh_before_gap_analysis 同款教训）。②`lib/mock/p30.ts` 头注写死「不得被
+  真实数据路径 import」，但其中 `TRI_COLOR`/`IdentityChip` 其实是纯展示 token 不是数据——
+  真实化某个 p30 UI 页面时把这类纯展示件挪到 `components/p30/shared.tsx`（本就不含 mock
+  数据，可安全 import），mock 文件只保留纯 mock 数据集，re-export 一份保持旧引用不炸。
+  ③ GITHUB_TOKEN 是只读 PAT（wrangler.toml 头注写明），任何「真实事件」类交互（如按钮
+  点击要留痕）不能指望它去 POST GitHub 评论/状态；already-established 的写路径是
+  `lib/dispatch.ts` 同款 broker 模式（COORD_GATEWAY_ADMIN_TOKEN 直接 POST coord-gateway
+  `/tasks`，产生真实 `task.dispatched` 事件），复用它而不是新开一条写权限面。④p30/F01
+  的目录（memberships 行）目前是空的引导期状态（无自动迁移/无 bootstrap 数据）——「无
+  项目成员资格」的无权限态判定只在**查到明确的 engineer_handle 且其在本项目没有
+  active/pending membership** 时才拒绝，查无该 handle（尚未纳入目录）一律放行，否则会
+  把唯一真实用户也拒之门外。⑤`pnpm --filter devportal exec tsx <phases 目录下的 .ts>`
+  会因该目录最近的 package.json 无 `"type":"module"` 而把顶层 await 当 CJS 报错——写成
+  `async function main() {...}; main()`，不要用顶层 await。
 - 2026-07-19：p30-F02 D3 阶段 2 灰度落地——`middleware.ts` 是「谁需要登录」的唯一事实源
   （matcher 只含 /me*、/p/*；公开层四路由零鉴权）；身份读取统一走 `lib/session.ts` 的
   getSessionUser（OAuth session cookie 优先，Access JWT 回退，灰度期双栈）；公开层防回退
