@@ -8,6 +8,7 @@ import {
   signState,
   stateCookieHeader,
 } from "@/lib/oauth";
+import { readLastStop } from "@/lib/last-stop";
 
 export const runtime = "edge";
 
@@ -20,7 +21,11 @@ export async function GET(request: Request): Promise<Response> {
       { status: 503 },
     );
   }
-  const returnTo = sanitizeReturnTo(url.searchParams.get("return_to"));
+  // D4「记住上次停留」：仅在没有显式 return_to 时才用上次停留兜底——中间件带着
+  // 具体目标重定向登录（例如从 /p/xxx 被拦）的场景永远优先具体目标，不被此覆盖。
+  const explicitReturnTo = url.searchParams.get("return_to");
+  const lastStop = explicitReturnTo ? null : readLastStop(request.headers);
+  const returnTo = sanitizeReturnTo(explicitReturnTo ?? lastStop);
   const nonce = randomNonce();
   const state = await signState(nonce, returnTo);
   if (!state) {

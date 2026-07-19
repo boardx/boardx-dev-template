@@ -2,12 +2,10 @@
 // 不得被任何真实数据路径 import）。三个界面（M1 /me、M2 /me/agents、W5 /p/:slug/people）
 // 的全部数据都集中在这里，方便人类核对与后续删除。
 //
-// 三色体系（N6，全站一致）：👤 人类 = tag-blue；🤖 agent = tag-purple；项目 = tag-green。
-export const TRI_COLOR = {
-  human: "bg-tag-blue text-foreground",
-  agent: "bg-tag-purple text-foreground",
-  project: "bg-tag-green text-foreground",
-} as const;
+// TRI_COLOR 是纯展示 token 不是 mock 数据，p30/F08 把它连同 IdentityChip 一起挪去了
+// components/p30/shared.tsx（该文件不含 mock 数据，可被真实路径 import）。这里保留
+// re-export 只为不破坏尚未真实化的批次（M2/W5）里可能存在的旧 import 路径。
+export { TRI_COLOR } from "@/components/p30/shared";
 
 /** 当前登录者（mock）：@usamshen。D6：agent 标识 = @handle/agent-name。 */
 export const MOCK_ME = { handle: "usamshen", name: "Usam Shen" } as const;
