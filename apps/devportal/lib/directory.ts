@@ -136,6 +136,19 @@ export async function listProjectMemberships(slug: string): Promise<DirectoryMem
   return r.body.memberships.filter((m) => m.project_slug === slug);
 }
 
+/**
+ * 用 github_login（认证锚点）查 engineer——绝不能退化成按 handle 匹配。同款纪律见
+ * lib/workspace-authz.ts 的 findEngineerByGithubLogin：handle 只是目录里的展示用
+ * 自然键，与登录身份是两个独立字段（可以不相等，见 e2e fixture 的诱饵工程师用例）；
+ * github_login 为空的 engineer 记录（尚未绑定 GitHub）永远不参与匹配。
+ */
+export async function findEngineerByGithubLogin(login: string): Promise<DirectoryEngineer | null> {
+  const r = await readCall<{ engineers: DirectoryEngineer[] }>("/engineers");
+  if (!r.ok) return null;
+  const norm = login.toLowerCase();
+  return r.body.engineers.find((e) => typeof e.github_login === "string" && e.github_login.toLowerCase() === norm) ?? null;
+}
+
 /** upsert engineer by GitHub 身份（handle 用小写 login，一律真身份，不接受调用方自报 handle）。 */
 export async function upsertEngineerFromSession(login: string, displayName: string | null): Promise<
   { ok: true; engineer: DirectoryEngineer } | { ok: false; status: number; error?: string }

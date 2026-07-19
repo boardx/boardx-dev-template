@@ -2,9 +2,15 @@
 //   GET ?project=slug → 真实待审 membership 列表 + SLA 倒计时（owner/maintainer/approver 可见）
 // 授权判定：真实查该项目下当前登录者的 active membership，角色需 owner|maintainer|approver；
 // 不满足 → 403（W6 无权限态，非 mock 视角开关能绕过）。
+//
+// 身份 join 键修复：曾经按 session.login 直接匹配 memberships 的 engineer_handle
+// （目录里的展示用自然键），与 p30/F03 修复前的漏洞同一根因——handle 与 github_login
+// 是两个独立字段，可以不相等；退回按 handle 匹配会让「handle 恰好等于某个真实用户
+// github_login」的人继承其 membership。现在统一走 findEngineerByGithubLogin()
+// 解出 engineer_id 后按 engineer_id 匹配，与 lib/workspace-authz.ts 同一套纪律。
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/session";
-import { directoryReadConfigured, listProjectMemberships } from "@/lib/directory";
+import { directoryReadConfigured, findEngineerByGithubLogin, listProjectMemberships } from "@/lib/directory";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -24,8 +30,8 @@ export async function GET(req: Request) {
   const memberships = await listProjectMemberships(project);
   if (memberships === null) return NextResponse.json({ configured: true, error: "unreachable" }, { status: 502 });
 
-  const handle = session.login.toLowerCase();
-  const mine = memberships.find((m) => m.engineer_handle === handle && m.status === "active");
+  const engineer = await findEngineerByGithubLogin(session.login);
+  const mine = engineer ? memberships.find((m) => m.engineer_id === engineer.engineer_id && m.status === "active") : undefined;
   if (!mine || !APPROVER_ROLES.has(mine.role)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }

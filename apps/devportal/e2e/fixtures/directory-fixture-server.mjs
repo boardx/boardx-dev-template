@@ -34,8 +34,20 @@ const server = createServer((req, res) => {
     return json(res, 200, { projects: FIXTURE_PROJECTS });
   if (req.method === "GET" && url.pathname === "/api/coord/directory/engineers")
     return json(res, 200, { engineers: FIXTURE_ENGINEERS });
-  if (req.method === "GET" && url.pathname === "/api/coord/directory/memberships")
-    return json(res, 200, { memberships: FIXTURE_MEMBERSHIPS });
+  if (req.method === "GET" && url.pathname === "/api/coord/directory/memberships") {
+    // 真实 coord-gateway 的 listMemberships() 是 SQL JOIN 出 project_slug/engineer_handle
+    // （packages/coord-directory/src/directory.ts），这里补同一份 join 逻辑——否则
+    // devportal 端依赖 project_slug 过滤的代码（lib/directory.ts listProjectMemberships）
+    // 在这份固定数据上永远查不到东西，会把「fixture 数据形状漏了字段」误判成「真实鉴权逻辑坏了」。
+    const projectsById = new Map(FIXTURE_PROJECTS.map((p) => [p.project_id, p]));
+    const engineersById = new Map(FIXTURE_ENGINEERS.map((e) => [e.engineer_id, e]));
+    const joined = FIXTURE_MEMBERSHIPS.map((m) => ({
+      ...m,
+      project_slug: projectsById.get(m.project_id)?.slug,
+      engineer_handle: engineersById.get(m.engineer_id)?.handle,
+    }));
+    return json(res, 200, { memberships: joined });
+  }
   return json(res, 404, { error: "not_found" });
 });
 
