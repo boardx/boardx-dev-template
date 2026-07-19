@@ -68,6 +68,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
 
 ## 1 · Wave 1 —— 底座与身份
 
+## R1（F01 story 锚点）
+
 ### F01 平台目录 DO：Project/Membership/Enrollment 领域模型
 - 来源：platform-redesign §1 领域模型；UC-01（项目成为租户）/ UC-04（Membership 状态机）/ UC-06（Enrollment）。
 - area: `coord` / capability: `CAP-DATA`
@@ -77,6 +79,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   2. `curl -sf https://coord-gateway.boardx.workers.dev/api/coord/directory/projects -H "Authorization: Bearer $COORD_API_TOKEN" | jq -e '.projects | type == "array"'`
   3. `bash phases/phase-p30-devportal-platform/scripts/verify-directory-invariants.sh`（待写：写入一个 agent 缺 owner → 4xx；重复 @handle → 409；改名后 ULID 不变且旧引用可解析）
 - notes：RepoHub 已按仓天然分片，本 feature 只补「平台级目录」这一层，不动 RepoHub 内部。凭据沿用 coord-gateway 认证栈，不引入新长期密钥（coord-resident 非功能）。敏感 area，挂 rev-security。
+
+## R2（F02 story 锚点）
 
 ### F02 GitHub OAuth 登录（D3 阶段 2，原子灰度）
 - 来源：D3 门禁三阶段灰度（阶段 1→2）；UC-04①「GitHub 登录（平台不另设账号）」。
@@ -89,6 +93,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   4. e2e：`apps/devportal/e2e/p30/auth-gray.spec.ts`（待写：OAuth 登录 → /me 200；登出 → /explore 仍 200）
 - notes：**原子灰度是本 feature 的验收核心**：部署窗口内不允许出现「Access 已删、OAuth 未生效」中间态（CD 活跃时先删后合会被踩中，记忆已固化）。阶段 3「摘除 Access」不在本 phase（见排除项）。
 
+## R3（F03 story 锚点）
+
 ### F03 /p/:slug 路由化 + 成员鉴权（服务端角色裁剪 + 无权限态）
 - 来源：platform-redesign §4 三层 IA；N1 第四态「无权限」；use-cases 已知边界③「角色视角未裁剪（contributor 仍可见治理台）」。
 - area: `devportal` / capability: `CAP-WEB`
@@ -98,6 +104,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   2. e2e：`apps/devportal/e2e/p30/workspace-authz.spec.ts`（待写：contributor 身份 goto /p/boardx/settings → `[data-testid=gov-no-access]` 可见且 `governance-console` 的治理操作不可见；owner 身份 → `governance-console` 可见；断言含从切换器**真实点击路径**进入 /p/:slug，不全是 goto 直达——testing-standards「能被导航到」）
   3. `bash phases/phase-p30-devportal-platform/scripts/verify-authz-api.sh`（待写：contributor token 调 settings 数据接口 → 403；owner → 200）
 - notes：裁剪必须发生在服务端（API 层），前端隐藏不算过（假阳性防护）。M1 侧栏切换器同步从「过滤三栏」改为导航到 /p/:slug（批次 1 已知偏差的兑现）。
+
+## R4（F04 story 锚点）
 
 ### F04 工作区数据按项目分片（已知边界①）
 - 来源：use-cases 已知边界①「需求/sprint/对话流数据未按项目分片」；§1 工作原语「按项目分片」。
@@ -112,6 +120,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
 
 ## 2 · Wave 2 —— 生命周期闭环与协议
 
+## R5（F05 story 锚点）
+
 ### F05 GitHub App 多仓安装流：/onboard 接真（UC-01 接入体检真实现）
 - 来源：UC-01 项目接入；批次 3 P3 原型（PR #750）。
 - area: `platform` / capability: `CAP-DATA`
@@ -121,6 +131,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   2. `bash phases/phase-p30-devportal-platform/scripts/verify-onboard-checkup.sh`（待写：对测试仓触发接入 → 轮询体检事件流，断言四项体检各出现 done/warn 终态且镜像种子计数 >0 → 目录 DO 出现该项目）
   3. e2e：`apps/devportal/e2e/p30/onboard.spec.ts`（待写：走 `onboard-step-{1,2,3}` 真实点击路径，断言 `admin-badge-*`/`not-admin-*` 与真实权限一致、`onboard-done` 与 `enter-workspace` 出现）
 - notes：p29-F03 的 App 与 webhook ingest 是单仓的，本 feature 把它扩成「安装即租户注册」多仓流。`onboard-elapsed` 显示真实耗时而非静态 3m42s。体检状态点沿批次 3 已实现的四态点。
+
+## R6（F06 story 锚点）
 
 ### F06 加入审批流 + SLA（UC-04：P2 join 向导与 W6 审批队列接真）
 - 来源：UC-04；UC-02 审批队列；D2（审批发生在成员加入层）。
@@ -132,6 +144,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   3. e2e：`apps/devportal/e2e/p30/join-approve.spec.ts`（待写：`join-cta` → `join-step-{1,2,3}` → `join-pending`/`join-sla-countdown`；owner 视角 `approval-row-*` → `approve-*` → `approval-decided-*`）
 - notes：SLA 兑现记录同时喂给 P2 公开区（F21）。审批动作全部入审计 + GitHub issue 双写（N5）。
 
+## R7（F07 story 锚点）
+
 ### F07 enroll 真实现：命名空间 / 一次性 token / 首心跳点亮（UC-06）
 - 来源：UC-06；D2 自动准入；D6 命名空间；批次 1 M2 原型。
 - area: `auth` / capability: `CAP-AUTH`
@@ -141,6 +155,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   2. `bash phases/phase-p30-devportal-platform/scripts/verify-enroll-heartbeat.sh`（待写：API enroll → 拿 token 打一次心跳 → 断言 fleet 接口该 agent 状态由 waiting 变 live；rotate 后旧 token 调 API → 401）
   3. e2e：`apps/devportal/e2e/p30/enroll.spec.ts`（待写：`enroll-open` → 三步 → 后台用 curl 打真心跳 → `first-heartbeat-live` 点亮 → `fleet-row-*` 新增；`rotate-confirm` 输入全名解锁）
 - notes：这是 aha moment（redesign §6），首心跳点亮延迟应 ≤ 数秒（WS，N2）。敏感 area，挂 rev-security。
+
+## R8（F08 story 锚点）
 
 ### F08 /me 三栏真数据 + D4 登录落点（UC-09）
 - 来源：UC-09；D4 默认视角；批次 1 M1 原型。
@@ -152,6 +168,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   3. e2e：`apps/devportal/e2e/p30/me-workbench.spec.ts`（待写：登录后 URL 落 /me；`col-decisions`/`col-stuck-prs`/`col-agent-anomalies` 有真数据行；`switcher-badge-<slug>` 计数与注入事实一致；点击切换器 → URL /p/:slug）
 - notes：「10 秒知道该干什么」。晨报条（`morning-brief`）本 feature 保留占位/降级态，叙事内容属 R4 后的 F19——两者边界在 notes 写死避免范围蔓延。
 
+## R9（F09 story 锚点）
+
 ### F09 三层意图消息协议 v1（UC-11）
 - 来源：UC-11；coord-resident §4（decide 意图）。
 - area: `coord` / capability: `CAP-DATA`
@@ -161,6 +179,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   2. `test -f docs/coord-platform/protocol/intents.md && grep -q 'decide' docs/coord-platform/protocol/CHANGELOG.md`
   3. `bash phases/phase-p30-devportal-platform/scripts/verify-intent-chain.sh`（待写：注入 blocker → escalate → 断言 decide 出现在待拍板接口；回写拍板 → 断言 assign 广播事件出现且线程状态翻「已闭环」；GitHub issue 双写用 gh api 断言）
 - notes：协议语义继承 ADR-009/017（events 唯一可信历史）。这是 F13 信箱与 C 线 R2-R4 的消息底座，先行于它们。
+
+## R10（F10 story 锚点）
 
 ### F10 R1：CoordBrain 影子模式（保序第 1 级）
 - 来源：coord-resident R1 + 目标架构 §1；UC-17 背景。
@@ -176,6 +196,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
 
 ## 3 · Wave 3 —— 接管链与协作面
 
+## R11（F11 story 锚点）
+
 ### F11 R2：机械合并接管（保序第 2 级）
 - 来源：coord-resident R2；UC-08 尾段（review → 合并）。
 - area: `coord` / capability: `CAP-WORKFLOW`
@@ -185,6 +207,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   2. `bash phases/phase-p30-devportal-platform/scripts/verify-auto-merge.sh`（待写：测试仓开全绿 PR → 轮询断言被自动合并 + 审计事件 + PR 评论存在（gh api）；触发测试 andon → 第二个全绿 PR 不被合并；关开关 → 同样不合并）
   3. e2e：`apps/devportal/e2e/p30/takeover-switch.spec.ts`（待写：治理台开关翻到人工 → 断言 brain 状态接口 mode=manual）
 - notes：把「PR 等待时长主动追踪催办」一并机械化（超阈值自动催办事件）。合并权从此双轨：开关开=DO,关=人——**同一时刻只有一个主体有合并权**,开关状态入审计。
+
+## R12（F12 story 锚点）
 
 ### F12 R3：派工接管（保序第 3 级）
 - 来源：coord-resident R3；UC-08 认领即派工的服务端。
@@ -196,6 +220,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   3. e2e：`apps/devportal/e2e/p30/claim-dispatch.spec.ts`（待写：sprint 面板真实点击「认领 → 派我的 agent」→ 租约卡出现）
 - notes：复用 p29-F05 原子租约原语,本 feature 是其「谁来发起」的接管。降级开关同 F11 模式。
 
+## R13（F13 story 锚点）
+
 ### F13 agent 直达信箱（UC-12 平台消息总线）
 - 来源：UC-12。
 - area: `coord` / capability: `CAP-DATA`
@@ -204,6 +230,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   1. `pnpm --filter @repo/coord-repohub test`（信箱状态机 + 离线暂存单测）
   2. `bash phases/phase-p30-devportal-platform/scripts/verify-mailbox.sh`（待写：A token 发消息给离线 B → 状态 stored；B 心跳 → delivered；B 读 + 回执 → aligned；ScheduleWakeup 到点产生唤醒事件）
 - notes：依赖 F09 意图协议的信封格式。这是把「coord-main 与 module-coordinator 靠本地 session 传话」的现状搬进平台的关键一步。
+
+## R14（F14 story 锚点）
 
 ### F14 新成员 onboarding 5 步清单（UC-05）
 - 来源：UC-05。
@@ -215,6 +243,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   3. e2e：`apps/devportal/e2e/p30/onboarding-checklist.spec.ts`（待写：清单每步深链真实点击可达目标页；✋ 举手 → 待拍板列表出现琥珀条目）
 - notes：✋ raise-concern 原语在本 feature 首次落地（发起端）,治理台展示端已在批次 2（`raise-hand-list`）;24h 自动升级的定时逻辑归 F15 的 1h SLA loop 执行,这里只建事件。
 
+## R15（F15 story 锚点）
+
 ### F15 @platform/dispatcher 五 loop（UC-17）
 - 来源：UC-17；coord-resident §2。
 - area: `coord` / capability: `CAP-WORKFLOW`
@@ -223,6 +253,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   1. `pnpm --filter @repo/coord-brain test`（dispatcher 路由规则单测:断言任何动作产出都是 draft/notify 类型,不含直接状态写）
   2. `bash phases/phase-p30-devportal-platform/scripts/verify-dispatcher-loops.sh`（待写：查 loops 状态接口,断言五个 loop 各有 last_run 且间隔符合周期;制造一个 stale 租约 → 15m loop（测试模式下加速 tick）产出回收草案进待拍板而非直接回收）
 - notes：**「永不直接改项目内状态」是不变量,用类型/单测双重锁死**。调度中心完整 UI 不在批次 1-3 signoff 内——本 feature 的 UI 落点为最小只读视图,完整调度中心视图待后续 UI 批次（见缺口清单）。1h loop 顺带执行 F14 的 ✋ 24h 升级与 F06 的审批 SLA 超时升级。
+
+## R16（F16 story 锚点）
 
 ### F16 通知分级与降噪（UC-18）
 - 来源：UC-18；P6 ♻️。
@@ -238,6 +270,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
 
 ## 4 · Wave 4 —— LLM 判断面与双边市场
 
+## R17（F17 story 锚点）
+
 ### F17 R4：LLM 判断面接入（保序第 4 级）
 - 来源：coord-resident R4 + 目标架构 §3；UC-09 卡片「为什么需要我?」。
 - area: `coord` / capability: `CAP-DATA`
@@ -247,6 +281,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   2. `bash phases/phase-p30-devportal-platform/scripts/verify-llm-judgment.sh`（待写：注入 decide 请求 → 轮询断言其 summary/why 字段非空且带 provider 标注;关开关 → 新请求无 summary 但正常进待拍板）
   3. e2e：`apps/devportal/e2e/p30/decision-why.spec.ts`（待写：/me 决策卡展开 `decision-why-*` 显示推理文本）
 - notes：本 feature 只建 provider 接入 + 待拍板摘要一个消费者;需求分析（F18）、晨报/命令条（F19）是后续消费者,不塞进本 feature。实现载体优先评估 Cloudflare Agents SDK。
+
+## R18（F18 story 锚点）
 
 ### F18 需求提交流水线（UC-07 + 容量校验）
 - 来源：UC-07；已知边界④「sprint 容量无校验」、②backlog（最小化承接）。
@@ -258,6 +294,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   3. e2e：`apps/devportal/e2e/p30/req-pipeline.spec.ts`（待写：表单真实提交 → 五节点进度点推进;驳回 → backlog 列表出现）
 - notes：需求 tab 与流水线视图不在批次 1-3 signoff（工作区 W2/W4 为 ✅ 继承)——转正前需人类拍板:沿用继承视图内嵌（无新版式）还是出批次 4 原型。分析结论是「建议」,过不过全在人（写路径守卫同 F17）。
 
+## R19（F19 story 锚点）
+
 ### F19 晨报叙事 + 命令条（UC-09 晨报 / UC-10）
 - 来源：UC-09 晨报；UC-10；已知边界⑤「命令条意图覆盖有限」。
 - area: `devportal` / capability: `CAP-WEB`
@@ -267,6 +305,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   2. `bash phases/phase-p30-devportal-platform/scripts/verify-command-bar.sh`（待写：API 发「提需求:测试需求」→ F18 流水线出现该条;发一句超纲指令 → 响应含 queued=true 且 coord 队列出现条目）
   3. e2e：`apps/devportal/e2e/p30/morning-and-commandbar.spec.ts`（待写：`morning-brief` 文本含真实计数 N 且与三栏行数一致;命令条提需求 → 跳转/提示;帮助面板列出意图清单）
 - notes：晨报与命令条都是 F17 的消费者;晨报数字必须与三栏事实一致（防 LLM 幻觉:计数由代码算,LLM 只做叙事包装）。
+
+## R20（F20 story 锚点）
 
 ### F20 P1 项目目录接真数据
 - 来源：UC-03；批次 3 P1 原型；D3。
@@ -278,6 +318,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   3. e2e：`apps/devportal/e2e/p30/explore.spec.ts`（待写：`explore-grid` 卡数==目录项目数;`explore-card-<slug>` 点击 → URL /projects/<slug> 且内容随 slug 变;筛选后 `explore-result-count` 正确）
 - notes：活跃度分档规则（高/中/低阈值）在本 feature 定义并入文档。依赖 F05 提供 ≥2 个真实租户。
 
+## R21（F21 story 锚点）
+
 ### F21 P2 招募页接真数据
 - 来源：UC-03；批次 2 P2 原型；N2（GitHub 聚合 ≤60s）。
 - area: `devportal` / capability: `CAP-WEB`
@@ -287,6 +329,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   2. `bash phases/phase-p30-devportal-platform/scripts/verify-project-home-live.sh`（待写：对测试仓 merge 一个 PR → ≤60s 内火花线数据端点计数 +1;SLA 兑现率字段与 F06 审批史一致性抽查）
   3. e2e：`apps/devportal/e2e/p30/project-home.spec.ts`（待写：`activity-proof`/`proof-autogen-note`/`sla-record` 可见且数值非 mock 常量;从 /explore 真实点击路径到达本页）
 - notes：聚合器与 F20 共用（一次建设两处消费）。「活跃度证明不可自填」靠**无写入接口**保证,不是前端禁用。
+
+## R22（F22 story 锚点）
 
 ### F22 性能页跨项目化（UC-15）
 - 来源：UC-15；D1 可见性。
@@ -302,6 +346,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
 
 ## 5 · Wave 5 —— 公开档案与唯一性移交
 
+## R23（F23 story 锚点）
+
 ### F23 公开档案 + agent 数字分身页（UC-16）
 - 来源：UC-16；D1（opt-in 区间化 / 分身页全公开）；D6（/a/:handle/:agent 路由）。
 - area: `devportal` / capability: `CAP-WEB`
@@ -311,6 +357,8 @@ Wave = priority 值（1-5）。四条线：A 多租户底座 / B 工程师生命
   2. `bash phases/phase-p30-devportal-platform/scripts/verify-profile-optin.sh`（待写：未 opt-in 用户档案接口无聚合指标字段;opt-in 后出现且值为区间字符串非精确数;分身页匿名 200 且含 owner/parent）
   3. e2e：`apps/devportal/e2e/p30/public-profiles.spec.ts`（待写：从花名册/车队行真实点击进两页;opt-in 开关翻转后档案区块变化）
 - notes：**⚠️ ADR-003 阻断项：P4/P5 均为 🆕 视图且不在批次 1-3 signoff 内**——本 feature 转正前必须补 UI 先行批次 4（P4/P5 原型 + 人类确认),否则首版 feature_list.json 暂缓收录本条（见转正步骤 3）。
+
+## R24（F24 story 锚点）
 
 ### F24 R5：唯一性移交（保序第 5 级）
 - 来源：coord-resident R5 + 目标架构 §5。
