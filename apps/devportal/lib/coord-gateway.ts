@@ -262,7 +262,10 @@ export type OnboardInstallationResult =
 
 /** GET installation 回执 + 真实仓库列表——login 必须是**请求发起者**的真实 GitHub
  *  身份（服务端从 session 取，绝不接受客户端自报，IDOR 修复 #776 review）：
- *  gateway 只返回该 login 有真实 collaborator 关系的仓库，零关系仓库整条不下发。 */
+ *  gateway 只返回该 login 有真实 collaborator 关系的仓库，零关系仓库整条不下发；
+ *  过滤后为空（请求者与该 installation 完全无归属关系）时 gateway 直接 403，
+ *  不下发 account/permissions（同族 IDOR 收口，#776 复审——之前这两个字段无条件
+ *  返回，任意登录用户遍历 installation_id 仍能侦察"谁装了 App、授权了什么权限"）。 */
 export async function fetchOnboardInstallation(installationId: number, login: string): Promise<OnboardInstallationResult> {
   const gw = onboardBase();
   if (!gw) return { configured: false };
@@ -272,6 +275,7 @@ export async function fetchOnboardInstallation(installationId: number, login: st
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
       cache: "no-store",
     });
+    if (res.status === 403) return { configured: true, error: "not_a_member" };
     if (!res.ok) return { configured: true, error: `upstream_${res.status}` };
     return { configured: true, installation: (await res.json()) as OnboardInstallation };
   } catch {

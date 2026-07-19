@@ -19,6 +19,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const result = await fetchOnboardInstallation(installationId, user.login);
   if (!result.configured) return NextResponse.json({ configured: false }, { status: 200 });
-  if ("error" in result) return NextResponse.json({ configured: true, error: result.error }, { status: 502 });
+  if ("error" in result) {
+    const status = result.error === "not_a_member" ? 403 : 502;
+    return NextResponse.json({ configured: true, error: result.error }, { status });
+  }
   return NextResponse.json({ configured: true, installation: result.installation });
 }

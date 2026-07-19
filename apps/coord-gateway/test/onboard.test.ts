@@ -7,10 +7,11 @@
 //      强制"发起人对该 installation/repo 有 collaborator admin 权限"——此前只有前端
 //      disabled 徽章，服务端完全不校验，任意登录用户可枚举/侦察/注册任意租户的仓库。
 import { SELF, env } from "cloudflare:test";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { createGitHubAppAuth } from "@repo/coord-projection";
 import {
   deriveSlug,
+  handleOnboard,
   listInstallationRepos,
   reposFromInstallationPayload,
   runCheckup,
@@ -326,5 +327,132 @@ describe("REST 面 /api/coord/onboard/*", () => {
       headers: { authorization: "Bearer test-api-token" },
     });
     expect(r.status).toBe(404);
+  });
+});
+
+// ---------- 端到端 REST 路径的 IDOR 回归（#776 复审要求：不能只有单元测试覆盖）----------
+// SELF.fetch 走的是 miniflare 按 wrangler.toml 解析出的独立 env 快照，测试文件里改写
+// `cloudflare:test` 的 env 对象不会反映到那个快照里（已实测：改了 GITHUB_APP_ID 后
+// SELF.fetch 仍然 503，证明两者不是同一份绑定）。于是这里改为**直接调用 handleOnboard**
+// ——它就是 index.ts fetch() 分发到的同一个函数，不是重新实现；用真实的
+// env.DIRECTORY/env.REPOHUB（cloudflare:test 导出的活体 DO 绑定）拼一份自定义 Env
+// （补上 GITHUB_APP_ID/PRIVATE_KEY/COORD_API_TOKEN），这样既走了生产代码的完整路径，
+// 又能用 vi.stubGlobal 顶替全局 fetch 挡下真实 GitHub 调用（同一 JS realm，直接调用
+// 不经过额外的 worker 分发，stubGlobal 保证生效）。
+describe("REST 面 IDOR 回归（installation_id 属己但 repo 属他 / 零归属侦察）", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function testGatewayEnv(): Env {
+    return {
+      ...(env as unknown as Env),
+      GITHUB_APP_ID: "12345",
+      GITHUB_APP_PRIVATE_KEY: privatePem,
+      COORD_API_TOKEN: "test-api-token",
+    };
+  }
+
+  /** 装机（token 铸造）响应恒定通过；仓库/权限响应由每条用例自定义。 */
+  function stubGithub(handle: (url: string) => Response) {
+    vi.stubGlobal(
+      "fetch",
+      (async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/access_tokens"))
+          return Response.json({ token: "ghs_e2e", expires_at: new Date(Date.now() + 3600_000).toISOString() }, { status: 201 });
+        return handle(url);
+      }) as typeof fetch,
+    );
+  }
+
+  it("installations/:id：installation_id 属于攻击者自己安装的账户，但请求者与其下全部仓库零 collaborator 关系 → 403，响应体不含 account/permissions（同族 IDOR 收口）", async () => {
+    stubGithub((url) => {
+      if (url.includes("/installation/repositories"))
+        return Response.json({ repositories: [{ full_name: "victim-org/secret-repo", private: true, description: "受害者的私有仓" }] });
+      if (url.includes("/collaborators/attacker/permission")) return Response.json({ message: "not found" }, { status: 404 });
+      if (url.match(/\/app\/installations\/\d+$/)) return Response.json({ id: 9002, account: { login: "victim-org", type: "Organization" }, permissions: { contents: "read" } });
+      return Response.json({ message: "unexpected" }, { status: 500 });
+    });
+
+    const req = new Request("https://gw.test/api/coord/onboard/installations/9002?login=attacker", {
+      headers: { authorization: "Bearer test-api-token" },
+    });
+    const r = await handleOnboard(req, testGatewayEnv(), new URL(req.url));
+    expect(r.status).toBe(403);
+    const body = await r.json<Record<string, unknown>>();
+    expect(body["error"]).toBe("not_a_member");
+    expect(body).not.toHaveProperty("account");
+    expect(body).not.toHaveProperty("permissions");
+    expect(body).not.toHaveProperty("repos");
+  });
+
+  it("checkup：installation_id 是请求者自己的安装，但 owner/repo 是别人的仓库（mismatch）→ 403 not_admin，走完整 REST 路径（非仅单测）", async () => {
+    stubGithub((url) => {
+      if (url.includes("/repos/other-owner/other-repo/collaborators/legit-user/permission"))
+        return Response.json({ message: "not found" }, { status: 404 }); // 请求者对这个别人的仓零关系
+      return Response.json({ message: "unexpected" }, { status: 500 });
+    });
+
+    const req = new Request(
+      "https://gw.test/api/coord/onboard/checkup?installation_id=9003&owner=other-owner&repo=other-repo&login=legit-user",
+      { headers: { authorization: "Bearer test-api-token" } },
+    );
+    const r = await handleOnboard(req, testGatewayEnv(), new URL(req.url));
+    expect(r.status).toBe(403);
+    expect(await r.json()).toMatchObject({ error: "not_admin" });
+  });
+
+  it("finalize：同一 mismatch 场景（own installation_id + 他人 repo）→ 403，目录 DO 未被写入", async () => {
+    stubGithub((url) => {
+      if (url.includes("/repos/other-owner/other-repo/collaborators/legit-user/permission"))
+        return Response.json({ message: "not found" }, { status: 404 });
+      return Response.json({ message: "unexpected" }, { status: 500 });
+    });
+
+    const gatewayEnv = testGatewayEnv();
+    const req = new Request("https://gw.test/api/coord/onboard/finalize", {
+      method: "POST",
+      headers: { authorization: "Bearer test-api-token", "content-type": "application/json" },
+      body: JSON.stringify({ full_name: "other-owner/other-repo", installation_id: 9003, login: "legit-user" }),
+    });
+    const r = await handleOnboard(req, gatewayEnv, new URL(req.url));
+    expect(r.status).toBe(403);
+    expect(await r.json()).toMatchObject({ error: "not_admin" });
+
+    // 目录 DO 里不应出现这个项目（拒绝发生在 registerProject 调用之前）
+    const projects = await (
+      await SELF.fetch("https://gw.test/api/coord/directory/projects", { headers: { authorization: "Bearer test-api-token" } })
+    ).json<{ projects: { slug: string }[] }>();
+    expect(projects.projects.some((p) => p.slug === "other-repo")).toBe(false);
+  });
+
+  it("finalize 成功路径：真实 admin 放行后，可见性以 GitHub 真实值为准——" +
+    "客户端谎报 private:false，GitHub 说 private:true，注册结果以 GitHub 为准（#776 复审顺手项）", async () => {
+    stubGithub((url) => {
+      if (url.includes("/repos/usamshen/finalize-visibility-check/collaborators/usamshen/permission"))
+        return Response.json({ permission: "admin" });
+      if (url.endsWith("/repos/usamshen/finalize-visibility-check")) return Response.json({ private: true });
+      return Response.json({ message: "unexpected" }, { status: 500 });
+    });
+
+    const req = new Request("https://gw.test/api/coord/onboard/finalize", {
+      method: "POST",
+      headers: { authorization: "Bearer test-api-token", "content-type": "application/json" },
+      body: JSON.stringify({
+        full_name: "usamshen/finalize-visibility-check",
+        private: false, // 客户端谎报公开
+        installation_id: 9004,
+        login: "usamshen",
+      }),
+    });
+    const r = await handleOnboard(req, testGatewayEnv(), new URL(req.url));
+    expect(r.status).toBe(200);
+    expect(await r.json()).toMatchObject({ project: { slug: "finalize-visibility-check", registered: true } });
+
+    const project = ((await (
+      await SELF.fetch("https://gw.test/api/coord/directory/projects", { headers: { authorization: "Bearer test-api-token" } })
+    ).json<{ projects: { slug: string; visibility: string }[] }>()).projects).find((p) => p.slug === "finalize-visibility-check");
+    expect(project?.visibility).toBe("private"); // 以 GitHub 真实值为准，不是客户端谎报的 false
   });
 });

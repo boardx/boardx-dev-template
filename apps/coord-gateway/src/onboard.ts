@@ -290,6 +290,21 @@ export async function runCheckup(
   return [webhook, mirrorSeed, modulesInit, branchProtection];
 }
 
+/** 仓库真实 private 标志（GitHub 权威，而非客户端自报——finalize 此前信任客户端
+ *  传入的 private 字段，理论上可被伪造出与实际不符的可见性记录，#776 复审顺手项）。
+ *  查不到（网络异常/仓库被删）时保守回退 true（宁可误判为私有，不误判为公开）。 */
+export async function fetchRepoPrivate(
+  token: string,
+  owner: string,
+  repo: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<boolean> {
+  const res = await ghGet(token, `/repos/${owner}/${repo}`, fetchImpl);
+  if (!res.ok) return true;
+  const body = (await res.json()) as { private?: boolean };
+  return body.private !== false;
+}
+
 /** 请求者对 owner/repo 是否有 admin 权限——checkup 与 finalize 共用的唯一授权门禁
  *  出口（IDOR 修复，#776 review：此前这两个端点完全不校验发起人与目标仓的归属
  *  关系，任意登录用户可对任意仓触发体检/注册）。非 admin（含查不到关系）一律拒绝。 */
@@ -346,14 +361,19 @@ export async function handleOnboard(req: Request, env: Env, url: URL): Promise<R
     if (!fullName || !fullName.includes("/")) return json(422, { error: "invalid_full_name" });
     if (!installationId || !login) return json(422, { error: "missing_params", details: ["installation_id/login 必填（服务端权限核验用）"] });
     const [owner, name] = fullName.split("/") as [string, string];
+    let isPrivate: boolean;
     try {
       const isAdmin = await verifyAdminAccess(auth, installationId, owner, name, login);
       if (!isAdmin) return json(403, { error: "not_admin", detail: `${login} 对 ${fullName} 无 admin 权限` });
+      // 可见性以 GitHub 真实值为准，不信任客户端自报（#776 复审）：同一次
+      // installationTokenById 内部有缓存，这里不算多打一轮 App 认证。
+      const token = await auth.installationTokenById(installationId);
+      isPrivate = await fetchRepoPrivate(token, owner, name);
     } catch (e) {
       return json(502, { error: "github_unreachable", detail: String(e) });
     }
     try {
-      const result = await registerProject(env, { full_name: fullName, name, private: body?.private === true });
+      const result = await registerProject(env, { full_name: fullName, name, private: isPrivate });
       return json(200, { project: result });
     } catch (e) {
       return json(502, { error: "directory_unreachable", detail: String(e) });
@@ -367,10 +387,14 @@ export async function handleOnboard(req: Request, env: Env, url: URL): Promise<R
     // 绝不能退化为返回全部仓库（跨租户 IDOR 根因，#776 review）。
     if (!login) return json(422, { error: "missing_params", details: ["login 必填（服务端权限核验用）"] });
     try {
-      const [installation, repos] = await Promise.all([
-        auth.getInstallation(installationId),
-        listInstallationRepos(auth, installationId, login),
-      ]);
+      const repos = await listInstallationRepos(auth, installationId, login);
+      // 同族 IDOR 收口（#776 复审）：repos 过滤后为空 = 请求者与该 installation
+      // 完全无归属关系——此时哪怕只下发 account/permissions（谁装了这个 App、
+      // 授权了什么权限）也是侦察信息泄漏，整个端点直接 403，不做 getInstallation
+      // 调用（省一次不必要的 GitHub API 往返，也彻底不构造含 account 的响应体）。
+      if (repos.length === 0)
+        return json(403, { error: "not_a_member", detail: `${login} 与 installation ${installationId} 无归属关系` });
+      const installation = await auth.getInstallation(installationId);
       return json(200, {
         installation_id: installationId,
         account: installation.account,
