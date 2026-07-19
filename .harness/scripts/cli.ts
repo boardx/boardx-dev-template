@@ -1,6 +1,7 @@
 import { parseArgs } from "./lib/args";
 import { log } from "./lib/log";
 import { newPhase } from "./new-phase";
+import { newAdr } from "./new-adr";
 import { newSprint } from "./new-sprint";
 import { verify } from "./verify";
 import { syncGithub } from "./sync-github";
@@ -27,6 +28,7 @@ const args = parseArgs(argv.slice(1));
 async function main(): Promise<void> {
   switch (cmd) {
     case "new-phase":     newPhase(args); break;
+    case "new-adr":       newAdr(args); break;
     case "new-sprint":    newSprint(args); break;
     case "verify":        verify(args); break;
     case "sync":          syncGithub(args); break;
@@ -52,6 +54,8 @@ async function main(): Promise<void> {
       log.info("用法:");
       log.info("  pnpm harness new-phase     --id NN --name <name> [--slug <s>] [--goal <g>] [--ui]");
       log.info("                             --ui：有界面的阶段，scaffold UI 先行确认关卡（ADR-003）");
+      log.info("  pnpm harness new-adr       --title \"<slug 标题>\" [--id ADR-NNN] [--layer methodology|project]");
+      log.info("                             # 原子取号 + scaffold + README 索引登记（占号即登记，见 ADR-撞号教训）");
       log.info("  pnpm harness new-sprint    --phase NN --id MM [--goal <g>] [--features F01,F02]");
       log.info("  pnpm harness verify        --sprint NN/MM | --phase NN [--feature F01] [--owner <id>]");
       log.info("  pnpm harness sync          --phase NN [--apply]");
