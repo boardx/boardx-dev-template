@@ -206,13 +206,19 @@ export function OnboardWizard({ installationId }: { installationId: number | nul
   }, [allDone]);
 
   // 全部体检项揭示完成 → 立即 finalize（幂等注册为目录项目，拿真实 slug）。
+  // installation_id 必传：服务端据此换 installation token 核实发起人对该仓的
+  // admin 权限（服务端强制，非前端 disabled 徽章能代替，#776 review）。
   useEffect(() => {
-    if (!allDone || !repo || finalSlug || finalizing) return;
+    if (!allDone || !repo || installation?.status !== "ok" || finalSlug || finalizing) return;
     setFinalizing(true);
     fetch("/api/coord/onboard/finalize", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ full_name: repo.full_name, private: repo.private }),
+      body: JSON.stringify({
+        full_name: repo.full_name,
+        private: repo.private,
+        installation_id: installation.data.installation_id,
+      }),
     })
       .then(async (res) => {
         const body = (await res.json()) as { configured: boolean; slug?: string; error?: string };
@@ -221,7 +227,7 @@ export function OnboardWizard({ installationId }: { installationId: number | nul
       })
       .catch((e: unknown) => setFinalError(String(e)))
       .finally(() => setFinalizing(false));
-  }, [allDone, repo, finalSlug, finalizing]);
+  }, [allDone, repo, installation, finalSlug, finalizing]);
 
   const repos = installation?.status === "ok" ? installation.data.repos : [];
 

@@ -125,11 +125,33 @@ export interface OnboardRepo {
   is_admin: boolean;
 }
 
-/** installation 下真实仓库列表 + 按 login 判定的真实 admin 权限（collaborator permission API）。 */
+/** collaborator permission 查询的单一出口（授权门禁与 UI admin 徽章共用同一次真相）。
+ *  返回 GitHub 的 permission 字符串（"admin"|"write"|"read"|"none"...）；查不到
+ *  （403/404，App 权限不足或请求者根本不是协作者）一律按 null 处理——保守拒绝，
+ *  不假定任何默认权限（IDOR 修复：#776 review，2026-07-19）。 */
+export async function collaboratorPermission(
+  token: string,
+  owner: string,
+  repo: string,
+  login: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
+  const res = await ghGet(token, `/repos/${owner}/${repo}/collaborators/${login}/permission`, fetchImpl);
+  if (!res.ok) return null;
+  const body = (await res.json()) as { permission?: string };
+  return body.permission ?? null;
+}
+
+/** installation 下真实仓库列表，且**只返回请求者有真实 collaborator 关系的仓库**
+ *  （权限查不到/查到 "none" 的仓库整条剔除，不下发任何元数据——修复跨租户 IDOR：
+ *  任意登录用户曾能枚举 installation_id 拿到其他账户全部私有仓库 full_name/
+ *  description/language，#776 review）。admin 徽章沿用同一次权限查询结果，
+ *  非 admin 仓仍会出现在列表里（disabled 供 UI 展示"我是协作者但不是 admin"），
+ *  但零关系的仓库彻底不可见。 */
 export async function listInstallationRepos(
   auth: GitHubAppAuth,
   installationId: number,
-  login: string | null,
+  login: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<OnboardRepo[]> {
   const token = await auth.installationTokenById(installationId);
@@ -137,32 +159,27 @@ export async function listInstallationRepos(
   if (!res.ok) throw new Error(`github_list_repos_${res.status}`);
   const body = (await res.json()) as { repositories?: Record<string, unknown>[] };
   const repos = body.repositories ?? [];
-  return Promise.all(
-    repos.map(async (r): Promise<OnboardRepo> => {
+  const withPermission = await Promise.all(
+    repos.map(async (r) => {
       const fullName = r["full_name"] as string;
       const [owner, name] = fullName.split("/") as [string, string];
-      let isAdmin = false;
-      if (login) {
-        const permRes = await ghGet(token, `/repos/${owner}/${name}/collaborators/${login}/permission`, fetchImpl);
-        if (permRes.ok) {
-          const permBody = (await permRes.json()) as { permission?: string };
-          isAdmin = permBody.permission === "admin";
-        }
-        // 403/404（App 权限不足或非协作者）保守判为非 admin，不阻塞列表渲染
-      }
-      return {
-        full_name: fullName,
-        owner,
-        name,
-        slug: deriveSlug(name),
-        description: typeof r["description"] === "string" ? (r["description"] as string) : null,
-        language: typeof r["language"] === "string" ? (r["language"] as string) : null,
-        private: r["private"] === true,
-        default_branch: typeof r["default_branch"] === "string" ? (r["default_branch"] as string) : "main",
-        is_admin: isAdmin,
-      };
+      const permission = await collaboratorPermission(token, owner, name, login, fetchImpl);
+      return { r, fullName, owner, name, permission };
     }),
   );
+  return withPermission
+    .filter(({ permission }) => permission !== null && permission !== "none")
+    .map(({ r, fullName, owner, name, permission }): OnboardRepo => ({
+      full_name: fullName,
+      owner,
+      name,
+      slug: deriveSlug(name),
+      description: typeof r["description"] === "string" ? (r["description"] as string) : null,
+      language: typeof r["language"] === "string" ? (r["language"] as string) : null,
+      private: r["private"] === true,
+      default_branch: typeof r["default_branch"] === "string" ? (r["default_branch"] as string) : "main",
+      is_admin: permission === "admin",
+    }));
 }
 
 // ---------- 自动体检（真实四项：webhook / 镜像种子 / CODEOWNERS·CONTRIBUTING / 分支保护） ----------
@@ -273,6 +290,22 @@ export async function runCheckup(
   return [webhook, mirrorSeed, modulesInit, branchProtection];
 }
 
+/** 请求者对 owner/repo 是否有 admin 权限——checkup 与 finalize 共用的唯一授权门禁
+ *  出口（IDOR 修复，#776 review：此前这两个端点完全不校验发起人与目标仓的归属
+ *  关系，任意登录用户可对任意仓触发体检/注册）。非 admin（含查不到关系）一律拒绝。 */
+export async function verifyAdminAccess(
+  auth: GitHubAppAuth,
+  installationId: number,
+  owner: string,
+  repo: string,
+  login: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<boolean> {
+  const token = await auth.installationTokenById(installationId);
+  const permission = await collaboratorPermission(token, owner, repo, login, fetchImpl);
+  return permission === "admin";
+}
+
 // ---------- REST 面：/api/coord/onboard/*（ops token 门，同目录读面口径） ----------
 
 // ops token 门（devportal 服务端持有 COORD_API_TOKEN 代读，同目录读面口径的 ops 万能钥匙一侧；
@@ -290,19 +323,35 @@ export async function handleOnboard(req: Request, env: Env, url: URL): Promise<R
   const denied = await requireOps(req, env);
   if (denied) return denied;
 
-  // 先判路由是否存在（未知子路径一律 404，不受 GitHub App 配置态影响），
-  // 再按具体路由决定是否需要 GitHub App 凭据——finalize 只写目录 DO，不打 GitHub。
+  // 先判路由是否存在（未知子路径一律 404，不受 GitHub App 配置态影响）。
   const installationsMatch = url.pathname.match(/^\/api\/coord\/onboard\/installations\/(\d+)$/);
   const isFinalize = req.method === "POST" && url.pathname === "/api/coord/onboard/finalize";
   const isInstallations = req.method === "GET" && Boolean(installationsMatch);
   const isCheckup = req.method === "GET" && url.pathname === "/api/coord/onboard/checkup";
   if (!isFinalize && !isInstallations && !isCheckup) return json(404, { error: "not_found" });
 
+  // 三个端点全部需要 GitHub App 凭据（finalize 也要——注册前必须先核实发起人对该
+  // repo 有 admin 权限；此前 finalize 只写目录 DO 未打 GitHub 是 IDOR 根因之一，
+  // #776 review）：未配置 fail-closed。
+  const auth = githubAuth(env);
+  if (!auth) return json(503, { error: "github_app_not_configured" });
+
   if (isFinalize) {
-    const body = (await req.json().catch(() => null)) as { full_name?: string; private?: boolean } | null;
+    const body = (await req.json().catch(() => null)) as
+      | { full_name?: string; private?: boolean; installation_id?: number; login?: string }
+      | null;
     const fullName = body?.full_name;
+    const installationId = body?.installation_id;
+    const login = body?.login;
     if (!fullName || !fullName.includes("/")) return json(422, { error: "invalid_full_name" });
-    const [, name] = fullName.split("/") as [string, string];
+    if (!installationId || !login) return json(422, { error: "missing_params", details: ["installation_id/login 必填（服务端权限核验用）"] });
+    const [owner, name] = fullName.split("/") as [string, string];
+    try {
+      const isAdmin = await verifyAdminAccess(auth, installationId, owner, name, login);
+      if (!isAdmin) return json(403, { error: "not_admin", detail: `${login} 对 ${fullName} 无 admin 权限` });
+    } catch (e) {
+      return json(502, { error: "github_unreachable", detail: String(e) });
+    }
     try {
       const result = await registerProject(env, { full_name: fullName, name, private: body?.private === true });
       return json(200, { project: result });
@@ -311,13 +360,12 @@ export async function handleOnboard(req: Request, env: Env, url: URL): Promise<R
     }
   }
 
-  // 以下路径都要打真 GitHub（installation 视角）：未配置 App 凭据 fail-closed。
-  const auth = githubAuth(env);
-  if (!auth) return json(503, { error: "github_app_not_configured" });
-
   if (isInstallations) {
     const installationId = Number(installationsMatch![1]);
     const login = url.searchParams.get("login");
+    // login 必填：没有它就无法核实"请求者与该 installation 有归属关系"，
+    // 绝不能退化为返回全部仓库（跨租户 IDOR 根因，#776 review）。
+    if (!login) return json(422, { error: "missing_params", details: ["login 必填（服务端权限核验用）"] });
     try {
       const [installation, repos] = await Promise.all([
         auth.getInstallation(installationId),
@@ -338,8 +386,16 @@ export async function handleOnboard(req: Request, env: Env, url: URL): Promise<R
     const installationId = Number(url.searchParams.get("installation_id") ?? "");
     const owner = url.searchParams.get("owner");
     const repo = url.searchParams.get("repo");
+    const login = url.searchParams.get("login");
     const defaultBranch = url.searchParams.get("default_branch") ?? "main";
-    if (!installationId || !owner || !repo) return json(422, { error: "missing_params", details: ["installation_id/owner/repo 必填"] });
+    if (!installationId || !owner || !repo || !login)
+      return json(422, { error: "missing_params", details: ["installation_id/owner/repo/login 必填"] });
+    try {
+      const isAdmin = await verifyAdminAccess(auth, installationId, owner, repo, login);
+      if (!isAdmin) return json(403, { error: "not_admin", detail: `${login} 对 ${owner}/${repo} 无 admin 权限` });
+    } catch (e) {
+      return json(502, { error: "github_unreachable", detail: String(e) });
+    }
     try {
       const items = await runCheckup(env, auth, installationId, owner, repo, defaultBranch);
       return json(200, { items });
