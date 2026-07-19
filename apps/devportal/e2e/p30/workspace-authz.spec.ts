@@ -1,11 +1,18 @@
 // p30-F03 e2e：/p/:slug 路由化 + 成员鉴权（服务端角色裁剪）。
 //
-// 数据来自本地固定 fixture 目录（e2e/fixtures/directory-fixture-server.mjs，
+// 数据来自本地固定 fixture 目录（e2e/fixtures/directory-fixture-constants.mjs，
 // playwright.config.ts 已把 next dev 的 COORD_GATEWAY_URL/COORD_API_TOKEN 指向它）：
-//   project fixture-proj（私有）：owner-user=owner，contrib-user=contributor
-//   project fixture-public（公开）：无成员也可只读
+//   project fixture-proj（私有）：github_login=owner-user → owner，
+//                                 github_login=contrib-user → contributor
+//   project fixture-public（公开）：无成员也可只读（public-viewer）
 // lib/workspace-authz.ts 走的是与生产一致的 fetch 路径，测试环境零特判——本地跑通
 // 即证明服务端裁剪逻辑本身正确，只是数据源换成了固定 fixture（而非真实部署）。
+//
+// 安全审计修复（PR #783 复审）：fixture 里每个 engineer 的 handle 都刻意与 github_login
+// 不同，并且放了一个诱饵工程师（handle="owner-user"，即真实 owner 的 github_login；
+// github_login 却是完全不同的人，membership 角色是 contributor）。下面的 owner 测试组
+// 因此天然是回归用例——如果鉴权 join 键退回用 handle 匹配，登录 owner-user 会被误配到
+// 诱饵记录（contributor），governance-console 断言与 role=="owner" 断言都会变红。
 //
 // 本地跑法：pnpm --filter devportal exec playwright test e2e/p30/workspace-authz.spec.ts
 import { expect, test } from "@playwright/test";
@@ -71,6 +78,36 @@ test.describe("p30-F03 工作区服务端角色裁剪", () => {
     expect(response.status()).toBe(403);
     const body = (await response.json()) as Record<string, unknown>;
     expect(body["project"]).toBeUndefined();
+  });
+
+  test("身份混淆回归：login=owner-user 必须按 github_login 精确解析为真实 owner，不能被 handle 相同的诱饵工程师顶替", async ({ request }) => {
+    const cookie = await mintSessionCookie("owner-user");
+    const response = await request.get("/api/portal/workspace/fixture-proj/access", {
+      headers: { cookie: `devportal_session=${cookie}` },
+    });
+    expect(response.status()).toBe(200);
+    const body = (await response.json()) as { role?: string; project?: { slug?: string } };
+    // 诱饵工程师（handle="owner-user"）的 membership 角色是 contributor——
+    // 若鉴权错误按 handle join，这里会拿到 "contributor" 而不是 "owner"。
+    expect(body.role).toBe("owner");
+    expect(body.project?.slug).toBe("fixture-proj");
+  });
+
+  test("未登录不能靠 404/401 差异枚举私有项目是否存在：未知 slug 与已知私有 slug 都是 401", async ({ request }) => {
+    const known = await request.get("/api/portal/workspace/fixture-proj/access");
+    const unknown = await request.get("/api/portal/workspace/does-not-exist/access");
+    expect(known.status()).toBe(401);
+    expect(unknown.status()).toBe(401);
+  });
+
+  test("公开项目非成员的角色是 public-viewer，不冒充 contributor（语义不失真）", async ({ request }) => {
+    const cookie = await mintSessionCookie("outsider-user");
+    const response = await request.get("/api/portal/workspace/fixture-public/access", {
+      headers: { cookie: `devportal_session=${cookie}` },
+    });
+    expect(response.status()).toBe(200);
+    const body = (await response.json()) as { role?: string };
+    expect(body.role).toBe("public-viewer");
   });
 
   test("从切换器真实点击路径进入 /p/:slug（不再是过滤三栏的 mock 交互）", async ({ browser, baseURL }) => {

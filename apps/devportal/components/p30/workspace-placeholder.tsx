@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { PortalCard } from "@/components/portal/portal-card";
 import { WorkspaceNoAccess } from "@/components/p30/workspace-no-access";
-import { resolveWorkspaceAccess, type DirectoryProject, type MembershipRole } from "@/lib/workspace-authz";
+import { resolveWorkspaceAccess, type DirectoryProject, type ViewerRole } from "@/lib/workspace-authz";
 
 const TAB_COPY: Record<string, { title: string; note: string }> = {
   pulse: { title: "脉搏与进度", note: "工作区脉搏数据按项目分片后接入（p30/F04）。" },
@@ -22,7 +22,7 @@ export function WorkspacePlaceholder({
 }: {
   tab: keyof typeof TAB_COPY;
   project: DirectoryProject;
-  role: MembershipRole;
+  role: ViewerRole;
 }) {
   const copy = TAB_COPY[tab];
   return (
