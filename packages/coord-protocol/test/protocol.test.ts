@@ -270,7 +270,7 @@ describe("CoordEvent", () => {
   });
 });
 
-describe("Intents（coord/0.1.3，p30/F09）", () => {
+describe("Intents（coord/0.1.4，p30/F09）", () => {
   it("intent.assign 缺 target_agent_id / 坏 target_resource_id 被拒", () => {
     expect(validateEvent(event("intent.assign", { note: null })).ok).toBe(false);
     expect(
