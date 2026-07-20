@@ -57,9 +57,9 @@ describe("GET /api/portal/my-agents", () => {
         if (url.includes("/directory/agents")) {
           return jsonRes(200, {
             agents: [
-              { agent_id: "agt_1", name: "healthy", identifier: "@usamshen/healthy", owner: { engineer_id: "e1", handle: "usamshen" }, parent: null, projects: [], capabilities: ["Claude Code"], lifecycle: "active", last_heartbeat_at: new Date().toISOString(), created_at: "x", updated_at: "x" },
-              { agent_id: "agt_2", name: "revoked", identifier: "@usamshen/revoked", owner: { engineer_id: "e1", handle: "usamshen" }, parent: null, projects: [], capabilities: ["Codex"], lifecycle: "active", last_heartbeat_at: null, created_at: "x", updated_at: "x" },
-              { agent_id: "agt_3", name: "not-mine", identifier: "@other/not-mine", owner: { engineer_id: "e2", handle: "other" }, parent: null, projects: [], capabilities: [], lifecycle: "active", last_heartbeat_at: null, created_at: "x", updated_at: "x" },
+              { agent_id: "agt_1", name: "healthy", identifier: "@usamshen/healthy", owner: { engineer_id: "e1", handle: "usamshen", github_login: "usamshen" }, parent: null, projects: [], capabilities: ["Claude Code"], lifecycle: "active", last_heartbeat_at: new Date().toISOString(), created_at: "x", updated_at: "x" },
+              { agent_id: "agt_2", name: "revoked", identifier: "@usamshen/revoked", owner: { engineer_id: "e1", handle: "usamshen", github_login: "usamshen" }, parent: null, projects: [], capabilities: ["Codex"], lifecycle: "active", last_heartbeat_at: null, created_at: "x", updated_at: "x" },
+              { agent_id: "agt_3", name: "not-mine", identifier: "@other/not-mine", owner: { engineer_id: "e2", handle: "other", github_login: "other" }, parent: null, projects: [], capabilities: [], lifecycle: "active", last_heartbeat_at: null, created_at: "x", updated_at: "x" },
             ],
           });
         }
@@ -157,12 +157,36 @@ describe("POST /api/portal/my-agents/:id/rotate", () => {
       "fetch",
       vi.fn(async (url: string) => {
         if (url.includes("/directory/agents/agt_victim"))
-          return jsonRes(200, { agent: { agent_id: "agt_victim", owner: { engineer_id: "e1", handle: "victim" } } });
+          return jsonRes(200, { agent: { agent_id: "agt_victim", owner: { engineer_id: "e1", handle: "victim", github_login: "victim" } } });
         throw new Error(`unexpected: ${url}`);
       }),
     );
     const { POST } = await import("../app/api/portal/my-agents/[agentId]/rotate/route");
     const res = await POST(new Request("https://x", { method: "POST" }), { params: { agentId: "agt_victim" } });
+    expect(res.status).toBe(403);
+  });
+
+  // 身份混淆回归（p30/F06 #798 同款漏洞类）：诱饵场景——登录者的 login 恰好等于
+  // 目标 agent owner 的 handle（展示用自然键），但 github_login（认证锚点）是完全
+  // 不同的人。若判定退回按 handle 比较，这里会被误判成"是我自己的 agent"，
+  // 拿到 200 并成功轮换/吊销受害者的 token——这正是写路径权限提升。
+  it("身份混淆回归：login 恰好等于受害者 agent 的 handle（诱饵）→ 仍然 403，不能按 handle 顶替", async () => {
+    const { getSessionUser } = await import("@/lib/session");
+    // 攻击者的真实 GitHub 身份是 attacker-real；victim agent 的 owner.handle 恰好是 "attacker-real"
+    // （两者字符串相同），但 owner.github_login 是完全不同的 victim-real。
+    vi.mocked(getSessionUser).mockResolvedValue({ login: "attacker-real", email: null, name: null, avatarUrl: null, via: "oauth" });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("/directory/agents/agt_victim2"))
+          return jsonRes(200, {
+            agent: { agent_id: "agt_victim2", owner: { engineer_id: "e9", handle: "attacker-real", github_login: "victim-real" } },
+          });
+        throw new Error(`unexpected: ${url}`);
+      }),
+    );
+    const { POST } = await import("../app/api/portal/my-agents/[agentId]/rotate/route");
+    const res = await POST(new Request("https://x", { method: "POST" }), { params: { agentId: "agt_victim2" } });
     expect(res.status).toBe(403);
   });
 
@@ -174,7 +198,7 @@ describe("POST /api/portal/my-agents/:id/rotate", () => {
       "fetch",
       vi.fn(async (url: string, init?: RequestInit) => {
         if (url.includes("/directory/agents/agt_1"))
-          return jsonRes(200, { agent: { agent_id: "agt_1", owner: { engineer_id: "e1", handle: "usamshen" } } });
+          return jsonRes(200, { agent: { agent_id: "agt_1", owner: { engineer_id: "e1", handle: "usamshen", github_login: "usamshen" } } });
         if (url.endsWith("/tokens") && (!init || init.method === undefined || init.method === "GET")) {
           return jsonRes(200, {
             tokens: [
@@ -212,7 +236,7 @@ describe("POST /api/portal/my-agents/:id/retire", () => {
           return jsonRes(200, { agent: { lifecycle: "retired" } });
         }
         if (url.includes("/directory/agents/agt_1"))
-          return jsonRes(200, { agent: { agent_id: "agt_1", owner: { engineer_id: "e1", handle: "usamshen" } } });
+          return jsonRes(200, { agent: { agent_id: "agt_1", owner: { engineer_id: "e1", handle: "usamshen", github_login: "usamshen" } } });
         if (url.endsWith("/tokens")) return jsonRes(200, { tokens: [{ token_hash_prefix: "aaaaaaaa", agent_id: "agt_1", owner: "usamshen", created_at: "x", revoked_at: null }] });
         if (url.includes("/tokens/revoke")) return jsonRes(200, { ok: true });
         throw new Error(`unexpected: ${url}`);
@@ -245,7 +269,7 @@ describe("POST /api/portal/my-agents/:id/lifecycle", () => {
       vi.fn(async (url: string) => {
         if (url.includes("/lifecycle")) return jsonRes(200, { agent: { lifecycle: "paused" } });
         if (url.includes("/directory/agents/agt_1"))
-          return jsonRes(200, { agent: { agent_id: "agt_1", owner: { engineer_id: "e1", handle: "usamshen" } } });
+          return jsonRes(200, { agent: { agent_id: "agt_1", owner: { engineer_id: "e1", handle: "usamshen", github_login: "usamshen" } } });
         throw new Error(`unexpected: ${url}`);
       }),
     );

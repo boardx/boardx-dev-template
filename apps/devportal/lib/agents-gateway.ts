@@ -35,7 +35,9 @@ export interface DirectoryAgent {
   agent_id: string;
   name: string;
   identifier: string;
-  owner: { engineer_id: string; handle: string } | null;
+  // github_login 是认证锚点——判定"是不是我的 agent"必须用这个字段，不能用 handle
+  // （两者是目录里的独立字段，可以不相等，同 p30/F06 #798 教训）。
+  owner: { engineer_id: string; handle: string; github_login: string | null } | null;
   parent: { agent_id: string; name: string } | null;
   projects: string[];
   capabilities: string[];
@@ -59,6 +61,15 @@ function adminHeaders(gw: GatewayEnv): HeadersInit {
 
 function apiHeaders(gw: GatewayEnv): HeadersInit {
   return { Authorization: `Bearer ${gw.apiToken}` };
+}
+
+/** 判定某个 agent 是不是当前登录者自己的——必须按 github_login（认证锚点）比较，
+ *  不能按 handle（目录里的展示用自然键，与登录身份是独立字段，可以不相等）。
+ *  单一出口：所有写路径（lifecycle/retire/rotate）与列表过滤都必须走这里，
+ *  不在各自路由里重复写比较逻辑（同 p30/F06 #798 教训——重复实现容易漏改）。 */
+export function isOwnAgent(agent: Pick<DirectoryAgent, "owner">, login: string): boolean {
+  const norm = login.toLowerCase();
+  return agent.owner?.github_login?.toLowerCase() === norm;
 }
 
 export async function listMyDirectoryAgents(gw: GatewayEnv): Promise<DirectoryAgent[] | null> {

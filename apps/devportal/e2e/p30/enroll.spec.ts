@@ -8,6 +8,11 @@
 //   - 有 live gateway 凭据（COORD_GATEWAY_URL/COORD_API_TOKEN/COORD_GATEWAY_ADMIN_TOKEN
 //     三者齐备，CI/本地手动注入时才成立）：走完整闭环——mint 真 token →「后台 curl」
 //     直接打真心跳（模拟 agent 进程）→ WS/轮询点亮 first-heartbeat-live → fleet-row 新增。
+//
+// cookie 名同 auth-gray.spec.ts 的纪律（#769）：session cookie 加了 __Host- 前缀
+// （本文件此前一直用旧名 devportal_session，服务端已经不认，本次同步）；
+// `context.addCookies` 用 `domain`+`path`（而非 `url`）才能通过本地这套
+// Playwright/Chromium 组合对 `__Host-` 前缀 cookie 的 CDP 校验。
 import { expect, test } from "@playwright/test";
 import { SignJWT } from "jose";
 import { E2E_SESSION_SECRET } from "../../playwright.config";
@@ -31,7 +36,15 @@ test.describe("enroll 向导 UI 骨架（无 live gateway 也应成立）", () =
     const cookie = await mintSessionCookie("e2e-enroll-user");
     const context = await browser.newContext({ baseURL });
     await context.addCookies([
-      { name: "devportal_session", value: cookie, url: baseURL as string, httpOnly: true, sameSite: "Lax" },
+      {
+        name: "__Host-devportal_session",
+        value: cookie,
+        domain: new URL(baseURL as string).hostname,
+        path: "/",
+        httpOnly: true,
+        secure: true,
+        sameSite: "Lax",
+      },
     ]);
     const page = await context.newPage();
     const res = await page.goto("/me/agents");
@@ -63,7 +76,15 @@ test.describe("enroll 全流程接真（需 live coord-gateway 凭据）", () =>
     const cookie = await mintSessionCookie("e2e-enroll-user");
     const context = await browser.newContext({ baseURL });
     await context.addCookies([
-      { name: "devportal_session", value: cookie, url: baseURL as string, httpOnly: true, sameSite: "Lax" },
+      {
+        name: "__Host-devportal_session",
+        value: cookie,
+        domain: new URL(baseURL as string).hostname,
+        path: "/",
+        httpOnly: true,
+        secure: true,
+        sameSite: "Lax",
+      },
     ]);
     const page = await context.newPage();
     await page.goto("/me/agents");
@@ -84,7 +105,7 @@ test.describe("enroll 全流程接真（需 live coord-gateway 凭据）", () =>
     // 「后台 curl 打真心跳」：不经 devportal UI，直接模拟 agent 进程用它自己的
     // scoped token 打心跳（agent_id 从 identifier 反解不便，改用 fleet 接口拿 agentId）。
     const fleetRes = await request.get("/api/portal/my-agents", {
-      headers: { cookie: `devportal_session=${cookie}` },
+      headers: { cookie: `__Host-devportal_session=${cookie}` },
     });
     const fleetBody = (await fleetRes.json()) as { fleet: Array<{ id: string; agentId: string }> };
     const mine = fleetBody.fleet.find((a) => a.id.endsWith(`/${name}`));
