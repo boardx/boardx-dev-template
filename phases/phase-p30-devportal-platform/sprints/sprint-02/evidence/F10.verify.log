@@ -1,0 +1,25 @@
+$ pnpm --filter @repo/coord-brain test
+[exit 0]
+
+> @repo/coord-brain@0.1.0 test /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/coord-brain
+> vitest run
+
+
+ RUN  v2.1.9 /Users/shenyanbin/Documents/projects/boardx-dev-next/packages/coord-brain
+
+ ✓ test/rules.test.ts (23 tests) 3ms
+
+ Test Files  1 passed (1)
+      Tests  23 passed (23)
+   Start at  17:01:05
+   Duration  216ms (transform 56ms, setup 0ms, collect 52ms, tests 3ms, environment 0ms, prepare 37ms)
+
+
+
+$ bash phases/phase-p30-devportal-platform/scripts/verify-shadow-cycle.sh
+[exit 1]
+== 1. GET /shadow-decisions 结构断言 ==
+✓ 事件数=1000，字段结构（rule/subject_id/decision/reason/at）齐全
+== 2. GET /shadow-cycle-status 跨度断言 ==
+事件计数=8475 first_at=2026-07-19T02:10:01Z last_at=2026-07-19T09:01:00Z span_ms=24659000
+✗ 尚未满足：影子事件流跨度 6.85h < 门槛 24.00h
