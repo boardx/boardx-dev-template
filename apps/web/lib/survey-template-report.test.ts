@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { SurveyReportCategoryPlanInput } from "@repo/data";
 import {
   assembleTemplateDrivenReport,
+  buildEmptyTemplateDrivenReport,
   buildSurveyReportTemplateSnapshot,
   materializeReportAssetUrls,
   validateTemplateDrivenReport,
@@ -113,6 +114,38 @@ describe("template-driven survey report contract", () => {
     ]);
     expect(snapshot.chapters[1]?.chartTemplateId).toBe("line-simple");
     expect(snapshot.chapters[0]).not.toHaveProperty("chartTemplateId");
+  });
+
+  it("builds an ordered empty framework without fabricated report content", () => {
+    const report = buildEmptyTemplateDrivenReport({
+      title: "经营诊断报告",
+      generatedAt: "2026-07-20T00:00:00.000Z",
+      sourceRevision: "source-empty",
+      snapshot: buildSurveyReportTemplateSnapshot(reportPlan),
+      questionCount: 8,
+    });
+
+    expect(report.status).toBe("empty");
+    expect(report.sample).toEqual({
+      responseCount: 0,
+      questionCount: 8,
+      confidence: "none",
+    });
+    expect(report.chapters.map((chapter) => ({
+      chapterId: chapter.chapterId,
+      order: chapter.order,
+      title: chapter.title,
+      outputType: chapter.outputType,
+    }))).toEqual([
+      { chapterId: "summary", order: 1, title: "管理层摘要", outputType: "text" },
+      { chapterId: "trend", order: 2, title: "趋势对比", outputType: "chart" },
+      { chapterId: "visual", order: 3, title: "场景视觉", outputType: "image" },
+    ]);
+    expect(report.chapters.every((chapter) => chapter.state === "framework"))
+      .toBe(true);
+    expect(JSON.stringify(report)).not.toContain("evidenceRefs");
+    expect(JSON.stringify(report)).not.toContain("series");
+    expect(JSON.stringify(report)).not.toContain("assetId");
   });
 
   it("rejects missing, reordered, and output-type-mismatched chapters", () => {

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildProfessionalReportHtml } from "./report-export";
 import type { ProfessionalSurveyReportDocument } from "./survey-professional-report";
-import type { PublicTemplateDrivenSurveyReport } from "./survey-template-report";
+import type {
+  EmptyTemplateDrivenSurveyReport,
+  PublicTemplateDrivenSurveyReport,
+} from "./survey-template-report";
 
 const report: ProfessionalSurveyReportDocument = {
   title: "学生成长调查分析报告",
@@ -132,5 +135,51 @@ describe("buildProfessionalReportHtml", () => {
     expect(html).toContain("根据聚合洞察生成");
     expect(html).not.toContain("执行摘要");
     expect(html).not.toContain("方法与限制");
+  });
+
+  it("exports an ordered framework without fabricating zero-response content", () => {
+    const emptyReport: EmptyTemplateDrivenSurveyReport = {
+      schemaVersion: "template-driven-report-v1",
+      title: "零答卷报告框架",
+      generatedAt: "2026-07-20T00:00:00.000Z",
+      sourceRevision: "source-revision-empty",
+      status: "empty",
+      templateSnapshot: {
+        title: "零答卷报告框架",
+        description: "等待真实答卷",
+        chapters: [
+          { id: "summary", order: 1, title: "管理层摘要", outputType: "text", requirement: "先结论" },
+          { id: "trend", order: 2, title: "趋势对比", outputType: "chart", chartTemplateId: "line-simple", requirement: "给图表" },
+        ],
+      },
+      sample: { responseCount: 0, questionCount: 8, confidence: "none" },
+      chapters: [
+        {
+          state: "framework",
+          chapterId: "summary",
+          order: 1,
+          title: "管理层摘要",
+          requirement: "先结论",
+          outputType: "text",
+        },
+        {
+          state: "framework",
+          chapterId: "trend",
+          order: 2,
+          title: "趋势对比",
+          requirement: "给图表",
+          outputType: "chart",
+          chartTemplateId: "line-simple",
+        },
+      ],
+    };
+
+    const html = buildProfessionalReportHtml(emptyReport);
+
+    expect(html.indexOf("管理层摘要")).toBeLessThan(html.indexOf("趋势对比"));
+    expect(html).toContain("生成要求：先结论");
+    expect(html).toContain("等待真实答卷后生成本章节内容");
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain("有效回答 n=");
   });
 });

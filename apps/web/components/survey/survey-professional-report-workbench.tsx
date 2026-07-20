@@ -70,7 +70,7 @@ export function SurveyProfessionalReportWorkbench({
       className="min-w-0 bg-secondary/30"
     >
       <header className="border-b border-border bg-background px-4 py-4 sm:px-6">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-4">
+        <div className="flex w-full flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-11 font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -148,7 +148,7 @@ export function SurveyProfessionalReportWorkbench({
           </div>
         </div>
         {shareStatus ? (
-          <p role="status" className="mx-auto mt-2 max-w-6xl text-right text-11 text-muted-foreground">
+          <p role="status" className="mt-2 w-full text-right text-11 text-muted-foreground">
             {shareStatus}
           </p>
         ) : null}
@@ -159,7 +159,7 @@ export function SurveyProfessionalReportWorkbench({
           id="report-generation-empty-state"
           data-testid="report-generation-empty-state"
           role="status"
-          className="mx-auto mt-4 max-w-5xl border border-border bg-background px-4 py-3"
+          className="mt-4 w-full border border-border bg-background px-4 py-3"
         >
           <p className="text-13 font-semibold text-foreground">
             收到至少 1 份有效答卷后可生成报告
@@ -173,7 +173,7 @@ export function SurveyProfessionalReportWorkbench({
       {error ? (
         <p
           role="alert"
-          className="mx-auto mt-4 max-w-6xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-13 text-destructive"
+          className="mt-4 w-full border border-destructive/30 bg-destructive/5 px-4 py-3 text-13 text-destructive"
         >
           {error}
         </p>
@@ -181,7 +181,7 @@ export function SurveyProfessionalReportWorkbench({
 
       <main
         data-testid="professional-report-reading-surface"
-        className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6"
+        className="w-full py-5"
       >
         <div className="min-w-0 overflow-hidden border border-border bg-background shadow-sm">
           <ProfessionalReportDocument report={report} />

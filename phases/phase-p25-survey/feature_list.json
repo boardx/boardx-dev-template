@@ -606,6 +606,33 @@
       ],
       "evidence": "evidence/F25.verify.log @ 2026-07-19T18:35:32.434Z",
       "notes": "独立 UI feature，Issue #805；从 PR #757 分支派生 stacked PR，仅统一视觉框架，不修改业务契约。"
+    },
+    {
+      "id": "F26",
+      "priority": 1,
+      "area": "survey",
+      "title": "扩展工作流布局并保留无数据报告框架",
+      "user_visible_behavior": "设计问卷在桌面端以 6:4 展示编辑区和 AI 助手；报告模板与分析报告铺满导航下方空间；分析报告始终按已保存模板的章节顺序组装，有答卷时逐章生成，无答卷时直接展示同顺序章节框架且不调用模型。",
+      "spec_ref": "25-fullwidth-report-framework.md#R1",
+      "design_ref": "requirements/25-fullwidth-report-framework.md；docs/superpowers/specs/2026-07-20-survey-fullwidth-report-framework-design.md；GitHub #811",
+      "status": "passing",
+      "sprint": "26",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F25"
+      ],
+      "wave": 23,
+      "verification": [
+        "pnpm --filter @repo/web run test -- survey-template-report survey-report.route",
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "E2E_PORT=62688 COLLAB_WS_PORT=62689 pnpm --filter @repo/web exec playwright test e2e/survey-p25-026-fullwidth-report-framework.spec.ts",
+        "pnpm harness doctor --phase p25",
+        "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-26/evidence/F26.verify.log"
+      ],
+      "notes": "独立 UI 与报告读取 feature，Issue #811；从 PR #806 分支派生 stacked PR。",
+      "evidence": "evidence/F26.verify.log @ 2026-07-20T04:28:10.663Z"
     }
   ]
 }

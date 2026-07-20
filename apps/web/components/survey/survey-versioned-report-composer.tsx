@@ -175,7 +175,7 @@ export function SurveyVersionedReportComposer({
     <div
       data-testid="workspace-report-composer"
       aria-busy={saving}
-      className="mx-auto grid w-full max-w-screen-2xl gap-5 px-4 pb-8 pt-2 md:px-7"
+      className="grid w-full gap-5 pb-8 pt-2"
     >
       <header className="flex flex-wrap items-center gap-3">
         <Button type="button" size="sm" variant="outline" onClick={onBackToDesign}>
