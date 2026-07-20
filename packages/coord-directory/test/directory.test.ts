@@ -477,6 +477,15 @@ describe("审计事件（append-only，coord/0.1.2 directory.*）", () => {
     const req = events.find((e) => e["type"] === "directory.membership.requested" && (e["payload"] as Obj)["membership_id"] === m["membership_id"])!;
     expect(req["agent_id"]).toBe("coord-main"); // 自报 actor 归因
   });
+
+  it("不带 since 时 limit 截到最新 N 条，而不是最旧 N 条（#815）", async () => {
+    for (let i = 0; i < 5; i += 1) await seed(`window-${i}`);
+    const all = (await j(await get("/directory/events?limit=500")))["events"] as Obj[];
+    expect(all.length).toBeGreaterThan(3);
+
+    const capped = (await j(await get("/directory/events?limit=3")))["events"] as Obj[];
+    expect(capped.map((e) => e["event_id"])).toEqual(all.slice(-3).map((e) => e["event_id"]));
+  });
 });
 
 describe("入口纪律", () => {

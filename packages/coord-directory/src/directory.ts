@@ -285,9 +285,12 @@ export class PlatformDirectory extends DurableObject {
   private listEvents(url: URL): Response {
     const since = url.searchParams.get("since");
     const limit = Math.min(Number(url.searchParams.get("limit") ?? 100), 500);
+    // 无 since：要最近 limit 条，必须按 event_id DESC 取最新的再倒回升序——不能
+    // ASC+LIMIT 直接截，那会在总事件数超过 limit 后永远截在最早一批（coord-repohub
+    // 同款缺陷，见 #813/#814；本文件是 PlatformDirectory 自己的 events 表）。
     const rows = since
       ? [...this.sql.exec(`SELECT * FROM events WHERE event_id > ? ORDER BY event_id LIMIT ?`, since, limit)]
-      : [...this.sql.exec(`SELECT * FROM events ORDER BY event_id LIMIT ?`, limit)];
+      : [...this.sql.exec(`SELECT * FROM events ORDER BY event_id DESC LIMIT ?`, limit)].reverse();
     return json(200, {
       events: rows.map((r) => ({ protocol: PROTOCOL, ...r, payload: JSON.parse(r["payload"] as string) })),
     });
