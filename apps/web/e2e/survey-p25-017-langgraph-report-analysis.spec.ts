@@ -13,7 +13,7 @@ async function register(page: Page) {
   expect(response.status()).toBe(201);
 }
 
-test("LangGraph report chapters share one fact snapshot and recover from model failure", async ({
+test("LangGraph report chapters share one fact snapshot and keep the last success on failure", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1653, height: 1024 });
@@ -81,11 +81,21 @@ test("LangGraph report chapters share one fact snapshot and recover from model f
   const generatedPayload = await generated.json();
   expect(generatedPayload.reused).toBe(false);
   expect(generatedPayload.model).toBe("stub:survey-report");
+  expect(generatedPayload.report.schemaVersion).toBe(
+    "template-driven-report-v1"
+  );
   expect(
-    generatedPayload.report.executiveSummary.claims.some(
-      (claim: { statement: string }) =>
-        claim.statement.includes("用户行为与关键场景") ||
-        claim.statement.includes("满意度与体验评价")
+    generatedPayload.report.chapters.every(
+      (chapter: { outputType: string }) => chapter.outputType === "text"
+    )
+  ).toBe(true);
+  expect(
+    generatedPayload.report.chapters.some((chapter: { claims: Array<{ statement: string }> }) =>
+      chapter.claims.some(
+        (claim) =>
+          claim.statement.includes("用户行为与关键场景") ||
+          claim.statement.includes("满意度与体验评价")
+      )
     )
   ).toBe(true);
   expect(JSON.stringify(generatedPayload)).not.toContain('"answers"');
@@ -101,28 +111,44 @@ test("LangGraph report chapters share one fact snapshot and recover from model f
   expect(reusedPayload.reused).toBe(true);
   expect(reusedPayload.generation.versions).toHaveLength(1);
 
-  const fallback = await page.request.post(
-    `/api/surveys/${survey.id}/professional-report`,
+  const rePlanned = await page.request.patch(
+    `/api/surveys/${survey.id}/report-categories`,
     {
       data: {
-        model: "missing:provider",
-        instruction: "生成一个新的管理层复核版本",
+        title: "产品反馈决策调研 · 复核版",
+        description: "管理层复核所用的另一版报告结构。",
+        categories: [
+          {
+            id: "management-review",
+            name: "管理层复核摘要",
+            description: "",
+            requirement: "先给结论，再说明业务含义和下一步动作。",
+            questionIds: [],
+            outputType: "text",
+            inputModes: ["text"],
+            prompt: "先给结论，再说明业务含义和下一步动作。",
+            order: 1,
+            isCustom: true,
+          },
+        ],
       },
     }
   );
-  expect(fallback.status()).toBe(200);
-  const fallbackPayload = await fallback.json();
-  expect(fallbackPayload.model).toBe("deterministic:evidence");
-  expect(fallbackPayload.warning).toContain("可稍后重新生成");
-  expect(fallbackPayload.report.executiveSummary.claims.length).toBeGreaterThan(
-    0
-  );
-  expect(fallbackPayload.generation.versions).toHaveLength(2);
+  expect(rePlanned.status()).toBe(200);
 
-  await page.goto(`/surveys?survey=${survey.id}&step=template`);
-  await expect(page.getByTestId("report-template-builder")).toBeVisible();
-  await expect(page.getByTestId("professional-report-document")).toBeVisible();
-  await expect(page.getByTestId("report-version-history")).toContainText(
-    "2 个版本"
+  const failing = await page.request.post(
+    `/api/surveys/${survey.id}/professional-report`,
+    { data: { model: "missing:provider" } }
   );
+  expect(failing.status()).toBe(500);
+
+  const statusAfterFailure = await page.request.get(
+    `/api/surveys/${survey.id}/professional-report`
+  );
+  const statusPayload = await statusAfterFailure.json();
+  expect(statusPayload.generation.versions).toHaveLength(1);
+  expect(statusPayload.generation.latestArtifact).not.toBeNull();
+
+  await page.goto(`/surveys?survey=${survey.id}&step=report`);
+  await expect(page.getByTestId("professional-report-document")).toBeVisible();
 });

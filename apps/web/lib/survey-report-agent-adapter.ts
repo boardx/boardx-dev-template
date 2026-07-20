@@ -278,12 +278,10 @@ export interface TemplateTextChapterAgentResult {
   invalid: boolean;
 }
 
-/**
- * Single-chapter variant of {@link generateSurveyReportAgentClaims} for the
- * template-driven report pipeline (survey-report-chapter-generation.ts):
- * runs the evidence-retrieval agent against the raw fact snapshot for just
- * one template chapter instead of batching every category at once.
- */
+// Single-chapter variant of generateSurveyReportAgentClaims for the
+// template-driven pipeline; categoryKey must mirror that function's
+// `name.trim().toLowerCase()` convention so professionalChapterTitle's
+// category map (behavior/satisfaction/...) still applies.
 export async function generateTemplateTextChapterViaAgent({
   chapterId,
   title,
@@ -298,7 +296,7 @@ export async function generateTemplateTextChapterViaAgent({
     chapters: [
       {
         id: chapterId,
-        categoryKey: chapterId,
+        categoryKey: title.trim().toLowerCase(),
         title,
         goal: requirement,
         requirement,
@@ -317,10 +315,7 @@ export async function generateTemplateTextChapterViaAgent({
   });
 
   const chapter = agentResult.chapters[0];
-  if (!chapter || chapter.evidenceRefs.length === 0) {
-    return { headline: title, claims: [], invalid: false };
-  }
-  if (chapter.status !== "accepted") {
+  if (!chapter || chapter.status !== "accepted") {
     return { headline: title, claims: [], invalid: true };
   }
 
