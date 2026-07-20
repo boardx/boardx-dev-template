@@ -123,6 +123,18 @@ describe("Events 流", () => {
     const tail = await (await SELF.fetch(`${BASE}/events?since=${mid}&limit=500`)).json<{ events: Array<Record<string, unknown>> }>();
     expect(tail.events.map((e) => e["event_id"])).toEqual(ids.slice(ids.indexOf(mid) + 1));
   });
+
+  it("不带 since 时 limit 截到最新 N 条，而不是最旧 N 条（#813）", async () => {
+    for (let i = 0; i < 5; i += 1) {
+      await post("/claims", claimBody(`wrk-events-${i}`, `issue:${200 + i}`));
+    }
+    const all = await (await SELF.fetch(`${BASE}/events?limit=500`)).json<{ events: Array<Record<string, unknown>> }>();
+    const totalCount = all.events.length;
+    expect(totalCount).toBeGreaterThan(3);
+
+    const capped = await (await SELF.fetch(`${BASE}/events?limit=3`)).json<{ events: Array<Record<string, unknown>> }>();
+    expect(capped.events.map((e) => e["event_id"])).toEqual(all.events.slice(-3).map((e) => e["event_id"]));
+  });
 });
 
 describe("F04 镜像", () => {
