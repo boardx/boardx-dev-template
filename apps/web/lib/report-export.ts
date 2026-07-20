@@ -452,6 +452,22 @@ function buildTemplateDrivenReportHtml(
     hour12: false,
   });
   const chapters = report.chapters.map((chapter, index) => {
+    if (isTemplateDrivenReportFrameworkChapter(chapter)) {
+      return `
+        <section class="chapter">
+          <p class="eyebrow">${String(index + 1).padStart(2, "0")} / ${escapeHtml(
+            chapter.outputType === "chart"
+              ? "数据图表"
+              : chapter.outputType === "image"
+                ? "研究视觉"
+                : "分析结论"
+          )}</p>
+          <h2>${escapeHtml(chapter.title)}</h2>
+          <p>生成要求：${escapeHtml(chapter.requirement)}</p>
+          <p class="framework">等待真实答卷后生成本章节内容。</p>
+        </section>
+      `;
+    }
     let output = "";
     if (chapter.outputType === "text") {
       output = `
@@ -527,6 +543,7 @@ function buildTemplateDrivenReportHtml(
     figure { margin: 0; }
     figure img { display: block; width: 100%; max-height: 118mm; object-fit: cover; }
     figcaption, small { display: block; margin-top: 3mm; color: #737373; font-size: 10px; }
+    .framework { margin-top: 6mm; padding: 10mm 6mm; color: #737373; border: 1px dashed #d4d4d4; text-align: center; }
     .limitation { margin-top: 6mm; padding: 3mm 4mm; color: #525252; background: #f5f5f5; font-size: 11px; }
     @media screen { body { background: #ededed; } main { padding: 24px; background: #fff; } .cover { min-height: 900px; } }
   </style>
@@ -791,3 +808,4 @@ import {
   isTemplateDrivenSurveyReport,
   type SurveyReportDocument,
 } from "./survey-report-document";
+import { isTemplateDrivenReportFrameworkChapter } from "./survey-template-report";

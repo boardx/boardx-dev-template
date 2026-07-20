@@ -82,6 +82,31 @@ export interface PublicTemplateDrivenSurveyReport
   chapters: PublicTemplateDrivenReportChapter[];
 }
 
+export interface TemplateDrivenReportFrameworkChapter {
+  state: "framework";
+  chapterId: string;
+  order: number;
+  title: string;
+  requirement: string;
+  outputType: SurveyReportOutputType;
+  chartTemplateId?: SurveyReportChartTemplateId;
+}
+
+export interface EmptyTemplateDrivenSurveyReport
+  extends Omit<TemplateDrivenSurveyReport, "chapters" | "status" | "sample"> {
+  status: "empty";
+  sample: {
+    responseCount: 0;
+    questionCount: number;
+    confidence: "none";
+  };
+  chapters: TemplateDrivenReportFrameworkChapter[];
+}
+
+export type PublicTemplateDrivenSurveyReportView =
+  | PublicTemplateDrivenSurveyReport
+  | EmptyTemplateDrivenSurveyReport;
+
 function normalizedRequirement(
   category: SurveyReportCategoryPlanInput["categories"][number]
 ): string {
@@ -207,6 +232,47 @@ export function assembleTemplateDrivenReport(input: {
     sample: input.sample,
     chapters: input.chapters,
   };
+}
+
+export function buildEmptyTemplateDrivenReport(input: {
+  title: string;
+  generatedAt: string;
+  sourceRevision: string;
+  snapshot: SurveyReportTemplateSnapshot;
+  questionCount: number;
+}): EmptyTemplateDrivenSurveyReport {
+  return {
+    schemaVersion: TEMPLATE_DRIVEN_REPORT_SCHEMA_VERSION,
+    title: input.title,
+    generatedAt: input.generatedAt,
+    sourceRevision: input.sourceRevision,
+    status: "empty",
+    templateSnapshot: input.snapshot,
+    sample: {
+      responseCount: 0,
+      questionCount: input.questionCount,
+      confidence: "none",
+    },
+    chapters: input.snapshot.chapters.map((chapter) => ({
+      state: "framework",
+      chapterId: chapter.id,
+      order: chapter.order,
+      title: chapter.title,
+      requirement: chapter.requirement,
+      outputType: chapter.outputType,
+      ...(chapter.chartTemplateId
+        ? { chartTemplateId: chapter.chartTemplateId }
+        : {}),
+    })),
+  };
+}
+
+export function isTemplateDrivenReportFrameworkChapter(
+  chapter:
+    | PublicTemplateDrivenReportChapter
+    | TemplateDrivenReportFrameworkChapter
+): chapter is TemplateDrivenReportFrameworkChapter {
+  return "state" in chapter && chapter.state === "framework";
 }
 
 export function materializeReportAssetUrls(

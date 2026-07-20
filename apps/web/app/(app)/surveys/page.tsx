@@ -3266,6 +3266,7 @@ export default function SurveysPage() {
   const [workspaceReportGenerating, setWorkspaceReportGenerating] = useState(false);
   const [workspaceTemplateStatus, setWorkspaceTemplateStatus] = useState("");
   const [workspaceTemplateError, setWorkspaceTemplateError] = useState("");
+  const editorLoadRequestVersion = useRef(0);
   const reportCategoryPlanRequestVersion = useRef(0);
   const [reportTemplatesBySurveyId, setReportTemplatesBySurveyId] = useState<Record<number, ReportTemplateDraft>>({});
   const [reportCategoryPlansBySurveyId, setReportCategoryPlansBySurveyId] = useState<Record<number, ReportCategoryPlanDraft>>({});
@@ -3480,6 +3481,7 @@ export default function SurveysPage() {
   }
 
   function openEditor(options: { withAi?: boolean; template?: SurveyTemplate } = {}) {
+    editorLoadRequestVersion.current += 1;
     const template = options.template;
     setEditingSurveyId(null);
     setEditingTemplateId(null);
@@ -3684,13 +3686,16 @@ export default function SurveysPage() {
   }
 
   async function loadSurveyForEditor(surveyId: number, nextView: "edit" | "preview", options: { withAi?: boolean } = {}) {
+    const requestVersion = ++editorLoadRequestVersion.current;
     setError("");
     const res = await fetch(`/api/surveys/${surveyId}`);
+    if (requestVersion !== editorLoadRequestVersion.current) return;
     if (!res.ok) {
       setError(res.status === 403 ? "你无权访问该问卷" : "加载问卷失败，请重试");
       return;
     }
     const { survey } = await res.json();
+    if (requestVersion !== editorLoadRequestVersion.current) return;
     setWorkspaceSurvey(survey);
     setSurveys((items) => {
       const existing = items.find((item) => item.id === survey.id);
@@ -4429,6 +4434,7 @@ export default function SurveysPage() {
 
   async function navigateWorkspace(target: WorkspaceTarget) {
     if (target === "workspace") {
+      editorLoadRequestVersion.current += 1;
       setMode("list");
       setWorkspaceView("workspace");
       setWorkbenchTab("my");
@@ -4450,6 +4456,7 @@ export default function SurveysPage() {
       return;
     }
 
+    editorLoadRequestVersion.current += 1;
     setMode("list");
     setWorkspaceView(target);
     setAiCreateFlow(false);
@@ -5450,7 +5457,7 @@ export default function SurveysPage() {
               ? "mx-auto grid items-start gap-4 py-0 xl:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)]"
               : `mx-auto grid gap-4 ${
                   aiOpen
-                    ? "grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px]"
+                    ? "grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)]"
                     : "grid-cols-1 xl:grid-cols-[minmax(0,1fr)_56px]"
                 }`}
           >

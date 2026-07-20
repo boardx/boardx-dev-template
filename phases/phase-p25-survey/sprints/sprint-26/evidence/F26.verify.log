@@ -1,0 +1,30 @@
+$ pnpm --filter @repo/web run test -- survey-template-report survey-report.route report-export
+[exit 0]
+Test Files  36 passed (36)
+Tests       187 passed (187)
+
+$ pnpm --filter @repo/web run lint
+[exit 0]
+design lint: all blocking checks passed
+
+$ pnpm --filter @repo/web run typecheck
+[exit 0]
+tsc --noEmit
+
+$ E2E_PORT=62688 COLLAB_WS_PORT=62689 pnpm --filter @repo/web exec playwright test e2e/survey-p25-026-fullwidth-report-framework.spec.ts
+[exit 0]
+1 passed
+
+Verified behavior:
+- Desktop survey design uses a measured 60/40 questionnaire-to-AI grid.
+- Workflow tabs replace only the content below the persistent header.
+- Report template and analysis report use the full workflow content width.
+- A zero-response report reads the saved template snapshot and renders text,
+  chart, and image framework chapters in saved order.
+- Framework chapters do not mount ECharts canvases or image assets and do not
+  contain generated claims.
+- Mobile report view has no horizontal overflow.
+
+Screenshots:
+- phases/phase-p25-survey/sprints/sprint-26/evidence/fullwidth-report-framework-desktop.png
+- phases/phase-p25-survey/sprints/sprint-26/evidence/fullwidth-report-framework-mobile.png

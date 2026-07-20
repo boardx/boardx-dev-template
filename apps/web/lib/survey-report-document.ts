@@ -1,13 +1,13 @@
 import type { ProfessionalSurveyReportDocument } from "./survey-professional-report";
-import type { PublicTemplateDrivenSurveyReport } from "./survey-template-report";
+import type { PublicTemplateDrivenSurveyReportView } from "./survey-template-report";
 
 export type SurveyReportDocument =
   | ProfessionalSurveyReportDocument
-  | PublicTemplateDrivenSurveyReport;
+  | PublicTemplateDrivenSurveyReportView;
 
 export function isTemplateDrivenSurveyReport(
   report: SurveyReportDocument
-): report is PublicTemplateDrivenSurveyReport {
+): report is PublicTemplateDrivenSurveyReportView {
   return "schemaVersion" in report
     && report.schemaVersion === "template-driven-report-v1";
 }

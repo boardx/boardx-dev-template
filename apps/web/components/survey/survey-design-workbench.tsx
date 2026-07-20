@@ -79,17 +79,26 @@ export function SurveyDesignWorkbench({
 
   return (
     <div data-testid="workspace-design-workbench" className="grid gap-3">
-      <div className={aiCollapsed ? "grid min-w-0 xl:grid-cols-[auto_minmax(0,1fr)_auto]" : "grid min-w-0 xl:grid-cols-[auto_minmax(0,1fr)_320px]"}>
-        <SurveyOutlinePanel
-          title="题目大纲"
-          items={questions.map((question) => ({ id: question.id, label: question.title || "未命名问题", meta: typeLabel[question.type] }))}
-          selectedId={selectedQuestionId}
-          collapsed={outlineCollapsed}
-          onToggle={() => setOutlineCollapsed((collapsed) => !collapsed)}
-          onSelect={setSelectedQuestionId}
-          footer={<Button type="button" size="sm" variant="outline" className="mt-2 w-full border-dashed" onClick={addQuestion}><Plus className="h-4 w-4" />添加问题</Button>}
-        />
-        <section className="grid gap-2.5">
+      <div
+        data-testid="survey-editor-workspace"
+        className={aiCollapsed
+          ? "grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_56px]"
+          : "grid min-w-0 gap-3 xl:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)]"}
+      >
+        <div
+          data-testid="question-builder-panel"
+          className="grid min-w-0 gap-3 xl:grid-cols-[auto_minmax(0,1fr)]"
+        >
+          <SurveyOutlinePanel
+            title="题目大纲"
+            items={questions.map((question) => ({ id: question.id, label: question.title || "未命名问题", meta: typeLabel[question.type] }))}
+            selectedId={selectedQuestionId}
+            collapsed={outlineCollapsed}
+            onToggle={() => setOutlineCollapsed((collapsed) => !collapsed)}
+            onSelect={setSelectedQuestionId}
+            footer={<Button type="button" size="sm" variant="outline" className="mt-2 w-full border-dashed" onClick={addQuestion}><Plus className="h-4 w-4" />添加问题</Button>}
+          />
+          <section className="grid min-w-0 gap-2.5">
           <div className="rounded-lg border border-border bg-background p-3">
             <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -238,7 +247,8 @@ export function SurveyDesignWorkbench({
           </Button>
           {saveError && <p role="alert" className="text-13 text-destructive">{saveError}</p>}
           {actionMessage && <p className="text-13 text-muted-foreground">{actionMessage}</p>}
-        </section>
+          </section>
+        </div>
 
         {aiCollapsed ? (
           <div className="hidden border-l border-border bg-background xl:flex xl:items-start xl:justify-center xl:px-1 xl:py-3">
@@ -255,14 +265,16 @@ export function SurveyDesignWorkbench({
             </Button>
           </div>
         ) : (
-          <SurveyAiPanel
-            placeholder="例如：把题目改得更适合家长填写，并补充心理健康相关问题"
-            resultLabel="AI 优化建议已生成"
-            onSubmit={() => onOpenAi()}
-            onPreview={onOpenAi}
-            onApply={onOpenAi}
-            onCollapse={() => setAiCollapsed(true)}
-          />
+          <div data-testid="survey-ai-assistant" className="min-w-0">
+            <SurveyAiPanel
+              placeholder="例如：把题目改得更适合家长填写，并补充心理健康相关问题"
+              resultLabel="AI 优化建议已生成"
+              onSubmit={() => onOpenAi()}
+              onPreview={onOpenAi}
+              onApply={onOpenAi}
+              onCollapse={() => setAiCollapsed(true)}
+            />
+          </div>
         )}
       </div>
     </div>

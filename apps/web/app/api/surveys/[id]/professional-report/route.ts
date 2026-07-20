@@ -31,7 +31,6 @@ import {
   type SurveyReportGenerationStatus,
 } from "@/lib/survey-report-generation";
 import {
-  buildProfessionalReportDocument,
   rawTextResponsesFromSourceData,
   sanitizeProfessionalReportDocument,
 } from "@/lib/survey-professional-report";
@@ -43,6 +42,7 @@ import {
 } from "@/lib/survey-report-chapter-generation";
 import {
   assembleTemplateDrivenReport,
+  buildEmptyTemplateDrivenReport,
   buildSurveyReportTemplateSnapshot,
   materializeReportAssetUrls,
   type TemplateDrivenSurveyReport,
@@ -315,11 +315,17 @@ export async function GET(request: Request, { params }: { params: { id: string }
       ...context,
       artifacts: includeArtifactInStatus(context.artifacts, currentArtifact),
     });
-    const report = await artifactReport(artifact) ?? buildProfessionalReportDocument({
-      evidence: context.evidence,
-      generatedAt: new Date().toISOString(),
-      reportPlan: context.reportCategoryPlan,
-    });
+    const templateSnapshot = buildSurveyReportTemplateSnapshot(
+      context.reportCategoryPlan
+    );
+    const report = await artifactReport(artifact)
+      ?? buildEmptyTemplateDrivenReport({
+        title: templateSnapshot.title || context.survey.title,
+        generatedAt: new Date().toISOString(),
+        sourceRevision: context.sourceSnapshot.sourceRevision,
+        snapshot: templateSnapshot,
+        questionCount: context.evidence.survey.questionCount,
+      });
     const historyArtifacts = context.artifacts;
     const nextHistoryCursor = nextHistoryCursorForPage(historyArtifacts);
     const historyPage = generationStatus({

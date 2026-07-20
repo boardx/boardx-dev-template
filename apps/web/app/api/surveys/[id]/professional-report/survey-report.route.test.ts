@@ -383,6 +383,90 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
     expect(mocks.createVersionedSurveyReportArtifact).not.toHaveBeenCalled();
   });
 
+  it("returns the saved template framework in order when there are no responses", async () => {
+    mocks.listSurveyResponses.mockResolvedValue([]);
+    mocks.readSurveyReportCategoryPlan.mockResolvedValue({
+      title: "零答卷报告框架",
+      description: "严格按模板章节展示",
+      categories: [
+        {
+          id: "visual",
+          name: "场景视觉",
+          description: "",
+          requirement: "预留场景配图位置。",
+          questionIds: [],
+          outputType: "image",
+          inputModes: ["image"],
+          prompt: "预留场景配图位置。",
+          order: 3,
+          isCustom: true,
+        },
+        {
+          id: "summary",
+          name: "管理层摘要",
+          description: "",
+          requirement: "收到答卷后先给结论。",
+          questionIds: [],
+          outputType: "text",
+          inputModes: ["text"],
+          prompt: "收到答卷后先给结论。",
+          order: 1,
+          isCustom: true,
+        },
+        {
+          id: "trend",
+          name: "趋势对比",
+          description: "",
+          requirement: "收到答卷后比较关键维度。",
+          questionIds: [],
+          outputType: "chart",
+          inputModes: ["chart"],
+          chartTemplateId: "line-simple",
+          prompt: "收到答卷后比较关键维度。",
+          order: 2,
+          isCustom: true,
+        },
+      ],
+    });
+
+    const response = await GET(
+      new Request("http://test.local/api/surveys/41/professional-report"),
+      params
+    );
+    const payload = await response?.json();
+
+    expect(response?.status).toBe(200);
+    expect(payload.preview).toBe(true);
+    expect(payload.report).toMatchObject({
+      schemaVersion: "template-driven-report-v1",
+      title: "零答卷报告框架",
+      status: "empty",
+      sample: {
+        responseCount: 0,
+        questionCount: 1,
+        confidence: "none",
+      },
+    });
+    expect(payload.report.chapters.map((chapter: {
+      state: string;
+      chapterId: string;
+      outputType: string;
+    }) => ({
+      state: chapter.state,
+      chapterId: chapter.chapterId,
+      outputType: chapter.outputType,
+    }))).toEqual([
+      { state: "framework", chapterId: "summary", outputType: "text" },
+      { state: "framework", chapterId: "trend", outputType: "chart" },
+      { state: "framework", chapterId: "visual", outputType: "image" },
+    ]);
+    expect(JSON.stringify(payload.report)).not.toContain("evidenceRefs");
+    expect(JSON.stringify(payload.report)).not.toContain("series");
+    expect(JSON.stringify(payload.report)).not.toContain("assetId");
+    expect(mocks.claimSurveyReportGeneration).not.toHaveBeenCalled();
+    expect(mocks.callQwenJson).not.toHaveBeenCalled();
+  });
+
   it("never sends raw text responses to the model", async () => {
     const canary = "F16_ROUTE_MODEL_CANARY_72b15";
     mocks.getSurveyWithQuestions.mockResolvedValue({
