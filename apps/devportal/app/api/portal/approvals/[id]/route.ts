@@ -35,7 +35,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const lookup = await findEngineerByGithubLogin(session.login);
   if (!lookup.ok) return NextResponse.json({ error: "directory_unreachable" }, { status: 502 });
-  const mine = lookup.engineer ? memberships.find((m) => m.engineer_id === lookup.engineer!.engineer_id && m.status === "active") : undefined;
+  const engineer = lookup.engineer;
+  const mine = engineer ? memberships.find((m) => m.engineer_id === engineer.engineer_id && m.status === "active") : undefined;
   if (!mine || !APPROVER_ROLES.has(mine.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   if (!directoryWriteConfigured()) return NextResponse.json({ error: "directory_not_configured" }, { status: 503 });

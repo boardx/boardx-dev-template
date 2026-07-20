@@ -49,7 +49,8 @@ export async function GET(req: Request) {
   const handle = session.login.toLowerCase();
   const lookup = await findEngineerByGithubLogin(session.login);
   if (!lookup.ok) return NextResponse.json({ logged_in: true, handle, configured: true, error: "unreachable" });
-  const mine = lookup.engineer ? memberships.find((m) => m.engineer_id === lookup.engineer!.engineer_id) : undefined;
+  const engineer = lookup.engineer;
+  const mine = engineer ? memberships.find((m) => m.engineer_id === engineer.engineer_id) : undefined;
   if (!mine) return NextResponse.json({ logged_in: true, handle, configured: true, membership: null });
 
   const sla = mine.status === "pending" ? (await getMembershipSla(mine.membership_id))?.sla ?? mine.sla ?? null : null;
