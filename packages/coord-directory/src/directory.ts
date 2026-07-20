@@ -169,6 +169,21 @@ function jsonField(o: Obj | null, key: string, fallback: unknown): string | Resp
   return JSON.stringify(v);
 }
 
+/** 加法迁移语句表（p30/F07 起）：SQLite 无 `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`，
+ *  用「试跑一次，已存在则吞掉报错」保持幂等——同一纪律见文件头「幂等 SCHEMA」。
+ *  `CREATE TABLE IF NOT EXISTS` 只在表首次创建时生效；已被更早版本实例化过的表
+ *  （如生产 DO 在 F06 落地前就已建过 memberships 表）不会自动获得后续新增列，
+ *  必须逐列补 ALTER TABLE，否则 INSERT 会因列不存在而 500（#787 事故：
+ *  POST /memberships 在已 provision 的生产 DO 上报 500，根因即此）。
+ *  导出为顶层常量（而非 migrate() 内的局部变量）是为了让「老表结构 + 迁移 = 新列可用」
+ *  这类回归测试能直接复用同一份真实语句，而不是在测试里手抄一份容易漂移的副本。 */
+export const SCHEMA_MIGRATIONS = [
+  `ALTER TABLE agents ADD COLUMN lifecycle TEXT NOT NULL DEFAULT 'active'`,
+  `ALTER TABLE memberships ADD COLUMN modules TEXT NOT NULL DEFAULT '[]'`,
+  `ALTER TABLE memberships ADD COLUMN intro TEXT NOT NULL DEFAULT ''`,
+  `ALTER TABLE memberships ADD COLUMN onboarding_issue_url TEXT`,
+];
+
 export class PlatformDirectory extends DurableObject {
   private sql: SqlStorage;
 
@@ -179,26 +194,34 @@ export class PlatformDirectory extends DurableObject {
     this.migrate();
   }
 
-  /** 加法迁移（p30/F07 起）：SQLite 无 `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`，
-   *  用「试跑一次，已存在则吞掉报错」保持幂等——同一纪律见文件头「幂等 SCHEMA」。
-   *  `CREATE TABLE IF NOT EXISTS` 只在表首次创建时生效；已被更早版本实例化过的表
-   *  （如生产 DO 在 F06 落地前就已建过 memberships 表）不会自动获得后续新增列，
-   *  必须逐列补 ALTER TABLE，否则 INSERT 会因列不存在而 500（#787 事故：
-   *  POST /memberships 在已 provision 的生产 DO 上报 500，根因即此）。 */
   private migrate(): void {
-    const alters = [
-      `ALTER TABLE agents ADD COLUMN lifecycle TEXT NOT NULL DEFAULT 'active'`,
-      `ALTER TABLE memberships ADD COLUMN modules TEXT NOT NULL DEFAULT '[]'`,
-      `ALTER TABLE memberships ADD COLUMN intro TEXT NOT NULL DEFAULT ''`,
-      `ALTER TABLE memberships ADD COLUMN onboarding_issue_url TEXT`,
-    ];
-    for (const stmt of alters) {
+    for (const stmt of SCHEMA_MIGRATIONS) {
       try {
         this.sql.exec(stmt);
       } catch {
         /* 列已存在（非首次启动）——幂等 no-op */
       }
     }
+  }
+
+  /** 仅回归测试用：把当前表结构退回「迁移前」形状，复现 #787（老表 + 新代码 =
+   *  INSERT 因列缺失而 500）。DROP COLUMN 直接对着 SCHEMA_MIGRATIONS 反着来一遍，
+   *  维持单一出口——真去掉的列名跟着迁移语句表走，不在这里另抄一份列名容易漂移。 */
+  private testDropMigratedColumns(): Response {
+    const dropped: string[] = [];
+    const failed: string[] = [];
+    for (const stmt of SCHEMA_MIGRATIONS) {
+      const m = /^ALTER TABLE (\w+) ADD COLUMN (\w+)/.exec(stmt);
+      if (!m) continue;
+      const [, table, column] = m as unknown as [string, string, string];
+      try {
+        this.sql.exec(`ALTER TABLE ${table} DROP COLUMN ${column}`);
+        dropped.push(`${table}.${column}`);
+      } catch (e) {
+        failed.push(`${table}.${column}: ${(e as Error).message}`);
+      }
+    }
+    return json(200, { dropped, failed });
   }
 
   // ---------- HTTP 入口（gateway 经 stub.fetch 调用） ----------
@@ -234,6 +257,15 @@ export class PlatformDirectory extends DurableObject {
       if (req.method === "POST" && p === "/directory/enrollments") return this.createEnrollment(await req.json());
       const rv = p.match(/^\/directory\/enrollments\/(enr_[0-9A-Z]+)\/revoke$/);
       if (req.method === "POST" && rv) return this.revokeEnrollment(rv[1]!, await req.json());
+      // 仅回归测试用（#787 老表迁移回归）：不在 coord-gateway 的读/写 allowlist 里，
+      // 生产网关路由 404 挡在前面，永远打不到这里；只有独立测试 host（index.ts，
+      // 本身对非 GET 请求要求 COORD_DIRECTORY_TEST_HOST=1）才转发得到——双重收窄。
+      if (req.method === "POST" && p === "/directory/__test__/drop-migrated-columns")
+        return this.testDropMigratedColumns();
+      if (req.method === "POST" && p === "/directory/__test__/run-migrations") {
+        this.migrate();
+        return json(200, { ok: true });
+      }
       return json(404, { error: "not_found" });
     } catch (e) {
       if (e instanceof SyntaxError) return json(400, { error: "invalid_json" });
