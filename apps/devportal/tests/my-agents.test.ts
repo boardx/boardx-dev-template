@@ -224,6 +224,28 @@ describe("POST /api/portal/my-agents/:id/rotate", () => {
 });
 
 describe("POST /api/portal/my-agents/:id/retire", () => {
+  // 身份混淆回归（p30/F06 #798 同款漏洞类，与 rotate 对称补齐，#808）：诱饵场景——
+  // 登录者的 login 恰好等于目标 agent owner 的 handle（展示用自然键），但
+  // github_login（认证锚点）是完全不同的人。retire 是撤全部 token 的最强写路径，
+  // 若判定退回按 handle 比较会被误判成"是我自己的 agent"，成功撤销受害者的 token。
+  it("身份混淆回归：login 恰好等于受害者 agent 的 handle（诱饵）→ 仍然 403，不能按 handle 顶替", async () => {
+    const { getSessionUser } = await import("@/lib/session");
+    vi.mocked(getSessionUser).mockResolvedValue({ login: "attacker-real", email: null, name: null, avatarUrl: null, via: "oauth" });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("/directory/agents/agt_victim3"))
+          return jsonRes(200, {
+            agent: { agent_id: "agt_victim3", owner: { engineer_id: "e9", handle: "attacker-real", github_login: "victim-real" } },
+          });
+        throw new Error(`unexpected: ${url}`);
+      }),
+    );
+    const { POST } = await import("../app/api/portal/my-agents/[agentId]/retire/route");
+    const res = await POST(new Request("https://x", { method: "POST" }), { params: { agentId: "agt_victim3" } });
+    expect(res.status).toBe(403);
+  });
+
   it("成功：吊销 token + Directory 生命周期置 retired", async () => {
     const { getSessionUser } = await import("@/lib/session");
     vi.mocked(getSessionUser).mockResolvedValue({ login: "usamshen", email: null, name: null, avatarUrl: null, via: "oauth" });
@@ -253,6 +275,26 @@ describe("POST /api/portal/my-agents/:id/retire", () => {
 });
 
 describe("POST /api/portal/my-agents/:id/lifecycle", () => {
+  // 身份混淆回归（p30/F06 #798 同款漏洞类，与 rotate 对称补齐，#808）：诱饵场景，
+  // 同款 login==handle/github_login 不同 攻击结构，验证 pause/resume 写路径同样 fail-closed。
+  it("身份混淆回归：login 恰好等于受害者 agent 的 handle（诱饵）→ 仍然 403，不能按 handle 顶替", async () => {
+    const { getSessionUser } = await import("@/lib/session");
+    vi.mocked(getSessionUser).mockResolvedValue({ login: "attacker-real", email: null, name: null, avatarUrl: null, via: "oauth" });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("/directory/agents/agt_victim4"))
+          return jsonRes(200, {
+            agent: { agent_id: "agt_victim4", owner: { engineer_id: "e9", handle: "attacker-real", github_login: "victim-real" } },
+          });
+        throw new Error(`unexpected: ${url}`);
+      }),
+    );
+    const { POST } = await import("../app/api/portal/my-agents/[agentId]/lifecycle/route");
+    const res = await POST(new Request("https://x", { method: "POST", body: JSON.stringify({ action: "pause" }) }), { params: { agentId: "agt_victim4" } });
+    expect(res.status).toBe(403);
+  });
+
   it("非法 action → 422", async () => {
     const { getSessionUser } = await import("@/lib/session");
     vi.mocked(getSessionUser).mockResolvedValue({ login: "usamshen", email: null, name: null, avatarUrl: null, via: "oauth" });
