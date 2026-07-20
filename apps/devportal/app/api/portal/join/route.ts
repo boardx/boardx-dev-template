@@ -47,7 +47,9 @@ export async function GET(req: Request) {
   if (memberships === null) return NextResponse.json({ logged_in: true, handle: session.login, configured: true, error: "unreachable" });
 
   const handle = session.login.toLowerCase();
-  const engineer = await findEngineerByGithubLogin(session.login);
+  const lookup = await findEngineerByGithubLogin(session.login);
+  if (!lookup.ok) return NextResponse.json({ logged_in: true, handle, configured: true, error: "unreachable" });
+  const engineer = lookup.engineer;
   const mine = engineer ? memberships.find((m) => m.engineer_id === engineer.engineer_id) : undefined;
   if (!mine) return NextResponse.json({ logged_in: true, handle, configured: true, membership: null });
 

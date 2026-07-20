@@ -7,6 +7,8 @@
 // 后果更重（写路径权限提升：handle 恰好等于某个真实 owner/maintainer github_login 的
 // 人，能以其身份批准/驳回他人的加入申请）。现在统一走 findEngineerByGithubLogin()
 // 解出 engineer_id 后按 engineer_id 匹配。
+// findEngineerByGithubLogin 返回判别联合（#807）：!lookup.ok 是上游目录读面本身
+// 打不通，与「查无此人」是两回事，不得都折叠成 403。
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/session";
 import { directoryWriteConfigured, findEngineerByGithubLogin, listProjectMemberships, transitionMembership } from "@/lib/directory";
@@ -31,7 +33,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const memberships = await listProjectMemberships(project);
   if (memberships === null) return NextResponse.json({ error: "directory_unreachable" }, { status: 502 });
 
-  const engineer = await findEngineerByGithubLogin(session.login);
+  const lookup = await findEngineerByGithubLogin(session.login);
+  if (!lookup.ok) return NextResponse.json({ error: "directory_unreachable" }, { status: 502 });
+  const engineer = lookup.engineer;
   const mine = engineer ? memberships.find((m) => m.engineer_id === engineer.engineer_id && m.status === "active") : undefined;
   if (!mine || !APPROVER_ROLES.has(mine.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 

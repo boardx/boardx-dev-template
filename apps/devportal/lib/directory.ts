@@ -142,11 +142,16 @@ export async function listProjectMemberships(slug: string): Promise<DirectoryMem
  * 自然键，与登录身份是两个独立字段（可以不相等，见 e2e fixture 的诱饵工程师用例）；
  * github_login 为空的 engineer 记录（尚未绑定 GitHub）永远不参与匹配。
  */
-export async function findEngineerByGithubLogin(login: string): Promise<DirectoryEngineer | null> {
+export type EngineerLookup =
+  | { ok: true; engineer: DirectoryEngineer | null }
+  | { ok: false };
+
+export async function findEngineerByGithubLogin(login: string): Promise<EngineerLookup> {
   const r = await readCall<{ engineers: DirectoryEngineer[] }>("/engineers");
-  if (!r.ok) return null;
+  if (!r.ok) return { ok: false };
   const norm = login.toLowerCase();
-  return r.body.engineers.find((e) => typeof e.github_login === "string" && e.github_login.toLowerCase() === norm) ?? null;
+  const engineer = r.body.engineers.find((e) => typeof e.github_login === "string" && e.github_login.toLowerCase() === norm) ?? null;
+  return { ok: true, engineer };
 }
 
 /** upsert engineer by GitHub 身份（handle 用小写 login，一律真身份，不接受调用方自报 handle）。 */
