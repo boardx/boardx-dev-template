@@ -440,6 +440,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const chapters = await generateTemplateReportChapters({
       snapshot,
       evidence: context.evidence,
+      sourceSnapshot: context.sourceSnapshot,
       sourceRevision: context.sourceSnapshot.sourceRevision,
       teamId:
         context.survey.team_id

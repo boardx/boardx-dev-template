@@ -3,17 +3,17 @@ import type {
   SurveyQuestionEvidence,
   SurveyReportEvidenceBundle,
 } from "./survey-report-evidence";
-import {
-  type AiEvidenceClaimCandidate,
-  modelSafeSurveyReportEvidence,
-  validateEvidenceClaims,
-} from "./survey-professional-report";
+import { validateEvidenceClaims } from "./survey-professional-report";
 import type {
   SurveyReportTemplateChapterSnapshot,
   SurveyReportTemplateSnapshot,
   TemplateDrivenReportChapter,
 } from "./survey-template-report";
 import { callQwenJson } from "./qwen";
+import {
+  generateTemplateTextChapterViaAgent,
+  type SurveyReportSourceSnapshotLike,
+} from "./survey-report-agent-adapter";
 import {
   generateAndStoreSurveyReportImage,
   type StoredSurveyReportImage,
@@ -22,6 +22,7 @@ import {
 interface GenerateTemplateReportChaptersInput {
   snapshot: SurveyReportTemplateSnapshot;
   evidence: SurveyReportEvidenceBundle;
+  sourceSnapshot: SurveyReportSourceSnapshotLike;
   sourceRevision: string;
   teamId: string | number;
   surveyId: string | number;
@@ -38,11 +39,7 @@ interface ChapterGenerationDependencies {
   generateImage?: (
     input: Parameters<typeof generateAndStoreSurveyReportImage>[0]
   ) => Promise<StoredSurveyReportImage>;
-}
-
-interface TextChapterResult {
-  headline: string;
-  claims: AiEvidenceClaimCandidate[];
+  generateTextChapterAgent?: typeof generateTemplateTextChapterViaAgent;
 }
 
 interface ChartChapterResult {
@@ -99,32 +96,18 @@ function chapterBase(
 async function generateTextChapter(
   input: GenerateTemplateReportChaptersInput,
   chapter: SurveyReportTemplateChapterSnapshot,
-  callJson: ChapterJsonCaller
+  generateTextChapterAgent: typeof generateTemplateTextChapterViaAgent
 ): Promise<TemplateDrivenReportChapter> {
-  const result = await callJson({
-    model: input.model,
-    temperature: 0.2,
-    messages: requestMessages({
-      task: "generate_template_text_chapter",
-      sourceRevision: input.sourceRevision,
-      chapter,
-      outputContract: {
-        headline: "string",
-        claims: [{
-          statement: "string",
-          evidenceId: "must match evidence.claims[].id",
-          value: "must equal evidence claim value",
-          denominator: "must equal evidence claim denominator",
-          implication: "optional string",
-          recommendation: "optional string",
-        }],
-      },
-      evidence: modelSafeSurveyReportEvidence(input.evidence),
-    }),
-  }) as TextChapterResult;
-  const candidates = Array.isArray(result.claims) ? result.claims : [];
-  const claims = validateEvidenceClaims(input.evidence, candidates);
-  if (candidates.length > 0 && claims.length === 0) {
+  const agentResult = await generateTextChapterAgent({
+    chapterId: chapter.id,
+    title: chapter.title,
+    requirement: chapter.requirement,
+    snapshot: input.sourceSnapshot,
+    evidence: input.evidence,
+    modelId: input.model,
+  });
+  const claims = validateEvidenceClaims(input.evidence, agentResult.claims);
+  if (agentResult.invalid && claims.length === 0) {
     throw new Error("report_text_evidence_invalid");
   }
   const paragraphs = claims.flatMap((claim) => [
@@ -140,7 +123,7 @@ async function generateTextChapter(
       input.evidence.limitations
     ),
     outputType: "text",
-    headline: String(result.headline ?? "").trim() || chapter.title,
+    headline: agentResult.headline.trim() || chapter.title,
     body: paragraphs.join("\n\n"),
     claims,
   };
@@ -239,11 +222,15 @@ export async function generateTemplateReportChapters(
   const callJson = dependencies.callJson ?? callQwenJson;
   const generateImage =
     dependencies.generateImage ?? generateAndStoreSurveyReportImage;
+  const generateTextChapterAgent =
+    dependencies.generateTextChapterAgent ?? generateTemplateTextChapterViaAgent;
   const chapters: TemplateDrivenReportChapter[] = [];
 
   for (const chapter of input.snapshot.chapters) {
     if (chapter.outputType === "text") {
-      chapters.push(await generateTextChapter(input, chapter, callJson));
+      chapters.push(
+        await generateTextChapter(input, chapter, generateTextChapterAgent)
+      );
     } else if (chapter.outputType === "chart") {
       chapters.push(await generateChartChapter(input, chapter, callJson));
     } else {

@@ -14,8 +14,12 @@
     "lint": "echo 'lint: ok'"
   },
   "devDependencies": {
+    "@types/node": "*",
     "typescript": "*",
-    "vitest": "*",
-    "@types/node": "*"
+    "vitest": "*"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.2.3",
+    "@langchain/langgraph": "^1.4.7"
   }
 }
