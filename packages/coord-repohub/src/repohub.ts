@@ -311,9 +311,13 @@ export class RepoHub extends DurableObject {
   private listEvents(url: URL): Response {
     const since = url.searchParams.get("since");
     const limit = Math.min(Number(url.searchParams.get("limit") ?? 100), 500);
+    // 无 since：调用方要的是"最近 limit 条"（events.md 没有单独的"最近 N 条"端点，
+    // 这是唯一入口），必须按 event_id DESC 取最新的再倒回升序——不能直接 ASC+LIMIT，
+    // 那会在总事件数超过 limit 后永远截在最早的一批（#813：devportal
+    // fetchRecentEvents() 因此冻结在了很旧的快照上，不会随时间推进）。
     const rows = since
       ? [...this.sql.exec(`SELECT * FROM events WHERE event_id > ? ORDER BY event_id LIMIT ?`, since, limit)]
-      : [...this.sql.exec(`SELECT * FROM events ORDER BY event_id LIMIT ?`, limit)];
+      : [...this.sql.exec(`SELECT * FROM events ORDER BY event_id DESC LIMIT ?`, limit)].reverse();
     return json(200, {
       events: rows.map((r) => ({ ...r, payload: JSON.parse(r["payload"] as string) })),
     });

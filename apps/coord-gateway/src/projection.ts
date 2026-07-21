@@ -16,6 +16,13 @@ import type { Env } from "./index";
 
 const DEFAULT_REPOS = "boardx/boardx-dev-template";
 const EVENTS_BATCH = 500;
+// event_id 下界哨兵（26 个 ULID 字母表最小字符 "0"）：cursor 为 null（首次投影/新仓
+// 冷启动）时显式传 since=MIN_EVENT_ID，走 /events 的 since 分支（WHERE event_id > ?
+// ORDER BY event_id LIMIT ?，真正的"从头分页"语义），而不是省略 since 依赖其默认行为
+// ——#814 起默认行为是"最近 N 条"（修复 #813 的冻结缺陷），如果仍然省略 since，
+// 冷启动会跳过 EVENTS_BATCH 条之前的所有历史事件（#815 review 要求：给 bootstrap
+// 一个显式入口，不能靠"cursor 实践中不会晚于 500 条事件才建立"这种论证代替代码保证）。
+const MIN_EVENT_ID = "evt_00000000000000000000000000";
 
 async function doJson<T>(stub: DurableObjectStub, path: string, init?: RequestInit): Promise<T> {
   const res = await stub.fetch(`https://repohub${path}`, init);
@@ -29,7 +36,7 @@ async function projectRepo(env: Env, auth: GitHubAppAuth, repo: string): Promise
 
   const { cursor } = await doJson<{ cursor: string | null }>(stub, "/projector/cursor");
   const { events } = await doJson<{ events: ProjectionEvent[] }>(
-    stub, `/events?limit=${EVENTS_BATCH}${cursor ? `&since=${cursor}` : ""}`,
+    stub, `/events?limit=${EVENTS_BATCH}&since=${cursor ?? MIN_EVENT_ID}`,
   );
   const andon = await doJson<AndonState>(stub, "/andon");
   // 活跃租约快照必须在 events 之后取：快照时点 ≥ 批内事件时点，引擎里
