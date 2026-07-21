@@ -425,6 +425,32 @@
       "notes": "仅在 F16 合并后复用 Survey 交付 worktree，同步最新 main 并切换到独立 F17 分支和 Delivery PR；生产 Web/API 使用 StateBackend、StoreBackend 或受控虚拟 backend，不使用宿主机 FilesystemBackend。PR 只 Closes F17 feature issue，并 Refs #648。"
     },
     {
+      "id": "F18",
+      "priority": 1,
+      "area": "survey",
+      "title": "按参考稿重构设计问卷工作台",
+      "user_visible_behavior": "用户进入设计问卷步骤时，看到与已确认参考稿一致的顶部操作和五步导航、问卷摘要、诊断假设、连续可编辑题目卡片及右侧 AI 助手；桌面端不再显示题目大纲侧栏，移动端为无横向溢出的单列布局。用户仍可编辑标题、说明、题型、分类、选项和必填状态，执行排序、删除、添加、保存、预览及步骤导航。",
+      "design_ref": "requirements/17-design-workbench-reference-ui.md；docs/superpowers/specs/2026-07-18-survey-design-workbench-reference-ui-design.md；2026-07-18 用户确认截图",
+      "status": "passing",
+      "sprint": "18",
+      "owner": "wrk-survey-1",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F11",
+        "F15"
+      ],
+      "wave": 15,
+      "verification": [
+        "pnpm --filter @repo/web run test -- survey-design-summary",
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "pnpm --filter @repo/web exec playwright test e2e/survey-p25-018-design-workbench-ui.spec.ts",
+        "pnpm harness doctor --phase p25"
+      ],
+      "evidence": "evidence/F18.verify.log @ 2026-07-18T14:52:16.729Z",
+      "notes": "独立 UI Delivery PR，Refs #648。共享热点为 apps/web/app/(app)/surveys/page.tsx、apps/web/components/survey/survey-design-workbench.tsx 和 survey-ai-panel.tsx；不与 F17 并行修改这些文件。"
+    },
+    {
       "id": "F19",
       "priority": 1,
       "area": "survey",
