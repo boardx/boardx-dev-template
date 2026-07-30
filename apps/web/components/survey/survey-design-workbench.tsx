@@ -78,7 +78,7 @@ export function SurveyDesignWorkbench({
   }, [questions, selectedQuestionId]);
 
   return (
-    <div data-testid="workspace-design-workbench" className="grid gap-3">
+    <div data-testid="workspace-design-workbench" className="grid gap-4">
       <div className={aiCollapsed ? "grid min-w-0 xl:grid-cols-[auto_minmax(0,1fr)_auto]" : "grid min-w-0 xl:grid-cols-[auto_minmax(0,1fr)_320px]"}>
         <SurveyOutlinePanel
           title="题目大纲"

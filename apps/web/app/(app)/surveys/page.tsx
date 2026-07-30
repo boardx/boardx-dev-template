@@ -752,11 +752,14 @@ function WorkspaceShell({
           <div className={focusedMode ? "" : "lg:min-w-survey-workbench"}>
           {!hideHeader && <header
             data-testid={inSurveyWorkflow ? "survey-workflow-header" : undefined}
-            className="sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-3 backdrop-blur"
+            className="sticky top-0 z-10 overflow-hidden border-b border-border bg-background/95 backdrop-blur"
           >
             {inSurveyWorkflow ? (
-              <div className="grid gap-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div
+                  data-testid="survey-workflow-topbar"
+                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                >
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <Badge variant="outline" className="bg-secondary">
                       Survey Workflow
@@ -774,7 +777,10 @@ function WorkspaceShell({
                   </div>
                 </div>
 
-                <div data-testid="survey-workflow-tabs" className="grid gap-2 border-t border-border pt-3 md:grid-cols-5">
+                <div
+                  data-testid="survey-workflow-tabs"
+                  className="grid gap-2 border-t border-border px-4 py-3 md:grid-cols-5"
+                >
                   <span data-testid="survey-editor-stepper" className="sr-only">
                     五步工作流导航
                   </span>
@@ -4942,7 +4948,7 @@ export default function SurveysPage() {
         onCreateBlank={() => openTemplateEditor()}
         onNavigate={(target) => void navigateWorkspace(target)}
       >
-      <div data-testid={isTemplateEditor ? "template-editor-shell" : "survey-editor-screen"} className={isTemplateEditor ? "pb-8" : "w-full px-4 pb-10 sm:px-6"}>
+      <div data-testid={isTemplateEditor ? "template-editor-shell" : "survey-editor-screen"} className={isTemplateEditor ? "pb-8" : "w-full pb-10"}>
         <div data-testid={isTemplateEditor ? undefined : "survey-editor-shell"} className="mb-4">
           {isTemplateEditor && <div className="rounded-lg border border-border bg-background">
           <div data-testid="editor-command-bar" className="flex flex-wrap items-center gap-3 py-4">

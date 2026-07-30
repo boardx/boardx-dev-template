@@ -111,7 +111,7 @@ export function SurveyCollectWorkbench({
   }
 
   return (
-    <div data-testid="workspace-collect-workbench" className="grid w-full gap-5 bg-survey/5 p-5 md:p-6">
+    <div data-testid="workspace-collect-workbench" className="grid w-full gap-4">
       <section
         data-testid="collect-status-panel"
         className="flex flex-col gap-5 rounded-lg border border-survey/20 bg-background p-5 shadow-sm md:flex-row md:items-center md:justify-between md:p-6"

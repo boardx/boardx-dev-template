@@ -218,8 +218,11 @@ test("five workflow surfaces fill the desktop workspace and keep a single-column
     await page.goto(`/surveys?survey=${survey.id}&step=${step}`);
     const surface = page.getByTestId("survey-workflow-surface");
     const content = page.getByTestId("survey-workflow-content");
+    const header = page.getByTestId("survey-workflow-header");
+    const topbar = page.getByTestId("survey-workflow-topbar");
+    const tabs = page.getByTestId("survey-workflow-tabs");
 
-    await expect(page.getByTestId("survey-workflow-header")).toContainText("持久壳层问卷", { timeout: 30_000 });
+    await expect(header).toContainText("持久壳层问卷", { timeout: 30_000 });
     const workbench = page.getByTestId(workbenches[step]);
     await expect(workbench).toBeVisible({ timeout: 20_000 });
     if (step === "design") {
@@ -228,14 +231,22 @@ test("five workflow surfaces fill the desktop workspace and keep a single-column
     }
     await expect(surface).toBeVisible({ timeout: 20_000 });
     await expect(content).toBeVisible();
-    const [surfaceBox, contentBox, workbenchBox] = await Promise.all([
+    const [headerBox, topbarBox, tabsBox, surfaceBox, contentBox, workbenchBox] = await Promise.all([
+      header.boundingBox(),
+      topbar.boundingBox(),
+      tabs.boundingBox(),
       surface.boundingBox(),
       content.boundingBox(),
       workbench.boundingBox(),
     ]);
+    expect(headerBox).not.toBeNull();
+    expect(topbarBox).not.toBeNull();
+    expect(tabsBox).not.toBeNull();
     expect(surfaceBox).not.toBeNull();
     expect(contentBox).not.toBeNull();
     expect(workbenchBox).not.toBeNull();
+    expect(Math.abs(tabsBox!.y - topbarBox!.y - topbarBox!.height)).toBeLessThanOrEqual(1);
+    expect(Math.abs(surfaceBox!.y - headerBox!.y - headerBox!.height)).toBeLessThanOrEqual(1);
     expect(Math.abs(contentBox!.x - surfaceBox!.x)).toBeLessThanOrEqual(1);
     expect(Math.abs(contentBox!.width - surfaceBox!.width)).toBeLessThanOrEqual(1);
     expect(workbenchBox!.x - contentBox!.x).toBeLessThanOrEqual(25);
