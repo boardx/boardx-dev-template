@@ -221,6 +221,10 @@ test("five workflow surfaces keep a bounded desktop frame and a single-column mo
 
     await expect(page.getByTestId("survey-workflow-header")).toContainText("持久壳层问卷");
     await expect(page.getByTestId(workbenches[step])).toBeVisible({ timeout: 20_000 });
+    if (step === "design") {
+      await expect(page.getByTestId("survey-title")).toHaveValue("持久壳层问卷");
+      await expect(page.getByTestId("question-title-0")).toHaveValue("你最关注哪个体验环节？");
+    }
     await expect(surface).toBeVisible({ timeout: 20_000 });
     await expect(content).toBeVisible();
     const [surfaceBox, contentBox] = await Promise.all([surface.boundingBox(), content.boundingBox()]);
@@ -247,6 +251,10 @@ test("five workflow surfaces keep a bounded desktop frame and a single-column mo
 
     await expect(page.getByTestId("survey-workflow-header")).toContainText("持久壳层问卷");
     await expect(page.getByTestId(workbenches[step])).toBeVisible({ timeout: 20_000 });
+    if (step === "design") {
+      await expect(page.getByTestId("survey-title")).toHaveValue("持久壳层问卷");
+      await expect(page.getByTestId("question-title-0")).toHaveValue("你最关注哪个体验环节？");
+    }
     await expect(page.getByTestId("survey-workflow-content")).toBeVisible({ timeout: 20_000 });
     await expect(activeControl).toBeVisible();
     await tabTo(page, activeControl);
