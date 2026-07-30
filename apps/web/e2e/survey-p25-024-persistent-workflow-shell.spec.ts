@@ -1,4 +1,7 @@
 import { expect, test, type ElementHandle, type Locator, type Page } from "@playwright/test";
+import path from "node:path";
+
+const repositoryRoot = path.resolve(__dirname, "../../..");
 
 async function register(page: Page) {
   const response = await page.request.post("/api/auth/register", {
@@ -167,7 +170,7 @@ test("each workflow deep link uses the shared framed surface and marks its activ
   }
 });
 
-test("five workflow surfaces keep a bounded desktop frame and a single-column mobile layout", async ({ page }, testInfo) => {
+test("five workflow surfaces keep a bounded desktop frame and a single-column mobile layout", async ({ page }) => {
   test.setTimeout(120_000);
   await register(page);
   const survey = await createSurvey(page);
@@ -185,7 +188,10 @@ test("five workflow surfaces keep a bounded desktop frame and a single-column mo
     collect: page.getByRole("button", { name: "保存配置" }),
     answer: page.getByTestId("answer-open-preview"),
   } as const;
-  const evidenceRoot = `${testInfo.config.rootDir}/../../../phases/phase-p25-survey/sprints/sprint-12/evidence`;
+  const evidenceRoot = path.join(
+    repositoryRoot,
+    "phases/phase-p25-survey/sprints/sprint-12/evidence",
+  );
   const desktopEvidencePath = `${evidenceRoot}/survey-five-step-unified-desktop.png`;
   const mobileEvidencePath = `${evidenceRoot}/survey-five-step-unified-mobile.png`;
   const desktopScreenshots: string[] = [];
