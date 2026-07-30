@@ -75,7 +75,7 @@ test("report template exposes whole-survey requirements and a real report previe
   await expect(page.getByTestId("report-module-list")).toBeVisible();
   await expect(page.getByTestId("report-requirement-panel")).toBeVisible();
   await expect(page.getByTestId("report-preview-panel")).toBeVisible();
-  await expect(page.getByTestId("professional-report-document")).toContainText("暂无真实答卷");
+  await expect(page.getByTestId("report-preview-panel")).toContainText("当前事实库包含 0 份答卷");
   await expect(page.getByRole("heading", { name: "报告模版 · 学生成长调研" })).toBeVisible();
   await expect(page.getByText("问题来源", { exact: true })).toHaveCount(0);
   await expect(page.getByText("输出模块", { exact: true })).toHaveCount(0);
@@ -156,8 +156,11 @@ test("professional report never invents evidence for an empty survey", async ({ 
   const generatedResponse = await page.request.post(`/api/surveys/${survey.id}/professional-report`, {
     data: { instruction: "生成管理层报告" },
   });
-  expect(generatedResponse.status()).toBe(200);
-  expect((await generatedResponse.json()).report.executiveSummary.claims).toEqual([]);
+  expect(generatedResponse.status()).toBe(422);
+  expect(await generatedResponse.json()).toMatchObject({
+    error: "report_requires_responses",
+    minimumResponseCount: 1,
+  });
 
   await page.goto(`/surveys?survey=${survey.id}&step=report`);
   await expect(page.getByTestId("professional-report-document")).toContainText("尚无真实答卷", { timeout: 20_000 });

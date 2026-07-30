@@ -110,6 +110,23 @@
     @apply bg-background text-foreground antialiased;
   }
 
+  html.survey-workflow-active,
+  body.survey-workflow-active {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body.survey-workflow-active {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+  }
+
+  body.survey-workflow-active [data-app-scroll-container] {
+    overflow: hidden;
+  }
+
   progress.survey-progress {
     appearance: none;
     overflow: hidden;

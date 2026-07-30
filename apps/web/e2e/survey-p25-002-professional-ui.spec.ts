@@ -113,7 +113,7 @@ test("editor shell keeps the reference workflow, default AI assistant, and unifi
   await page.getByTestId("create-with-ai").click();
   await page.getByTestId("new-survey-blank").click();
   await expect(page.getByTestId("survey-editor-shell")).toBeVisible();
-  await expect(page.getByTestId("editor-command-bar")).toBeVisible();
+  await expect(page.getByTestId("editor-command-bar")).toHaveCount(0);
   await expect(page.getByTestId("survey-editor-stepper")).toBeVisible();
   await expect(page.getByTestId("question-builder-panel")).toBeVisible();
   await expect(page.getByTestId("survey-ai-assistant")).toBeVisible();
@@ -143,6 +143,91 @@ test("editor shell keeps the reference workflow, default AI assistant, and unifi
   expect(previewOption!.y).toBeGreaterThan(previewQuestion!.y);
   await page.getByTestId("edit-survey").click();
   await expect(page.getByTestId("question-builder-panel")).toBeVisible();
+});
+
+test("saved survey keeps preview and save actions visible at the bottom of a long editor", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await register(page);
+  const survey = await createSurvey(
+    page,
+    false,
+    Array.from({ length: 24 }, (_, index) => ({
+      title: `编辑器长问卷问题 ${index + 1}`,
+      type: index % 2 === 0 ? "single" : "short_text",
+      required: index < 2,
+      options: index % 2 === 0 ? ["选项 A", "选项 B"] : [],
+    }))
+  );
+
+  await page.goto(`/surveys?survey=${survey.id}&step=design`);
+  const workflowHeader = page.getByTestId("survey-workflow-header");
+  const appScrollContainer = page.getByTestId("app-scroll-container");
+  const workflowScrollContainer = page.getByTestId("survey-workflow-scroll-container");
+  const saveButton = page.getByTestId("save-survey");
+
+  await expect(workflowHeader).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("question-title-23")).toBeAttached({ timeout: 20_000 });
+  await expect(saveButton).toHaveText("保存修改");
+  await expect(page.getByTestId("editor-report-template")).toHaveCount(0);
+  const headerBeforeScroll = await workflowHeader.boundingBox();
+  expect(headerBeforeScroll).not.toBeNull();
+
+  const workflowScrollMetrics = await workflowScrollContainer.evaluate((element) => {
+    const maximum = element.scrollHeight - element.clientHeight;
+    element.scrollTop = Math.max(0, maximum - 300);
+    return {
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      scrollTop: element.scrollTop,
+      maximum,
+    };
+  });
+  expect(workflowScrollMetrics.scrollHeight).toBeGreaterThan(workflowScrollMetrics.clientHeight);
+  expect(workflowScrollMetrics.scrollTop).toBeGreaterThan(0);
+  const workflowScrollBox = await workflowScrollContainer.boundingBox();
+  expect(workflowScrollBox).not.toBeNull();
+  await page.mouse.move(
+    workflowScrollBox!.x + workflowScrollBox!.width / 2,
+    workflowScrollBox!.y + workflowScrollBox!.height / 2
+  );
+  await page.mouse.wheel(0, 200);
+  await expect.poll(
+    () => workflowScrollContainer.evaluate((element) => element.scrollTop)
+  ).toBeGreaterThan(workflowScrollMetrics.scrollTop);
+  await workflowScrollContainer.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await page.mouse.wheel(0, 4_000);
+  await page.waitForTimeout(100);
+  expect(await workflowScrollContainer.evaluate((element) => element.scrollTop))
+    .toBe(workflowScrollMetrics.maximum);
+  await expect(page.getByTestId("add-question")).toBeInViewport();
+  await expect(workflowHeader).toBeInViewport();
+  await expect(saveButton).toBeInViewport();
+  expect(await appScrollContainer.evaluate((element) => element.scrollTop)).toBe(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  expect(await page.evaluate(() => document.documentElement.scrollTop)).toBe(0);
+  const headerAfterScroll = await workflowHeader.boundingBox();
+  const viewport = page.viewportSize();
+  expect(headerAfterScroll).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(headerAfterScroll!.y).toBe(headerBeforeScroll!.y);
+  expect(headerAfterScroll!.height).toBe(headerBeforeScroll!.height);
+  expect(headerAfterScroll!.y).toBeGreaterThanOrEqual(0);
+  expect(headerAfterScroll!.y + headerAfterScroll!.height).toBeLessThanOrEqual(viewport!.height);
+
+  await page.getByTestId("question-title-23").fill("编辑器底部保存已生效");
+  await expect(saveButton).toBeEnabled();
+  const saveResponsePromise = page.waitForResponse(
+    (response) => response.url().endsWith(`/api/surveys/${survey.id}`) && response.request().method() === "PATCH"
+  );
+  await saveButton.click();
+  const saveResponse = await saveResponsePromise;
+  expect(saveResponse.status()).toBe(200);
+  const savedSurvey = (await saveResponse.json()).survey as {
+    questions: Array<{ title: string }>;
+  };
+  expect(savedSurvey.questions[23]?.title).toBe("编辑器底部保存已生效");
 });
 
 test("anonymous mobile respondents retain a visible submission action while scrolling a long survey", async ({ page, browser }) => {

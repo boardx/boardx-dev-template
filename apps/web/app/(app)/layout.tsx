@@ -27,7 +27,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             </div>
           )}
         </header>
-        <main className="flex-1 overflow-auto">
+        <main
+          data-app-scroll-container
+          data-testid="app-scroll-container"
+          className="min-h-0 flex-1 overflow-auto"
+        >
           {children}
         </main>
       </div>

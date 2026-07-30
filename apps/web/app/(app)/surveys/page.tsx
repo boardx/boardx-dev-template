@@ -650,6 +650,7 @@ interface WorkspaceShellProps {
   templateLibraryMode?: boolean;
   hideHeader?: boolean;
   hideSidebar?: boolean;
+  workflowActions?: ReactNode;
   onCreateWithAi: () => void;
   onCreateFromScene?: () => void;
   onCreateBlank: () => void;
@@ -666,6 +667,7 @@ function WorkspaceShell({
   templateLibraryMode = false,
   hideHeader = false,
   hideSidebar = false,
+  workflowActions,
   onCreateWithAi,
   onCreateFromScene,
   onCreateBlank,
@@ -706,8 +708,16 @@ function WorkspaceShell({
     answer: "预览答题页，查看单份答卷和报告样本来源。",
   };
   return (
-    <div data-testid={inSurveyWorkflow ? "survey-workflow-shell" : undefined} className="min-h-full bg-secondary text-foreground">
-      <div className={focusedMode ? "grid min-h-screen" : "grid min-h-screen lg:grid-cols-[330px_minmax(0,1fr)]"}>
+    <div
+      data-testid={inSurveyWorkflow ? "survey-workflow-shell" : undefined}
+      className={focusedMode
+        ? "h-full min-h-0 overflow-hidden bg-secondary text-foreground"
+        : "min-h-full bg-secondary text-foreground"}
+    >
+      <div className={focusedMode
+        ? "grid h-full min-h-0 overflow-hidden"
+        : "grid min-h-screen lg:grid-cols-[330px_minmax(0,1fr)]"}
+      >
         {!focusedMode ? (
           <SurveyNavigationSidebar
             active={activeNavigation}
@@ -736,7 +746,10 @@ function WorkspaceShell({
           />
         ) : null}
 
-        <section className="min-w-0 overflow-auto">
+        <section
+          data-testid={focusedMode ? "survey-workflow-scroll-container" : undefined}
+          className={focusedMode ? "min-h-0 min-w-0 overflow-y-auto overscroll-y-contain" : "min-w-0 overflow-auto"}
+        >
           <div className={focusedMode ? "" : "lg:min-w-survey-workbench"}>
           {!hideHeader && <header
             data-testid={inSurveyWorkflow ? "survey-workflow-header" : undefined}
@@ -753,10 +766,13 @@ function WorkspaceShell({
                       <span className="truncate text-14 font-semibold text-foreground">{currentSurvey.title}</span>
                     ) : null}
                   </div>
-                  <Button type="button" variant="outline" size="sm" className="h-9 gap-1.5 rounded-lg px-3 text-13" onClick={() => onNavigate("workspace")}>
-                    <ChevronLeft className="h-4 w-4" strokeWidth={1.6} />
-                    返回列表
-                  </Button>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {workflowActions}
+                    <Button type="button" variant="outline" size="sm" className="h-9 gap-1.5 rounded-lg px-3 text-13" onClick={() => onNavigate("workspace")}>
+                      <ChevronLeft className="h-4 w-4" strokeWidth={1.6} />
+                      返回列表
+                    </Button>
+                  </div>
                 </div>
 
                 <div data-testid="survey-workflow-tabs" className="grid gap-2 border-t border-border pt-3 md:grid-cols-5">
@@ -3321,8 +3337,13 @@ export default function SurveysPage() {
 
   useEffect(() => {
     const workflowActive = mode === "editor" || workspaceView !== "workspace";
+    if (workflowActive) {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+    document.documentElement.classList.toggle("survey-workflow-active", workflowActive);
     document.body.classList.toggle("survey-workflow-active", workflowActive);
     return () => {
+      document.documentElement.classList.remove("survey-workflow-active");
       document.body.classList.remove("survey-workflow-active");
     };
   }, [mode, workspaceView]);
@@ -4489,9 +4510,9 @@ export default function SurveysPage() {
     setView("edit");
     if (currentSurveyId != null) {
       window.history.replaceState(null, "", `/surveys?survey=${currentSurveyId}&step=${target}`);
-      await loadSurveyForWorkspace(currentSurveyId);
+      void loadSurveyForWorkspace(currentSurveyId);
       if (target === "template" || target === "report") {
-        await loadWorkspaceReportCategoryPlan(currentSurveyId);
+        void loadWorkspaceReportCategoryPlan(currentSurveyId);
       }
     }
   }
@@ -5229,6 +5250,42 @@ export default function SurveysPage() {
         ...(template.tags ?? []),
       ].join(" ").toLowerCase().includes(q);
     });
+    const surveyEditorActions = !isTemplateEditor && !created ? (
+      <>
+        <Button
+          data-testid={view === "edit" ? "preview-survey" : "edit-survey"}
+          variant="outline"
+          size="sm"
+          onClick={() => setView(view === "edit" ? "preview" : "edit")}
+          className="h-9 gap-1.5 rounded-lg px-3 text-13"
+        >
+          {view === "edit" ? (
+            <>
+              <Eye className="h-4 w-4" strokeWidth={1.5} />
+              预览
+            </>
+          ) : (
+            <>
+              <Pencil className="h-4 w-4" strokeWidth={1.5} />
+              编辑
+            </>
+          )}
+        </Button>
+        {(view === "edit" || editingSurveyId == null) && (
+          <Button
+            data-testid="save-survey"
+            size="sm"
+            disabled={saving || !canSave}
+            onClick={() => void save()}
+            className="h-9 rounded-lg bg-foreground px-3 text-13 text-background hover:bg-foreground/90 hover:text-background"
+          >
+            {saving
+              ? editingSurveyId == null ? "发布中…" : "保存中…"
+              : editingSurveyId == null ? "发布问卷" : "保存修改"}
+          </Button>
+        )}
+      </>
+    ) : undefined;
     return (
       <WorkspaceShell
         active={isTemplateEditor ? "template" : "design"}
@@ -5237,13 +5294,14 @@ export default function SurveysPage() {
         templateLibraryMode={isTemplateEditor}
         hideHeader={isTemplateEditor}
         hideSidebar={isTemplateEditor}
+        workflowActions={surveyEditorActions}
         onCreateWithAi={() => openEditor({ withAi: true })}
         onCreateBlank={() => openTemplateEditor()}
         onNavigate={(target) => void navigateWorkspace(target)}
       >
       <div data-testid={isTemplateEditor ? "template-editor-shell" : "survey-editor-screen"} className={isTemplateEditor ? "pb-8" : "mx-auto max-w-survey-editor px-4 pb-10 sm:px-6 lg:px-8"}>
-        <div data-testid={isTemplateEditor ? undefined : "survey-editor-shell"} className={isTemplateEditor ? "mb-4 rounded-lg border border-border bg-background" : "mb-4"}>
-          <div data-testid={isTemplateEditor ? undefined : "survey-editor-reference-header"}>
+        <div data-testid={isTemplateEditor ? undefined : "survey-editor-shell"} className="mb-4">
+          {isTemplateEditor && <div className="rounded-lg border border-border bg-background">
           <div data-testid="editor-command-bar" className="flex flex-wrap items-center gap-3 py-4">
             <Button
               data-testid="back-to-list"
@@ -5262,20 +5320,16 @@ export default function SurveysPage() {
               <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
               {isTemplateEditor ? "返回模版" : "返回列表"}
             </Button>
-            {!isTemplateEditor && <Badge variant="outline" className="bg-secondary">Survey Workflow</Badge>}
-            {isTemplateEditor ? (
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-15 font-semibold text-foreground">{title.trim() || "未命名模版"}</p>
-                <p className="text-12 text-muted-foreground">
-                  {questions.length} 题 · {templateTags.length} 个标签 ·{" "}
-                  <span data-testid="template-save-state" className={templateDirty ? "text-foreground" : undefined}>
-                    {editingTemplateId ? (templateDirty ? "未保存更改" : "已保存") : "未保存"}
-                  </span>
-                </p>
-              </div>
-            ) : <div className="min-w-2 flex-1" />}
-            {isTemplateEditor && (
-              <div className="flex items-center rounded-lg border border-border bg-secondary p-1">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-15 font-semibold text-foreground">{title.trim() || "未命名模版"}</p>
+              <p className="text-12 text-muted-foreground">
+                {questions.length} 题 · {templateTags.length} 个标签 ·{" "}
+                <span data-testid="template-save-state" className={templateDirty ? "text-foreground" : undefined}>
+                  {editingTemplateId ? (templateDirty ? "未保存更改" : "已保存") : "未保存"}
+                </span>
+              </p>
+            </div>
+            <div className="flex items-center rounded-lg border border-border bg-secondary p-1">
                 <Button
                   data-testid="template-edit-mode"
                   type="button"
@@ -5298,67 +5352,16 @@ export default function SurveysPage() {
                   <Eye className="h-3.5 w-3.5" strokeWidth={1.6} />
                   预览
                 </Button>
-              </div>
-            )}
-            {!created && !isTemplateEditor && (
+            </div>
+            {!created && (
               <Button
-                data-testid={view === "edit" ? "preview-survey" : "edit-survey"}
-                variant="outline"
+                data-testid="save-template-editor"
                 size="sm"
-                onClick={() => setView(view === "edit" ? "preview" : "edit")}
-                className="gap-1.5"
+                disabled={saving || !canSaveTemplate}
+                onClick={() => void saveAsTemplate()}
+                className="bg-foreground text-background hover:bg-foreground/90"
               >
-                {view === "edit" ? (
-                  <>
-                    <Eye className="h-4 w-4" strokeWidth={1.5} />
-                    预览
-                  </>
-                ) : (
-                  <>
-                    <Pencil className="h-4 w-4" strokeWidth={1.5} />
-                    编辑
-                  </>
-                )}
-              </Button>
-            )}
-            {!created && !isTemplateEditor && (
-              <Button
-                data-testid="editor-report-template"
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (editingSurveyId == null) {
-                    setEditorActionMessage("请先发布问卷，再配置报告模版。");
-                    return;
-                  }
-                  void navigateWorkspace("template");
-                }}
-                className="gap-1.5"
-              >
-                <FileText className="h-4 w-4" strokeWidth={1.5} />
-                报告模版
-              </Button>
-            )}
-            {!created && (view === "edit" || isTemplateEditor) && (
-              <Button
-                data-testid={isTemplateEditor ? "save-template-editor" : "save-survey"}
-                size="sm"
-                disabled={saving || !(isTemplateEditor ? canSaveTemplate : canSave)}
-                onClick={() => void (isTemplateEditor ? saveAsTemplate() : save())}
-                className={isTemplateEditor ? "bg-foreground text-background hover:bg-foreground/90" : undefined}
-              >
-                {saving ? "保存中…" : isTemplateEditor ? "保存模版" : editingSurveyId == null ? "发布问卷" : "保存修改"}
-              </Button>
-            )}
-            {!created && view === "preview" && editingSurveyId == null && !isTemplateEditor && (
-              <Button
-                data-testid="save-survey"
-                size="sm"
-                disabled={saving || !canSave}
-                onClick={() => void save()}
-              >
-                {saving ? "发布中…" : "发布问卷"}
+                {saving ? "保存中…" : "保存模版"}
               </Button>
             )}
           </div>
@@ -5367,8 +5370,7 @@ export default function SurveysPage() {
               {templateMessage}
             </p>
           )}
-          </div>
-        </div>
+          </div>}
 
         {created && (
           <div className="mx-auto mt-4 max-w-3xl">
@@ -6475,6 +6477,7 @@ export default function SurveysPage() {
             </aside>}
           </div>
         )}
+        </div>
       </div>
       </WorkspaceShell>
     );

@@ -43,7 +43,9 @@ test("survey workspace restores every source workflow step from the URL", async 
   await expect(page.getByTestId("survey-editor-screen")).toBeVisible();
   await expect(page.getByTestId("survey-workflow-shell")).toContainText("五步工作台调研");
   await expect(page.getByTestId("workflow-design")).toHaveAttribute("aria-current", "step");
-  await expect(page.locator("#workflow-category-0")).toHaveValue("需求洞察");
+  await expect(
+    page.locator("#workflow-category-0, [data-testid='question-category-select-0']").first()
+  ).toHaveValue("需求洞察");
 
   for (const [step, testId, introTestId] of [
     ["template", "workspace-template-workbench", "template-workspace-intro"],

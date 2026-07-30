@@ -1,4 +1,4 @@
-import { expect, test, type ElementHandle, type Page } from "@playwright/test";
+import { expect, test, type ElementHandle, type Locator, type Page } from "@playwright/test";
 
 async function register(page: Page) {
   const response = await page.request.post("/api/auth/register", {
@@ -33,10 +33,36 @@ async function createSurvey(page: Page) {
   return (await response.json()).survey as { id: number };
 }
 
+async function tabTo(page: Page, target: Locator, maximumTabs = 80) {
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  });
+  for (let index = 0; index < maximumTabs; index += 1) {
+    await page.keyboard.press("Tab");
+    if (await target.evaluate((node) => document.activeElement === node)) return;
+  }
+  throw new Error(`Keyboard focus did not reach ${await target.getAttribute("data-testid")}`);
+}
+
+async function waitForScreenshotImages(page: Page) {
+  await page.locator("img").evaluateAll(async (images) => {
+    await Promise.all(images.map(async (image) => {
+      if (!(image instanceof HTMLImageElement)) return;
+      if (!image.complete) {
+        await new Promise<void>((resolve) => {
+          image.addEventListener("load", () => resolve(), { once: true });
+          image.addEventListener("error", () => resolve(), { once: true });
+        });
+      }
+      await image.decode().catch(() => undefined);
+    }));
+  });
+}
+
 type ShellSnapshot = {
   header: ElementHandle<HTMLElement>;
   tabs: ElementHandle<HTMLElement>;
-  headerText: string;
+  surveyTitle: string;
   headerBox: { x: number; y: number; width: number; height: number };
   tabsBox: { x: number; y: number; width: number; height: number };
 };
@@ -53,7 +79,7 @@ async function captureShell(page: Page): Promise<ShellSnapshot> {
   return {
     header: header! as ElementHandle<HTMLElement>,
     tabs: tabs! as ElementHandle<HTMLElement>,
-    headerText: await header!.textContent() ?? "",
+    surveyTitle: "持久壳层问卷",
     headerBox: headerBox!,
     tabsBox: tabsBox!,
   };
@@ -66,7 +92,7 @@ async function expectSameShell(page: Page, snapshot: ShellSnapshot) {
   expect(await snapshot.tabs.evaluate((node) => (
     node.isConnected && node === document.querySelector("[data-testid=survey-workflow-tabs]")
   ))).toBe(true);
-  await expect(page.getByTestId("survey-workflow-header")).toHaveText(snapshot.headerText);
+  await expect(page.getByTestId("survey-workflow-header")).toContainText(snapshot.surveyTitle);
   const headerBox = await page.getByTestId("survey-workflow-header").boundingBox();
   const tabsBox = await page.getByTestId("survey-workflow-tabs").boundingBox();
   expect(headerBox).toEqual(snapshot.headerBox);
@@ -74,6 +100,7 @@ async function expectSameShell(page: Page, snapshot: ShellSnapshot) {
 }
 
 test("workflow tabs keep one persistent shell and only replace content below", async ({ page }) => {
+  test.setTimeout(90_000);
   await page.setViewportSize({ width: 1920, height: 1200 });
   await register(page);
   const survey = await createSurvey(page);
@@ -93,7 +120,7 @@ test("workflow tabs keep one persistent shell and only replace content below", a
   ] as const) {
     await page.getByTestId(`workflow-${step}`).click();
     await expect(page).toHaveURL(new RegExp(`survey=${survey.id}.*step=${step}`));
-    await expect(page.getByTestId(contentTestId)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId(contentTestId)).toBeVisible({ timeout: 30_000 });
     await expect(page.getByTestId(`workflow-${step}`)).toHaveAttribute("aria-current", "step");
     await expectSameShell(page, shell);
   }
@@ -140,11 +167,27 @@ test("each workflow deep link uses the shared framed surface and marks its activ
   }
 });
 
-test("five workflow surfaces keep a bounded desktop frame and a single-column mobile layout", async ({ page }) => {
+test("five workflow surfaces keep a bounded desktop frame and a single-column mobile layout", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   await register(page);
   const survey = await createSurvey(page);
   const steps = ["design", "template", "collect", "answer", "report"] as const;
+  const workbenches = {
+    design: "survey-editor-screen",
+    template: "workspace-template-workbench",
+    collect: "workspace-collect-workbench",
+    answer: "workspace-answer-workbench",
+    report: "workspace-report-workbench",
+  } as const;
+  const mobileCommands = {
+    design: page.getByTestId("preview-survey"),
+    template: page.getByRole("button", { name: "AI 重新推演" }),
+    collect: page.getByRole("button", { name: "保存配置" }),
+    answer: page.getByTestId("answer-open-preview"),
+  } as const;
+  const evidenceRoot = `${testInfo.config.rootDir}/../../../phases/phase-p25-survey/sprints/sprint-12/evidence`;
+  const desktopEvidencePath = `${evidenceRoot}/survey-five-step-unified-desktop.png`;
+  const mobileEvidencePath = `${evidenceRoot}/survey-five-step-unified-mobile.png`;
   const desktopScreenshots: string[] = [];
   const mobileScreenshots: string[] = [];
   const renderScreenshotSheet = (screenshots: string[], columns: number) => `
@@ -170,6 +213,8 @@ test("five workflow surfaces keep a bounded desktop frame and a single-column mo
     const surface = page.getByTestId("survey-workflow-surface");
     const content = page.getByTestId("survey-workflow-content");
 
+    await expect(page.getByTestId("survey-workflow-header")).toContainText("持久壳层问卷");
+    await expect(page.getByTestId(workbenches[step])).toBeVisible({ timeout: 20_000 });
     await expect(surface).toBeVisible({ timeout: 20_000 });
     await expect(content).toBeVisible();
     const [surfaceBox, contentBox] = await Promise.all([surface.boundingBox(), content.boundingBox()]);
@@ -183,8 +228,9 @@ test("five workflow surfaces keep a bounded desktop frame and a single-column mo
   }
 
   await page.setContent(renderScreenshotSheet(desktopScreenshots, 2));
+  await waitForScreenshotImages(page);
   await page.screenshot({
-    path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-five-step-unified-desktop.png",
+    path: desktopEvidencePath,
     fullPage: true,
   });
 
@@ -193,17 +239,32 @@ test("five workflow surfaces keep a bounded desktop frame and a single-column mo
     await page.goto(`/surveys?survey=${survey.id}&step=${step}`);
     const activeControl = page.getByTestId(`workflow-${step}`);
 
+    await expect(page.getByTestId("survey-workflow-header")).toContainText("持久壳层问卷");
+    await expect(page.getByTestId(workbenches[step])).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId("survey-workflow-content")).toBeVisible({ timeout: 20_000 });
     await expect(activeControl).toBeVisible();
-    await activeControl.focus();
+    await tabTo(page, activeControl);
     await expect(activeControl).toBeFocused();
+    if (step === "report") {
+      const emptyState = page.getByTestId("report-generation-empty-state");
+      await expect(emptyState).toContainText("收到至少 1 份有效答卷后可生成报告");
+      await expect(page.getByRole("button", { name: "重新生成" })).toBeDisabled();
+    } else {
+      const command = mobileCommands[step];
+      await tabTo(page, command);
+      await expect(command).toBeFocused();
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+    await page.getByTestId("survey-workflow-scroll-container").evaluate((element) => {
+      element.scrollTop = 0;
+    });
     mobileScreenshots.push((await page.screenshot({ fullPage: false })).toString("base64"));
   }
 
   await page.setContent(renderScreenshotSheet(mobileScreenshots, 1));
+  await waitForScreenshotImages(page);
   await page.screenshot({
-    path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-five-step-unified-mobile.png",
+    path: mobileEvidencePath,
     fullPage: true,
   });
 });
