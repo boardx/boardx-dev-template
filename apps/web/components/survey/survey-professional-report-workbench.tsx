@@ -71,7 +71,7 @@ export function SurveyProfessionalReportWorkbench({
     >
       <header
         data-testid="report-workspace-intro"
-        className="border-b border-survey/20 bg-background px-5 py-4"
+        className="rounded-lg border border-border bg-background px-5 py-4"
       >
         <div className="mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">

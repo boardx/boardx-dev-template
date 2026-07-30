@@ -175,11 +175,11 @@ export function SurveyVersionedReportComposer({
     <div
       data-testid="workspace-report-composer"
       aria-busy={saving}
-      className="grid w-full gap-5 pb-8"
+      className="grid w-full gap-4 pb-8"
     >
       <header
         data-testid="template-workspace-intro"
-        className="flex flex-wrap items-center gap-3 border-b border-survey/20 bg-background px-5 py-4"
+        className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-background px-5 py-4"
       >
         <Button type="button" size="sm" variant="outline" onClick={onBackToDesign}>
           <ChevronLeft className="h-4 w-4" strokeWidth={1.7} />

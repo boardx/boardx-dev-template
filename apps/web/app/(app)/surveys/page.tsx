@@ -1001,7 +1001,7 @@ function WorkspaceModulePanel({
       </a>
       <section
         data-testid={view === "answer" ? "answer-workspace-intro" : undefined}
-        className="flex flex-wrap items-center justify-between gap-3 border-b border-survey/20 bg-background px-5 py-4"
+        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-background px-5 py-4"
       >
         <div>
           <Badge variant="outline">{item.label}</Badge>
@@ -2631,7 +2631,7 @@ function WorkspaceReportWorkbench({
         <div data-testid="workspace-report-workbench" className="grid gap-4">
           <section
             data-testid="report-workspace-intro"
-            className="border-b border-survey/20 bg-background px-5 py-4"
+            className="rounded-lg border border-border bg-background px-5 py-4"
           >
             <p className="text-11 font-semibold uppercase tracking-[0.14em] text-survey">Analysis Report</p>
             <h2 className="mt-1 text-20 font-bold text-foreground">{survey.title} 分析报告</h2>
@@ -2658,7 +2658,7 @@ function WorkspaceReportWorkbench({
       <div data-testid="workspace-report-workbench" className="grid gap-4">
         <section
           data-testid="report-workspace-intro"
-          className="border-b border-survey/20 bg-background px-5 py-4"
+          className="rounded-lg border border-border bg-background px-5 py-4"
         >
           <p className="text-11 font-semibold uppercase tracking-[0.14em] text-survey">Analysis Report</p>
           <h2 className="mt-1 text-20 font-bold text-foreground">{survey.title} 分析报告</h2>
