@@ -18,10 +18,8 @@ import {
   FileText,
   LayoutTemplate,
   ListChecks,
-  PauseCircle,
   PanelRightOpen,
   Pencil,
-  PlayCircle,
   Plus,
   Send,
   SlidersHorizontal,
@@ -40,6 +38,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ProfessionalReportDocument } from "@/components/survey/professional-report-document";
 import { SurveyAiPanel } from "@/components/survey/survey-ai-panel";
+import { SurveyCollectWorkbench } from "@/components/survey/survey-collect-workbench";
 import { SurveyHomeDashboard } from "@/components/survey/survey-home-dashboard";
 import { SurveyListScreen } from "@/components/survey/survey-list-screen";
 import { SurveyNavigationSidebar, type SurveyNavigationTarget } from "@/components/survey/survey-navigation-sidebar";
@@ -2406,362 +2405,6 @@ function WorkspaceTemplateWorkbench({
             {error || status}
           </p>
         )}
-      </section>
-    </div>
-  );
-}
-
-function WorkspaceCollectWorkbench({
-  survey,
-  responseMode,
-  publishStartAt,
-  publishEndAt,
-  responseLimit,
-  oneResponsePerUser,
-  confirmationMessage,
-  message,
-  statusTogglePending,
-  onResponseModeChange,
-  onPublishStartAtChange,
-  onPublishEndAtChange,
-  onResponseLimitChange,
-  onOneResponsePerUserChange,
-  onConfirmationMessageChange,
-  onToggleStatus,
-  onSave,
-  onBackToTemplate,
-  onOpenReport,
-}: {
-  survey: Survey;
-  responseMode: "anonymous" | "identified";
-  publishStartAt: string;
-  publishEndAt: string;
-  responseLimit: string;
-  oneResponsePerUser: boolean;
-  confirmationMessage: string;
-  message: string;
-  statusTogglePending: boolean;
-  onResponseModeChange: (value: "anonymous" | "identified") => void;
-  onPublishStartAtChange: (value: string) => void;
-  onPublishEndAtChange: (value: string) => void;
-  onResponseLimitChange: (value: string) => void;
-  onOneResponsePerUserChange: (value: boolean) => void;
-  onConfirmationMessageChange: (value: string) => void;
-  onToggleStatus: () => void;
-  onSave: () => void;
-  onBackToTemplate: () => void;
-  onOpenReport: () => void;
-}) {
-  const reportPlan = inferReportPlan(survey);
-  const isCollecting = survey.status === "active";
-  const toggleStatusLabel = isCollecting ? "暂停回收" : "启用回收";
-  const shareUrl = survey.shareUrl || `/s/${survey.id}`;
-  const responseTarget = responseLimit.trim() ? Number(responseLimit) : null;
-  const completionText = responseTarget && responseTarget > 0
-    ? `${Math.min(100, Math.round((survey.responses / responseTarget) * 100))}% 目标进度`
-    : "未设置上限";
-  const channelCards = [
-    ["公开链接", "复制后可投放到邮件、社群或运营位", "Ready"],
-    ["二维码", "适合线下物料、海报和现场扫码", "Ready"],
-    ["定向邀请", responseMode === "identified" ? "实名模式可追踪受访者" : "匿名模式仅统计来源", responseMode === "identified" ? "Enabled" : "Optional"],
-  ];
-
-  return (
-    <div data-testid="workspace-collect-workbench" className="grid gap-4">
-      <section
-        data-testid="collect-workspace-intro"
-        className="flex flex-wrap items-center justify-between gap-3 border-b border-survey/20 bg-background px-5 py-4"
-      >
-        <div>
-          <Badge variant="outline" className="border-survey/30 bg-survey/5 text-survey">Collect</Badge>
-          <h2 className="mt-2 text-18 font-bold text-foreground">发布回收</h2>
-          <p className="text-13 text-muted-foreground">设置链接、回收范围和提交规则。</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={onBackToTemplate}>
-            上一步：报告规划
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={isCollecting ? "outline" : "default"}
-            onClick={onToggleStatus}
-            disabled={statusTogglePending}
-            className={isCollecting ? "gap-1.5" : "gap-1.5 bg-foreground text-background hover:bg-foreground/90"}
-          >
-            {isCollecting ? <PauseCircle className="h-4 w-4" strokeWidth={1.6} /> : <PlayCircle className="h-4 w-4" strokeWidth={1.6} />}
-            {statusTogglePending ? "处理中" : toggleStatusLabel}
-          </Button>
-          <Button type="button" size="sm" variant="outline" onClick={onSave}>
-            保存配置
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={onOpenReport}
-            className="gap-1.5 border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background"
-          >
-            下一步：分析报告
-            <Send className="h-4 w-4" strokeWidth={1.6} />
-          </Button>
-        </div>
-      </section>
-
-      {message && (
-        <section
-          role={message.startsWith("已保存") ? undefined : "alert"}
-          className={`rounded-lg border p-3 text-13 ${
-            message.startsWith("已保存")
-              ? "border-success/30 bg-tag-green text-success"
-              : "border-destructive/30 bg-destructive/5 text-destructive"
-          }`}
-        >
-          {message}
-        </section>
-      )}
-
-      <section className="grid gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-3">
-        <div className="bg-background p-4">
-          <p className="text-12 text-muted-foreground">当前问卷</p>
-          <p className="mt-1 text-15 font-semibold text-foreground">{survey.title}</p>
-          <p className="mt-1 line-clamp-2 text-12 text-muted-foreground">{survey.description || "暂无说明"}</p>
-        </div>
-        <div className="bg-background p-4">
-          <p className="text-12 text-muted-foreground">回收状态</p>
-          <div className="mt-2 flex items-center gap-2">
-            <Badge variant="outline" className={statusBadgeClass(survey.status)}>
-              {STATUS_LABEL[survey.status]}
-            </Badge>
-            <span className="text-13 font-semibold text-foreground">{survey.responses} 份答卷</span>
-          </div>
-          <p className="mt-1 text-12 text-muted-foreground">{completionText}</p>
-          <Button
-            type="button"
-            size="sm"
-            variant={isCollecting ? "outline" : "default"}
-            onClick={onToggleStatus}
-            disabled={statusTogglePending}
-            className={`mt-3 w-full gap-1.5 ${isCollecting ? "" : "bg-foreground text-background hover:bg-foreground/90"}`}
-          >
-            {isCollecting ? <PauseCircle className="h-4 w-4" strokeWidth={1.6} /> : <PlayCircle className="h-4 w-4" strokeWidth={1.6} />}
-            {statusTogglePending ? "处理中" : toggleStatusLabel}
-          </Button>
-        </div>
-        <div className="bg-background p-4">
-          <p className="text-12 text-muted-foreground">报告规划</p>
-          <p className="mt-1 text-13 font-semibold text-foreground">{reportPlan.name}</p>
-          <p className="mt-1 text-12 text-muted-foreground">{reportPlan.meta}</p>
-        </div>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="grid gap-4">
-          <section className="rounded-lg border border-border bg-background p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <Badge variant="success">Publish setup</Badge>
-                <h3 className="mt-2 text-18 font-bold text-foreground">回收规则</h3>
-                <p className="text-13 text-muted-foreground">这些设置会直接影响答题入口、去重规则和回收时间窗口。</p>
-              </div>
-              <Badge variant="outline">{responseMode === "identified" ? "实名填写" : "匿名填写"}</Badge>
-            </div>
-
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div className="grid gap-1.5">
-                <Label htmlFor="workspace-publish-mode">答题身份</Label>
-                <Select
-                  id="workspace-publish-mode"
-                  value={responseMode}
-                  onChange={(event) => onResponseModeChange(event.target.value === "identified" ? "identified" : "anonymous")}
-                >
-                  <option value="anonymous">匿名填写</option>
-                  <option value="identified">实名填写</option>
-                </Select>
-              </div>
-              <label className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2 text-14 text-foreground">
-                <span>
-                  <span className="block font-semibold">每人一次</span>
-                  <span className="text-12 text-muted-foreground">限制重复提交，后续可接入登录态或邀请名单。</span>
-                </span>
-                <Input
-                  type="checkbox"
-                  checked={oneResponsePerUser}
-                  onChange={(event) => onOneResponsePerUserChange(event.target.checked)}
-                  className="h-4 w-4"
-                />
-              </label>
-              <div className="grid gap-1.5">
-                <Label htmlFor="workspace-publish-start">开始时间</Label>
-                <Input
-                  id="workspace-publish-start"
-                  type="datetime-local"
-                  value={publishStartAt}
-                  onChange={(event) => onPublishStartAtChange(event.target.value)}
-                />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="workspace-publish-end">截止时间</Label>
-                <Input
-                  id="workspace-publish-end"
-                  type="datetime-local"
-                  value={publishEndAt}
-                  onChange={(event) => onPublishEndAtChange(event.target.value)}
-                />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="workspace-response-limit">答卷上限</Label>
-                <Input
-                  id="workspace-response-limit"
-                  type="number"
-                  min="1"
-                  placeholder="不限制"
-                  value={responseLimit}
-                  onChange={(event) => onResponseLimitChange(event.target.value)}
-                />
-              </div>
-              <div className="rounded-lg border border-border bg-card p-3">
-                <p className="text-12 text-muted-foreground">发布前检查</p>
-                <div className="mt-2 grid gap-2 text-13">
-                  {["题目可答", "报告规划已绑定", "提交文案已配置"].map((item) => (
-                    <div key={item} className="flex items-center gap-2 text-foreground">
-                      <span className="h-2 w-2 rounded-full bg-success" />
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="grid gap-1.5 md:col-span-2">
-                <Label htmlFor="workspace-confirmation-message">提交确认文案</Label>
-                <Textarea
-                  id="workspace-confirmation-message"
-                  value={confirmationMessage}
-                  onChange={(event) => onConfirmationMessageChange(event.target.value)}
-                  className="min-h-24"
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-lg border border-border bg-background p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <Badge variant="outline">Share</Badge>
-                <h3 className="mt-2 text-18 font-bold text-foreground">发布入口</h3>
-                <p className="text-13 text-muted-foreground">提供链接、二维码和渠道投放入口，方便上线前检查。</p>
-              </div>
-              <Button type="button" size="sm" variant="outline" className="gap-1.5">
-                <Copy className="h-4 w-4" strokeWidth={1.6} />
-                复制链接
-              </Button>
-            </div>
-            <div className="mt-4 grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="grid aspect-square place-items-center rounded-md border border-border bg-muted">
-                  <div className="rounded-md bg-background px-3 py-2 text-center text-12 font-semibold text-foreground">QR</div>
-                </div>
-                <p className="mt-3 text-12 text-muted-foreground">扫码预览答题页</p>
-              </div>
-              <div className="grid gap-3">
-                <div className="rounded-lg border border-border bg-card p-3">
-                  <p className="text-12 text-muted-foreground">公开链接</p>
-                  <p className="mt-1 truncate text-13 font-semibold text-foreground">{shareUrl}</p>
-                </div>
-                <div className="grid gap-3 md:grid-cols-3">
-                  {channelCards.map(([title, desc, status]) => (
-                    <div key={title} className="rounded-lg border border-border bg-card p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-13 font-semibold text-foreground">{title}</p>
-                        <Badge variant={status === "Ready" || status === "Enabled" ? "success" : "muted"}>{status}</Badge>
-                      </div>
-                      <p className="mt-2 text-12 text-muted-foreground">{desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <aside className="grid h-fit gap-4">
-          <SurveyAiPanel
-            title="发布 AI"
-            placeholder="例如：设置为团队实名问卷，回收 200 份并在周五截止"
-            resultLabel="AI 已生成发布方案"
-            changeCount={5}
-            onSubmit={onSave}
-            onPreview={() => undefined}
-            onApply={onSave}
-          />
-          <section className="rounded-lg border border-border bg-card p-4">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-15 font-bold text-foreground">回收监控</h3>
-              <Badge variant={survey.status === "active" ? "success" : "muted"}>{STATUS_LABEL[survey.status]}</Badge>
-            </div>
-            <div className="mt-4 grid gap-3">
-              {[
-                ["已收答卷", `${survey.responses}`],
-                ["答卷上限", responseTarget ? `${responseTarget}` : "不限"],
-                ["身份模式", responseMode === "identified" ? "实名" : "匿名"],
-                ["去重策略", oneResponsePerUser ? "每人一次" : "允许多次"],
-              ].map(([label, value]) => (
-                <div key={label} className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2">
-                  <span className="text-12 text-muted-foreground">{label}</span>
-                  <span className="text-13 font-semibold text-foreground">{value}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="rounded-lg border border-border bg-card p-4">
-            <h3 className="text-15 font-bold text-foreground">上线检查</h3>
-            <div className="mt-3 grid gap-2">
-              {[
-                ["答题页", "可访问"],
-                ["报告模板", "已绑定"],
-                ["回收规则", publishEndAt ? "有截止时间" : "长期开放"],
-                ["提交反馈", confirmationMessage.trim() ? "已配置" : "待补充"],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-md border border-border bg-background p-3">
-                  <p className="text-12 text-muted-foreground">{label}</p>
-                  <p className="mt-1 text-13 font-semibold text-foreground">{value}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="rounded-lg border border-border bg-card p-4">
-            <h3 className="text-15 font-bold text-foreground">下一步</h3>
-            <p className="mt-1 text-12 text-muted-foreground">
-              保存配置后可以发布答题链接；回收开始后，分析报告会按报告规划自动补全数据。
-            </p>
-            <div className="mt-3 grid gap-2">
-              <Button
-                type="button"
-                variant={isCollecting ? "outline" : "default"}
-                size="sm"
-                onClick={onToggleStatus}
-                disabled={statusTogglePending}
-                className={`gap-1.5 ${isCollecting ? "" : "bg-foreground text-background hover:bg-foreground/90"}`}
-              >
-                {isCollecting ? <PauseCircle className="h-4 w-4" strokeWidth={1.6} /> : <PlayCircle className="h-4 w-4" strokeWidth={1.6} />}
-                {statusTogglePending ? "处理中" : toggleStatusLabel}
-              </Button>
-              <Button type="button" variant="outline" size="sm" onClick={onSave}>
-                保存发布配置
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={onOpenReport}
-                className="border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background"
-              >
-                进入分析报告
-              </Button>
-            </div>
-          </section>
-        </aside>
       </section>
     </div>
   );
@@ -6571,7 +6214,7 @@ export default function SurveysPage() {
           }
           collectContent={
             currentSurveyForNavigation ? (
-              <WorkspaceCollectWorkbench
+              <SurveyCollectWorkbench
                 survey={currentSurveyForNavigation}
                 responseMode={responseMode}
                 publishStartAt={publishStartAt}
@@ -6588,9 +6231,16 @@ export default function SurveysPage() {
                 onOneResponsePerUserChange={setOneResponsePerUser}
                 onConfirmationMessageChange={setConfirmationMessage}
                 onToggleStatus={() => void toggleWorkspaceSurveyStatus()}
-                onSave={() => void savePublishSettings()}
-                onBackToTemplate={() => void navigateWorkspace("template")}
-                onOpenReport={() => void navigateWorkspace("report")}
+                onReset={() => {
+                  setResponseMode(currentSurveyForNavigation.responseMode);
+                  setPublishStartAt(toDateTimeLocal(currentSurveyForNavigation.publishStartAt));
+                  setPublishEndAt(toDateTimeLocal(currentSurveyForNavigation.publishEndAt));
+                  setResponseLimit(currentSurveyForNavigation.responseLimit == null ? "" : String(currentSurveyForNavigation.responseLimit));
+                  setOneResponsePerUser(currentSurveyForNavigation.oneResponsePerUser);
+                  setConfirmationMessage(currentSurveyForNavigation.confirmationMessage);
+                  setPublishSettingsMessage("");
+                }}
+                onSave={savePublishSettings}
               />
             ) : undefined
           }

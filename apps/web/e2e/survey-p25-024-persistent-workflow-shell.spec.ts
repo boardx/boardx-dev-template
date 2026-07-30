@@ -185,7 +185,7 @@ test("five workflow surfaces fill the desktop workspace and keep a single-column
   const mobileCommands = {
     design: page.getByTestId("preview-survey"),
     template: page.getByRole("button", { name: "AI 重新推演" }),
-    collect: page.getByRole("button", { name: "保存配置" }),
+    collect: page.getByTestId("save-collect-settings"),
     answer: page.getByTestId("answer-open-preview"),
   } as const;
   const evidenceRoot = path.join(
@@ -287,5 +287,88 @@ test("five workflow surfaces fill the desktop workspace and keep a single-column
   await page.screenshot({
     path: mobileEvidencePath,
     fullPage: true,
+  });
+});
+
+test("simplified collect workspace focuses on status, effective time, and advanced settings", async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1487, height: 1058 });
+  await register(page);
+  const survey = await createSurvey(page);
+
+  await page.goto(`/surveys?survey=${survey.id}&step=collect`);
+
+  const workbench = page.getByTestId("workspace-collect-workbench");
+  await expect(workbench).toBeVisible({ timeout: 20_000 });
+  await expect(workbench.getByTestId("collect-status-panel")).toBeVisible();
+  await expect(workbench.getByTestId("collect-settings-panel")).toBeVisible();
+  await expect(workbench.getByTestId("collect-enabled-switch")).toHaveAttribute("role", "switch");
+  await expect(workbench.getByTestId("save-collect-settings")).toBeVisible();
+  await expect(workbench.getByText("发布 AI", { exact: true })).toHaveCount(0);
+  await expect(workbench.getByText("回收监控", { exact: true })).toHaveCount(0);
+  await expect(workbench.getByText("报告规划", { exact: true })).toHaveCount(0);
+  await page.screenshot({
+    path: path.join(
+      repositoryRoot,
+      "phases/phase-p25-survey/sprints/sprint-12/evidence/survey-collect-simplified-desktop.png",
+    ),
+    fullPage: false,
+  });
+
+  const startImmediately = workbench.getByRole("checkbox", { name: "立即开始" });
+  const noEndDate = workbench.getByRole("checkbox", { name: "长期有效" });
+  const startInput = workbench.getByLabel("开始时间");
+  const endInput = workbench.getByLabel("结束时间");
+
+  await expect(startImmediately).toBeChecked();
+  await expect(noEndDate).toBeChecked();
+  await expect(startInput).toBeDisabled();
+  await expect(endInput).toBeDisabled();
+
+  await startImmediately.uncheck();
+  await noEndDate.uncheck();
+  await expect(startInput).toBeEnabled();
+  await expect(endInput).toBeEnabled();
+
+  await startInput.fill("2026-07-31T10:00");
+  await endInput.fill("2026-07-31T09:00");
+  await expect(workbench.getByTestId("err-collect-time")).toHaveText("结束时间必须晚于开始时间");
+  await expect(workbench.getByTestId("save-collect-settings")).toBeDisabled();
+
+  await endInput.fill("2026-07-31T11:00");
+  await expect(workbench.getByTestId("err-collect-time")).toHaveCount(0);
+  await expect(workbench.getByTestId("save-collect-settings")).toBeEnabled();
+  const saveResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH"
+      && response.url().endsWith(`/api/surveys/${survey.id}`),
+  );
+  await workbench.getByTestId("save-collect-settings").click();
+  expect((await saveResponse).ok()).toBe(true);
+  await expect(workbench.locator('[role="status"], [role="alert"]')).toHaveText("已保存发布设置");
+
+  const enabledSwitch = workbench.getByTestId("collect-enabled-switch");
+  await enabledSwitch.click();
+  await expect(enabledSwitch).toHaveAttribute("aria-checked", "true");
+  await expect(workbench.getByRole("button", { name: "复制问卷链接" })).toBeEnabled();
+
+  const advanced = workbench.getByTestId("collect-advanced-settings");
+  await expect(advanced).not.toHaveAttribute("open", "");
+  await advanced.getByText("高级设置", { exact: true }).click();
+  await expect(advanced).toHaveAttribute("open", "");
+  await expect(workbench.getByLabel("答题身份")).toBeVisible();
+  await expect(workbench.getByLabel("答卷上限")).toBeVisible();
+
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.reload();
+  await expect(page.getByTestId("workspace-collect-workbench")).toBeVisible({ timeout: 20_000 });
+  const overflow = await page.getByTestId("survey-workflow-content").evaluate((node) => node.scrollWidth - node.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+  await page.screenshot({
+    path: path.join(
+      repositoryRoot,
+      "phases/phase-p25-survey/sprints/sprint-12/evidence/survey-collect-simplified-mobile.png",
+    ),
+    fullPage: false,
   });
 });
