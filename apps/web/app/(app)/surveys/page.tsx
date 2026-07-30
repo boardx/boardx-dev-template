@@ -770,7 +770,7 @@ function WorkspaceShell({
                       <Button
                         key={step.id}
                         data-active={isActive ? "true" : "false"}
-                        data-testid={`survey-workflow-step-${step.id}`}
+                        data-testid={`workflow-${step.id}`}
                         type="button"
                         aria-current={isActive ? "step" : undefined}
                         variant="outline"
@@ -783,9 +783,10 @@ function WorkspaceShell({
                         ].join(" ")}
                       >
                         <span
-                          data-testid={`workflow-${step.id}`}
+                          data-active={isActive ? "true" : "false"}
+                          data-testid={`survey-workflow-step-${step.id}`}
                           aria-current={isActive ? "step" : undefined}
-                          className="contents"
+                          className="flex min-w-0 flex-1 items-center"
                         >
                           <span className={[
                             "mr-3 grid h-7 w-7 shrink-0 place-items-center rounded-md text-12 font-bold",

@@ -117,9 +117,25 @@ test("each workflow deep link uses the shared framed surface and marks its activ
 
   for (const step of steps) {
     await page.goto(`/surveys?survey=${survey.id}&step=${step}`);
-    await expect(page.getByTestId("survey-workflow-surface")).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByTestId("survey-workflow-content")).toBeVisible();
+    const surface = page.getByTestId("survey-workflow-surface");
+    const content = surface.getByTestId("survey-workflow-content");
+
+    await expect(surface).toHaveCount(1);
+    await expect(surface).toBeVisible({ timeout: 20_000 });
+    await expect(content).toHaveCount(1);
+    await expect(content).toBeVisible();
     await expect(page.getByTestId("survey-workflow-tabs")).toHaveCount(1);
     await expect(page.getByTestId(`survey-workflow-step-${step}`)).toHaveAttribute("data-active", "true");
+
+    for (const inactiveStep of steps.filter((candidate) => candidate !== step)) {
+      await expect(page.getByTestId(`survey-workflow-step-${inactiveStep}`)).toHaveAttribute("data-active", "false");
+    }
+
+    const overflow = await content.evaluate((node) => ({
+      content: node.scrollWidth - node.clientWidth,
+      surface: node.parentElement ? node.parentElement.scrollWidth - node.parentElement.clientWidth : 1,
+    }));
+    expect(overflow.content).toBeLessThanOrEqual(1);
+    expect(overflow.surface).toBeLessThanOrEqual(1);
   }
 });
