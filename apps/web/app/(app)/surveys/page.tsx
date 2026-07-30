@@ -5299,7 +5299,7 @@ export default function SurveysPage() {
         onCreateBlank={() => openTemplateEditor()}
         onNavigate={(target) => void navigateWorkspace(target)}
       >
-      <div data-testid={isTemplateEditor ? "template-editor-shell" : "survey-editor-screen"} className={isTemplateEditor ? "pb-8" : "mx-auto max-w-survey-editor px-4 pb-10 sm:px-6 lg:px-8"}>
+      <div data-testid={isTemplateEditor ? "template-editor-shell" : "survey-editor-screen"} className={isTemplateEditor ? "pb-8" : "w-full px-4 pb-10 sm:px-6"}>
         <div data-testid={isTemplateEditor ? undefined : "survey-editor-shell"} className="mb-4">
           {isTemplateEditor && <div className="rounded-lg border border-border bg-background">
           <div data-testid="editor-command-bar" className="flex flex-wrap items-center gap-3 py-4">

@@ -19,7 +19,7 @@ export function SurveyWorkflowSurface({
     >
       <div
         data-testid="survey-workflow-content"
-        className={cn("mx-auto w-full max-w-survey-editor p-4 sm:p-6", contentClassName)}
+        className={cn("w-full p-4 sm:p-6", contentClassName)}
       >
         {children}
       </div>

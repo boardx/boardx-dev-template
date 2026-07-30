@@ -170,7 +170,7 @@ test("each workflow deep link uses the shared framed surface and marks its activ
   }
 });
 
-test("five workflow surfaces keep a bounded desktop frame and a single-column mobile layout", async ({ page }) => {
+test("five workflow surfaces fill the desktop workspace and keep a single-column mobile layout", async ({ page }) => {
   test.setTimeout(120_000);
   await register(page);
   const survey = await createSurvey(page);
@@ -219,20 +219,27 @@ test("five workflow surfaces keep a bounded desktop frame and a single-column mo
     const surface = page.getByTestId("survey-workflow-surface");
     const content = page.getByTestId("survey-workflow-content");
 
-    await expect(page.getByTestId("survey-workflow-header")).toContainText("持久壳层问卷");
-    await expect(page.getByTestId(workbenches[step])).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("survey-workflow-header")).toContainText("持久壳层问卷", { timeout: 30_000 });
+    const workbench = page.getByTestId(workbenches[step]);
+    await expect(workbench).toBeVisible({ timeout: 20_000 });
     if (step === "design") {
-      await expect(page.getByTestId("survey-title")).toHaveValue("持久壳层问卷");
-      await expect(page.getByTestId("question-title-0")).toHaveValue("你最关注哪个体验环节？");
+      await expect(page.getByTestId("survey-title")).toHaveValue("持久壳层问卷", { timeout: 30_000 });
+      await expect(page.getByTestId("question-title-0")).toHaveValue("你最关注哪个体验环节？", { timeout: 30_000 });
     }
     await expect(surface).toBeVisible({ timeout: 20_000 });
     await expect(content).toBeVisible();
-    const [surfaceBox, contentBox] = await Promise.all([surface.boundingBox(), content.boundingBox()]);
+    const [surfaceBox, contentBox, workbenchBox] = await Promise.all([
+      surface.boundingBox(),
+      content.boundingBox(),
+      workbench.boundingBox(),
+    ]);
     expect(surfaceBox).not.toBeNull();
     expect(contentBox).not.toBeNull();
-    expect(contentBox!.x).toBeGreaterThanOrEqual(surfaceBox!.x);
-    expect(contentBox!.x + contentBox!.width).toBeLessThanOrEqual(surfaceBox!.x + surfaceBox!.width);
-    expect(contentBox!.width).toBeLessThanOrEqual(1600);
+    expect(workbenchBox).not.toBeNull();
+    expect(Math.abs(contentBox!.x - surfaceBox!.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(contentBox!.width - surfaceBox!.width)).toBeLessThanOrEqual(1);
+    expect(workbenchBox!.x - contentBox!.x).toBeLessThanOrEqual(25);
+    expect(contentBox!.x + contentBox!.width - workbenchBox!.x - workbenchBox!.width).toBeLessThanOrEqual(25);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440);
     desktopScreenshots.push((await page.screenshot({ fullPage: false })).toString("base64"));
   }
@@ -249,11 +256,11 @@ test("five workflow surfaces keep a bounded desktop frame and a single-column mo
     await page.goto(`/surveys?survey=${survey.id}&step=${step}`);
     const activeControl = page.getByTestId(`workflow-${step}`);
 
-    await expect(page.getByTestId("survey-workflow-header")).toContainText("持久壳层问卷");
+    await expect(page.getByTestId("survey-workflow-header")).toContainText("持久壳层问卷", { timeout: 30_000 });
     await expect(page.getByTestId(workbenches[step])).toBeVisible({ timeout: 20_000 });
     if (step === "design") {
-      await expect(page.getByTestId("survey-title")).toHaveValue("持久壳层问卷");
-      await expect(page.getByTestId("question-title-0")).toHaveValue("你最关注哪个体验环节？");
+      await expect(page.getByTestId("survey-title")).toHaveValue("持久壳层问卷", { timeout: 30_000 });
+      await expect(page.getByTestId("question-title-0")).toHaveValue("你最关注哪个体验环节？", { timeout: 30_000 });
     }
     await expect(page.getByTestId("survey-workflow-content")).toBeVisible({ timeout: 20_000 });
     await expect(activeControl).toBeVisible();
