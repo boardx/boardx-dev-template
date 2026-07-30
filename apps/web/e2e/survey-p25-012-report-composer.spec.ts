@@ -106,6 +106,10 @@ test("report composer stacks without horizontal overflow on tablet and mobile", 
   const survey = (await created.json()).survey as { id: number };
 
   await page.goto(`/surveys?survey=${survey.id}&step=template`);
+  await expect(
+    page.getByTestId("survey-workflow-content").getByTestId("workspace-template-workbench")
+  ).toBeVisible();
+  await expect(page.getByTestId("template-workspace-intro")).toBeVisible();
   const builder = page.getByTestId("report-template-builder");
   const outline = page.getByTestId("report-module-list");
   const requirement = page.getByTestId("report-requirement-panel");

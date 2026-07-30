@@ -978,7 +978,10 @@ function WorkspaceModulePanel({
       <a data-testid="workspace-report-link" href={`/surveys/${survey.id}/results`} className="sr-only">
         打开分析报告
       </a>
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-background p-4">
+      <section
+        data-testid={view === "answer" ? "answer-workspace-intro" : undefined}
+        className="flex flex-wrap items-center justify-between gap-3 border-b border-survey/20 bg-background px-5 py-4"
+      >
         <div>
           <Badge variant="outline">{item.label}</Badge>
           <h2 className="mt-2 text-18 font-bold text-foreground">{item.title}</h2>
@@ -1023,13 +1026,13 @@ function WorkspaceModulePanel({
         </div>
       </section>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <section className="rounded-lg border border-border bg-card p-4">
+      <section className="grid gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-3">
+        <div className="bg-background p-4">
           <p className="text-12 text-muted-foreground">当前问卷</p>
           <p className="mt-1 text-15 font-semibold text-foreground">{survey.title}</p>
           <p className="mt-1 line-clamp-2 text-12 text-muted-foreground">{survey.description || "暂无说明"}</p>
-        </section>
-        <section className="rounded-lg border border-border bg-card p-4">
+        </div>
+        <div className="bg-background p-4">
           <p className="text-12 text-muted-foreground">回收状态</p>
           <div className="mt-2">
             <Badge variant="outline" className={statusBadgeClass(survey.status)}>
@@ -1037,13 +1040,13 @@ function WorkspaceModulePanel({
             </Badge>
           </div>
           <p className="mt-2 text-12 text-muted-foreground">{survey.responses} 份答卷</p>
-        </section>
-        <section className="rounded-lg border border-border bg-card p-4">
+        </div>
+        <div className="bg-background p-4">
           <p className="text-12 text-muted-foreground">报告规划</p>
           <p className="mt-1 text-13 font-semibold text-foreground">{reportPlan?.name}</p>
           <p className="mt-1 text-12 text-muted-foreground">{reportPlan?.meta}</p>
-        </section>
-      </div>
+        </div>
+      </section>
 
       {view === "answer" && (
         <section data-testid="user-responses-workbench" className={answerViewsCollapsed ? "grid min-w-0 gap-3 xl:grid-cols-[56px_minmax(0,1fr)_300px]" : "grid min-w-0 gap-3 xl:grid-cols-[200px_minmax(0,1fr)_300px]"}>
@@ -1083,7 +1086,7 @@ function WorkspaceModulePanel({
                     key={response.id}
                     type="button"
                     variant="ghost"
-                    className="flex h-auto w-full items-center justify-between gap-3 rounded-none px-4 py-3 text-left font-normal transition-colors hover:bg-muted/20"
+                    className="flex h-auto w-full items-center justify-between gap-3 rounded-none px-4 py-3 text-left font-normal transition-colors hover:bg-survey/5"
                     onClick={onOpenResponses}
                   >
                     <div className="flex min-w-0 items-center gap-3">
@@ -2449,9 +2452,12 @@ function WorkspaceCollectWorkbench({
 
   return (
     <div data-testid="workspace-collect-workbench" className="grid gap-4">
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-background p-4">
+      <section
+        data-testid="collect-workspace-intro"
+        className="flex flex-wrap items-center justify-between gap-3 border-b border-survey/20 bg-background px-5 py-4"
+      >
         <div>
-          <Badge variant="outline">Collect</Badge>
+          <Badge variant="outline" className="border-survey/30 bg-survey/5 text-survey">Collect</Badge>
           <h2 className="mt-2 text-18 font-bold text-foreground">发布回收</h2>
           <p className="text-13 text-muted-foreground">设置链接、回收范围和提交规则。</p>
         </div>
@@ -2499,13 +2505,13 @@ function WorkspaceCollectWorkbench({
         </section>
       )}
 
-      <section className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-lg border border-border bg-card p-4">
+      <section className="grid gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-3">
+        <div className="bg-background p-4">
           <p className="text-12 text-muted-foreground">当前问卷</p>
           <p className="mt-1 text-15 font-semibold text-foreground">{survey.title}</p>
           <p className="mt-1 line-clamp-2 text-12 text-muted-foreground">{survey.description || "暂无说明"}</p>
         </div>
-        <div className="rounded-lg border border-border bg-card p-4">
+        <div className="bg-background p-4">
           <p className="text-12 text-muted-foreground">回收状态</p>
           <div className="mt-2 flex items-center gap-2">
             <Badge variant="outline" className={statusBadgeClass(survey.status)}>
@@ -2526,7 +2532,7 @@ function WorkspaceCollectWorkbench({
             {statusTogglePending ? "处理中" : toggleStatusLabel}
           </Button>
         </div>
-        <div className="rounded-lg border border-border bg-card p-4">
+        <div className="bg-background p-4">
           <p className="text-12 text-muted-foreground">报告规划</p>
           <p className="mt-1 text-13 font-semibold text-foreground">{reportPlan.name}</p>
           <p className="mt-1 text-12 text-muted-foreground">{reportPlan.meta}</p>
@@ -2933,22 +2939,24 @@ function WorkspaceReportWorkbench({
 
   if (professionalReport) {
     return (
-      <SurveyProfessionalReportWorkbench
-        report={professionalReport}
-        generation={generation}
-        generating={generating}
-        error={error}
-        onGenerateReport={() =>
-          onGenerateReport(
-            reportGenerationInstruction(),
-            effectiveCategoryPlan
-          )
-        }
-        onSelectVersion={onSelectVersion}
-        onLoadMoreVersions={onLoadMoreVersions}
-        onExportPdf={exportPdf}
-        onExportWord={exportWord}
-      />
+      <div data-testid="workspace-report-workbench">
+        <SurveyProfessionalReportWorkbench
+          report={professionalReport}
+          generation={generation}
+          generating={generating}
+          error={error}
+          onGenerateReport={() =>
+            onGenerateReport(
+              reportGenerationInstruction(),
+              effectiveCategoryPlan
+            )
+          }
+          onSelectVersion={onSelectVersion}
+          onLoadMoreVersions={onLoadMoreVersions}
+          onExportPdf={exportPdf}
+          onExportWord={exportWord}
+        />
+      </div>
     );
   }
 

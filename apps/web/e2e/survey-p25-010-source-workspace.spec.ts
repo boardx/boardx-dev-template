@@ -45,16 +45,20 @@ test("survey workspace restores every source workflow step from the URL", async 
   await expect(page.getByTestId("workflow-design")).toHaveAttribute("aria-current", "step");
   await expect(page.locator("#workflow-category-0")).toHaveValue("需求洞察");
 
-  for (const [step, testId] of [
-    ["template", "workspace-template-workbench"],
-    ["collect", "workspace-collect-workbench"],
-    ["answer", "workspace-answer-workbench"],
-    ["report", "workspace-report-workbench"],
+  for (const [step, testId, introTestId] of [
+    ["template", "workspace-template-workbench", "template-workspace-intro"],
+    ["collect", "workspace-collect-workbench", "collect-workspace-intro"],
+    ["answer", "workspace-answer-workbench", "answer-workspace-intro"],
+    ["report", "workspace-report-workbench", "report-workspace-intro"],
   ] as const) {
     await page.goto(`/surveys?survey=${survey.id}&step=${step}`);
     await expect(page).toHaveURL(new RegExp(`step=${step}`));
     await page.reload();
     await expect(page.getByTestId(testId)).toBeVisible();
+    await expect(
+      page.getByTestId("survey-workflow-content").getByTestId(testId)
+    ).toBeVisible();
+    await expect(page.getByTestId(introTestId)).toBeVisible();
   }
 
   await page.goto(`/surveys?survey=${survey.id}&step=answer`);

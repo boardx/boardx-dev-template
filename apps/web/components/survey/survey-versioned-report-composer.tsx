@@ -175,9 +175,12 @@ export function SurveyVersionedReportComposer({
     <div
       data-testid="workspace-report-composer"
       aria-busy={saving}
-      className="mx-auto grid w-full max-w-screen-2xl gap-5 px-4 pb-8 pt-2 md:px-7"
+      className="grid w-full gap-5 pb-8"
     >
-      <header className="flex flex-wrap items-center gap-3">
+      <header
+        data-testid="template-workspace-intro"
+        className="flex flex-wrap items-center gap-3 border-b border-survey/20 bg-background px-5 py-4"
+      >
         <Button type="button" size="sm" variant="outline" onClick={onBackToDesign}>
           <ChevronLeft className="h-4 w-4" strokeWidth={1.7} />
           返回模版
@@ -197,6 +200,7 @@ export function SurveyVersionedReportComposer({
             onClick={() => {
               if (!saving && !generating) onClassify();
             }}
+            className="border-survey/30 bg-survey/5 text-survey hover:bg-survey/10 hover:text-survey"
           >
             <Sparkles className="h-4 w-4" strokeWidth={1.6} />
             {classifying ? "推演中..." : "AI 重新推演"}
@@ -253,18 +257,20 @@ export function SurveyVersionedReportComposer({
                   onClick={() => setSelectedCategoryId(category.id)}
                   className={[
                     "grid min-w-0 grid-cols-[32px_minmax(0,1fr)_24px] items-center gap-2 bg-background px-3 py-3 text-left transition-colors",
-                    active ? "bg-foreground text-background" : "hover:bg-secondary",
+                    active
+                      ? "border-l-2 border-survey bg-survey/5 text-foreground"
+                      : "hover:bg-secondary",
                   ].join(" ")}
                 >
                   <span className={[
                     "grid h-8 w-8 place-items-center rounded-md text-12 font-bold",
-                    active ? "bg-background text-foreground" : "bg-muted text-foreground",
+                    active ? "bg-survey/15 text-survey" : "bg-muted text-foreground",
                   ].join(" ")}>
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <span className="min-w-0">
                     <span className="block truncate text-13 font-semibold">{category.name}</span>
-                    <span className={active ? "mt-0.5 block truncate text-11 text-background/65" : "mt-0.5 block truncate text-11 text-muted-foreground"}>
+                    <span className="mt-0.5 block truncate text-11 text-muted-foreground">
                       {category.requirement?.trim() ? "要求已定义" : "待补充要求"}
                     </span>
                   </span>
@@ -357,10 +363,12 @@ export function SurveyVersionedReportComposer({
                           key={option.value}
                           type="button"
                           size="sm"
-                          variant={active ? "default" : "ghost"}
+                          variant="ghost"
                           aria-pressed={active}
                           disabled={saving}
-                          className="min-w-0 rounded-md px-2"
+                          className={active
+                            ? "min-w-0 rounded-md border border-survey/30 bg-survey/5 px-2 text-survey hover:bg-survey/10 hover:text-survey"
+                            : "min-w-0 rounded-md px-2"}
                           onClick={() => patchSelected({
                             outputType: option.value,
                             inputModes: [option.value],
@@ -394,10 +402,12 @@ export function SurveyVersionedReportComposer({
                           <Button
                             key={template.id}
                             type="button"
-                            variant={active ? "default" : "outline"}
+                            variant="outline"
                             aria-pressed={active}
                             disabled={saving}
-                            className="h-auto min-w-0 justify-between whitespace-normal px-3 py-2 text-left"
+                            className={active
+                              ? "h-auto min-w-0 justify-between whitespace-normal border-survey/30 bg-survey/5 px-3 py-2 text-left text-survey hover:bg-survey/10 hover:text-survey"
+                              : "h-auto min-w-0 justify-between whitespace-normal px-3 py-2 text-left"}
                             onClick={() => patchSelected({ chartTemplateId: template.id })}
                           >
                             <span className="min-w-0">

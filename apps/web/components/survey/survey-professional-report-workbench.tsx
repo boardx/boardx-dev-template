@@ -69,7 +69,10 @@ export function SurveyProfessionalReportWorkbench({
       data-testid="survey-professional-report-workbench"
       className="min-w-0 bg-secondary/30"
     >
-      <header className="border-b border-border bg-background px-4 py-4 sm:px-6">
+      <header
+        data-testid="report-workspace-intro"
+        className="border-b border-survey/20 bg-background px-5 py-4"
+      >
         <div className="mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -140,7 +143,7 @@ export function SurveyProfessionalReportWorkbench({
               aria-describedby={
                 canGenerate ? undefined : "report-generation-empty-state"
               }
-              className="h-9 gap-2 bg-foreground px-3 text-background transition-colors duration-200 hover:bg-foreground/90"
+              className="h-9 gap-2 border border-survey/30 bg-foreground px-3 text-background transition-colors duration-200 hover:bg-foreground/90"
             >
               <Sparkles className="h-4 w-4" strokeWidth={1.6} />
               {generating ? "生成中" : "重新生成"}
