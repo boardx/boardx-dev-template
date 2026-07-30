@@ -48,6 +48,7 @@ import { SurveyDesignWorkbench } from "@/components/survey/survey-design-workben
 import { SurveyReportVersionHistory } from "@/components/survey/survey-report-version-history";
 import { SurveyProfessionalReportWorkbench } from "@/components/survey/survey-professional-report-workbench";
 import { SurveyVersionedReportComposer } from "@/components/survey/survey-versioned-report-composer";
+import { SurveyWorkflowSurface } from "@/components/survey/survey-workflow-surface";
 import {
   downloadProfessionalWordReport,
   openProfessionalPdfExportWindow,
@@ -768,7 +769,8 @@ function WorkspaceShell({
                     return (
                       <Button
                         key={step.id}
-                        data-testid={`workflow-${step.id}`}
+                        data-active={isActive ? "true" : "false"}
+                        data-testid={`survey-workflow-step-${step.id}`}
                         type="button"
                         aria-current={isActive ? "step" : undefined}
                         variant="outline"
@@ -776,24 +778,30 @@ function WorkspaceShell({
                         className={[
                           "h-auto min-h-14 justify-start rounded-lg px-3 py-2 text-left",
                           isActive
-                            ? "!border-foreground !bg-foreground !text-background hover:!bg-foreground/90 hover:!text-background"
-                            : "border-border bg-background hover:border-foreground/40",
+                            ? "border-survey bg-survey/10 text-foreground shadow-sm"
+                            : "border-border bg-background text-foreground hover:border-survey/50 hover:bg-survey/5",
                         ].join(" ")}
                       >
-                        <span className={[
-                          "mr-3 grid h-7 w-7 shrink-0 place-items-center rounded-md text-12 font-bold",
-                          isActive ? "bg-background text-foreground" : "bg-secondary text-foreground",
-                        ].join(" ")}
+                        <span
+                          data-testid={`workflow-${step.id}`}
+                          aria-current={isActive ? "step" : undefined}
+                          className="contents"
                         >
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                        <span className="min-w-0">
-                          <span className="flex items-center gap-1.5 text-13 font-bold">
-                            <Icon className="h-4 w-4" strokeWidth={1.6} />
-                            {step.label}
+                          <span className={[
+                            "mr-3 grid h-7 w-7 shrink-0 place-items-center rounded-md text-12 font-bold",
+                            isActive ? "bg-survey/15 text-survey" : "bg-secondary text-foreground",
+                          ].join(" ")}
+                          >
+                            {String(index + 1).padStart(2, "0")}
                           </span>
-                          <span className={isActive ? "mt-1 block text-11 font-normal text-background/70" : "mt-1 block text-11 font-normal text-muted-foreground"}>
-                            {step.desc}
+                          <span className="min-w-0">
+                            <span className="flex items-center gap-1.5 text-13 font-bold">
+                              <Icon className="h-4 w-4" strokeWidth={1.6} />
+                              {step.label}
+                            </span>
+                            <span className="mt-1 block text-11 font-normal text-muted-foreground">
+                              {step.desc}
+                            </span>
                           </span>
                         </span>
                       </Button>
@@ -848,9 +856,9 @@ function WorkspaceShell({
             )}
           </header>}
 
-          <div className={inSurveyWorkflow ? "p-4" : ""}>
-            {children}
-          </div>
+          {inSurveyWorkflow ? (
+            <SurveyWorkflowSurface>{children}</SurveyWorkflowSurface>
+          ) : children}
           </div>
         </section>
       </div>

@@ -109,3 +109,17 @@ test("workflow tabs keep one persistent shell and only replace content below", a
     fullPage: false,
   });
 });
+
+test("each workflow deep link uses the shared framed surface and marks its active step", async ({ page }) => {
+  await register(page);
+  const survey = await createSurvey(page);
+  const steps = ["design", "template", "collect", "answer", "report"] as const;
+
+  for (const step of steps) {
+    await page.goto(`/surveys?survey=${survey.id}&step=${step}`);
+    await expect(page.getByTestId("survey-workflow-surface")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("survey-workflow-content")).toBeVisible();
+    await expect(page.getByTestId("survey-workflow-tabs")).toHaveCount(1);
+    await expect(page.getByTestId(`survey-workflow-step-${step}`)).toHaveAttribute("data-active", "true");
+  }
+});
