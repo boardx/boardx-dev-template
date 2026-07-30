@@ -198,3 +198,40 @@ test("answer and acceptance small surfaces share the professional shell", async 
   await expect(page.getByTestId("acceptance-professional-shell")).toBeVisible();
   await expect(page.getByTestId("survey-acceptance-panel")).toBeVisible();
 });
+
+test("a 24-question design workflow keeps extra bottom-wheel scrolling inside its container", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await register(page);
+  const survey = await createSurvey(
+    page,
+    false,
+    Array.from({ length: 24 }, (_, index) => ({
+      title: `滚动所有权回归问题 ${index + 1}`,
+      type: index % 2 === 0 ? "single" : "short_text",
+      required: index < 2,
+      options: index % 2 === 0 ? ["选项 A", "选项 B"] : [],
+    }))
+  );
+
+  await page.goto(`/surveys?survey=${survey.id}&step=design`);
+  const workflowScrollContainer = page.getByTestId("survey-workflow-scroll-container");
+  await expect(page.getByTestId("question-title-23")).toBeAttached({ timeout: 20_000 });
+
+  const metrics = await workflowScrollContainer.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+    return { clientHeight: element.clientHeight, scrollHeight: element.scrollHeight, scrollTop: element.scrollTop };
+  });
+  expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+  expect(metrics.scrollTop).toBeGreaterThan(0);
+
+  const workflowBox = await workflowScrollContainer.boundingBox();
+  expect(workflowBox).not.toBeNull();
+  await page.mouse.move(workflowBox!.x + workflowBox!.width / 2, workflowBox!.y + workflowBox!.height / 2);
+  await page.mouse.wheel(0, 4_000);
+  await page.waitForTimeout(100);
+
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  expect(await page.evaluate(() => document.documentElement.scrollTop)).toBe(0);
+  expect(await page.getByTestId("app-scroll-container").evaluate((node) => node.scrollTop)).toBe(0);
+});

@@ -139,3 +139,71 @@ test("each workflow deep link uses the shared framed surface and marks its activ
     expect(overflow.surface).toBeLessThanOrEqual(1);
   }
 });
+
+test("five workflow surfaces keep a bounded desktop frame and a single-column mobile layout", async ({ page }) => {
+  test.setTimeout(120_000);
+  await register(page);
+  const survey = await createSurvey(page);
+  const steps = ["design", "template", "collect", "answer", "report"] as const;
+  const desktopScreenshots: string[] = [];
+  const mobileScreenshots: string[] = [];
+  const renderScreenshotSheet = (screenshots: string[], columns: number) => `
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #f7f4ff; color: #1b1726; font-family: Arial, sans-serif; }
+      main { display: grid; grid-template-columns: repeat(${columns}, minmax(0, 1fr)); gap: 16px; padding: 16px; }
+      figure { margin: 0; overflow: hidden; border: 1px solid #ded6f2; border-radius: 8px; background: #ffffff; }
+      figcaption { padding: 10px 12px; font-size: 14px; font-weight: 700; }
+      img { display: block; width: 100%; height: auto; }
+    </style>
+    <main>${screenshots.map((screenshot, index) => `
+      <figure>
+        <figcaption>${steps[index]}</figcaption>
+        <img alt="${steps[index]} workflow surface" src="data:image/png;base64,${screenshot}" />
+      </figure>
+    `).join("")}</main>
+  `;
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const step of steps) {
+    await page.goto(`/surveys?survey=${survey.id}&step=${step}`);
+    const surface = page.getByTestId("survey-workflow-surface");
+    const content = page.getByTestId("survey-workflow-content");
+
+    await expect(surface).toBeVisible({ timeout: 20_000 });
+    await expect(content).toBeVisible();
+    const [surfaceBox, contentBox] = await Promise.all([surface.boundingBox(), content.boundingBox()]);
+    expect(surfaceBox).not.toBeNull();
+    expect(contentBox).not.toBeNull();
+    expect(contentBox!.x).toBeGreaterThanOrEqual(surfaceBox!.x);
+    expect(contentBox!.x + contentBox!.width).toBeLessThanOrEqual(surfaceBox!.x + surfaceBox!.width);
+    expect(contentBox!.width).toBeLessThanOrEqual(1600);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440);
+    desktopScreenshots.push((await page.screenshot({ fullPage: false })).toString("base64"));
+  }
+
+  await page.setContent(renderScreenshotSheet(desktopScreenshots, 2));
+  await page.screenshot({
+    path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-five-step-unified-desktop.png",
+    fullPage: true,
+  });
+
+  await page.setViewportSize({ width: 375, height: 812 });
+  for (const step of steps) {
+    await page.goto(`/surveys?survey=${survey.id}&step=${step}`);
+    const activeControl = page.getByTestId(`workflow-${step}`);
+
+    await expect(page.getByTestId("survey-workflow-content")).toBeVisible({ timeout: 20_000 });
+    await expect(activeControl).toBeVisible();
+    await activeControl.focus();
+    await expect(activeControl).toBeFocused();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+    mobileScreenshots.push((await page.screenshot({ fullPage: false })).toString("base64"));
+  }
+
+  await page.setContent(renderScreenshotSheet(mobileScreenshots, 1));
+  await page.screenshot({
+    path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-five-step-unified-mobile.png",
+    fullPage: true,
+  });
+});
