@@ -55,10 +55,11 @@ test("survey workspace restores every source workflow step from the URL", async 
     await expect(page).toHaveURL(new RegExp(`step=${step}`));
     await page.reload();
     await expect(page.getByTestId(testId)).toBeVisible();
-    await expect(
-      page.getByTestId("survey-workflow-content").getByTestId(testId)
-    ).toBeVisible();
-    await expect(page.getByTestId(introTestId)).toBeVisible();
+    const workbench = page.getByTestId("survey-workflow-content").getByTestId(testId);
+    const intro = workbench.getByTestId(introTestId);
+    await expect(workbench).toBeVisible();
+    await expect(intro).toHaveCount(1);
+    await expect(intro).toBeVisible();
   }
 
   await page.goto(`/surveys?survey=${survey.id}&step=answer`);

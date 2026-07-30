@@ -2963,28 +2963,46 @@ function WorkspaceReportWorkbench({
   if (!professionalReport) {
     if (responseCount === 0) {
       return (
-        <section
-          data-testid="report-generation-empty-state"
-          className="border border-border bg-background px-6 py-16 text-center"
-        >
-          <h2 className="text-18 font-bold text-foreground">
-            收到至少 1 份有效答卷后可生成报告
-          </h2>
-          <p className="mx-auto mt-2 max-w-xl text-13 text-muted-foreground">
-            请先发布问卷并回收答卷。系统只使用真实答卷生成报告，不会用模拟数据填充图表或结论。
-          </p>
-          <Button type="button" className="mt-5" disabled>
-            <Sparkles className="mr-2 h-4 w-4" strokeWidth={1.6} />
-            重新生成
-          </Button>
-        </section>
+        <div data-testid="workspace-report-workbench" className="grid gap-4">
+          <section
+            data-testid="report-workspace-intro"
+            className="border-b border-survey/20 bg-background px-5 py-4"
+          >
+            <p className="text-11 font-semibold uppercase tracking-[0.14em] text-survey">Analysis Report</p>
+            <h2 className="mt-1 text-20 font-bold text-foreground">{survey.title} 分析报告</h2>
+          </section>
+          <section
+            data-testid="report-generation-empty-state"
+            className="border border-border bg-background px-6 py-16 text-center"
+          >
+            <h2 className="text-18 font-bold text-foreground">
+              收到至少 1 份有效答卷后可生成报告
+            </h2>
+            <p className="mx-auto mt-2 max-w-xl text-13 text-muted-foreground">
+              请先发布问卷并回收答卷。系统只使用真实答卷生成报告，不会用模拟数据填充图表或结论。
+            </p>
+            <Button type="button" className="mt-5" disabled>
+              <Sparkles className="mr-2 h-4 w-4" strokeWidth={1.6} />
+              重新生成
+            </Button>
+          </section>
+        </div>
       );
     }
     return (
-      <section data-testid="professional-report-loading" className="border border-border bg-background px-8 py-16 text-center">
-        <h2 className="text-18 font-bold text-foreground">正在汇总真实答卷</h2>
-        <p className="mt-2 text-13 text-muted-foreground">报告只会使用已提交答卷，不会用模拟数据填充图表或结论。</p>
-      </section>
+      <div data-testid="workspace-report-workbench" className="grid gap-4">
+        <section
+          data-testid="report-workspace-intro"
+          className="border-b border-survey/20 bg-background px-5 py-4"
+        >
+          <p className="text-11 font-semibold uppercase tracking-[0.14em] text-survey">Analysis Report</p>
+          <h2 className="mt-1 text-20 font-bold text-foreground">{survey.title} 分析报告</h2>
+        </section>
+        <section data-testid="professional-report-loading" className="border border-border bg-background px-8 py-16 text-center">
+          <h2 className="text-18 font-bold text-foreground">正在汇总真实答卷</h2>
+          <p className="mt-2 text-13 text-muted-foreground">报告只会使用已提交答卷，不会用模拟数据填充图表或结论。</p>
+        </section>
+      </div>
     );
   }
 
