@@ -4382,9 +4382,16 @@ export default function SurveysPage() {
         return;
       }
       if (!res.ok) {
+        const generationError = String(payload?.error ?? "");
         setWorkspaceTemplateError(
-          payload?.error === "report_requires_responses"
+          generationError === "report_requires_responses"
             ? "收到至少 1 份有效答卷后可生成报告。"
+            : generationError.startsWith("report_template_chapter_sources_missing:")
+              ? "有报告章节尚未选择分析题目，请返回报告模板补充题目来源。"
+              : generationError.startsWith("report_template_chapter_sources_unavailable:")
+                ? "有报告章节引用了已删除或不可访问的题目，请返回报告模板修复题目来源。"
+                : generationError.startsWith("report_template_chart_sources_incompatible:")
+                  ? "图表章节没有可生成分布数据的题目，请调整题目来源或输出类型。"
             : "正式报告生成失败，请稍后重试。"
         );
         return;

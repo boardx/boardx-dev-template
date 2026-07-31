@@ -4,7 +4,6 @@ import {
   canViewSurvey,
   cleanSurveyReportCategoryPlan,
   defaultSurveyReportCategoryPlan,
-  ensureSurveyReportCategoryPlan,
   getSurveyReportCategoryPlan,
   getSurveyWithQuestions,
   upsertSurveyReportCategoryPlan,
@@ -131,14 +130,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: "无管理权限" }, { status: 403 });
   }
   const body = await req.json().catch(() => ({}));
-  const previewOnly = body?.previewOnly === true;
   const instruction = String(body?.instruction ?? "").trim().slice(0, 1200);
   const currentPlan = cleanSurveyReportCategoryPlan(
     body?.currentPlan,
     loaded.survey.title,
     loaded.survey.questions
   );
-  if (previewOnly && !instruction) {
+  if (!instruction) {
     return NextResponse.json(
       { error: "请先描述报告受众、决策目标或修改要求" },
       { status: 400 }
@@ -173,7 +171,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
               "基于 currentPlan 做增量修改，不要无理由丢失现有章节。",
               "章节顺序就是报告输出顺序。",
               "每章 questionIds 只能引用 survey.questions 中的 id，同一道题允许用于多个章节。",
-              "每章必须给出独有分析目标和一种主要输出形式，避免重复全局样本说明。",
+              "每章必须分别填写 analysisObjective 和 analysisMethod，并选择一种主要输出形式。",
+              "不同章节应回答不同决策问题，避免重复全局样本说明。",
             ],
             survey: {
               title: loaded.survey.title,
@@ -194,6 +193,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                   id: "稳定且唯一的章节 ID",
                   name: "分类名称",
                   description: "分类说明",
+                  analysisObjective: "本章要回答的独立决策问题",
+                  analysisMethod: "本章采用的分析方法和比较维度",
                   requirement: "描述读者、决策目标、必须回答的问题、证据边界和表达要求",
                   questionIds: [1, 2],
                   outputType: "text | chart | image",
@@ -213,14 +214,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         loaded.survey.title,
         loaded.survey.questions
       );
-    const reportCategoryPlan = previewOnly
-      ? fallback
-      : await upsertSurveyReportCategoryPlan(surveyId, fallback);
     return NextResponse.json({
-      reportCategoryPlan,
+      reportCategoryPlan: fallback,
       model,
       generatedBy: "default",
-      previewOnly,
+      previewOnly: true,
       warning: "AI 模板推演暂不可用，已保留当前草稿，请稍后重试。",
     });
   }
@@ -229,13 +227,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const plan = cleaned.categories.length
     ? cleaned
     : defaultSurveyReportCategoryPlan(loaded.survey.title, loaded.survey.questions);
-  const reportCategoryPlan = previewOnly
-    ? plan
-    : await upsertSurveyReportCategoryPlan(surveyId, plan);
   return NextResponse.json({
-    reportCategoryPlan,
+    reportCategoryPlan: plan,
     model,
     generatedBy: "llm",
-    previewOnly,
+    previewOnly: true,
   });
 }

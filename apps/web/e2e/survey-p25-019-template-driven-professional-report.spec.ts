@@ -170,7 +170,10 @@ test("generates one ordered artifact per saved template chapter", async ({
     ["decision-scenario", 3, "image"],
   ]);
   expect(payload.report).not.toHaveProperty("executiveSummary");
-  expect(payload.report).not.toHaveProperty("methodology");
+  expect(payload.report.methodology).toMatchObject({
+    statement: expect.stringContaining("份有效答卷"),
+    evidenceScope: expect.stringContaining("模板显式绑定的题目"),
+  });
   expect(JSON.stringify(payload.report)).not.toContain("survey-reports/");
 
   const imageChapter = payload.report.chapters[2] as {
@@ -193,6 +196,8 @@ test("generates one ordered artifact per saved template chapter", async ({
     .toContainText("安全信任结构");
   await expect(page.getByTestId("professional-report-document"))
     .toContainText("购买决策场景");
+  await expect(page.getByTestId("professional-report-methodology"))
+    .toHaveCount(1);
   await expect(page.getByTestId("professional-report-document"))
     .not.toContainText("执行摘要");
   await expect(page.getByTestId("professional-report-document"))

@@ -202,6 +202,24 @@ function TemplateDrivenReportDocument({
         </div>
       </header>
 
+      <section
+        data-testid="professional-report-methodology"
+        className="grid gap-6 border-b border-border px-6 py-7 sm:px-10 lg:grid-cols-2"
+      >
+        <div>
+          <p className="text-11 font-semibold text-muted-foreground">研究方法</p>
+          <p className="mt-2 text-13 leading-6 text-muted-foreground">
+            {report.methodology.statement}
+          </p>
+        </div>
+        <div>
+          <p className="text-11 font-semibold text-muted-foreground">证据口径</p>
+          <p className="mt-2 text-13 leading-6 text-muted-foreground">
+            {report.methodology.evidenceScope}
+          </p>
+        </div>
+      </section>
+
       <nav
         data-testid="professional-report-chapter-nav"
         aria-label="报告章节"

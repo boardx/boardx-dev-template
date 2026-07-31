@@ -52,6 +52,8 @@ describe("Survey source data contract", () => {
     expect(plan.categories).toHaveLength(2);
     expect(plan.categories[0]).toMatchObject({
       name: "商品安全",
+      analysisObjective: expect.stringContaining("商品安全"),
+      analysisMethod: expect.stringContaining("匿名聚合"),
       questionIds: [11],
       outputType: "text",
       inputModes: ["text"],
@@ -94,6 +96,8 @@ describe("Survey source data contract", () => {
       maxDimensions: 12,
       sort: "desc",
     });
+    expect(safetyCategory?.analysisObjective).toContain("商品安全");
+    expect(safetyCategory?.analysisMethod).toContain("匿名聚合");
     expect(plan.categories.flatMap((category) => category.questionIds)).toEqual([11]);
   });
 

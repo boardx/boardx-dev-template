@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, ChevronDown, Copy, Link2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,6 +75,11 @@ export function SurveyCollectWorkbench({
   );
   const shareUrl = survey.shareUrl || `/s/${survey.id}`;
   const feedbackIsSuccess = message.startsWith("已");
+
+  useEffect(() => {
+    setStartImmediately(!publishStartAt);
+    setNoEndDate(!publishEndAt);
+  }, [survey.id, publishStartAt, publishEndAt]);
 
   function updateStartImmediately(checked: boolean) {
     setStartImmediately(checked);

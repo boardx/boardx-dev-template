@@ -533,6 +533,37 @@ export function SurveyVersionedReportComposer({
                   </div>
                 ) : null}
 
+                <div className="grid gap-2">
+                  <Label htmlFor="report-analysis-objective">分析目标</Label>
+                  <Input
+                    id="report-analysis-objective"
+                    data-testid="report-analysis-objective-input"
+                    maxLength={500}
+                    value={selectedCategory.analysisObjective ?? ""}
+                    disabled={saving}
+                    onChange={(event) => patchSelected({
+                      analysisObjective: event.target.value,
+                    })}
+                    placeholder="本章要回答的独立决策问题"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="report-analysis-method">分析方法</Label>
+                  <Textarea
+                    id="report-analysis-method"
+                    data-testid="report-analysis-method-input"
+                    className="min-h-24 resize-y text-13 leading-6"
+                    maxLength={1000}
+                    value={selectedCategory.analysisMethod ?? ""}
+                    disabled={saving}
+                    onChange={(event) => patchSelected({
+                      analysisMethod: event.target.value,
+                    })}
+                    placeholder="说明使用哪些题目、采用何种比较或交叉分析方法"
+                  />
+                </div>
+
                 <div
                   data-testid="report-question-sources"
                   className="grid gap-3 border border-border bg-secondary/30 p-4"

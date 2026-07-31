@@ -129,6 +129,8 @@ export interface SurveyReportCategoryInput {
   id: string;
   name: string;
   description: string;
+  analysisObjective?: string;
+  analysisMethod?: string;
   requirement?: string;
   questionIds: number[];
   outputType: SurveyReportOutputType;
@@ -253,6 +255,8 @@ export function defaultSurveyReportCategoryPlan(title: string, questions: Survey
       id: stableCategoryId(name, index),
       name: name.slice(0, 48),
       description: `围绕「${name}」下的 ${items.length} 个问题生成报告内容。`,
+      analysisObjective: `识别「${name}」相关反馈中最值得管理层关注的结论。`,
+      analysisMethod: "基于章节绑定题目的匿名聚合结果进行描述性分析，并结合样本边界解读。",
       requirement: `面向决策者分析「${name}」，先给结论，再展示证据、样本边界和行动建议。`,
       questionIds: items.map((question) => Number(question.id)),
       outputType: "text",
@@ -294,6 +298,14 @@ export function cleanSurveyReportCategoryPlan(input: unknown, surveyTitle: strin
       requirementParts.join("\n") ||
       `面向决策者分析「${name}」，先给结论，再展示证据、样本边界和行动建议。`
     ).slice(0, 2000);
+    const analysisObjective = (
+      String(item.analysisObjective ?? "").trim()
+      || `识别「${name}」相关反馈中最值得管理层关注的结论。`
+    ).slice(0, 500);
+    const analysisMethod = (
+      String(item.analysisMethod ?? "").trim()
+      || "基于章节绑定题目的匿名聚合结果进行描述性分析，并结合样本边界解读。"
+    ).slice(0, 1000);
     const outputType = cleanReportOutputType(item.outputType);
     const chartTemplateId = outputType === "chart"
       ? cleanChartTemplateId(item.chartTemplateId)
@@ -302,6 +314,8 @@ export function cleanSurveyReportCategoryPlan(input: unknown, surveyTitle: strin
       id: String(item.id ?? stableCategoryId(name, index)).trim().slice(0, 80),
       name,
       description: String(item.description ?? "").trim().slice(0, 240),
+      analysisObjective,
+      analysisMethod,
       requirement,
       questionIds,
       outputType,

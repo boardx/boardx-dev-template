@@ -18,6 +18,8 @@ const report: PublicTemplateDrivenSurveyReport = {
         title: "管理层摘要",
         outputType: "text",
         questionIds: [],
+        analysisObjective: "提炼结论",
+        analysisMethod: "证据归纳",
         requirement: "先结论。",
       },
       {
@@ -27,6 +29,8 @@ const report: PublicTemplateDrivenSurveyReport = {
         outputType: "chart",
         questionIds: [],
         chartTemplateId: "line-simple",
+        analysisObjective: "比较趋势",
+        analysisMethod: "分布对比",
         requirement: "展示趋势。",
       },
       {
@@ -35,6 +39,8 @@ const report: PublicTemplateDrivenSurveyReport = {
         title: "场景视觉",
         outputType: "image",
         questionIds: [],
+        analysisObjective: "呈现场景",
+        analysisMethod: "研究视觉",
         requirement: "展示场景。",
       },
     ],
@@ -43,6 +49,10 @@ const report: PublicTemplateDrivenSurveyReport = {
     responseCount: 13,
     questionCount: 8,
     confidence: "medium",
+  },
+  methodology: {
+    statement: "匿名聚合分析",
+    evidenceScope: "仅使用绑定题目",
   },
   chapters: [
     {

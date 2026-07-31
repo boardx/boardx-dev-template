@@ -14,6 +14,8 @@ export interface SurveyReportTemplateChapterSnapshot {
   title: string;
   questionIds: number[];
   outputType: SurveyReportOutputType;
+  analysisObjective: string;
+  analysisMethod: string;
   requirement: string;
   chartTemplateId?: SurveyReportChartTemplateId;
 }
@@ -68,6 +70,10 @@ export interface TemplateDrivenSurveyReport {
     questionCount: number;
     confidence: "none" | "low" | "medium" | "high";
   };
+  methodology: {
+    statement: string;
+    evidenceScope: string;
+  };
   chapters: TemplateDrivenReportChapter[];
 }
 
@@ -108,6 +114,10 @@ export function buildSurveyReportTemplateSnapshot(
           title: category.name.trim(),
           questionIds: [...category.questionIds],
           outputType: category.outputType,
+          analysisObjective: category.analysisObjective?.trim()
+            || `识别「${category.name.trim()}」相关反馈中最值得管理层关注的结论。`,
+          analysisMethod: category.analysisMethod?.trim()
+            || "基于章节绑定题目的匿名聚合结果进行描述性分析，并结合样本边界解读。",
           requirement: normalizedRequirement(category),
         };
         if (category.outputType === "chart") {
@@ -207,6 +217,12 @@ export function assembleTemplateDrivenReport(input: {
           : "ready",
     templateSnapshot: input.snapshot,
     sample: input.sample,
+    methodology: {
+      statement:
+        `基于 ${input.sample.responseCount} 份有效答卷，对 ${input.sample.questionCount} 道问卷题目的匿名聚合证据进行章节化分析。`,
+      evidenceScope:
+        "各章节仅使用模板显式绑定的题目；同一道题可在不同分析目标下重复使用，所有结论均受当前事实版本约束。",
+    },
     chapters: input.chapters,
   };
 }
@@ -216,8 +232,15 @@ export function materializeReportAssetUrls(
   surveyId: string | number,
   artifactId: string
 ): PublicTemplateDrivenSurveyReport {
+  const methodology = report.methodology ?? {
+    statement:
+      `基于 ${report.sample.responseCount} 份有效答卷，对 ${report.sample.questionCount} 道问卷题目的匿名聚合证据进行章节化分析。`,
+    evidenceScope:
+      "各章节仅使用模板显式绑定的题目；同一道题可在不同分析目标下重复使用，所有结论均受当前事实版本约束。",
+  };
   return {
     ...report,
+    methodology,
     chapters: report.chapters.map((chapter) => {
       if (chapter.outputType !== "image") return chapter;
       const { assetKey: _assetKey, ...publicChapter } = chapter;

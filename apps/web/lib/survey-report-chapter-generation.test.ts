@@ -42,6 +42,8 @@ const snapshot = buildSurveyReportTemplateSnapshot({
       id: "summary",
       name: "管理层摘要",
       description: "",
+      analysisObjective: "识别影响安全信任的首要因素。",
+      analysisMethod: "比较各安全关注项的选择占比，并结合购买经历交叉解读。",
       requirement: "先给结论，再说明业务含义和下一步动作。",
       questionIds: [2],
       outputType: "text",
@@ -54,6 +56,8 @@ const snapshot = buildSurveyReportTemplateSnapshot({
       id: "trust-chart",
       name: "安全信任结构",
       description: "",
+      analysisObjective: "呈现不同安全信息的关注结构。",
+      analysisMethod: "使用选项分布进行构成分析，并标注有效样本量。",
       requirement: "选择最能体现安全关注差异的题目。",
       questionIds: [2],
       outputType: "chart",
@@ -67,6 +71,8 @@ const snapshot = buildSurveyReportTemplateSnapshot({
       id: "scenario-image",
       name: "核心场景视觉",
       description: "",
+      analysisObjective: "把核心信任场景转化为管理层可快速理解的视觉。",
+      analysisMethod: "依据购买经历和安全关注的聚合发现生成研究视觉。",
       requirement: "生成克制、专业且不带文字数字的场景信息图。",
       questionIds: [1],
       outputType: "image",
@@ -149,6 +155,8 @@ describe("template report chapter generation", () => {
     for (const call of callJson.mock.calls) {
       const request = JSON.parse(call[0].messages[1]!.content);
       expect(request.sourceRevision).toBe("source-revision-1");
+      expect(request.chapter.analysisObjective).toBeTruthy();
+      expect(request.chapter.analysisMethod).toBeTruthy();
       expect(request.chapter.requirement).toBeTruthy();
       if (request.task === "generate_template_text_chapter") {
         expect(request.evidence.questions.map(
@@ -241,6 +249,35 @@ describe("template report chapter generation", () => {
     })).rejects.toThrow("report_template_chapter_sources_missing:summary");
 
     expect(callJson).not.toHaveBeenCalled();
+  });
+
+  it("rejects stale question references before invoking any generator", async () => {
+    const callJson = vi.fn();
+    const generateImage = vi.fn();
+
+    await expect(generateTemplateReportChapters({
+      snapshot: {
+        ...snapshot,
+        chapters: [{
+          ...snapshot.chapters[0]!,
+          questionIds: [2, 999],
+        }],
+      },
+      evidence,
+      sourceRevision: "source-revision-1",
+      teamId: 7,
+      surveyId: 59,
+      artifactId: "artifact-id",
+      model: "qwen-test",
+    }, {
+      callJson,
+      generateImage,
+    })).rejects.toThrow(
+      "report_template_chapter_sources_unavailable:summary:999"
+    );
+
+    expect(callJson).not.toHaveBeenCalled();
+    expect(generateImage).not.toHaveBeenCalled();
   });
 
   it("rejects chart chapters without distribution-compatible question sources", async () => {

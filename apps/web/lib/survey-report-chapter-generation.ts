@@ -82,6 +82,17 @@ function assertValidChapterSources(
     if (!chapter.questionIds.length) {
       throw new Error(`report_template_chapter_sources_missing:${chapter.id}`);
     }
+    const availableQuestionIds = new Set(
+      evidence.questions.map((question) => Number(question.questionId))
+    );
+    const unavailableQuestionIds = chapter.questionIds
+      .map(Number)
+      .filter((questionId) => !availableQuestionIds.has(questionId));
+    if (unavailableQuestionIds.length) {
+      throw new Error(
+        `report_template_chapter_sources_unavailable:${chapter.id}:${unavailableQuestionIds.join(",")}`
+      );
+    }
     if (chapter.outputType !== "chart") continue;
     const chapterEvidence = evidenceForChapter(evidence, chapter);
     const hasChartEvidence = chapterEvidence.questions.some(

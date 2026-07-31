@@ -527,6 +527,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const errorMessage = error instanceof Error ? error.message : "";
     if (
       errorMessage.startsWith("report_template_chapter_sources_missing:")
+      || errorMessage.startsWith("report_template_chapter_sources_unavailable:")
       || errorMessage.startsWith("report_template_chart_sources_incompatible:")
     ) {
       return NextResponse.json({ error: errorMessage }, { status: 422 });

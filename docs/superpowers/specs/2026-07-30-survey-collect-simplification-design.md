@@ -148,4 +148,3 @@ The implementation should prove:
    expansion and save.
 8. The layout fills the workflow workspace and remains usable at desktop and
    mobile widths.
-

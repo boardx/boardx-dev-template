@@ -30,10 +30,18 @@ test("report categories fall back deterministically and remain owner-only", asyn
   expect(detail.status()).toBe(200);
   const questionIds = ((await detail.json()).survey.questions as Array<{ id: number | string }>).map(({ id }) => String(id));
 
-  const classified = await page.request.post(`/api/surveys/${survey.id}/report-categories`);
+  const beforePreview = await page.request.get(`/api/surveys/${survey.id}/report-categories`);
+  const beforePayload = await beforePreview.json();
+  const classified = await page.request.post(`/api/surveys/${survey.id}/report-categories`, {
+    data: {
+      instruction: "按管理层阅读逻辑重新组织章节",
+      currentPlan: beforePayload.reportCategoryPlan,
+    },
+  });
   expect(classified.status()).toBe(200);
   const payload = await classified.json();
   expect(payload.generatedBy).toMatch(/^(llm|default)$/);
+  expect(payload.previewOnly).toBe(true);
   expect(payload.reportCategoryPlan.categories.length).toBeGreaterThan(0);
   expect(payload.reportCategoryPlan.categories.flatMap((category: { questionIds: Array<number | string> }) => category.questionIds.map(String))).toEqual(
     expect.arrayContaining(questionIds)
@@ -41,7 +49,7 @@ test("report categories fall back deterministically and remain owner-only", asyn
 
   const reloaded = await page.request.get(`/api/surveys/${survey.id}/report-categories`);
   expect(reloaded.status()).toBe(200);
-  expect((await reloaded.json()).reportCategoryPlan.categories.length).toBeGreaterThan(0);
+  expect((await reloaded.json()).updatedAt).toBeNull();
 
   await register(page, "p25_f12_outsider");
   expect((await page.request.post(`/api/surveys/${survey.id}/report-categories`)).status()).toBe(403);
@@ -62,8 +70,6 @@ test("report template exposes whole-survey requirements and a real report previe
   });
   expect(created.status()).toBe(201);
   const survey = (await created.json()).survey as { id: number };
-  expect((await page.request.post(`/api/surveys/${survey.id}/report-categories`)).status()).toBe(200);
-
   const categoryResponse = page.waitForResponse((response) =>
     response.url().includes(`/api/surveys/${survey.id}/report-categories`) &&
     response.request().method() === "GET"

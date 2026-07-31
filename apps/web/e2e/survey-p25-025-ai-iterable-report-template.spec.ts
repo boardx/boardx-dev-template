@@ -97,6 +97,8 @@ test("consultant can reuse questions across chapters and preview AI changes befo
         id: "retention-overview",
         name: "留存风险与价值感知",
         description: "组合满意度与续约驱动，识别主要风险。",
+        analysisObjective: "识别最影响客户续约的风险与价值因素。",
+        analysisMethod: "交叉比较满意度与续约驱动题目的聚合分布。",
         requirement: "面向咨询公司领导，给出风险排序、证据边界和短期动作。",
         questionIds: [
           Number(survey.questions[0]!.id),
@@ -113,6 +115,8 @@ test("consultant can reuse questions across chapters and preview AI changes befo
         id: "action-roadmap",
         name: "改善优先级与行动路线",
         description: "结合续约驱动与开放反馈形成行动建议。",
+        analysisObjective: "确定改善动作的优先级和执行路径。",
+        analysisMethod: "综合续约驱动分布与开放反馈主题，按影响和可行性排序。",
         requirement: "按影响和可行性组织建议，明确负责人和验证指标。",
         questionIds: [
           Number(survey.questions[1]!.id),
@@ -200,6 +204,10 @@ test("consultant can reuse questions across chapters and preview AI changes befo
   await expect(page.getByTestId("report-question-sources")).toContainText(
     "已选择 2 题",
   );
+  await expect(page.getByTestId("report-analysis-objective-input"))
+    .toHaveValue("识别最影响客户续约的风险与价值因素。");
+  await expect(page.getByTestId("report-analysis-method-input"))
+    .toHaveValue("交叉比较满意度与续约驱动题目的聚合分布。");
 
   const saveResponse = page.waitForResponse(
     (response) =>
@@ -218,6 +226,10 @@ test("consultant can reuse questions across chapters and preview AI changes befo
     Number(survey.questions[0]!.id),
     Number(survey.questions[1]!.id),
   ]);
+  expect(saved.categories[0]).toMatchObject({
+    analysisObjective: "识别最影响客户续约的风险与价值因素。",
+    analysisMethod: "交叉比较满意度与续约驱动题目的聚合分布。",
+  });
   expect(saved.categories[1].questionIds).toEqual([
     Number(survey.questions[1]!.id),
     Number(survey.questions[2]!.id),

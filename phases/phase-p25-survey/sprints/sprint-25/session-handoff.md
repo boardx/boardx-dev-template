@@ -13,14 +13,19 @@
 - 章节题目引用现在参与报告版本键并严格约束每章生成证据。
 - AI 模板推演改为基于用户指令和当前草稿的定向迭代。
 - 缺失引用显式修复，模板保存使用微秒精度乐观锁阻止协作者覆盖。
+- AI 模板 POST 现在仅返回预览；持久化统一走带 CAS 的 PATCH。
+- 每章独立保存分析目标与分析方法，并冻结到正式报告版本快照中。
+- 失效题目引用在模型调用前返回章节级 422，避免无效或错配证据进入报告。
+- 正式报告将研究方法和证据口径集中呈现一次，历史 v1 产物读取时保持兼容。
+- F19 的全有或全无发布契约保持不变，任一章节失败时不会发布部分报告。
 
 ## 仍损坏或未验证
 - `pnpm harness tick --session codex-survey-report-ui` 需要外部 coordinator 环境变量，当前环境未配置。
-- PR #824 review 修复后的 F25 Playwright 本地复跑被 Docker Desktop 启动失败阻断；相关单元测试、类型检查和 lint 已通过，等待 GitHub CI 完整复验。
+- PR #824 review 修复后的 F25 Playwright 本地复跑被无响应的 Docker API 阻断；`verify:base` 81/81 tasks、Web 189 tests、Data 101 tests 和 doctor 均已通过，等待 GitHub CI 完整复验。
 - 真实 PostgreSQL 双客户端并发 E2E 尚未单独覆盖；SQL 契约、首次创建冲突和后续更新冲突已有定向测试。
 
 ## 下一步最佳动作
-- 推送 PR #824 的章节来源门禁修复，重新请求 review，等待 CI 与 review 门禁通过后由 `usersyj` coordinator 合并。
+- 推送 PR #824 的模板并发、章节契约、来源门禁和报告口径修复，重新请求独立 code/feature review，等待 CI 与 review 门禁通过后由 `usersyj` coordinator 合并。
 - 如需 coordinator 心跳，先配置 RepoHub/coord-gateway 所需环境变量，再运行 tick。
 
 ## 命令
