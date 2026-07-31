@@ -4,6 +4,7 @@ import {
   SurveyReportChapterValidationError,
   assembleTemplateDrivenReport,
   buildSurveyReportTemplateSnapshot,
+  countDistinctTemplateQuestions,
   materializeReportAssetUrls,
   validateTemplateDrivenReport,
   type TemplateDrivenReportChapter,
@@ -58,6 +59,14 @@ const reportPlan: SurveyReportCategoryPlanInput = {
     },
   ],
 };
+
+describe("countDistinctTemplateQuestions", () => {
+  it("counts the distinct union of chapter sources and permits reuse", () => {
+    expect(
+      countDistinctTemplateQuestions(buildSurveyReportTemplateSnapshot(reportPlan))
+    ).toBe(3);
+  });
+});
 
 const textChapter: TemplateDrivenReportChapter = {
   chapterId: "summary",

@@ -46,6 +46,7 @@ import {
   SurveyReportChapterValidationError,
   assembleTemplateDrivenReport,
   buildSurveyReportTemplateSnapshot,
+  countDistinctTemplateQuestions,
   materializeReportAssetUrls,
   type TemplateDrivenSurveyReport,
 } from "@/lib/survey-template-report";
@@ -464,7 +465,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       allowedEvidenceRefs: reportEvidenceRefs(context.evidence),
       sample: {
         responseCount: context.evidence.sample.responseCount,
-        questionCount: context.evidence.survey.questionCount,
+        questionCount: countDistinctTemplateQuestions(snapshot),
         confidence: context.evidence.sample.confidence,
       },
     });

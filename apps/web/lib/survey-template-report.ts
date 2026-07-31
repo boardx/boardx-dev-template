@@ -261,6 +261,14 @@ export function validateTemplateDrivenReport(
   });
 }
 
+export function countDistinctTemplateQuestions(
+  snapshot: SurveyReportTemplateSnapshot
+): number {
+  return new Set(
+    snapshot.chapters.flatMap((chapter) => chapter.questionIds)
+  ).size;
+}
+
 export function assembleTemplateDrivenReport(input: {
   title: string;
   generatedAt: string;

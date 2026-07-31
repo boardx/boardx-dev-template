@@ -223,7 +223,7 @@ function TemplateDrivenReportDocument({
       <nav
         data-testid="professional-report-chapter-nav"
         aria-label="报告章节"
-        className="sticky top-0 z-10 flex gap-2 overflow-x-auto border-b border-border bg-background/95 px-6 py-3 backdrop-blur sm:px-10"
+        className="flex gap-2 overflow-x-auto border-b border-border bg-background px-6 py-3 sm:px-10"
       >
         {report.templateSnapshot.chapters
           .slice()

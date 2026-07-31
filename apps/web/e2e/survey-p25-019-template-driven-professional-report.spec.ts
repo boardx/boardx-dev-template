@@ -205,6 +205,8 @@ test("generates one ordered artifact per saved template chapter", async ({
   await expect(methodology).toHaveCount(1);
   await expect(methodology).toContainText("研究方法");
   await expect(methodology).toContainText("证据口径");
+  await expect(page.getByTestId("professional-report-chapter-nav"))
+    .not.toHaveClass(/sticky/);
   await expect(page.getByTestId("professional-report-document"))
     .not.toContainText("执行摘要");
   await expect(page.getByText("报告 AI", { exact: true })).toHaveCount(0);
