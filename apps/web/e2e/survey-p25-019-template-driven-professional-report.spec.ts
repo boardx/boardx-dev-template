@@ -145,9 +145,14 @@ test("generates one ordered artifact per saved template chapter", async ({
       },
     ],
   };
+  const currentPlanResponse = await page.request.get(
+    `/api/surveys/${survey.id}/report-categories`
+  );
+  expect(currentPlanResponse.status()).toBe(200);
+  const { updatedAt } = await currentPlanResponse.json();
   const saved = await page.request.patch(
     `/api/surveys/${survey.id}/report-categories`,
-    { data: plan }
+    { data: { ...plan, expectedUpdatedAt: updatedAt } }
   );
   expect(saved.status()).toBe(200);
 
@@ -196,12 +201,12 @@ test("generates one ordered artifact per saved template chapter", async ({
     .toContainText("安全信任结构");
   await expect(page.getByTestId("professional-report-document"))
     .toContainText("购买决策场景");
-  await expect(page.getByTestId("professional-report-methodology"))
-    .toHaveCount(1);
+  const methodology = page.getByTestId("professional-report-methodology");
+  await expect(methodology).toHaveCount(1);
+  await expect(methodology).toContainText("研究方法");
+  await expect(methodology).toContainText("证据口径");
   await expect(page.getByTestId("professional-report-document"))
     .not.toContainText("执行摘要");
-  await expect(page.getByTestId("professional-report-document"))
-    .not.toContainText("研究方法");
   await expect(page.getByText("报告 AI", { exact: true })).toHaveCount(0);
   await expectNonEmptyCanvas(
     page.getByTestId("professional-echarts-trust-structure").locator("canvas")

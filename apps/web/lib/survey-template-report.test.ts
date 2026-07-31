@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SurveyReportCategoryPlanInput } from "@repo/data";
 import {
+  SurveyReportChapterValidationError,
   assembleTemplateDrivenReport,
   buildSurveyReportTemplateSnapshot,
   materializeReportAssetUrls,
@@ -141,12 +142,20 @@ describe("template-driven survey report contract", () => {
       snapshot,
       [textChapter, chartChapter],
       allowedEvidenceRefs
-    )).toThrow("report_chapter_count_mismatch");
+    )).toThrow(new SurveyReportChapterValidationError(
+      "visual",
+      "场景视觉",
+      "report_chapter_count_mismatch"
+    ));
     expect(() => validateTemplateDrivenReport(
       snapshot,
       [textChapter, imageChapter, chartChapter],
       allowedEvidenceRefs
-    )).toThrow("report_chapter_order_mismatch");
+    )).toThrow(new SurveyReportChapterValidationError(
+      "trend",
+      "趋势对比",
+      "report_chapter_order_mismatch"
+    ));
     expect(() => validateTemplateDrivenReport(
       snapshot,
       [
@@ -155,7 +164,11 @@ describe("template-driven survey report contract", () => {
         imageChapter,
       ] as TemplateDrivenReportChapter[],
       allowedEvidenceRefs
-    )).toThrow("report_chapter_output_type_mismatch");
+    )).toThrow(new SurveyReportChapterValidationError(
+      "trend",
+      "趋势对比",
+      "report_chapter_output_type_mismatch"
+    ));
   });
 
   it("rejects evidence outside the current fact revision", () => {
@@ -165,7 +178,11 @@ describe("template-driven survey report contract", () => {
       snapshot,
       [{ ...textChapter, evidenceRefs: ["unknown-evidence"] }, chartChapter, imageChapter],
       new Set(["question-1-top", "question-1-distribution"])
-    )).toThrow("report_chapter_evidence_mismatch");
+    )).toThrow(new SurveyReportChapterValidationError(
+      "summary",
+      "管理层摘要",
+      "report_chapter_evidence_mismatch"
+    ));
   });
 
   it("assembles template chapters with one centralized methodology section", () => {

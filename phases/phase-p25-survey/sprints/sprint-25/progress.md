@@ -97,3 +97,27 @@
   - Turbo 基础门禁 81/81 tasks 通过；Harness doctor 0 FAIL / 0 WARN；verify 确认 F25 已 passing 并按不可逆规则跳过。
   - Docker Desktop 在获批访问后仍停滞于 Server API，本地 F19/F24 Playwright 无法启动，未记为通过。
 - 下一步最佳动作: 提交并推送到 PR #824，重新请求独立 code/feature review 与 GitHub CI；门禁通过后仅由 `usersyj` coordinator 合并。
+
+### 2026-08-01 01:28:00
+- 本轮目标: 关闭独立 feature review 提出的章节定位与当前 HEAD 浏览器证据缺口。
+- 已完成:
+  - 模板装配校验失败与运行期生成失败统一返回具体章节 ID、标题和可重试状态，失败时释放 claim 且不落部分版本。
+  - F19 E2E 按乐观锁契约读取并提交 `expectedUpdatedAt`，同时验证文本、图表、图片和受保护图片下载。
+  - Playwright 在未显式配置 `S3_ENDPOINT` 时从 worktree `MINIO_PORT` 推导隔离对象存储端点。
+  - F24 使用新版模板编辑器稳定的“继续发布”命令验证移动端键盘可达性。
+  - F25 连续报告 fixture 对齐集中方法论和完整 GET 响应契约。
+- 运行过的验证:
+  - F19/F24/F25 Playwright 共 7 条全部通过，耗时 41.0 秒。
+  - 章节失败路由和模板装配定向单测 17 条通过。
+- 已记录证据:
+  - sprint-19 `report-desktop.png`、`report-mobile.png`
+  - sprint-24 `persistent-workflow-shell.png`
+  - sprint-25 `ai-iterable-report-template.png`、`continuous-professional-report.png`
+- 下一步最佳动作: 跑完整单测、typecheck、lint、Turbo 基础门禁和 Harness doctor；提交推送后重新请求 code/feature review，最终仅由 `usersyj` coordinator 合并。
+
+### 2026-08-01 01:40:00
+- 最终门禁:
+  - Web 全量测试 36 files / 191 tests、typecheck、lint 全部通过。
+  - `pnpm -w run verify:base` 81/81 tasks 通过。
+  - Harness doctor 0 FAIL / 0 WARN；verify 确认 F25 已 passing 并按不可逆规则跳过。
+- 下一步最佳动作: 提交并推送 PR #824，重新请求独立 code/feature review 与 GitHub CI；门禁通过后仅由 `usersyj` coordinator 合并。

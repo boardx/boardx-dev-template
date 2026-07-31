@@ -48,3 +48,21 @@ that the initial failure was startup timing rather than a product regression.
 - `pnpm harness verify --sprint p25/25`: F25 already passing; skipped by the irreversible-state rule.
 - Docker Desktop remained unresponsive after approved API access and the probe was terminated after five seconds; the updated F19/F24 Playwright assertions are therefore left for GitHub CI and are not recorded as locally passing.
 - Final coordinator remains `usersyj`; worker must not merge PR #824.
+
+## Current-head browser and failure-contract verification
+
+- Template assembly validation failures now preserve the failed chapter ID and title, return the same chapter-scoped retry contract as generation failures, release the generation claim, and publish no partial artifact.
+- The F19 report-category save follows the production CAS contract by reading and sending `expectedUpdatedAt` before PATCH.
+- Playwright derives `S3_ENDPOINT` from the worktree `MINIO_PORT` when no explicit endpoint is configured, so image chapters exercise the active isolated MinIO service instead of the obsolete default port.
+- The current versioned template editor exposes a stable `template-continue-publish` command used by the mobile keyboard workflow check.
+- Historical E2E report fixtures include the centralized methodology contract and the complete GET response envelope.
+- `E2E_PORT=62678 COLLAB_WS_PORT=62679 pnpm --filter @repo/web exec playwright test e2e/survey-p25-019-template-driven-professional-report.spec.ts e2e/survey-p25-024-persistent-workflow-shell.spec.ts e2e/survey-p25-025-ai-iterable-report-template.spec.ts`: 7 tests passed in 41.0s.
+- `pnpm --filter @repo/web run test`: 36 files / 191 tests passed.
+- `pnpm --filter @repo/web run typecheck`: exit 0.
+- `pnpm --filter @repo/web run lint`: exit 0, with only the pre-existing phase-p17 language-mix warnings.
+- `pnpm -w run verify:base`: 81/81 Turbo tasks passed.
+- `pnpm harness doctor --phase p25`: 0 FAIL / 0 WARN.
+- `pnpm harness verify --sprint p25/25`: F25 already passing; skipped by the irreversible-state rule.
+- Current-head browser coverage includes ordered text/chart/image report generation and protected image retrieval, unified five-step desktop/mobile surfaces and keyboard commands, simplified collection settings, AI template iteration, repeated question reuse, and a continuous four-chapter report document.
+- Updated visual evidence: sprint-19 `report-desktop.png` / `report-mobile.png`, sprint-24 `persistent-workflow-shell.png`, and sprint-25 `ai-iterable-report-template.png` / `continuous-professional-report.png`.
+- Final coordinator remains `usersyj`; this worker does not merge PR #824.

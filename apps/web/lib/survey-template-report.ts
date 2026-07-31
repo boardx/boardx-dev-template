@@ -89,6 +89,17 @@ export interface PublicTemplateDrivenSurveyReport
   chapters: PublicTemplateDrivenReportChapter[];
 }
 
+export class SurveyReportChapterValidationError extends Error {
+  constructor(
+    readonly chapterId: string,
+    readonly chapterTitle: string,
+    readonly reason: string
+  ) {
+    super(`report_template_chapter_validation_failed:${chapterId}:${reason}`);
+    this.name = "SurveyReportChapterValidationError";
+  }
+}
+
 function normalizedRequirement(
   category: SurveyReportCategoryPlanInput["categories"][number]
 ): string {
@@ -128,17 +139,52 @@ export function buildSurveyReportTemplateSnapshot(
   };
 }
 
+function chapterValidationError(
+  reason: string,
+  expected?: SurveyReportTemplateChapterSnapshot,
+  actual?: TemplateDrivenReportChapter
+): SurveyReportChapterValidationError {
+  return new SurveyReportChapterValidationError(
+    expected?.id ?? actual?.chapterId ?? "unknown-chapter",
+    expected?.title ?? actual?.title ?? "未知章节",
+    reason
+  );
+}
+
+function firstDuplicate<T>(items: T[], key: (item: T) => string): T | undefined {
+  const seen = new Set<string>();
+  return items.find((item) => {
+    const value = key(item);
+    if (seen.has(value)) return true;
+    seen.add(value);
+    return false;
+  });
+}
+
 function validateUniqueChapterIds(
   snapshot: SurveyReportTemplateSnapshot,
   chapters: TemplateDrivenReportChapter[]
 ): void {
-  if (
-    new Set(snapshot.chapters.map((chapter) => chapter.id)).size
-      !== snapshot.chapters.length
-    || new Set(chapters.map((chapter) => chapter.chapterId)).size
-      !== chapters.length
-  ) {
-    throw new Error("report_chapter_id_mismatch");
+  const duplicateExpected = firstDuplicate(
+    snapshot.chapters,
+    (chapter) => chapter.id
+  );
+  if (duplicateExpected) {
+    throw chapterValidationError(
+      "report_chapter_id_mismatch",
+      duplicateExpected
+    );
+  }
+  const duplicateActual = firstDuplicate(
+    chapters,
+    (chapter) => chapter.chapterId
+  );
+  if (duplicateActual) {
+    throw chapterValidationError(
+      "report_chapter_id_mismatch",
+      snapshot.chapters.find((chapter) => chapter.id === duplicateActual.chapterId),
+      duplicateActual
+    );
   }
 }
 
@@ -148,7 +194,12 @@ export function validateTemplateDrivenReport(
   allowedEvidenceRefs: ReadonlySet<string>
 ): void {
   if (chapters.length !== snapshot.chapters.length) {
-    throw new Error("report_chapter_count_mismatch");
+    const index = Math.min(chapters.length, snapshot.chapters.length);
+    throw chapterValidationError(
+      "report_chapter_count_mismatch",
+      snapshot.chapters[index] ?? snapshot.chapters.at(-1),
+      chapters[index] ?? chapters.at(-1)
+    );
   }
   validateUniqueChapterIds(snapshot, chapters);
 
@@ -160,10 +211,18 @@ export function validateTemplateDrivenReport(
       || chapter.order !== expected.order
       || chapter.title !== expected.title
     ) {
-      throw new Error("report_chapter_order_mismatch");
+      throw chapterValidationError(
+        "report_chapter_order_mismatch",
+        expected,
+        chapter
+      );
     }
     if (chapter.outputType !== expected.outputType) {
-      throw new Error("report_chapter_output_type_mismatch");
+      throw chapterValidationError(
+        "report_chapter_output_type_mismatch",
+        expected,
+        chapter
+      );
     }
     if (
       chapter.outputType === "chart"
@@ -172,20 +231,32 @@ export function validateTemplateDrivenReport(
         || !chapter.option
       )
     ) {
-      throw new Error("report_chapter_chart_mismatch");
+      throw chapterValidationError(
+        "report_chapter_chart_mismatch",
+        expected,
+        chapter
+      );
     }
     if (
       chapter.outputType === "image"
       && (!chapter.assetId.trim() || !chapter.assetKey.trim())
     ) {
-      throw new Error("report_chapter_image_mismatch");
+      throw chapterValidationError(
+        "report_chapter_image_mismatch",
+        expected,
+        chapter
+      );
     }
     if (
       chapter.evidenceRefs.some(
         (evidenceRef) => !allowedEvidenceRefs.has(evidenceRef)
       )
     ) {
-      throw new Error("report_chapter_evidence_mismatch");
+      throw chapterValidationError(
+        "report_chapter_evidence_mismatch",
+        expected,
+        chapter
+      );
     }
   });
 }

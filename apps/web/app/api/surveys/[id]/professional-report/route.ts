@@ -43,6 +43,7 @@ import {
   reportEvidenceRefs,
 } from "@/lib/survey-report-chapter-generation";
 import {
+  SurveyReportChapterValidationError,
   assembleTemplateDrivenReport,
   buildSurveyReportTemplateSnapshot,
   materializeReportAssetUrls,
@@ -533,7 +534,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
     ) {
       return NextResponse.json({ error: errorMessage }, { status: 422 });
     }
-    if (error instanceof SurveyReportChapterGenerationError) {
+    if (
+      error instanceof SurveyReportChapterGenerationError
+      || error instanceof SurveyReportChapterValidationError
+    ) {
       return NextResponse.json({
         error: "report_template_chapter_generation_failed",
         failedChapter: {

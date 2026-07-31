@@ -184,7 +184,7 @@ test("five workflow surfaces fill the desktop workspace and keep a single-column
   } as const;
   const mobileCommands = {
     design: page.getByTestId("preview-survey"),
-    template: page.getByRole("button", { name: "AI 重新推演" }),
+    template: page.getByTestId("template-continue-publish"),
     collect: page.getByTestId("save-collect-settings"),
     answer: page.getByTestId("answer-open-preview"),
   } as const;

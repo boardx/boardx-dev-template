@@ -63,7 +63,10 @@ function preferIpv4Loopback(value: string | undefined): string | undefined {
   return value?.replaceAll("localhost", "127.0.0.1");
 }
 function loopbackEnv(key: "DATABASE_URL" | "REDIS_URL" | "S3_ENDPOINT"): Record<string, string> {
-  const value = preferIpv4Loopback(process.env[key]);
+  const fallback = key === "S3_ENDPOINT" && process.env.MINIO_PORT
+    ? `http://127.0.0.1:${process.env.MINIO_PORT}`
+    : undefined;
+  const value = preferIpv4Loopback(process.env[key] ?? fallback);
   return value ? { [key]: value } : {};
 }
 // CAP-PAYMENT（F05）：webhook 走共享密钥 fail-closed 校验（见 lib/webhook-auth.ts）。

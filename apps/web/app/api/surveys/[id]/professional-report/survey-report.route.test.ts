@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   listSurveyResponses: vi.fn(),
   readSurveyReportCategoryPlan: vi.fn(),
   releaseSurveyReportGenerationClaim: vi.fn(),
+  assembleTemplateDrivenReport: vi.fn(),
   updateSurveyAiSessionStatus: vi.fn(),
 }));
 
@@ -60,7 +61,21 @@ vi.mock("@repo/data", async (importOriginal) => {
   };
 });
 
+vi.mock("@/lib/survey-template-report", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/lib/survey-template-report")
+  >();
+  mocks.assembleTemplateDrivenReport.mockImplementation(
+    actual.assembleTemplateDrivenReport
+  );
+  return {
+    ...actual,
+    assembleTemplateDrivenReport: mocks.assembleTemplateDrivenReport,
+  };
+});
+
 import { GET, POST } from "./route";
+import { SurveyReportChapterValidationError } from "@/lib/survey-template-report";
 
 const params = { params: { id: "41" } };
 const artifact = {
@@ -460,6 +475,44 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
         sessionId: "20000000-0000-4000-8000-000000000041",
         errorMessage:
           "report_template_chapter_generation_failed:summary:report_text_evidence_invalid",
+      })
+    );
+  });
+
+  it("identifies the chapter and publishes nothing when report assembly validation fails", async () => {
+    mocks.claimSurveyReportGeneration.mockReset().mockResolvedValue({
+      status: "claimed",
+      sessionId: "20000000-0000-4000-8000-000000000041",
+    });
+    mocks.callQwenJson.mockResolvedValue({ claims: [] });
+    mocks.assembleTemplateDrivenReport.mockImplementationOnce(() => {
+      throw new SurveyReportChapterValidationError(
+        "summary",
+        "核心结论",
+        "report_chapter_evidence_mismatch"
+      );
+    });
+
+    const response = await POST(reportRequest(), params);
+
+    expect(response?.status).toBe(500);
+    await expect(response?.json()).resolves.toEqual({
+      error: "report_template_chapter_generation_failed",
+      failedChapter: {
+        chapterId: "summary",
+        title: "核心结论",
+        status: "failed",
+        retryable: true,
+      },
+    });
+    expect(mocks.createVersionedSurveyReportArtifact).not.toHaveBeenCalled();
+    expect(mocks.createSurveyAiModelTrace).not.toHaveBeenCalled();
+    expect(mocks.completeSurveyReportGenerationClaim).not.toHaveBeenCalled();
+    expect(mocks.releaseSurveyReportGenerationClaim).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: "20000000-0000-4000-8000-000000000041",
+        errorMessage:
+          "report_template_chapter_validation_failed:summary:report_chapter_evidence_mismatch",
       })
     );
   });

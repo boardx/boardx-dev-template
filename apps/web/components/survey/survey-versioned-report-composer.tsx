@@ -281,7 +281,13 @@ export function SurveyVersionedReportComposer({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" size="sm" variant="ghost" onClick={onOpenCollect}>
+          <Button
+            data-testid="template-continue-publish"
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={onOpenCollect}
+          >
             继续发布
             <Send className="h-4 w-4" strokeWidth={1.6} />
           </Button>
