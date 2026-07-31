@@ -152,3 +152,16 @@
   - F19/F24/F25 Playwright 8/8；Harness doctor 0 FAIL / 0 WARN。
 - 提交记录: `72de1075 fix(survey): close final report review gaps`。
 - 下一步最佳动作: 推送当前提交与证据，回复并关闭 3 条 GitHub review 线程，重新触发当前 HEAD review；最终仅由 `usersyj` coordinator 合并。
+
+### 2026-08-01 03:05:00
+- 本轮目标: 关闭 PR #824 当前 HEAD review 新增的三项报告证据边界问题。
+- 已完成:
+  - 图片来源不兼容错误纳入 API 结构化 422 白名单，失败时不发布任何报告产物。
+  - 低样本等全局解读限制保存在正式报告版本并仅展示一次，章节不再重复相同限制。
+  - 模板章节预览明确列出当前章节选中的题目来源，不再错误声明使用整份问卷。
+- 运行过的验证:
+  - Web 全量测试 36 files / 197 tests、typecheck、design lint 通过；lint 仅保留既存 phase-p17 文案语言警告。
+  - F19/F24/F25 Playwright 共 8/8 通过；截图证据已刷新。
+  - `pnpm -w run verify:base` 81/81 tasks 通过；Harness doctor 0 FAIL / 0 WARN；verify 确认 F25 已 passing 并按不可逆规则跳过。
+  - `git diff --check` 通过。
+- 下一步最佳动作: 执行 Harness doctor/verify 与基础门禁，提交并推送；逐条回复并关闭 3 条 review 线程，再对新 HEAD 触发 review。最终仅由 `usersyj` coordinator 合并。

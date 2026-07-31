@@ -54,6 +54,7 @@ const report: PublicTemplateDrivenSurveyReport = {
     statement: "匿名聚合分析",
     evidenceScope: "仅使用绑定题目",
   },
+  limitations: [],
   chapters: [
     {
       chapterId: "summary",

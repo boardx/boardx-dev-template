@@ -218,6 +218,16 @@ function TemplateDrivenReportDocument({
             {report.methodology.evidenceScope}
           </p>
         </div>
+        {report.limitations.length ? (
+          <div className="border-l-2 border-foreground pl-4 lg:col-span-2">
+            <p className="text-11 font-semibold text-muted-foreground">解读限制</p>
+            <ul className="mt-2 grid gap-1 text-13 leading-6 text-muted-foreground">
+              {report.limitations.map((limitation) => (
+                <li key={limitation}>{limitation}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </section>
 
       <nav

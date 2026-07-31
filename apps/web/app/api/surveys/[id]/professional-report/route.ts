@@ -468,6 +468,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         questionCount: countDistinctTemplateQuestions(snapshot),
         confidence: context.evidence.sample.confidence,
       },
+      limitations: context.evidence.limitations,
     });
     await createSurveyAiModelTrace({
       id: randomUUID(),
@@ -537,6 +538,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       || errorMessage.startsWith("report_template_chapter_sources_unavailable:")
       || errorMessage.startsWith("report_template_text_sources_incompatible:")
       || errorMessage.startsWith("report_template_chart_sources_incompatible:")
+      || errorMessage.startsWith("report_template_image_sources_incompatible:")
     ) {
       const chapterId = errorMessage.split(":")[1] ?? "";
       return NextResponse.json({

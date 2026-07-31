@@ -83,6 +83,7 @@ describe("buildProfessionalReportHtml", () => {
       },
       sample: { responseCount: 13, questionCount: 8, confidence: "medium" },
       methodology: { statement: "匿名聚合分析", evidenceScope: "仅使用绑定题目" },
+      limitations: ["有效样本少于 30 份，结论仅作为方向性信号。"],
       chapters: [
         {
           chapterId: "summary",
@@ -134,6 +135,7 @@ describe("buildProfessionalReportHtml", () => {
     expect(html).toContain("研究方法与证据口径");
     expect(html).toContain("匿名聚合分析");
     expect(html).toContain("仅使用绑定题目");
+    expect(html.match(/有效样本少于 30 份/g)).toHaveLength(1);
     expect(html).not.toContain("执行摘要");
   });
 });

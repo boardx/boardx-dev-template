@@ -179,6 +179,12 @@ test("generates one ordered artifact per saved template chapter", async ({
     statement: expect.stringContaining("份有效答卷"),
     evidenceScope: expect.stringContaining("模板显式绑定的题目"),
   });
+  expect(payload.report.limitations).toContain(
+    "有效样本少于 30 份，结论仅作为方向性信号。"
+  );
+  expect(payload.report.chapters.every(
+    (chapter: { limitations: string[] }) => chapter.limitations.length === 0
+  )).toBe(true);
   expect(JSON.stringify(payload.report)).not.toContain("survey-reports/");
 
   const imageChapter = payload.report.chapters[2] as {
@@ -205,6 +211,11 @@ test("generates one ordered artifact per saved template chapter", async ({
   await expect(methodology).toHaveCount(1);
   await expect(methodology).toContainText("研究方法");
   await expect(methodology).toContainText("证据口径");
+  await expect(methodology).toContainText("解读限制");
+  await expect(page.getByText(
+    "有效样本少于 30 份，结论仅作为方向性信号。",
+    { exact: true }
+  )).toHaveCount(1);
   await expect(page.getByTestId("professional-report-chapter-nav"))
     .not.toHaveClass(/sticky/);
   await expect(page.getByTestId("professional-report-document"))

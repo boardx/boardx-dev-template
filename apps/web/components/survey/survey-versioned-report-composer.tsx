@@ -157,6 +157,17 @@ export function SurveyVersionedReportComposer({
   const missingQuestionIds = selectedCategory?.questionIds.filter(
     (questionId) => !availableQuestionIds.has(Number(questionId))
   ) ?? [];
+  const selectedSourceScope = selectedCategory?.questionIds
+    .map((questionId) => {
+      const questionIndex = questions.findIndex(
+        (question) => Number(question.id) === Number(questionId)
+      );
+      const question = questionById.get(Number(questionId));
+      return question
+        ? `Q${questionIndex + 1}「${question.title}」`
+        : `题目 ${questionId}`;
+    })
+    .join("、") || "当前章节所选题目";
   const sourceValidationErrors = categories.flatMap((category) => {
     if (!category.questionIds.length) {
       return [{
@@ -812,6 +823,7 @@ export function SurveyVersionedReportComposer({
               <SurveyReportOutputPreview
                 category={selectedCategory}
                 responseCount={survey.responses}
+                sourceScope={selectedSourceScope}
               />
             ) : (
               <div className="grid min-h-96 place-items-center px-8 text-center">

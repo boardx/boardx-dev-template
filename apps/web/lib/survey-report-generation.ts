@@ -66,7 +66,10 @@ export function surveyReportGenerationErrorMessage(
   );
   if (
     typeof payload.error === "string"
-    && payload.error.startsWith("report_template_text_sources_incompatible:")
+    && (
+      payload.error.startsWith("report_template_text_sources_incompatible:")
+      || payload.error.startsWith("report_template_image_sources_incompatible:")
+    )
   ) {
     return `章节「${title}」缺少可用的匿名聚合证据，上一份完整报告已保留。请调整题目来源或输出类型。`;
   }

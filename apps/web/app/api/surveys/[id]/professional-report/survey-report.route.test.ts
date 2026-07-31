@@ -479,6 +479,64 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
     );
   });
 
+  it("returns a structured 422 when an image chapter has no aggregate evidence", async () => {
+    mocks.claimSurveyReportGeneration.mockReset().mockResolvedValue({
+      status: "claimed",
+      sessionId: "20000000-0000-4000-8000-000000000041",
+    });
+    mocks.getSurveyWithQuestions.mockResolvedValue({
+      id: 41,
+      title: "图片报告测试",
+      description: "",
+      updated_at: "2026-07-18T07:00:00.000Z",
+      team_id: 3,
+      questions: [{
+        id: 12,
+        position: 0,
+        title: "补充建议",
+        type: "text",
+        required: false,
+        options: [],
+        category: "开放反馈",
+      }],
+    });
+    mocks.listSurveyResponses.mockResolvedValue([{
+      id: 91,
+      submitted_at: new Date("2026-07-18T07:30:00.000Z"),
+      answers: { "12": "希望交付更快" },
+    }]);
+    mocks.ensureSurveyReportCategoryPlan.mockResolvedValue({
+      title: "图片报告测试",
+      description: "",
+      categories: [{
+        id: "scenario-image",
+        name: "场景视觉",
+        description: "",
+        requirement: "生成研究视觉。",
+        questionIds: [12],
+        outputType: "image",
+        inputModes: ["image"],
+        prompt: "生成研究视觉。",
+        order: 1,
+        isCustom: true,
+      }],
+    });
+
+    const response = await POST(reportRequest(), params);
+
+    expect(response?.status).toBe(422);
+    await expect(response?.json()).resolves.toEqual({
+      error: "report_template_image_sources_incompatible:scenario-image",
+      failedChapter: {
+        chapterId: "scenario-image",
+        title: "场景视觉",
+        status: "failed",
+        retryable: true,
+      },
+    });
+    expect(mocks.createVersionedSurveyReportArtifact).not.toHaveBeenCalled();
+  });
+
   it("identifies the chapter and publishes nothing when report assembly validation fails", async () => {
     mocks.claimSurveyReportGeneration.mockReset().mockResolvedValue({
       status: "claimed",

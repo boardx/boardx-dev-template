@@ -11,14 +11,18 @@ import { findSurveyReportChartTemplate } from "@/lib/survey-report-chart-templat
 interface SurveyReportOutputPreviewProps {
   category: SurveyReportCategoryInput;
   responseCount: number;
+  sourceScope: string;
 }
 
-function PreviewBoundary({ responseCount }: { responseCount: number }) {
+function PreviewBoundary({
+  responseCount,
+  sourceScope,
+}: Pick<SurveyReportOutputPreviewProps, "responseCount" | "sourceScope">) {
   return (
     <div className="border-l-2 border-foreground bg-secondary/50 px-4 py-3">
       <p className="text-12 font-semibold text-foreground">数据与证据边界</p>
       <p className="mt-1 text-12 leading-5 text-muted-foreground">
-        生成时从整份问卷与全部授权答卷中检索证据。当前事实库包含 {responseCount} 份答卷。
+        生成时仅从 {sourceScope} 对应的授权答卷中检索聚合证据。当前事实库包含 {responseCount} 份答卷。
       </p>
     </div>
   );
@@ -27,6 +31,7 @@ function PreviewBoundary({ responseCount }: { responseCount: number }) {
 function ChartOutputPreview({
   category,
   responseCount,
+  sourceScope,
 }: SurveyReportOutputPreviewProps) {
   const [view, setView] = useState<"preview" | "json">("preview");
   const [copied, setCopied] = useState(false);
@@ -182,7 +187,7 @@ function ChartOutputPreview({
         </div>
       )}
 
-      <PreviewBoundary responseCount={responseCount} />
+      <PreviewBoundary responseCount={responseCount} sourceScope={sourceScope} />
       <p className="text-11 leading-5 text-muted-foreground">
         此处仅展示图表模板效果；完整生成内容及历史版本请在“分析报告”中查看。
       </p>
@@ -193,6 +198,7 @@ function ChartOutputPreview({
 function TextOutputPreview({
   category,
   responseCount,
+  sourceScope,
 }: SurveyReportOutputPreviewProps) {
   const requirement = category.requirement?.trim() || category.prompt.trim();
 
@@ -209,7 +215,7 @@ function TextOutputPreview({
         </p>
       </header>
 
-      <PreviewBoundary responseCount={responseCount} />
+      <PreviewBoundary responseCount={responseCount} sourceScope={sourceScope} />
 
       <div
         data-testid="report-output-empty"
@@ -231,6 +237,7 @@ function TextOutputPreview({
 function ImageOutputPreview({
   category,
   responseCount,
+  sourceScope,
 }: SurveyReportOutputPreviewProps) {
   const requirement = category.requirement?.trim() || category.prompt.trim();
 
@@ -247,7 +254,7 @@ function ImageOutputPreview({
         </p>
       </header>
 
-      <PreviewBoundary responseCount={responseCount} />
+      <PreviewBoundary responseCount={responseCount} sourceScope={sourceScope} />
 
       <div
         data-testid="report-output-empty"

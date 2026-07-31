@@ -26,10 +26,13 @@
 - 图片章节与文本章节统一要求匿名聚合 claim；不兼容来源在生成前返回章节级失败。
 - 报告级样本限制只在正式报告前言出现，不再复制到各章节。
 - 发布回收工作台复制的是带当前 origin 的完整受访者 URL。
+- 图片来源不兼容现在返回结构化章节级 422，且失败请求不会发布报告产物。
+- 正式报告版本保留全局解读限制，并在方法论区域仅展示一次。
+- 章节预览边界精确列出所选题目来源，不再把局部来源描述成整份问卷。
 
 ## 仍损坏或未验证
 - `pnpm harness tick --session codex-survey-report-ui` 需要外部 coordinator 环境变量，当前环境未配置。
-- 当前 HEAD 的 F19/F24/F25 Playwright 已本地通过 7/7；Docker 与 PostgreSQL/Redis/MinIO 均恢复可用。
+- 当前 HEAD 的 F19/F24/F25 Playwright 已本地通过 8/8；Docker 与 PostgreSQL/Redis/MinIO 均恢复可用。
 - 真实 PostgreSQL 双客户端并发 E2E 尚未单独覆盖；SQL 契约、首次创建冲突和后续更新冲突已有定向测试。
 
 ## 下一步最佳动作
@@ -37,7 +40,7 @@
 - Issue #823 已更新当前范围、验证结果并明确分配给 `usersyj`；最终 merge 只能由 `usersyj` coordinator 执行。
 - Harness sync dry-run 只计划投影旧 F01/F02 且 owner 错配为 `wrk-survey-1`，为避免制造错误 GitHub 状态未执行 `--apply`；F25 由 Issue #823 与 PR #824 准确跟踪。
 - 等待当前 HEAD 的 GitHub review/CI 门禁；若无新 finding，由 `usersyj` coordinator 合并 PR #824。
-- 最新 review 修复提交为 `72de1075`；本地 Web 195 tests、F19/F24/F25 Playwright 8/8、doctor 0 FAIL / 0 WARN 已通过，待推送并关闭对应 GitHub 线程。
+- `72de1075` 后的最新未提交 review 修复已完成；本地 Web 197 tests、F19/F24/F25 Playwright 8/8、Turbo 基础门禁 81/81 与 doctor 0 FAIL / 0 WARN 已通过，待提交推送并关闭对应 GitHub 线程。
 - 如需 coordinator 心跳，先配置 RepoHub/coord-gateway 所需环境变量，再运行 tick。
 
 ## 命令

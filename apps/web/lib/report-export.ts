@@ -552,6 +552,9 @@ function buildTemplateDrivenReportHtml(
         <dt>研究方法</dt><dd>${escapeHtml(report.methodology.statement)}</dd>
         <dt>证据口径</dt><dd>${escapeHtml(report.methodology.evidenceScope)}</dd>
       </dl>
+      ${report.limitations.length
+        ? `<h3>解读限制</h3><ul>${report.limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+        : ""}
     </section>
     ${chapters}
   </main>

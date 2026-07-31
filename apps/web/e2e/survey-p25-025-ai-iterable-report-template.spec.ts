@@ -279,6 +279,7 @@ test("analysis report renders every saved chapter as one continuous document", a
       statement: "基于 118 份有效答卷，对 3 道问卷题目的匿名聚合证据进行章节化分析。",
       evidenceScope: "各章节仅使用模板显式绑定的题目，同一道题可在不同分析目标下重复使用。",
     },
+    limitations: [],
     chapters: chapterTitles.map((title, index) => ({
       chapterId: `chapter-${index + 1}`,
       order: index + 1,

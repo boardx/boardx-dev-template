@@ -74,6 +74,7 @@ export interface TemplateDrivenSurveyReport {
     statement: string;
     evidenceScope: string;
   };
+  limitations: string[];
   chapters: TemplateDrivenReportChapter[];
 }
 
@@ -277,6 +278,7 @@ export function assembleTemplateDrivenReport(input: {
   chapters: TemplateDrivenReportChapter[];
   allowedEvidenceRefs: ReadonlySet<string>;
   sample: TemplateDrivenSurveyReport["sample"];
+  limitations: string[];
 }): TemplateDrivenSurveyReport {
   validateTemplateDrivenReport(
     input.snapshot,
@@ -302,6 +304,7 @@ export function assembleTemplateDrivenReport(input: {
       evidenceScope:
         "各章节仅使用模板显式绑定的题目；同一道题可在不同分析目标下重复使用，所有结论均受当前事实版本约束。",
     },
+    limitations: Array.from(new Set(input.limitations)),
     chapters: input.chapters,
   };
 }
@@ -320,6 +323,7 @@ export function materializeReportAssetUrls(
   return {
     ...report,
     methodology,
+    limitations: report.limitations ?? [],
     chapters: report.chapters.map((chapter) => {
       if (chapter.outputType !== "image") return chapter;
       const { assetKey: _assetKey, ...publicChapter } = chapter;

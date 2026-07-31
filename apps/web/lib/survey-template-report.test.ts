@@ -210,6 +210,7 @@ describe("template-driven survey report contract", () => {
         questionCount: 8,
         confidence: "medium",
       },
+      limitations: ["有效样本少于 30 份，结论仅作为方向性信号。"],
     });
 
     expect(report.schemaVersion).toBe("template-driven-report-v1");
@@ -221,6 +222,11 @@ describe("template-driven survey report contract", () => {
       statement: "基于 13 份有效答卷，对 8 道问卷题目的匿名聚合证据进行章节化分析。",
       evidenceScope: "各章节仅使用模板显式绑定的题目；同一道题可在不同分析目标下重复使用，所有结论均受当前事实版本约束。",
     });
+    expect(report.limitations).toEqual([
+      "有效样本少于 30 份，结论仅作为方向性信号。",
+    ]);
+    expect(report.chapters.every((chapter) => chapter.limitations.length === 0))
+      .toBe(true);
     expect(report).not.toHaveProperty("actions");
   });
 
@@ -240,6 +246,7 @@ describe("template-driven survey report contract", () => {
         questionCount: 8,
         confidence: "medium",
       },
+      limitations: [],
     });
 
     const publicReport = materializeReportAssetUrls(report, 59, "artifact-id");
@@ -269,10 +276,12 @@ describe("template-driven survey report contract", () => {
         questionCount: 8,
         confidence: "medium",
       },
+      limitations: [],
     });
     const historicalReport = {
       ...report,
       methodology: undefined,
+      limitations: undefined,
     } as unknown as typeof report;
 
     expect(materializeReportAssetUrls(
@@ -280,5 +289,10 @@ describe("template-driven survey report contract", () => {
       59,
       "artifact-id"
     ).methodology.statement).toContain("13 份有效答卷");
+    expect(materializeReportAssetUrls(
+      historicalReport,
+      59,
+      "artifact-id"
+    ).limitations).toEqual([]);
   });
 });
