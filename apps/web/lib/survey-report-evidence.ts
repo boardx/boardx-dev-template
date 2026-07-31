@@ -65,6 +65,11 @@ const choiceTypes = new Set<ReportQuestionType>(["single", "multiple", "dropdown
 const scoreTypes = new Set<ReportQuestionType>(["rating", "linear_scale", "nps", "number"]);
 const textTypes = new Set<ReportQuestionType>(["short_text", "text"]);
 
+export function isSurveyReportChartCompatibleQuestionType(type: string) {
+  return choiceTypes.has(type as ReportQuestionType)
+    || scoreTypes.has(type as ReportQuestionType);
+}
+
 function answerFor(question: ReportQuestion, response: ReportResponseDefinition) {
   return response.answers[String(question.id)] ?? response.answers[question.id];
 }

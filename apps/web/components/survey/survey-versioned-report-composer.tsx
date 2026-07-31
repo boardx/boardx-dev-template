@@ -37,6 +37,7 @@ import {
   updateReportCategory,
 } from "@/lib/survey-report-category-plan";
 import { SURVEY_REPORT_CHART_TEMPLATES } from "@/lib/survey-report-chart-templates";
+import { isSurveyReportChartCompatibleQuestionType } from "@/lib/survey-report-evidence";
 import {
   getReportGenerationEligibility,
   getReportGenerationStatus,
@@ -146,9 +147,50 @@ export function SurveyVersionedReportComposer({
   const availableQuestionIds = new Set(
     questions.map((question) => Number(question.id)).filter(Number.isFinite)
   );
+  const questionById = new Map(
+    questions
+      .map((question) => [Number(question.id), question] as const)
+      .filter(([questionId]) => Number.isFinite(questionId))
+  );
   const missingQuestionIds = selectedCategory?.questionIds.filter(
     (questionId) => !availableQuestionIds.has(Number(questionId))
   ) ?? [];
+  const sourceValidationErrors = categories.flatMap((category) => {
+    if (!category.questionIds.length) {
+      return [{
+        categoryId: category.id,
+        message: `章节「${category.name}」至少需要选择一道分析题目。`,
+      }];
+    }
+    const unavailable = category.questionIds.filter(
+      (questionId) => !questionById.has(Number(questionId))
+    );
+    if (unavailable.length) {
+      return [{
+        categoryId: category.id,
+        message: `章节「${category.name}」包含已失效的题目引用。`,
+      }];
+    }
+    if (category.outputType === "chart") {
+      const compatible = category.questionIds.some((questionId) => {
+        const question = questionById.get(Number(questionId));
+        return question
+          ? isSurveyReportChartCompatibleQuestionType(question.type)
+          : false;
+      });
+      if (!compatible) {
+        return [{
+          categoryId: category.id,
+          message: `章节「${category.name}」需要选择至少一道可生成分布图表的题目。`,
+        }];
+      }
+    }
+    return [];
+  });
+  const selectedSourceValidation = sourceValidationErrors.find(
+    (validation) => validation.categoryId === selectedCategory?.id
+  );
+  const hasSourceValidationErrors = sourceValidationErrors.length > 0;
   const draftDirty = !areSurveyReportCategoryPlansEqual(draft, plan);
   const generationEligibility = getReportGenerationEligibility({
     draftDirty,
@@ -191,7 +233,7 @@ export function SurveyVersionedReportComposer({
   }
 
   function saveDraft() {
-    if (saving || generating || classifying) return;
+    if (saving || generating || classifying || hasSourceValidationErrors) return;
     onSavePlan(draft);
   }
 
@@ -510,6 +552,8 @@ export function SurveyVersionedReportComposer({
                     {questions.map((question, index) => {
                       const normalizedId = Number(question.id);
                       const checked = selectedCategory.questionIds.includes(normalizedId);
+                      const chartCompatible =
+                        isSurveyReportChartCompatibleQuestionType(question.type);
                       return (
                         <label
                           key={`${question.id}-${index}`}
@@ -518,7 +562,15 @@ export function SurveyVersionedReportComposer({
                           <input
                             type="checkbox"
                             checked={checked}
-                            disabled={saving || !Number.isFinite(normalizedId)}
+                            disabled={
+                              saving
+                              || !Number.isFinite(normalizedId)
+                              || (
+                                selectedCategory.outputType === "chart"
+                                && !chartCompatible
+                                && !checked
+                              )
+                            }
                             onChange={() => toggleQuestion(question.id)}
                             className="mt-0.5 h-4 w-4 accent-survey"
                           />
@@ -528,6 +580,9 @@ export function SurveyVersionedReportComposer({
                             </span>
                             <span className="mt-0.5 block text-10 text-muted-foreground">
                               {question.type}
+                              {selectedCategory.outputType === "chart" && !chartCompatible
+                                ? " · 不支持图表"
+                                : ""}
                             </span>
                           </span>
                         </label>
@@ -559,6 +614,15 @@ export function SurveyVersionedReportComposer({
                           </Button>
                         ))}
                       </div>
+                    </div>
+                  ) : null}
+                  {selectedSourceValidation && !missingQuestionIds.length ? (
+                    <div
+                      data-testid="report-source-validation"
+                      role="alert"
+                      className="border border-destructive/30 bg-destructive/5 px-3 py-2 text-11 leading-5 text-foreground"
+                    >
+                      {selectedSourceValidation.message}
                     </div>
                   ) : null}
                   {questions.length === 0 ? (
@@ -598,7 +662,12 @@ export function SurveyVersionedReportComposer({
                     data-testid="save-report-plan"
                     type="button"
                     variant="outline"
-                    disabled={saving || generating || classifying}
+                    disabled={
+                      saving
+                      || generating
+                      || classifying
+                      || hasSourceValidationErrors
+                    }
                     onClick={saveDraft}
                   >
                     <Save className="h-4 w-4" strokeWidth={1.7} />
@@ -607,9 +676,17 @@ export function SurveyVersionedReportComposer({
                   <Button
                     data-testid="generate-versioned-report"
                     type="button"
-                    disabled={!generationEligibility.canGenerate}
+                    disabled={
+                      !generationEligibility.canGenerate
+                      || hasSourceValidationErrors
+                    }
                     onClick={() => {
-                      if (generationEligibility.canGenerate) onGenerateReport();
+                      if (
+                        generationEligibility.canGenerate
+                        && !hasSourceValidationErrors
+                      ) {
+                        onGenerateReport();
+                      }
                     }}
                   >
                     <RefreshCw className={generating ? "h-4 w-4 animate-spin" : "h-4 w-4"} strokeWidth={1.7} />
@@ -625,6 +702,10 @@ export function SurveyVersionedReportComposer({
                 {!generationEligibility.canGenerate && generationEligibility.message ? (
                   <p data-testid="report-generation-eligibility" className="text-11 text-muted-foreground">
                     {generationEligibility.message}
+                  </p>
+                ) : hasSourceValidationErrors ? (
+                  <p data-testid="report-generation-eligibility" className="text-11 text-destructive">
+                    {sourceValidationErrors[0]?.message}
                   </p>
                 ) : null}
               </div>

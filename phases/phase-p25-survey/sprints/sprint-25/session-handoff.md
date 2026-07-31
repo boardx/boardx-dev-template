@@ -16,11 +16,11 @@
 
 ## 仍损坏或未验证
 - `pnpm harness tick --session codex-survey-report-ui` 需要外部 coordinator 环境变量，当前环境未配置。
-- F25 无已知未验证功能边界。
+- PR #824 review 修复后的 F25 Playwright 本地复跑被 Docker Desktop 启动失败阻断；相关单元测试、类型检查和 lint 已通过，等待 GitHub CI 完整复验。
 - 真实 PostgreSQL 双客户端并发 E2E 尚未单独覆盖；SQL 契约、首次创建冲突和后续更新冲突已有定向测试。
 
 ## 下一步最佳动作
-- 推送 `codex/survey-five-step-ui`，创建关联 F25 Issue/PR，等待 `verify`、`fullstack-smoke` 和 coordinator review 后合并。
+- 推送 PR #824 的章节来源门禁修复，重新请求 review，等待 CI 与 review 门禁通过后由 `usersyj` coordinator 合并。
 - 如需 coordinator 心跳，先配置 RepoHub/coord-gateway 所需环境变量，再运行 tick。
 
 ## 命令

@@ -524,6 +524,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
       });
     }
     console.error("[api] professional-report generation failed", error);
+    const errorMessage = error instanceof Error ? error.message : "";
+    if (
+      errorMessage.startsWith("report_template_chapter_sources_missing:")
+      || errorMessage.startsWith("report_template_chart_sources_incompatible:")
+    ) {
+      return NextResponse.json({ error: errorMessage }, { status: 422 });
+    }
     return NextResponse.json({ error: "professional_report_generation_failed" }, { status: 500 });
   }
 }

@@ -58,7 +58,6 @@ function evidenceForChapter(
   evidence: SurveyReportEvidenceBundle,
   chapter: SurveyReportTemplateChapterSnapshot
 ): SurveyReportEvidenceBundle {
-  if (!chapter.questionIds.length) return evidence;
   const selected = new Set(chapter.questionIds.map(Number));
   const questions = evidence.questions.filter((question) =>
     selected.has(Number(question.questionId))
@@ -73,6 +72,27 @@ function evidenceForChapter(
     questions,
     claims: evidence.claims.filter((claim) => questionIds.has(claim.questionId)),
   };
+}
+
+function assertValidChapterSources(
+  snapshot: SurveyReportTemplateSnapshot,
+  evidence: SurveyReportEvidenceBundle
+): void {
+  for (const chapter of snapshot.chapters) {
+    if (!chapter.questionIds.length) {
+      throw new Error(`report_template_chapter_sources_missing:${chapter.id}`);
+    }
+    if (chapter.outputType !== "chart") continue;
+    const chapterEvidence = evidenceForChapter(evidence, chapter);
+    const hasChartEvidence = chapterEvidence.questions.some(
+      (question) => Boolean(distributionFor(question)?.length)
+    );
+    if (!hasChartEvidence) {
+      throw new Error(
+        `report_template_chart_sources_incompatible:${chapter.id}`
+      );
+    }
+  }
 }
 
 export function reportEvidenceRefs(
@@ -260,6 +280,7 @@ export async function generateTemplateReportChapters(
   input: GenerateTemplateReportChaptersInput,
   dependencies: ChapterGenerationDependencies = {}
 ): Promise<TemplateDrivenReportChapter[]> {
+  assertValidChapterSources(input.snapshot, input.evidence);
   const callJson = dependencies.callJson ?? callQwenJson;
   const generateImage =
     dependencies.generateImage ?? generateAndStoreSurveyReportImage;

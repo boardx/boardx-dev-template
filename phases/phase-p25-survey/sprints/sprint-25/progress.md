@@ -52,3 +52,16 @@
 - 提交记录:
   - `41cd44cf fix(survey): harden iterative report templates`
 - 下一步最佳动作: 同步 GitHub Issue，推送 `codex/survey-five-step-ui`，创建 PR 并进入 review/CI/coordinator 合并门禁。
+
+### 2026-07-31 23:37:00
+- 本轮目标: 修复 PR #824 中 Codex review 提出的两项 P1 章节来源门禁问题。
+- 已完成:
+  - 禁止空 `questionIds` 章节回退到整份问卷证据，改为在生成前返回可修复的 422 校验错误。
+  - 图表章节必须至少引用一道可生成分布数据的题目；前端禁用不兼容的新选择并提示修复旧配置。
+  - 所有章节在调用 AI 或图片生成前统一预检，避免无效模板产生部分副作用。
+- 运行过的验证:
+  - 报告相关 Web 单元测试 17 条通过。
+  - `pnpm --filter @repo/web typecheck` 通过。
+  - `pnpm --filter @repo/web lint` 通过，仅有既存的文案语言警告。
+  - F25 Playwright 复跑被本机 Docker Desktop 启动失败阻断；PostgreSQL `127.0.0.1:62136` 未监听，未将该次运行记为通过。
+- 下一步最佳动作: 提交并推送 review 修复，触发 PR #824 CI 和重新 review；门禁通过后交由 `usersyj` coordinator 合并。

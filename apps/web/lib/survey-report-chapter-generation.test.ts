@@ -218,6 +218,74 @@ describe("template report chapter generation", () => {
     })).rejects.toThrow("report_chart_evidence_invalid");
   });
 
+  it("rejects chapters without explicitly selected question sources", async () => {
+    const callJson = vi.fn();
+
+    await expect(generateTemplateReportChapters({
+      snapshot: {
+        ...snapshot,
+        chapters: [{
+          ...snapshot.chapters[0]!,
+          questionIds: [],
+        }],
+      },
+      evidence,
+      sourceRevision: "source-revision-1",
+      teamId: 7,
+      surveyId: 59,
+      artifactId: "artifact-id",
+      model: "qwen-test",
+    }, {
+      callJson,
+      generateImage: vi.fn(),
+    })).rejects.toThrow("report_template_chapter_sources_missing:summary");
+
+    expect(callJson).not.toHaveBeenCalled();
+  });
+
+  it("rejects chart chapters without distribution-compatible question sources", async () => {
+    const textEvidence = buildSurveyReportEvidence({
+      survey: {
+        title: "开放反馈",
+        description: "收集详细建议",
+        questions: [{
+          id: 3,
+          title: "请说明原因",
+          type: "short_text",
+          required: true,
+          options: [],
+        }],
+      },
+      responses: [
+        { id: 1, answers: { "3": "认证说明不够清楚" } },
+      ],
+    });
+    const callJson = vi.fn();
+
+    await expect(generateTemplateReportChapters({
+      snapshot: {
+        ...snapshot,
+        chapters: [{
+          ...snapshot.chapters[1]!,
+          questionIds: [3],
+        }],
+      },
+      evidence: textEvidence,
+      sourceRevision: "source-revision-1",
+      teamId: 7,
+      surveyId: 59,
+      artifactId: "artifact-id",
+      model: "qwen-test",
+    }, {
+      callJson,
+      generateImage: vi.fn(),
+    })).rejects.toThrow(
+      "report_template_chart_sources_incompatible:trust-chart"
+    );
+
+    expect(callJson).not.toHaveBeenCalled();
+  });
+
   it("exposes only validated claim and aggregate distribution evidence references", () => {
     expect(reportEvidenceRefs(evidence)).toEqual(new Set([
       "question-1-top",
