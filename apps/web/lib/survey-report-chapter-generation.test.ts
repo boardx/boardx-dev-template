@@ -43,7 +43,7 @@ const snapshot = buildSurveyReportTemplateSnapshot({
       name: "管理层摘要",
       description: "",
       requirement: "先给结论，再说明业务含义和下一步动作。",
-      questionIds: [],
+      questionIds: [2],
       outputType: "text",
       inputModes: ["text"],
       prompt: "先给结论，再说明业务含义和下一步动作。",
@@ -55,7 +55,7 @@ const snapshot = buildSurveyReportTemplateSnapshot({
       name: "安全信任结构",
       description: "",
       requirement: "选择最能体现安全关注差异的题目。",
-      questionIds: [],
+      questionIds: [2],
       outputType: "chart",
       inputModes: ["chart"],
       chartTemplateId: "pie-simple",
@@ -68,7 +68,7 @@ const snapshot = buildSurveyReportTemplateSnapshot({
       name: "核心场景视觉",
       description: "",
       requirement: "生成克制、专业且不带文字数字的场景信息图。",
-      questionIds: [],
+      questionIds: [1],
       outputType: "image",
       inputModes: ["image"],
       prompt: "生成克制、专业且不带文字数字的场景信息图。",
@@ -143,17 +143,31 @@ describe("template report chapter generation", () => {
     });
     expect(chapters[2]).toMatchObject({
       assetId: "scenario-image",
-      evidenceRefs: expect.arrayContaining(["question-1-top", "question-2-top"]),
+      evidenceRefs: ["question-1-top"],
     });
     expect(callJson).toHaveBeenCalledTimes(2);
     for (const call of callJson.mock.calls) {
       const request = JSON.parse(call[0].messages[1]!.content);
       expect(request.sourceRevision).toBe("source-revision-1");
       expect(request.chapter.requirement).toBeTruthy();
+      if (request.task === "generate_template_text_chapter") {
+        expect(request.evidence.questions.map(
+          (question: { questionId: number }) => question.questionId
+        )).toEqual([2]);
+        expect(request.evidence.claims.map(
+          (claim: { questionId: number }) => claim.questionId
+        )).toEqual([2]);
+      }
+      if (request.task === "select_template_chart_evidence") {
+        expect(request.candidates.map(
+          (question: { questionId: number }) => question.questionId
+        )).toEqual([2]);
+      }
     }
     expect(generateImage).toHaveBeenCalledWith(expect.objectContaining({
       artifactId: "artifact-id",
       chapterId: "scenario-image",
+      prompt: expect.not.stringContaining("认证信息"),
     }));
   });
 

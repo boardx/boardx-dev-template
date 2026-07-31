@@ -2887,6 +2887,8 @@ export default function SurveysPage() {
   const reportCategoryPlanRequestVersion = useRef(0);
   const [reportTemplatesBySurveyId, setReportTemplatesBySurveyId] = useState<Record<number, ReportTemplateDraft>>({});
   const [reportCategoryPlansBySurveyId, setReportCategoryPlansBySurveyId] = useState<Record<number, ReportCategoryPlanDraft>>({});
+  const [reportCategoryPlanUpdatedAtBySurveyId, setReportCategoryPlanUpdatedAtBySurveyId] =
+    useState<Record<number, string | null>>({});
   const [generatedReportsBySurveyId, setGeneratedReportsBySurveyId] = useState<Record<number, unknown>>({});
   const [professionalReportsBySurveyId, setProfessionalReportsBySurveyId] = useState<Record<number, SurveyReportDocument>>({});
   const [professionalReportGenerationBySurveyId, setProfessionalReportGenerationBySurveyId] = useState<Record<number, SurveyReportGenerationStatus>>({});
@@ -4179,6 +4181,11 @@ export default function SurveysPage() {
       }
       if (payload.reportCategoryPlan) {
         setReportCategoryPlansBySurveyId((items) => ({ ...items, [surveyId]: payload.reportCategoryPlan as ReportCategoryPlanDraft }));
+        setReportCategoryPlanUpdatedAtBySurveyId((items) => ({
+          ...items,
+          [surveyId]:
+            typeof payload.updatedAt === "string" ? payload.updatedAt : null,
+        }));
       }
     } catch {
       if (requestVersion !== reportCategoryPlanRequestVersion.current) return;
@@ -4243,7 +4250,11 @@ export default function SurveysPage() {
       : "refresh-failed";
   }
 
-  async function classifyWorkspaceReportCategories(surveyId: number): Promise<{
+  async function classifyWorkspaceReportCategories(
+    surveyId: number,
+    instruction: string,
+    currentPlan: ReportCategoryPlanDraft
+  ): Promise<{
     plan: ReportCategoryPlanDraft;
     warning?: string;
   } | null> {
@@ -4260,7 +4271,11 @@ export default function SurveysPage() {
       const res = await fetch(`/api/surveys/${surveyId}/report-categories`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ previewOnly: true }),
+        body: JSON.stringify({
+          previewOnly: true,
+          instruction,
+          currentPlan,
+        }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -4294,7 +4309,11 @@ export default function SurveysPage() {
       const res = await fetch(`/api/surveys/${surveyId}/report-categories`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(plan),
+        body: JSON.stringify({
+          ...plan,
+          expectedUpdatedAt:
+            reportCategoryPlanUpdatedAtBySurveyId[surveyId] ?? null,
+        }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -4302,6 +4321,13 @@ export default function SurveysPage() {
         return;
       }
       const saved = payload.reportCategoryPlan as ReportCategoryPlanDraft;
+      setReportCategoryPlanUpdatedAtBySurveyId((items) => ({
+        ...items,
+        [surveyId]:
+          typeof payload.reportCategoryPlan?.updated_at === "string"
+            ? payload.reportCategoryPlan.updated_at
+            : items[surveyId] ?? null,
+      }));
       const persistence = await applyPersistedWorkspaceReportCategoryPlan({
         surveyId,
         reportCategoryPlan: saved,
@@ -6122,8 +6148,12 @@ export default function SurveysPage() {
                   generating={workspaceReportGenerating}
                   status={workspaceTemplateStatus}
                   error={workspaceTemplateError}
-                  onClassify={() =>
-                    classifyWorkspaceReportCategories(currentSurveyForNavigation.id)
+                  onClassify={(instruction, currentPlan) =>
+                    classifyWorkspaceReportCategories(
+                      currentSurveyForNavigation.id,
+                      instruction,
+                      currentPlan as ReportCategoryPlanDraft
+                    )
                   }
                   onSavePlan={(plan) =>
                     void saveWorkspaceReportCategoryPlan(

@@ -17,7 +17,7 @@ const reportPlan: SurveyReportCategoryPlanInput = {
       name: "场景视觉",
       description: "",
       requirement: "生成体现核心使用场景的专业配图。",
-      questionIds: [],
+      questionIds: [3],
       outputType: "image",
       inputModes: ["image"],
       prompt: "生成体现核心使用场景的专业配图。",
@@ -29,7 +29,7 @@ const reportPlan: SurveyReportCategoryPlanInput = {
       name: "管理层摘要",
       description: "",
       requirement: "先结论，再给证据和行动建议。",
-      questionIds: [],
+      questionIds: [1],
       outputType: "text",
       inputModes: ["text"],
       prompt: "先结论，再给证据和行动建议。",
@@ -41,7 +41,7 @@ const reportPlan: SurveyReportCategoryPlanInput = {
       name: "趋势对比",
       description: "",
       requirement: "比较关键维度并标明样本量。",
-      questionIds: [],
+      questionIds: [1, 2],
       outputType: "chart",
       inputModes: ["chart"],
       chartTemplateId: "line-simple",
@@ -112,6 +112,11 @@ describe("template-driven survey report contract", () => {
       { id: "visual", order: 3, title: "场景视觉", outputType: "image" },
     ]);
     expect(snapshot.chapters[1]?.chartTemplateId).toBe("line-simple");
+    expect(snapshot.chapters.map((chapter) => chapter.questionIds)).toEqual([
+      [1],
+      [1, 2],
+      [3],
+    ]);
     expect(snapshot.chapters[0]).not.toHaveProperty("chartTemplateId");
   });
 

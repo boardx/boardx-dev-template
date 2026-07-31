@@ -54,6 +54,27 @@ function distributionFor(question: SurveyQuestionEvidence) {
   return question.distribution ?? question.score?.distribution;
 }
 
+function evidenceForChapter(
+  evidence: SurveyReportEvidenceBundle,
+  chapter: SurveyReportTemplateChapterSnapshot
+): SurveyReportEvidenceBundle {
+  if (!chapter.questionIds.length) return evidence;
+  const selected = new Set(chapter.questionIds.map(Number));
+  const questions = evidence.questions.filter((question) =>
+    selected.has(Number(question.questionId))
+  );
+  const questionIds = new Set(questions.map((question) => question.questionId));
+  return {
+    ...evidence,
+    survey: {
+      ...evidence.survey,
+      questionCount: questions.length,
+    },
+    questions,
+    claims: evidence.claims.filter((claim) => questionIds.has(claim.questionId)),
+  };
+}
+
 export function reportEvidenceRefs(
   evidence: SurveyReportEvidenceBundle
 ): Set<string> {
@@ -101,6 +122,7 @@ async function generateTextChapter(
   chapter: SurveyReportTemplateChapterSnapshot,
   callJson: ChapterJsonCaller
 ): Promise<TemplateDrivenReportChapter> {
+  const chapterEvidence = evidenceForChapter(input.evidence, chapter);
   const result = await callJson({
     model: input.model,
     temperature: 0.2,
@@ -119,11 +141,11 @@ async function generateTextChapter(
           recommendation: "optional string",
         }],
       },
-      evidence: modelSafeSurveyReportEvidence(input.evidence),
+      evidence: modelSafeSurveyReportEvidence(chapterEvidence),
     }),
   }) as TextChapterResult;
   const candidates = Array.isArray(result.claims) ? result.claims : [];
-  const claims = validateEvidenceClaims(input.evidence, candidates);
+  const claims = validateEvidenceClaims(chapterEvidence, candidates);
   if (candidates.length > 0 && claims.length === 0) {
     throw new Error("report_text_evidence_invalid");
   }
@@ -154,7 +176,8 @@ async function generateChartChapter(
   if (!chapter.chartTemplateId) {
     throw new Error("report_template_chart_missing");
   }
-  const candidates = input.evidence.questions.filter(
+  const chapterEvidence = evidenceForChapter(input.evidence, chapter);
+  const candidates = chapterEvidence.questions.filter(
     (question) => Boolean(distributionFor(question)?.length)
   );
   const result = await callJson({
@@ -201,7 +224,8 @@ async function generateImageChapter(
   chapter: SurveyReportTemplateChapterSnapshot,
   generateImage: NonNullable<ChapterGenerationDependencies["generateImage"]>
 ): Promise<TemplateDrivenReportChapter> {
-  const aggregateClaims = input.evidence.claims;
+  const chapterEvidence = evidenceForChapter(input.evidence, chapter);
+  const aggregateClaims = chapterEvidence.claims;
   const evidenceRefs = aggregateClaims.map((claim) => claim.id);
   const insight = aggregateClaims.map((claim) => claim.statement).join("；");
   const altText = `${chapter.title}的专业研究场景图`;
@@ -223,7 +247,7 @@ async function generateImageChapter(
   });
 
   return {
-    ...chapterBase(chapter, evidenceRefs, input.evidence.limitations),
+    ...chapterBase(chapter, evidenceRefs, chapterEvidence.limitations),
     outputType: "image",
     assetId: image.assetId,
     assetKey: image.objectKey,

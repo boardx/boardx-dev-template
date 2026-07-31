@@ -178,7 +178,9 @@ export function isBlank(title: string | null | undefined): boolean {
 const REPORT_TEMPLATE_COLS =
   'id, survey_id, title, sections, metrics, chart_slots AS "chartSlots", caveats, created_at, updated_at';
 const REPORT_CATEGORY_PLAN_COLS =
-  'id, survey_id, category_plan AS "categoryPlan", created_at, updated_at';
+  `id, survey_id, category_plan AS "categoryPlan",
+   to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at,
+   to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS updated_at`;
 
 const REPORT_OUTPUT_TYPES = new Set<SurveyReportOutputType>(["image", "chart", "text"]);
 const REPORT_CHART_TEMPLATE_IDS = new Set<SurveyReportChartTemplateId>([
@@ -265,19 +267,16 @@ export function defaultSurveyReportCategoryPlan(title: string, questions: Survey
 export function cleanSurveyReportCategoryPlan(input: unknown, surveyTitle: string, questions: SurveyQuestion[] = []): SurveyReportCategoryPlanInput {
   const body = input && typeof input === "object" ? input as Record<string, unknown> : {};
   const fallback = defaultSurveyReportCategoryPlan(surveyTitle, questions);
-  const validIds = new Set(questions.map((question) => Number(question.id)));
   const raw = Array.isArray(body.categories) ? body.categories : fallback.categories;
   const categories = raw.map((value, index) => {
     const item = value && typeof value === "object" ? value as Record<string, unknown> : {};
     const name = String(item.name ?? `报告分类 ${index + 1}`).trim().slice(0, 48) || `报告分类 ${index + 1}`;
     const questionIds = Array.isArray(item.questionIds)
-      ? Array.from(new Set(item.questionIds.map(Number).map((id) => {
-        if (validIds.has(id)) return id;
-        const positionalQuestion = questions.find(
-          (question) => question.position + 1 === id
-        );
-        return positionalQuestion ? Number(positionalQuestion.id) : undefined;
-      }).filter((id): id is number => id != null)))
+      ? Array.from(new Set(
+        item.questionIds
+          .map(Number)
+          .filter((id): id is number => Number.isFinite(id) && id > 0)
+      ))
       : [];
     const modulePrompts = Object.fromEntries((["text", "chat", "chart", "image"] as ReportInputMode[])
       .map((mode) => [mode, String((item.modulePrompts as Record<string, unknown> | undefined)?.[mode] ?? "").trim().slice(0, 1000)])
@@ -350,15 +349,32 @@ type SurveyReportCategoryPlanRow = Omit<SurveyReportCategoryPlan, "title" | "des
   categoryPlan: SurveyReportCategoryPlanInput;
 };
 
-export async function upsertSurveyReportCategoryPlan(surveyId: number, input: SurveyReportCategoryPlanInput): Promise<SurveyReportCategoryPlan> {
+export async function upsertSurveyReportCategoryPlan(
+  surveyId: number,
+  input: SurveyReportCategoryPlanInput,
+  expectedUpdatedAt?: string | null
+): Promise<SurveyReportCategoryPlan> {
   const rows = await query<SurveyReportCategoryPlanRow>(
     `INSERT INTO survey_report_templates (survey_id, title, sections, metrics, chart_slots, caveats, category_plan)
      VALUES ($1, $2, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, $3::jsonb)
-     ON CONFLICT (survey_id) DO UPDATE SET category_plan = EXCLUDED.category_plan, updated_at = now()
+     ON CONFLICT (survey_id) DO UPDATE
+       SET category_plan = EXCLUDED.category_plan, updated_at = now()
+       WHERE $4::boolean
+          OR (
+            $5::timestamptz IS NOT NULL
+            AND survey_report_templates.updated_at = $5::timestamptz
+          )
      RETURNING ${REPORT_CATEGORY_PLAN_COLS}`,
-    [surveyId, input.title.trim() || "问卷专业报告", JSON.stringify(input)]
+    [
+      surveyId,
+      input.title.trim() || "问卷专业报告",
+      JSON.stringify(input),
+      expectedUpdatedAt === undefined,
+      expectedUpdatedAt ?? null,
+    ]
   );
-  const row = rows[0]!;
+  const row = rows[0];
+  if (!row) throw new Error("report_template_conflict");
   return { id: row.id, survey_id: row.survey_id, ...row.categoryPlan, created_at: row.created_at, updated_at: row.updated_at };
 }
 

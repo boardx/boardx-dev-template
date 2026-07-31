@@ -76,9 +76,9 @@ describe("buildProfessionalReportHtml", () => {
         title: "模板驱动报告",
         description: "管理层阅读版",
         chapters: [
-          { id: "summary", order: 1, title: "管理层摘要", outputType: "text", requirement: "先结论" },
-          { id: "trend", order: 2, title: "趋势对比", outputType: "chart", chartTemplateId: "line-simple", requirement: "给图表" },
-          { id: "visual", order: 3, title: "场景视觉", outputType: "image", requirement: "给图片" },
+          { id: "summary", order: 1, title: "管理层摘要", outputType: "text", questionIds: [], requirement: "先结论" },
+          { id: "trend", order: 2, title: "趋势对比", outputType: "chart", questionIds: [], chartTemplateId: "line-simple", requirement: "给图表" },
+          { id: "visual", order: 3, title: "场景视觉", outputType: "image", questionIds: [], requirement: "给图片" },
         ],
       },
       sample: { responseCount: 13, questionCount: 8, confidence: "medium" },

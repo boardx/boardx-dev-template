@@ -17,6 +17,7 @@ const report: PublicTemplateDrivenSurveyReport = {
         order: 1,
         title: "管理层摘要",
         outputType: "text",
+        questionIds: [],
         requirement: "先结论。",
       },
       {
@@ -24,6 +25,7 @@ const report: PublicTemplateDrivenSurveyReport = {
         order: 2,
         title: "趋势对比",
         outputType: "chart",
+        questionIds: [],
         chartTemplateId: "line-simple",
         requirement: "展示趋势。",
       },
@@ -32,6 +34,7 @@ const report: PublicTemplateDrivenSurveyReport = {
         order: 3,
         title: "场景视觉",
         outputType: "image",
+        questionIds: [],
         requirement: "展示场景。",
       },
     ],

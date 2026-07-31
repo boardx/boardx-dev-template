@@ -23,6 +23,7 @@ export function buildSurveyReportRequirementPayload(plan: {
         name: category.name,
         description: category.description,
         requirement: categoryRequirement(category),
+        questionIds: [...category.questionIds].sort((left, right) => left - right),
         outputType: category.outputType,
         chartTemplateId:
           category.outputType === "chart" ? category.chartTemplateId : undefined,

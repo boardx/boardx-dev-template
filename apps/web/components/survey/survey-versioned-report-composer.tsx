@@ -65,7 +65,10 @@ interface SurveyVersionedReportComposerProps {
   generating: boolean;
   status: string;
   error: string;
-  onClassify: () => Promise<{
+  onClassify: (
+    instruction: string,
+    currentPlan: SurveyReportCategoryPlanInput
+  ) => Promise<{
     plan: SurveyReportCategoryPlanInput;
     warning?: string;
   } | null>;
@@ -126,6 +129,7 @@ export function SurveyVersionedReportComposer({
     plan: SurveyReportCategoryPlanInput;
     warning?: string;
   } | null>(null);
+  const [aiInstruction, setAiInstruction] = useState("");
 
   useEffect(() => {
     setDraft(plan);
@@ -139,6 +143,12 @@ export function SurveyVersionedReportComposer({
   const categories = draft.categories.slice().sort((left, right) => left.order - right.order);
   const selectedCategory =
     categories.find((category) => category.id === selectedCategoryId) ?? categories[0];
+  const availableQuestionIds = new Set(
+    questions.map((question) => Number(question.id)).filter(Number.isFinite)
+  );
+  const missingQuestionIds = selectedCategory?.questionIds.filter(
+    (questionId) => !availableQuestionIds.has(Number(questionId))
+  ) ?? [];
   const draftDirty = !areSurveyReportCategoryPlansEqual(draft, plan);
   const generationEligibility = getReportGenerationEligibility({
     draftDirty,
@@ -196,8 +206,8 @@ export function SurveyVersionedReportComposer({
   }
 
   async function requestAiSuggestion() {
-    if (classifying || saving || generating) return;
-    const suggestion = await onClassify();
+    if (classifying || saving || generating || !aiInstruction.trim()) return;
+    const suggestion = await onClassify(aiInstruction.trim(), draft);
     if (suggestion) setAiSuggestion(suggestion);
   }
 
@@ -229,23 +239,43 @@ export function SurveyVersionedReportComposer({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={classifying || saving || generating}
-            onClick={() => void requestAiSuggestion()}
-            className="border-survey/30 bg-survey/5 text-survey hover:bg-survey/10 hover:text-survey"
-          >
-            <Sparkles className="h-4 w-4" strokeWidth={1.6} />
-            {classifying ? "推演中..." : "AI 重新推演"}
-          </Button>
           <Button type="button" size="sm" variant="ghost" onClick={onOpenCollect}>
             继续发布
             <Send className="h-4 w-4" strokeWidth={1.6} />
           </Button>
         </div>
       </header>
+
+      <section
+        data-testid="report-ai-iteration"
+        className="grid gap-3 border border-survey/20 bg-survey/5 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+      >
+        <div className="grid gap-2">
+          <Label htmlFor="report-ai-instruction">与 AI 迭代模板</Label>
+          <Textarea
+            id="report-ai-instruction"
+            data-testid="report-ai-instruction"
+            value={aiInstruction}
+            maxLength={1200}
+            disabled={saving || generating || classifying}
+            onChange={(event) => setAiInstruction(event.target.value)}
+            placeholder="例如：面向咨询公司领导，合并重复章节，增加续约风险与行动优先级分析。"
+            className="min-h-20 resize-y bg-background"
+          />
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={
+            classifying || saving || generating || !aiInstruction.trim()
+          }
+          onClick={() => void requestAiSuggestion()}
+          className="border-survey/30 bg-background text-survey hover:bg-survey/10 hover:text-survey"
+        >
+          <Sparkles className="h-4 w-4" strokeWidth={1.6} />
+          {classifying ? "推演中..." : "生成变更预览"}
+        </Button>
+      </section>
 
       {(status || error) && (
         <div
@@ -504,6 +534,33 @@ export function SurveyVersionedReportComposer({
                       );
                     })}
                   </div>
+                  {missingQuestionIds.length ? (
+                    <div
+                      data-testid="report-missing-question-references"
+                      role="alert"
+                      className="border border-destructive/30 bg-destructive/5 px-3 py-2 text-11 leading-5 text-foreground"
+                    >
+                      <p className="font-semibold">有题目引用需要修复</p>
+                      <p className="text-muted-foreground">
+                        题目 ID {missingQuestionIds.join("、")} 已被删除或当前不可访问。
+                        系统会保留原引用，不会自动替换；请取消引用或选择其他题目后保存。
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {missingQuestionIds.map((questionId) => (
+                          <Button
+                            key={questionId}
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={saving}
+                            onClick={() => toggleQuestion(questionId)}
+                          >
+                            移除题目 ID {questionId}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   {questions.length === 0 ? (
                     <p className="text-12 text-muted-foreground">
                       请先在“设计问卷”中保存题目。

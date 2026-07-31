@@ -40,4 +40,9 @@ describe("buildSurveyReportRequirementPayload", () => {
     expect(requirementHash({ chartTemplateId: "bar-simple", chartType: "bar" }))
       .not.toBe(requirementHash({ chartTemplateId: "line-simple", chartType: "line" }));
   });
+
+  it("changes the requirement hash when the chapter question references change", () => {
+    expect(requirementHash({ questionIds: [11] }))
+      .not.toBe(requirementHash({ questionIds: [12] }));
+  });
 });

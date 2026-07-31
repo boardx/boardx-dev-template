@@ -12,6 +12,7 @@ export interface SurveyReportTemplateChapterSnapshot {
   id: string;
   order: number;
   title: string;
+  questionIds: number[];
   outputType: SurveyReportOutputType;
   requirement: string;
   chartTemplateId?: SurveyReportChartTemplateId;
@@ -105,6 +106,7 @@ export function buildSurveyReportTemplateSnapshot(
           id: category.id,
           order: index + 1,
           title: category.name.trim(),
+          questionIds: [...category.questionIds],
           outputType: category.outputType,
           requirement: normalizedRequirement(category),
         };

@@ -71,7 +71,13 @@ test("consultant can reuse questions across chapters and preview AI changes befo
     (await savedBeforePreview.json()).reportCategoryPlan;
   const apiPreview = await page.request.post(
     `/api/surveys/${survey.id}/report-categories`,
-    { data: { previewOnly: true } },
+    {
+      data: {
+        previewOnly: true,
+        instruction: "面向咨询公司领导优化章节结构，但不要直接保存。",
+        currentPlan: savedPlanBeforePreview,
+      },
+    },
   );
   expect(apiPreview.status()).toBe(200);
   expect((await apiPreview.json()).previewOnly).toBe(true);
@@ -128,7 +134,13 @@ test("consultant can reuse questions across chapters and preview AI changes befo
       return;
     }
     aiPreviewRequested = true;
-    expect(route.request().postDataJSON()).toMatchObject({ previewOnly: true });
+    expect(route.request().postDataJSON()).toMatchObject({
+      previewOnly: true,
+      instruction: expect.stringContaining("咨询公司领导"),
+      currentPlan: expect.objectContaining({
+        categories: expect.any(Array),
+      }),
+    });
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -168,7 +180,10 @@ test("consultant can reuse questions across chapters and preview AI changes befo
     .getByRole("checkbox", { name: survey.questions[1]!.title })
     .check();
 
-  await page.getByRole("button", { name: "AI 重新推演" }).click();
+  await page.getByTestId("report-ai-instruction").fill(
+    "面向咨询公司领导，合并重复章节并增加续约风险与行动优先级分析。",
+  );
+  await page.getByRole("button", { name: "生成变更预览" }).click();
   const preview = page.getByTestId("report-ai-change-preview");
   await expect(preview).toBeVisible();
   await expect(preview).toContainText("管理层客户洞察报告");
