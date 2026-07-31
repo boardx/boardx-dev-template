@@ -4,8 +4,8 @@
 - 仓库根目录: `/Users/shenyangjun/boardx/boardx-dev-template`
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F25 / 实现 AI 可迭代报告模板与连续专业报告
-- 当前 blocker: harness tick 依赖的 coordinator 环境变量未配置；不影响本地 feature verify
+- 当前最高优先级未完成功能: 无；F25 已由 Harness 门控升级为 `passing`
+- 当前 blocker: 无功能 blocker；coordinator 心跳环境变量仍未配置
 
 ## 会话记录
 ### 2026-07-31 02:42:03
@@ -26,6 +26,8 @@
 - 已记录证据:
   - `evidence/ai-iterable-report-template.png`
   - `evidence/continuous-professional-report.png`
-- 提交记录: 待提交实现并运行 `pnpm harness verify --sprint p25/25`
+- 提交记录:
+  - `7d11728a feat(survey): implement iterative report templates`
+  - `3583b854 test(survey): record F25 verification evidence`
 - 已知风险或未解决问题: `pnpm harness tick --session codex-survey-report-ui` 因缺少 coordinator 凭据无法登记心跳。
-- 下一步最佳动作: 提交实现，运行 harness verify，提交 `F25.verify.log` 后再次 verify 由脚本将 F25 升为 passing。
+- 下一步最佳动作: 提交 Harness 自动生成的 passing 状态、最终验证日志和本交接记录；F25 无剩余开发项。
