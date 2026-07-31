@@ -84,6 +84,7 @@ function evidenceForChapter(
     },
     questions,
     claims: evidence.claims.filter((claim) => questionIds.has(claim.questionId)),
+    limitations: [],
   };
 }
 
@@ -107,9 +108,12 @@ function assertValidChapterSources(
       );
     }
     const chapterEvidence = evidenceForChapter(evidence, chapter);
-    if (chapter.outputType === "text" && !chapterEvidence.claims.length) {
+    if (
+      (chapter.outputType === "text" || chapter.outputType === "image") &&
+      !chapterEvidence.claims.length
+    ) {
       throw new Error(
-        `report_template_text_sources_incompatible:${chapter.id}`
+        `report_template_${chapter.outputType}_sources_incompatible:${chapter.id}`
       );
     }
     if (chapter.outputType !== "chart") continue;
@@ -208,7 +212,7 @@ async function generateTextChapter(
     ...chapterBase(
       chapter,
       claims.map((claim) => claim.id),
-      input.evidence.limitations
+      chapterEvidence.limitations
     ),
     outputType: "text",
     headline: String(result.headline ?? "").trim() || chapter.title,
@@ -258,7 +262,7 @@ async function generateChartChapter(
     ...chapterBase(
       chapter,
       [`question-${question.questionId}-distribution`],
-      input.evidence.limitations
+      chapterEvidence.limitations
     ),
     outputType: "chart",
     chartTemplateId: chapter.chartTemplateId,

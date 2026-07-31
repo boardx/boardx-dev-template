@@ -151,6 +151,7 @@ describe("template report chapter generation", () => {
       assetId: "scenario-image",
       evidenceRefs: ["question-1-top"],
     });
+    expect(chapters.every((chapter) => chapter.limitations.length === 0)).toBe(true);
     expect(callJson).toHaveBeenCalledTimes(2);
     for (const call of callJson.mock.calls) {
       const request = JSON.parse(call[0].messages[1]!.content);
@@ -377,6 +378,49 @@ describe("template report chapter generation", () => {
     );
 
     expect(callJson).not.toHaveBeenCalled();
+  });
+
+  it("rejects image chapters when selected sources have no anonymous aggregate claims", async () => {
+    const textEvidence = buildSurveyReportEvidence({
+      survey: {
+        title: "开放反馈",
+        description: "收集详细建议",
+        questions: [{
+          id: 3,
+          title: "请说明原因",
+          type: "short_text",
+          required: true,
+          options: [],
+        }],
+      },
+      responses: [
+        { id: 1, answers: { "3": "认证说明不够清楚" } },
+      ],
+    });
+    const generateImage = vi.fn();
+
+    await expect(generateTemplateReportChapters({
+      snapshot: {
+        ...snapshot,
+        chapters: [{
+          ...snapshot.chapters[2]!,
+          questionIds: [3],
+        }],
+      },
+      evidence: textEvidence,
+      sourceRevision: "source-revision-1",
+      teamId: 7,
+      surveyId: 59,
+      artifactId: "artifact-id",
+      model: "qwen-test",
+    }, {
+      callJson: vi.fn(),
+      generateImage,
+    })).rejects.toThrow(
+      "report_template_image_sources_incompatible:scenario-image"
+    );
+
+    expect(generateImage).not.toHaveBeenCalled();
   });
 
   it("exposes only validated claim and aggregate distribution evidence references", () => {

@@ -113,7 +113,8 @@ export function SurveyCollectWorkbench({
 
   async function copyShareUrl() {
     if (!isCollecting) return;
-    await navigator.clipboard.writeText(shareUrl);
+    const absoluteShareUrl = new URL(shareUrl, window.location.origin).toString();
+    await navigator.clipboard.writeText(absoluteShareUrl);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
   }

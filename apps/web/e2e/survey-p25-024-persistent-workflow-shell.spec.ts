@@ -170,6 +170,25 @@ test("each workflow deep link uses the shared framed surface and marks its activ
   }
 });
 
+test("collect copies an absolute respondent URL", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await register(page);
+  const survey = await createSurvey(page);
+  const activation = await page.request.patch(`/api/surveys/${survey.id}`, {
+    data: { isActive: true },
+  });
+  expect(activation.status()).toBe(200);
+
+  await page.goto(`/surveys?survey=${survey.id}&step=collect`);
+  await expect(page.getByTestId("workspace-collect-workbench")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("collect-enabled-switch")).toHaveAttribute("aria-checked", "true");
+  await page.getByRole("button", { name: "复制问卷链接" }).click();
+
+  const copiedUrl = await page.evaluate(() => navigator.clipboard.readText());
+  expect(new URL(copiedUrl).origin).toBe(new URL(page.url()).origin);
+  expect(new URL(copiedUrl).pathname).toMatch(/^\/survey\/\d+\/answer$/);
+});
+
 test("five workflow surfaces fill the desktop workspace and keep a single-column mobile layout", async ({ page }) => {
   test.setTimeout(120_000);
   await register(page);
