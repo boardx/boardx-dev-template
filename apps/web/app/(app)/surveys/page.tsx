@@ -913,7 +913,6 @@ function WorkspaceModulePanel({
   onOpenResponses: () => void;
   onBack: () => void;
 }) {
-  const [answerViewsCollapsed, setAnswerViewsCollapsed] = useState(false);
   const [selectedAnswerView, setSelectedAnswerView] = useState("all");
   const reportPlan = survey ? inferReportPlan(survey) : null;
   const config: Record<Exclude<WorkspaceTarget, "workspace">, { label: string; title: string; copy: string; icon: typeof ClipboardList }> = {
@@ -992,7 +991,7 @@ function WorkspaceModulePanel({
   });
 
   return (
-    <div data-testid={view === "answer" ? "workspace-answer-workbench" : undefined} className="grid gap-4">
+    <div data-testid={view === "answer" ? "workspace-answer-workbench" : undefined}>
       <a data-testid="workspace-answer-link" href={`/survey/${survey.id}/answer`} className="sr-only">
         打开答题页
       </a>
@@ -1001,142 +1000,123 @@ function WorkspaceModulePanel({
       </a>
       <section
         data-testid={view === "answer" ? "answer-workspace-intro" : undefined}
-        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-background px-5 py-4"
+        className="overflow-hidden rounded-lg border border-survey/20 bg-background shadow-sm"
       >
-        <div>
-          <Badge variant="outline">{item.label}</Badge>
-          <h2 className="mt-2 text-18 font-bold text-foreground">{item.title}</h2>
-          <p className="text-13 text-muted-foreground">{item.copy}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={onBack}>
-            返回列表
-          </Button>
-          {view === "design" && (
-            <Button type="button" size="sm" onClick={() => onOpenEditor("questions")}>
-              打开题目编辑
-            </Button>
-          )}
-          {view === "template" && (
-            <Button type="button" size="sm" onClick={onOpenResults}>
-              打开报告规划
-            </Button>
-          )}
-          {view === "collect" && (
-            <Button type="button" size="sm" onClick={() => onOpenEditor("settings")}>
-              配置发布回收
-            </Button>
-          )}
-          {view === "report" && (
-            <Button type="button" size="sm" onClick={onOpenResults}>
-              查看分析报告
-            </Button>
-          )}
-          {view === "answer" && (
-            <>
-              <Button data-testid="answer-open-preview" type="button" size="sm" variant="outline" className="gap-1.5" onClick={onOpenAnswer}>
-                <Eye className="h-4 w-4" strokeWidth={1.7} />
-                问卷预览
-              </Button>
-              <Button data-testid="answer-open-responses" type="button" size="sm" className="gap-1.5" onClick={onOpenResponses}>
-                <ClipboardList className="h-4 w-4" strokeWidth={1.7} />
-                查看用户答卷
-              </Button>
-            </>
-          )}
-        </div>
-      </section>
-
-      <section className="grid gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-3">
-        <div className="bg-background p-4">
-          <p className="text-12 text-muted-foreground">当前问卷</p>
-          <p className="mt-1 text-15 font-semibold text-foreground">{survey.title}</p>
-          <p className="mt-1 line-clamp-2 text-12 text-muted-foreground">{survey.description || "暂无说明"}</p>
-        </div>
-        <div className="bg-background p-4">
-          <p className="text-12 text-muted-foreground">回收状态</p>
-          <div className="mt-2">
-            <Badge variant="outline" className={statusBadgeClass(survey.status)}>
-              {STATUS_LABEL[survey.status]}
-            </Badge>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+          <div>
+            <Badge variant="outline">{item.label}</Badge>
+            <h2 className="mt-2 text-18 font-bold text-foreground">{item.title}</h2>
+            <p className="text-13 text-muted-foreground">{item.copy}</p>
           </div>
-          <p className="mt-2 text-12 text-muted-foreground">{survey.responses} 份答卷</p>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={onBack}>
+              返回列表
+            </Button>
+            <Button data-testid="answer-open-preview" type="button" size="sm" variant="outline" className="gap-1.5" onClick={onOpenAnswer}>
+              <Eye className="h-4 w-4" strokeWidth={1.7} />
+              问卷预览
+            </Button>
+            <Button data-testid="answer-open-responses" type="button" size="sm" className="gap-1.5" onClick={onOpenResponses}>
+              <ClipboardList className="h-4 w-4" strokeWidth={1.7} />
+              查看用户答卷
+            </Button>
+          </div>
         </div>
-        <div className="bg-background p-4">
-          <p className="text-12 text-muted-foreground">报告规划</p>
-          <p className="mt-1 text-13 font-semibold text-foreground">{reportPlan?.name}</p>
-          <p className="mt-1 text-12 text-muted-foreground">{reportPlan?.meta}</p>
-        </div>
-      </section>
 
-      {view === "answer" && (
-        <section data-testid="user-responses-workbench" className={answerViewsCollapsed ? "grid min-w-0 gap-3 xl:grid-cols-[56px_minmax(0,1fr)_300px]" : "grid min-w-0 gap-3 xl:grid-cols-[200px_minmax(0,1fr)_300px]"}>
-          <SurveyOutlinePanel
-            title="答卷视图"
-            items={[
+        <div className="grid border-y border-border bg-surface-1 md:grid-cols-3 md:divide-x md:divide-border">
+          <div className="px-5 py-3">
+            <p className="text-12 text-muted-foreground">当前问卷</p>
+            <p className="mt-1 text-15 font-semibold text-foreground">{survey.title}</p>
+          </div>
+          <div className="border-t border-border px-5 py-3 md:border-t-0">
+            <p className="text-12 text-muted-foreground">回收状态</p>
+            <div className="mt-1 flex items-center gap-2">
+              <Badge variant="outline" className={statusBadgeClass(survey.status)}>
+                {STATUS_LABEL[survey.status]}
+              </Badge>
+              <span className="text-12 text-muted-foreground">{survey.responses} 份答卷</span>
+            </div>
+          </div>
+          <div className="border-t border-border px-5 py-3 md:border-t-0">
+            <p className="text-12 text-muted-foreground">报告规划</p>
+            <p className="mt-1 text-13 font-semibold text-foreground">{reportPlan?.name}</p>
+          </div>
+        </div>
+
+        <div data-testid="user-responses-workbench" className="p-4">
+          <div className="mb-3 flex flex-wrap gap-2" aria-label="答卷视图">
+            {[
               { id: "all", label: "全部答卷", meta: `${survey.responses} 份` },
               { id: "today", label: "今日提交", meta: `${Math.min(18, survey.responses)} 份` },
               { id: "review", label: "需复核", meta: survey.responses ? "待检查" : "0 份" },
               { id: "flagged", label: "已标记", meta: "0 份" },
               { id: "invalid", label: "无效答卷", meta: "0 份" },
-            ]}
-            selectedId={selectedAnswerView}
-            collapsed={answerViewsCollapsed}
-            onToggle={() => setAnswerViewsCollapsed((collapsed) => !collapsed)}
-            onSelect={setSelectedAnswerView}
-          />
-          <div className="overflow-hidden rounded-lg border border-border bg-background">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3">
-              <div>
-                <Badge variant="outline">Responses</Badge>
-                <h3 className="mt-2 text-17 font-bold text-foreground">用户答卷</h3>
-                <p className="mt-1 text-13 leading-6 text-muted-foreground">
-                  按单份答卷查看提交内容、答题完成状态和报告生成时引用的真实样本。
-                </p>
-              </div>
-              <Button data-testid="answer-open-all-responses" type="button" size="sm" className="gap-1.5" onClick={onOpenResponses}>
-                <ClipboardList className="h-4 w-4" strokeWidth={1.7} />
-                查看全部答卷
+            ].map((answerView) => (
+              <Button
+                key={answerView.id}
+                type="button"
+                size="sm"
+                variant={selectedAnswerView === answerView.id ? "secondary" : "ghost"}
+                className={selectedAnswerView === answerView.id ? "bg-survey/10 text-survey hover:bg-survey/15" : "text-muted-foreground"}
+                onClick={() => setSelectedAnswerView(answerView.id)}
+              >
+                {answerView.label}
+                <span className="ml-1.5 text-11 opacity-70">{answerView.meta}</span>
               </Button>
-            </div>
-
-            {responseRows.length > 0 ? (
-              <div className="divide-y divide-border">
-                {responseRows.map((response, index) => (
-                  <Button
-                    key={response.id}
-                    type="button"
-                    variant="ghost"
-                    className="flex h-auto w-full items-center justify-between gap-3 rounded-none px-4 py-3 text-left font-normal transition-colors hover:bg-survey/5"
-                    onClick={onOpenResponses}
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-foreground text-12 font-semibold text-background">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate text-14 font-semibold text-foreground">
-                          {response.id} · {response.title}
-                        </p>
-                        <p className="mt-1 text-12 text-muted-foreground">
-                          {response.time} · 已答完 · {response.source}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="success">{response.status}</Badge>
-                  </Button>
-                ))}
-              </div>
-            ) : (
-              <div className="px-4 py-8 text-center">
-                <ClipboardList className="mx-auto h-8 w-8 text-muted-foreground" strokeWidth={1.6} />
-                <p className="mt-3 text-14 font-semibold text-foreground">暂无用户答卷</p>
-                <p className="mt-1 text-13 text-muted-foreground">发布回收后，这里会显示每位用户的提交记录。</p>
-              </div>
-            )}
+            ))}
           </div>
 
-          <div className="grid gap-3">
+          <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+            <div className="overflow-hidden rounded-lg border border-border bg-background">
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3">
+                <div>
+                  <h3 className="text-17 font-bold text-foreground">用户答卷</h3>
+                  <p className="mt-1 text-13 leading-6 text-muted-foreground">
+                    按单份答卷查看提交内容、答题完成状态和报告生成时引用的真实样本。
+                  </p>
+                </div>
+                <Button data-testid="answer-open-all-responses" type="button" size="sm" className="gap-1.5" onClick={onOpenResponses}>
+                  <ClipboardList className="h-4 w-4" strokeWidth={1.7} />
+                  查看全部答卷
+                </Button>
+              </div>
+
+              {responseRows.length > 0 ? (
+                <div className="divide-y divide-border">
+                  {responseRows.map((response, index) => (
+                    <Button
+                      key={response.id}
+                      type="button"
+                      variant="ghost"
+                      className="flex h-auto w-full items-center justify-between gap-3 rounded-none px-4 py-3 text-left font-normal transition-colors hover:bg-survey/5"
+                      onClick={onOpenResponses}
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-foreground text-12 font-semibold text-background">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-14 font-semibold text-foreground">
+                            {response.id} · {response.title}
+                          </p>
+                          <p className="mt-1 text-12 text-muted-foreground">
+                            {response.time} · 已答完 · {response.source}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="success">{response.status}</Badge>
+                    </Button>
+                  ))}
+                </div>
+              ) : (
+                <div className="px-4 py-8 text-center">
+                  <ClipboardList className="mx-auto h-8 w-8 text-muted-foreground" strokeWidth={1.6} />
+                  <p className="mt-3 text-14 font-semibold text-foreground">暂无用户答卷</p>
+                  <p className="mt-1 text-13 text-muted-foreground">发布回收后，这里会显示每位用户的提交记录。</p>
+                </div>
+              )}
+            </div>
+
             <SurveyAiPanel
               title="答卷质量 AI"
               placeholder="找出可能无效的答卷并说明原因"
@@ -1146,68 +1126,9 @@ function WorkspaceModulePanel({
               onPreview={onOpenResponses}
               onApply={onOpenResponses}
             />
-            <Button
-              type="button"
-              variant="ghost"
-              data-testid="answer-responses-card"
-              className="group h-auto flex-col items-stretch rounded-lg border border-border bg-background p-4 text-left font-normal transition-colors hover:border-border-strong hover:bg-muted/20"
-              onClick={onOpenResponses}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-foreground">
-                  <ClipboardList className="h-5 w-5" strokeWidth={1.7} />
-                </div>
-                <Badge variant="outline">{survey.responses} 份答卷</Badge>
-              </div>
-              <h3 className="mt-4 text-17 font-bold text-foreground">单份答卷查看</h3>
-              <p className="mt-2 text-13 leading-6 text-muted-foreground">
-                进入答卷明细，逐份核对用户提交内容、提交时间和后续报告样本来源。
-              </p>
-              <span className="mt-4 inline-flex text-13 font-semibold text-foreground group-hover:underline">查看用户答卷</span>
-            </Button>
-
-            <Button
-              type="button"
-              variant="ghost"
-              data-testid="answer-preview-card"
-              className="group h-auto flex-col items-stretch rounded-lg border border-border bg-background p-4 text-left font-normal transition-colors hover:border-border-strong hover:bg-muted/20"
-              onClick={onOpenAnswer}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-foreground">
-                  <Eye className="h-5 w-5" strokeWidth={1.7} />
-                </div>
-                <Badge variant="outline">Preview</Badge>
-              </div>
-              <h3 className="mt-4 text-17 font-bold text-foreground">问卷预览</h3>
-              <p className="mt-2 text-13 leading-6 text-muted-foreground">
-                以用户视角打开答题页，检查题目顺序、必填校验、选项显示和提交成功状态。
-              </p>
-              <span className="mt-4 inline-flex text-13 font-semibold text-foreground group-hover:underline">打开问卷预览</span>
-            </Button>
-
-            <Button
-              type="button"
-              variant="ghost"
-              data-testid="answer-report-sample-card"
-              className="group h-auto flex-col items-stretch rounded-lg border border-border bg-background p-4 text-left font-normal transition-colors hover:border-border-strong hover:bg-muted/20"
-              onClick={onOpenResults}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-foreground">
-                  <BarChart3 className="h-5 w-5" strokeWidth={1.7} />
-                </div>
-                <Badge variant="outline">Report sample</Badge>
-              </div>
-              <h3 className="mt-4 text-17 font-bold text-foreground">报告样本来源</h3>
-              <p className="mt-2 text-13 leading-6 text-muted-foreground">
-                跳转到分析报告，确认这些答卷如何参与图表、洞察和风险判断。
-              </p>
-              <span className="mt-4 inline-flex text-13 font-semibold text-foreground group-hover:underline">查看报告样本</span>
-            </Button>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
     </div>
   );
 }

@@ -111,71 +111,71 @@ export function SurveyCollectWorkbench({
   }
 
   return (
-    <div data-testid="workspace-collect-workbench" className="grid w-full gap-4">
-      <section
-        data-testid="collect-status-panel"
-        className="flex flex-col gap-5 rounded-lg border border-survey/20 bg-background p-5 shadow-sm md:flex-row md:items-center md:justify-between md:p-6"
-      >
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-20 font-bold text-foreground">发布回收</h2>
-            <Badge
-              variant="outline"
-              className={isCollecting ? "border-success/30 bg-tag-green text-success" : "bg-muted text-muted-foreground"}
-            >
-              {statusTogglePending ? "处理中" : isCollecting ? "回收中" : "已暂停"}
-            </Badge>
-          </div>
-          <p className="mt-2 text-13 text-muted-foreground">设置问卷的开放状态和有效时间。</p>
-        </div>
-
-        <div className="flex items-center justify-between gap-4 md:justify-end">
-          <div>
-            <Label htmlFor="collect-enabled-switch" className="text-14 font-semibold text-foreground">
-              启用回收
-            </Label>
-            <p className="mt-1 text-12 text-muted-foreground">
-              {isCollecting ? "受访者现在可以提交答卷" : "当前不会接收新的答卷"}
-            </p>
-          </div>
-          <Button
-            id="collect-enabled-switch"
-            data-testid="collect-enabled-switch"
-            type="button"
-            role="switch"
-            aria-checked={isCollecting}
-            aria-label="启用回收"
-            variant="secondary"
-            size="icon"
-            onClick={onToggleStatus}
-            disabled={statusTogglePending}
-            className={`h-6 w-11 shrink-0 rounded-full p-0 transition-colors ${
-              isCollecting ? "justify-end bg-survey hover:bg-survey/90" : "justify-start bg-muted hover:bg-muted"
-            }`}
-          >
-            <span className="mx-0.5 h-5 w-5 rounded-full bg-background shadow-sm transition-transform" />
-          </Button>
-        </div>
-      </section>
-
-      {message ? (
-        <p
-          role={feedbackIsSuccess ? "status" : "alert"}
-          data-testid={feedbackIsSuccess ? "collect-settings-saved" : "err-collect-settings"}
-          className={`rounded-lg border px-4 py-3 text-13 ${
-            feedbackIsSuccess
-              ? "border-success/30 bg-tag-green text-success"
-              : "border-destructive/30 bg-destructive/5 text-destructive"
-          }`}
-        >
-          {message}
-        </p>
-      ) : null}
-
+    <div data-testid="workspace-collect-workbench" className="w-full">
       <section
         data-testid="collect-settings-panel"
-        className="overflow-hidden rounded-lg border border-border bg-background shadow-sm"
+        className="overflow-hidden rounded-lg border border-survey/20 bg-background shadow-sm"
       >
+        <div
+          data-testid="collect-status-panel"
+          className="flex flex-col gap-5 border-b border-border p-5 md:flex-row md:items-center md:justify-between md:p-6"
+        >
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-20 font-bold text-foreground">发布回收</h2>
+              <Badge
+                variant="outline"
+                className={isCollecting ? "border-success/30 bg-tag-green text-success" : "bg-muted text-muted-foreground"}
+              >
+                {statusTogglePending ? "处理中" : isCollecting ? "回收中" : "已暂停"}
+              </Badge>
+            </div>
+            <p className="mt-2 text-13 text-muted-foreground">设置问卷的开放状态和有效时间。</p>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 md:justify-end">
+            <div>
+              <Label htmlFor="collect-enabled-switch" className="text-14 font-semibold text-foreground">
+                启用回收
+              </Label>
+              <p className="mt-1 text-12 text-muted-foreground">
+                {isCollecting ? "受访者现在可以提交答卷" : "当前不会接收新的答卷"}
+              </p>
+            </div>
+            <Button
+              id="collect-enabled-switch"
+              data-testid="collect-enabled-switch"
+              type="button"
+              role="switch"
+              aria-checked={isCollecting}
+              aria-label="启用回收"
+              variant="secondary"
+              size="icon"
+              onClick={onToggleStatus}
+              disabled={statusTogglePending}
+              className={`h-6 w-11 shrink-0 rounded-full p-0 transition-colors ${
+                isCollecting ? "justify-end bg-survey hover:bg-survey/90" : "justify-start bg-muted hover:bg-muted"
+              }`}
+            >
+              <span className="mx-0.5 h-5 w-5 rounded-full bg-background shadow-sm transition-transform" />
+            </Button>
+          </div>
+        </div>
+
+        {message ? (
+          <p
+            role={feedbackIsSuccess ? "status" : "alert"}
+            data-testid={feedbackIsSuccess ? "collect-settings-saved" : "err-collect-settings"}
+            className={`mx-5 mt-5 rounded-lg border px-4 py-3 text-13 md:mx-6 ${
+              feedbackIsSuccess
+                ? "border-success/30 bg-tag-green text-success"
+                : "border-destructive/30 bg-destructive/5 text-destructive"
+            }`}
+          >
+            {message}
+          </p>
+        ) : null}
+
         <div className="border-b border-border p-5 md:p-6">
           <h3 className="text-18 font-bold text-foreground">开放时间</h3>
           <p className="mt-1 text-13 text-muted-foreground">可立即开放，也可以设置指定的回收时间窗口。</p>
