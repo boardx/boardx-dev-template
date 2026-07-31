@@ -139,3 +139,16 @@
   - `9278b2d9 fix(survey): enforce report source and access boundaries`
   - `d1cc27b9 fix(survey): align report scope and scrolling`
 - 下一步最佳动作: 等待 GitHub Codex 对当前 HEAD 的 review 结果；门禁通过后仅由 `usersyj` coordinator 合并 PR #824。
+
+### 2026-08-01 02:24:37
+- 本轮目标: 关闭 PR #824 最新 Codex review 的三项证据边界问题。
+- 已完成:
+  - 图片章节在所选题目没有匿名聚合 claim 时提前拒绝，不再生成无证据支撑的视觉。
+  - 全局样本限制只保留在正式报告前言，章节不再重复展示同一限制信息。
+  - 复制问卷链接时将相对路径解析为当前站点的绝对受访者 URL。
+- 运行过的验证:
+  - TDD 定向章节单测 8/8；Web 全量 36 files / 195 tests。
+  - Web typecheck 与 design lint 通过，仅有既存 phase-p17 文案语言警告。
+  - F19/F24/F25 Playwright 8/8；Harness doctor 0 FAIL / 0 WARN。
+- 提交记录: `72de1075 fix(survey): close final report review gaps`。
+- 下一步最佳动作: 推送当前提交与证据，回复并关闭 3 条 GitHub review 线程，重新触发当前 HEAD review；最终仅由 `usersyj` coordinator 合并。

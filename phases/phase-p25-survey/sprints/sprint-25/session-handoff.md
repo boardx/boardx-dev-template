@@ -23,6 +23,9 @@
 - 模板驱动正式导出包含一次性的研究方法与证据口径。
 - 模板装配校验失败与章节生成失败现在共享章节级失败响应，能直接定位失败章节且不会发布部分报告。
 - Playwright 对隔离 MinIO 动态端口、报告模板 CAS 保存、新版模板移动端命令和集中方法论契约均已对齐。
+- 图片章节与文本章节统一要求匿名聚合 claim；不兼容来源在生成前返回章节级失败。
+- 报告级样本限制只在正式报告前言出现，不再复制到各章节。
+- 发布回收工作台复制的是带当前 origin 的完整受访者 URL。
 
 ## 仍损坏或未验证
 - `pnpm harness tick --session codex-survey-report-ui` 需要外部 coordinator 环境变量，当前环境未配置。
@@ -34,6 +37,7 @@
 - Issue #823 已更新当前范围、验证结果并明确分配给 `usersyj`；最终 merge 只能由 `usersyj` coordinator 执行。
 - Harness sync dry-run 只计划投影旧 F01/F02 且 owner 错配为 `wrk-survey-1`，为避免制造错误 GitHub 状态未执行 `--apply`；F25 由 Issue #823 与 PR #824 准确跟踪。
 - 等待当前 HEAD 的 GitHub review/CI 门禁；若无新 finding，由 `usersyj` coordinator 合并 PR #824。
+- 最新 review 修复提交为 `72de1075`；本地 Web 195 tests、F19/F24/F25 Playwright 8/8、doctor 0 FAIL / 0 WARN 已通过，待推送并关闭对应 GitHub 线程。
 - 如需 coordinator 心跳，先配置 RepoHub/coord-gateway 所需环境变量，再运行 tick。
 
 ## 命令

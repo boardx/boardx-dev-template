@@ -78,3 +78,16 @@ that the initial failure was startup timing rather than a product regression.
 - Two independent local reviewers returned `APPROVE` with no P0/P1/P2 findings on the final implementation patch.
 - All 8 remaining GitHub review threads received evidence replies and were resolved.
 - Issue #823 and PR #824 identify `usersyj` as final coordinator and merge owner; this worker does not merge.
+
+## Final evidence-boundary review follow-up
+
+- Commit `72de1075` rejects image chapters whose selected questions provide no anonymous aggregate claims, before any image generator is invoked.
+- Chapter bundles no longer inherit report-level sample limitations; those limitations remain in the formal report preface instead of repeating in every chapter.
+- Collection link copy resolves origin-relative respondent paths against the current browser origin, producing a directly usable absolute URL.
+- TDD red evidence: the chapter test failed on inherited limitations and unsupported image generation; the Playwright test failed because the copied path raised `TypeError: Invalid URL`.
+- `pnpm --filter @repo/web run test`: 36 files / 195 tests passed.
+- `pnpm --filter @repo/web run typecheck`: exit 0.
+- `pnpm --filter @repo/web run lint`: exit 0, with only the pre-existing phase-p17 language-mix warnings.
+- F19/F24/F25 Playwright: 8/8 passed, including absolute respondent-link clipboard coverage.
+- `pnpm harness doctor --phase p25`: 0 FAIL / 0 WARN.
+- Final coordinator remains `usersyj`; this worker does not merge PR #824.
