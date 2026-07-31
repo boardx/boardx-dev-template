@@ -82,3 +82,18 @@
   - `pnpm harness doctor --phase p25`，0 FAIL / 0 WARN。
   - Docker API 在获批访问后仍无响应，本轮无法启动 PostgreSQL Playwright 环境，未将 E2E 记为通过。
 - 下一步最佳动作: 提交并推送本轮加固，解决 PR review threads，重新请求独立 code/feature review 与 GitHub CI；全部门禁通过后交由 `usersyj` coordinator 合并。
+
+### 2026-08-01 00:37:40
+- 本轮目标: 关闭 PR #824 独立 feature/code review 的最后四项门禁问题。
+- 已完成:
+  - 章节运行期生成失败返回章节 ID、标题和可重试状态，前端明确提示失败章节并保留上一份完整报告。
+  - F19 E2E 模板使用真实题目来源，符合严格章节来源校验。
+  - 发布回收开始/结束时间分别同步，避免修改一个日期重置另一个未保存开关。
+  - 正式 PDF/Word 导出补齐一次性的研究方法与证据口径，不重复章节内容。
+- 运行过的验证:
+  - Web 全量单元测试 36 个文件、190 条通过。
+  - Web typecheck 通过；Web lint 通过，仅保留既存 phase-p17 文案语言警告。
+  - 报告导出定向测试 2 条通过；`git diff --check` 通过。
+  - Turbo 基础门禁 81/81 tasks 通过；Harness doctor 0 FAIL / 0 WARN；verify 确认 F25 已 passing 并按不可逆规则跳过。
+  - Docker Desktop 在获批访问后仍停滞于 Server API，本地 F19/F24 Playwright 无法启动，未记为通过。
+- 下一步最佳动作: 提交并推送到 PR #824，重新请求独立 code/feature review 与 GitHub CI；门禁通过后仅由 `usersyj` coordinator 合并。

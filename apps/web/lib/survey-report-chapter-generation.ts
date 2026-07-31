@@ -50,6 +50,19 @@ interface ChartChapterResult {
   interpretation: string;
 }
 
+export class SurveyReportChapterGenerationError extends Error {
+  constructor(
+    readonly chapterId: string,
+    readonly chapterTitle: string,
+    readonly reason: string
+  ) {
+    super(
+      `report_template_chapter_generation_failed:${chapterId}:${reason}`
+    );
+    this.name = "SurveyReportChapterGenerationError";
+  }
+}
+
 function distributionFor(question: SurveyQuestionEvidence) {
   return question.distribution ?? question.score?.distribution;
 }
@@ -298,12 +311,21 @@ export async function generateTemplateReportChapters(
   const chapters: TemplateDrivenReportChapter[] = [];
 
   for (const chapter of input.snapshot.chapters) {
-    if (chapter.outputType === "text") {
-      chapters.push(await generateTextChapter(input, chapter, callJson));
-    } else if (chapter.outputType === "chart") {
-      chapters.push(await generateChartChapter(input, chapter, callJson));
-    } else {
-      chapters.push(await generateImageChapter(input, chapter, generateImage));
+    try {
+      if (chapter.outputType === "text") {
+        chapters.push(await generateTextChapter(input, chapter, callJson));
+      } else if (chapter.outputType === "chart") {
+        chapters.push(await generateChartChapter(input, chapter, callJson));
+      } else {
+        chapters.push(await generateImageChapter(input, chapter, generateImage));
+      }
+    } catch (error) {
+      if (error instanceof SurveyReportChapterGenerationError) throw error;
+      throw new SurveyReportChapterGenerationError(
+        chapter.id,
+        chapter.title,
+        error instanceof Error ? error.message : "chapter_generation_failed"
+      );
     }
   }
   return chapters;

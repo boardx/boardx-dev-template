@@ -203,7 +203,12 @@ describe("template report chapter generation", () => {
     }, {
       callJson: invalidClaim,
       generateImage: vi.fn(),
-    })).rejects.toThrow("report_text_evidence_invalid");
+    })).rejects.toMatchObject({
+      name: "SurveyReportChapterGenerationError",
+      chapterId: "summary",
+      chapterTitle: "管理层摘要",
+      reason: "report_text_evidence_invalid",
+    });
 
     const invalidChart = vi.fn().mockResolvedValue({
       questionId: 999,
@@ -223,7 +228,12 @@ describe("template report chapter generation", () => {
     }, {
       callJson: invalidChart,
       generateImage: vi.fn(),
-    })).rejects.toThrow("report_chart_evidence_invalid");
+    })).rejects.toMatchObject({
+      name: "SurveyReportChapterGenerationError",
+      chapterId: "trust-chart",
+      chapterTitle: "安全信任结构",
+      reason: "report_chart_evidence_invalid",
+    });
   });
 
   it("rejects chapters without explicitly selected question sources", async () => {

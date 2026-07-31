@@ -78,8 +78,11 @@ export function SurveyCollectWorkbench({
 
   useEffect(() => {
     setStartImmediately(!publishStartAt);
+  }, [survey.id, publishStartAt]);
+
+  useEffect(() => {
     setNoEndDate(!publishEndAt);
-  }, [survey.id, publishStartAt, publishEndAt]);
+  }, [survey.id, publishEndAt]);
 
   function updateStartImmediately(checked: boolean) {
     setStartImmediately(checked);

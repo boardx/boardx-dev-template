@@ -45,6 +45,31 @@ export interface SurveyReportRequestTransition {
   state: SurveyReportRequestState;
 }
 
+interface SurveyReportGenerationFailurePayload {
+  error?: unknown;
+  failedChapter?: {
+    chapterId?: unknown;
+    title?: unknown;
+    status?: unknown;
+    retryable?: unknown;
+  };
+}
+
+export function surveyReportGenerationErrorMessage(
+  payload: SurveyReportGenerationFailurePayload
+): string | null {
+  if (
+    payload.error !== "report_template_chapter_generation_failed"
+    || payload.failedChapter?.status !== "failed"
+  ) {
+    return null;
+  }
+  const title = String(
+    payload.failedChapter.title || payload.failedChapter.chapterId || "未知章节"
+  );
+  return `章节「${title}」生成失败，上一份完整报告已保留。请重试生成。`;
+}
+
 export function createSurveyReportRequestState(): SurveyReportRequestState {
   return {
     epoch: 0,

@@ -520,6 +520,10 @@ function buildTemplateDrivenReportHtml(
     .cover-meta div { padding: 12px; background: #262626; }
     .cover-meta span { display: block; color: #a3a3a3; font-size: 10px; }
     .cover-meta strong { display: block; margin-top: 4px; font-size: 15px; }
+    .methodology { padding: 12mm 0; break-before: page; }
+    .methodology dl { display: grid; grid-template-columns: 36mm 1fr; margin: 8mm 0 0; border-top: 1px solid #d4d4d4; }
+    .methodology dt, .methodology dd { margin: 0; padding: 4mm 0; border-bottom: 1px solid #ededed; }
+    .methodology dt { color: #737373; font-weight: 600; }
     .chapter { padding: 12mm 0; break-before: page; }
     .chart { margin: 5mm 0; border-top: 1px solid #d4d4d4; }
     .bar-row { display: grid; grid-template-columns: 1fr 24mm; gap: 4mm; padding: 3mm 0; border-bottom: 1px solid #ededed; }
@@ -540,6 +544,14 @@ function buildTemplateDrivenReportHtml(
         <div><span>模板章节</span><strong>${report.chapters.length} 个</strong></div>
         <div><span>生成时间</span><strong>${escapeHtml(generatedAt)}</strong></div>
       </div>
+    </section>
+    <section class="methodology">
+      <p class="eyebrow">Research Methodology</p>
+      <h2>研究方法与证据口径</h2>
+      <dl>
+        <dt>研究方法</dt><dd>${escapeHtml(report.methodology.statement)}</dd>
+        <dt>证据口径</dt><dd>${escapeHtml(report.methodology.evidenceScope)}</dd>
+      </dl>
     </section>
     ${chapters}
   </main>

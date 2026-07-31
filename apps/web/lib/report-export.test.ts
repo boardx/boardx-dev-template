@@ -131,7 +131,9 @@ describe("buildProfessionalReportHtml", () => {
     expect(html.indexOf("趋势对比")).toBeLessThan(html.indexOf("场景视觉"));
     expect(html).toContain("趋势解释");
     expect(html).toContain("根据聚合洞察生成");
+    expect(html).toContain("研究方法与证据口径");
+    expect(html).toContain("匿名聚合分析");
+    expect(html).toContain("仅使用绑定题目");
     expect(html).not.toContain("执行摘要");
-    expect(html).not.toContain("方法与限制");
   });
 });

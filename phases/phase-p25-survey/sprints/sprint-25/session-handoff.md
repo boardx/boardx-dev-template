@@ -18,14 +18,18 @@
 - 失效题目引用在模型调用前返回章节级 422，避免无效或错配证据进入报告。
 - 正式报告将研究方法和证据口径集中呈现一次，历史 v1 产物读取时保持兼容。
 - F19 的全有或全无发布契约保持不变，任一章节失败时不会发布部分报告。
+- 章节运行期失败现在携带失败章节身份，前端保留上一份完整报告并给出可重试提示。
+- F19 E2E 使用真实章节题目来源；F24 E2E 新增开始时间修改后结束时间开关不被重置的断言。
+- 模板驱动正式导出包含一次性的研究方法与证据口径。
 
 ## 仍损坏或未验证
 - `pnpm harness tick --session codex-survey-report-ui` 需要外部 coordinator 环境变量，当前环境未配置。
 - PR #824 review 修复后的 F25 Playwright 本地复跑被无响应的 Docker API 阻断；`verify:base` 81/81 tasks、Web 189 tests、Data 101 tests 和 doctor 均已通过，等待 GitHub CI 完整复验。
+- 最终 review 加固后的 Web 36 个测试文件、190 条测试、typecheck、lint、导出定向测试和 Turbo 81/81 tasks 均通过；doctor 0 FAIL / 0 WARN，verify 确认 F25 已 passing；Docker Server API 仍无响应，更新后的 F19/F24 Playwright 需由 GitHub CI 复验。
 - 真实 PostgreSQL 双客户端并发 E2E 尚未单独覆盖；SQL 契约、首次创建冲突和后续更新冲突已有定向测试。
 
 ## 下一步最佳动作
-- 推送 PR #824 的模板并发、章节契约、来源门禁和报告口径修复，重新请求独立 code/feature review，等待 CI 与 review 门禁通过后由 `usersyj` coordinator 合并。
+- 推送 PR #824 的结构化章节失败、E2E 来源修复、时间开关隔离和正式导出方法论，重新请求独立 code/feature review，等待 CI 与 review 门禁通过后由 `usersyj` coordinator 合并。
 - 如需 coordinator 心跳，先配置 RepoHub/coord-gateway 所需环境变量，再运行 tick。
 
 ## 命令

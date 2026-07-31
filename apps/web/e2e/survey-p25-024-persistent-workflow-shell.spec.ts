@@ -342,6 +342,8 @@ test("simplified collect workspace focuses on status, effective time, and advanc
   await expect(endInput).toBeEnabled();
 
   await startInput.fill("2026-07-31T10:00");
+  await expect(noEndDate).not.toBeChecked();
+  await expect(endInput).toBeEnabled();
   await endInput.fill("2026-07-31T09:00");
   await expect(workbench.getByTestId("err-collect-time")).toHaveText("结束时间必须晚于开始时间");
   await expect(workbench.getByTestId("save-collect-settings")).toBeDisabled();

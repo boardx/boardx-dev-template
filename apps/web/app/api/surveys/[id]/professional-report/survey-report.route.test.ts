@@ -444,12 +444,22 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
     const response = await POST(reportRequest(), params);
 
     expect(response?.status).toBe(500);
+    await expect(response?.json()).resolves.toEqual({
+      error: "report_template_chapter_generation_failed",
+      failedChapter: {
+        chapterId: "summary",
+        title: "核心结论",
+        status: "failed",
+        retryable: true,
+      },
+    });
     expect(mocks.createVersionedSurveyReportArtifact).not.toHaveBeenCalled();
     expect(mocks.completeSurveyReportGenerationClaim).not.toHaveBeenCalled();
     expect(mocks.releaseSurveyReportGenerationClaim).toHaveBeenCalledWith(
       expect.objectContaining({
         sessionId: "20000000-0000-4000-8000-000000000041",
-        errorMessage: "report_text_evidence_invalid",
+        errorMessage:
+          "report_template_chapter_generation_failed:summary:report_text_evidence_invalid",
       })
     );
   });

@@ -10,6 +10,7 @@ import {
   resolveSurveyReportGenerationStatus,
   settleSurveyReportGenerationRequest,
   settleSurveyReportRefresh,
+  surveyReportGenerationErrorMessage,
 } from "./survey-report-generation";
 import type { SurveyReportCategoryPlanInput } from "@repo/data";
 
@@ -298,5 +299,21 @@ describe("survey report request epochs", () => {
       accepted: false,
       state: generation.state,
     });
+  });
+});
+
+describe("surveyReportGenerationErrorMessage", () => {
+  it("identifies the failed chapter and explains that the previous report is retained", () => {
+    expect(surveyReportGenerationErrorMessage({
+      error: "report_template_chapter_generation_failed",
+      failedChapter: {
+        chapterId: "summary",
+        title: "管理层摘要",
+        status: "failed",
+        retryable: true,
+      },
+    })).toBe(
+      "章节「管理层摘要」生成失败，上一份完整报告已保留。请重试生成。"
+    );
   });
 });

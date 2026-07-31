@@ -38,6 +38,7 @@ import {
 import { buildSurveyReportRequirementPayload } from "@/lib/survey-report-requirement";
 import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
 import {
+  SurveyReportChapterGenerationError,
   generateTemplateReportChapters,
   reportEvidenceRefs,
 } from "@/lib/survey-report-chapter-generation";
@@ -531,6 +532,17 @@ export async function POST(request: Request, { params }: { params: { id: string 
       || errorMessage.startsWith("report_template_chart_sources_incompatible:")
     ) {
       return NextResponse.json({ error: errorMessage }, { status: 422 });
+    }
+    if (error instanceof SurveyReportChapterGenerationError) {
+      return NextResponse.json({
+        error: "report_template_chapter_generation_failed",
+        failedChapter: {
+          chapterId: error.chapterId,
+          title: error.chapterTitle,
+          status: "failed",
+          retryable: true,
+        },
+      }, { status: 500 });
     }
     return NextResponse.json({ error: "professional_report_generation_failed" }, { status: 500 });
   }
