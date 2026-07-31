@@ -67,5 +67,12 @@ describe("buildSurveyReportEvidence", () => {
 
     expect(evidence.sample.confidence).toBe("low");
     expect(evidence.limitations).toContain("有效样本少于 30 份，结论仅作为方向性信号。");
+    expect(evidence.claims).toContainEqual(expect.objectContaining({
+      id: "question-4-top",
+      questionId: 4,
+      evidenceLabel: "5",
+      value: 1,
+      denominator: 1,
+    }));
   });
 });

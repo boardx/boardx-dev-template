@@ -241,6 +241,12 @@ export function buildReportComposerPreview(
 ): ReportComposerPreview {
   const categories = orderedReportCategories(plan);
   const sections = categories.map((category): ReportComposerPreviewSection => {
+    const selectedQuestionIds = new Set(category.questionIds.map(Number));
+    const selectedQuestions = questions.flatMap((question, index) =>
+      selectedQuestionIds.has(Number(question.id))
+        ? [{ ...question, displayIndex: index + 1 }]
+        : []
+    );
     const requirement =
       category.requirement?.trim() ||
       category.prompt?.trim() ||
@@ -252,8 +258,12 @@ export function buildReportComposerPreview(
       title: category.name,
       description: category.description || "该章节将从完整事实库中自主检索所需证据。",
       requirement,
-      sourceScope: "整份问卷与全部授权答卷",
-      questionCount: questions.length,
+      sourceScope: selectedQuestions.length
+        ? selectedQuestions
+          .map((question) => `Q${question.displayIndex} · ${question.title}`)
+          .join("；")
+        : "未选择分析题目",
+      questionCount: selectedQuestions.length,
       inputModes: [outputType],
       text: outputType === "text"
         ? buildTextPreview(category, survey, requirement)

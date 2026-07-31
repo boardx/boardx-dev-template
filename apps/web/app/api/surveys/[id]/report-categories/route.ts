@@ -50,6 +50,9 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   if (surveyId == null) return NextResponse.json({ error: "surveyId 无效" }, { status: 400 });
   const loaded = await loadSurvey(surveyId, user.id);
   if ("error" in loaded) return NextResponse.json({ error: loaded.error }, { status: loaded.status });
+  if (!(await canManageSurveyScope(surveyId, user.id))) {
+    return NextResponse.json({ error: "无管理权限" }, { status: 403 });
+  }
   const persisted = await getSurveyReportCategoryPlan(surveyId);
   const reportCategoryPlan = persisted?.categories.length
     ? cleanSurveyReportCategoryPlan(

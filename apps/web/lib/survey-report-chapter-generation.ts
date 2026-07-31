@@ -106,8 +106,13 @@ function assertValidChapterSources(
         `report_template_chapter_sources_unavailable:${chapter.id}:${unavailableQuestionIds.join(",")}`
       );
     }
-    if (chapter.outputType !== "chart") continue;
     const chapterEvidence = evidenceForChapter(evidence, chapter);
+    if (chapter.outputType === "text" && !chapterEvidence.claims.length) {
+      throw new Error(
+        `report_template_text_sources_incompatible:${chapter.id}`
+      );
+    }
+    if (chapter.outputType !== "chart") continue;
     const hasChartEvidence = chapterEvidence.questions.some(
       (question) => Boolean(distributionFor(question)?.length)
     );
@@ -278,6 +283,8 @@ async function generateImageChapter(
     prompt: [
       "生成专业、克制、适合管理层研究报告的横向场景信息图。",
       `章节：${chapter.title}。`,
+      `分析目标：${chapter.analysisObjective}`,
+      `分析方法：${chapter.analysisMethod}`,
       `要求：${chapter.requirement}`,
       insight ? `匿名聚合洞察：${insight}` : "",
       "画面不得出现文字、数字、品牌标志、人物肖像或未经证据支持的统计结论。",

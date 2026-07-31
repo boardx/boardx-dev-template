@@ -151,7 +151,8 @@ function claimsFromQuestions(
 ): SurveyEvidenceClaim[] {
   if (confidence === "none") return [];
   return questions.flatMap((question) => {
-    const ranked = [...(question.distribution ?? [])].sort((a, b) => b.count - a.count);
+    const distribution = question.distribution ?? question.score?.distribution ?? [];
+    const ranked = [...distribution].sort((a, b) => b.count - a.count);
     const top = ranked[0];
     if (!top || top.denominator === 0) return [];
     return [{

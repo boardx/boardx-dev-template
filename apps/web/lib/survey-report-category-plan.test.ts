@@ -6,7 +6,7 @@ import {
 } from "./survey-report-category-plan";
 
 describe("buildReportComposerPreview", () => {
-  it("builds only the selected chart output from the whole-survey source", () => {
+  it("builds the selected chart output from only its explicitly selected questions", () => {
     const preview = buildReportComposerPreview(
       {
         title: "商品安全报告",
@@ -28,12 +28,15 @@ describe("buildReportComposerPreview", () => {
           },
         ],
       },
-      [{ id: 1, title: "关注什么？", type: "single", options: ["成分", "认证"] }],
+      [
+        { id: 1, title: "关注什么？", type: "single", options: ["成分", "认证"] },
+        { id: 2, title: "是否购买？", type: "single", options: ["是", "否"] },
+      ],
       { title: "商品安全调研", description: "", responses: 12 }
     );
 
     expect(preview.sections[0]?.requirement).toBe("先给结论，再说明样本边界。");
-    expect(preview.sections[0]?.sourceScope).toBe("整份问卷与全部授权答卷");
+    expect(preview.sections[0]?.sourceScope).toBe("Q1 · 关注什么？");
     expect(preview.sections[0]).toMatchObject({
       inputModes: ["chart"],
       chart: {

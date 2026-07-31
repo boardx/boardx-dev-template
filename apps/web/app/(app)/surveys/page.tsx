@@ -136,6 +136,7 @@ interface Survey {
   teamId: number | null;
   updatedAt: string;
   isOwner: boolean;
+  canManage?: boolean;
   shareUrl: string;
 }
 
@@ -2340,6 +2341,7 @@ function WorkspaceTemplateWorkbench({
 
 function WorkspaceReportWorkbench({
   survey,
+  canManage,
   questions,
   categoryPlan,
   generatedReport,
@@ -2352,6 +2354,7 @@ function WorkspaceReportWorkbench({
   onLoadMoreVersions,
 }: {
   survey: Survey;
+  canManage: boolean;
   questions: Question[];
   categoryPlan?: ReportCategoryPlanDraft;
   generatedReport?: unknown;
@@ -2529,6 +2532,7 @@ function WorkspaceReportWorkbench({
       <div data-testid="workspace-report-workbench">
         <SurveyProfessionalReportWorkbench
           report={professionalReport}
+          canManage={canManage}
           generation={generation}
           generating={generating}
           error={error}
@@ -2543,6 +2547,26 @@ function WorkspaceReportWorkbench({
           onExportPdf={exportPdf}
           onExportWord={exportWord}
         />
+      </div>
+    );
+  }
+
+  if (!canManage) {
+    return (
+      <div data-testid="workspace-report-workbench" className="grid gap-4">
+        <section
+          data-testid="report-workspace-intro"
+          className="rounded-lg border border-border bg-background px-5 py-4"
+        >
+          <p className="text-11 font-semibold uppercase tracking-[0.14em] text-survey">Analysis Report</p>
+          <h2 className="mt-1 text-20 font-bold text-foreground">{survey.title} 分析报告</h2>
+        </section>
+        <section className="border border-border bg-background px-8 py-16 text-center">
+          <h2 className="text-18 font-bold text-foreground">暂无已生成报告</h2>
+          <p className="mt-2 text-13 text-muted-foreground">
+            报告生成后将在这里提供只读查看和导出。
+          </p>
+        </section>
       </div>
     );
   }
@@ -4177,6 +4201,7 @@ export default function SurveysPage() {
       const payload = await res.json().catch(() => ({}));
       if (requestVersion !== reportCategoryPlanRequestVersion.current) return;
       if (!res.ok) {
+        if (res.status === 403) return;
         setWorkspaceTemplateError(payload?.error ?? "报告结构加载失败");
         return;
       }
@@ -6139,9 +6164,14 @@ export default function SurveysPage() {
           }
           templateContent={
             currentSurveyForNavigation ? (
+              (currentSurveyForNavigation.canManage ?? currentSurveyForNavigation.isOwner) ? (
               <div data-testid="workspace-template-workbench">
                 <SurveyVersionedReportComposer
                   survey={currentSurveyForNavigation}
+                  canManage={
+                    currentSurveyForNavigation.canManage
+                    ?? currentSurveyForNavigation.isOwner
+                  }
                   questions={workspaceQuestionsForComposer(questions)}
                   plan={
                     reportCategoryPlansBySurveyId[currentSurveyForNavigation.id] ??
@@ -6177,6 +6207,20 @@ export default function SurveysPage() {
                   onOpenCollect={() => void navigateWorkspace("collect")}
                 />
               </div>
+              ) : (
+                <section
+                  data-testid="workspace-template-readonly"
+                  className="border border-border bg-background px-6 py-12 text-center"
+                >
+                  <h2 className="text-lg font-semibold text-foreground">报告模板仅对管理协作者开放</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    你可以查看已生成的正式报告，但不能查看或修改报告模板配置。
+                  </p>
+                  <Button className="mt-5" onClick={() => void navigateWorkspace("report")}>
+                    查看已生成报告
+                  </Button>
+                </section>
+              )
             ) : undefined
           }
           collectContent={
@@ -6219,6 +6263,10 @@ export default function SurveysPage() {
                 </a>
                 <WorkspaceReportWorkbench
                   survey={currentSurveyForNavigation}
+                  canManage={
+                    currentSurveyForNavigation.canManage
+                    ?? currentSurveyForNavigation.isOwner
+                  }
                   questions={questions}
                   categoryPlan={reportCategoryPlansBySurveyId[currentSurveyForNavigation.id]}
                   generatedReport={generatedReportsBySurveyId[currentSurveyForNavigation.id]}

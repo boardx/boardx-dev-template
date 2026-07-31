@@ -61,6 +61,7 @@ interface SurveyVersionedReportComposerProps {
   plan: SurveyReportCategoryPlanInput;
   generation?: SurveyReportGenerationStatus;
   requirementsChangedOverride?: boolean;
+  canManage: boolean;
   saving: boolean;
   classifying: boolean;
   generating: boolean;
@@ -113,6 +114,7 @@ export function SurveyVersionedReportComposer({
   plan,
   generation,
   requirementsChangedOverride = false,
+  canManage,
   saving,
   classifying,
   generating,
@@ -185,6 +187,20 @@ export function SurveyVersionedReportComposer({
         }];
       }
     }
+    if (category.outputType === "text") {
+      const hasAggregateEvidence = category.questionIds.some((questionId) => {
+        const question = questionById.get(Number(questionId));
+        return question
+          ? isSurveyReportChartCompatibleQuestionType(question.type)
+          : false;
+      });
+      if (!hasAggregateEvidence) {
+        return [{
+          categoryId: category.id,
+          message: `章节「${category.name}」需要选择至少一道可形成匿名聚合证据的题目。`,
+        }];
+      }
+    }
     return [];
   });
   const selectedSourceValidation = sourceValidationErrors.find(
@@ -202,7 +218,7 @@ export function SurveyVersionedReportComposer({
     draftDirty,
     requirementsChangedOverride
   );
-  const draftEditingDisabled = saving;
+  const draftEditingDisabled = saving || !canManage;
 
   function patchSelected(patch: Partial<SurveyReportCategoryInput>) {
     if (draftEditingDisabled || !selectedCategory) return;
@@ -233,7 +249,7 @@ export function SurveyVersionedReportComposer({
   }
 
   function saveDraft() {
-    if (saving || generating || classifying || hasSourceValidationErrors) return;
+    if (!canManage || saving || generating || classifying || hasSourceValidationErrors) return;
     onSavePlan(draft);
   }
 
@@ -248,13 +264,13 @@ export function SurveyVersionedReportComposer({
   }
 
   async function requestAiSuggestion() {
-    if (classifying || saving || generating || !aiInstruction.trim()) return;
+    if (!canManage || classifying || saving || generating || !aiInstruction.trim()) return;
     const suggestion = await onClassify(aiInstruction.trim(), draft);
     if (suggestion) setAiSuggestion(suggestion);
   }
 
   function applyAiSuggestion() {
-    if (!aiSuggestion) return;
+    if (!canManage || !aiSuggestion) return;
     setDraft(aiSuggestion.plan);
     setSelectedCategoryId(aiSuggestion.plan.categories[0]?.id ?? "");
     setAiSuggestion(null);
@@ -280,7 +296,8 @@ export function SurveyVersionedReportComposer({
             用自然语言定义每个章节；生成时系统从整份问卷和全部授权答卷中检索证据。
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        {!canManage ? <Badge variant="muted">只读权限</Badge> : null}
+        {canManage ? <div className="flex flex-wrap items-center gap-2">
           <Button
             data-testid="template-continue-publish"
             type="button"
@@ -291,10 +308,10 @@ export function SurveyVersionedReportComposer({
             继续发布
             <Send className="h-4 w-4" strokeWidth={1.6} />
           </Button>
-        </div>
+        </div> : null}
       </header>
 
-      <section
+      {canManage ? <section
         data-testid="report-ai-iteration"
         className="grid gap-3 border border-survey/20 bg-survey/5 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
       >
@@ -323,7 +340,7 @@ export function SurveyVersionedReportComposer({
           <Sparkles className="h-4 w-4" strokeWidth={1.6} />
           {classifying ? "推演中..." : "生成变更预览"}
         </Button>
-      </section>
+      </section> : null}
 
       {(status || error) && (
         <div
@@ -355,7 +372,7 @@ export function SurveyVersionedReportComposer({
                 <h3 className="text-14 font-bold text-foreground">报告章节</h3>
                 <p className="mt-1 text-11 text-muted-foreground">{categories.length} 个章节</p>
               </div>
-              <Button type="button" size="icon" variant="ghost" className="h-8 w-8" aria-label="添加章节" disabled={saving} onClick={addCategory}>
+              <Button type="button" size="icon" variant="ghost" className="h-8 w-8" aria-label="添加章节" disabled={draftEditingDisabled} onClick={addCategory}>
                 <Plus className="h-4 w-4" strokeWidth={1.7} />
               </Button>
             </div>
@@ -392,7 +409,7 @@ export function SurveyVersionedReportComposer({
               );
             })}
           </div>
-          <Button type="button" variant="ghost" className="h-11 w-full rounded-none border-t border-border" disabled={saving} onClick={addCategory}>
+          <Button type="button" variant="ghost" className="h-11 w-full rounded-none border-t border-border" disabled={draftEditingDisabled} onClick={addCategory}>
             <Plus className="h-4 w-4" strokeWidth={1.7} />
             添加章节
           </Button>
@@ -417,7 +434,7 @@ export function SurveyVersionedReportComposer({
                       variant="ghost"
                       className="h-8 w-8"
                       aria-label="章节上移"
-                      disabled={saving || selectedCategory.order === 1}
+                      disabled={draftEditingDisabled || selectedCategory.order === 1}
                       onClick={() => moveSelectedCategory(-1)}
                     >
                       <ArrowUp className="h-4 w-4" strokeWidth={1.7} />
@@ -428,7 +445,7 @@ export function SurveyVersionedReportComposer({
                       variant="ghost"
                       className="h-8 w-8"
                       aria-label="章节下移"
-                      disabled={saving || selectedCategory.order === categories.length}
+                      disabled={draftEditingDisabled || selectedCategory.order === categories.length}
                       onClick={() => moveSelectedCategory(1)}
                     >
                       <ArrowDown className="h-4 w-4" strokeWidth={1.7} />
@@ -439,7 +456,7 @@ export function SurveyVersionedReportComposer({
                       variant="ghost"
                       className="h-8 w-8"
                       aria-label="删除章节"
-                      disabled={saving || categories.length <= 1}
+                      disabled={draftEditingDisabled || categories.length <= 1}
                       onClick={removeSelectedCategory}
                     >
                       <Trash2 className="h-4 w-4" strokeWidth={1.7} />
@@ -455,7 +472,7 @@ export function SurveyVersionedReportComposer({
                     id="report-category-name"
                     value={selectedCategory.name}
                     maxLength={48}
-                    disabled={saving}
+                    disabled={draftEditingDisabled}
                     onChange={(event) => patchSelected({ name: event.target.value })}
                   />
                 </div>
@@ -478,7 +495,7 @@ export function SurveyVersionedReportComposer({
                           size="sm"
                           variant="ghost"
                           aria-pressed={active}
-                          disabled={saving}
+                          disabled={draftEditingDisabled}
                           className={active
                             ? "min-w-0 rounded-md border border-survey/30 bg-survey/5 px-2 text-survey hover:bg-survey/10 hover:text-survey"
                             : "min-w-0 rounded-md px-2"}
@@ -517,7 +534,7 @@ export function SurveyVersionedReportComposer({
                             type="button"
                             variant="outline"
                             aria-pressed={active}
-                            disabled={saving}
+                            disabled={draftEditingDisabled}
                             className={active
                               ? "h-auto min-w-0 justify-between whitespace-normal border-survey/30 bg-survey/5 px-3 py-2 text-left text-survey hover:bg-survey/10 hover:text-survey"
                               : "h-auto min-w-0 justify-between whitespace-normal px-3 py-2 text-left"}
@@ -546,7 +563,7 @@ export function SurveyVersionedReportComposer({
                     data-testid="report-analysis-objective-input"
                     maxLength={500}
                     value={selectedCategory.analysisObjective ?? ""}
-                    disabled={saving}
+                    disabled={draftEditingDisabled}
                     onChange={(event) => patchSelected({
                       analysisObjective: event.target.value,
                     })}
@@ -562,7 +579,7 @@ export function SurveyVersionedReportComposer({
                     className="min-h-24 resize-y text-13 leading-6"
                     maxLength={1000}
                     value={selectedCategory.analysisMethod ?? ""}
-                    disabled={saving}
+                    disabled={draftEditingDisabled}
                     onChange={(event) => patchSelected({
                       analysisMethod: event.target.value,
                     })}
@@ -600,7 +617,7 @@ export function SurveyVersionedReportComposer({
                             type="checkbox"
                             checked={checked}
                             disabled={
-                              saving
+                              draftEditingDisabled
                               || !Number.isFinite(normalizedId)
                               || (
                                 selectedCategory.outputType === "chart"
@@ -644,7 +661,7 @@ export function SurveyVersionedReportComposer({
                             type="button"
                             size="sm"
                             variant="outline"
-                            disabled={saving}
+                            disabled={draftEditingDisabled}
                             onClick={() => toggleQuestion(questionId)}
                           >
                             移除题目 ID {questionId}
@@ -682,7 +699,7 @@ export function SurveyVersionedReportComposer({
                     className="min-h-48 resize-y text-13 leading-6"
                     maxLength={2000}
                     value={selectedCategory.requirement ?? selectedCategory.prompt}
-                    disabled={saving}
+                    disabled={draftEditingDisabled}
                     onChange={(event) => patchSelected({
                       requirement: event.target.value,
                       prompt: event.target.value,
@@ -700,7 +717,8 @@ export function SurveyVersionedReportComposer({
                     type="button"
                     variant="outline"
                     disabled={
-                      saving
+                      !canManage
+                      || saving
                       || generating
                       || classifying
                       || hasSourceValidationErrors
@@ -714,12 +732,14 @@ export function SurveyVersionedReportComposer({
                     data-testid="generate-versioned-report"
                     type="button"
                     disabled={
-                      !generationEligibility.canGenerate
+                      !canManage
+                      || !generationEligibility.canGenerate
                       || hasSourceValidationErrors
                     }
                     onClick={() => {
                       if (
-                        generationEligibility.canGenerate
+                        canManage
+                        && generationEligibility.canGenerate
                         && !hasSourceValidationErrors
                       ) {
                         onGenerateReport();
@@ -810,7 +830,7 @@ export function SurveyVersionedReportComposer({
       </section>
 
       <Dialog
-        open={Boolean(aiSuggestion)}
+        open={canManage && Boolean(aiSuggestion)}
         onClose={() => setAiSuggestion(null)}
         title="预览 AI 模板建议"
         description="AI 不会直接覆盖当前模板。确认后建议才会进入草稿，仍需保存才会持久化。"

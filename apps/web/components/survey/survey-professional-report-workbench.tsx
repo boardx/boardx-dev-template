@@ -13,6 +13,7 @@ import {
 
 interface SurveyProfessionalReportWorkbenchProps {
   report: SurveyReportDocument;
+  canManage: boolean;
   generation?: SurveyReportGenerationStatus;
   generating: boolean;
   error: string;
@@ -37,6 +38,7 @@ function formatGeneratedAt(value: string) {
 
 export function SurveyProfessionalReportWorkbench({
   report,
+  canManage,
   generation,
   generating,
   error,
@@ -135,7 +137,7 @@ export function SurveyProfessionalReportWorkbench({
                 Word
               </Button>
             </div>
-            <Button
+            {canManage ? <Button
               type="button"
               size="sm"
               disabled={generating || !canGenerate}
@@ -147,7 +149,7 @@ export function SurveyProfessionalReportWorkbench({
             >
               <Sparkles className="h-4 w-4" strokeWidth={1.6} />
               {generating ? "生成中" : "重新生成"}
-            </Button>
+            </Button> : null}
           </div>
         </div>
         {shareStatus ? (

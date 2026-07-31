@@ -347,9 +347,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
   let claimedGeneration:
     | { artifactKey: SurveyReportArtifactKey; sessionId: string }
     | undefined;
+  const chapterTitles = new Map<string, string>();
   try {
     const context = await loadReportContext(params.id, true);
     if ("response" in context) return context.response;
+    context.reportCategoryPlan.categories.forEach((chapter) => {
+      chapterTitles.set(chapter.id, chapter.name);
+    });
     const body = (await request.json().catch(() => ({}))) as {
       model?: unknown;
     };
@@ -530,9 +534,19 @@ export async function POST(request: Request, { params }: { params: { id: string 
     if (
       errorMessage.startsWith("report_template_chapter_sources_missing:")
       || errorMessage.startsWith("report_template_chapter_sources_unavailable:")
+      || errorMessage.startsWith("report_template_text_sources_incompatible:")
       || errorMessage.startsWith("report_template_chart_sources_incompatible:")
     ) {
-      return NextResponse.json({ error: errorMessage }, { status: 422 });
+      const chapterId = errorMessage.split(":")[1] ?? "";
+      return NextResponse.json({
+        error: errorMessage,
+        failedChapter: {
+          chapterId,
+          title: chapterTitles.get(chapterId) ?? chapterId,
+          status: "failed",
+          retryable: true,
+        },
+      }, { status: 422 });
     }
     if (
       error instanceof SurveyReportChapterGenerationError
