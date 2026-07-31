@@ -85,7 +85,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   return NextResponse.json({ reportCategoryPlan });
 }
 
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
   const surveyId = parseSurveyId(params.id);
@@ -95,6 +95,8 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   if (!(await canManageSurveyScope(surveyId, user.id))) {
     return NextResponse.json({ error: "无管理权限" }, { status: 403 });
   }
+  const body = await req.json().catch(() => ({}));
+  const previewOnly = body?.previewOnly === true;
 
   const model = systemSelectedModel();
   let classified: SurveyReportCategoryPlanInput;
@@ -141,11 +143,14 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     });
   } catch {
     const fallback = defaultSurveyReportCategoryPlan(loaded.survey.title, loaded.survey.questions);
-    const reportCategoryPlan = await upsertSurveyReportCategoryPlan(surveyId, fallback);
+    const reportCategoryPlan = previewOnly
+      ? fallback
+      : await upsertSurveyReportCategoryPlan(surveyId, fallback);
     return NextResponse.json({
       reportCategoryPlan,
       model,
       generatedBy: "default",
+      previewOnly,
       warning: "千问分类暂不可用，已按题目生成默认分类。稍后可再次点击 AI 重新分类。",
     });
   }
@@ -154,6 +159,13 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   const plan = cleaned.categories.length
     ? cleaned
     : defaultSurveyReportCategoryPlan(loaded.survey.title, loaded.survey.questions);
-  const reportCategoryPlan = await upsertSurveyReportCategoryPlan(surveyId, plan);
-  return NextResponse.json({ reportCategoryPlan, model, generatedBy: "llm" });
+  const reportCategoryPlan = previewOnly
+    ? plan
+    : await upsertSurveyReportCategoryPlan(surveyId, plan);
+  return NextResponse.json({
+    reportCategoryPlan,
+    model,
+    generatedBy: "llm",
+    previewOnly,
+  });
 }

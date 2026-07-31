@@ -27,6 +27,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog } from "@/components/ui/dialog";
 import { SurveyReportOutputPreview } from "@/components/survey/survey-report-output-preview";
 import {
   addCustomReportCategory,
@@ -51,6 +52,11 @@ interface ReportComposerSurvey {
 
 interface SurveyVersionedReportComposerProps {
   survey: ReportComposerSurvey;
+  questions: Array<{
+    id: number | string;
+    title: string;
+    type: string;
+  }>;
   plan: SurveyReportCategoryPlanInput;
   generation?: SurveyReportGenerationStatus;
   requirementsChangedOverride?: boolean;
@@ -59,7 +65,10 @@ interface SurveyVersionedReportComposerProps {
   generating: boolean;
   status: string;
   error: string;
-  onClassify: () => void;
+  onClassify: () => Promise<{
+    plan: SurveyReportCategoryPlanInput;
+    warning?: string;
+  } | null>;
   onSavePlan: (plan: SurveyReportCategoryPlanInput) => void;
   onGenerateReport: () => void;
   onBackToDesign: () => void;
@@ -96,6 +105,7 @@ function formatVersionTime(value: string) {
 
 export function SurveyVersionedReportComposer({
   survey,
+  questions,
   plan,
   generation,
   requirementsChangedOverride = false,
@@ -112,6 +122,10 @@ export function SurveyVersionedReportComposer({
 }: SurveyVersionedReportComposerProps) {
   const [draft, setDraft] = useState(plan);
   const [selectedCategoryId, setSelectedCategoryId] = useState(plan.categories[0]?.id ?? "");
+  const [aiSuggestion, setAiSuggestion] = useState<{
+    plan: SurveyReportCategoryPlanInput;
+    warning?: string;
+  } | null>(null);
 
   useEffect(() => {
     setDraft(plan);
@@ -171,6 +185,29 @@ export function SurveyVersionedReportComposer({
     onSavePlan(draft);
   }
 
+  function toggleQuestion(questionId: number | string) {
+    if (draftEditingDisabled || !selectedCategory) return;
+    const normalizedId = Number(questionId);
+    if (!Number.isFinite(normalizedId)) return;
+    const selected = new Set(selectedCategory.questionIds);
+    if (selected.has(normalizedId)) selected.delete(normalizedId);
+    else selected.add(normalizedId);
+    patchSelected({ questionIds: Array.from(selected) });
+  }
+
+  async function requestAiSuggestion() {
+    if (classifying || saving || generating) return;
+    const suggestion = await onClassify();
+    if (suggestion) setAiSuggestion(suggestion);
+  }
+
+  function applyAiSuggestion() {
+    if (!aiSuggestion) return;
+    setDraft(aiSuggestion.plan);
+    setSelectedCategoryId(aiSuggestion.plan.categories[0]?.id ?? "");
+    setAiSuggestion(null);
+  }
+
   return (
     <div
       data-testid="workspace-report-composer"
@@ -197,9 +234,7 @@ export function SurveyVersionedReportComposer({
             size="sm"
             variant="outline"
             disabled={classifying || saving || generating}
-            onClick={() => {
-              if (!saving && !generating) onClassify();
-            }}
+            onClick={() => void requestAiSuggestion()}
             className="border-survey/30 bg-survey/5 text-survey hover:bg-survey/10 hover:text-survey"
           >
             <Sparkles className="h-4 w-4" strokeWidth={1.6} />
@@ -426,17 +461,54 @@ export function SurveyVersionedReportComposer({
                   </div>
                 ) : null}
 
-                <div className="border-l-2 border-foreground bg-secondary/50 px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" strokeWidth={1.6} />
-                    <p className="text-12 font-semibold text-foreground">数据范围</p>
+                <div
+                  data-testid="report-question-sources"
+                  className="grid gap-3 border border-border bg-secondary/30 p-4"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="text-12 font-semibold text-foreground">分析题目</p>
+                      <p className="mt-1 text-11 leading-5 text-muted-foreground">
+                        同一道题可用于多个章节，组合题目可形成交叉维度分析。
+                      </p>
+                    </div>
+                    <Badge variant="muted">
+                      已选择 {selectedCategory.questionIds.length} 题
+                    </Badge>
                   </div>
-                  <p className="mt-2 text-12 leading-5 text-muted-foreground">
-                    整份问卷与全部授权答卷。生成模块会按本章要求自主检索所需证据，无需逐题指定。
-                  </p>
-                  <p className="mt-1 text-11 text-muted-foreground">
-                    当前 {survey.responses} 份答卷，内容变化时自动形成新的事实库修订。
-                  </p>
+                  <div className="grid max-h-48 gap-1 overflow-y-auto">
+                    {questions.map((question, index) => {
+                      const normalizedId = Number(question.id);
+                      const checked = selectedCategory.questionIds.includes(normalizedId);
+                      return (
+                        <label
+                          key={`${question.id}-${index}`}
+                          className="flex cursor-pointer items-start gap-3 rounded-md px-2 py-2 transition-colors hover:bg-background"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={saving || !Number.isFinite(normalizedId)}
+                            onChange={() => toggleQuestion(question.id)}
+                            className="mt-0.5 h-4 w-4 accent-survey"
+                          />
+                          <span className="min-w-0">
+                            <span className="block text-12 font-medium text-foreground">
+                              Q{index + 1} · {question.title}
+                            </span>
+                            <span className="mt-0.5 block text-10 text-muted-foreground">
+                              {question.type}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {questions.length === 0 ? (
+                    <p className="text-12 text-muted-foreground">
+                      请先在“设计问卷”中保存题目。
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="grid gap-2">
@@ -561,6 +633,80 @@ export function SurveyVersionedReportComposer({
 
         </aside>
       </section>
+
+      <Dialog
+        open={Boolean(aiSuggestion)}
+        onClose={() => setAiSuggestion(null)}
+        title="预览 AI 模板建议"
+        description="AI 不会直接覆盖当前模板。确认后建议才会进入草稿，仍需保存才会持久化。"
+        testId="report-ai-change-preview"
+        className="max-h-[85vh] max-w-2xl overflow-y-auto"
+        footer={(
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAiSuggestion(null)}
+            >
+              保留当前模板
+            </Button>
+            <Button type="button" onClick={applyAiSuggestion}>
+              <Check className="h-4 w-4" strokeWidth={1.7} />
+              应用建议
+            </Button>
+          </>
+        )}
+      >
+        {aiSuggestion ? (
+          <div className="grid gap-4">
+            <div className="border border-border bg-secondary/30 p-4">
+              <p className="text-15 font-bold text-foreground">
+                {aiSuggestion.plan.title}
+              </p>
+              <p className="mt-1 text-12 leading-5 text-muted-foreground">
+                {aiSuggestion.plan.description}
+              </p>
+              <p className="mt-3 text-12 font-semibold text-survey">
+                {aiSuggestion.plan.categories.length} 个章节
+              </p>
+            </div>
+            <div className="grid gap-2">
+              {aiSuggestion.plan.categories
+                .slice()
+                .sort((left, right) => left.order - right.order)
+                .map((category, index) => (
+                  <div
+                    key={category.id}
+                    className="grid grid-cols-[32px_minmax(0,1fr)] gap-3 border-b border-border px-1 py-3 last:border-b-0"
+                  >
+                    <span className="grid h-8 w-8 place-items-center rounded-md bg-survey/10 text-11 font-bold text-survey">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-13 font-semibold text-foreground">
+                        {category.name}
+                      </p>
+                      <p className="mt-1 text-11 leading-5 text-muted-foreground">
+                        {category.questionIds.length} 道题 · {
+                          category.outputType === "chart"
+                            ? "图表"
+                            : category.outputType === "image"
+                              ? "图片"
+                              : "文本"
+                        }
+                      </p>
+                    </div>
+                  </div>
+                ))}
+            </div>
+            {aiSuggestion.warning ? (
+              <p className="text-12 text-muted-foreground">
+                {aiSuggestion.warning}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </Dialog>
     </div>
   );
 }

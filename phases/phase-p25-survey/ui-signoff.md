@@ -73,6 +73,11 @@ confirmed_at: 2026-07-14T00:00:00+08:00
   唯一的图片、图表或文本产物，全部通过类型和证据校验后再按模板顺序原子组装。
   分析报告阅读界面以
   `ui-preview/2026-07-19-professional-report-reference.png` 为视觉参考。
+- 2026-07-31 报告模板与连续报告增量确认：用户确认
+  `ui-preview/survey-system-interactive.html` 的 `#template` 和 `#report` 交互方案，
+  要求同一道题可重复用于多个章节、一个章节可组合多题进行不同维度分析，AI 变更先预览再应用；
+  查看报告时一次显示全部章节并连续向下阅读，去除各章重复的样本与方法信息。
+  确认原型基线为提交 `35802634`，并明确要求按 Harness 流程实现到生产代码。
 
 ---
 **确认动作**：核对无误后，把顶部 frontmatter 的 `status` 改为 `confirmed`，填 `confirmed_by` / `confirmed_at`，提交。之后才可调 requirement-author 生成 feature_list、跑 new-sprint。

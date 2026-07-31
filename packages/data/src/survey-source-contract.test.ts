@@ -62,7 +62,7 @@ describe("Survey source data contract", () => {
     });
   });
 
-  it("cleans chart settings and binds omitted questions to a category", () => {
+  it("cleans chart settings without forcing unused questions into a chapter", () => {
     const plan = cleanSurveyReportCategoryPlan(
       {
         title: " 安全洞察 ",
@@ -92,7 +92,7 @@ describe("Survey source data contract", () => {
       maxDimensions: 12,
       sort: "desc",
     });
-    expect(plan.categories.flatMap((category) => category.questionIds).sort()).toEqual([11, 12]);
+    expect(plan.categories.flatMap((category) => category.questionIds)).toEqual([11]);
   });
 
   it("folds legacy module prompts into one natural-language requirement", () => {

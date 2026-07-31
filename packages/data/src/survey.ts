@@ -252,7 +252,7 @@ export function defaultSurveyReportCategoryPlan(title: string, questions: Survey
       name: name.slice(0, 48),
       description: `围绕「${name}」下的 ${items.length} 个问题生成报告内容。`,
       requirement: `面向决策者分析「${name}」，先给结论，再展示证据、样本边界和行动建议。`,
-      questionIds: items.map((question) => question.id),
+      questionIds: items.map((question) => Number(question.id)),
       outputType: "text",
       inputModes: ["text"],
       prompt: `基于「${name}」分类下的题目和答卷数据生成专业分析。`,
@@ -265,13 +265,19 @@ export function defaultSurveyReportCategoryPlan(title: string, questions: Survey
 export function cleanSurveyReportCategoryPlan(input: unknown, surveyTitle: string, questions: SurveyQuestion[] = []): SurveyReportCategoryPlanInput {
   const body = input && typeof input === "object" ? input as Record<string, unknown> : {};
   const fallback = defaultSurveyReportCategoryPlan(surveyTitle, questions);
-  const validIds = new Set(questions.map((question) => question.id));
+  const validIds = new Set(questions.map((question) => Number(question.id)));
   const raw = Array.isArray(body.categories) ? body.categories : fallback.categories;
   const categories = raw.map((value, index) => {
     const item = value && typeof value === "object" ? value as Record<string, unknown> : {};
     const name = String(item.name ?? `报告分类 ${index + 1}`).trim().slice(0, 48) || `报告分类 ${index + 1}`;
     const questionIds = Array.isArray(item.questionIds)
-      ? Array.from(new Set(item.questionIds.map(Number).map((id) => validIds.has(id) ? id : questions.find((question) => question.position + 1 === id)?.id).filter((id): id is number => id != null)))
+      ? Array.from(new Set(item.questionIds.map(Number).map((id) => {
+        if (validIds.has(id)) return id;
+        const positionalQuestion = questions.find(
+          (question) => question.position + 1 === id
+        );
+        return positionalQuestion ? Number(positionalQuestion.id) : undefined;
+      }).filter((id): id is number => id != null)))
       : [];
     const modulePrompts = Object.fromEntries((["text", "chat", "chart", "image"] as ReportInputMode[])
       .map((mode) => [mode, String((item.modulePrompts as Record<string, unknown> | undefined)?.[mode] ?? "").trim().slice(0, 1000)])
@@ -312,12 +318,6 @@ export function cleanSurveyReportCategoryPlan(input: unknown, surveyTitle: strin
       isCustom: item.isCustom === true,
     };
   }).sort((a, b) => a.order - b.order).map((category, index) => ({ ...category, order: index + 1 }));
-  const assigned = new Set(categories.flatMap((category) => category.questionIds));
-  for (const question of questions) {
-    if (assigned.has(question.id) || categories.length === 0) continue;
-    const matching = categories.find((category) => question.category && category.name.includes(question.category)) ?? categories[0];
-    matching?.questionIds.push(question.id);
-  }
   return {
     title: String(body.title ?? fallback.title).trim().slice(0, 120) || fallback.title,
     description: String(body.description ?? fallback.description).trim().slice(0, 300) || fallback.description,

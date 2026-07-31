@@ -161,6 +161,15 @@ function TemplateDrivenReportDocument({
 }: {
   report: PublicTemplateDrivenSurveyReport;
 }) {
+  function navigateToChapter(chapterId: string) {
+    const targetId = `report-chapter-${chapterId}`;
+    document.getElementById(targetId)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+    window.history.replaceState(null, "", `#${targetId}`);
+  }
+
   return (
     <article
       data-testid="professional-report-document"
@@ -192,6 +201,32 @@ function TemplateDrivenReportDocument({
           ))}
         </div>
       </header>
+
+      <nav
+        data-testid="professional-report-chapter-nav"
+        aria-label="报告章节"
+        className="sticky top-0 z-10 flex gap-2 overflow-x-auto border-b border-border bg-background/95 px-6 py-3 backdrop-blur sm:px-10"
+      >
+        {report.templateSnapshot.chapters
+          .slice()
+          .sort((left, right) => left.order - right.order)
+          .map((chapter, index) => (
+            <button
+              key={chapter.id}
+              data-testid={`report-chapter-link-${chapter.id}`}
+              type="button"
+              onClick={() => navigateToChapter(chapter.id)}
+              className="shrink-0 rounded-md border border-border bg-background px-3 py-2 text-left transition-colors hover:border-survey/40 hover:bg-survey/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-survey/40"
+            >
+              <span className="block text-10 font-semibold text-muted-foreground">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className="mt-0.5 block max-w-44 truncate text-12 font-semibold text-foreground">
+                {chapter.title}
+              </span>
+            </button>
+          ))}
+      </nav>
 
       {report.chapters.map((chapter, index) => (
         <section

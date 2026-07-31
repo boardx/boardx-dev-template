@@ -4243,40 +4243,38 @@ export default function SurveysPage() {
       : "refresh-failed";
   }
 
-  async function classifyWorkspaceReportCategories(surveyId: number) {
+  async function classifyWorkspaceReportCategories(surveyId: number): Promise<{
+    plan: ReportCategoryPlanDraft;
+    warning?: string;
+  } | null> {
     if (
       workspaceTemplateSaving ||
       workspaceReportClassifying ||
       workspaceReportGenerating
-    ) return;
+    ) return null;
     reportCategoryPlanRequestVersion.current += 1;
     setWorkspaceReportClassifying(true);
     setWorkspaceTemplateStatus("");
     setWorkspaceTemplateError("");
     try {
-      const res = await fetch(`/api/surveys/${surveyId}/report-categories`, { method: "POST" });
+      const res = await fetch(`/api/surveys/${surveyId}/report-categories`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ previewOnly: true }),
+      });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
         setWorkspaceTemplateError(payload?.error ?? "AI 分类失败，请检查模型配置后重试");
-        return;
+        return null;
       }
-      const persistence = await applyPersistedWorkspaceReportCategoryPlan({
-        surveyId,
-        reportCategoryPlan:
-          payload.reportCategoryPlan as ReportCategoryPlanDraft,
-        invalidateWhenUnchanged: false,
-      });
-      const status =
-        payload?.warning ?? "AI 已按问卷问题生成报告分类结构。";
-      setWorkspaceTemplateStatus(
-        persistence === "unchanged"
-          ? status
-          : persistence === "refreshed"
-            ? `${status} 正式报告状态已刷新。`
-            : `${status} 正式报告状态刷新失败，请稍后重试。`
-      );
+      setWorkspaceTemplateStatus("AI 建议已生成，确认应用后再保存模板。");
+      return {
+        plan: payload.reportCategoryPlan as ReportCategoryPlanDraft,
+        warning: typeof payload?.warning === "string" ? payload.warning : undefined,
+      };
     } catch {
       setWorkspaceTemplateError("AI 分类失败，请稍后重试。");
+      return null;
     } finally {
       setWorkspaceReportClassifying(false);
     }
@@ -6109,6 +6107,7 @@ export default function SurveysPage() {
               <div data-testid="workspace-template-workbench">
                 <SurveyVersionedReportComposer
                   survey={currentSurveyForNavigation}
+                  questions={workspaceQuestionsForComposer(questions)}
                   plan={
                     reportCategoryPlansBySurveyId[currentSurveyForNavigation.id] ??
                     fallbackReportCategoryPlan(currentSurveyForNavigation, questions)
@@ -6123,7 +6122,9 @@ export default function SurveysPage() {
                   generating={workspaceReportGenerating}
                   status={workspaceTemplateStatus}
                   error={workspaceTemplateError}
-                  onClassify={() => void classifyWorkspaceReportCategories(currentSurveyForNavigation.id)}
+                  onClassify={() =>
+                    classifyWorkspaceReportCategories(currentSurveyForNavigation.id)
+                  }
                   onSavePlan={(plan) =>
                     void saveWorkspaceReportCategoryPlan(
                       currentSurveyForNavigation.id,

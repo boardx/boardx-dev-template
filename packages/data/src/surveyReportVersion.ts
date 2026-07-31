@@ -253,8 +253,7 @@ export async function ensureSurveyReportSourceSnapshot(
     `INSERT INTO survey_report_source_snapshots
       (source_revision, survey_id, content_hash, schema_version, response_count, source_data, created_at)
      VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
-     ON CONFLICT (survey_id, content_hash) DO UPDATE
-       SET source_revision = EXCLUDED.source_revision
+     ON CONFLICT DO NOTHING
      RETURNING ${SOURCE_SNAPSHOT_COLUMNS}`,
     [
       snapshot.sourceRevision,
@@ -266,7 +265,21 @@ export async function ensureSurveyReportSourceSnapshot(
       snapshot.generatedAt,
     ]
   );
-  return sourceSnapshotFromRow(rows[0]!);
+  if (rows[0]) return sourceSnapshotFromRow(rows[0]);
+
+  const existingRows = await query<SurveyReportSourceSnapshotRow>(
+    `SELECT ${SOURCE_SNAPSHOT_COLUMNS}
+     FROM survey_report_source_snapshots
+     WHERE source_revision = $1
+        OR (survey_id = $2 AND content_hash = $3)
+     ORDER BY CASE WHEN source_revision = $1 THEN 0 ELSE 1 END
+     LIMIT 1`,
+    [snapshot.sourceRevision, snapshot.surveyId, snapshot.contentHash]
+  );
+  if (!existingRows[0]) {
+    throw new Error("Survey report source snapshot conflict could not be resolved");
+  }
+  return sourceSnapshotFromRow(existingRows[0]);
 }
 
 export async function findSurveyReportSourceSnapshot(
