@@ -66,3 +66,15 @@ that the initial failure was startup timing rather than a product regression.
 - Current-head browser coverage includes ordered text/chart/image report generation and protected image retrieval, unified five-step desktop/mobile surfaces and keyboard commands, simplified collection settings, AI template iteration, repeated question reuse, and a continuous four-chapter report document.
 - Updated visual evidence: sprint-19 `report-desktop.png` / `report-mobile.png`, sprint-24 `persistent-workflow-shell.png`, and sprint-25 `ai-iterable-report-template.png` / `continuous-professional-report.png`.
 - Final coordinator remains `usersyj`; this worker does not merge PR #824.
+
+## Final current-head review closure
+
+- `9278b2d9` rejects unsupported open-text-only evidence before generation, includes image analysis settings in prompts, and enforces read-only management boundaries.
+- `d1cc27b9` derives formal-report question counts from the distinct union of template-bound question IDs and removes sticky report chapter navigation so the full document scrolls continuously.
+- Web: 36 files / 194 tests passed; typecheck and lint passed.
+- Data: 15 files / 101 tests passed; workflow-worker: 11 tests passed.
+- F19/F24/F25 Playwright: 7/7 passed; final professional-report E2E: 1/1 passed.
+- Pre-push affected verification: 16/16 tasks successful; Harness doctor: 0 FAIL / 0 WARN; `git diff --check`: passed.
+- Two independent local reviewers returned `APPROVE` with no P0/P1/P2 findings on the final implementation patch.
+- All 8 remaining GitHub review threads received evidence replies and were resolved.
+- Issue #823 and PR #824 identify `usersyj` as final coordinator and merge owner; this worker does not merge.

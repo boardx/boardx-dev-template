@@ -121,3 +121,21 @@
   - `pnpm -w run verify:base` 81/81 tasks 通过。
   - Harness doctor 0 FAIL / 0 WARN；verify 确认 F25 已 passing 并按不可逆规则跳过。
 - 下一步最佳动作: 提交并推送 PR #824，重新请求独立 code/feature review 与 GitHub CI；门禁通过后仅由 `usersyj` coordinator 合并。
+
+### 2026-08-01 02:10:00
+- 本轮目标: 完成 PR #824 当前 HEAD 的最终 review 修复、GitHub 投影和 coordinator 交接。
+- 已完成:
+  - 开放文本无安全聚合证据时改为章节级 422，图片章节生成提示纳入分析目标与方法。
+  - 只读协作者不再看到模板/报告变更控件；章节预览严格使用所选题目来源。
+  - 正式报告题目数量改为模板章节题目 ID 的去重并集，章节目录取消 sticky，完整报告连续滚动。
+  - 8 条 GitHub review 线程逐条回复修复证据并全部关闭；Issue #823 和 PR #824 已同步当前提交与 `usersyj` 交接。
+  - Harness sync dry-run 已执行；计划仅包含旧 F01/F02 且 assignee 为 `wrk-survey-1`，因此按投影规则未执行会制造错误 Issue 的 `--apply`。
+- 运行过的验证:
+  - Web 全量测试 36 files / 194 tests、typecheck、lint 通过。
+  - Data 15 files / 101 tests、workflow-worker 11 tests 通过。
+  - F19/F24/F25 Playwright 7/7；最终专业报告 E2E 1/1。
+  - pre-push affected 16/16；Harness doctor 0 FAIL / 0 WARN；`git diff --check` 通过。
+- 提交记录:
+  - `9278b2d9 fix(survey): enforce report source and access boundaries`
+  - `d1cc27b9 fix(survey): align report scope and scrolling`
+- 下一步最佳动作: 等待 GitHub Codex 对当前 HEAD 的 review 结果；门禁通过后仅由 `usersyj` coordinator 合并 PR #824。

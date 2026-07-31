@@ -30,7 +30,10 @@
 - 真实 PostgreSQL 双客户端并发 E2E 尚未单独覆盖；SQL 契约、首次创建冲突和后续更新冲突已有定向测试。
 
 ## 下一步最佳动作
-- 全量门禁已通过；推送 PR #824 的结构化章节失败、E2E 契约修复、隔离 MinIO 配置和当前 HEAD 浏览器证据，重新请求独立 code/feature review；等待 CI 与 review 门禁通过后由 `usersyj` coordinator 合并。
+- PR #824 已推送到 `d1cc27b9`，8 条历史 review 线程均已回复并关闭，当前 HEAD 的 Codex review 已重新触发。
+- Issue #823 已更新当前范围、验证结果并明确分配给 `usersyj`；最终 merge 只能由 `usersyj` coordinator 执行。
+- Harness sync dry-run 只计划投影旧 F01/F02 且 owner 错配为 `wrk-survey-1`，为避免制造错误 GitHub 状态未执行 `--apply`；F25 由 Issue #823 与 PR #824 准确跟踪。
+- 等待当前 HEAD 的 GitHub review/CI 门禁；若无新 finding，由 `usersyj` coordinator 合并 PR #824。
 - 如需 coordinator 心跳，先配置 RepoHub/coord-gateway 所需环境变量，再运行 tick。
 
 ## 命令
