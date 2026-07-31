@@ -18,6 +18,10 @@
       --orange: #e99217;
       --red: #df3b3b;
       --blue: #306acb;
+      --purple: #6f4bf2;
+      --purple-deep: #5634d8;
+      --purple-soft: #eee9ff;
+      --purple-wash: #f8f6ff;
       --shadow: 0 1px 2px rgba(0,0,0,.04);
       font-family: Inter, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
       color: var(--ink);
@@ -105,9 +109,9 @@
       text-align: left;
     }
     .step-num { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 7px; background: var(--soft); font-weight: 720; }
-    .step.active { border-color: #1d1d1d; background: #1d1d1d; color: #fff; }
-    .step.active .step-num { background: #fff; color: #171717; }
-    .step.active .step-desc { color: rgba(255,255,255,.62); }
+    .step.active { border-color: var(--purple); background: var(--purple-soft); color: var(--ink); }
+    .step.active .step-num { background: #ddd4ff; color: var(--purple-deep); }
+    .step.active .step-desc { color: var(--muted); }
     .step-label { display: block; font-weight: 720; }
     .step-desc { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; white-space: nowrap; }
     .workspace { display: grid; min-height: 0; grid-template-columns: 56px 286px minmax(540px, 1fr) 318px; }
@@ -230,6 +234,152 @@
     .donut::after { display: grid; width: 76px; height: 76px; place-items: center; border-radius: 50%; background: #fff; content: "118"; font-size: 22px; font-weight: 760; }
     .setting-panel { margin-top: 12px; padding: 16px; }
     .setting-list { display: grid; gap: 16px; margin-top: 16px; }
+    .template-main { background: var(--purple-wash); }
+    .template-main .main-inner { width: 100%; max-width: none; padding: 20px 22px 64px; }
+    .template-header {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin: -20px -22px 18px;
+      padding: 13px 22px;
+      border-bottom: 1px solid #ddd7f4;
+      background: rgba(248,246,255,.96);
+      backdrop-filter: blur(10px);
+    }
+    .template-header-copy { min-width: 0; }
+    .template-header-title { display: flex; align-items: center; gap: 9px; font-size: 17px; }
+    .template-status { color: var(--muted); font-size: 12px; }
+    .btn.purple { border-color: var(--purple); background: var(--purple); color: #fff; }
+    .btn.purple:hover { border-color: var(--purple-deep); background: var(--purple-deep); }
+    .template-overview {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 20px;
+      align-items: start;
+      padding: 20px 22px;
+      border-top: 4px solid var(--purple);
+    }
+    .template-overview h1 { margin-top: 0; font-size: 23px; }
+    .template-overview p { margin-top: 8px; color: var(--muted); line-height: 1.65; }
+    .template-overview-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+    .template-overview .chip.purple, .chip.purple { background: var(--purple-soft); color: var(--purple-deep); font-weight: 650; }
+    .analysis-unit { margin-top: 14px; overflow: hidden; }
+    .analysis-unit-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 17px 20px;
+      border-bottom: 1px solid var(--line);
+    }
+    .analysis-unit-title { display: flex; align-items: center; gap: 10px; }
+    .analysis-index {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      border-radius: 7px;
+      background: var(--purple-soft);
+      color: var(--purple-deep);
+      font-weight: 760;
+    }
+    .analysis-unit-body { padding: 20px; }
+    .analysis-fields { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 14px; }
+    .analysis-fields .objective { grid-column: 1 / -1; }
+    .question-source-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-top: 18px; }
+    .source-group { min-width: 0; padding: 15px; border: 1px solid var(--line); border-radius: 7px; background: #fcfcfd; }
+    .source-group-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .source-group-head p { margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .question-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+    .question-chip {
+      display: inline-flex;
+      min-width: 0;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 9px;
+      border: 1px solid #ddd7f4;
+      border-radius: 6px;
+      background: var(--purple-wash);
+      color: #433a63;
+      font-size: 12px;
+    }
+    .question-chip b { color: var(--purple-deep); }
+    .reuse-note { display: inline-flex; align-items: center; gap: 5px; color: var(--purple-deep); font-size: 11px; }
+    .unit-section { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+    .unit-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .unit-section-head p { margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .output-list { margin-top: 10px; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+    .output-row {
+      display: grid;
+      grid-template-columns: 36px 110px minmax(160px,.8fr) minmax(220px,1.3fr) auto;
+      gap: 12px;
+      align-items: center;
+      min-height: 70px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+    .output-row:last-child { border-bottom: 0; }
+    .output-icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 7px; background: var(--purple-soft); color: var(--purple-deep); font-weight: 760; }
+    .output-type { color: var(--muted); font-size: 12px; }
+    .output-title { font-weight: 680; }
+    .output-prompt { overflow: hidden; color: var(--muted); font-size: 12px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
+    .template-prompt textarea { min-height: 108px; background: #fcfcfd; }
+    .template-side .outline { gap: 5px; }
+    .template-side .outline-item { min-height: 74px; }
+    .template-side .outline-item.active { border-color: var(--purple); background: var(--purple-soft); color: var(--ink); }
+    .template-side .outline-item.active .outline-meta { color: var(--muted); }
+    .template-side .outline-item.active .outline-num { background: var(--purple); color: #fff; }
+    .template-ai { padding: 0; background: #fff; }
+    .template-ai .template-ai-head { padding: 18px 16px 14px; border-bottom: 1px solid var(--line); }
+    .template-ai-body { padding: 14px 16px 24px; }
+    .template-ai-message { margin-bottom: 12px; padding: 12px; border-radius: 7px; background: var(--purple-wash); color: #4d4660; font-size: 12px; line-height: 1.6; }
+    .ai-prompt-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .proposal { margin-top: 14px; border: 1px solid #d8d0fa; border-radius: 8px; overflow: hidden; }
+    .proposal-head { padding: 13px 14px; background: var(--purple-soft); }
+    .proposal-list { display: grid; }
+    .proposal-item { display: grid; grid-template-columns: 20px minmax(0,1fr); gap: 9px; padding: 12px 14px; border-top: 1px solid #e4dff8; background: #fff; }
+    .proposal-item input { width: 16px; height: 16px; accent-color: var(--purple); }
+    .proposal-item p { margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .proposal-actions { display: grid; grid-template-columns: 1fr 1.25fr; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--line); background: #fafafa; }
+    .modal-layer.template-modal { z-index: 20; }
+    .template-dialog { width: min(calc(100vw - 40px), 860px); max-height: calc(100vh - 56px); overflow: auto; padding: 0; }
+    .template-dialog-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 20px; border-bottom: 1px solid var(--line); background: #fff; }
+    .template-dialog-body { padding: 18px 20px 22px; }
+    .picker-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .question-picker-list { display: grid; gap: 8px; }
+    .picker-row {
+      display: grid;
+      grid-template-columns: 22px 46px minmax(0,1fr) 92px 120px;
+      gap: 10px;
+      align-items: center;
+      min-height: 54px;
+      padding: 9px 11px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+    }
+    .picker-row input { width: 16px; height: 16px; accent-color: var(--purple); }
+    .picker-row .reuse { color: var(--purple-deep); font-size: 11px; text-align: right; }
+    .output-picker-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+    .output-choice { min-height: 136px; padding: 14px; border: 1px solid var(--line); border-radius: 7px; background: #fff; text-align: left; }
+    .output-choice:hover { border-color: var(--purple); background: var(--purple-wash); }
+    .output-choice h3 { margin-top: 10px; }
+    .output-choice p { margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .diff-column { padding: 14px; border: 1px solid var(--line); border-radius: 7px; }
+    .diff-column.after { border-color: #d8d0fa; background: var(--purple-wash); }
+    .diff-column ul { margin: 12px 0 0; padding-left: 18px; line-height: 1.8; }
+    @media (max-width: 1360px) {
+      .workspace { grid-template-columns: 50px 248px minmax(520px, 1fr) 300px; }
+      .analysis-fields { grid-template-columns: minmax(0, 1fr) 190px; }
+      .output-row { grid-template-columns: 34px 92px minmax(140px,1fr) auto; }
+      .output-prompt { display: none; }
+    }
     .segmented { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line-strong); border-radius: 7px; overflow: hidden; }
     .segment { min-height: 40px; border: 0; border-right: 1px solid var(--line); background: #fff; }
     .segment:last-child { border-right: 0; }
@@ -281,6 +431,102 @@
     .report-kpi { padding: 14px; }
     .finding { margin-top: 12px; padding: 16px; }
     .finding ul { margin: 10px 0 0; padding-left: 20px; color: #484d52; line-height: 1.8; }
+    .report-main { background: #f3f1f8; }
+    .report-main .main-inner { width: 100%; max-width: none; padding: 0 28px 80px; }
+    .report-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 6;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 0 -28px;
+      padding: 14px 28px;
+      border-bottom: 1px solid #ddd8ed;
+      background: rgba(250,249,253,.96);
+      backdrop-filter: blur(10px);
+    }
+    .report-toolbar h1 { margin: 0; font-size: 22px; }
+    .report-toolbar p { margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .report-document {
+      width: min(100%, 1040px);
+      margin: 22px auto 0;
+      overflow: hidden;
+      border: 1px solid #dedbe8;
+      border-radius: 4px;
+      background: #fff;
+      box-shadow: 0 8px 24px rgba(38,31,64,.06);
+    }
+    .report-cover { padding: 46px 52px 38px; border-top: 5px solid var(--purple); }
+    .report-kicker { color: var(--purple-deep); font-size: 11px; font-weight: 760; letter-spacing: 1.4px; text-transform: uppercase; }
+    .report-cover h2 { margin-top: 14px; font-size: 32px; }
+    .report-cover-summary { max-width: 720px; margin-top: 12px; color: #50505a; line-height: 1.75; }
+    .report-method {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      margin-top: 30px;
+      border: 1px solid var(--line);
+    }
+    .report-method-item { min-height: 78px; padding: 14px 16px; border-right: 1px solid var(--line); }
+    .report-method-item:last-child { border-right: 0; }
+    .report-method-item span { display: block; color: var(--muted); font-size: 11px; }
+    .report-method-item strong { display: block; margin-top: 7px; font-size: 16px; }
+    .report-chapter { padding: 38px 52px 44px; border-top: 1px solid var(--line); scroll-margin-top: 76px; }
+    .report-chapter-head { display: grid; grid-template-columns: 44px minmax(0,1fr); gap: 16px; align-items: start; }
+    .report-chapter-index {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      border-radius: 6px;
+      background: var(--purple-soft);
+      color: var(--purple-deep);
+      font-weight: 760;
+    }
+    .report-chapter h2 { font-size: 24px; }
+    .report-chapter-lead { margin-top: 8px; color: var(--muted); line-height: 1.7; }
+    .report-section-label { margin-bottom: 10px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
+    .report-callout {
+      margin-top: 24px;
+      padding: 18px 20px;
+      border-left: 3px solid var(--purple);
+      background: var(--purple-wash);
+      line-height: 1.7;
+    }
+    .report-callout strong { display: block; margin-bottom: 5px; }
+    .report-insight-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 24px; }
+    .report-insight { padding: 17px; border: 1px solid var(--line); border-radius: 6px; }
+    .report-insight span { color: var(--muted); font-size: 11px; }
+    .report-insight strong { display: block; margin-top: 7px; font-size: 21px; }
+    .report-insight p { margin-top: 8px; color: #555962; font-size: 12px; line-height: 1.55; }
+    .report-evidence-grid { display: grid; grid-template-columns: 1.25fr .75fr; gap: 16px; margin-top: 24px; }
+    .report-evidence { min-height: 250px; padding: 18px; border: 1px solid var(--line); border-radius: 6px; }
+    .report-evidence h3 { margin-bottom: 4px; }
+    .report-evidence-caption { color: var(--muted); font-size: 11px; }
+    .report-bars { display: flex; height: 150px; align-items: end; justify-content: space-around; gap: 14px; margin-top: 18px; padding: 0 10px 24px; border-bottom: 1px solid var(--line); }
+    .report-bars span { position: relative; width: 34px; border-radius: 3px 3px 0 0; background: var(--purple); }
+    .report-bars span:nth-child(even) { background: #b8a9f5; }
+    .report-bars span::after { position: absolute; right: 50%; bottom: -21px; color: var(--muted); content: attr(data-label); font-size: 10px; transform: translateX(50%); white-space: nowrap; }
+    .report-ring { display: grid; width: 146px; height: 146px; margin: 24px auto 10px; place-items: center; border-radius: 50%; background: conic-gradient(var(--purple) 0 68%, #d8d2ef 68% 100%); }
+    .report-ring::after { display: grid; width: 82px; height: 82px; place-items: center; border-radius: 50%; background: #fff; content: attr(data-value); font-size: 22px; font-weight: 760; }
+    .report-matrix { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-top: 18px; }
+    .report-matrix div { min-height: 86px; padding: 12px; border: 1px solid var(--line); background: #fafafa; font-size: 12px; line-height: 1.5; }
+    .report-matrix div:first-child { border-color: #cfc4ff; background: var(--purple-wash); }
+    .report-quote-list { display: grid; gap: 10px; margin-top: 20px; }
+    .report-quote { padding: 14px 16px; border-left: 2px solid #cfc4ff; background: #fafafa; color: #444851; line-height: 1.65; }
+    .report-actions-table { width: 100%; margin-top: 22px; border: 1px solid var(--line); }
+    .report-actions-table th { background: #f7f6fa; }
+    .report-actions-table td { white-space: normal; line-height: 1.5; }
+    .report-side .outline-item.active { border-color: var(--purple); background: var(--purple-soft); color: var(--ink); }
+    .report-side .outline-item.active .outline-num { background: var(--purple); color: #fff; }
+    .report-side .outline-item.active .outline-meta { color: var(--muted); }
+    @media (max-width: 1320px) {
+      .report-cover, .report-chapter { padding-right: 34px; padding-left: 34px; }
+      .report-method { grid-template-columns: repeat(2,1fr); }
+      .report-method-item:nth-child(2) { border-right: 0; }
+      .report-method-item:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+    }
     .app.preview-only { display: block; min-width: 0; height: 100vh; }
     .app.preview-only .topbar, .app.preview-only .workflow { display: none; }
     .app.preview-only .workspace { height: 100vh; }
@@ -660,6 +906,14 @@
       chapterSettingsOpen: false,
       templateSourcesOpen: true,
       aiDetailsOpen: false,
+      templateSaved: true,
+      questionPickerOpen: false,
+      questionPickerRole: "core",
+      outputPickerOpen: false,
+      templateDiffOpen: false,
+      templatePreviewOpen: false,
+      aiProposalOpen: false,
+      proposalChecks: [true, true, true],
       questions: [
         { title: "您之前是否使用过同类商品？", type: "单选", required: true, desc: "行为习惯", options: ["经常使用", "偶尔使用", "第一次使用"] },
         { title: "您购买或试用这款新品的主要原因是什么？", type: "多选", required: true, desc: "偏好", options: ["功能吸引", "价格合适", "朋友推荐", "品牌信任"] },
@@ -669,7 +923,57 @@
         { title: "您愿意再次购买的可能性是多少？", type: "NPS", required: true, desc: "偏好" },
         { title: "还有哪些建议希望告诉我们？", type: "段落", required: false, desc: "开放反馈" }
       ],
-      chapters: ["基础信息画像", "学习习惯与课堂表现", "校园纪律与行为规范", "同伴关系与心理健康", "生活方式与电子产品使用", "安全认知与自我保护", "开放性反馈与需求洞察"],
+      chapters: [
+        {
+          title: "购买驱动与用户分层",
+          objective: "识别不同使用经验用户的购买动机差异，明确新品首购与复购的关键驱动因素。",
+          method: "交叉分析",
+          core: [1, 5],
+          dimensions: [0],
+          outputs: [
+            { type: "管理层结论", icon: "T", title: "关键购买驱动结论", prompt: "先给出结论，再说明不同使用经验人群的主要购买驱动差异，并标注样本限制。" },
+            { type: "堆叠条形图", icon: "▥", title: "购买原因 × 使用经验", prompt: "以 Q1 为分组维度，展示 Q2 各选项占比；按组内百分比归一化，并标注样本量。" },
+            { type: "行动建议", icon: "→", title: "分层转化建议", prompt: "针对首次使用、偶尔使用和经常使用三类人群，分别给出可执行的产品与沟通建议。" }
+          ],
+          generationPrompt: "以咨询项目经理口吻输出本章。先回答“谁因为什么购买”，再解释人群差异及其业务含义。所有判断必须引用 Q1、Q2、Q6 的数据；样本不足时明确提示，不做因果推断。"
+        },
+        {
+          title: "产品体验与满意度诊断",
+          objective: "定位包装、整体体验与价格感知对满意度的影响，形成体验改进优先级。",
+          method: "驱动因素分析",
+          core: [2, 4],
+          dimensions: [3],
+          outputs: [
+            { type: "指标卡", icon: "#", title: "核心体验指标", prompt: "展示包装满意度与整体体验评分的均值、分布和高低分占比。" },
+            { type: "矩阵图", icon: "⊞", title: "体验改进优先级", prompt: "按影响程度和当前表现构建二维优先级矩阵。" }
+          ],
+          generationPrompt: "围绕体验短板、影响程度和优先级组织章节，区分事实、解释和建议。"
+        },
+        {
+          title: "价格接受度与价值感知",
+          objective: "评估价格接受区间及其与体验评价、购买意愿之间的关系。",
+          method: "分层对比",
+          core: [3, 5],
+          dimensions: [0, 4],
+          outputs: [
+            { type: "分组条形图", icon: "▤", title: "价格接受度分布", prompt: "展示不同使用经验和体验评分人群的价格接受度分布。" },
+            { type: "管理层结论", icon: "T", title: "价值感知判断", prompt: "总结价格阻力集中在哪些人群，并给出定价沟通建议。" }
+          ],
+          generationPrompt: "避免将相关性表述为因果，结合价格接受度、体验评分与复购倾向形成判断。"
+        },
+        {
+          title: "开放反馈与机会主题",
+          objective: "从开放反馈中提炼高频主题、典型证据和未满足需求。",
+          method: "主题编码",
+          core: [6],
+          dimensions: [0, 4],
+          outputs: [
+            { type: "主题表", icon: "▦", title: "反馈主题与证据", prompt: "按主题、频次、代表性原话和涉及人群输出证据表。" },
+            { type: "机会清单", icon: "→", title: "产品机会清单", prompt: "将主题转化为机会点，并按影响与可执行性排序。" }
+          ],
+          generationPrompt: "保留用户原意，引用内容需匿名；低频但高风险主题单独提示。"
+        }
+      ],
       responses: [
         ["R-0120", "张三（家长）", "2025-05-24 10:15", "5分32秒", "100%", "优秀", "正常"],
         ["R-0119", "匿名答卷", "2025-05-24 09:58", "1分12秒", "45%", "可疑", "需复核"],
@@ -797,6 +1101,7 @@
 
     function aiPanel(context) {
       if (state.aiCollapsed) return `<aside class="ai" style="padding:12px 7px;text-align:center"><button class="btn icon ghost" data-action="expand-ai" type="button" aria-label="展开 AI 助手">«</button></aside>`;
+      if (context === "template") return templateAiPanel();
       const copy = {
         design: ["用自然语言生成待确认变更，逐项应用到左侧问卷。", "例如：控制在 8 题内；加入 NPS；把语气改得更清楚", "AI 优化建议已生成"],
         template: ["告诉 AI 你想做什么，AI 会帮你优化报告模板", "例如：重新组织报告章节，突出学习习惯与心理健康", "AI 生成的变更建议"],
@@ -810,6 +1115,33 @@
         <div class="ai-compose"><textarea id="aiInput" placeholder="${copy[1]}"></textarea><button class="ai-send" data-action="ai-send" type="button" aria-label="发送">›</button></div>
         <section class="ai-status card"><div class="status-line"><span class="spinner"></span><span>AI 已完成分析</span><span style="margin-left:auto;color:#92969b;font-size:12px">10:15:32</span></div></section>
         <section class="ai-result card"><div class="status-line"><span class="success-icon">✓</span><strong>${copy[2]}</strong></div><p>已识别可优化项，并根据当前问卷结构生成可应用的调整。</p><button class="btn ghost" style="margin-top:10px;padding-left:0" data-action="ai-details" type="button">查看 3 项修改 ${state.aiDetailsOpen ? "⌃" : "⌄"}</button>${state.aiDetailsOpen ? `<div class="ai-detail-list"><span>1. 精简题目描述，降低阅读负担</span><span>2. 统一必填设置和选项表达</span><span>3. 补充报告分析所需分类</span></div>` : ""}<div class="actions"><button class="btn" data-action="ai-preview" type="button">预览变更</button><button class="btn primary" data-action="ai-apply" type="button">直接应用</button></div></section>
+      </aside>`;
+    }
+
+    function templateAiPanel() {
+      const selectedCount = state.proposalChecks.filter(Boolean).length;
+      return `<aside class="ai template-ai">
+        <div class="template-ai-head">
+          <div class="ai-head"><span class="ai-title">AI 模板顾问</span><button class="btn icon ghost" data-action="collapse-ai" type="button" aria-label="收起 AI 助手">»</button></div>
+          <p class="ai-copy">描述报告受众、决策问题或希望加强的分析。AI 只生成待确认变更，不会直接覆盖模板。</p>
+          <div class="template-ai-message">当前模板面向咨询顾问与咨询公司领导。建议优先呈现管理层结论、证据链和可执行建议。</div>
+        </div>
+        <div class="template-ai-body">
+          <div class="ai-compose"><textarea id="aiInput" placeholder="例如：增加不同使用经验人群的购买驱动差异分析，并给出适合管理层阅读的图表"></textarea></div>
+          <div class="ai-prompt-chips"><button class="btn small" data-action="ai-prompt" data-prompt="增加用户分层对比" type="button">用户分层对比</button><button class="btn small" data-action="ai-prompt" data-prompt="加强高管摘要" type="button">加强高管摘要</button><button class="btn small" data-action="ai-prompt" data-prompt="补充证据边界" type="button">证据边界</button></div>
+          <button class="btn purple" style="width:100%;margin-top:10px" data-action="ai-send" type="button">生成待确认变更</button>
+          ${state.aiProposalOpen ? `<section class="proposal">
+            <div class="proposal-head"><strong>AI 建议了 3 项变更</strong><p style="margin-top:4px;color:#62577f;font-size:11px">逐项勾选，查看差异后再应用。</p></div>
+            <div class="proposal-list">
+              ${[
+                ["新增分析章节","不同用户群的购买驱动差异"],
+                ["复用并重组题目","Q1 作为分组维度，Q2 与 Q6 作为核心问题"],
+                ["增加两类输出","堆叠条形图 + 管理层结论，并生成对应提示词"]
+              ].map((item,index)=>`<label class="proposal-item"><input data-proposal-check="${index}" type="checkbox" ${state.proposalChecks[index] ? "checked" : ""}><span><strong>${item[0]}</strong><p>${item[1]}</p></span></label>`).join("")}
+            </div>
+            <div class="proposal-actions"><button class="btn" data-action="ai-preview" type="button">查看完整差异</button><button class="btn purple" data-action="ai-apply" type="button" ${selectedCount ? "" : "disabled"}>应用已选 ${selectedCount} 项</button></div>
+          </section>` : `<section class="ai-status card"><div class="status-line"><span class="success-icon">✓</span><span>模板结构已读取</span></div><p style="margin-top:9px;color:var(--muted);font-size:12px;line-height:1.55">AI 会同时检查章节目标、题目证据、分析方法与输出组件。</p></section>`}
+        </div>
       </aside>`;
     }
 
@@ -926,18 +1258,59 @@
     }
 
     function chapterSide() {
-      return `<aside class="side"><div class="side-head"><span class="side-title">报告章节</span><button class="btn small" data-action="add-chapter" type="button">＋ 添加章节</button></div><div class="outline">${state.chapters.map((title, i) => `<button class="outline-item ${i === state.chapter ? "active" : ""}" data-chapter="${i}" type="button"><span class="outline-num">${i + 1}</span><span><span class="outline-label">${esc(title)}</span><span class="outline-meta">${i === 0 ? "3 个问题｜3 个模块" : "4 个问题｜2 个模块"}</span></span></button>`).join("")}<button class="btn dashed" data-action="add-chapter" type="button">＋ 添加章节</button></div></aside>`;
+      return `<aside class="side template-side"><div class="side-head"><span class="side-title">报告章节</span><button class="btn small" data-action="add-chapter" type="button">＋ 添加</button></div><div class="outline">${state.chapters.map((chapter, i) => `<button class="outline-item ${i === state.chapter ? "active" : ""}" data-chapter="${i}" type="button"><span class="outline-num">${String(i + 1).padStart(2,"0")}</span><span><span class="outline-label">${esc(chapter.title)}</span><span class="outline-meta">${esc(chapter.method)} · ${chapter.core.length} 核心题 · ${chapter.outputs.length} 输出</span></span></button>`).join("")}<button class="btn dashed" data-action="add-chapter" type="button">＋ 添加分析章节</button></div></aside>`;
+    }
+
+    function questionChip(questionIndex) {
+      const question = state.questions[questionIndex];
+      return `<span class="question-chip"><b>Q${questionIndex + 1}</b><span>${esc(question.title)}</span></span>`;
     }
 
     function templateMain() {
       const chapter = state.chapters[state.chapter];
-      return `<main class="main"><div class="main-inner">
-        <div class="section-head"><div><span class="eyebrow">报告模板</span><h1>${esc(chapter)}</h1><p class="subcopy">AI 已将问卷内容整理为报告章节，并为每个章节配置输出模块。</p></div><button class="btn" data-action="chapter-settings" type="button">章节设置</button></div>
-        ${state.chapterSettingsOpen ? `<section class="card setting-panel"><div class="section-head"><h3>章节设置</h3><button class="btn small" data-action="chapter-settings" type="button">完成</button></div><div class="setting-list"><div class="field"><label>章节名称</label><input type="text" value="${esc(chapter)}"></div><label class="check"><input type="checkbox" checked> 允许 AI 自动改写本章</label></div></section>` : ""}
-        <section class="card setting-panel"><button class="btn ghost" style="width:100%;justify-content:space-between;padding:0" data-action="source-toggle" type="button"><strong>题目来源（3）</strong><span>${state.templateSourcesOpen ? "⌃" : "⌄"}</span></button>${state.templateSourcesOpen ? `<div class="source-list"><div class="source-row"><strong>Q01</strong><span>性别</span></div><div class="source-row"><strong>Q02</strong><span>年级</span></div><div class="source-row"><strong>Q03</strong><span>是否独生子女</span></div></div>` : ""}</section>
-        <div class="toolbar"><div class="actions"><button class="btn small ${state.module === "chart" ? "primary" : ""}" data-module="chart" type="button">图表</button><button class="btn small ${state.module === "image" ? "primary" : ""}" data-module="image" type="button">图片</button><button class="btn small ${state.module === "text" ? "primary" : ""}" data-module="text" type="button">文本</button></div><div class="actions"><button class="btn small" data-action="template-preview" type="button">预览</button><button class="btn small" data-action="auto-layout" type="button">自动排版</button></div></div>
-        <section class="template-canvas card"><div class="module-grid"><article class="module card"><div class="section-head"><h3>学生基础信息分布</h3><span class="chip">8 列 × 5 行</span></div><p class="subcopy" style="margin-top:4px">样本量：n = 120</p><div class="bars">${[38,62,76,96,88,66].map((h,i)=>`<span class="bar-group"><i class="bar" style="height:${h}%"></i><i class="bar alt" style="height:${Math.max(h-10,20)}%"></i></span>`).join("")}</div></article><article class="module card"><div class="section-head"><h3>生源性别分布</h3><button class="btn icon small ghost" data-action="module-menu" type="button" aria-label="模块菜单">⋯</button></div><div class="donut"></div><p style="text-align:center;color:var(--muted)">男生 53.4%　女生 46.6%</p></article></div><article class="finding card"><h3>基础信息分析结论</h3><p class="subcopy">各年级男女比例较为接近，整体分布均衡，未见显著性别差异。</p></article></section>
+      return `<main class="main template-main"><div class="main-inner">
+        <header class="template-header"><div class="template-header-copy"><div class="template-header-title"><strong>报告模板 · ${surveyTitle}</strong><span class="template-status">${state.templateSaved ? "已保存" : "有未保存修改"}</span></div></div><div class="actions"><button class="btn" data-action="template-preview" type="button">预览报告结构</button><button class="btn primary" data-action="save-template" type="button">保存模板</button></div></header>
+        <section class="template-overview card"><div><h1>商品反馈诊断报告</h1><p>为咨询顾问与咨询公司领导设计。章节可自由组合题目与分析维度，同一题目可在多个章节重复使用。</p><div class="template-overview-meta"><span class="chip purple">管理层导向</span><span class="chip purple">多维交叉分析</span><span class="chip">${state.chapters.length} 个章节</span><span class="chip">${state.chapters.reduce((sum,item)=>sum+item.outputs.length,0)} 个输出组件</span></div></div><button class="btn" data-action="professional-framework" type="button">使用专业报告框架</button></section>
+        <section class="analysis-unit card">
+          <div class="analysis-unit-head"><div class="analysis-unit-title"><span class="analysis-index">${String(state.chapter + 1).padStart(2,"0")}</span><div><h2>章节分析单元</h2><span class="outline-meta">目标、证据、分析方法与输出在一个单元内配置</span></div></div><div class="actions"><button class="btn small" data-action="duplicate-chapter" type="button">复制章节</button><button class="btn small danger" data-action="delete-chapter" type="button">删除</button></div></div>
+          <div class="analysis-unit-body">
+            <div class="analysis-fields"><div class="field"><label>章节标题</label><input data-template-title type="text" value="${esc(chapter.title)}"></div><div class="field"><label>分析方法</label><select data-template-method>${["交叉分析","驱动因素分析","分层对比","趋势分析","主题编码","描述性统计"].map(method=>`<option ${method===chapter.method?"selected":""}>${method}</option>`).join("")}</select></div><div class="field objective"><label>分析目标</label><textarea data-template-objective>${esc(chapter.objective)}</textarea></div></div>
+            <div class="question-source-grid">
+              <section class="source-group"><div class="source-group-head"><div><h3>核心问题</h3><p>直接回答本章关键业务问题，可选择一道或多道。</p></div><button class="btn small" data-action="open-question-picker" data-question-role="core" type="button">＋ 选择题目</button></div><div class="question-chips">${chapter.core.map(questionChip).join("")}</div></section>
+              <section class="source-group"><div class="source-group-head"><div><h3>分组与解释维度</h3><p>用于人群切片、交叉对比或解释结果。</p></div><button class="btn small" data-action="open-question-picker" data-question-role="dimensions" type="button">＋ 选择维度</button></div><div class="question-chips">${chapter.dimensions.map(questionChip).join("")}</div></section>
+            </div>
+            <div class="reuse-note" style="margin-top:10px">同一道题可在不同章节中重复使用，系统会保留每处独立的分析提示。</div>
+            <section class="unit-section"><div class="unit-section-head"><div><h3>章节输出</h3><p>组合文本、图表与表格，分别定义生成目的和提示。</p></div><button class="btn small purple" data-action="open-output-picker" type="button">＋ 添加输出</button></div><div class="output-list">${chapter.outputs.map((output,index)=>`<div class="output-row"><span class="output-icon">${output.icon}</span><div><span class="output-type">${esc(output.type)}</span><div class="output-title">${esc(output.title)}</div></div><div class="output-prompt">${esc(output.prompt)}</div><button class="btn icon small ghost" data-action="edit-output" data-output-index="${index}" type="button" aria-label="编辑输出">⋯</button></div>`).join("")}</div></section>
+            <section class="unit-section template-prompt"><div class="unit-section-head"><div><h3>本章生成提示</h3><p>控制分析口径、表达顺序与证据边界，生成报告时按本章执行。</p></div><button class="btn small" data-action="improve-prompt" type="button">AI 优化提示</button></div><div class="field" style="margin-top:10px"><textarea data-template-prompt>${esc(chapter.generationPrompt)}</textarea></div></section>
+          </div>
+        </section>
       </div></main>`;
+    }
+
+    function templateOverlay() {
+      const chapter = state.chapters[state.chapter];
+      if (state.questionPickerOpen) {
+        const current = chapter[state.questionPickerRole];
+        return `<div class="modal-layer template-modal"><section class="template-dialog card" role="dialog" aria-modal="true"><header class="template-dialog-head"><div><h2>选择${state.questionPickerRole === "core" ? "核心问题" : "分组与解释维度"}</h2><p class="subcopy" style="margin-top:4px">题目可以被多个章节重复使用，不会从其他章节移除。</p></div><button class="btn icon ghost" data-action="close-template-modal" type="button" aria-label="关闭">×</button></header><div class="template-dialog-body"><div class="question-picker-list">${state.questions.map((question,index)=>{const uses=state.chapters.filter(item=>item.core.includes(index)||item.dimensions.includes(index)).length;return `<label class="picker-row"><input data-picker-question="${index}" type="checkbox" ${current.includes(index)?"checked":""}><strong>Q${index+1}</strong><span>${esc(question.title)}</span><span class="chip">${esc(question.type)}</span><span class="reuse">${uses ? `已用于 ${uses} 个章节` : "尚未使用"}</span></label>`}).join("")}</div><div class="actions" style="justify-content:flex-end;margin-top:16px"><button class="btn" data-action="close-template-modal" type="button">取消</button><button class="btn purple" data-action="confirm-question-picker" type="button">确认选择</button></div></div></section></div>`;
+      }
+      if (state.outputPickerOpen) {
+        const choices = [
+          ["T","管理层结论","先结论后证据，适合章节开头。"],
+          ["#","指标卡","展示核心指标、变化或目标差距。"],
+          ["▥","堆叠条形图","适合类别题按人群维度做占比对比。"],
+          ["▦","交叉分析表","适合查看两个分类变量的完整分布。"],
+          ["⊞","优先级矩阵","按影响程度与当前表现确定优先级。"],
+          ["→","行动建议","将洞察转换为责任清晰的行动项。"]
+        ];
+        return `<div class="modal-layer template-modal"><section class="template-dialog card" role="dialog" aria-modal="true"><header class="template-dialog-head"><div><h2>添加章节输出</h2><p class="subcopy" style="margin-top:4px">系统会根据当前题型与维度生成适用提示，仍可在章节内继续修改。</p></div><button class="btn icon ghost" data-action="close-template-modal" type="button" aria-label="关闭">×</button></header><div class="template-dialog-body"><div class="output-picker-grid">${choices.map((choice,index)=>`<button class="output-choice" data-action="choose-output" data-output-choice="${index}" type="button"><span class="output-icon">${choice[0]}</span><h3>${choice[1]}</h3><p>${choice[2]}</p><span class="reuse-note" style="margin-top:9px">与当前题目兼容</span></button>`).join("")}</div></div></section></div>`;
+      }
+      if (state.templateDiffOpen) {
+        return `<div class="modal-layer template-modal"><section class="template-dialog card" role="dialog" aria-modal="true"><header class="template-dialog-head"><div><span class="eyebrow">AI 变更预览</span><h2 style="margin-top:8px">不同用户群的购买驱动差异</h2></div><button class="btn icon ghost" data-action="close-template-modal" type="button" aria-label="关闭">×</button></header><div class="template-dialog-body"><div class="diff-grid"><section class="diff-column"><strong>当前模板</strong><ul><li>购买动机只在综合章节中呈现</li><li>Q1 与 Q2 未做交叉分析</li><li>输出以总体占比为主</li></ul></section><section class="diff-column after"><strong>应用后</strong><ul><li>新增独立的用户分层章节</li><li>复用 Q1、Q2、Q6 形成证据链</li><li>增加堆叠条形图和管理层结论</li></ul></section></div><section class="card" style="margin-top:12px;padding:14px"><h3>生成提示</h3><p class="subcopy">以 Q1 为分组维度，对比 Q2 各购买原因和 Q6 复购意愿；先呈现结论，再解释差异和业务意义，并标注每组样本量。</p></section><div class="actions" style="justify-content:flex-end;margin-top:16px"><button class="btn" data-action="close-template-modal" type="button">返回修改</button><button class="btn purple" data-action="apply-from-diff" type="button">应用已选变更</button></div></div></section></div>`;
+      }
+      if (state.templatePreviewOpen) {
+        return `<div class="modal-layer template-modal"><section class="template-dialog card" role="dialog" aria-modal="true"><header class="template-dialog-head"><div><span class="eyebrow">报告结构预览</span><h2 style="margin-top:8px">商品反馈诊断报告</h2></div><button class="btn icon ghost" data-action="close-template-modal" type="button" aria-label="关闭">×</button></header><div class="template-dialog-body"><p class="subcopy" style="margin-top:0">报告将按照以下章节顺序生成。每章独立检索题目证据，并执行已配置的分析与输出提示。</p><div class="outline" style="padding:14px 0 0">${state.chapters.map((item,index)=>`<section class="picker-row" style="grid-template-columns:46px minmax(0,1fr) 110px 100px"><strong>${String(index+1).padStart(2,"0")}</strong><span><strong>${esc(item.title)}</strong><span class="outline-meta">${esc(item.objective)}</span></span><span class="chip">${esc(item.method)}</span><span class="reuse">${item.outputs.length} 个输出</span></section>`).join("")}</div></div></section></div>`;
+      }
+      return "";
     }
 
     function publishSide() {
@@ -979,18 +1352,49 @@
     }
 
     function reportSide() {
-      const statuses = ["已生成","已生成","已生成","生成失败","生成中 70%","生成中 40%","待生成","待生成"];
       const chapters = ["执行摘要", "基础信息画像", "学习习惯与课堂表现", "校园纪律与行为规范", "同伴关系与心理健康", "生活方式与电子产品使用", "安全认知与自我保护", "建议与行动"];
-      return `<aside class="side"><div class="side-head"><span class="side-title">报告目录</span><button class="btn icon ghost" data-action="collapse-side" type="button" aria-label="收起报告目录">«</button></div><div class="outline">${chapters.map((x,i)=>`<button class="outline-item ${i===state.reportChapter?"active":""}" data-action="select-report-chapter" data-report-chapter="${i}" type="button"><span class="outline-num">${i+1}</span><span><span class="outline-label">${x}</span><span class="outline-meta" style="color:${statuses[i].includes("失败")?"var(--orange)":statuses[i].includes("已生成")?"var(--green)":"var(--muted)"}">${statuses[i]}</span></span></button>`).join("")}</div></aside>`;
+      const types = ["管理层摘要", "样本分层", "驱动分析", "风险诊断", "关系网络", "行为关联", "能力评估", "行动路线图"];
+      return `<aside class="side report-side"><div class="side-head"><span class="side-title">报告目录</span><button class="btn icon ghost" data-action="collapse-side" type="button" aria-label="收起报告目录">«</button></div><div class="outline">${chapters.map((x,i)=>`<button class="outline-item ${i===state.reportChapter?"active":""}" data-action="select-report-chapter" data-report-chapter="${i}" type="button"><span class="outline-num">${i+1}</span><span><span class="outline-label">${x}</span><span class="outline-meta">${types[i]}</span></span></button>`).join("")}</div></aside>`;
     }
 
     function reportMain() {
-      const chapters = ["执行摘要", "基础信息画像", "学习习惯与课堂表现", "校园纪律与行为规范", "同伴关系与心理健康", "生活方式与电子产品使用", "安全认知与自我保护", "建议与行动"];
-      const chapterTitle = chapters[state.reportChapter];
-      return `<main class="main"><div class="main-inner" style="max-width:1120px">
-        <div class="section-head"><h1 style="margin:0">分析报告</h1><div class="actions"><button class="btn" data-action="regenerate" type="button">重新生成</button><button class="btn" data-action="export-report" type="button">导出⌄</button><button class="btn primary" data-action="full-report" type="button">生成完整报告</button></div></div>
-        <section class="report-progress card"><strong>总进度　6/8</strong><div class="progress-bars">${Array.from({length:8},(_,i)=>`<span class="${i<6?"done":i===6?"working":""}"></span>`).join("")}</div><span style="color:var(--muted)">预计还需 3–5 分钟</span></section>
-        <section class="report-paper card"><div class="section-head"><div><span class="eyebrow">第 ${state.reportChapter + 1} 章</span><h2 style="margin-top:8px">${chapterTitle}</h2></div><div class="actions"><button class="btn small" data-action="rewrite" type="button">AI 改写</button><button class="btn small" data-action="edit-report" type="button">${state.reportEditing ? "完成编辑" : "编辑"}</button><button class="btn small" data-action="regenerate" type="button">重新生成</button></div></div><p class="subcopy ${state.reportEditing ? "editable" : ""}" contenteditable="${state.reportEditing}">本章基于 118 份有效回收样本，呈现学生在性别、年级、生源性别分布等基础特征。</p><div class="report-kpis"><div class="report-kpi card"><span class="metric-label">有效样本</span><div class="metric-value">118 <small>人</small></div></div><div class="report-kpi card"><span class="metric-label">完成率</span><div class="metric-value">94.4%</div></div><div class="report-kpi card"><span class="metric-label">平均用时</span><div class="metric-value">4分32秒</div></div></div><div class="module-grid" style="margin-top:12px"><article class="module card"><h3>学生基础信息分布</h3><div class="bars">${[38,62,76,96,88,66].map((h)=>`<span class="bar-group"><i class="bar" style="height:${h}%"></i><i class="bar alt" style="height:${Math.max(h-10,20)}%"></i></span>`).join("")}</div></article><article class="module card"><h3>生源性别分布</h3><div class="donut"></div></article></div><article class="finding card ${state.reportEditing ? "editable" : ""}" contenteditable="${state.reportEditing}"><h3>关键发现</h3><ul><li>性别分布较为均衡，差异在样本范围内较小。</li><li>四年级样本量相对较高，可重点关注该年级群体的行为与发展特征。</li><li>低年级样本量偏少，跨年级比较时需结合实际样本量审慎判断。</li></ul></article></section>
+      const chapter = (index, title, lead, body) => `<section class="report-chapter" id="report-chapter-${index}" data-report-section="${index}"><header class="report-chapter-head"><span class="report-chapter-index">${String(index + 1).padStart(2,"0")}</span><div><h2>${title}</h2><p class="report-chapter-lead">${lead}</p></div></header>${body}</section>`;
+      const barChart = (values, labels) => `<div class="report-bars">${values.map((value,index)=>`<span style="height:${value}%" data-label="${labels[index]}"></span>`).join("")}</div>`;
+      return `<main class="main report-main"><div class="main-inner">
+        <header class="report-toolbar"><div><h1>商品反馈问卷分析报告</h1><p>完整报告 · 2026 年 7 月 31 日</p></div><div class="actions"><button class="btn" data-action="regenerate" type="button">重新生成</button><button class="btn" data-action="export-report" type="button">导出</button><button class="btn primary" data-action="rewrite" type="button">AI 修订报告</button></div></header>
+        <article class="report-document">
+          <header class="report-cover">
+            <span class="report-kicker">BoardX Survey · Diagnostic Report</span>
+            <h2>小学生成长与行为习惯诊断报告</h2>
+            <p class="report-cover-summary">本报告面向学校管理者与教育咨询团队，从学生画像、学习行为、纪律规范、同伴关系、数字生活和安全能力六个维度识别关键差异，并形成可执行的管理优先级。</p>
+            <div class="report-method"><div class="report-method-item"><span>有效样本</span><strong>118 份</strong></div><div class="report-method-item"><span>覆盖年级</span><strong>1–6 年级</strong></div><div class="report-method-item"><span>完成率</span><strong>94.4%</strong></div><div class="report-method-item"><span>分析口径</span><strong>交叉分析 + 主题编码</strong></div></div>
+          </header>
+          ${chapter(0, "执行摘要", "聚焦最影响学生成长质量的三项判断，并给出管理层应优先采取的行动。", `
+            <div class="report-insight-grid"><article class="report-insight"><span>首要优势</span><strong>学习投入稳定</strong><p>74% 的学生保持规律作业节奏，高年级自主管理表现更突出。</p></article><article class="report-insight"><span>主要风险</span><strong>晚间屏幕暴露</strong><p>约三成学生在睡前持续使用电子产品，与次日课堂专注度显著相关。</p></article><article class="report-insight"><span>优先机会</span><strong>同伴支持机制</strong><p>低归属感群体更依赖老师介入，需要建立稳定的同伴互助触点。</p></article></div>
+            <div class="report-callout"><strong>管理层结论</strong>建议未来一个学期围绕“作息管理、同伴支持、安全情境训练”建立三条干预主线，并按年级配置不同强度的行动方案。</div>`)}
+          ${chapter(1, "基础信息画像", "识别不同年级、家庭结构与通勤方式下的学生群体差异，为后续分析建立分层基线。", `
+            <div class="report-evidence-grid"><article class="report-evidence"><h3>年级与家庭结构分布</h3><p class="report-evidence-caption">样本量与主要家庭结构的交叉分布</p>${barChart([44,58,71,89,82,64],["一年级","二年级","三年级","四年级","五年级","六年级"])}</article><article class="report-evidence"><h3>稳定照护占比</h3><p class="report-evidence-caption">工作日主要照护者保持稳定</p><div class="report-ring" data-value="81%"></div></article></div>
+            <div class="report-callout"><strong>画像启示</strong>四、五年级样本具有较强代表性；一年级跨群体比较应控制样本量影响。隔代照护学生在作息监督与数字设备规则上呈现更高差异。</div>`)}
+          ${chapter(2, "学习习惯与课堂表现", "从作业节奏、课堂参与和自主复盘三个变量解释学习投入的形成机制。", `
+            <div class="report-insight-grid"><article class="report-insight"><span>规律完成作业</span><strong>74%</strong><p>是课堂专注度最稳定的正向关联因素。</p></article><article class="report-insight"><span>主动提问</span><strong>42%</strong><p>中年级达到峰值，高年级更倾向课后求助。</p></article><article class="report-insight"><span>每周自主复盘</span><strong>36%</strong><p>表现优秀群体的复盘频率约为其他群体的 1.8 倍。</p></article></div>
+            <div class="report-evidence-grid"><article class="report-evidence"><h3>学习行为驱动强度</h3><p class="report-evidence-caption">对课堂专注表现的相对解释度</p>${barChart([86,68,57,44,31],["作业规律","睡眠充足","主动提问","家长提醒","课外补习"])}</article><article class="report-evidence"><h3>干预优先级</h3><div class="report-matrix"><div><strong>优先巩固</strong><br>作业节奏与睡眠</div><div><strong>重点培养</strong><br>自主复盘</div><div><strong>持续观察</strong><br>课外补习负担</div><div><strong>个别支持</strong><br>课堂表达焦虑</div></div></article></div>`)}
+          ${chapter(3, "校园纪律与行为规范", "区分偶发行为和持续性风险，识别纪律问题背后的场景触发因素。", `
+            <div class="report-evidence-grid"><article class="report-evidence"><h3>高频触发场景</h3><p class="report-evidence-caption">报告过至少一次规则冲突的学生占比</p>${barChart([64,51,43,29,18],["课间活动","排队集合","小组任务","午休","校外活动"])}</article><article class="report-evidence"><h3>风险集中度</h3><p class="report-evidence-caption">少数学生贡献多数重复事件</p><div class="report-ring" data-value="23%"></div></article></div>
+            <div class="report-callout"><strong>风险判断</strong>纪律问题主要集中在非结构化时段，而非课堂规则理解不足。建议优先改善课间与集合场景的空间组织和成人可见度。</div>`)}
+          ${chapter(4, "同伴关系与心理健康", "从归属感、求助路径与冲突恢复能力评估学生的社会支持网络。", `
+            <div class="report-insight-grid"><article class="report-insight"><span>班级归属感</span><strong>78%</strong><p>多数学生能找到稳定同伴，但低归属群体集中于转学和新入班学生。</p></article><article class="report-insight"><span>遇事主动求助</span><strong>61%</strong><p>女生更倾向向老师求助，男生更倾向同伴内部解决。</p></article><article class="report-insight"><span>冲突后可恢复</span><strong>69%</strong><p>具备固定同伴支持的学生恢复速度明显更快。</p></article></div>
+            <div class="report-quote-list"><blockquote class="report-quote">“遇到不开心的事情时，我希望先有一个同学听我说完，再决定要不要找老师。”</blockquote><blockquote class="report-quote">“小组固定分配时容易被忽略，希望老师偶尔调整搭档。”</blockquote></div>
+            <div class="report-callout"><strong>支持策略</strong>建立新生伙伴制与匿名求助入口，并训练班主任识别“低互动但高压力”的隐性风险学生。</div>`)}
+          ${chapter(5, "生活方式与电子产品使用", "检验睡眠、运动与屏幕使用之间的关联，定位最具可操作性的家庭协同议题。", `
+            <div class="report-evidence-grid"><article class="report-evidence"><h3>晚间屏幕时长与次日专注</h3><p class="report-evidence-caption">屏幕使用越长，低专注比例持续上升</p>${barChart([29,42,58,76],["≤30分钟","30–60分钟","1–2小时","≥2小时"])}</article><article class="report-evidence"><h3>每日运动达标</h3><p class="report-evidence-caption">达到 60 分钟中高强度活动</p><div class="report-ring" data-value="56%"></div></article></div>
+            <div class="report-callout"><strong>家庭协同机会</strong>不建议只强调“减少屏幕时间”，应将设备停用时间与固定睡眠流程绑定，并提供家长可执行的晚间规则模板。</div>`)}
+          ${chapter(6, "安全认知与自我保护", "评估学生在交通、陌生人接触、网络信息与校园突发情境中的实际应对能力。", `
+            <div class="report-insight-grid"><article class="report-insight"><span>交通规则识别</span><strong>88%</strong><p>知识掌握较好，但复杂路口的情境判断仍有偏差。</p></article><article class="report-insight"><span>网络信息辨识</span><strong>54%</strong><p>高年级接触更广，但对诱导链接和隐私索取警觉不足。</p></article><article class="report-insight"><span>主动求助路径</span><strong>72%</strong><p>多数学生知道向谁求助，但在同伴压力场景中执行率下降。</p></article></div>
+            <div class="report-evidence-grid"><article class="report-evidence"><h3>能力缺口分布</h3>${barChart([31,46,64,38],["交通情境","网络隐私","陌生人应对","校园突发"])}</article><article class="report-evidence"><h3>训练方式建议</h3><div class="report-matrix"><div><strong>情境演练</strong><br>网络隐私与陌生人接触</div><div><strong>知识复习</strong><br>交通规则</div><div><strong>同伴协作</strong><br>校园突发事件</div><div><strong>家校共练</strong><br>紧急联系人路径</div></div></article></div>`)}
+          ${chapter(7, "建议与行动", "将分析发现转化为分阶段、可负责、可衡量的学校行动路线图。", `
+            <table class="report-actions-table"><thead><tr><th>优先级</th><th>行动主题</th><th>关键举措</th><th>责任角色</th><th>验证指标</th></tr></thead><tbody><tr><td><span class="chip purple">P0</span></td><td><strong>健康作息</strong></td><td>发布家庭晚间设备规则模板，开展两周睡眠挑战</td><td>德育处 / 家委会</td><td>睡前屏幕暴露下降 20%</td></tr><tr><td><span class="chip purple">P0</span></td><td><strong>同伴支持</strong></td><td>建立新生伙伴制和班级匿名求助入口</td><td>班主任 / 心理教师</td><td>低归属感群体下降 15%</td></tr><tr><td><span class="chip">P1</span></td><td><strong>安全训练</strong></td><td>按年级开展网络隐私与突发情境演练</td><td>安全办 / 信息教师</td><td>情境题正确率达到 80%</td></tr></tbody></table>
+            <div class="report-callout"><strong>90 天推进节奏</strong>第 1–2 周完成基线沟通与责任人确认，第 3–8 周执行三项重点干预，第 9–12 周复测关键指标并向管理层提交成效复盘。</div>`)}
+        </article>
       </div></main>`;
     }
 
@@ -1030,7 +1434,7 @@
         responses: [responseSide(), responsesMain(), aiPanel("responses")],
         report: [reportSide(), reportMain(), aiPanel("report")]
       }[state.step];
-      workspace.innerHTML = rail() + (state.sideCollapsed ? "" : pieces[0]) + pieces[1] + pieces[2];
+      workspace.innerHTML = rail() + (state.sideCollapsed ? "" : pieces[0]) + pieces[1] + pieces[2] + (state.step === "template" ? templateOverlay() : "");
       workspace.style.gridTemplateColumns = state.sideCollapsed ? "56px minmax(540px,1fr) 318px" : "";
       bind();
       $(".main").scrollTop = 0;
@@ -1066,6 +1470,27 @@
       $$("[data-chapter]").forEach(el => el.onclick = () => { state.chapter = Number(el.dataset.chapter); render(); });
       $$("[data-response]").forEach(el => el.onclick = () => { state.response = Number(el.dataset.response); state.responseDetailOpen = true; render(); });
       $$("[data-module]").forEach(el => el.onclick = () => { state.module = el.dataset.module; toast(`已切换为${el.textContent}模块`); render(); });
+      $$("[data-proposal-check]").forEach(el => el.onchange = () => {
+        state.proposalChecks[Number(el.dataset.proposalCheck)] = el.checked;
+        renderPreservingScroll();
+      });
+      $$("[data-template-title]").forEach(el => el.oninput = event => {
+        state.chapters[state.chapter].title = event.target.value;
+        state.templateSaved = false;
+      });
+      $$("[data-template-objective]").forEach(el => el.oninput = event => {
+        state.chapters[state.chapter].objective = event.target.value;
+        state.templateSaved = false;
+      });
+      $$("[data-template-method]").forEach(el => el.onchange = event => {
+        state.chapters[state.chapter].method = event.target.value;
+        state.templateSaved = false;
+        renderPreservingScroll();
+      });
+      $$("[data-template-prompt]").forEach(el => el.oninput = event => {
+        state.chapters[state.chapter].generationPrompt = event.target.value;
+        state.templateSaved = false;
+      });
       $$("[data-segment-group] .segment").forEach(el => el.onclick = () => { $$(".segment", el.parentElement).forEach(x => x.classList.remove("active")); el.classList.add("active"); markDirty(); });
       $$("[data-action]").forEach(el => el.addEventListener("click", () => handleAction(el.dataset.action, el)));
       $$("[data-preview-input]").forEach(element => {
@@ -1158,6 +1583,42 @@
       const text = $("#previewProgressText");
       if (progress) progress.value = answered;
       if (text) text.textContent = `${answered} / ${state.questions.length}`;
+    }
+
+    function applyTemplateProposal() {
+      const checks = state.proposalChecks;
+      let target = state.chapters.findIndex(chapter => chapter.title === "不同用户群的购买驱动差异");
+      if (checks[0] && target === -1) {
+        state.chapters.splice(1, 0, {
+          title: "不同用户群的购买驱动差异",
+          objective: "比较首次、偶尔和经常使用者的购买驱动与复购倾向，为分层沟通和产品策略提供依据。",
+          method: "交叉分析",
+          core: checks[1] ? [1, 5] : [1],
+          dimensions: checks[1] ? [0] : [],
+          outputs: checks[2] ? [
+            {type:"堆叠条形图",icon:"▥",title:"购买原因 × 使用经验",prompt:"以 Q1 为分组维度，展示 Q2 各购买原因的组内占比并标注样本量。"},
+            {type:"管理层结论",icon:"T",title:"分层购买驱动结论",prompt:"先总结各人群最显著的购买驱动，再解释差异及其业务意义。"}
+          ] : [{type:"管理层结论",icon:"T",title:"分层购买驱动结论",prompt:"总结不同使用经验人群的购买驱动差异。"}],
+          generationPrompt: "面向咨询项目负责人输出。对比 Q1 人群在 Q2 购买原因与 Q6 复购意愿上的差异；明确样本量和证据边界，不将相关性表述为因果。"
+        });
+        target = 1;
+      } else if (target !== -1) {
+        const chapter = state.chapters[target];
+        if (checks[1]) {
+          chapter.core = [...new Set([...chapter.core, 1, 5])];
+          chapter.dimensions = [...new Set([...chapter.dimensions, 0])];
+        }
+        if (checks[2] && !chapter.outputs.some(output => output.type === "堆叠条形图")) {
+          chapter.outputs.push({type:"堆叠条形图",icon:"▥",title:"购买原因 × 使用经验",prompt:"以 Q1 为分组维度，展示 Q2 各购买原因的组内占比并标注样本量。"});
+          chapter.outputs.push({type:"管理层结论",icon:"T",title:"分层购买驱动结论",prompt:"先总结各人群最显著的购买驱动，再解释差异及其业务意义。"});
+        }
+      }
+      if (target !== -1) state.chapter = target;
+      state.aiProposalOpen = false;
+      state.templateDiffOpen = false;
+      state.templateSaved = false;
+      render();
+      toast(`已应用 ${checks.filter(Boolean).length} 项 AI 变更，请确认后保存`);
     }
 
     function handleAction(action, element) {
@@ -1299,7 +1760,8 @@
       } else if (action === "select-report-chapter") {
         state.reportChapter = Number(element.dataset.reportChapter);
         state.reportEditing = false;
-        render();
+        $$(".report-side .outline-item").forEach((item) => item.classList.toggle("active", item === element));
+        $(`#report-chapter-${state.reportChapter}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
       } else if (action === "edit-report") {
         state.reportEditing = !state.reportEditing;
         render();
@@ -1329,11 +1791,107 @@
         render();
       } else if (action === "ai-send") {
         const input = $("#aiInput");
-        toast(input && input.value.trim() ? "AI 正在分析你的要求" : "请输入优化要求");
-      } else if (action === "ai-preview") toast("已打开 3 项变更预览");
-      else if (action === "ai-apply") { toast("AI 建议已应用"); markDirty(); }
-      else if (action === "add-chapter") { state.chapters.push(`新章节 ${state.chapters.length + 1}`); state.chapter = state.chapters.length - 1; render(); toast("已添加报告章节"); }
-      else if (action === "template-preview" || action === "open-preview") openPreview();
+        if (!input || !input.value.trim()) return toast("请输入希望 AI 调整的内容");
+        if (state.step === "template") {
+          state.aiProposalOpen = true;
+          state.proposalChecks = [true, true, true];
+          render();
+          toast("AI 已生成 3 项待确认变更");
+        } else {
+          toast("AI 正在分析你的要求");
+        }
+      } else if (action === "ai-preview") {
+        if (state.step === "template") {
+          state.templateDiffOpen = true;
+          render();
+        } else toast("已打开 3 项变更预览");
+      }
+      else if (action === "ai-apply" || action === "apply-from-diff") {
+        if (state.step === "template") {
+          applyTemplateProposal();
+        } else {
+          toast("AI 建议已应用");
+          markDirty();
+        }
+      }
+      else if (action === "add-chapter") {
+        state.chapters.push({
+          title: `新分析章节 ${state.chapters.length + 1}`,
+          objective: "说明本章需要回答的业务问题与决策目标。",
+          method: "描述性统计",
+          core: [],
+          dimensions: [],
+          outputs: [{type:"管理层结论",icon:"T",title:"章节结论",prompt:"先给出结论，再列出数据证据与业务含义。"}],
+          generationPrompt: "基于本章选定题目生成专业、审慎且可追溯的分析。"
+        });
+        state.chapter = state.chapters.length - 1;
+        state.templateSaved = false;
+        render();
+        toast("已添加分析章节");
+      }
+      else if (action === "template-preview") { state.templatePreviewOpen = true; render(); }
+      else if (action === "open-preview") openPreview();
+      else if (action === "save-template") { state.templateSaved = true; render(); toast("报告模板已保存"); }
+      else if (action === "professional-framework") { toast("专业框架已作为参考，不会覆盖当前章节"); }
+      else if (action === "duplicate-chapter") {
+        const source = state.chapters[state.chapter];
+        state.chapters.splice(state.chapter + 1, 0, JSON.parse(JSON.stringify({...source, title: `${source.title}（副本）`})));
+        state.chapter += 1;
+        state.templateSaved = false;
+        render();
+        toast("章节已复制，题目引用也已保留");
+      }
+      else if (action === "delete-chapter") {
+        if (state.chapters.length === 1) return toast("至少保留一个报告章节");
+        state.chapters.splice(state.chapter, 1);
+        state.chapter = Math.max(0, state.chapter - 1);
+        state.templateSaved = false;
+        render();
+        toast("章节已删除");
+      }
+      else if (action === "open-question-picker") {
+        state.questionPickerRole = element.dataset.questionRole;
+        state.questionPickerOpen = true;
+        render();
+      }
+      else if (action === "confirm-question-picker") {
+        state.chapters[state.chapter][state.questionPickerRole] = $$("[data-picker-question]:checked").map(input => Number(input.dataset.pickerQuestion));
+        state.questionPickerOpen = false;
+        state.templateSaved = false;
+        render();
+        toast("题目引用已更新");
+      }
+      else if (action === "open-output-picker") { state.outputPickerOpen = true; render(); }
+      else if (action === "choose-output") {
+        const choices = [
+          {type:"管理层结论",icon:"T",title:"管理层结论",prompt:"先给出一页可读的结论，再列出证据、业务含义与限制。"},
+          {type:"指标卡",icon:"#",title:"核心指标",prompt:"展示关键指标、样本量、基准与变化方向。"},
+          {type:"堆叠条形图",icon:"▥",title:"人群分组对比",prompt:"按当前维度对核心题做组内百分比对比，并标注每组样本量。"},
+          {type:"交叉分析表",icon:"▦",title:"题目交叉分析",prompt:"输出核心题与维度题的交叉分布、显著差异和数据限制。"},
+          {type:"优先级矩阵",icon:"⊞",title:"改进优先级",prompt:"按业务影响与当前表现构建优先级矩阵，并解释象限含义。"},
+          {type:"行动建议",icon:"→",title:"行动建议",prompt:"将本章洞察转化为分层、可执行、可衡量的建议。"}
+        ];
+        state.chapters[state.chapter].outputs.push(choices[Number(element.dataset.outputChoice)]);
+        state.outputPickerOpen = false;
+        state.templateSaved = false;
+        render();
+        toast("输出组件已添加，并生成了初始提示");
+      }
+      else if (action === "edit-output") { toast("可在实际实现中展开编辑输出标题、图表参数与提示"); }
+      else if (action === "improve-prompt") {
+        const chapter = state.chapters[state.chapter];
+        chapter.generationPrompt += " 输出时区分事实、解释与建议，并为每项关键判断标注题目证据。";
+        state.templateSaved = false;
+        renderPreservingScroll();
+        toast("AI 已补充证据边界与表达规范");
+      }
+      else if (action === "close-template-modal") {
+        state.questionPickerOpen = false;
+        state.outputPickerOpen = false;
+        state.templateDiffOpen = false;
+        state.templatePreviewOpen = false;
+        render();
+      }
       else if (action === "auto-layout") toast("报告画布已自动排版");
       else if (action === "copy-link") {
         const value = $("#publishUrl").value;
@@ -1385,6 +1943,13 @@
     document.addEventListener("keydown", event => {
       if (event.key !== "Escape") return;
       closePreview();
+      if (state.questionPickerOpen || state.outputPickerOpen || state.templateDiffOpen || state.templatePreviewOpen) {
+        state.questionPickerOpen = false;
+        state.outputPickerOpen = false;
+        state.templateDiffOpen = false;
+        state.templatePreviewOpen = false;
+        render();
+      }
       if (state.createModal) {
         state.createModal = false;
         render();
@@ -1393,6 +1958,7 @@
 
     const initial = location.hash.slice(1);
     if (["design","template","publish","responses","report"].includes(initial)) state.step = initial;
+    if (initial === "template") state.sideCollapsed = false;
     if (initial === "preview") {
       state.step = "design";
       state.previewing = true;
