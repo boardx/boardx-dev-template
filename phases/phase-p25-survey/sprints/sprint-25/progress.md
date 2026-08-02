@@ -165,3 +165,73 @@
   - `pnpm -w run verify:base` 81/81 tasks 通过；Harness doctor 0 FAIL / 0 WARN；verify 确认 F25 已 passing 并按不可逆规则跳过。
   - `git diff --check` 通过。
 - 下一步最佳动作: 执行 Harness doctor/verify 与基础门禁，提交并推送；逐条回复并关闭 3 条 review 线程，再对新 HEAD 触发 review。最终仅由 `usersyj` coordinator 合并。
+
+### 2026-08-01 11:15:00
+- 本轮目标: 修复真实 PostgreSQL 问卷题目 ID 类型不一致导致模板章节无法匹配，以及开放文本章节和千问 JSON 模式生成失败。
+- 已完成:
+  - 数据库字符串题目 ID 在证据入口统一归一化为数字，模板章节能够按保存的 `questionIds` 正确匹配证据。
+  - 开放文本题只生成匿名回复覆盖率证据，不向模型或报告暴露原始回答；覆盖率仅在章节没有结构化结论时兜底使用。
+  - 千问 JSON 调用统一确保消息包含 JSON 输出约束，并保留有界供应商错误详情用于诊断。
+  - 正式报告正文与证据卡去重，保留一次业务含义、一次证据结论和一次行动建议。
+  - survey 338 已成功生成 100 份有效答卷、10 个模板章节的正式报告，生成时间为 2026/08/01 11:11。
+- 运行过的验证:
+  - 报告定向单元测试 5 files / 41 tests 通过。
+  - Web typecheck 与 design lint 通过；lint 仅保留既存 phase-p17 文案语言警告。
+  - F25 Playwright 通过；Harness doctor 0 FAIL / 0 WARN。
+- 下一步最佳动作: 将本轮修复与同会话的答卷查看改动按范围审查后提交，进入 PR review 与 `usersyj` coordinator 合并门禁。
+
+### 2026-08-01 12:30:00
+- 本轮目标: 修复正式报告未强制执行已保存章节模板要求、且旧缓存产物被继续复用的问题。
+- 已完成:
+  - 文本章节生成协议新增强制 `templateExecution`，逐章执行分析目标、分析方法和输出要求；缺少管理结论、综合分析或行动建议时整章生成失败，不发布半成品。
+  - 正式报告文本章节新增结构化叙事输出，并兼容历史无叙事字段的 v1 产物读取。
+  - 报告产物版本键升级为 `template-driven-report-v2`，避免复用未执行模板要求的旧缓存。
+  - survey 338 已在已登录真实页面重新生成版本 2；10 个章节均显示管理结论、综合分析、行动建议和绑定题目证据。
+- 运行过的验证:
+  - Web 报告定向测试 5 files / 32 tests、专业报告 API 12 tests、Data 版本测试 10 tests 通过。
+  - Web 与 Data typecheck 通过；`pnpm --filter @repo/web build` 通过，仅保留既存 `supports-color` ESM warning。
+  - 真实 `POST /api/surveys/338/professional-report` 约 89 秒返回 200，页面生成时间更新为 2026/08/01 12:27、版本更新为 2。
+- 下一步最佳动作: 审查本轮报告生成契约改动后提交到 PR #824，重新执行 review/CI 门禁并由 `usersyj` coordinator 合并。
+
+### 2026-08-01 14:10:00
+- 本轮目标: 修复报告模板章节切换为图表后未保存、正式报告仍按文本生成的问题。
+- 已完成:
+  - 章节来源校验按输出类型拆分：文本章节允许开放题来源，图表章节仍强制要求可聚合的结构化题目。
+  - 模板存在未保存变更时禁用“查看分析报告”，避免用户打开仍使用旧模板快照的报告。
+  - survey 338 已真实保存“组织特征”为 `chart / line-simple`，重新生成正式报告后该章节渲染为 ECharts 画布，其余章节保持文本输出。
+- 运行过的验证:
+  - 报告定向单元测试 5 files / 28 tests、Web typecheck、design lint 通过。
+  - `pnpm --filter @repo/web build` 通过，仅保留既存 `supports-color` ESM warning。
+  - 真实 `POST /api/surveys/338/professional-report` 返回 200；报告页“组织特征”节点为 `data-output-type=chart`，包含 1 个 canvas 和 1 个 ECharts 实例。
+- 未通过边界: 旧版 F16 Playwright AI stub 未返回新版文本章节 `narrative` 契约，导致生成版本数断言失败；该 fixture 漂移与本次图表保存链路无关。
+- 下一步最佳动作: 更新 F16 AI stub 到新版叙事契约后补跑完整 E2E，再按 PR #824 review 门禁提交给 `usersyj` coordinator。
+
+### 2026-08-01 19:05:00
+- 本轮目标: 修复正式报告页面已生成 ECharts 图表、PDF 导出却降级为文本行的问题。
+- 已完成:
+  - PDF 导出改为克隆当前正式报告阅读 DOM，不再通过独立简化模板重新拼装报告。
+  - 导出前将每个 ECharts canvas 序列化为带语义标签的 PNG，等待图片解码后再打开打印流程。
+  - F19 报告 AI 测试桩补齐新版文本章节 `narrative` 契约，并新增打印页必须包含图表图片的断言。
+- 运行过的验证:
+  - `pnpm --filter @repo/web test -- report-export.test.ts`，3/3 通过；新增 canvas 到打印图片的定向回归测试。
+  - `pnpm --filter @repo/web typecheck` 通过。
+  - `pnpm --filter @repo/web lint` 通过，仅保留既存 phase-p17 文案语言警告。
+  - `pnpm --filter @repo/web build` 通过，仅保留既存 `supports-color` ESM warning。
+  - `pnpm harness doctor --phase p25`，0 FAIL / 0 WARN；`git diff --check` 通过。
+- 未通过边界: F19 Playwright 两次均在导航报告页时未找到工作台；第一次同时出现 PostgreSQL 尚未接受连接，第二次未产生页面诊断产物。失败发生在 PDF 点击前，未将其记为导出通过。
+- 下一步最佳动作: 保留定向测试与类型门禁证据；测试环境会话/数据库稳定后补跑 F19 完整浏览器流程，再进入 PR review 与 `usersyj` coordinator 合并门禁。
+
+### 2026-08-02 11:15:00
+- 本轮目标: 完成专业报告生成、图表导出、真实答卷查看和发布时段校验的最终加固，并按 Harness 流程提交 GitHub 门禁。
+- 已完成:
+  - 正式报告按已保存章节的图片、图表、文本输出类型生成；连续阅读和 PDF 打印复用同一份报告 DOM，ECharts 画布导出为图片。
+  - 章节来源校验覆盖图片与图表输出，图片章节同样必须绑定可形成匿名聚合证据的结构化题目。
+  - 发布回收关闭“立即开始”或“长期有效”后，开始/结束时间变为必填并显示字段级错误。
+  - 答卷工作台展示真实答卷列表和单份问答详情，模板版本与正式报告读取链路完成回归验证。
+  - 用户明确授权跳过本轮 coord-gateway token/lease 步骤；其余 Harness 验证、证据、GitHub Issue/PR、review 门禁继续执行。最终合并权限仍归 `usersyj` coordinator。
+- 运行过的验证:
+  - `pnpm --filter @repo/web exec vitest run lib/survey-report-category-plan.test.ts lib/survey-report-chapter-generation.test.ts lib/report-export.test.ts`，3 files / 19 tests 通过。
+  - `pnpm --filter @repo/web run typecheck` 通过。
+  - F10/F16/F19/F25 联合 Playwright，15/15 通过；包含发布时间必填、模板持久化、连续报告和 AI 模板迭代。
+  - 本轮最终改动前已通过 `pnpm -w run verify:base` 81/81 tasks、Web 全量 36 files / 204 tests、Data 版本测试 10/10 和 Harness doctor 0 FAIL / 0 WARN。
+- 下一步最佳动作: 运行最终 doctor/verify/diff-check，提交并推送 PR #824；回复并关闭当前两条 review finding，再触发新 HEAD review，由 `usersyj` coordinator 在门禁通过后合并。

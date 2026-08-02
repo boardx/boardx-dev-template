@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -35,6 +35,7 @@ import {
   moveReportCategory,
   normalizeCategoryOrder,
   updateReportCategory,
+  validateReportCategorySources,
 } from "@/lib/survey-report-category-plan";
 import { SURVEY_REPORT_CHART_TEMPLATES } from "@/lib/survey-report-chart-templates";
 import { isSurveyReportChartCompatibleQuestionType } from "@/lib/survey-report-evidence";
@@ -128,6 +129,7 @@ export function SurveyVersionedReportComposer({
 }: SurveyVersionedReportComposerProps) {
   const [draft, setDraft] = useState(plan);
   const [selectedCategoryId, setSelectedCategoryId] = useState(plan.categories[0]?.id ?? "");
+  const incomingPlanRef = useRef({ surveyId: survey.id, plan });
   const [aiSuggestion, setAiSuggestion] = useState<{
     plan: SurveyReportCategoryPlanInput;
     warning?: string;
@@ -135,6 +137,13 @@ export function SurveyVersionedReportComposer({
   const [aiInstruction, setAiInstruction] = useState("");
 
   useEffect(() => {
+    const surveyChanged = incomingPlanRef.current.surveyId !== survey.id;
+    const planChanged = !areSurveyReportCategoryPlansEqual(
+      incomingPlanRef.current.plan,
+      plan
+    );
+    if (!surveyChanged && !planChanged) return;
+    incomingPlanRef.current = { surveyId: survey.id, plan };
     setDraft(plan);
     setSelectedCategoryId((current) =>
       plan.categories.some((category) => category.id === current)
@@ -168,52 +177,7 @@ export function SurveyVersionedReportComposer({
         : `题目 ${questionId}`;
     })
     .join("、") || "当前章节所选题目";
-  const sourceValidationErrors = categories.flatMap((category) => {
-    if (!category.questionIds.length) {
-      return [{
-        categoryId: category.id,
-        message: `章节「${category.name}」至少需要选择一道分析题目。`,
-      }];
-    }
-    const unavailable = category.questionIds.filter(
-      (questionId) => !questionById.has(Number(questionId))
-    );
-    if (unavailable.length) {
-      return [{
-        categoryId: category.id,
-        message: `章节「${category.name}」包含已失效的题目引用。`,
-      }];
-    }
-    if (category.outputType === "chart") {
-      const compatible = category.questionIds.some((questionId) => {
-        const question = questionById.get(Number(questionId));
-        return question
-          ? isSurveyReportChartCompatibleQuestionType(question.type)
-          : false;
-      });
-      if (!compatible) {
-        return [{
-          categoryId: category.id,
-          message: `章节「${category.name}」需要选择至少一道可生成分布图表的题目。`,
-        }];
-      }
-    }
-    if (category.outputType === "text") {
-      const hasAggregateEvidence = category.questionIds.some((questionId) => {
-        const question = questionById.get(Number(questionId));
-        return question
-          ? isSurveyReportChartCompatibleQuestionType(question.type)
-          : false;
-      });
-      if (!hasAggregateEvidence) {
-        return [{
-          categoryId: category.id,
-          message: `章节「${category.name}」需要选择至少一道可形成匿名聚合证据的题目。`,
-        }];
-      }
-    }
-    return [];
-  });
+  const sourceValidationErrors = validateReportCategorySources(draft, questions);
   const selectedSourceValidation = sourceValidationErrors.find(
     (validation) => validation.categoryId === selectedCategory?.id
   );
@@ -544,6 +508,7 @@ export function SurveyVersionedReportComposer({
                             key={template.id}
                             type="button"
                             variant="outline"
+                            data-testid={`report-chart-template-${template.id}`}
                             aria-pressed={active}
                             disabled={draftEditingDisabled}
                             className={active
@@ -807,14 +772,26 @@ export function SurveyVersionedReportComposer({
                   {formatVersionTime(generation.latestArtifact.createdAt)}
                 </p>
               ) : null}
-              <a
-                data-testid="open-analysis-report"
-                href={`/surveys?survey=${survey.id}&step=report`}
-                className={buttonVariants({ size: "sm", variant: "outline" })}
-              >
-                <FileText className="h-4 w-4" strokeWidth={1.6} />
-                查看分析报告
-              </a>
+              {draftDirty || saving ? (
+                <Button
+                  data-testid="open-analysis-report"
+                  size="sm"
+                  variant="outline"
+                  disabled
+                >
+                  <FileText className="h-4 w-4" strokeWidth={1.6} />
+                  保存后查看报告
+                </Button>
+              ) : (
+                <a
+                  data-testid="open-analysis-report"
+                  href={`/surveys?survey=${survey.id}&step=report`}
+                  className={buttonVariants({ size: "sm", variant: "outline" })}
+                >
+                  <FileText className="h-4 w-4" strokeWidth={1.6} />
+                  查看分析报告
+                </a>
+              )}
             </div>
           </div>
 

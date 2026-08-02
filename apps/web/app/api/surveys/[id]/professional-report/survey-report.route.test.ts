@@ -100,6 +100,18 @@ function reportRequest() {
   });
 }
 
+function validTextChapterResult() {
+  return {
+    headline: "核心结论",
+    narrative: {
+      conclusion: "安全是当前样本的首要关注项。",
+      analysis: "按照模板要求比较聚合结果后，安全关注高于价格关注。",
+      recommendation: "优先验证并强化安全相关价值表达。",
+    },
+    claims: [],
+  };
+}
+
 describe("POST /api/surveys/:id/professional-report generation claim", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -178,12 +190,12 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
 
   it("lets one concurrent request call the model and returns 202 for the other", async () => {
     let releaseModel!: () => void;
-    const modelHeld = new Promise<{ claims: [] }>((resolve) => {
-      releaseModel = () => resolve({ claims: [] });
+    const modelHeld = new Promise<ReturnType<typeof validTextChapterResult>>((resolve) => {
+      releaseModel = () => resolve(validTextChapterResult());
     });
     mocks.callQwenJson
       .mockImplementationOnce(() => modelHeld)
-      .mockResolvedValueOnce({ claims: [] });
+      .mockResolvedValueOnce(validTextChapterResult());
 
     const firstResponsePromise = POST(reportRequest(), params);
     await vi.waitFor(() => {
@@ -356,7 +368,7 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
   });
 
   it("uses only the persisted plan hash even when a legacy instruction is sent", async () => {
-    mocks.callQwenJson.mockResolvedValue({ claims: [] });
+    mocks.callQwenJson.mockResolvedValue(validTextChapterResult());
 
     const first = await POST(new Request(
       "http://test.local/api/surveys/41/professional-report",
@@ -432,7 +444,7 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
       submitted_at: new Date("2026-07-18T07:30:00.000Z"),
       answers: { "11": "安全", "12": canary },
     }]);
-    mocks.callQwenJson.mockResolvedValue({ claims: [] });
+    mocks.callQwenJson.mockResolvedValue(validTextChapterResult());
 
     const response = await POST(reportRequest(), params);
 
@@ -448,6 +460,11 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
     });
     mocks.callQwenJson.mockResolvedValue({
       headline: "无效结论",
+      narrative: {
+        conclusion: "这是一个缺少证据的结论。",
+        analysis: "这是一个缺少证据的分析。",
+        recommendation: "这是一个缺少证据的建议。",
+      },
       claims: [{
         statement: "没有来源的结论",
         evidenceId: "missing-evidence",
@@ -542,7 +559,7 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
       status: "claimed",
       sessionId: "20000000-0000-4000-8000-000000000041",
     });
-    mocks.callQwenJson.mockResolvedValue({ claims: [] });
+    mocks.callQwenJson.mockResolvedValue(validTextChapterResult());
     mocks.assembleTemplateDrivenReport.mockImplementationOnce(() => {
       throw new SurveyReportChapterValidationError(
         "summary",

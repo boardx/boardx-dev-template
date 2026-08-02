@@ -5,6 +5,62 @@ import type {
   SurveyReportChartTemplateId,
   SurveyReportChartType,
 } from "@repo/data";
+import { isSurveyReportChartCompatibleQuestionType } from "./survey-report-evidence";
+
+export interface ReportCategorySourceValidationError {
+  categoryId: string;
+  message: string;
+}
+
+export function validateReportCategorySources(
+  plan: SurveyReportCategoryPlanInput,
+  questions: Array<Pick<ComposerQuestion, "id" | "title" | "type">>
+): ReportCategorySourceValidationError[] {
+  const questionById = new Map(
+    questions
+      .map((question) => [Number(question.id), question] as const)
+      .filter(([questionId]) => Number.isFinite(questionId))
+  );
+
+  return orderedReportCategories(plan).flatMap((category) => {
+    if (!category.questionIds.length) {
+      return [{
+        categoryId: category.id,
+        message: `章节「${category.name}」至少需要选择一道分析题目。`,
+      }];
+    }
+    const unavailable = category.questionIds.filter(
+      (questionId) => !questionById.has(Number(questionId))
+    );
+    if (unavailable.length) {
+      return [{
+        categoryId: category.id,
+        message: `章节「${category.name}」包含已失效的题目引用。`,
+      }];
+    }
+    if (category.outputType === "chart" || category.outputType === "image") {
+      const compatible = category.questionIds.some((questionId) => {
+        const question = questionById.get(Number(questionId));
+        return question
+          ? isSurveyReportChartCompatibleQuestionType(question.type)
+          : false;
+      });
+      if (!compatible && category.outputType === "chart") {
+        return [{
+          categoryId: category.id,
+          message: `章节「${category.name}」需要选择至少一道可生成分布图表的题目。`,
+        }];
+      }
+      if (!compatible) {
+        return [{
+          categoryId: category.id,
+          message: `章节「${category.name}」需要选择至少一道可形成匿名聚合证据的题目。`,
+        }];
+      }
+    }
+    return [];
+  });
+}
 
 export interface ComposerQuestion {
   id: number | string;

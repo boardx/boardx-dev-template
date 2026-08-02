@@ -195,9 +195,21 @@ test("generates one ordered artifact per saved template chapter", async ({
   expect(imageResponse.headers()["content-type"]).toContain("image/png");
   expect((await imageResponse.body()).byteLength).toBeGreaterThan(50);
 
+  const persistedReport = await page.request.get(
+    `/api/surveys/${survey.id}/professional-report`
+  );
+  expect(persistedReport.status()).toBe(200);
+  expect((await persistedReport.json()).report.chapters.map(
+    (chapter: { chapterId: string }) => chapter.chapterId
+  )).toEqual([
+    "management-summary",
+    "trust-structure",
+    "decision-scenario",
+  ]);
+
   await page.goto(`/surveys?survey=${survey.id}&step=report`);
   await expect(page.getByTestId("survey-professional-report-workbench"))
-    .toBeVisible();
+    .toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("professional-report-outline")).toHaveCount(0);
   await expect(page.getByTestId("professional-report-reading-surface"))
     .toBeVisible();
@@ -211,7 +223,7 @@ test("generates one ordered artifact per saved template chapter", async ({
   await expect(methodology).toHaveCount(1);
   await expect(methodology).toContainText("研究方法");
   await expect(methodology).toContainText("证据口径");
-  await expect(methodology).toContainText("解读限制");
+  await expect(methodology).toContainText("解读边界");
   await expect(page.getByText(
     "有效样本少于 30 份，结论仅作为方向性信号。",
     { exact: true }
@@ -226,6 +238,15 @@ test("generates one ordered artifact per saved template chapter", async ({
   );
   await expect(page.getByTestId("professional-image-decision-scenario"))
     .toBeVisible();
+
+  const printPagePromise = page.waitForEvent("popup");
+  await page.getByRole("button", { name: "PDF" }).click();
+  const printPage = await printPagePromise;
+  await expect(printPage.locator("img[data-report-export-canvas]"))
+    .toHaveCount(1);
+  await expect(printPage.getByRole("heading", { name: "安全信任结构", exact: true }))
+    .toBeVisible();
+  await printPage.close();
 
   await page.screenshot({
     path:

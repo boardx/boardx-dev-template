@@ -75,4 +75,33 @@ describe("buildSurveyReportEvidence", () => {
       denominator: 1,
     }));
   });
+
+  it("creates aggregate coverage evidence for text questions without exposing answers", () => {
+    const evidence = buildSurveyReportEvidence({
+      survey: {
+        title: "开放反馈",
+        description: "",
+        questions: [{
+          id: 5,
+          title: "请提出改进建议",
+          type: "text",
+          required: false,
+          options: [],
+        }],
+      },
+      responses: [
+        { id: 1, answers: { "5": "统一信息入口" } },
+        { id: 2, answers: {} },
+      ],
+    });
+
+    expect(evidence.claims).toEqual([expect.objectContaining({
+      id: "question-5-response-rate",
+      questionId: 5,
+      statement: "「请提出改进建议」收到 1 份有效文本反馈，占本次样本的 50%。",
+      value: 1,
+      denominator: 2,
+    })]);
+    expect(evidence.claims[0]?.statement).not.toContain("统一信息入口");
+  });
 });

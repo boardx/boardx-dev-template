@@ -58,7 +58,7 @@ describe("survey report source revisions", () => {
 
   it("keys artifacts by the template-driven report contract version", () => {
     expect(SURVEY_REPORT_TEMPLATE_VERSION).toBe(
-      "template-driven-report-v1"
+      "template-driven-report-v2"
     );
   });
 

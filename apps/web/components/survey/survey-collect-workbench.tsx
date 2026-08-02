@@ -73,6 +73,9 @@ export function SurveyCollectWorkbench({
     startImmediately ? "" : publishStartAt,
     noEndDate ? "" : publishEndAt,
   );
+  const missingStartDate = !startImmediately && !publishStartAt;
+  const missingEndDate = !noEndDate && !publishEndAt;
+  const settingsInvalid = missingStartDate || missingEndDate || invalidTimeRange;
   const shareUrl = survey.shareUrl || `/s/${survey.id}`;
   const feedbackIsSuccess = message.startsWith("已");
 
@@ -102,7 +105,7 @@ export function SurveyCollectWorkbench({
   }
 
   async function saveSettings() {
-    if (invalidTimeRange || saving) return;
+    if (settingsInvalid || saving) return;
     setSaving(true);
     try {
       await onSave();
@@ -129,7 +132,7 @@ export function SurveyCollectWorkbench({
           data-testid="collect-status-panel"
           className="flex flex-col gap-5 border-b border-border p-5 md:flex-row md:items-center md:justify-between md:p-6"
         >
-          <div>
+          <div data-testid="collect-workspace-intro">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-20 font-bold text-foreground">发布回收</h2>
               <Badge
@@ -213,11 +216,29 @@ export function SurveyCollectWorkbench({
                   setStartImmediately(false);
                   onPublishStartAtChange(event.target.value);
                 }}
-                aria-describedby={invalidTimeRange ? "collect-time-error" : undefined}
+                aria-invalid={missingStartDate || invalidTimeRange}
+                aria-describedby={
+                  missingStartDate
+                    ? "collect-start-time-error"
+                    : invalidTimeRange
+                      ? "collect-time-error"
+                      : undefined
+                }
               />
-              <p className="text-12 text-muted-foreground">
-                {startImmediately ? "保存后，启用回收即刻生效" : "到达该时间后开始接收答卷"}
-              </p>
+              {missingStartDate ? (
+                <p
+                  id="collect-start-time-error"
+                  role="alert"
+                  data-testid="err-collect-start-time"
+                  className="text-12 text-destructive"
+                >
+                  请选择开始时间
+                </p>
+              ) : (
+                <p className="text-12 text-muted-foreground">
+                  {startImmediately ? "保存后，启用回收即刻生效" : "到达该时间后开始接收答卷"}
+                </p>
+              )}
             </div>
 
             <div className="grid gap-2">
@@ -243,11 +264,29 @@ export function SurveyCollectWorkbench({
                   setNoEndDate(false);
                   onPublishEndAtChange(event.target.value);
                 }}
-                aria-describedby={invalidTimeRange ? "collect-time-error" : undefined}
+                aria-invalid={missingEndDate || invalidTimeRange}
+                aria-describedby={
+                  missingEndDate
+                    ? "collect-end-time-error"
+                    : invalidTimeRange
+                      ? "collect-time-error"
+                      : undefined
+                }
               />
-              <p className="text-12 text-muted-foreground">
-                {noEndDate ? "保持开放，直到手动暂停回收" : "到达该时间后自动停止接收"}
-              </p>
+              {missingEndDate ? (
+                <p
+                  id="collect-end-time-error"
+                  role="alert"
+                  data-testid="err-collect-end-time"
+                  className="text-12 text-destructive"
+                >
+                  请选择结束时间
+                </p>
+              ) : (
+                <p className="text-12 text-muted-foreground">
+                  {noEndDate ? "保持开放，直到手动暂停回收" : "到达该时间后自动停止接收"}
+                </p>
+              )}
             </div>
           </div>
 
@@ -369,7 +408,7 @@ export function SurveyCollectWorkbench({
             data-testid="save-collect-settings"
             type="button"
             onClick={() => void saveSettings()}
-            disabled={saving || invalidTimeRange}
+            disabled={saving || settingsInvalid}
             className="min-w-28 transition-colors"
           >
             {saving ? "保存中" : "保存设置"}

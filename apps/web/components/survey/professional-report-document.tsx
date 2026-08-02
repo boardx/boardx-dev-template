@@ -17,7 +17,7 @@ function LegacyProfessionalReportDocument({ report }: { report: ProfessionalSurv
   return (
     <article data-testid="professional-report-document" className="bg-background text-foreground">
       <header className="border-b border-border px-8 py-10">
-        <p className="text-11 font-semibold uppercase tracking-[0.16em] text-muted-foreground">Survey Research Report</p>
+        <p className="text-11 font-semibold uppercase text-muted-foreground">Survey Research Report</p>
         <h1 className="mt-3 max-w-4xl text-30 font-bold leading-tight">{report.title}</h1>
         <div className="mt-8 grid gap-px overflow-hidden border border-border bg-border sm:grid-cols-3">
           {[
@@ -75,7 +75,6 @@ function LegacyProfessionalReportDocument({ report }: { report: ProfessionalSurv
               </p>
               <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
                 <h2 className="text-22 font-bold">{chapter.title}</h2>
-                <p className="text-12 text-muted-foreground">有效回答 n={chapter.validResponseCount}</p>
               </div>
               {chapter.requirement ? (
                 <p className="mt-3 text-12 leading-5 text-muted-foreground">
@@ -176,27 +175,54 @@ function TemplateDrivenReportDocument({
       data-report-schema={report.schemaVersion}
       className="bg-background text-foreground"
     >
-      <header className="border-b border-border px-6 py-8 sm:px-10 sm:py-10">
-        <p className="text-11 font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          Survey Research Report
-        </p>
-        <h1 className="mt-3 max-w-4xl text-30 font-bold leading-tight">
-          {report.title}
-        </h1>
-        {report.templateSnapshot.description ? (
-          <p className="mt-3 max-w-3xl text-14 leading-6 text-muted-foreground">
-            {report.templateSnapshot.description}
-          </p>
-        ) : null}
-        <div className="mt-8 grid gap-px overflow-hidden border border-border bg-border sm:grid-cols-3">
+      <header className="relative overflow-hidden border-b border-border px-6 py-9 sm:px-10 sm:py-12">
+        <div className="absolute inset-x-0 top-0 grid h-1 grid-cols-[2fr_1fr_1fr]" aria-hidden="true">
+          <span className="bg-survey" />
+          <span className="bg-success" />
+          <span className="bg-tag-pink" />
+        </div>
+        <div className="grid gap-9 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-end">
+          <div>
+            <div className="flex items-center gap-3">
+              <span className="h-px w-9 bg-survey" aria-hidden="true" />
+              <p className="text-11 font-semibold uppercase text-survey">
+                BoardX Insight Report
+              </p>
+            </div>
+            <h1 className="mt-5 max-w-4xl text-30 font-bold leading-[1.25] sm:text-34">
+              {report.title}
+            </h1>
+            {report.templateSnapshot.description ? (
+              <p className="mt-4 max-w-3xl text-15 leading-7 text-muted-foreground">
+                {report.templateSnapshot.description}
+              </p>
+            ) : null}
+          </div>
+          <aside className="border-l-2 border-survey/70 pl-5">
+            <p className="text-10 font-semibold uppercase text-muted-foreground">
+              Research scope
+            </p>
+            <p className="mt-2 text-14 font-semibold leading-6">
+              基于真实回收数据形成的管理层研究报告
+            </p>
+            <p className="mt-2 text-12 leading-5 text-muted-foreground">
+              结论、图表与行动建议均受当前模板和证据范围约束。
+            </p>
+          </aside>
+        </div>
+        <div className="mt-10 grid border-y border-border sm:grid-cols-3">
           {[
-            ["有效样本", `${report.sample.responseCount} 份`],
-            ["问题数量", `${report.sample.questionCount} 题`],
-            ["结论强度", templateConfidenceLabel(report.sample.confidence)],
-          ].map(([label, value]) => (
-            <div key={label} className="bg-background px-4 py-3">
-              <p className="text-11 text-muted-foreground">{label}</p>
-              <p className="mt-1 text-18 font-bold">{value}</p>
+            ["有效样本", `${report.sample.responseCount} 份`, "本次研究纳入分析"],
+            ["研究问题", `${report.sample.questionCount} 题`, "覆盖问卷全部有效题目"],
+            ["结论强度", templateConfidenceLabel(report.sample.confidence), "依据样本规模综合判断"],
+          ].map(([label, value, detail], index) => (
+            <div
+              key={label}
+              className={`py-4 sm:px-5 ${index > 0 ? "border-t border-border sm:border-l sm:border-t-0" : ""}`}
+            >
+              <p className="text-10 font-semibold uppercase text-muted-foreground">{label}</p>
+              <p className="mt-1 text-22 font-bold">{value}</p>
+              <p className="mt-1 text-11 text-muted-foreground">{detail}</p>
             </div>
           ))}
         </div>
@@ -204,24 +230,28 @@ function TemplateDrivenReportDocument({
 
       <section
         data-testid="professional-report-methodology"
-        className="grid gap-6 border-b border-border px-6 py-7 sm:px-10 lg:grid-cols-2"
+        className="grid gap-7 border-b border-border bg-secondary/35 px-6 py-7 sm:px-10 lg:grid-cols-[180px_1fr_1fr]"
       >
-        <div>
-          <p className="text-11 font-semibold text-muted-foreground">研究方法</p>
+        <div className="lg:pr-5">
+          <p className="text-10 font-semibold uppercase text-survey">Research design</p>
+          <h2 className="mt-2 text-18 font-bold leading-6">研究设计与<br className="hidden lg:block" />证据边界</h2>
+        </div>
+        <div className="border-t border-border pt-3 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+          <p className="text-11 font-semibold text-foreground">研究方法</p>
           <p className="mt-2 text-13 leading-6 text-muted-foreground">
             {report.methodology.statement}
           </p>
         </div>
-        <div>
-          <p className="text-11 font-semibold text-muted-foreground">证据口径</p>
+        <div className="border-t border-border pt-3 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+          <p className="text-11 font-semibold text-foreground">证据口径</p>
           <p className="mt-2 text-13 leading-6 text-muted-foreground">
             {report.methodology.evidenceScope}
           </p>
         </div>
         {report.limitations.length ? (
-          <div className="border-l-2 border-foreground pl-4 lg:col-span-2">
-            <p className="text-11 font-semibold text-muted-foreground">解读限制</p>
-            <ul className="mt-2 grid gap-1 text-13 leading-6 text-muted-foreground">
+          <div className="border-l-2 border-tag-pink bg-background/70 px-4 py-3 lg:col-start-2 lg:col-span-2">
+            <p className="text-11 font-semibold text-foreground">解读边界</p>
+            <ul className="mt-1 grid gap-1 text-12 leading-5 text-muted-foreground">
               {report.limitations.map((limitation) => (
                 <li key={limitation}>{limitation}</li>
               ))}
@@ -233,7 +263,7 @@ function TemplateDrivenReportDocument({
       <nav
         data-testid="professional-report-chapter-nav"
         aria-label="报告章节"
-        className="flex gap-2 overflow-x-auto border-b border-border bg-background px-6 py-3 sm:px-10"
+        className="flex gap-7 overflow-x-auto border-b border-border bg-background px-6 py-4 sm:px-10"
       >
         {report.templateSnapshot.chapters
           .slice()
@@ -244,12 +274,12 @@ function TemplateDrivenReportDocument({
               data-testid={`report-chapter-link-${chapter.id}`}
               type="button"
               onClick={() => navigateToChapter(chapter.id)}
-              className="shrink-0 rounded-md border border-border bg-background px-3 py-2 text-left transition-colors hover:border-survey/40 hover:bg-survey/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-survey/40"
+              className="group shrink-0 border-b-2 border-transparent pb-2 text-left transition-colors hover:border-survey focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-survey/40"
             >
-              <span className="block text-10 font-semibold text-muted-foreground">
+              <span className="block text-10 font-semibold text-survey">
                 {String(index + 1).padStart(2, "0")}
               </span>
-              <span className="mt-0.5 block max-w-44 truncate text-12 font-semibold text-foreground">
+              <span className="mt-0.5 block max-w-44 truncate text-12 font-semibold text-muted-foreground transition-colors group-hover:text-foreground">
                 {chapter.title}
               </span>
             </button>
@@ -262,46 +292,77 @@ function TemplateDrivenReportDocument({
           key={chapter.chapterId}
           data-testid={`professional-report-chapter-${chapter.chapterId}`}
           data-output-type={chapter.outputType}
-          className="scroll-mt-24 break-inside-avoid border-b border-border px-6 py-8 last:border-b-0 sm:px-10 sm:py-10"
+          className="scroll-mt-24 break-inside-avoid border-b border-border px-6 py-10 last:border-b-0 sm:px-10 sm:py-12"
         >
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-11 font-semibold text-muted-foreground">
+          <div className="grid gap-6 lg:grid-cols-[118px_minmax(0,1fr)]">
+            <div className="border-t-2 border-survey pt-3">
+              <p className="text-10 font-semibold uppercase text-survey">
                 {String(index + 1).padStart(2, "0")} / {
                   chapter.outputType === "chart"
-                    ? "数据图表"
+                    ? "Exhibit"
                     : chapter.outputType === "image"
-                      ? "研究视觉"
-                      : "分析结论"
+                      ? "Visual"
+                      : "Insight"
                 }
               </p>
-              <h2 className="mt-2 text-22 font-bold">{chapter.title}</h2>
-            </div>
-            {chapter.outputType === "chart" ? (
-              <p className="text-12 text-muted-foreground">
-                有效回答 n={chapter.sampleSize}
+              <p className="mt-2 text-11 leading-5 text-muted-foreground">
+                {chapter.outputType === "chart"
+                  ? "数据证据"
+                  : chapter.outputType === "image"
+                    ? "研究视觉"
+                    : "管理洞察"}
               </p>
-            ) : null}
+            </div>
+            <div>
+              <p className="text-10 font-semibold uppercase text-muted-foreground">Chapter</p>
+              <h2 className="mt-2 max-w-3xl text-22 font-bold leading-tight sm:text-26">{chapter.title}</h2>
+              {chapter.requirement ? (
+                <p className="mt-3 max-w-3xl text-12 leading-5 text-muted-foreground">{chapter.requirement}</p>
+              ) : null}
+            </div>
           </div>
 
           {chapter.outputType === "text" ? (
-            <div className="mt-6">
-              <h3 className="max-w-3xl text-18 font-bold leading-7">
+            <div className="mt-8 lg:ml-36">
+              <h3 className="max-w-4xl border-l-4 border-success pl-5 text-20 font-bold leading-8">
                 {chapter.headline}
               </h3>
-              <div className="mt-4 grid max-w-3xl gap-4">
-                {chapter.body.split(/\n{2,}/).filter(Boolean).map((paragraph) => (
-                  <p key={paragraph} className="text-14 leading-7 text-muted-foreground">
-                    {paragraph}
-                  </p>
-                ))}
-              </div>
+              {chapter.narrative ? (
+                <div className="mt-8 grid gap-6 lg:grid-cols-3">
+                  {[
+                    ["管理结论", chapter.narrative.conclusion],
+                    ["综合分析", chapter.narrative.analysis],
+                    ["行动建议", chapter.narrative.recommendation],
+                  ].map(([label, content]) => (
+                    <div key={label} className="border-t border-border pt-4">
+                      <p className="text-10 font-semibold uppercase text-survey">{label}</p>
+                      <p className="mt-3 text-14 leading-7 text-muted-foreground">
+                        {content}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-5 grid max-w-4xl gap-4">
+                  {chapter.body.split(/\n{2,}/).filter((paragraph) =>
+                    Boolean(paragraph)
+                    && !chapter.claims.some((claim) =>
+                      paragraph === claim.statement
+                      || paragraph === claim.recommendation
+                    )
+                  ).map((paragraph) => (
+                    <p key={paragraph} className="text-14 leading-7 text-muted-foreground">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+              )}
               {chapter.claims.length ? (
-                <div className="mt-6 grid gap-4">
+                <div className="mt-8 grid gap-4 border-t border-border pt-6">
                   {chapter.claims.map((claim) => (
                     <div
                       key={claim.id}
-                      className="grid gap-2 border-l-2 border-foreground pl-4 lg:grid-cols-[minmax(0,1fr)_160px]"
+                      className="grid gap-2 border-l-2 border-survey pl-4 lg:grid-cols-[minmax(0,1fr)_160px]"
                     >
                       <div>
                         <p className="text-14 font-semibold leading-6">
@@ -324,27 +385,37 @@ function TemplateDrivenReportDocument({
           ) : null}
 
           {chapter.outputType === "chart" ? (
-            <div className="mt-6" data-testid={`professional-chart-${chapter.chapterId}`}>
-              <div className="aspect-[16/9] min-h-72 w-full">
-                <SurveyEChartsCanvas
-                  option={chapter.option}
-                  testId={`professional-echarts-${chapter.chapterId}`}
-                  ariaLabel={`${chapter.title}报告图表`}
-                  className="h-full min-h-72 w-full"
-                />
+            <div className="mt-8 lg:ml-36" data-testid={`professional-chart-${chapter.chapterId}`}>
+              <div className="border-y border-border bg-secondary/20 px-3 py-6 sm:px-6">
+                <div className="mb-5 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-10 font-semibold uppercase text-survey">Exhibit {String(index + 1).padStart(2, "0")}</p>
+                    <p className="mt-1 text-13 font-semibold">{chapter.title}的数据分布与对比</p>
+                  </div>
+                  <span className="h-2 w-2 bg-success" aria-hidden="true" />
+                </div>
+                <div className="aspect-[16/9] min-h-72 w-full">
+                  <SurveyEChartsCanvas
+                    option={chapter.option}
+                    testId={`professional-echarts-${chapter.chapterId}`}
+                    ariaLabel={`${chapter.title}报告图表`}
+                    className="h-full min-h-72 w-full"
+                  />
+                </div>
               </div>
-              <p className="mt-4 max-w-3xl text-14 leading-7 text-muted-foreground">
-                {chapter.interpretation}
-              </p>
+              <div className="mt-5 grid gap-3 border-l-4 border-success pl-5 lg:grid-cols-[110px_minmax(0,1fr)]">
+                <p className="text-10 font-semibold uppercase text-success">Key takeaway</p>
+                <p className="max-w-3xl text-14 leading-7 text-muted-foreground">{chapter.interpretation}</p>
+              </div>
             </div>
           ) : null}
 
           {chapter.outputType === "image" ? (
             <figure
               data-testid={`professional-image-${chapter.chapterId}`}
-              className="mt-6"
+              className="mt-8 lg:ml-36"
             >
-              <div className="relative aspect-[16/9] w-full overflow-hidden bg-secondary">
+              <div className="relative aspect-[16/9] w-full overflow-hidden border-y border-border bg-secondary">
                 <Image
                   src={chapter.assetUrl}
                   alt={chapter.altText}
@@ -360,7 +431,7 @@ function TemplateDrivenReportDocument({
           ) : null}
 
           {chapter.limitations.length ? (
-            <p className="mt-6 border-t border-border pt-4 text-12 leading-5 text-muted-foreground">
+            <p className="mt-8 border-t border-border pt-4 text-11 leading-5 text-muted-foreground lg:ml-36">
               解读限制：{chapter.limitations.join(" ")}
             </p>
           ) : null}

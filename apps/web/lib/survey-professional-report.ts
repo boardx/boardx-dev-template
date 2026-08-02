@@ -210,6 +210,15 @@ function categoryQuestions(
   return evidence.questions.filter((question) => selected.has(question.questionId));
 }
 
+function preferSubstantiveClaims(
+  claims: ValidatedReportClaim[]
+): ValidatedReportClaim[] {
+  const substantiveClaims = claims.filter(
+    (claim) => !claim.id.endsWith("-response-rate")
+  );
+  return substantiveClaims.length ? substantiveClaims : claims;
+}
+
 function chapterForCategory(
   category: SurveyReportCategoryInput,
   evidence: SurveyReportEvidenceBundle,
@@ -218,7 +227,9 @@ function chapterForCategory(
 ): ProfessionalReportChapter {
   const questions = categoryQuestions(category, evidence);
   const questionIds = questions.map((question) => question.questionId);
-  const selectedClaims = claims.filter((claim) => questionIds.includes(claim.questionId));
+  const selectedClaims = preferSubstantiveClaims(
+    claims.filter((claim) => questionIds.includes(claim.questionId))
+  );
   const chartQuestion = questions.find((question) => chartForQuestion(question));
   const chart = category.outputType === "chart" && chartQuestion
     ? {
@@ -317,6 +328,7 @@ export function buildProfessionalReportDocument({
 }): ProfessionalSurveyReportDocument {
   const validatedAiClaims = validateEvidenceClaims(evidence, aiClaims);
   const claims: ValidatedReportClaim[] = validatedAiClaims.length ? validatedAiClaims : evidence.claims;
+  const summaryClaims = preferSubstantiveClaims(claims);
   const lowSample = evidence.sample.responseCount > 0
     && evidence.sample.responseCount < SURVEY_MIN_RELIABLE_SAMPLE;
   const status = evidence.sample.responseCount === 0 ? "empty" : lowSample ? "directional" : "ready";
@@ -325,7 +337,9 @@ export function buildProfessionalReportDocument({
     generatedAt,
     status,
     emptyState: status === "empty" ? "尚无真实答卷，无法生成分析结论。" : undefined,
-    executiveSummary: { claims: status === "empty" ? [] : claims.slice(0, 5) },
+    executiveSummary: {
+      claims: status === "empty" ? [] : summaryClaims.slice(0, 5),
+    },
     methodology: {
       sampleSize: evidence.sample.responseCount,
       questionCount: evidence.survey.questionCount,
@@ -345,7 +359,7 @@ export function buildProfessionalReportDocument({
     limitations: evidence.limitations,
     actions: status === "empty"
       ? []
-      : claims.slice(0, 3).map((claim) => ({
+      : summaryClaims.slice(0, 3).map((claim) => ({
           priority: claim.directional ? "medium" : "high",
           action: claim.recommendation ?? `进一步验证「${claim.evidenceLabel}」背后的原因。`,
           evidenceIds: [claim.id],

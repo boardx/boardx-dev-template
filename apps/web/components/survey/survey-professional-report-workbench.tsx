@@ -78,7 +78,7 @@ export function SurveyProfessionalReportWorkbench({
         <div className="mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-11 font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <p className="text-11 font-semibold uppercase text-muted-foreground">
                 Analysis Report
               </p>
               <span className="rounded-full bg-success/10 px-2 py-0.5 text-11 font-semibold text-success">
@@ -186,7 +186,7 @@ export function SurveyProfessionalReportWorkbench({
 
       <main
         data-testid="professional-report-reading-surface"
-        className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6"
+        className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6"
       >
         <div className="min-w-0 overflow-hidden border border-border bg-background shadow-sm">
           <ProfessionalReportDocument report={report} />

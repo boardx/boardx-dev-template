@@ -46,11 +46,12 @@ import { SurveyOutlinePanel } from "@/components/survey/survey-outline-panel";
 import { SurveyDesignWorkbench } from "@/components/survey/survey-design-workbench";
 import { SurveyReportVersionHistory } from "@/components/survey/survey-report-version-history";
 import { SurveyProfessionalReportWorkbench } from "@/components/survey/survey-professional-report-workbench";
+import { SurveyResponsesWorkbench } from "@/components/survey/survey-responses-workbench";
 import { SurveyVersionedReportComposer } from "@/components/survey/survey-versioned-report-composer";
 import { SurveyWorkflowSurface } from "@/components/survey/survey-workflow-surface";
 import {
   downloadProfessionalWordReport,
-  openProfessionalPdfExportWindow,
+  openVisualPdfExportWindow,
   type ReportExportPayload,
 } from "@/lib/report-export";
 import {
@@ -900,7 +901,6 @@ function WorkspaceModulePanel({
   onOpenEditor,
   onOpenResults,
   onOpenAnswer,
-  onOpenResponses,
   onBack,
 }: {
   view: Exclude<WorkspaceTarget, "workspace">;
@@ -912,10 +912,8 @@ function WorkspaceModulePanel({
   onOpenEditor: (tab: "questions" | "responses" | "settings") => void;
   onOpenResults: () => void;
   onOpenAnswer: () => void;
-  onOpenResponses: () => void;
   onBack: () => void;
 }) {
-  const [selectedAnswerView, setSelectedAnswerView] = useState("all");
   const reportPlan = survey ? inferReportPlan(survey) : null;
   const config: Record<Exclude<WorkspaceTarget, "workspace">, { label: string; title: string; copy: string; icon: typeof ClipboardList }> = {
     design: {
@@ -981,17 +979,6 @@ function WorkspaceModulePanel({
     return <>{reportContent}</>;
   }
 
-  const responseRows = Array.from({ length: Math.min(4, Math.max(survey.responses, 0)) }, (_, index) => {
-    const responseNumber = survey.responses - index;
-    return {
-      id: `R-${String(responseNumber).padStart(3, "0")}`,
-      title: `匿名答卷 ${index + 1}`,
-      time: index === 0 ? "最新提交" : `${index + 1} 小时前`,
-      status: "已完成",
-      source: "用于报告样本",
-    };
-  });
-
   return (
     <div data-testid={view === "answer" ? "workspace-answer-workbench" : undefined}>
       <a data-testid="workspace-answer-link" href={`/survey/${survey.id}/answer`} className="sr-only">
@@ -1018,10 +1005,6 @@ function WorkspaceModulePanel({
               <Eye className="h-4 w-4" strokeWidth={1.7} />
               问卷预览
             </Button>
-            <Button data-testid="answer-open-responses" type="button" size="sm" className="gap-1.5" onClick={onOpenResponses}>
-              <ClipboardList className="h-4 w-4" strokeWidth={1.7} />
-              查看用户答卷
-            </Button>
           </div>
         </div>
 
@@ -1045,90 +1028,8 @@ function WorkspaceModulePanel({
           </div>
         </div>
 
-        <div data-testid="user-responses-workbench" className="p-4">
-          <div className="mb-3 flex flex-wrap gap-2" aria-label="答卷视图">
-            {[
-              { id: "all", label: "全部答卷", meta: `${survey.responses} 份` },
-              { id: "today", label: "今日提交", meta: `${Math.min(18, survey.responses)} 份` },
-              { id: "review", label: "需复核", meta: survey.responses ? "待检查" : "0 份" },
-              { id: "flagged", label: "已标记", meta: "0 份" },
-              { id: "invalid", label: "无效答卷", meta: "0 份" },
-            ].map((answerView) => (
-              <Button
-                key={answerView.id}
-                type="button"
-                size="sm"
-                variant={selectedAnswerView === answerView.id ? "secondary" : "ghost"}
-                className={selectedAnswerView === answerView.id ? "bg-survey/10 text-survey hover:bg-survey/15" : "text-muted-foreground"}
-                onClick={() => setSelectedAnswerView(answerView.id)}
-              >
-                {answerView.label}
-                <span className="ml-1.5 text-11 opacity-70">{answerView.meta}</span>
-              </Button>
-            ))}
-          </div>
-
-          <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
-            <div className="overflow-hidden rounded-lg border border-border bg-background">
-              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3">
-                <div>
-                  <h3 className="text-17 font-bold text-foreground">用户答卷</h3>
-                  <p className="mt-1 text-13 leading-6 text-muted-foreground">
-                    按单份答卷查看提交内容、答题完成状态和报告生成时引用的真实样本。
-                  </p>
-                </div>
-                <Button data-testid="answer-open-all-responses" type="button" size="sm" className="gap-1.5" onClick={onOpenResponses}>
-                  <ClipboardList className="h-4 w-4" strokeWidth={1.7} />
-                  查看全部答卷
-                </Button>
-              </div>
-
-              {responseRows.length > 0 ? (
-                <div className="divide-y divide-border">
-                  {responseRows.map((response, index) => (
-                    <Button
-                      key={response.id}
-                      type="button"
-                      variant="ghost"
-                      className="flex h-auto w-full items-center justify-between gap-3 rounded-none px-4 py-3 text-left font-normal transition-colors hover:bg-survey/5"
-                      onClick={onOpenResponses}
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-foreground text-12 font-semibold text-background">
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate text-14 font-semibold text-foreground">
-                            {response.id} · {response.title}
-                          </p>
-                          <p className="mt-1 text-12 text-muted-foreground">
-                            {response.time} · 已答完 · {response.source}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant="success">{response.status}</Badge>
-                    </Button>
-                  ))}
-                </div>
-              ) : (
-                <div className="px-4 py-8 text-center">
-                  <ClipboardList className="mx-auto h-8 w-8 text-muted-foreground" strokeWidth={1.6} />
-                  <p className="mt-3 text-14 font-semibold text-foreground">暂无用户答卷</p>
-                  <p className="mt-1 text-13 text-muted-foreground">发布回收后，这里会显示每位用户的提交记录。</p>
-                </div>
-              )}
-            </div>
-
-            <SurveyAiPanel
-              title="答卷质量 AI"
-              placeholder="找出可能无效的答卷并说明原因"
-              resultLabel="AI 已完成答卷检查"
-              changeCount={Math.min(6, survey.responses)}
-              onSubmit={onOpenResponses}
-              onPreview={onOpenResponses}
-              onApply={onOpenResponses}
-            />
-          </div>
+        <div data-testid="user-responses-workbench">
+          <SurveyResponsesWorkbench surveyId={survey.id} />
         </div>
       </section>
     </div>
@@ -2514,8 +2415,18 @@ function WorkspaceReportWorkbench({
       setExportStatus("专业报告数据仍在加载，请稍后重试。");
       return;
     }
-    const opened = openProfessionalPdfExportWindow(professionalReport);
-    setExportStatus(opened ? "已打开 A4 PDF 导出窗口，可在打印对话框中保存。" : "浏览器拦截了 PDF 导出窗口，请允许弹窗后重试。");
+    const reportElement = document.querySelector<HTMLElement>(
+      '[data-testid="professional-report-document"]'
+    );
+    if (!reportElement) {
+      setExportStatus("未找到当前报告内容，请刷新页面后重试。");
+      return;
+    }
+    const opened = openVisualPdfExportWindow(
+      reportElement,
+      professionalReport.title
+    );
+    setExportStatus(opened ? "已打开包含图表的 PDF 导出窗口，可在打印对话框中保存。" : "浏览器拦截了 PDF 导出窗口，请允许弹窗后重试。");
   }
 
   function exportWord() {
@@ -4157,15 +4068,6 @@ export default function SurveysPage() {
       return;
     }
     window.open(new URL(`/survey/${currentSurveyId}/answer`, window.location.href).toString(), "_blank", "noopener,noreferrer");
-  }
-
-  function openSelectedSurveyResponses() {
-    if (currentSurveyId == null) {
-      openEditor();
-      setEditorTab("responses");
-      return;
-    }
-    window.location.href = `/surveys/${currentSurveyId}/results?from=workflow&tab=individual`;
   }
 
   async function saveWorkspaceReportTemplate(surveyId: number, template: ReportTemplateDraft) {
@@ -6295,7 +6197,6 @@ export default function SurveysPage() {
           onOpenEditor={(tab) => void openSelectedSurveyEditor(tab)}
           onOpenResults={openSelectedSurveyResults}
           onOpenAnswer={openSelectedSurveyAnswer}
-          onOpenResponses={openSelectedSurveyResponses}
           onBack={() => {
             setWorkspaceView("workspace");
           }}

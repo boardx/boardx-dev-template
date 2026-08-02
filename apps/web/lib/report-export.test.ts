@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { buildProfessionalReportHtml } from "./report-export";
+// @vitest-environment jsdom
+
+import { describe, expect, it, vi } from "vitest";
+import {
+  buildProfessionalReportHtml,
+  openVisualPdfExportWindow,
+} from "./report-export";
 import type { ProfessionalSurveyReportDocument } from "./survey-professional-report";
 import type { PublicTemplateDrivenSurveyReport } from "./survey-template-report";
 
@@ -57,7 +62,7 @@ describe("buildProfessionalReportHtml", () => {
     expect(html).toContain("@page");
     expect(html).toContain("学生成长调查分析报告");
     expect(html).toContain("有效样本");
-    expect(html).toContain("n=10");
+    expect(html).not.toContain("有效回答 n=");
     expect(html).toContain("数据来源：真实问卷答卷");
     expect(html).toContain("方法与限制");
     expect(html).not.toContain("模拟数据");
@@ -136,6 +141,57 @@ describe("buildProfessionalReportHtml", () => {
     expect(html).toContain("匿名聚合分析");
     expect(html).toContain("仅使用绑定题目");
     expect(html.match(/有效样本少于 30 份/g)).toHaveLength(1);
+    expect(html).not.toContain("有效回答 n=");
     expect(html).not.toContain("执行摘要");
+  });
+});
+
+describe("openVisualPdfExportWindow", () => {
+  it("serializes rendered chart canvases into the print document", async () => {
+    const reportElement = document.createElement("article");
+    reportElement.innerHTML = `
+      <section>
+        <h2>组织特征</h2>
+        <div role="img" aria-label="组织特征图表"><canvas></canvas></div>
+      </section>
+    `;
+    document.body.appendChild(reportElement);
+    const canvas = reportElement.querySelector("canvas");
+    expect(canvas).not.toBeNull();
+    vi.spyOn(canvas!, "toDataURL").mockReturnValue(
+      "data:image/png;base64,chart"
+    );
+
+    let writtenHtml = "";
+    const print = vi.fn();
+    const popup = {
+      document: {
+        open: vi.fn(),
+        write: vi.fn((html: string) => {
+          writtenHtml = html;
+        }),
+        close: vi.fn(),
+        images: [],
+      },
+      focus: vi.fn(),
+      print,
+      setTimeout: vi.fn((callback: () => void) => {
+        callback();
+        return 1;
+      }),
+    };
+    vi.spyOn(window, "open").mockReturnValue(
+      popup as unknown as Window
+    );
+
+    expect(openVisualPdfExportWindow(reportElement, "协作效率报告"))
+      .toBe(true);
+    await Promise.resolve();
+
+    expect(writtenHtml).toContain("组织特征");
+    expect(writtenHtml).toContain("data:image/png;base64,chart");
+    expect(writtenHtml).toContain('data-report-export-canvas="true"');
+    expect(writtenHtml).toContain('alt="组织特征图表"');
+    expect(print).toHaveBeenCalledOnce();
   });
 });

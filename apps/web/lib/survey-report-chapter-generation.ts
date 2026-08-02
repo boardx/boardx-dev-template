@@ -11,6 +11,7 @@ import {
 import type {
   SurveyReportTemplateChapterSnapshot,
   SurveyReportTemplateSnapshot,
+  TemplateDrivenTextNarrative,
   TemplateDrivenReportChapter,
 } from "./survey-template-report";
 import { callQwenJson } from "./qwen";
@@ -42,6 +43,7 @@ interface ChapterGenerationDependencies {
 
 interface TextChapterResult {
   headline: string;
+  narrative?: Partial<TemplateDrivenTextNarrative>;
   claims: AiEvidenceClaimCandidate[];
 }
 
@@ -76,6 +78,12 @@ function evidenceForChapter(
     selected.has(Number(question.questionId))
   );
   const questionIds = new Set(questions.map((question) => question.questionId));
+  const selectedClaims = evidence.claims.filter((claim) =>
+    questionIds.has(claim.questionId)
+  );
+  const substantiveClaims = selectedClaims.filter(
+    (claim) => !claim.id.endsWith("-response-rate")
+  );
   return {
     ...evidence,
     survey: {
@@ -83,7 +91,7 @@ function evidenceForChapter(
       questionCount: questions.length,
     },
     questions,
-    claims: evidence.claims.filter((claim) => questionIds.has(claim.questionId)),
+    claims: substantiveClaims.length ? substantiveClaims : selectedClaims,
     limitations: [],
   };
 }
@@ -108,9 +116,12 @@ function assertValidChapterSources(
       );
     }
     const chapterEvidence = evidenceForChapter(evidence, chapter);
+    const hasCompatibleClaims = chapter.outputType === "image"
+      ? chapterEvidence.claims.some((claim) => !claim.id.endsWith("-response-rate"))
+      : chapterEvidence.claims.length > 0;
     if (
       (chapter.outputType === "text" || chapter.outputType === "image") &&
-      !chapterEvidence.claims.length
+      !hasCompatibleClaims
     ) {
       throw new Error(
         `report_template_${chapter.outputType}_sources_incompatible:${chapter.id}`
@@ -146,13 +157,26 @@ function requestMessages(request: Record<string, unknown>) {
     {
       role: "system" as const,
       content:
-        "你是严谨的问卷研究分析师。只能使用输入中的匿名聚合证据，不得虚构数字、样本或因果关系。",
+        "你是严谨的问卷研究分析师。必须逐项执行章节中的分析目标、分析方法和自然语言要求；只能使用输入中的匿名聚合证据，不得虚构数字、样本或因果关系。输出必须是合法 JSON。",
     },
     {
       role: "user" as const,
       content: JSON.stringify(request),
     },
   ];
+}
+
+function requiredTextNarrative(
+  result: TextChapterResult
+): TemplateDrivenTextNarrative {
+  const narrative = result.narrative;
+  const conclusion = String(narrative?.conclusion ?? "").trim();
+  const analysis = String(narrative?.analysis ?? "").trim();
+  const recommendation = String(narrative?.recommendation ?? "").trim();
+  if (!conclusion || !analysis || !recommendation) {
+    throw new Error("report_text_template_execution_invalid");
+  }
+  return { conclusion, analysis, recommendation };
 }
 
 function chapterBase(
@@ -183,8 +207,19 @@ async function generateTextChapter(
       task: "generate_template_text_chapter",
       sourceRevision: input.sourceRevision,
       chapter,
+      templateExecution: {
+        analysisObjective: chapter.analysisObjective,
+        analysisMethod: chapter.analysisMethod,
+        requirement: chapter.requirement,
+        mandatory: true,
+      },
       outputContract: {
         headline: "string",
+        narrative: {
+          conclusion: "string",
+          analysis: "string that follows chapter.analysisMethod",
+          recommendation: "string",
+        },
         claims: [{
           statement: "string",
           evidenceId: "must match evidence.claims[].id",
@@ -202,11 +237,7 @@ async function generateTextChapter(
   if (candidates.length > 0 && claims.length === 0) {
     throw new Error("report_text_evidence_invalid");
   }
-  const paragraphs = claims.flatMap((claim) => [
-    claim.statement,
-    claim.implication,
-    claim.recommendation,
-  ]).filter((value): value is string => Boolean(value?.trim()));
+  const narrative = requiredTextNarrative(result);
 
   return {
     ...chapterBase(
@@ -216,7 +247,12 @@ async function generateTextChapter(
     ),
     outputType: "text",
     headline: String(result.headline ?? "").trim() || chapter.title,
-    body: paragraphs.join("\n\n"),
+    body: [
+      narrative.conclusion,
+      narrative.analysis,
+      narrative.recommendation,
+    ].join("\n\n"),
+    narrative,
     claims,
   };
 }

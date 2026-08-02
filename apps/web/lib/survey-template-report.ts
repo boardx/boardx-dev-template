@@ -35,11 +35,18 @@ interface TemplateChapterBase {
   limitations: string[];
 }
 
+export interface TemplateDrivenTextNarrative {
+  conclusion: string;
+  analysis: string;
+  recommendation: string;
+}
+
 export type TemplateDrivenReportChapter =
   | (TemplateChapterBase & {
       outputType: "text";
       headline: string;
       body: string;
+      narrative?: TemplateDrivenTextNarrative;
       claims: ValidatedReportClaim[];
     })
   | (TemplateChapterBase & {

@@ -3,7 +3,7 @@ import { getPool, query } from "./index";
 
 export const SURVEY_REPORT_SOURCE_SCHEMA_VERSION = "survey-source-v2" as const;
 export const SURVEY_REPORT_TEMPLATE_VERSION =
-  "template-driven-report-v1" as const;
+  "template-driven-report-v2" as const;
 
 export interface SurveyReportSourceSnapshotInput {
   survey: {

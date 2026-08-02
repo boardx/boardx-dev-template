@@ -56,6 +56,11 @@ createServer(async (request, response) => {
       const claim = prompt.evidence?.claims?.[0];
       result = {
         headline: "关键决策信号已形成，可进入证据化验证阶段",
+        narrative: {
+          conclusion: "当前样本已形成可供管理层判断的方向性信号。",
+          analysis: "领先反馈与其他选项之间存在可识别差异，后续应结合样本边界持续验证。",
+          recommendation: "围绕最高关注项补充验证材料并持续扩大样本。",
+        },
         claims: claim ? [{
           statement: claim.statement,
           evidenceId: claim.id,

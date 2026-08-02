@@ -93,6 +93,11 @@ describe("template report chapter generation", () => {
       if (request.task === "generate_template_text_chapter") {
         return {
           headline: "安全信任是当前购买决策的首要解释变量",
+          narrative: {
+            conclusion: "安全认证是建立购买信任的首要抓手。",
+            analysis: "按照章节要求对安全关注项进行比较后，认证关注高于成分关注。",
+            recommendation: "优先在关键购买触点展示可核验的认证信息。",
+          },
           claims: [{
             statement: "认证信息为占比最高的安全关注项。",
             evidenceId: "question-2-top",
@@ -139,6 +144,11 @@ describe("template report chapter generation", () => {
     ]);
     expect(chapters[0]).toMatchObject({
       headline: "安全信任是当前购买决策的首要解释变量",
+      narrative: {
+        conclusion: "安全认证是建立购买信任的首要抓手。",
+        analysis: "按照章节要求对安全关注项进行比较后，认证关注高于成分关注。",
+        recommendation: "优先在关键购买触点展示可核验的认证信息。",
+      },
       evidenceRefs: ["question-2-top"],
     });
     expect(chapters[1]).toMatchObject({
@@ -160,6 +170,17 @@ describe("template report chapter generation", () => {
       expect(request.chapter.analysisMethod).toBeTruthy();
       expect(request.chapter.requirement).toBeTruthy();
       if (request.task === "generate_template_text_chapter") {
+        expect(request.templateExecution).toEqual({
+          analysisObjective: "识别影响安全信任的首要因素。",
+          analysisMethod: "比较各安全关注项的选择占比，并结合购买经历交叉解读。",
+          requirement: "先给结论，再说明业务含义和下一步动作。",
+          mandatory: true,
+        });
+        expect(request.outputContract.narrative).toEqual({
+          conclusion: "string",
+          analysis: "string that follows chapter.analysisMethod",
+          recommendation: "string",
+        });
         expect(request.evidence.questions.map(
           (question: { questionId: number }) => question.questionId
         )).toEqual([2]);
@@ -337,7 +358,7 @@ describe("template report chapter generation", () => {
     expect(callJson).not.toHaveBeenCalled();
   });
 
-  it("rejects text chapters when selected sources have no anonymous aggregate claims", async () => {
+  it("generates text chapters from anonymous text-response coverage evidence", async () => {
     const textEvidence = buildSurveyReportEvidence({
       survey: {
         title: "开放反馈",
@@ -354,9 +375,23 @@ describe("template report chapter generation", () => {
         { id: 1, answers: { "3": "认证说明不够清楚" } },
       ],
     });
-    const callJson = vi.fn();
+    const callJson = vi.fn().mockResolvedValue({
+      headline: "开放反馈覆盖情况",
+      narrative: {
+        conclusion: "开放反馈题已获得完整作答覆盖。",
+        analysis: "本章仅能评估反馈覆盖率，不能在缺少安全主题聚合的情况下推断具体诉求。",
+        recommendation: "完成匿名主题聚合后，再形成开放反馈的优先级判断。",
+      },
+      claims: [{
+        statement: "本题收到 1 份有效文本反馈。",
+        evidenceId: "question-3-response-rate",
+        value: 1,
+        denominator: 1,
+        implication: "反馈覆盖完整，但不能据此推断未经聚合的主题。",
+      }],
+    });
 
-    await expect(generateTemplateReportChapters({
+    const chapters = await generateTemplateReportChapters({
       snapshot: {
         ...snapshot,
         chapters: [{
@@ -373,11 +408,20 @@ describe("template report chapter generation", () => {
     }, {
       callJson,
       generateImage: vi.fn(),
-    })).rejects.toThrow(
-      "report_template_text_sources_incompatible:summary"
-    );
+    });
 
-    expect(callJson).not.toHaveBeenCalled();
+    expect(chapters[0]).toMatchObject({
+      outputType: "text",
+      headline: "开放反馈覆盖情况",
+      evidenceRefs: ["question-3-response-rate"],
+    });
+    const request = JSON.parse(callJson.mock.calls[0]![0].messages[1]!.content);
+    expect(request.evidence.questions[0]).not.toHaveProperty("textResponses");
+    expect(request.evidence.claims).toContainEqual(expect.objectContaining({
+      id: "question-3-response-rate",
+      value: 1,
+      denominator: 1,
+    }));
   });
 
   it("rejects image chapters when selected sources have no anonymous aggregate claims", async () => {
