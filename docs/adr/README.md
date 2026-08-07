@@ -34,6 +34,7 @@
 | ADR-018 | spec-ref-closed-loop（每个 feature 必须能追溯到一个 story，claim/verify/doctor 三道门 + GitHub 投影） | Accepted |
 | ADR-019 | atomic-adr-numbering（ADR 编号原子取号，new-adr 命令，收口 #660 phase-id 同款撞号问题） | Accepted |
 | ADR-020 | agent-orchestration-langgraph（产品内多步 agent 流程改用 LangGraph StateGraph + PG checkpointer 编排，首个迁移目标 AVA Deep Research；不覆盖 devportal/coord-gateway） | Accepted |
+| ADR-021 | a2ui-generative-report-surface（生成式结构化界面用 A2UI 经 CopilotKit AG-UI 承载，限定 Dynamic Report Engine/Report Agent，不覆盖普通聊天） | Accepted |
 
 ## 适用层（2026-07-18 起，为模板化打包分层）
 
@@ -43,6 +44,6 @@
   [agentic-harness 模板](https://github.com/boardx) 打包给任何项目复用：
   0001、ADR-001、002、003、004、005、010、011、012、014、018、019。
 - **项目实现（BoardX 专属）**：本仓的具体技术选型与基础设施决策，模板只带
-  模式引用不带结论：0002、ADR-006、007、008、009、013、015、016、017、020。
+  模式引用不带结论：0002、ADR-006、007、008、009、013、015、016、017、020、021。
 
 新 ADR 落笔时必须标注适用层（模板 `adr.template.md` 已含该字段）。
