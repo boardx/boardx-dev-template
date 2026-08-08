@@ -51,6 +51,30 @@ createServer(async (request, response) => {
       (message) => message?.role === "user"
     );
     const prompt = JSON.parse(userMessage?.content ?? "{}");
+    if (body.stream) {
+      const claim = prompt.evidence?.claims?.[0];
+      const chapterResult = {
+        conclusion: claim
+          ? `${prompt.chapter?.title ?? "洞察"}：${claim.statement}`
+          : "",
+        evidenceRefs: claim ? [{
+          evidenceId: claim.id,
+          value: claim.value,
+          denominator: claim.denominator,
+        }] : [],
+        limitations: prompt.evidence?.limitations ?? [],
+        recommendation: claim
+          ? "围绕最高关注项补充验证材料并持续扩大样本。"
+          : "",
+      };
+      response.writeHead(200, { "content-type": "text/event-stream" });
+      response.write(`data: ${JSON.stringify({
+        choices: [{ delta: { content: JSON.stringify(chapterResult) } }],
+      })}\n\n`);
+      response.write("data: [DONE]\n\n");
+      response.end();
+      return;
+    }
     let result;
     if (prompt.task === "generate_template_text_chapter") {
       const claim = prompt.evidence?.claims?.[0];

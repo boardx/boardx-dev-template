@@ -1,0 +1,109 @@
+# PR #744 验证报告 — boardx/codex/p25-f17-langgraph-report-analysis
+## 分支: origin/codex/p25-f17-langgraph-report-analysis
+## 日期: 2026-07-19
+
+---
+
+## 命令 1: pnpm --filter @repo/web run test -- --run
+Exit Code: 1 (FAILED)
+Duration: ~2.6s
+
+### 失败摘要
+总计 172 个测试: 169 通过, 3 失败
+
+**关键失败测试（F16 suite）:**
+
+1. ❌ **lets one concurrent request call the model and returns 202 for the other**
+   - 错误: expected "spy" to be called 1 times, but got 0 times
+   - 位置: survey-report.route.test.ts:174:34
+   - 原因: mocks.callQwenJson 未被调用
+
+2. ❌ **uses only the persisted plan hash even when a legacy instruction is sent**
+   - 错误: expected 202 to be 200
+   - 位置: survey-report.route.test.ts:362:27
+   - 原因: 路由返回 202（in_progress）而非 200（成功）
+
+3. ❌ **never sends raw text responses to the model**
+   - 错误: expected 202 to be 200
+   - 位置: survey-report.route.test.ts:408:30
+   - 原因: 路由返回 202 而非 200
+
+### 根本原因分析
+
+**Mock 位置未迁移：**
+- Test 文件在 survey-report.route.test.ts:30 仍然 mock 了 `@/lib/qwen` 中的 `callQwenJson`
+- 但代码流链已变更:
+  1. route.ts → generateSurveyReportAgentClaims()（来自 @/lib/survey-report-agent-adapter）
+  2. survey-report-agent-adapter.ts → defaultGateway.streamChat()（来自 @repo/ai）
+  3. @repo/ai/gateway.ts → qwenProvider.streamChat()
+  
+**没有找到 mock 在 @repo/ai 层：**
+- 检查 packages/ai/src/*.test.ts：无相关 vi.mock("qwen"...) 定义
+- @repo/ai 导出的是 defaultGateway（真实网关），不是已 mock 的函数
+- test 仍在 mock @/lib/qwen 中不再被调用的上游 API
+- 导致 defaultGateway 内部调用 qwenProvider.streamChat()，尝试真实 HTTP 调用
+- HTTP 调用失败或被 stub provider 拦截，导致路由返回 202 而非 200
+
+---
+
+## 命令 2: pnpm --filter @repo/data test
+Exit Code: 0 (PASSED)
+Duration: ~1.0s
+
+总计 15 个测试文件, 95 个测试，全通过。
+
+---
+
+## 命令 3: pnpm --filter @repo/web run typecheck
+Exit Code: 0 (PASSED)
+Duration: ~negligible
+
+TypeScript 类型检查通过，无错误。
+
+---
+
+## 总体验证结果
+
+| 命令 | 退出码 | 状态 | 备注 |
+|------|--------|------|------|
+| pnpm --filter @repo/web run test -- --run | 1 | ❌ FAILED | 3/172 测试失败（同样的 F16 三条） |
+| pnpm --filter @repo/data test | 0 | ✓ PASSED | 95/95 测试通过 |
+| pnpm --filter @repo/web run typecheck | 0 | ✓ PASSED | 无类型错误 |
+
+---
+
+## Mock 位置确认
+
+**@/lib/qwen（test 仍在 mock）：**
+```
+apps/web/app/api/surveys/[id]/professional-report/survey-report.route.test.ts:30
+vi.mock("@/lib/qwen", () => ({
+  callQwenJson: mocks.callQwenJson,
+}));
+```
+
+**@repo/ai（实际被调用，未 mock）：**
+- packages/ai/src/surveyReportAgent.ts → runSurveyReportAgent() 
+- packages/ai/src/gateway.ts → defaultGateway（使用 qwenProvider）
+- 无 vi.mock 覆盖
+
+**@/lib/survey-report-agent-adapter（中间层）：**
+- 导入: `import { defaultGateway, runSurveyReportAgent } from "@repo/ai"`
+- 调用: `defaultGateway.streamChat()` 在 generateChapterWithGateway()
+- 此层未被 test mock
+
+---
+
+## 结论
+
+**作者的返工未能修复问题。** 虽然代码已迁移调用点到 @repo/ai（正确做法），但：
+
+1. **Mock 链断裂：** test 中的 vi.mock("@/lib/qwen") 现在是死代码，因为路由不再调用 @/lib/qwen
+2. **新 mock 缺失：** @repo/ai 中的 defaultGateway 未被 test 覆盖，导致真实网络调用或 stub 路由
+3. **结果：** 三条 F16 测试仍然失败
+
+**不建议合并。** 需要修复：
+1. 在 test 中 mock @repo/ai 中的 defaultGateway（或直接 mock streamChat）
+2. 或在 test setup 中注入 stub gateway
+3. 验证三条测试最终返回 200 而非 202
+

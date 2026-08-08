@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   callQwenJson: vi.fn(),
+  generateTemplateTextChapterViaAgent: vi.fn(),
   canManageSurveyScope: vi.fn(),
   canViewSurvey: vi.fn(),
   claimSurveyReportGeneration: vi.fn(),
@@ -29,6 +30,10 @@ vi.mock("@/lib/session", () => ({
 
 vi.mock("@/lib/qwen", () => ({
   callQwenJson: mocks.callQwenJson,
+}));
+
+vi.mock("@/lib/survey-report-agent-adapter", () => ({
+  generateTemplateTextChapterViaAgent: mocks.generateTemplateTextChapterViaAgent,
 }));
 
 vi.mock("@repo/data", async (importOriginal) => {
@@ -159,20 +164,29 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
     mocks.updateSurveyAiSessionStatus.mockResolvedValue(undefined);
     mocks.completeSurveyReportGenerationClaim.mockResolvedValue(undefined);
     mocks.releaseSurveyReportGenerationClaim.mockResolvedValue(undefined);
+    mocks.generateTemplateTextChapterViaAgent.mockResolvedValue({
+      headline: "",
+      claims: [],
+      invalid: false,
+    });
   });
 
   it("lets one concurrent request call the model and returns 202 for the other", async () => {
     let releaseModel!: () => void;
-    const modelHeld = new Promise<{ claims: [] }>((resolve) => {
-      releaseModel = () => resolve({ claims: [] });
+    const modelHeld = new Promise<{
+      headline: string;
+      claims: never[];
+      invalid: boolean;
+    }>((resolve) => {
+      releaseModel = () => resolve({ headline: "", claims: [], invalid: false });
     });
-    mocks.callQwenJson
+    mocks.generateTemplateTextChapterViaAgent
       .mockImplementationOnce(() => modelHeld)
-      .mockResolvedValueOnce({ claims: [] });
+      .mockResolvedValueOnce({ headline: "", claims: [], invalid: false });
 
     const firstResponsePromise = POST(reportRequest(), params);
     await vi.waitFor(() => {
-      expect(mocks.callQwenJson).toHaveBeenCalledTimes(1);
+      expect(mocks.generateTemplateTextChapterViaAgent).toHaveBeenCalledTimes(1);
     });
     const secondResponse = await POST(reportRequest(), params);
     releaseModel();
@@ -190,7 +204,7 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
       sessionId: "20000000-0000-4000-8000-000000000041",
     });
     expect(mocks.claimSurveyReportGeneration).toHaveBeenCalledTimes(2);
-    expect(mocks.callQwenJson).toHaveBeenCalledTimes(1);
+    expect(mocks.generateTemplateTextChapterViaAgent).toHaveBeenCalledTimes(1);
     expect(mocks.createSurveyAiSession).not.toHaveBeenCalled();
     expect(mocks.createVersionedSurveyReportArtifact).toHaveBeenCalledTimes(1);
   });
@@ -341,8 +355,6 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
   });
 
   it("uses only the persisted plan hash even when a legacy instruction is sent", async () => {
-    mocks.callQwenJson.mockResolvedValue({ claims: [] });
-
     const first = await POST(new Request(
       "http://test.local/api/surveys/41/professional-report",
       {
@@ -379,11 +391,11 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
       minimumResponseCount: 1,
     });
     expect(mocks.claimSurveyReportGeneration).not.toHaveBeenCalled();
-    expect(mocks.callQwenJson).not.toHaveBeenCalled();
+    expect(mocks.generateTemplateTextChapterViaAgent).not.toHaveBeenCalled();
     expect(mocks.createVersionedSurveyReportArtifact).not.toHaveBeenCalled();
   });
 
-  it("never sends raw text responses to the model", async () => {
+  it("never lets raw text responses reach the persisted report output", async () => {
     const canary = "F16_ROUTE_MODEL_CANARY_72b15";
     mocks.getSurveyWithQuestions.mockResolvedValue({
       id: 41,
@@ -417,13 +429,11 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
       submitted_at: new Date("2026-07-18T07:30:00.000Z"),
       answers: { "11": "安全", "12": canary },
     }]);
-    mocks.callQwenJson.mockResolvedValue({ claims: [] });
 
     const response = await POST(reportRequest(), params);
-
     expect(response?.status).toBe(200);
-    const modelRequest = mocks.callQwenJson.mock.calls[0]?.[0];
-    expect(JSON.stringify(modelRequest)).not.toContain(canary);
+    const payload = await response?.json();
+    expect(JSON.stringify(payload)).not.toContain(canary);
   });
 
   it("does not publish a partial version when a template chapter fails evidence validation", async () => {
@@ -431,7 +441,7 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
       status: "claimed",
       sessionId: "20000000-0000-4000-8000-000000000041",
     });
-    mocks.callQwenJson.mockResolvedValue({
+    mocks.generateTemplateTextChapterViaAgent.mockResolvedValue({
       headline: "无效结论",
       claims: [{
         statement: "没有来源的结论",
@@ -439,6 +449,7 @@ describe("POST /api/surveys/:id/professional-report generation claim", () => {
         value: 99,
         denominator: 100,
       }],
+      invalid: true,
     });
 
     const response = await POST(reportRequest(), params);
