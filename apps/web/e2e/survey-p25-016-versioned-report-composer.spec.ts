@@ -23,10 +23,7 @@ interface ProfessionalReportPayload {
       outputType?: "image" | "chart" | "text";
       requirement?: string;
       chartTemplateId?: string;
-      chart?: {
-        templateId?: string;
-        option?: { series?: Array<{ type?: string }> };
-      };
+      option?: { series?: Array<{ type?: string }> };
     }>;
   };
   preview?: boolean;
@@ -203,10 +200,11 @@ test("single-output report chapters persist and create exact immutable versions"
   expect(initialAnswer.status()).toBe(201);
 
   const categoriesResponse = await page.request.get(`/api/surveys/${survey.id}/report-categories`);
-  const categoryPlan = (await categoriesResponse.json()).reportCategoryPlan;
+  const categoriesPayload = await categoriesResponse.json();
+  const categoryPlan = categoriesPayload.reportCategoryPlan;
   categoryPlan.categories[0].requirement = "面向管理层，先给结论，再说明证据边界和行动建议。";
   const savedPlan = await page.request.patch(`/api/surveys/${survey.id}/report-categories`, {
-    data: categoryPlan,
+    data: { ...categoryPlan, expectedUpdatedAt: categoriesPayload.updatedAt },
   });
   expect(savedPlan.status()).toBe(200);
 
@@ -282,19 +280,26 @@ test("single-output report chapters persist and create exact immutable versions"
   await expect(page.getByTestId("report-requirement-panel")).toBeVisible();
   await expect(page.getByTestId("report-preview-panel")).toBeVisible();
   await expect(page.getByTestId("report-output-type")).toBeVisible();
+  await expect(page.getByTestId("report-requirement-input")).toHaveValue(
+    "面向管理层，先给结论，再说明证据边界和行动建议。"
+  );
   await expect(page.getByTestId("professional-report-document")).toHaveCount(0);
   await expect(page.getByTestId("report-version-history")).toHaveCount(0);
   await expect(page.getByText("问题来源", { exact: true })).toHaveCount(0);
   await expect(page.getByText("输出模块", { exact: true })).toHaveCount(0);
   await expect(page.getByTestId("report-mapping-panel")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "图表", exact: true }).click();
-  await expect(page.getByRole("button", { name: /基础折线图/ })).toHaveAttribute(
+  await page.getByTestId("report-output-type")
+    .getByRole("button", { name: "图表", exact: true })
+    .click();
+  await expect(page.getByTestId("report-chart-template-line-simple")).toHaveAttribute(
     "aria-pressed",
     "true"
   );
   await expect(page.getByTestId("generate-versioned-report")).toBeDisabled();
   await expect(page.getByTestId("report-generation-eligibility")).toContainText("先保存");
+  await expect(page.getByTestId("open-analysis-report")).toBeDisabled();
+  await expect(page.getByTestId("open-analysis-report")).toContainText("保存后查看");
   await expect(page.getByTestId("report-chart-canvas")).toBeVisible();
   await expectNonEmptyEChartsCanvas(page);
 
@@ -308,12 +313,15 @@ test("single-output report chapters persist and create exact immutable versions"
     response.request().method() === "PATCH"
   );
   await page.getByTestId("save-report-plan").click();
-  const savedChartPlanPayload = await (await savedChartPlanResponse).json();
+  const savedChartPlanResult = await savedChartPlanResponse;
+  expect(savedChartPlanResult.status()).toBe(200);
+  const savedChartPlanPayload = await savedChartPlanResult.json();
   expect(savedChartPlanPayload.reportCategoryPlan.categories[0]).toMatchObject({
     outputType: "chart",
     chartTemplateId: "line-simple",
   });
   await expect(page.getByTestId("report-generation-status")).toContainText("要求已修改");
+  await expect(page.getByTestId("open-analysis-report")).toBeEnabled();
   const changedChartStatusResponse =
     await page.request.get(`/api/surveys/${survey.id}/professional-report`);
   const changedChartStatusPayload =
@@ -331,7 +339,7 @@ test("single-output report chapters persist and create exact immutable versions"
     "aria-pressed",
     "true"
   );
-  await expect(page.getByRole("button", { name: /基础折线图/ })).toHaveAttribute(
+  await expect(page.getByTestId("report-chart-template-line-simple")).toHaveAttribute(
     "aria-pressed",
     "true"
   );
@@ -363,10 +371,7 @@ test("single-output report chapters persist and create exact immutable versions"
   expect(chartGenerationPayload.report?.chapters[0]).toMatchObject({
     outputType: "chart",
     chartTemplateId: "line-simple",
-    chart: {
-      templateId: "line-simple",
-      option: { series: [{ type: "line" }] },
-    },
+    option: { series: [{ type: "line" }] },
   });
   const chartVersion = chartGenerationPayload.generation.versions.find(
     (version) => version.id !== firstVersion.id
@@ -437,7 +442,7 @@ test("single-output report chapters persist and create exact immutable versions"
     outputType: "text",
     requirement: textRequirement,
   });
-  expect(textGenerationPayload.report?.chapters[0]?.chart).toBeUndefined();
+  expect(textGenerationPayload.report?.chapters[0]?.option).toBeUndefined();
   expect(textGenerationPayload.report?.chapters[0]?.chartTemplateId).toBeUndefined();
   const textVersion = textGenerationPayload.generation.versions.find(
     (version) =>
@@ -454,9 +459,11 @@ test("single-output report chapters persist and create exact immutable versions"
   await expect(page.getByTestId("professional-report-document")).toBeVisible();
   const history = page.getByTestId("report-version-history");
   await expect(history).toBeVisible();
-  await expect(history.getByRole("button")).toHaveCount(3);
+  await history.getByRole("button").click();
+  const versionMenu = page.getByTestId("report-version-menu");
+  await expect(versionMenu.getByRole("menuitem")).toHaveCount(3);
 
-  const chartVersionButton = history.getByRole("button").filter({ hasText: "版本 2" });
+  const chartVersionButton = versionMenu.getByRole("menuitem").filter({ hasText: "版本 2" });
   const chartVersionResponse = page.waitForResponse((response) => {
     const url = new URL(response.url());
     return (
@@ -469,13 +476,17 @@ test("single-output report chapters persist and create exact immutable versions"
   const exactChartVersionPayload =
     await (await chartVersionResponse).json() as ProfessionalReportPayload;
   expect(exactChartVersionPayload.selectedArtifactId).toBe(chartVersion.id);
-  expect(exactChartVersionPayload.report?.chapters[0]?.chart?.option)
+  expect(exactChartVersionPayload.report?.chapters[0]?.option)
     .toMatchObject({ series: [{ type: "line" }] });
   await expectNonEmptyCanvas(
     page.locator('[data-testid^="professional-echarts-"] canvas').first()
   );
 
-  const oldestVersionButton = history.getByRole("button").filter({ hasText: "版本 1" });
+  await history.getByRole("button").click();
+  const oldestVersionButton = page
+    .getByTestId("report-version-menu")
+    .getByRole("menuitem")
+    .filter({ hasText: "版本 1" });
   const exactVersionResponse = page.waitForResponse((response) => {
     const url = new URL(response.url());
     return (
@@ -490,7 +501,7 @@ test("single-output report chapters persist and create exact immutable versions"
   expect(exactVersionPayload.selectedArtifactId).toBe(firstVersion.id);
   expect(exactVersionPayload.report).toEqual(firstPayload.report);
   expectNoRawResponseRecords(exactVersionPayload, initialCanary);
-  await expect(oldestVersionButton).toHaveAttribute("aria-current", "true");
+    await expect(history.getByRole("button")).toContainText("版本 1");
 
   const invalidArtifact = await page.request.get(
     `/api/surveys/${survey.id}/professional-report?artifactId=missing-artifact`

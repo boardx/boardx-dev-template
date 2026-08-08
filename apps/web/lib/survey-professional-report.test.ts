@@ -211,6 +211,124 @@ describe("professional survey report", () => {
     });
   });
 
+  it("matches numeric chapter sources when database question ids are strings at runtime", () => {
+    const evidence = buildSurveyReportEvidence({
+      survey: {
+        ...survey,
+        questions: [{
+          id: "1" as unknown as number,
+          title: "性别",
+          type: "single" as const,
+          required: true,
+          options: ["男", "女"],
+        }],
+      },
+      responses: [{ id: 1, answers: { "1": "女" } }],
+    });
+    const report = buildProfessionalReportDocument({
+      evidence,
+      generatedAt: "2026-08-01T00:00:00.000Z",
+      reportPlan: {
+        title: "受访者画像报告",
+        description: "",
+        categories: [{
+          id: "profile",
+          name: "受访者画像",
+          description: "",
+          requirement: "分析受访者画像。",
+          questionIds: [1],
+          outputType: "text",
+          inputModes: ["text"],
+          prompt: "分析受访者画像。",
+          order: 1,
+          isCustom: false,
+        }],
+      },
+    });
+
+    expect(report.chapters[0]).toMatchObject({
+      questionId: 1,
+      questionIds: [1],
+      validResponseCount: 1,
+    });
+    expect(report.chapters[0]?.limitations).not.toContain(
+      "当前章节尚未匹配到可分析的问题。"
+    );
+  });
+
+  it("uses text coverage only as a fallback when a chapter has substantive evidence", () => {
+    const evidence = buildSurveyReportEvidence({
+      survey: {
+        ...survey,
+        questions: [
+          survey.questions[0]!,
+          {
+            id: 3,
+            title: "您的姓名或称呼",
+            type: "short_text" as const,
+            required: true,
+            options: [],
+          },
+          {
+            id: 4,
+            title: "补充建议",
+            type: "text" as const,
+            required: false,
+            options: [],
+          },
+        ],
+      },
+      responses: [{
+        id: 1,
+        answers: { "1": "女", "3": "张三", "4": "优化审批流程" },
+      }],
+    });
+    const report = buildProfessionalReportDocument({
+      evidence,
+      generatedAt: "2026-08-01T00:00:00.000Z",
+      reportPlan: {
+        title: "管理层报告",
+        description: "",
+        categories: [
+          {
+            id: "profile",
+            name: "受访者画像",
+            description: "",
+            requirement: "分析受访者画像。",
+            questionIds: [1, 3],
+            outputType: "text",
+            inputModes: ["text"],
+            prompt: "分析受访者画像。",
+            order: 1,
+            isCustom: false,
+          },
+          {
+            id: "feedback",
+            name: "开放反馈",
+            description: "",
+            requirement: "说明开放反馈覆盖情况。",
+            questionIds: [4],
+            outputType: "text",
+            inputModes: ["text"],
+            prompt: "说明开放反馈覆盖情况。",
+            order: 2,
+            isCustom: false,
+          },
+        ],
+      },
+    });
+
+    expect(report.executiveSummary.claims.map((claim) => claim.id)).toEqual([
+      "question-1-top",
+    ]);
+    expect(report.chapters[0]?.claims.map((claim) => claim.id)).toEqual([
+      "question-1-top",
+    ]);
+    expect(report.chapters[1]?.claims.map((claim) => claim.id)).toEqual([
+      "question-4-response-rate",
+    ]);
+  });
+
   it("recursively redacts raw historical text from claims and actions", () => {
     const canary = "F16_HISTORICAL_RAW_CANARY_0af8";
     const rawResponses = rawTextResponsesFromSourceData({

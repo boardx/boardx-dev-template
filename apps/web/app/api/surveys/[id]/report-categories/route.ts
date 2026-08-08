@@ -4,9 +4,8 @@ import {
   canViewSurvey,
   cleanSurveyReportCategoryPlan,
   defaultSurveyReportCategoryPlan,
-  ensureSurveyReportCategoryPlan,
+  getSurveyReportCategoryPlan,
   getSurveyWithQuestions,
-  readSurveyReportCategoryPlan,
   upsertSurveyReportCategoryPlan,
   type SurveyReportCategoryPlanInput,
 } from "@repo/data";
@@ -51,12 +50,24 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   if (surveyId == null) return NextResponse.json({ error: "surveyId 无效" }, { status: 400 });
   const loaded = await loadSurvey(surveyId, user.id);
   if ("error" in loaded) return NextResponse.json({ error: loaded.error }, { status: loaded.status });
-  const reportCategoryPlan = await readSurveyReportCategoryPlan(
-    surveyId,
-    loaded.survey.title,
-    loaded.survey.questions
-  );
-  return NextResponse.json({ reportCategoryPlan });
+  if (!(await canManageSurveyScope(surveyId, user.id))) {
+    return NextResponse.json({ error: "无管理权限" }, { status: 403 });
+  }
+  const persisted = await getSurveyReportCategoryPlan(surveyId);
+  const reportCategoryPlan = persisted?.categories.length
+    ? cleanSurveyReportCategoryPlan(
+      persisted,
+      loaded.survey.title,
+      loaded.survey.questions
+    )
+    : defaultSurveyReportCategoryPlan(
+      loaded.survey.title,
+      loaded.survey.questions
+    );
+  return NextResponse.json({
+    reportCategoryPlan,
+    updatedAt: persisted?.updated_at ?? null,
+  });
 }
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
@@ -81,11 +92,37 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     loaded.survey.title,
     loaded.survey.questions
   );
-  const reportCategoryPlan = await upsertSurveyReportCategoryPlan(surveyId, cleaned);
+  const expectedUpdatedAt =
+    typeof body?.expectedUpdatedAt === "string"
+      ? body.expectedUpdatedAt
+      : null;
+  let reportCategoryPlan;
+  try {
+    reportCategoryPlan = await upsertSurveyReportCategoryPlan(
+      surveyId,
+      cleaned,
+      expectedUpdatedAt
+    );
+  } catch (error) {
+    if (
+      error instanceof Error
+      && error.message === "report_template_conflict"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "报告模板已被其他协作者更新。请刷新查看最新版本，再合并你的修改。",
+          code: "report_template_conflict",
+        },
+        { status: 409 }
+      );
+    }
+    throw error;
+  }
   return NextResponse.json({ reportCategoryPlan });
 }
 
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: { id: string } }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
   const surveyId = parseSurveyId(params.id);
@@ -94,6 +131,25 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   if ("error" in loaded) return NextResponse.json({ error: loaded.error }, { status: loaded.status });
   if (!(await canManageSurveyScope(surveyId, user.id))) {
     return NextResponse.json({ error: "无管理权限" }, { status: 403 });
+  }
+  const body = await req.json().catch(() => ({}));
+  const instruction = String(body?.instruction ?? "").trim().slice(0, 1200);
+  const currentPlan = cleanSurveyReportCategoryPlan(
+    body?.currentPlan,
+    loaded.survey.title,
+    loaded.survey.questions
+  );
+  if (!instruction) {
+    return NextResponse.json(
+      { error: "请先描述报告受众、决策目标或修改要求" },
+      { status: 400 }
+    );
+  }
+  if (containsUnsafeReportPayload({ instruction, currentPlan })) {
+    return NextResponse.json(
+      { error: "AI 修改要求只接受自然语言和当前报告模板" },
+      { status: 400 }
+    );
   }
 
   const model = systemSelectedModel();
@@ -111,8 +167,16 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         {
           role: "user",
           content: JSON.stringify({
-            task: "classify_survey_questions_for_report_composer",
-            rule: "章节顺序就是报告输出顺序。每个章节都可以从整份问卷和全部授权答卷中自主检索证据。",
+            task: "iterate_survey_report_template",
+            instruction,
+            currentPlan,
+            rule: [
+              "基于 currentPlan 做增量修改，不要无理由丢失现有章节。",
+              "章节顺序就是报告输出顺序。",
+              "每章 questionIds 只能引用 survey.questions 中的 id，同一道题允许用于多个章节。",
+              "每章必须分别填写 analysisObjective 和 analysisMethod，并选择一种主要输出形式。",
+              "不同章节应回答不同决策问题，避免重复全局样本说明。",
+            ],
             survey: {
               title: loaded.survey.title,
               description: loaded.survey.description,
@@ -129,9 +193,16 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
               description: "报告规划说明",
               categories: [
                 {
+                  id: "稳定且唯一的章节 ID",
                   name: "分类名称",
                   description: "分类说明",
+                  analysisObjective: "本章要回答的独立决策问题",
+                  analysisMethod: "本章采用的分析方法和比较维度",
                   requirement: "描述读者、决策目标、必须回答的问题、证据边界和表达要求",
+                  questionIds: [1, 2],
+                  outputType: "text | chart | image",
+                  chartTemplateId: "仅图表章节填写：line-simple | bar-simple | pie-simple | scatter-simple | radar | funnel",
+                  order: 1,
                 },
               ],
             },
@@ -140,13 +211,18 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       ],
     });
   } catch {
-    const fallback = defaultSurveyReportCategoryPlan(loaded.survey.title, loaded.survey.questions);
-    const reportCategoryPlan = await upsertSurveyReportCategoryPlan(surveyId, fallback);
+    const fallback = currentPlan.categories.length
+      ? currentPlan
+      : defaultSurveyReportCategoryPlan(
+        loaded.survey.title,
+        loaded.survey.questions
+      );
     return NextResponse.json({
-      reportCategoryPlan,
+      reportCategoryPlan: fallback,
       model,
       generatedBy: "default",
-      warning: "千问分类暂不可用，已按题目生成默认分类。稍后可再次点击 AI 重新分类。",
+      previewOnly: true,
+      warning: "AI 模板推演暂不可用，已保留当前草稿，请稍后重试。",
     });
   }
 
@@ -154,6 +230,10 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   const plan = cleaned.categories.length
     ? cleaned
     : defaultSurveyReportCategoryPlan(loaded.survey.title, loaded.survey.questions);
-  const reportCategoryPlan = await upsertSurveyReportCategoryPlan(surveyId, plan);
-  return NextResponse.json({ reportCategoryPlan, model, generatedBy: "llm" });
+  return NextResponse.json({
+    reportCategoryPlan: plan,
+    model,
+    generatedBy: "llm",
+    previewOnly: true,
+  });
 }

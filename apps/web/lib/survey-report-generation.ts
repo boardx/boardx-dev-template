@@ -45,6 +45,38 @@ export interface SurveyReportRequestTransition {
   state: SurveyReportRequestState;
 }
 
+interface SurveyReportGenerationFailurePayload {
+  error?: unknown;
+  failedChapter?: {
+    chapterId?: unknown;
+    title?: unknown;
+    status?: unknown;
+    retryable?: unknown;
+  };
+}
+
+export function surveyReportGenerationErrorMessage(
+  payload: SurveyReportGenerationFailurePayload
+): string | null {
+  if (payload.failedChapter?.status !== "failed") {
+    return null;
+  }
+  const title = String(
+    payload.failedChapter.title || payload.failedChapter.chapterId || "未知章节"
+  );
+  if (
+    typeof payload.error === "string"
+    && (
+      payload.error.startsWith("report_template_text_sources_incompatible:")
+      || payload.error.startsWith("report_template_image_sources_incompatible:")
+    )
+  ) {
+    return `章节「${title}」缺少可用的匿名聚合证据，上一份完整报告已保留。请调整题目来源或输出类型。`;
+  }
+  if (payload.error !== "report_template_chapter_generation_failed") return null;
+  return `章节「${title}」生成失败，上一份完整报告已保留。请重试生成。`;
+}
+
 export function createSurveyReportRequestState(): SurveyReportRequestState {
   return {
     epoch: 0,

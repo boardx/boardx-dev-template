@@ -65,6 +65,11 @@ const choiceTypes = new Set<ReportQuestionType>(["single", "multiple", "dropdown
 const scoreTypes = new Set<ReportQuestionType>(["rating", "linear_scale", "nps", "number"]);
 const textTypes = new Set<ReportQuestionType>(["short_text", "text"]);
 
+export function isSurveyReportChartCompatibleQuestionType(type: string) {
+  return choiceTypes.has(type as ReportQuestionType)
+    || scoreTypes.has(type as ReportQuestionType);
+}
+
 function answerFor(question: ReportQuestion, response: ReportResponseDefinition) {
   return response.answers[String(question.id)] ?? response.answers[question.id];
 }
@@ -125,7 +130,7 @@ function buildQuestionEvidence(
 ): SurveyQuestionEvidence {
   const values = responses.map((response) => answerFor(question, response)).filter(isPresent);
   const base: SurveyQuestionEvidence = {
-    questionId: question.id,
+    questionId: Number(question.id),
     title: question.title,
     type: question.type,
     validResponseCount: values.length,
@@ -142,11 +147,25 @@ function buildQuestionEvidence(
 
 function claimsFromQuestions(
   questions: SurveyQuestionEvidence[],
-  confidence: SurveyEvidenceConfidence
+  confidence: SurveyEvidenceConfidence,
+  responseCount: number
 ): SurveyEvidenceClaim[] {
   if (confidence === "none") return [];
   return questions.flatMap((question) => {
-    const ranked = [...(question.distribution ?? [])].sort((a, b) => b.count - a.count);
+    if (textTypes.has(question.type) && responseCount > 0) {
+      return [{
+        id: `question-${question.questionId}-response-rate`,
+        questionId: question.questionId,
+        statement: `「${question.title}」收到 ${question.validResponseCount} 份有效文本反馈，占本次样本的 ${percentage(question.validResponseCount, responseCount)}%。`,
+        evidenceLabel: "有效文本反馈",
+        value: question.validResponseCount,
+        denominator: responseCount,
+        confidence,
+        directional: confidence === "low",
+      }];
+    }
+    const distribution = question.distribution ?? question.score?.distribution ?? [];
+    const ranked = [...distribution].sort((a, b) => b.count - a.count);
     const top = ranked[0];
     if (!top || top.denominator === 0) return [];
     return [{
@@ -178,7 +197,7 @@ export function buildSurveyReportEvidence({
     survey: { title: survey.title, description: survey.description, questionCount: survey.questions.length },
     sample: { responseCount: responses.length, confidence },
     questions,
-    claims: claimsFromQuestions(questions, confidence),
+    claims: claimsFromQuestions(questions, confidence, responses.length),
     limitations,
   };
 }

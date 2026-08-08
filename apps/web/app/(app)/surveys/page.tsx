@@ -18,10 +18,8 @@ import {
   FileText,
   LayoutTemplate,
   ListChecks,
-  PauseCircle,
   PanelRightOpen,
   Pencil,
-  PlayCircle,
   Plus,
   Send,
   SlidersHorizontal,
@@ -40,6 +38,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ProfessionalReportDocument } from "@/components/survey/professional-report-document";
 import { SurveyAiPanel } from "@/components/survey/survey-ai-panel";
+import { SurveyCollectWorkbench } from "@/components/survey/survey-collect-workbench";
 import { SurveyHomeDashboard } from "@/components/survey/survey-home-dashboard";
 import { SurveyListScreen } from "@/components/survey/survey-list-screen";
 import { SurveyNavigationSidebar, type SurveyNavigationTarget } from "@/components/survey/survey-navigation-sidebar";
@@ -47,10 +46,12 @@ import { SurveyOutlinePanel } from "@/components/survey/survey-outline-panel";
 import { SurveyDesignWorkbench } from "@/components/survey/survey-design-workbench";
 import { SurveyReportVersionHistory } from "@/components/survey/survey-report-version-history";
 import { SurveyProfessionalReportWorkbench } from "@/components/survey/survey-professional-report-workbench";
+import { SurveyResponsesWorkbench } from "@/components/survey/survey-responses-workbench";
 import { SurveyVersionedReportComposer } from "@/components/survey/survey-versioned-report-composer";
+import { SurveyWorkflowSurface } from "@/components/survey/survey-workflow-surface";
 import {
   downloadProfessionalWordReport,
-  openProfessionalPdfExportWindow,
+  openVisualPdfExportWindow,
   type ReportExportPayload,
 } from "@/lib/report-export";
 import {
@@ -66,6 +67,7 @@ import {
   isSurveyReportRequestCurrent,
   settleSurveyReportGenerationRequest,
   settleSurveyReportRefresh,
+  surveyReportGenerationErrorMessage,
   type SurveyReportRequestState,
   type SurveyReportGenerationStatus,
 } from "@/lib/survey-report-generation";
@@ -135,6 +137,7 @@ interface Survey {
   teamId: number | null;
   updatedAt: string;
   isOwner: boolean;
+  canManage?: boolean;
   shareUrl: string;
 }
 
@@ -649,6 +652,7 @@ interface WorkspaceShellProps {
   templateLibraryMode?: boolean;
   hideHeader?: boolean;
   hideSidebar?: boolean;
+  workflowActions?: ReactNode;
   onCreateWithAi: () => void;
   onCreateFromScene?: () => void;
   onCreateBlank: () => void;
@@ -665,6 +669,7 @@ function WorkspaceShell({
   templateLibraryMode = false,
   hideHeader = false,
   hideSidebar = false,
+  workflowActions,
   onCreateWithAi,
   onCreateFromScene,
   onCreateBlank,
@@ -705,8 +710,16 @@ function WorkspaceShell({
     answer: "预览答题页，查看单份答卷和报告样本来源。",
   };
   return (
-    <div data-testid={inSurveyWorkflow ? "survey-workflow-shell" : undefined} className="min-h-full bg-secondary text-foreground">
-      <div className={focusedMode ? "grid min-h-screen" : "grid min-h-screen lg:grid-cols-[330px_minmax(0,1fr)]"}>
+    <div
+      data-testid={inSurveyWorkflow ? "survey-workflow-shell" : undefined}
+      className={focusedMode
+        ? "h-full min-h-0 overflow-hidden bg-secondary text-foreground"
+        : "min-h-full bg-secondary text-foreground"}
+    >
+      <div className={focusedMode
+        ? "grid h-full min-h-0 overflow-hidden"
+        : "grid min-h-screen lg:grid-cols-[330px_minmax(0,1fr)]"}
+      >
         {!focusedMode ? (
           <SurveyNavigationSidebar
             active={activeNavigation}
@@ -735,15 +748,21 @@ function WorkspaceShell({
           />
         ) : null}
 
-        <section className="min-w-0 overflow-auto">
+        <section
+          data-testid={focusedMode ? "survey-workflow-scroll-container" : undefined}
+          className={focusedMode ? "min-h-0 min-w-0 overflow-y-auto overscroll-y-contain" : "min-w-0 overflow-auto"}
+        >
           <div className={focusedMode ? "" : "lg:min-w-survey-workbench"}>
           {!hideHeader && <header
             data-testid={inSurveyWorkflow ? "survey-workflow-header" : undefined}
-            className="sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-3 backdrop-blur"
+            className="sticky top-0 z-10 overflow-hidden border-b border-border bg-background/95 backdrop-blur"
           >
             {inSurveyWorkflow ? (
-              <div className="grid gap-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div
+                  data-testid="survey-workflow-topbar"
+                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                >
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <Badge variant="outline" className="bg-secondary">
                       Survey Workflow
@@ -752,13 +771,19 @@ function WorkspaceShell({
                       <span className="truncate text-14 font-semibold text-foreground">{currentSurvey.title}</span>
                     ) : null}
                   </div>
-                  <Button type="button" variant="outline" size="sm" className="h-9 gap-1.5 rounded-lg px-3 text-13" onClick={() => onNavigate("workspace")}>
-                    <ChevronLeft className="h-4 w-4" strokeWidth={1.6} />
-                    返回列表
-                  </Button>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {workflowActions}
+                    <Button type="button" variant="outline" size="sm" className="h-9 gap-1.5 rounded-lg px-3 text-13" onClick={() => onNavigate("workspace")}>
+                      <ChevronLeft className="h-4 w-4" strokeWidth={1.6} />
+                      返回列表
+                    </Button>
+                  </div>
                 </div>
 
-                <div data-testid="survey-workflow-tabs" className="grid gap-2 border-t border-border pt-3 md:grid-cols-5">
+                <div
+                  data-testid="survey-workflow-tabs"
+                  className="grid gap-2 border-t border-border px-4 py-3 md:grid-cols-5"
+                >
                   <span data-testid="survey-editor-stepper" className="sr-only">
                     五步工作流导航
                   </span>
@@ -768,6 +793,7 @@ function WorkspaceShell({
                     return (
                       <Button
                         key={step.id}
+                        data-active={isActive ? "true" : "false"}
                         data-testid={`workflow-${step.id}`}
                         type="button"
                         aria-current={isActive ? "step" : undefined}
@@ -776,24 +802,31 @@ function WorkspaceShell({
                         className={[
                           "h-auto min-h-14 justify-start rounded-lg px-3 py-2 text-left",
                           isActive
-                            ? "!border-foreground !bg-foreground !text-background hover:!bg-foreground/90 hover:!text-background"
-                            : "border-border bg-background hover:border-foreground/40",
+                            ? "border-survey bg-survey/10 text-foreground shadow-sm"
+                            : "border-border bg-background text-foreground hover:border-survey/50 hover:bg-survey/5",
                         ].join(" ")}
                       >
-                        <span className={[
-                          "mr-3 grid h-7 w-7 shrink-0 place-items-center rounded-md text-12 font-bold",
-                          isActive ? "bg-background text-foreground" : "bg-secondary text-foreground",
-                        ].join(" ")}
+                        <span
+                          data-active={isActive ? "true" : "false"}
+                          data-testid={`survey-workflow-step-${step.id}`}
+                          aria-current={isActive ? "step" : undefined}
+                          className="flex min-w-0 flex-1 items-center"
                         >
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                        <span className="min-w-0">
-                          <span className="flex items-center gap-1.5 text-13 font-bold">
-                            <Icon className="h-4 w-4" strokeWidth={1.6} />
-                            {step.label}
+                          <span className={[
+                            "mr-3 grid h-7 w-7 shrink-0 place-items-center rounded-md text-12 font-bold",
+                            isActive ? "bg-survey/15 text-survey" : "bg-secondary text-foreground",
+                          ].join(" ")}
+                          >
+                            {String(index + 1).padStart(2, "0")}
                           </span>
-                          <span className={isActive ? "mt-1 block text-11 font-normal text-background/70" : "mt-1 block text-11 font-normal text-muted-foreground"}>
-                            {step.desc}
+                          <span className="min-w-0">
+                            <span className="flex items-center gap-1.5 text-13 font-bold">
+                              <Icon className="h-4 w-4" strokeWidth={1.6} />
+                              {step.label}
+                            </span>
+                            <span className="mt-1 block text-11 font-normal text-muted-foreground">
+                              {step.desc}
+                            </span>
                           </span>
                         </span>
                       </Button>
@@ -848,9 +881,9 @@ function WorkspaceShell({
             )}
           </header>}
 
-          <div className={inSurveyWorkflow ? "p-4" : ""}>
-            {children}
-          </div>
+          {inSurveyWorkflow ? (
+            <SurveyWorkflowSurface>{children}</SurveyWorkflowSurface>
+          ) : children}
           </div>
         </section>
       </div>
@@ -868,7 +901,6 @@ function WorkspaceModulePanel({
   onOpenEditor,
   onOpenResults,
   onOpenAnswer,
-  onOpenResponses,
   onBack,
 }: {
   view: Exclude<WorkspaceTarget, "workspace">;
@@ -880,11 +912,8 @@ function WorkspaceModulePanel({
   onOpenEditor: (tab: "questions" | "responses" | "settings") => void;
   onOpenResults: () => void;
   onOpenAnswer: () => void;
-  onOpenResponses: () => void;
   onBack: () => void;
 }) {
-  const [answerViewsCollapsed, setAnswerViewsCollapsed] = useState(false);
-  const [selectedAnswerView, setSelectedAnswerView] = useState("all");
   const reportPlan = survey ? inferReportPlan(survey) : null;
   const config: Record<Exclude<WorkspaceTarget, "workspace">, { label: string; title: string; copy: string; icon: typeof ClipboardList }> = {
     design: {
@@ -950,231 +979,59 @@ function WorkspaceModulePanel({
     return <>{reportContent}</>;
   }
 
-  const responseRows = Array.from({ length: Math.min(4, Math.max(survey.responses, 0)) }, (_, index) => {
-    const responseNumber = survey.responses - index;
-    return {
-      id: `R-${String(responseNumber).padStart(3, "0")}`,
-      title: `匿名答卷 ${index + 1}`,
-      time: index === 0 ? "最新提交" : `${index + 1} 小时前`,
-      status: "已完成",
-      source: "用于报告样本",
-    };
-  });
-
   return (
-    <div data-testid={view === "answer" ? "workspace-answer-workbench" : undefined} className="grid gap-4">
+    <div data-testid={view === "answer" ? "workspace-answer-workbench" : undefined}>
       <a data-testid="workspace-answer-link" href={`/survey/${survey.id}/answer`} className="sr-only">
         打开答题页
       </a>
       <a data-testid="workspace-report-link" href={`/surveys/${survey.id}/results`} className="sr-only">
         打开分析报告
       </a>
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-background p-4">
-        <div>
-          <Badge variant="outline">{item.label}</Badge>
-          <h2 className="mt-2 text-18 font-bold text-foreground">{item.title}</h2>
-          <p className="text-13 text-muted-foreground">{item.copy}</p>
+      <section
+        data-testid={view === "answer" ? "answer-workspace-intro" : undefined}
+        className="overflow-hidden rounded-lg border border-survey/20 bg-background shadow-sm"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+          <div>
+            <Badge variant="outline">{item.label}</Badge>
+            <h2 className="mt-2 text-18 font-bold text-foreground">{item.title}</h2>
+            <p className="text-13 text-muted-foreground">{item.copy}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={onBack}>
+              返回列表
+            </Button>
+            <Button data-testid="answer-open-preview" type="button" size="sm" variant="outline" className="gap-1.5" onClick={onOpenAnswer}>
+              <Eye className="h-4 w-4" strokeWidth={1.7} />
+              问卷预览
+            </Button>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={onBack}>
-            返回列表
-          </Button>
-          {view === "design" && (
-            <Button type="button" size="sm" onClick={() => onOpenEditor("questions")}>
-              打开题目编辑
-            </Button>
-          )}
-          {view === "template" && (
-            <Button type="button" size="sm" onClick={onOpenResults}>
-              打开报告规划
-            </Button>
-          )}
-          {view === "collect" && (
-            <Button type="button" size="sm" onClick={() => onOpenEditor("settings")}>
-              配置发布回收
-            </Button>
-          )}
-          {view === "report" && (
-            <Button type="button" size="sm" onClick={onOpenResults}>
-              查看分析报告
-            </Button>
-          )}
-          {view === "answer" && (
-            <>
-              <Button data-testid="answer-open-preview" type="button" size="sm" variant="outline" className="gap-1.5" onClick={onOpenAnswer}>
-                <Eye className="h-4 w-4" strokeWidth={1.7} />
-                问卷预览
-              </Button>
-              <Button data-testid="answer-open-responses" type="button" size="sm" className="gap-1.5" onClick={onOpenResponses}>
-                <ClipboardList className="h-4 w-4" strokeWidth={1.7} />
-                查看用户答卷
-              </Button>
-            </>
-          )}
+
+        <div className="grid border-y border-border bg-surface-1 md:grid-cols-3 md:divide-x md:divide-border">
+          <div className="px-5 py-3">
+            <p className="text-12 text-muted-foreground">当前问卷</p>
+            <p className="mt-1 text-15 font-semibold text-foreground">{survey.title}</p>
+          </div>
+          <div className="border-t border-border px-5 py-3 md:border-t-0">
+            <p className="text-12 text-muted-foreground">回收状态</p>
+            <div className="mt-1 flex items-center gap-2">
+              <Badge variant="outline" className={statusBadgeClass(survey.status)}>
+                {STATUS_LABEL[survey.status]}
+              </Badge>
+              <span className="text-12 text-muted-foreground">{survey.responses} 份答卷</span>
+            </div>
+          </div>
+          <div className="border-t border-border px-5 py-3 md:border-t-0">
+            <p className="text-12 text-muted-foreground">报告规划</p>
+            <p className="mt-1 text-13 font-semibold text-foreground">{reportPlan?.name}</p>
+          </div>
+        </div>
+
+        <div data-testid="user-responses-workbench">
+          <SurveyResponsesWorkbench surveyId={survey.id} />
         </div>
       </section>
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <section className="rounded-lg border border-border bg-card p-4">
-          <p className="text-12 text-muted-foreground">当前问卷</p>
-          <p className="mt-1 text-15 font-semibold text-foreground">{survey.title}</p>
-          <p className="mt-1 line-clamp-2 text-12 text-muted-foreground">{survey.description || "暂无说明"}</p>
-        </section>
-        <section className="rounded-lg border border-border bg-card p-4">
-          <p className="text-12 text-muted-foreground">回收状态</p>
-          <div className="mt-2">
-            <Badge variant="outline" className={statusBadgeClass(survey.status)}>
-              {STATUS_LABEL[survey.status]}
-            </Badge>
-          </div>
-          <p className="mt-2 text-12 text-muted-foreground">{survey.responses} 份答卷</p>
-        </section>
-        <section className="rounded-lg border border-border bg-card p-4">
-          <p className="text-12 text-muted-foreground">报告规划</p>
-          <p className="mt-1 text-13 font-semibold text-foreground">{reportPlan?.name}</p>
-          <p className="mt-1 text-12 text-muted-foreground">{reportPlan?.meta}</p>
-        </section>
-      </div>
-
-      {view === "answer" && (
-        <section data-testid="user-responses-workbench" className={answerViewsCollapsed ? "grid min-w-0 gap-3 xl:grid-cols-[56px_minmax(0,1fr)_300px]" : "grid min-w-0 gap-3 xl:grid-cols-[200px_minmax(0,1fr)_300px]"}>
-          <SurveyOutlinePanel
-            title="答卷视图"
-            items={[
-              { id: "all", label: "全部答卷", meta: `${survey.responses} 份` },
-              { id: "today", label: "今日提交", meta: `${Math.min(18, survey.responses)} 份` },
-              { id: "review", label: "需复核", meta: survey.responses ? "待检查" : "0 份" },
-              { id: "flagged", label: "已标记", meta: "0 份" },
-              { id: "invalid", label: "无效答卷", meta: "0 份" },
-            ]}
-            selectedId={selectedAnswerView}
-            collapsed={answerViewsCollapsed}
-            onToggle={() => setAnswerViewsCollapsed((collapsed) => !collapsed)}
-            onSelect={setSelectedAnswerView}
-          />
-          <div className="overflow-hidden rounded-lg border border-border bg-background">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3">
-              <div>
-                <Badge variant="outline">Responses</Badge>
-                <h3 className="mt-2 text-17 font-bold text-foreground">用户答卷</h3>
-                <p className="mt-1 text-13 leading-6 text-muted-foreground">
-                  按单份答卷查看提交内容、答题完成状态和报告生成时引用的真实样本。
-                </p>
-              </div>
-              <Button data-testid="answer-open-all-responses" type="button" size="sm" className="gap-1.5" onClick={onOpenResponses}>
-                <ClipboardList className="h-4 w-4" strokeWidth={1.7} />
-                查看全部答卷
-              </Button>
-            </div>
-
-            {responseRows.length > 0 ? (
-              <div className="divide-y divide-border">
-                {responseRows.map((response, index) => (
-                  <Button
-                    key={response.id}
-                    type="button"
-                    variant="ghost"
-                    className="flex h-auto w-full items-center justify-between gap-3 rounded-none px-4 py-3 text-left font-normal transition-colors hover:bg-muted/20"
-                    onClick={onOpenResponses}
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-foreground text-12 font-semibold text-background">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate text-14 font-semibold text-foreground">
-                          {response.id} · {response.title}
-                        </p>
-                        <p className="mt-1 text-12 text-muted-foreground">
-                          {response.time} · 已答完 · {response.source}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="success">{response.status}</Badge>
-                  </Button>
-                ))}
-              </div>
-            ) : (
-              <div className="px-4 py-8 text-center">
-                <ClipboardList className="mx-auto h-8 w-8 text-muted-foreground" strokeWidth={1.6} />
-                <p className="mt-3 text-14 font-semibold text-foreground">暂无用户答卷</p>
-                <p className="mt-1 text-13 text-muted-foreground">发布回收后，这里会显示每位用户的提交记录。</p>
-              </div>
-            )}
-          </div>
-
-          <div className="grid gap-3">
-            <SurveyAiPanel
-              title="答卷质量 AI"
-              placeholder="找出可能无效的答卷并说明原因"
-              resultLabel="AI 已完成答卷检查"
-              changeCount={Math.min(6, survey.responses)}
-              onSubmit={onOpenResponses}
-              onPreview={onOpenResponses}
-              onApply={onOpenResponses}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              data-testid="answer-responses-card"
-              className="group h-auto flex-col items-stretch rounded-lg border border-border bg-background p-4 text-left font-normal transition-colors hover:border-border-strong hover:bg-muted/20"
-              onClick={onOpenResponses}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-foreground">
-                  <ClipboardList className="h-5 w-5" strokeWidth={1.7} />
-                </div>
-                <Badge variant="outline">{survey.responses} 份答卷</Badge>
-              </div>
-              <h3 className="mt-4 text-17 font-bold text-foreground">单份答卷查看</h3>
-              <p className="mt-2 text-13 leading-6 text-muted-foreground">
-                进入答卷明细，逐份核对用户提交内容、提交时间和后续报告样本来源。
-              </p>
-              <span className="mt-4 inline-flex text-13 font-semibold text-foreground group-hover:underline">查看用户答卷</span>
-            </Button>
-
-            <Button
-              type="button"
-              variant="ghost"
-              data-testid="answer-preview-card"
-              className="group h-auto flex-col items-stretch rounded-lg border border-border bg-background p-4 text-left font-normal transition-colors hover:border-border-strong hover:bg-muted/20"
-              onClick={onOpenAnswer}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-foreground">
-                  <Eye className="h-5 w-5" strokeWidth={1.7} />
-                </div>
-                <Badge variant="outline">Preview</Badge>
-              </div>
-              <h3 className="mt-4 text-17 font-bold text-foreground">问卷预览</h3>
-              <p className="mt-2 text-13 leading-6 text-muted-foreground">
-                以用户视角打开答题页，检查题目顺序、必填校验、选项显示和提交成功状态。
-              </p>
-              <span className="mt-4 inline-flex text-13 font-semibold text-foreground group-hover:underline">打开问卷预览</span>
-            </Button>
-
-            <Button
-              type="button"
-              variant="ghost"
-              data-testid="answer-report-sample-card"
-              className="group h-auto flex-col items-stretch rounded-lg border border-border bg-background p-4 text-left font-normal transition-colors hover:border-border-strong hover:bg-muted/20"
-              onClick={onOpenResults}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-foreground">
-                  <BarChart3 className="h-5 w-5" strokeWidth={1.7} />
-                </div>
-                <Badge variant="outline">Report sample</Badge>
-              </div>
-              <h3 className="mt-4 text-17 font-bold text-foreground">报告样本来源</h3>
-              <p className="mt-2 text-13 leading-6 text-muted-foreground">
-                跳转到分析报告，确认这些答卷如何参与图表、洞察和风险判断。
-              </p>
-              <span className="mt-4 inline-flex text-13 font-semibold text-foreground group-hover:underline">查看报告样本</span>
-            </Button>
-          </div>
-        </section>
-      )}
     </div>
   );
 }
@@ -2383,361 +2240,9 @@ function WorkspaceTemplateWorkbench({
   );
 }
 
-function WorkspaceCollectWorkbench({
-  survey,
-  responseMode,
-  publishStartAt,
-  publishEndAt,
-  responseLimit,
-  oneResponsePerUser,
-  confirmationMessage,
-  message,
-  statusTogglePending,
-  onResponseModeChange,
-  onPublishStartAtChange,
-  onPublishEndAtChange,
-  onResponseLimitChange,
-  onOneResponsePerUserChange,
-  onConfirmationMessageChange,
-  onToggleStatus,
-  onSave,
-  onBackToTemplate,
-  onOpenReport,
-}: {
-  survey: Survey;
-  responseMode: "anonymous" | "identified";
-  publishStartAt: string;
-  publishEndAt: string;
-  responseLimit: string;
-  oneResponsePerUser: boolean;
-  confirmationMessage: string;
-  message: string;
-  statusTogglePending: boolean;
-  onResponseModeChange: (value: "anonymous" | "identified") => void;
-  onPublishStartAtChange: (value: string) => void;
-  onPublishEndAtChange: (value: string) => void;
-  onResponseLimitChange: (value: string) => void;
-  onOneResponsePerUserChange: (value: boolean) => void;
-  onConfirmationMessageChange: (value: string) => void;
-  onToggleStatus: () => void;
-  onSave: () => void;
-  onBackToTemplate: () => void;
-  onOpenReport: () => void;
-}) {
-  const reportPlan = inferReportPlan(survey);
-  const isCollecting = survey.status === "active";
-  const toggleStatusLabel = isCollecting ? "暂停回收" : "启用回收";
-  const shareUrl = survey.shareUrl || `/s/${survey.id}`;
-  const responseTarget = responseLimit.trim() ? Number(responseLimit) : null;
-  const completionText = responseTarget && responseTarget > 0
-    ? `${Math.min(100, Math.round((survey.responses / responseTarget) * 100))}% 目标进度`
-    : "未设置上限";
-  const channelCards = [
-    ["公开链接", "复制后可投放到邮件、社群或运营位", "Ready"],
-    ["二维码", "适合线下物料、海报和现场扫码", "Ready"],
-    ["定向邀请", responseMode === "identified" ? "实名模式可追踪受访者" : "匿名模式仅统计来源", responseMode === "identified" ? "Enabled" : "Optional"],
-  ];
-
-  return (
-    <div data-testid="workspace-collect-workbench" className="grid gap-4">
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-background p-4">
-        <div>
-          <Badge variant="outline">Collect</Badge>
-          <h2 className="mt-2 text-18 font-bold text-foreground">发布回收</h2>
-          <p className="text-13 text-muted-foreground">设置链接、回收范围和提交规则。</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={onBackToTemplate}>
-            上一步：报告规划
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={isCollecting ? "outline" : "default"}
-            onClick={onToggleStatus}
-            disabled={statusTogglePending}
-            className={isCollecting ? "gap-1.5" : "gap-1.5 bg-foreground text-background hover:bg-foreground/90"}
-          >
-            {isCollecting ? <PauseCircle className="h-4 w-4" strokeWidth={1.6} /> : <PlayCircle className="h-4 w-4" strokeWidth={1.6} />}
-            {statusTogglePending ? "处理中" : toggleStatusLabel}
-          </Button>
-          <Button type="button" size="sm" variant="outline" onClick={onSave}>
-            保存配置
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={onOpenReport}
-            className="gap-1.5 border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background"
-          >
-            下一步：分析报告
-            <Send className="h-4 w-4" strokeWidth={1.6} />
-          </Button>
-        </div>
-      </section>
-
-      {message && (
-        <section
-          role={message.startsWith("已保存") ? undefined : "alert"}
-          className={`rounded-lg border p-3 text-13 ${
-            message.startsWith("已保存")
-              ? "border-success/30 bg-tag-green text-success"
-              : "border-destructive/30 bg-destructive/5 text-destructive"
-          }`}
-        >
-          {message}
-        </section>
-      )}
-
-      <section className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-12 text-muted-foreground">当前问卷</p>
-          <p className="mt-1 text-15 font-semibold text-foreground">{survey.title}</p>
-          <p className="mt-1 line-clamp-2 text-12 text-muted-foreground">{survey.description || "暂无说明"}</p>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-12 text-muted-foreground">回收状态</p>
-          <div className="mt-2 flex items-center gap-2">
-            <Badge variant="outline" className={statusBadgeClass(survey.status)}>
-              {STATUS_LABEL[survey.status]}
-            </Badge>
-            <span className="text-13 font-semibold text-foreground">{survey.responses} 份答卷</span>
-          </div>
-          <p className="mt-1 text-12 text-muted-foreground">{completionText}</p>
-          <Button
-            type="button"
-            size="sm"
-            variant={isCollecting ? "outline" : "default"}
-            onClick={onToggleStatus}
-            disabled={statusTogglePending}
-            className={`mt-3 w-full gap-1.5 ${isCollecting ? "" : "bg-foreground text-background hover:bg-foreground/90"}`}
-          >
-            {isCollecting ? <PauseCircle className="h-4 w-4" strokeWidth={1.6} /> : <PlayCircle className="h-4 w-4" strokeWidth={1.6} />}
-            {statusTogglePending ? "处理中" : toggleStatusLabel}
-          </Button>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-12 text-muted-foreground">报告规划</p>
-          <p className="mt-1 text-13 font-semibold text-foreground">{reportPlan.name}</p>
-          <p className="mt-1 text-12 text-muted-foreground">{reportPlan.meta}</p>
-        </div>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="grid gap-4">
-          <section className="rounded-lg border border-border bg-background p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <Badge variant="success">Publish setup</Badge>
-                <h3 className="mt-2 text-18 font-bold text-foreground">回收规则</h3>
-                <p className="text-13 text-muted-foreground">这些设置会直接影响答题入口、去重规则和回收时间窗口。</p>
-              </div>
-              <Badge variant="outline">{responseMode === "identified" ? "实名填写" : "匿名填写"}</Badge>
-            </div>
-
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div className="grid gap-1.5">
-                <Label htmlFor="workspace-publish-mode">答题身份</Label>
-                <Select
-                  id="workspace-publish-mode"
-                  value={responseMode}
-                  onChange={(event) => onResponseModeChange(event.target.value === "identified" ? "identified" : "anonymous")}
-                >
-                  <option value="anonymous">匿名填写</option>
-                  <option value="identified">实名填写</option>
-                </Select>
-              </div>
-              <label className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2 text-14 text-foreground">
-                <span>
-                  <span className="block font-semibold">每人一次</span>
-                  <span className="text-12 text-muted-foreground">限制重复提交，后续可接入登录态或邀请名单。</span>
-                </span>
-                <Input
-                  type="checkbox"
-                  checked={oneResponsePerUser}
-                  onChange={(event) => onOneResponsePerUserChange(event.target.checked)}
-                  className="h-4 w-4"
-                />
-              </label>
-              <div className="grid gap-1.5">
-                <Label htmlFor="workspace-publish-start">开始时间</Label>
-                <Input
-                  id="workspace-publish-start"
-                  type="datetime-local"
-                  value={publishStartAt}
-                  onChange={(event) => onPublishStartAtChange(event.target.value)}
-                />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="workspace-publish-end">截止时间</Label>
-                <Input
-                  id="workspace-publish-end"
-                  type="datetime-local"
-                  value={publishEndAt}
-                  onChange={(event) => onPublishEndAtChange(event.target.value)}
-                />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="workspace-response-limit">答卷上限</Label>
-                <Input
-                  id="workspace-response-limit"
-                  type="number"
-                  min="1"
-                  placeholder="不限制"
-                  value={responseLimit}
-                  onChange={(event) => onResponseLimitChange(event.target.value)}
-                />
-              </div>
-              <div className="rounded-lg border border-border bg-card p-3">
-                <p className="text-12 text-muted-foreground">发布前检查</p>
-                <div className="mt-2 grid gap-2 text-13">
-                  {["题目可答", "报告规划已绑定", "提交文案已配置"].map((item) => (
-                    <div key={item} className="flex items-center gap-2 text-foreground">
-                      <span className="h-2 w-2 rounded-full bg-success" />
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="grid gap-1.5 md:col-span-2">
-                <Label htmlFor="workspace-confirmation-message">提交确认文案</Label>
-                <Textarea
-                  id="workspace-confirmation-message"
-                  value={confirmationMessage}
-                  onChange={(event) => onConfirmationMessageChange(event.target.value)}
-                  className="min-h-24"
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-lg border border-border bg-background p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <Badge variant="outline">Share</Badge>
-                <h3 className="mt-2 text-18 font-bold text-foreground">发布入口</h3>
-                <p className="text-13 text-muted-foreground">提供链接、二维码和渠道投放入口，方便上线前检查。</p>
-              </div>
-              <Button type="button" size="sm" variant="outline" className="gap-1.5">
-                <Copy className="h-4 w-4" strokeWidth={1.6} />
-                复制链接
-              </Button>
-            </div>
-            <div className="mt-4 grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="grid aspect-square place-items-center rounded-md border border-border bg-muted">
-                  <div className="rounded-md bg-background px-3 py-2 text-center text-12 font-semibold text-foreground">QR</div>
-                </div>
-                <p className="mt-3 text-12 text-muted-foreground">扫码预览答题页</p>
-              </div>
-              <div className="grid gap-3">
-                <div className="rounded-lg border border-border bg-card p-3">
-                  <p className="text-12 text-muted-foreground">公开链接</p>
-                  <p className="mt-1 truncate text-13 font-semibold text-foreground">{shareUrl}</p>
-                </div>
-                <div className="grid gap-3 md:grid-cols-3">
-                  {channelCards.map(([title, desc, status]) => (
-                    <div key={title} className="rounded-lg border border-border bg-card p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-13 font-semibold text-foreground">{title}</p>
-                        <Badge variant={status === "Ready" || status === "Enabled" ? "success" : "muted"}>{status}</Badge>
-                      </div>
-                      <p className="mt-2 text-12 text-muted-foreground">{desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <aside className="grid h-fit gap-4">
-          <SurveyAiPanel
-            title="发布 AI"
-            placeholder="例如：设置为团队实名问卷，回收 200 份并在周五截止"
-            resultLabel="AI 已生成发布方案"
-            changeCount={5}
-            onSubmit={onSave}
-            onPreview={() => undefined}
-            onApply={onSave}
-          />
-          <section className="rounded-lg border border-border bg-card p-4">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-15 font-bold text-foreground">回收监控</h3>
-              <Badge variant={survey.status === "active" ? "success" : "muted"}>{STATUS_LABEL[survey.status]}</Badge>
-            </div>
-            <div className="mt-4 grid gap-3">
-              {[
-                ["已收答卷", `${survey.responses}`],
-                ["答卷上限", responseTarget ? `${responseTarget}` : "不限"],
-                ["身份模式", responseMode === "identified" ? "实名" : "匿名"],
-                ["去重策略", oneResponsePerUser ? "每人一次" : "允许多次"],
-              ].map(([label, value]) => (
-                <div key={label} className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2">
-                  <span className="text-12 text-muted-foreground">{label}</span>
-                  <span className="text-13 font-semibold text-foreground">{value}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="rounded-lg border border-border bg-card p-4">
-            <h3 className="text-15 font-bold text-foreground">上线检查</h3>
-            <div className="mt-3 grid gap-2">
-              {[
-                ["答题页", "可访问"],
-                ["报告模板", "已绑定"],
-                ["回收规则", publishEndAt ? "有截止时间" : "长期开放"],
-                ["提交反馈", confirmationMessage.trim() ? "已配置" : "待补充"],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-md border border-border bg-background p-3">
-                  <p className="text-12 text-muted-foreground">{label}</p>
-                  <p className="mt-1 text-13 font-semibold text-foreground">{value}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="rounded-lg border border-border bg-card p-4">
-            <h3 className="text-15 font-bold text-foreground">下一步</h3>
-            <p className="mt-1 text-12 text-muted-foreground">
-              保存配置后可以发布答题链接；回收开始后，分析报告会按报告规划自动补全数据。
-            </p>
-            <div className="mt-3 grid gap-2">
-              <Button
-                type="button"
-                variant={isCollecting ? "outline" : "default"}
-                size="sm"
-                onClick={onToggleStatus}
-                disabled={statusTogglePending}
-                className={`gap-1.5 ${isCollecting ? "" : "bg-foreground text-background hover:bg-foreground/90"}`}
-              >
-                {isCollecting ? <PauseCircle className="h-4 w-4" strokeWidth={1.6} /> : <PlayCircle className="h-4 w-4" strokeWidth={1.6} />}
-                {statusTogglePending ? "处理中" : toggleStatusLabel}
-              </Button>
-              <Button type="button" variant="outline" size="sm" onClick={onSave}>
-                保存发布配置
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={onOpenReport}
-                className="border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background"
-              >
-                进入分析报告
-              </Button>
-            </div>
-          </section>
-        </aside>
-      </section>
-    </div>
-  );
-}
-
 function WorkspaceReportWorkbench({
   survey,
+  canManage,
   questions,
   categoryPlan,
   generatedReport,
@@ -2750,6 +2255,7 @@ function WorkspaceReportWorkbench({
   onLoadMoreVersions,
 }: {
   survey: Survey;
+  canManage: boolean;
   questions: Question[];
   categoryPlan?: ReportCategoryPlanDraft;
   generatedReport?: unknown;
@@ -2909,8 +2415,18 @@ function WorkspaceReportWorkbench({
       setExportStatus("专业报告数据仍在加载，请稍后重试。");
       return;
     }
-    const opened = openProfessionalPdfExportWindow(professionalReport);
-    setExportStatus(opened ? "已打开 A4 PDF 导出窗口，可在打印对话框中保存。" : "浏览器拦截了 PDF 导出窗口，请允许弹窗后重试。");
+    const reportElement = document.querySelector<HTMLElement>(
+      '[data-testid="professional-report-document"]'
+    );
+    if (!reportElement) {
+      setExportStatus("未找到当前报告内容，请刷新页面后重试。");
+      return;
+    }
+    const opened = openVisualPdfExportWindow(
+      reportElement,
+      professionalReport.title
+    );
+    setExportStatus(opened ? "已打开包含图表的 PDF 导出窗口，可在打印对话框中保存。" : "浏览器拦截了 PDF 导出窗口，请允许弹窗后重试。");
   }
 
   function exportWord() {
@@ -2924,50 +2440,91 @@ function WorkspaceReportWorkbench({
 
   if (professionalReport) {
     return (
-      <SurveyProfessionalReportWorkbench
-        report={professionalReport}
-        generation={generation}
-        generating={generating}
-        error={error}
-        onGenerateReport={() =>
-          onGenerateReport(
-            reportGenerationInstruction(),
-            effectiveCategoryPlan
-          )
-        }
-        onSelectVersion={onSelectVersion}
-        onLoadMoreVersions={onLoadMoreVersions}
-        onExportPdf={exportPdf}
-        onExportWord={exportWord}
-      />
+      <div data-testid="workspace-report-workbench">
+        <SurveyProfessionalReportWorkbench
+          report={professionalReport}
+          canManage={canManage}
+          generation={generation}
+          generating={generating}
+          error={error}
+          onGenerateReport={() =>
+            onGenerateReport(
+              reportGenerationInstruction(),
+              effectiveCategoryPlan
+            )
+          }
+          onSelectVersion={onSelectVersion}
+          onLoadMoreVersions={onLoadMoreVersions}
+          onExportPdf={exportPdf}
+          onExportWord={exportWord}
+        />
+      </div>
+    );
+  }
+
+  if (!canManage) {
+    return (
+      <div data-testid="workspace-report-workbench" className="grid gap-4">
+        <section
+          data-testid="report-workspace-intro"
+          className="rounded-lg border border-border bg-background px-5 py-4"
+        >
+          <p className="text-11 font-semibold uppercase tracking-[0.14em] text-survey">Analysis Report</p>
+          <h2 className="mt-1 text-20 font-bold text-foreground">{survey.title} 分析报告</h2>
+        </section>
+        <section className="border border-border bg-background px-8 py-16 text-center">
+          <h2 className="text-18 font-bold text-foreground">暂无已生成报告</h2>
+          <p className="mt-2 text-13 text-muted-foreground">
+            报告生成后将在这里提供只读查看和导出。
+          </p>
+        </section>
+      </div>
     );
   }
 
   if (!professionalReport) {
     if (responseCount === 0) {
       return (
-        <section
-          data-testid="report-generation-empty-state"
-          className="border border-border bg-background px-6 py-16 text-center"
-        >
-          <h2 className="text-18 font-bold text-foreground">
-            收到至少 1 份有效答卷后可生成报告
-          </h2>
-          <p className="mx-auto mt-2 max-w-xl text-13 text-muted-foreground">
-            请先发布问卷并回收答卷。系统只使用真实答卷生成报告，不会用模拟数据填充图表或结论。
-          </p>
-          <Button type="button" className="mt-5" disabled>
-            <Sparkles className="mr-2 h-4 w-4" strokeWidth={1.6} />
-            重新生成
-          </Button>
-        </section>
+        <div data-testid="workspace-report-workbench" className="grid gap-4">
+          <section
+            data-testid="report-workspace-intro"
+            className="rounded-lg border border-border bg-background px-5 py-4"
+          >
+            <p className="text-11 font-semibold uppercase tracking-[0.14em] text-survey">Analysis Report</p>
+            <h2 className="mt-1 text-20 font-bold text-foreground">{survey.title} 分析报告</h2>
+          </section>
+          <section
+            data-testid="report-generation-empty-state"
+            className="border border-border bg-background px-6 py-16 text-center"
+          >
+            <h2 className="text-18 font-bold text-foreground">
+              收到至少 1 份有效答卷后可生成报告
+            </h2>
+            <p className="mx-auto mt-2 max-w-xl text-13 text-muted-foreground">
+              请先发布问卷并回收答卷。系统只使用真实答卷生成报告，不会用模拟数据填充图表或结论。
+            </p>
+            <Button type="button" className="mt-5" disabled>
+              <Sparkles className="mr-2 h-4 w-4" strokeWidth={1.6} />
+              重新生成
+            </Button>
+          </section>
+        </div>
       );
     }
     return (
-      <section data-testid="professional-report-loading" className="border border-border bg-background px-8 py-16 text-center">
-        <h2 className="text-18 font-bold text-foreground">正在汇总真实答卷</h2>
-        <p className="mt-2 text-13 text-muted-foreground">报告只会使用已提交答卷，不会用模拟数据填充图表或结论。</p>
-      </section>
+      <div data-testid="workspace-report-workbench" className="grid gap-4">
+        <section
+          data-testid="report-workspace-intro"
+          className="rounded-lg border border-border bg-background px-5 py-4"
+        >
+          <p className="text-11 font-semibold uppercase tracking-[0.14em] text-survey">Analysis Report</p>
+          <h2 className="mt-1 text-20 font-bold text-foreground">{survey.title} 分析报告</h2>
+        </section>
+        <section data-testid="professional-report-loading" className="border border-border bg-background px-8 py-16 text-center">
+          <h2 className="text-18 font-bold text-foreground">正在汇总真实答卷</h2>
+          <p className="mt-2 text-13 text-muted-foreground">报告只会使用已提交答卷，不会用模拟数据填充图表或结论。</p>
+        </section>
+      </div>
     );
   }
 
@@ -3266,6 +2823,8 @@ export default function SurveysPage() {
   const reportCategoryPlanRequestVersion = useRef(0);
   const [reportTemplatesBySurveyId, setReportTemplatesBySurveyId] = useState<Record<number, ReportTemplateDraft>>({});
   const [reportCategoryPlansBySurveyId, setReportCategoryPlansBySurveyId] = useState<Record<number, ReportCategoryPlanDraft>>({});
+  const [reportCategoryPlanUpdatedAtBySurveyId, setReportCategoryPlanUpdatedAtBySurveyId] =
+    useState<Record<number, string | null>>({});
   const [generatedReportsBySurveyId, setGeneratedReportsBySurveyId] = useState<Record<number, unknown>>({});
   const [professionalReportsBySurveyId, setProfessionalReportsBySurveyId] = useState<Record<number, SurveyReportDocument>>({});
   const [professionalReportGenerationBySurveyId, setProfessionalReportGenerationBySurveyId] = useState<Record<number, SurveyReportGenerationStatus>>({});
@@ -3286,8 +2845,13 @@ export default function SurveysPage() {
 
   useEffect(() => {
     const workflowActive = mode === "editor" || workspaceView !== "workspace";
+    if (workflowActive) {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+    document.documentElement.classList.toggle("survey-workflow-active", workflowActive);
     document.body.classList.toggle("survey-workflow-active", workflowActive);
     return () => {
+      document.documentElement.classList.remove("survey-workflow-active");
       document.body.classList.remove("survey-workflow-active");
     };
   }, [mode, workspaceView]);
@@ -4454,9 +4018,9 @@ export default function SurveysPage() {
     setView("edit");
     if (currentSurveyId != null) {
       window.history.replaceState(null, "", `/surveys?survey=${currentSurveyId}&step=${target}`);
-      await loadSurveyForWorkspace(currentSurveyId);
+      void loadSurveyForWorkspace(currentSurveyId);
       if (target === "template" || target === "report") {
-        await loadWorkspaceReportCategoryPlan(currentSurveyId);
+        void loadWorkspaceReportCategoryPlan(currentSurveyId);
       }
     }
   }
@@ -4506,15 +4070,6 @@ export default function SurveysPage() {
     window.open(new URL(`/survey/${currentSurveyId}/answer`, window.location.href).toString(), "_blank", "noopener,noreferrer");
   }
 
-  function openSelectedSurveyResponses() {
-    if (currentSurveyId == null) {
-      openEditor();
-      setEditorTab("responses");
-      return;
-    }
-    window.location.href = `/surveys/${currentSurveyId}/results?from=workflow&tab=individual`;
-  }
-
   async function saveWorkspaceReportTemplate(surveyId: number, template: ReportTemplateDraft) {
     setWorkspaceTemplateSaving(true);
     setWorkspaceTemplateStatus("");
@@ -4548,11 +4103,17 @@ export default function SurveysPage() {
       const payload = await res.json().catch(() => ({}));
       if (requestVersion !== reportCategoryPlanRequestVersion.current) return;
       if (!res.ok) {
+        if (res.status === 403) return;
         setWorkspaceTemplateError(payload?.error ?? "报告结构加载失败");
         return;
       }
       if (payload.reportCategoryPlan) {
         setReportCategoryPlansBySurveyId((items) => ({ ...items, [surveyId]: payload.reportCategoryPlan as ReportCategoryPlanDraft }));
+        setReportCategoryPlanUpdatedAtBySurveyId((items) => ({
+          ...items,
+          [surveyId]:
+            typeof payload.updatedAt === "string" ? payload.updatedAt : null,
+        }));
       }
     } catch {
       if (requestVersion !== reportCategoryPlanRequestVersion.current) return;
@@ -4617,40 +4178,46 @@ export default function SurveysPage() {
       : "refresh-failed";
   }
 
-  async function classifyWorkspaceReportCategories(surveyId: number) {
+  async function classifyWorkspaceReportCategories(
+    surveyId: number,
+    instruction: string,
+    currentPlan: ReportCategoryPlanDraft
+  ): Promise<{
+    plan: ReportCategoryPlanDraft;
+    warning?: string;
+  } | null> {
     if (
       workspaceTemplateSaving ||
       workspaceReportClassifying ||
       workspaceReportGenerating
-    ) return;
+    ) return null;
     reportCategoryPlanRequestVersion.current += 1;
     setWorkspaceReportClassifying(true);
     setWorkspaceTemplateStatus("");
     setWorkspaceTemplateError("");
     try {
-      const res = await fetch(`/api/surveys/${surveyId}/report-categories`, { method: "POST" });
+      const res = await fetch(`/api/surveys/${surveyId}/report-categories`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          previewOnly: true,
+          instruction,
+          currentPlan,
+        }),
+      });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
         setWorkspaceTemplateError(payload?.error ?? "AI 分类失败，请检查模型配置后重试");
-        return;
+        return null;
       }
-      const persistence = await applyPersistedWorkspaceReportCategoryPlan({
-        surveyId,
-        reportCategoryPlan:
-          payload.reportCategoryPlan as ReportCategoryPlanDraft,
-        invalidateWhenUnchanged: false,
-      });
-      const status =
-        payload?.warning ?? "AI 已按问卷问题生成报告分类结构。";
-      setWorkspaceTemplateStatus(
-        persistence === "unchanged"
-          ? status
-          : persistence === "refreshed"
-            ? `${status} 正式报告状态已刷新。`
-            : `${status} 正式报告状态刷新失败，请稍后重试。`
-      );
+      setWorkspaceTemplateStatus("AI 建议已生成，确认应用后再保存模板。");
+      return {
+        plan: payload.reportCategoryPlan as ReportCategoryPlanDraft,
+        warning: typeof payload?.warning === "string" ? payload.warning : undefined,
+      };
     } catch {
       setWorkspaceTemplateError("AI 分类失败，请稍后重试。");
+      return null;
     } finally {
       setWorkspaceReportClassifying(false);
     }
@@ -4670,7 +4237,11 @@ export default function SurveysPage() {
       const res = await fetch(`/api/surveys/${surveyId}/report-categories`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(plan),
+        body: JSON.stringify({
+          ...plan,
+          expectedUpdatedAt:
+            reportCategoryPlanUpdatedAtBySurveyId[surveyId] ?? null,
+        }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -4678,6 +4249,13 @@ export default function SurveysPage() {
         return;
       }
       const saved = payload.reportCategoryPlan as ReportCategoryPlanDraft;
+      setReportCategoryPlanUpdatedAtBySurveyId((items) => ({
+        ...items,
+        [surveyId]:
+          typeof payload.reportCategoryPlan?.updated_at === "string"
+            ? payload.reportCategoryPlan.updated_at
+            : items[surveyId] ?? null,
+      }));
       const persistence = await applyPersistedWorkspaceReportCategoryPlan({
         surveyId,
         reportCategoryPlan: saved,
@@ -4732,10 +4310,18 @@ export default function SurveysPage() {
         return;
       }
       if (!res.ok) {
+        const generationError = String(payload?.error ?? "");
         setWorkspaceTemplateError(
-          payload?.error === "report_requires_responses"
+          surveyReportGenerationErrorMessage(payload)
+          ?? (generationError === "report_requires_responses"
             ? "收到至少 1 份有效答卷后可生成报告。"
-            : "正式报告生成失败，请稍后重试。"
+            : generationError.startsWith("report_template_chapter_sources_missing:")
+              ? "有报告章节尚未选择分析题目，请返回报告模板补充题目来源。"
+              : generationError.startsWith("report_template_chapter_sources_unavailable:")
+                ? "有报告章节引用了已删除或不可访问的题目，请返回报告模板修复题目来源。"
+                : generationError.startsWith("report_template_chart_sources_incompatible:")
+                  ? "图表章节没有可生成分布数据的题目，请调整题目来源或输出类型。"
+            : "正式报告生成失败，请稍后重试。")
         );
         return;
       }
@@ -5194,6 +4780,42 @@ export default function SurveysPage() {
         ...(template.tags ?? []),
       ].join(" ").toLowerCase().includes(q);
     });
+    const surveyEditorActions = !isTemplateEditor && !created ? (
+      <>
+        <Button
+          data-testid={view === "edit" ? "preview-survey" : "edit-survey"}
+          variant="outline"
+          size="sm"
+          onClick={() => setView(view === "edit" ? "preview" : "edit")}
+          className="h-9 gap-1.5 rounded-lg px-3 text-13"
+        >
+          {view === "edit" ? (
+            <>
+              <Eye className="h-4 w-4" strokeWidth={1.5} />
+              预览
+            </>
+          ) : (
+            <>
+              <Pencil className="h-4 w-4" strokeWidth={1.5} />
+              编辑
+            </>
+          )}
+        </Button>
+        {(view === "edit" || editingSurveyId == null) && (
+          <Button
+            data-testid="save-survey"
+            size="sm"
+            disabled={saving || !canSave}
+            onClick={() => void save()}
+            className="h-9 rounded-lg bg-foreground px-3 text-13 text-background hover:bg-foreground/90 hover:text-background"
+          >
+            {saving
+              ? editingSurveyId == null ? "发布中…" : "保存中…"
+              : editingSurveyId == null ? "发布问卷" : "保存修改"}
+          </Button>
+        )}
+      </>
+    ) : undefined;
     return (
       <WorkspaceShell
         active={isTemplateEditor ? "template" : "design"}
@@ -5202,13 +4824,14 @@ export default function SurveysPage() {
         templateLibraryMode={isTemplateEditor}
         hideHeader={isTemplateEditor}
         hideSidebar={isTemplateEditor}
+        workflowActions={surveyEditorActions}
         onCreateWithAi={() => openEditor({ withAi: true })}
         onCreateBlank={() => openTemplateEditor()}
         onNavigate={(target) => void navigateWorkspace(target)}
       >
-      <div data-testid={isTemplateEditor ? "template-editor-shell" : "survey-editor-screen"} className={isTemplateEditor ? "pb-8" : "mx-auto max-w-survey-editor px-4 pb-10 sm:px-6 lg:px-8"}>
-        <div data-testid={isTemplateEditor ? undefined : "survey-editor-shell"} className={isTemplateEditor ? "mb-4 rounded-lg border border-border bg-background" : "mb-4"}>
-          <div data-testid={isTemplateEditor ? undefined : "survey-editor-reference-header"}>
+      <div data-testid={isTemplateEditor ? "template-editor-shell" : "survey-editor-screen"} className={isTemplateEditor ? "pb-8" : "w-full pb-10"}>
+        <div data-testid={isTemplateEditor ? undefined : "survey-editor-shell"} className="mb-4">
+          {isTemplateEditor && <div className="rounded-lg border border-border bg-background">
           <div data-testid="editor-command-bar" className="flex flex-wrap items-center gap-3 py-4">
             <Button
               data-testid="back-to-list"
@@ -5227,20 +4850,16 @@ export default function SurveysPage() {
               <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
               {isTemplateEditor ? "返回模版" : "返回列表"}
             </Button>
-            {!isTemplateEditor && <Badge variant="outline" className="bg-secondary">Survey Workflow</Badge>}
-            {isTemplateEditor ? (
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-15 font-semibold text-foreground">{title.trim() || "未命名模版"}</p>
-                <p className="text-12 text-muted-foreground">
-                  {questions.length} 题 · {templateTags.length} 个标签 ·{" "}
-                  <span data-testid="template-save-state" className={templateDirty ? "text-foreground" : undefined}>
-                    {editingTemplateId ? (templateDirty ? "未保存更改" : "已保存") : "未保存"}
-                  </span>
-                </p>
-              </div>
-            ) : <div className="min-w-2 flex-1" />}
-            {isTemplateEditor && (
-              <div className="flex items-center rounded-lg border border-border bg-secondary p-1">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-15 font-semibold text-foreground">{title.trim() || "未命名模版"}</p>
+              <p className="text-12 text-muted-foreground">
+                {questions.length} 题 · {templateTags.length} 个标签 ·{" "}
+                <span data-testid="template-save-state" className={templateDirty ? "text-foreground" : undefined}>
+                  {editingTemplateId ? (templateDirty ? "未保存更改" : "已保存") : "未保存"}
+                </span>
+              </p>
+            </div>
+            <div className="flex items-center rounded-lg border border-border bg-secondary p-1">
                 <Button
                   data-testid="template-edit-mode"
                   type="button"
@@ -5263,67 +4882,16 @@ export default function SurveysPage() {
                   <Eye className="h-3.5 w-3.5" strokeWidth={1.6} />
                   预览
                 </Button>
-              </div>
-            )}
-            {!created && !isTemplateEditor && (
+            </div>
+            {!created && (
               <Button
-                data-testid={view === "edit" ? "preview-survey" : "edit-survey"}
-                variant="outline"
+                data-testid="save-template-editor"
                 size="sm"
-                onClick={() => setView(view === "edit" ? "preview" : "edit")}
-                className="gap-1.5"
+                disabled={saving || !canSaveTemplate}
+                onClick={() => void saveAsTemplate()}
+                className="bg-foreground text-background hover:bg-foreground/90"
               >
-                {view === "edit" ? (
-                  <>
-                    <Eye className="h-4 w-4" strokeWidth={1.5} />
-                    预览
-                  </>
-                ) : (
-                  <>
-                    <Pencil className="h-4 w-4" strokeWidth={1.5} />
-                    编辑
-                  </>
-                )}
-              </Button>
-            )}
-            {!created && !isTemplateEditor && (
-              <Button
-                data-testid="editor-report-template"
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (editingSurveyId == null) {
-                    setEditorActionMessage("请先发布问卷，再配置报告模版。");
-                    return;
-                  }
-                  void navigateWorkspace("template");
-                }}
-                className="gap-1.5"
-              >
-                <FileText className="h-4 w-4" strokeWidth={1.5} />
-                报告模版
-              </Button>
-            )}
-            {!created && (view === "edit" || isTemplateEditor) && (
-              <Button
-                data-testid={isTemplateEditor ? "save-template-editor" : "save-survey"}
-                size="sm"
-                disabled={saving || !(isTemplateEditor ? canSaveTemplate : canSave)}
-                onClick={() => void (isTemplateEditor ? saveAsTemplate() : save())}
-                className={isTemplateEditor ? "bg-foreground text-background hover:bg-foreground/90" : undefined}
-              >
-                {saving ? "保存中…" : isTemplateEditor ? "保存模版" : editingSurveyId == null ? "发布问卷" : "保存修改"}
-              </Button>
-            )}
-            {!created && view === "preview" && editingSurveyId == null && !isTemplateEditor && (
-              <Button
-                data-testid="save-survey"
-                size="sm"
-                disabled={saving || !canSave}
-                onClick={() => void save()}
-              >
-                {saving ? "发布中…" : "发布问卷"}
+                {saving ? "保存中…" : "保存模版"}
               </Button>
             )}
           </div>
@@ -5332,8 +4900,7 @@ export default function SurveysPage() {
               {templateMessage}
             </p>
           )}
-          </div>
-        </div>
+          </div>}
 
         {created && (
           <div className="mx-auto mt-4 max-w-3xl">
@@ -6440,6 +6007,7 @@ export default function SurveysPage() {
             </aside>}
           </div>
         )}
+        </div>
       </div>
       </WorkspaceShell>
     );
@@ -6498,9 +6066,15 @@ export default function SurveysPage() {
           }
           templateContent={
             currentSurveyForNavigation ? (
+              (currentSurveyForNavigation.canManage ?? currentSurveyForNavigation.isOwner) ? (
               <div data-testid="workspace-template-workbench">
                 <SurveyVersionedReportComposer
                   survey={currentSurveyForNavigation}
+                  canManage={
+                    currentSurveyForNavigation.canManage
+                    ?? currentSurveyForNavigation.isOwner
+                  }
+                  questions={workspaceQuestionsForComposer(questions)}
                   plan={
                     reportCategoryPlansBySurveyId[currentSurveyForNavigation.id] ??
                     fallbackReportCategoryPlan(currentSurveyForNavigation, questions)
@@ -6515,7 +6089,13 @@ export default function SurveysPage() {
                   generating={workspaceReportGenerating}
                   status={workspaceTemplateStatus}
                   error={workspaceTemplateError}
-                  onClassify={() => void classifyWorkspaceReportCategories(currentSurveyForNavigation.id)}
+                  onClassify={(instruction, currentPlan) =>
+                    classifyWorkspaceReportCategories(
+                      currentSurveyForNavigation.id,
+                      instruction,
+                      currentPlan as ReportCategoryPlanDraft
+                    )
+                  }
                   onSavePlan={(plan) =>
                     void saveWorkspaceReportCategoryPlan(
                       currentSurveyForNavigation.id,
@@ -6529,11 +6109,25 @@ export default function SurveysPage() {
                   onOpenCollect={() => void navigateWorkspace("collect")}
                 />
               </div>
+              ) : (
+                <section
+                  data-testid="workspace-template-readonly"
+                  className="border border-border bg-background px-6 py-12 text-center"
+                >
+                  <h2 className="text-lg font-semibold text-foreground">报告模板仅对管理协作者开放</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    你可以查看已生成的正式报告，但不能查看或修改报告模板配置。
+                  </p>
+                  <Button className="mt-5" onClick={() => void navigateWorkspace("report")}>
+                    查看已生成报告
+                  </Button>
+                </section>
+              )
             ) : undefined
           }
           collectContent={
             currentSurveyForNavigation ? (
-              <WorkspaceCollectWorkbench
+              <SurveyCollectWorkbench
                 survey={currentSurveyForNavigation}
                 responseMode={responseMode}
                 publishStartAt={publishStartAt}
@@ -6550,9 +6144,16 @@ export default function SurveysPage() {
                 onOneResponsePerUserChange={setOneResponsePerUser}
                 onConfirmationMessageChange={setConfirmationMessage}
                 onToggleStatus={() => void toggleWorkspaceSurveyStatus()}
-                onSave={() => void savePublishSettings()}
-                onBackToTemplate={() => void navigateWorkspace("template")}
-                onOpenReport={() => void navigateWorkspace("report")}
+                onReset={() => {
+                  setResponseMode(currentSurveyForNavigation.responseMode);
+                  setPublishStartAt(toDateTimeLocal(currentSurveyForNavigation.publishStartAt));
+                  setPublishEndAt(toDateTimeLocal(currentSurveyForNavigation.publishEndAt));
+                  setResponseLimit(currentSurveyForNavigation.responseLimit == null ? "" : String(currentSurveyForNavigation.responseLimit));
+                  setOneResponsePerUser(currentSurveyForNavigation.oneResponsePerUser);
+                  setConfirmationMessage(currentSurveyForNavigation.confirmationMessage);
+                  setPublishSettingsMessage("");
+                }}
+                onSave={savePublishSettings}
               />
             ) : undefined
           }
@@ -6564,6 +6165,10 @@ export default function SurveysPage() {
                 </a>
                 <WorkspaceReportWorkbench
                   survey={currentSurveyForNavigation}
+                  canManage={
+                    currentSurveyForNavigation.canManage
+                    ?? currentSurveyForNavigation.isOwner
+                  }
                   questions={questions}
                   categoryPlan={reportCategoryPlansBySurveyId[currentSurveyForNavigation.id]}
                   generatedReport={generatedReportsBySurveyId[currentSurveyForNavigation.id]}
@@ -6592,7 +6197,6 @@ export default function SurveysPage() {
           onOpenEditor={(tab) => void openSelectedSurveyEditor(tab)}
           onOpenResults={openSelectedSurveyResults}
           onOpenAnswer={openSelectedSurveyAnswer}
-          onOpenResponses={openSelectedSurveyResponses}
           onBack={() => {
             setWorkspaceView("workspace");
           }}

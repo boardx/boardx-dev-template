@@ -94,6 +94,10 @@ test("renders the template report as one centered reading surface", async ({
   });
 
   await page.goto(`/surveys?survey=${survey.id}&step=report`);
+  await expect(
+    page.getByTestId("survey-workflow-content").getByTestId("survey-professional-report-workbench")
+  ).toBeVisible();
+  await expect(page.getByTestId("report-workspace-intro")).toHaveCount(1);
   await expect(page.getByTestId("survey-professional-report-workbench"))
     .toBeVisible();
   await expect(page.getByTestId("professional-report-reading-surface"))

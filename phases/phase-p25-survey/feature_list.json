@@ -580,6 +580,34 @@
       ],
       "evidence": "evidence/F24.verify.log @ 2026-07-19T06:49:51.259Z",
       "notes": "独立 UI feature，Refs #648，追加到 PR #757；只统一五步工作流外壳和切换行为，不修改各步骤业务契约。"
+    },
+    {
+      "id": "F25",
+      "priority": 1,
+      "area": "survey",
+      "title": "实现 AI 可迭代报告模板与连续专业报告",
+      "user_visible_behavior": "问卷管理者可按章节组合并重复引用问卷题目，配置每章分析目标、方法和输出形式，通过 AI 建议预览后确认应用并保存；进入分析报告时一次加载模板中的全部章节，按目录平滑定位并连续阅读到末章，全局样本和方法信息不在各章重复。",
+      "spec_ref": "24-ai-iterable-report-template.md#R3",
+      "design_ref": "ui-preview/survey-system-interactive.html#template；ui-preview/survey-system-interactive.html#report；prototype commit 35802634",
+      "status": "passing",
+      "sprint": "25",
+      "owner": "codex-survey-report-ui",
+      "capability": "CAP-WEB",
+      "depends_on": [
+        "F19",
+        "F22",
+        "F24"
+      ],
+      "wave": 22,
+      "verification": [
+        "pnpm --filter @repo/web run lint",
+        "pnpm --filter @repo/web run typecheck",
+        "E2E_PORT=62678 COLLAB_WS_PORT=62679 pnpm --filter @repo/web exec playwright test e2e/survey-p25-025-ai-iterable-report-template.spec.ts",
+        "pnpm harness doctor --phase p25",
+        "git cat-file -e HEAD:phases/phase-p25-survey/sprints/sprint-25/evidence/F25.verify.log"
+      ],
+      "evidence": "evidence/F25.verify.log @ 2026-07-31T03:31:19.757Z",
+      "notes": "增量实现现有报告模板与专业报告组件，不改变报告生成权限边界；同题可跨章节复用，报告按保存模板顺序连续渲染。"
     }
   ]
 }

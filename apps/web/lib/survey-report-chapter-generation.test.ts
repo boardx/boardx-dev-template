@@ -42,8 +42,10 @@ const snapshot = buildSurveyReportTemplateSnapshot({
       id: "summary",
       name: "管理层摘要",
       description: "",
+      analysisObjective: "识别影响安全信任的首要因素。",
+      analysisMethod: "比较各安全关注项的选择占比，并结合购买经历交叉解读。",
       requirement: "先给结论，再说明业务含义和下一步动作。",
-      questionIds: [],
+      questionIds: [2],
       outputType: "text",
       inputModes: ["text"],
       prompt: "先给结论，再说明业务含义和下一步动作。",
@@ -54,8 +56,10 @@ const snapshot = buildSurveyReportTemplateSnapshot({
       id: "trust-chart",
       name: "安全信任结构",
       description: "",
+      analysisObjective: "呈现不同安全信息的关注结构。",
+      analysisMethod: "使用选项分布进行构成分析，并标注有效样本量。",
       requirement: "选择最能体现安全关注差异的题目。",
-      questionIds: [],
+      questionIds: [2],
       outputType: "chart",
       inputModes: ["chart"],
       chartTemplateId: "pie-simple",
@@ -67,8 +71,10 @@ const snapshot = buildSurveyReportTemplateSnapshot({
       id: "scenario-image",
       name: "核心场景视觉",
       description: "",
+      analysisObjective: "把核心信任场景转化为管理层可快速理解的视觉。",
+      analysisMethod: "依据购买经历和安全关注的聚合发现生成研究视觉。",
       requirement: "生成克制、专业且不带文字数字的场景信息图。",
-      questionIds: [],
+      questionIds: [1],
       outputType: "image",
       inputModes: ["image"],
       prompt: "生成克制、专业且不带文字数字的场景信息图。",
@@ -87,6 +93,11 @@ describe("template report chapter generation", () => {
       if (request.task === "generate_template_text_chapter") {
         return {
           headline: "安全信任是当前购买决策的首要解释变量",
+          narrative: {
+            conclusion: "安全认证是建立购买信任的首要抓手。",
+            analysis: "按照章节要求对安全关注项进行比较后，认证关注高于成分关注。",
+            recommendation: "优先在关键购买触点展示可核验的认证信息。",
+          },
           claims: [{
             statement: "认证信息为占比最高的安全关注项。",
             evidenceId: "question-2-top",
@@ -133,6 +144,11 @@ describe("template report chapter generation", () => {
     ]);
     expect(chapters[0]).toMatchObject({
       headline: "安全信任是当前购买决策的首要解释变量",
+      narrative: {
+        conclusion: "安全认证是建立购买信任的首要抓手。",
+        analysis: "按照章节要求对安全关注项进行比较后，认证关注高于成分关注。",
+        recommendation: "优先在关键购买触点展示可核验的认证信息。",
+      },
       evidenceRefs: ["question-2-top"],
     });
     expect(chapters[1]).toMatchObject({
@@ -143,17 +159,48 @@ describe("template report chapter generation", () => {
     });
     expect(chapters[2]).toMatchObject({
       assetId: "scenario-image",
-      evidenceRefs: expect.arrayContaining(["question-1-top", "question-2-top"]),
+      evidenceRefs: ["question-1-top"],
     });
+    expect(chapters.every((chapter) => chapter.limitations.length === 0)).toBe(true);
     expect(callJson).toHaveBeenCalledTimes(2);
     for (const call of callJson.mock.calls) {
       const request = JSON.parse(call[0].messages[1]!.content);
       expect(request.sourceRevision).toBe("source-revision-1");
+      expect(request.chapter.analysisObjective).toBeTruthy();
+      expect(request.chapter.analysisMethod).toBeTruthy();
       expect(request.chapter.requirement).toBeTruthy();
+      if (request.task === "generate_template_text_chapter") {
+        expect(request.templateExecution).toEqual({
+          analysisObjective: "识别影响安全信任的首要因素。",
+          analysisMethod: "比较各安全关注项的选择占比，并结合购买经历交叉解读。",
+          requirement: "先给结论，再说明业务含义和下一步动作。",
+          mandatory: true,
+        });
+        expect(request.outputContract.narrative).toEqual({
+          conclusion: "string",
+          analysis: "string that follows chapter.analysisMethod",
+          recommendation: "string",
+        });
+        expect(request.evidence.questions.map(
+          (question: { questionId: number }) => question.questionId
+        )).toEqual([2]);
+        expect(request.evidence.claims.map(
+          (claim: { questionId: number }) => claim.questionId
+        )).toEqual([2]);
+      }
+      if (request.task === "select_template_chart_evidence") {
+        expect(request.candidates.map(
+          (question: { questionId: number }) => question.questionId
+        )).toEqual([2]);
+      }
     }
     expect(generateImage).toHaveBeenCalledWith(expect.objectContaining({
       artifactId: "artifact-id",
       chapterId: "scenario-image",
+      prompt: expect.stringContaining("分析目标：把核心信任场景转化为管理层可快速理解的视觉。"),
+    }));
+    expect(generateImage).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: expect.stringContaining("分析方法：依据购买经历和安全关注的聚合发现生成研究视觉。"),
     }));
   });
 
@@ -181,7 +228,12 @@ describe("template report chapter generation", () => {
     }, {
       callJson: invalidClaim,
       generateImage: vi.fn(),
-    })).rejects.toThrow("report_text_evidence_invalid");
+    })).rejects.toMatchObject({
+      name: "SurveyReportChapterGenerationError",
+      chapterId: "summary",
+      chapterTitle: "管理层摘要",
+      reason: "report_text_evidence_invalid",
+    });
 
     const invalidChart = vi.fn().mockResolvedValue({
       questionId: 999,
@@ -201,7 +253,218 @@ describe("template report chapter generation", () => {
     }, {
       callJson: invalidChart,
       generateImage: vi.fn(),
-    })).rejects.toThrow("report_chart_evidence_invalid");
+    })).rejects.toMatchObject({
+      name: "SurveyReportChapterGenerationError",
+      chapterId: "trust-chart",
+      chapterTitle: "安全信任结构",
+      reason: "report_chart_evidence_invalid",
+    });
+  });
+
+  it("rejects chapters without explicitly selected question sources", async () => {
+    const callJson = vi.fn();
+
+    await expect(generateTemplateReportChapters({
+      snapshot: {
+        ...snapshot,
+        chapters: [{
+          ...snapshot.chapters[0]!,
+          questionIds: [],
+        }],
+      },
+      evidence,
+      sourceRevision: "source-revision-1",
+      teamId: 7,
+      surveyId: 59,
+      artifactId: "artifact-id",
+      model: "qwen-test",
+    }, {
+      callJson,
+      generateImage: vi.fn(),
+    })).rejects.toThrow("report_template_chapter_sources_missing:summary");
+
+    expect(callJson).not.toHaveBeenCalled();
+  });
+
+  it("rejects stale question references before invoking any generator", async () => {
+    const callJson = vi.fn();
+    const generateImage = vi.fn();
+
+    await expect(generateTemplateReportChapters({
+      snapshot: {
+        ...snapshot,
+        chapters: [{
+          ...snapshot.chapters[0]!,
+          questionIds: [2, 999],
+        }],
+      },
+      evidence,
+      sourceRevision: "source-revision-1",
+      teamId: 7,
+      surveyId: 59,
+      artifactId: "artifact-id",
+      model: "qwen-test",
+    }, {
+      callJson,
+      generateImage,
+    })).rejects.toThrow(
+      "report_template_chapter_sources_unavailable:summary:999"
+    );
+
+    expect(callJson).not.toHaveBeenCalled();
+    expect(generateImage).not.toHaveBeenCalled();
+  });
+
+  it("rejects chart chapters without distribution-compatible question sources", async () => {
+    const textEvidence = buildSurveyReportEvidence({
+      survey: {
+        title: "开放反馈",
+        description: "收集详细建议",
+        questions: [{
+          id: 3,
+          title: "请说明原因",
+          type: "short_text",
+          required: true,
+          options: [],
+        }],
+      },
+      responses: [
+        { id: 1, answers: { "3": "认证说明不够清楚" } },
+      ],
+    });
+    const callJson = vi.fn();
+
+    await expect(generateTemplateReportChapters({
+      snapshot: {
+        ...snapshot,
+        chapters: [{
+          ...snapshot.chapters[1]!,
+          questionIds: [3],
+        }],
+      },
+      evidence: textEvidence,
+      sourceRevision: "source-revision-1",
+      teamId: 7,
+      surveyId: 59,
+      artifactId: "artifact-id",
+      model: "qwen-test",
+    }, {
+      callJson,
+      generateImage: vi.fn(),
+    })).rejects.toThrow(
+      "report_template_chart_sources_incompatible:trust-chart"
+    );
+
+    expect(callJson).not.toHaveBeenCalled();
+  });
+
+  it("generates text chapters from anonymous text-response coverage evidence", async () => {
+    const textEvidence = buildSurveyReportEvidence({
+      survey: {
+        title: "开放反馈",
+        description: "收集详细建议",
+        questions: [{
+          id: 3,
+          title: "请说明原因",
+          type: "short_text",
+          required: true,
+          options: [],
+        }],
+      },
+      responses: [
+        { id: 1, answers: { "3": "认证说明不够清楚" } },
+      ],
+    });
+    const callJson = vi.fn().mockResolvedValue({
+      headline: "开放反馈覆盖情况",
+      narrative: {
+        conclusion: "开放反馈题已获得完整作答覆盖。",
+        analysis: "本章仅能评估反馈覆盖率，不能在缺少安全主题聚合的情况下推断具体诉求。",
+        recommendation: "完成匿名主题聚合后，再形成开放反馈的优先级判断。",
+      },
+      claims: [{
+        statement: "本题收到 1 份有效文本反馈。",
+        evidenceId: "question-3-response-rate",
+        value: 1,
+        denominator: 1,
+        implication: "反馈覆盖完整，但不能据此推断未经聚合的主题。",
+      }],
+    });
+
+    const chapters = await generateTemplateReportChapters({
+      snapshot: {
+        ...snapshot,
+        chapters: [{
+          ...snapshot.chapters[0]!,
+          questionIds: [3],
+        }],
+      },
+      evidence: textEvidence,
+      sourceRevision: "source-revision-1",
+      teamId: 7,
+      surveyId: 59,
+      artifactId: "artifact-id",
+      model: "qwen-test",
+    }, {
+      callJson,
+      generateImage: vi.fn(),
+    });
+
+    expect(chapters[0]).toMatchObject({
+      outputType: "text",
+      headline: "开放反馈覆盖情况",
+      evidenceRefs: ["question-3-response-rate"],
+    });
+    const request = JSON.parse(callJson.mock.calls[0]![0].messages[1]!.content);
+    expect(request.evidence.questions[0]).not.toHaveProperty("textResponses");
+    expect(request.evidence.claims).toContainEqual(expect.objectContaining({
+      id: "question-3-response-rate",
+      value: 1,
+      denominator: 1,
+    }));
+  });
+
+  it("rejects image chapters when selected sources have no anonymous aggregate claims", async () => {
+    const textEvidence = buildSurveyReportEvidence({
+      survey: {
+        title: "开放反馈",
+        description: "收集详细建议",
+        questions: [{
+          id: 3,
+          title: "请说明原因",
+          type: "short_text",
+          required: true,
+          options: [],
+        }],
+      },
+      responses: [
+        { id: 1, answers: { "3": "认证说明不够清楚" } },
+      ],
+    });
+    const generateImage = vi.fn();
+
+    await expect(generateTemplateReportChapters({
+      snapshot: {
+        ...snapshot,
+        chapters: [{
+          ...snapshot.chapters[2]!,
+          questionIds: [3],
+        }],
+      },
+      evidence: textEvidence,
+      sourceRevision: "source-revision-1",
+      teamId: 7,
+      surveyId: 59,
+      artifactId: "artifact-id",
+      model: "qwen-test",
+    }, {
+      callJson: vi.fn(),
+      generateImage,
+    })).rejects.toThrow(
+      "report_template_image_sources_incompatible:scenario-image"
+    );
+
+    expect(generateImage).not.toHaveBeenCalled();
   });
 
   it("exposes only validated claim and aggregate distribution evidence references", () => {

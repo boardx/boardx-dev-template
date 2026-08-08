@@ -38,12 +38,15 @@ import {
 import { buildSurveyReportRequirementPayload } from "@/lib/survey-report-requirement";
 import type { ProfessionalSurveyReportDocument } from "@/lib/survey-professional-report";
 import {
+  SurveyReportChapterGenerationError,
   generateTemplateReportChapters,
   reportEvidenceRefs,
 } from "@/lib/survey-report-chapter-generation";
 import {
+  SurveyReportChapterValidationError,
   assembleTemplateDrivenReport,
   buildSurveyReportTemplateSnapshot,
+  countDistinctTemplateQuestions,
   materializeReportAssetUrls,
   type TemplateDrivenSurveyReport,
 } from "@/lib/survey-template-report";
@@ -345,9 +348,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
   let claimedGeneration:
     | { artifactKey: SurveyReportArtifactKey; sessionId: string }
     | undefined;
+  const chapterTitles = new Map<string, string>();
   try {
     const context = await loadReportContext(params.id, true);
     if ("response" in context) return context.response;
+    context.reportCategoryPlan.categories.forEach((chapter) => {
+      chapterTitles.set(chapter.id, chapter.name);
+    });
     const body = (await request.json().catch(() => ({}))) as {
       model?: unknown;
     };
@@ -458,9 +465,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
       allowedEvidenceRefs: reportEvidenceRefs(context.evidence),
       sample: {
         responseCount: context.evidence.sample.responseCount,
-        questionCount: context.evidence.survey.questionCount,
+        questionCount: countDistinctTemplateQuestions(snapshot),
         confidence: context.evidence.sample.confidence,
       },
+      limitations: context.evidence.limitations,
     });
     await createSurveyAiModelTrace({
       id: randomUUID(),
@@ -524,6 +532,39 @@ export async function POST(request: Request, { params }: { params: { id: string 
       });
     }
     console.error("[api] professional-report generation failed", error);
+    const errorMessage = error instanceof Error ? error.message : "";
+    if (
+      errorMessage.startsWith("report_template_chapter_sources_missing:")
+      || errorMessage.startsWith("report_template_chapter_sources_unavailable:")
+      || errorMessage.startsWith("report_template_text_sources_incompatible:")
+      || errorMessage.startsWith("report_template_chart_sources_incompatible:")
+      || errorMessage.startsWith("report_template_image_sources_incompatible:")
+    ) {
+      const chapterId = errorMessage.split(":")[1] ?? "";
+      return NextResponse.json({
+        error: errorMessage,
+        failedChapter: {
+          chapterId,
+          title: chapterTitles.get(chapterId) ?? chapterId,
+          status: "failed",
+          retryable: true,
+        },
+      }, { status: 422 });
+    }
+    if (
+      error instanceof SurveyReportChapterGenerationError
+      || error instanceof SurveyReportChapterValidationError
+    ) {
+      return NextResponse.json({
+        error: "report_template_chapter_generation_failed",
+        failedChapter: {
+          chapterId: error.chapterId,
+          title: error.chapterTitle,
+          status: "failed",
+          retryable: true,
+        },
+      }, { status: 500 });
+    }
     return NextResponse.json({ error: "professional_report_generation_failed" }, { status: 500 });
   }
 }

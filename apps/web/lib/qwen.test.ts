@@ -26,6 +26,26 @@ describe("callQwenJson", () => {
 
     expect(timeout).toHaveBeenCalledWith(45_000);
     const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
-    expect(JSON.parse(String(request.body))).toMatchObject({ enable_thinking: false });
+    const body = JSON.parse(String(request.body));
+    expect(body).toMatchObject({ enable_thinking: false });
+    expect(body.messages.some((message: { content: string }) =>
+      /json/i.test(message.content)
+    )).toBe(true);
+  });
+
+  it("preserves a bounded provider error detail for diagnosis", async () => {
+    vi.stubEnv("DASHSCOPE_API_KEY", "test-key");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({
+        error: { code: "InvalidParameter", message: "Unsupported response format" },
+      }), { status: 400 })
+    ));
+
+    await expect(callQwenJson({
+      model: "qwen3.7-max",
+      messages: [{ role: "user", content: "return json" }],
+    })).rejects.toThrow(
+      "千问请求失败 (400): {\"error\":{\"code\":\"InvalidParameter\",\"message\":\"Unsupported response format\"}}"
+    );
   });
 });

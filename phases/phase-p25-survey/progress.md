@@ -1,10 +1,10 @@
 # 进度日志 — Phase p25 Survey System
 
 ## 当前已验证状态(唯一真相)
-- 仓库根目录: `/private/tmp/boardx-p25-survey-system`
+- 仓库根目录: `/Users/shenyangjun/boardx/boardx-dev-template`
 - 标准启动路径: `pnpm -w run dev`
 - 标准验证路径: `pnpm -w run verify:base`
-- 当前最高优先级未完成功能: F09 重建题目分类、模板标签与报告规划数据契约
+- 当前最高优先级未完成功能: F13 重建专业图表、图片与多格式报告导出
 - 当前 blocker: 无
 
 ## 会话记录
@@ -43,3 +43,12 @@
 - 提交记录: 待需求 checkpoint 提交。
 - 已知风险或未解决问题: 源 stash 是整仓 WIP，必须排除 `.next` 和非 Survey 脚手架；报告导出依赖需在 F13 单独评审。
 - 下一步最佳动作: 提交需求 checkpoint；创建 sprint-09 并只认领 F09。
+
+### 2026-08-01 02:30:00
+- 本轮目标: 完成 F25 AI 可迭代报告模板与连续专业报告的最终门禁、GitHub 投影和 coordinator 交接。
+- 已完成: F25 已由 Harness 验证为 passing；章节支持题目重复引用和多题组合，生成证据严格受章节来源约束；正式报告集中展示全局样本与方法信息并连续滚动；只读协作者保持只读；发布回收聚焦启用状态和时间窗口。
+- 运行过的验证: Web 36 files / 195 tests、typecheck、lint；Data 15 files / 101 tests；workflow-worker 11 tests；F19/F24/F25 Playwright 8/8；pre-push affected 16/16；`pnpm harness doctor --phase p25` 为 0 FAIL / 0 WARN。
+- 已记录证据: `sprints/sprint-25/evidence/`、`sprints/sprint-25/progress.md`、`sprints/sprint-25/session-handoff.md`。
+- 提交记录: `72de1075 fix(survey): close final report review gaps`、`1af76a8b docs(survey): record final review evidence`。
+- 已知风险或未解决问题: 尚未增加真实 PostgreSQL 双客户端并发 E2E；当前由 SQL 语义与 source contract 测试覆盖。F13、F14、F17 仍为 pending，不属于 F25 本次交付范围。
+- 下一步最佳动作: 等待 PR #824 当前 HEAD review 门禁；通过后仅由 `usersyj` coordinator 合并。后续按权威 `feature_list.json` 从 F13 继续，禁止回退到已 passing 的 F09/F25。

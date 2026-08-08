@@ -10,6 +10,7 @@ import {
   resolveSurveyReportGenerationStatus,
   settleSurveyReportGenerationRequest,
   settleSurveyReportRefresh,
+  surveyReportGenerationErrorMessage,
 } from "./survey-report-generation";
 import type { SurveyReportCategoryPlanInput } from "@repo/data";
 
@@ -298,5 +299,35 @@ describe("survey report request epochs", () => {
       accepted: false,
       state: generation.state,
     });
+  });
+});
+
+describe("surveyReportGenerationErrorMessage", () => {
+  it("identifies the failed chapter and explains that the previous report is retained", () => {
+    expect(surveyReportGenerationErrorMessage({
+      error: "report_template_chapter_generation_failed",
+      failedChapter: {
+        chapterId: "summary",
+        title: "管理层摘要",
+        status: "failed",
+        retryable: true,
+      },
+    })).toBe(
+      "章节「管理层摘要」生成失败，上一份完整报告已保留。请重试生成。"
+    );
+  });
+
+  it("identifies chapters whose sources cannot produce aggregate evidence", () => {
+    expect(surveyReportGenerationErrorMessage({
+      error: "report_template_text_sources_incompatible:open-feedback",
+      failedChapter: {
+        chapterId: "open-feedback",
+        title: "开放反馈洞察",
+        status: "failed",
+        retryable: true,
+      },
+    })).toBe(
+      "章节「开放反馈洞察」缺少可用的匿名聚合证据，上一份完整报告已保留。请调整题目来源或输出类型。"
+    );
   });
 });

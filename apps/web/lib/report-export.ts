@@ -57,6 +57,8 @@ function cloneElementWithRenderedCanvases(element: HTMLElement) {
     try {
       const image = document.createElement("img");
       image.src = canvas.toDataURL("image/png");
+      image.dataset.reportExportCanvas = "true";
+      image.alt = canvas.closest('[role="img"]')?.getAttribute("aria-label") ?? "报告图表";
       image.width = canvas.offsetWidth || canvas.width;
       image.height = canvas.offsetHeight || canvas.height;
       image.style.cssText = target.getAttribute("style") ?? "";
@@ -225,7 +227,7 @@ function buildReportHtml(payload: ReportExportPayload) {
       color: #c7c7c7;
       font-size: 12px;
       font-weight: 700;
-      letter-spacing: 0.16em;
+      letter-spacing: 0;
       text-transform: uppercase;
     }
     h1 {
@@ -352,7 +354,7 @@ function buildReportHtml(payload: ReportExportPayload) {
       color: #737373;
       font-size: 11px;
       font-weight: 700;
-      letter-spacing: 0.14em;
+      letter-spacing: 0;
     }
     h2 {
       margin: 0;
@@ -362,7 +364,7 @@ function buildReportHtml(payload: ReportExportPayload) {
     h3 {
       margin: 18px 0 8px;
       font-size: 13px;
-      letter-spacing: 0.08em;
+      letter-spacing: 0;
       text-transform: uppercase;
     }
     .section-subtitle {
@@ -472,7 +474,6 @@ function buildTemplateDrivenReportHtml(
           `).join("")}
         </div>
         <p>${escapeHtml(chapter.interpretation)}</p>
-        <small>有效回答 n=${chapter.sampleSize}</small>
       `;
     } else {
       output = `
@@ -510,24 +511,31 @@ function buildTemplateDrivenReportHtml(
     * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     body { margin: 0; color: #171717; background: #fff; font: 13px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
     main { max-width: 180mm; margin: 0 auto; }
-    .cover { min-height: 245mm; display: flex; flex-direction: column; justify-content: space-between; padding: 18mm 12mm; color: #fff; background: #171717; break-after: page; }
-    .kicker, .eyebrow { margin: 0; color: #737373; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
-    .kicker { color: #d4d4d4; }
+    .cover { position: relative; min-height: 245mm; display: flex; flex-direction: column; justify-content: space-between; padding: 24mm 14mm 18mm; color: #171717; background: #fff; border-top: 4mm solid #6654e8; break-after: page; }
+    .cover::after { content: ""; position: absolute; top: -4mm; right: 0; width: 42mm; height: 4mm; background: #24986e; border-left: 14mm solid #e77a67; }
+    .kicker, .eyebrow { margin: 0; color: #6654e8; font-size: 10px; font-weight: 700; letter-spacing: 0; text-transform: uppercase; }
     h1 { max-width: 145mm; margin: 22mm 0 0; font-size: 34px; line-height: 1.25; }
     h2 { margin: 4px 0 8mm; font-size: 22px; line-height: 1.35; }
     h3 { margin: 0 0 4mm; font-size: 16px; }
-    .cover-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #525252; }
-    .cover-meta div { padding: 12px; background: #262626; }
-    .cover-meta span { display: block; color: #a3a3a3; font-size: 10px; }
+    .cover-meta { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid #d8d8de; border-bottom: 1px solid #d8d8de; }
+    .cover-meta div { padding: 12px; border-left: 1px solid #d8d8de; }
+    .cover-meta div:first-child { border-left: 0; }
+    .cover-meta span { display: block; color: #73737d; font-size: 10px; }
     .cover-meta strong { display: block; margin-top: 4px; font-size: 15px; }
-    .chapter { padding: 12mm 0; break-before: page; }
-    .chart { margin: 5mm 0; border-top: 1px solid #d4d4d4; }
+    .methodology { padding: 12mm 0; break-before: page; }
+    .methodology dl { display: grid; grid-template-columns: 36mm 1fr; margin: 8mm 0 0; border-top: 1px solid #d4d4d4; }
+    .methodology dt, .methodology dd { margin: 0; padding: 4mm 0; border-bottom: 1px solid #ededed; }
+    .methodology dt { color: #737373; font-weight: 600; }
+    .chapter { padding: 14mm 0; border-top: 2px solid #6654e8; break-before: page; }
+    .chapter > h2 { max-width: 145mm; }
+    .chapter > h3 { margin-top: 8mm; padding-left: 5mm; border-left: 3px solid #24986e; }
+    .chart { margin: 7mm 0; padding: 4mm; border-top: 1px solid #d4d4d4; border-bottom: 1px solid #d4d4d4; background: #fafafd; }
     .bar-row { display: grid; grid-template-columns: 1fr 24mm; gap: 4mm; padding: 3mm 0; border-bottom: 1px solid #ededed; }
     .bar-row strong { text-align: right; }
     figure { margin: 0; }
     figure img { display: block; width: 100%; max-height: 118mm; object-fit: cover; }
     figcaption, small { display: block; margin-top: 3mm; color: #737373; font-size: 10px; }
-    .limitation { margin-top: 6mm; padding: 3mm 4mm; color: #525252; background: #f5f5f5; font-size: 11px; }
+    .limitation { margin-top: 6mm; padding: 3mm 4mm; color: #525252; background: #f7f6fb; border-left: 2px solid #e77a67; font-size: 11px; }
     @media screen { body { background: #ededed; } main { padding: 24px; background: #fff; } .cover { min-height: 900px; } }
   </style>
 </head>
@@ -540,6 +548,17 @@ function buildTemplateDrivenReportHtml(
         <div><span>模板章节</span><strong>${report.chapters.length} 个</strong></div>
         <div><span>生成时间</span><strong>${escapeHtml(generatedAt)}</strong></div>
       </div>
+    </section>
+    <section class="methodology">
+      <p class="eyebrow">Research Methodology</p>
+      <h2>研究方法与证据口径</h2>
+      <dl>
+        <dt>研究方法</dt><dd>${escapeHtml(report.methodology.statement)}</dd>
+        <dt>证据口径</dt><dd>${escapeHtml(report.methodology.evidenceScope)}</dd>
+      </dl>
+      ${report.limitations.length
+        ? `<h3>解读限制</h3><ul>${report.limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+        : ""}
     </section>
     ${chapters}
   </main>
@@ -574,9 +593,9 @@ export function buildProfessionalReportHtml(report: SurveyReportDocument) {
               ? "图片章节"
               : "文本章节"
         )}</p>
-        <div class="chapter-title"><h2>${escapeHtml(chapter.title)}</h2><span>有效回答 n=${chapter.validResponseCount}</span></div>
+        <div class="chapter-title"><h2>${escapeHtml(chapter.title)}</h2></div>
         ${chapter.requirement ? `<p>${escapeHtml(`生成要求：${chapter.requirement}`)}</p>` : ""}
-        ${chapter.outputType === "chart" && chartRows ? `<div class="chart">${chapter.chartTemplateId ? `<p>${escapeHtml(`ECharts 模板：${chapter.chartTemplateId}`)}</p>` : ""}${chartRows}<footer>数据来源：真实问卷答卷 · ${escapeHtml(chapter.chart!.denominatorLabel)} n=${chapter.chart!.denominator}</footer></div>` : ""}
+        ${chapter.outputType === "chart" && chartRows ? `<div class="chart">${chapter.chartTemplateId ? `<p>${escapeHtml(`ECharts 模板：${chapter.chartTemplateId}`)}</p>` : ""}${chartRows}<footer>数据来源：真实问卷答卷 · ${escapeHtml(chapter.chart!.denominatorLabel)}</footer></div>` : ""}
         ${chapter.outputType === "image" && chapter.imagePrompt ? `<p class="limitation">${escapeHtml(`图片生成约束：${chapter.imagePrompt}`)}</p>` : ""}
         ${chapter.limitations.length ? `<p class="limitation">限制：${escapeHtml(chapter.limitations.join(" "))}</p>` : ""}
       </section>
@@ -595,7 +614,7 @@ export function buildProfessionalReportHtml(report: SurveyReportDocument) {
     body { margin: 0; color: #171717; background: #fff; font: 13px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
     main { max-width: 180mm; margin: 0 auto; }
     .cover { min-height: 245mm; display: flex; flex-direction: column; justify-content: space-between; padding: 18mm 12mm; color: #fff; background: #171717; break-after: page; }
-    .cover .kicker, .eyebrow { margin: 0; color: #737373; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    .cover .kicker, .eyebrow { margin: 0; color: #737373; font-size: 10px; font-weight: 700; letter-spacing: 0; text-transform: uppercase; }
     .cover .kicker { color: #d4d4d4; }
     h1 { max-width: 145mm; margin: 22mm 0 0; font-size: 34px; line-height: 1.25; }
     .cover-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #525252; }
@@ -701,7 +720,14 @@ export function openVisualPdfExportWindow(element: HTMLElement, title: string) {
   win.document.write(visualReportHtml(element, title));
   win.document.close();
   win.focus();
-  win.setTimeout(() => {
+  win.setTimeout(async () => {
+    await Promise.all(
+      Array.from(win.document.images).map((image) =>
+        typeof image.decode === "function"
+          ? image.decode().catch(() => undefined)
+          : Promise.resolve()
+      )
+    );
     win.print();
   }, 500);
   return true;

@@ -3,7 +3,9 @@ import {
   cleanSurveyReportCategoryPlan,
   defaultSurveyReportCategoryPlan,
   ensureSurveyReportCategoryPlan,
+  getSurveyReportCategoryPlan,
   readSurveyReportCategoryPlan,
+  upsertSurveyReportCategoryPlan,
   type SurveyQuestion,
 } from "./survey";
 import { query } from "./index";
@@ -50,6 +52,8 @@ describe("Survey source data contract", () => {
     expect(plan.categories).toHaveLength(2);
     expect(plan.categories[0]).toMatchObject({
       name: "商品安全",
+      analysisObjective: expect.stringContaining("商品安全"),
+      analysisMethod: expect.stringContaining("匿名聚合"),
       questionIds: [11],
       outputType: "text",
       inputModes: ["text"],
@@ -62,7 +66,7 @@ describe("Survey source data contract", () => {
     });
   });
 
-  it("cleans chart settings and binds omitted questions to a category", () => {
+  it("cleans chart settings without forcing unused questions into a chapter", () => {
     const plan = cleanSurveyReportCategoryPlan(
       {
         title: " 安全洞察 ",
@@ -92,7 +96,9 @@ describe("Survey source data contract", () => {
       maxDimensions: 12,
       sort: "desc",
     });
-    expect(plan.categories.flatMap((category) => category.questionIds).sort()).toEqual([11, 12]);
+    expect(safetyCategory?.analysisObjective).toContain("商品安全");
+    expect(safetyCategory?.analysisMethod).toContain("匿名聚合");
+    expect(plan.categories.flatMap((category) => category.questionIds)).toEqual([11]);
   });
 
   it("folds legacy module prompts into one natural-language requirement", () => {
@@ -246,6 +252,73 @@ describe("Survey source data contract", () => {
       chartTemplateId: "bar-simple",
       chartType: "bar",
     });
+  });
+
+  it("preserves missing question references for repair instead of rebinding by position", () => {
+    const plan = cleanSurveyReportCategoryPlan({
+      title: "需修复引用的报告",
+      description: "",
+      categories: [{
+        id: "missing-reference",
+        name: "缺失引用",
+        description: "",
+        requirement: "保留原引用供用户修复",
+        questionIds: [1, 999, 11],
+        outputType: "text",
+        inputModes: ["text"],
+        prompt: "保留原引用供用户修复",
+        order: 1,
+        isCustom: true,
+      }],
+    }, "商品调研", questions);
+
+    expect(plan.categories[0]?.questionIds).toEqual([1, 999, 11]);
+  });
+
+  it("rejects an optimistic save when another collaborator already updated the template", async () => {
+    mockQuery.mockResolvedValueOnce([]);
+
+    await expect(upsertSurveyReportCategoryPlan(
+      7,
+      defaultSurveyReportCategoryPlan("商品调研", questions),
+      "2026-07-18T00:00:00.000Z"
+    )).rejects.toThrow("report_template_conflict");
+    expect(mockQuery.mock.calls[0]?.[1]?.[3]).toBe(false);
+    expect(mockQuery.mock.calls[0]?.[1]?.[4]).toBe(
+      "2026-07-18T00:00:00.000Z"
+    );
+    expect(String(mockQuery.mock.calls[0]?.[0])).toContain("to_char(updated_at");
+  });
+
+  it("rejects a concurrent first save when the client observed no template", async () => {
+    mockQuery.mockResolvedValueOnce([]);
+
+    await expect(upsertSurveyReportCategoryPlan(
+      7,
+      defaultSurveyReportCategoryPlan("商品调研", questions),
+      null
+    )).rejects.toThrow("report_template_conflict");
+    expect(mockQuery.mock.calls[0]?.[1]?.[3]).toBe(false);
+    expect(mockQuery.mock.calls[0]?.[1]?.[4]).toBeNull();
+  });
+
+  it("returns a database-formatted microsecond token with the persisted plan", async () => {
+    const updatedAt = "2026-07-18T00:00:00.123456Z";
+    mockQuery.mockResolvedValueOnce([{
+      id: 31,
+      survey_id: 7,
+      categoryPlan: defaultSurveyReportCategoryPlan("商品调研", questions),
+      created_at: "2026-07-18T00:00:00.000000Z",
+      updated_at: updatedAt,
+    }]);
+
+    const plan = await getSurveyReportCategoryPlan(7);
+
+    expect(plan?.updated_at).toBe(updatedAt);
+    expect(String(mockQuery.mock.calls[0]?.[0])).toContain(
+      "to_char(updated_at AT TIME ZONE 'UTC'"
+    );
+    expect(mockQuery).toHaveBeenCalledTimes(1);
   });
 
   it("normalizes report plans for read-only callers without persisting migration", async () => {

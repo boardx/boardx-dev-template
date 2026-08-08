@@ -13,6 +13,7 @@ import {
 
 interface SurveyProfessionalReportWorkbenchProps {
   report: SurveyReportDocument;
+  canManage: boolean;
   generation?: SurveyReportGenerationStatus;
   generating: boolean;
   error: string;
@@ -37,6 +38,7 @@ function formatGeneratedAt(value: string) {
 
 export function SurveyProfessionalReportWorkbench({
   report,
+  canManage,
   generation,
   generating,
   error,
@@ -69,11 +71,14 @@ export function SurveyProfessionalReportWorkbench({
       data-testid="survey-professional-report-workbench"
       className="min-w-0 bg-secondary/30"
     >
-      <header className="border-b border-border bg-background px-4 py-4 sm:px-6">
+      <header
+        data-testid="report-workspace-intro"
+        className="rounded-lg border border-border bg-background px-5 py-4"
+      >
         <div className="mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-11 font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <p className="text-11 font-semibold uppercase text-muted-foreground">
                 Analysis Report
               </p>
               <span className="rounded-full bg-success/10 px-2 py-0.5 text-11 font-semibold text-success">
@@ -132,7 +137,7 @@ export function SurveyProfessionalReportWorkbench({
                 Word
               </Button>
             </div>
-            <Button
+            {canManage ? <Button
               type="button"
               size="sm"
               disabled={generating || !canGenerate}
@@ -140,11 +145,11 @@ export function SurveyProfessionalReportWorkbench({
               aria-describedby={
                 canGenerate ? undefined : "report-generation-empty-state"
               }
-              className="h-9 gap-2 bg-foreground px-3 text-background transition-colors duration-200 hover:bg-foreground/90"
+              className="h-9 gap-2 border border-survey/30 bg-foreground px-3 text-background transition-colors duration-200 hover:bg-foreground/90"
             >
               <Sparkles className="h-4 w-4" strokeWidth={1.6} />
               {generating ? "生成中" : "重新生成"}
-            </Button>
+            </Button> : null}
           </div>
         </div>
         {shareStatus ? (
@@ -181,7 +186,7 @@ export function SurveyProfessionalReportWorkbench({
 
       <main
         data-testid="professional-report-reading-surface"
-        className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6"
+        className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6"
       >
         <div className="min-w-0 overflow-hidden border border-border bg-background shadow-sm">
           <ProfessionalReportDocument report={report} />

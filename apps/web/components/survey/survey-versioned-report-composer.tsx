@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -27,6 +27,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog } from "@/components/ui/dialog";
 import { SurveyReportOutputPreview } from "@/components/survey/survey-report-output-preview";
 import {
   addCustomReportCategory,
@@ -34,8 +35,10 @@ import {
   moveReportCategory,
   normalizeCategoryOrder,
   updateReportCategory,
+  validateReportCategorySources,
 } from "@/lib/survey-report-category-plan";
 import { SURVEY_REPORT_CHART_TEMPLATES } from "@/lib/survey-report-chart-templates";
+import { isSurveyReportChartCompatibleQuestionType } from "@/lib/survey-report-evidence";
 import {
   getReportGenerationEligibility,
   getReportGenerationStatus,
@@ -51,15 +54,27 @@ interface ReportComposerSurvey {
 
 interface SurveyVersionedReportComposerProps {
   survey: ReportComposerSurvey;
+  questions: Array<{
+    id: number | string;
+    title: string;
+    type: string;
+  }>;
   plan: SurveyReportCategoryPlanInput;
   generation?: SurveyReportGenerationStatus;
   requirementsChangedOverride?: boolean;
+  canManage: boolean;
   saving: boolean;
   classifying: boolean;
   generating: boolean;
   status: string;
   error: string;
-  onClassify: () => void;
+  onClassify: (
+    instruction: string,
+    currentPlan: SurveyReportCategoryPlanInput
+  ) => Promise<{
+    plan: SurveyReportCategoryPlanInput;
+    warning?: string;
+  } | null>;
   onSavePlan: (plan: SurveyReportCategoryPlanInput) => void;
   onGenerateReport: () => void;
   onBackToDesign: () => void;
@@ -96,9 +111,11 @@ function formatVersionTime(value: string) {
 
 export function SurveyVersionedReportComposer({
   survey,
+  questions,
   plan,
   generation,
   requirementsChangedOverride = false,
+  canManage,
   saving,
   classifying,
   generating,
@@ -112,8 +129,21 @@ export function SurveyVersionedReportComposer({
 }: SurveyVersionedReportComposerProps) {
   const [draft, setDraft] = useState(plan);
   const [selectedCategoryId, setSelectedCategoryId] = useState(plan.categories[0]?.id ?? "");
+  const incomingPlanRef = useRef({ surveyId: survey.id, plan });
+  const [aiSuggestion, setAiSuggestion] = useState<{
+    plan: SurveyReportCategoryPlanInput;
+    warning?: string;
+  } | null>(null);
+  const [aiInstruction, setAiInstruction] = useState("");
 
   useEffect(() => {
+    const surveyChanged = incomingPlanRef.current.surveyId !== survey.id;
+    const planChanged = !areSurveyReportCategoryPlansEqual(
+      incomingPlanRef.current.plan,
+      plan
+    );
+    if (!surveyChanged && !planChanged) return;
+    incomingPlanRef.current = { surveyId: survey.id, plan };
     setDraft(plan);
     setSelectedCategoryId((current) =>
       plan.categories.some((category) => category.id === current)
@@ -125,6 +155,33 @@ export function SurveyVersionedReportComposer({
   const categories = draft.categories.slice().sort((left, right) => left.order - right.order);
   const selectedCategory =
     categories.find((category) => category.id === selectedCategoryId) ?? categories[0];
+  const availableQuestionIds = new Set(
+    questions.map((question) => Number(question.id)).filter(Number.isFinite)
+  );
+  const questionById = new Map(
+    questions
+      .map((question) => [Number(question.id), question] as const)
+      .filter(([questionId]) => Number.isFinite(questionId))
+  );
+  const missingQuestionIds = selectedCategory?.questionIds.filter(
+    (questionId) => !availableQuestionIds.has(Number(questionId))
+  ) ?? [];
+  const selectedSourceScope = selectedCategory?.questionIds
+    .map((questionId) => {
+      const questionIndex = questions.findIndex(
+        (question) => Number(question.id) === Number(questionId)
+      );
+      const question = questionById.get(Number(questionId));
+      return question
+        ? `Q${questionIndex + 1}「${question.title}」`
+        : `题目 ${questionId}`;
+    })
+    .join("、") || "当前章节所选题目";
+  const sourceValidationErrors = validateReportCategorySources(draft, questions);
+  const selectedSourceValidation = sourceValidationErrors.find(
+    (validation) => validation.categoryId === selectedCategory?.id
+  );
+  const hasSourceValidationErrors = sourceValidationErrors.length > 0;
   const draftDirty = !areSurveyReportCategoryPlansEqual(draft, plan);
   const generationEligibility = getReportGenerationEligibility({
     draftDirty,
@@ -136,7 +193,7 @@ export function SurveyVersionedReportComposer({
     draftDirty,
     requirementsChangedOverride
   );
-  const draftEditingDisabled = saving;
+  const draftEditingDisabled = saving || !canManage;
 
   function patchSelected(patch: Partial<SurveyReportCategoryInput>) {
     if (draftEditingDisabled || !selectedCategory) return;
@@ -167,17 +224,43 @@ export function SurveyVersionedReportComposer({
   }
 
   function saveDraft() {
-    if (saving || generating || classifying) return;
+    if (!canManage || saving || generating || classifying || hasSourceValidationErrors) return;
     onSavePlan(draft);
+  }
+
+  function toggleQuestion(questionId: number | string) {
+    if (draftEditingDisabled || !selectedCategory) return;
+    const normalizedId = Number(questionId);
+    if (!Number.isFinite(normalizedId)) return;
+    const selected = new Set(selectedCategory.questionIds);
+    if (selected.has(normalizedId)) selected.delete(normalizedId);
+    else selected.add(normalizedId);
+    patchSelected({ questionIds: Array.from(selected) });
+  }
+
+  async function requestAiSuggestion() {
+    if (!canManage || classifying || saving || generating || !aiInstruction.trim()) return;
+    const suggestion = await onClassify(aiInstruction.trim(), draft);
+    if (suggestion) setAiSuggestion(suggestion);
+  }
+
+  function applyAiSuggestion() {
+    if (!canManage || !aiSuggestion) return;
+    setDraft(aiSuggestion.plan);
+    setSelectedCategoryId(aiSuggestion.plan.categories[0]?.id ?? "");
+    setAiSuggestion(null);
   }
 
   return (
     <div
       data-testid="workspace-report-composer"
       aria-busy={saving}
-      className="mx-auto grid w-full max-w-screen-2xl gap-5 px-4 pb-8 pt-2 md:px-7"
+      className="grid w-full gap-4 pb-8"
     >
-      <header className="flex flex-wrap items-center gap-3">
+      <header
+        data-testid="template-workspace-intro"
+        className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-background px-5 py-4"
+      >
         <Button type="button" size="sm" variant="outline" onClick={onBackToDesign}>
           <ChevronLeft className="h-4 w-4" strokeWidth={1.7} />
           返回模版
@@ -188,25 +271,51 @@ export function SurveyVersionedReportComposer({
             用自然语言定义每个章节；生成时系统从整份问卷和全部授权答卷中检索证据。
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        {!canManage ? <Badge variant="muted">只读权限</Badge> : null}
+        {canManage ? <div className="flex flex-wrap items-center gap-2">
           <Button
+            data-testid="template-continue-publish"
             type="button"
             size="sm"
-            variant="outline"
-            disabled={classifying || saving || generating}
-            onClick={() => {
-              if (!saving && !generating) onClassify();
-            }}
+            variant="ghost"
+            onClick={onOpenCollect}
           >
-            <Sparkles className="h-4 w-4" strokeWidth={1.6} />
-            {classifying ? "推演中..." : "AI 重新推演"}
-          </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={onOpenCollect}>
             继续发布
             <Send className="h-4 w-4" strokeWidth={1.6} />
           </Button>
-        </div>
+        </div> : null}
       </header>
+
+      {canManage ? <section
+        data-testid="report-ai-iteration"
+        className="grid gap-3 border border-survey/20 bg-survey/5 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+      >
+        <div className="grid gap-2">
+          <Label htmlFor="report-ai-instruction">与 AI 迭代模板</Label>
+          <Textarea
+            id="report-ai-instruction"
+            data-testid="report-ai-instruction"
+            value={aiInstruction}
+            maxLength={1200}
+            disabled={saving || generating || classifying}
+            onChange={(event) => setAiInstruction(event.target.value)}
+            placeholder="例如：面向咨询公司领导，合并重复章节，增加续约风险与行动优先级分析。"
+            className="min-h-20 resize-y bg-background"
+          />
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={
+            classifying || saving || generating || !aiInstruction.trim()
+          }
+          onClick={() => void requestAiSuggestion()}
+          className="border-survey/30 bg-background text-survey hover:bg-survey/10 hover:text-survey"
+        >
+          <Sparkles className="h-4 w-4" strokeWidth={1.6} />
+          {classifying ? "推演中..." : "生成变更预览"}
+        </Button>
+      </section> : null}
 
       {(status || error) && (
         <div
@@ -238,7 +347,7 @@ export function SurveyVersionedReportComposer({
                 <h3 className="text-14 font-bold text-foreground">报告章节</h3>
                 <p className="mt-1 text-11 text-muted-foreground">{categories.length} 个章节</p>
               </div>
-              <Button type="button" size="icon" variant="ghost" className="h-8 w-8" aria-label="添加章节" disabled={saving} onClick={addCategory}>
+              <Button type="button" size="icon" variant="ghost" className="h-8 w-8" aria-label="添加章节" disabled={draftEditingDisabled} onClick={addCategory}>
                 <Plus className="h-4 w-4" strokeWidth={1.7} />
               </Button>
             </div>
@@ -253,18 +362,20 @@ export function SurveyVersionedReportComposer({
                   onClick={() => setSelectedCategoryId(category.id)}
                   className={[
                     "grid min-w-0 grid-cols-[32px_minmax(0,1fr)_24px] items-center gap-2 bg-background px-3 py-3 text-left transition-colors",
-                    active ? "bg-foreground text-background" : "hover:bg-secondary",
+                    active
+                      ? "border-l-2 border-survey bg-survey/5 text-foreground"
+                      : "hover:bg-secondary",
                   ].join(" ")}
                 >
                   <span className={[
                     "grid h-8 w-8 place-items-center rounded-md text-12 font-bold",
-                    active ? "bg-background text-foreground" : "bg-muted text-foreground",
+                    active ? "bg-survey/15 text-survey" : "bg-muted text-foreground",
                   ].join(" ")}>
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <span className="min-w-0">
                     <span className="block truncate text-13 font-semibold">{category.name}</span>
-                    <span className={active ? "mt-0.5 block truncate text-11 text-background/65" : "mt-0.5 block truncate text-11 text-muted-foreground"}>
+                    <span className="mt-0.5 block truncate text-11 text-muted-foreground">
                       {category.requirement?.trim() ? "要求已定义" : "待补充要求"}
                     </span>
                   </span>
@@ -273,7 +384,7 @@ export function SurveyVersionedReportComposer({
               );
             })}
           </div>
-          <Button type="button" variant="ghost" className="h-11 w-full rounded-none border-t border-border" disabled={saving} onClick={addCategory}>
+          <Button type="button" variant="ghost" className="h-11 w-full rounded-none border-t border-border" disabled={draftEditingDisabled} onClick={addCategory}>
             <Plus className="h-4 w-4" strokeWidth={1.7} />
             添加章节
           </Button>
@@ -298,7 +409,7 @@ export function SurveyVersionedReportComposer({
                       variant="ghost"
                       className="h-8 w-8"
                       aria-label="章节上移"
-                      disabled={saving || selectedCategory.order === 1}
+                      disabled={draftEditingDisabled || selectedCategory.order === 1}
                       onClick={() => moveSelectedCategory(-1)}
                     >
                       <ArrowUp className="h-4 w-4" strokeWidth={1.7} />
@@ -309,7 +420,7 @@ export function SurveyVersionedReportComposer({
                       variant="ghost"
                       className="h-8 w-8"
                       aria-label="章节下移"
-                      disabled={saving || selectedCategory.order === categories.length}
+                      disabled={draftEditingDisabled || selectedCategory.order === categories.length}
                       onClick={() => moveSelectedCategory(1)}
                     >
                       <ArrowDown className="h-4 w-4" strokeWidth={1.7} />
@@ -320,7 +431,7 @@ export function SurveyVersionedReportComposer({
                       variant="ghost"
                       className="h-8 w-8"
                       aria-label="删除章节"
-                      disabled={saving || categories.length <= 1}
+                      disabled={draftEditingDisabled || categories.length <= 1}
                       onClick={removeSelectedCategory}
                     >
                       <Trash2 className="h-4 w-4" strokeWidth={1.7} />
@@ -336,7 +447,7 @@ export function SurveyVersionedReportComposer({
                     id="report-category-name"
                     value={selectedCategory.name}
                     maxLength={48}
-                    disabled={saving}
+                    disabled={draftEditingDisabled}
                     onChange={(event) => patchSelected({ name: event.target.value })}
                   />
                 </div>
@@ -357,10 +468,12 @@ export function SurveyVersionedReportComposer({
                           key={option.value}
                           type="button"
                           size="sm"
-                          variant={active ? "default" : "ghost"}
+                          variant="ghost"
                           aria-pressed={active}
-                          disabled={saving}
-                          className="min-w-0 rounded-md px-2"
+                          disabled={draftEditingDisabled}
+                          className={active
+                            ? "min-w-0 rounded-md border border-survey/30 bg-survey/5 px-2 text-survey hover:bg-survey/10 hover:text-survey"
+                            : "min-w-0 rounded-md px-2"}
                           onClick={() => patchSelected({
                             outputType: option.value,
                             inputModes: [option.value],
@@ -394,10 +507,13 @@ export function SurveyVersionedReportComposer({
                           <Button
                             key={template.id}
                             type="button"
-                            variant={active ? "default" : "outline"}
+                            variant="outline"
+                            data-testid={`report-chart-template-${template.id}`}
                             aria-pressed={active}
-                            disabled={saving}
-                            className="h-auto min-w-0 justify-between whitespace-normal px-3 py-2 text-left"
+                            disabled={draftEditingDisabled}
+                            className={active
+                              ? "h-auto min-w-0 justify-between whitespace-normal border-survey/30 bg-survey/5 px-3 py-2 text-left text-survey hover:bg-survey/10 hover:text-survey"
+                              : "h-auto min-w-0 justify-between whitespace-normal px-3 py-2 text-left"}
                             onClick={() => patchSelected({ chartTemplateId: template.id })}
                           >
                             <span className="min-w-0">
@@ -416,17 +532,134 @@ export function SurveyVersionedReportComposer({
                   </div>
                 ) : null}
 
-                <div className="border-l-2 border-foreground bg-secondary/50 px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" strokeWidth={1.6} />
-                    <p className="text-12 font-semibold text-foreground">数据范围</p>
+                <div className="grid gap-2">
+                  <Label htmlFor="report-analysis-objective">分析目标</Label>
+                  <Input
+                    id="report-analysis-objective"
+                    data-testid="report-analysis-objective-input"
+                    maxLength={500}
+                    value={selectedCategory.analysisObjective ?? ""}
+                    disabled={draftEditingDisabled}
+                    onChange={(event) => patchSelected({
+                      analysisObjective: event.target.value,
+                    })}
+                    placeholder="本章要回答的独立决策问题"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="report-analysis-method">分析方法</Label>
+                  <Textarea
+                    id="report-analysis-method"
+                    data-testid="report-analysis-method-input"
+                    className="min-h-24 resize-y text-13 leading-6"
+                    maxLength={1000}
+                    value={selectedCategory.analysisMethod ?? ""}
+                    disabled={draftEditingDisabled}
+                    onChange={(event) => patchSelected({
+                      analysisMethod: event.target.value,
+                    })}
+                    placeholder="说明使用哪些题目、采用何种比较或交叉分析方法"
+                  />
+                </div>
+
+                <div
+                  data-testid="report-question-sources"
+                  className="grid gap-3 border border-border bg-secondary/30 p-4"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="text-12 font-semibold text-foreground">分析题目</p>
+                      <p className="mt-1 text-11 leading-5 text-muted-foreground">
+                        同一道题可用于多个章节，组合题目可形成交叉维度分析。
+                      </p>
+                    </div>
+                    <Badge variant="muted">
+                      已选择 {selectedCategory.questionIds.length} 题
+                    </Badge>
                   </div>
-                  <p className="mt-2 text-12 leading-5 text-muted-foreground">
-                    整份问卷与全部授权答卷。生成模块会按本章要求自主检索所需证据，无需逐题指定。
-                  </p>
-                  <p className="mt-1 text-11 text-muted-foreground">
-                    当前 {survey.responses} 份答卷，内容变化时自动形成新的事实库修订。
-                  </p>
+                  <div className="grid max-h-48 gap-1 overflow-y-auto">
+                    {questions.map((question, index) => {
+                      const normalizedId = Number(question.id);
+                      const checked = selectedCategory.questionIds.includes(normalizedId);
+                      const chartCompatible =
+                        isSurveyReportChartCompatibleQuestionType(question.type);
+                      return (
+                        <label
+                          key={`${question.id}-${index}`}
+                          className="flex cursor-pointer items-start gap-3 rounded-md px-2 py-2 transition-colors hover:bg-background"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={
+                              draftEditingDisabled
+                              || !Number.isFinite(normalizedId)
+                              || (
+                                selectedCategory.outputType === "chart"
+                                && !chartCompatible
+                                && !checked
+                              )
+                            }
+                            onChange={() => toggleQuestion(question.id)}
+                            className="mt-0.5 h-4 w-4 accent-survey"
+                          />
+                          <span className="min-w-0">
+                            <span className="block text-12 font-medium text-foreground">
+                              Q{index + 1} · {question.title}
+                            </span>
+                            <span className="mt-0.5 block text-10 text-muted-foreground">
+                              {question.type}
+                              {selectedCategory.outputType === "chart" && !chartCompatible
+                                ? " · 不支持图表"
+                                : ""}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {missingQuestionIds.length ? (
+                    <div
+                      data-testid="report-missing-question-references"
+                      role="alert"
+                      className="border border-destructive/30 bg-destructive/5 px-3 py-2 text-11 leading-5 text-foreground"
+                    >
+                      <p className="font-semibold">有题目引用需要修复</p>
+                      <p className="text-muted-foreground">
+                        题目 ID {missingQuestionIds.join("、")} 已被删除或当前不可访问。
+                        系统会保留原引用，不会自动替换；请取消引用或选择其他题目后保存。
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {missingQuestionIds.map((questionId) => (
+                          <Button
+                            key={questionId}
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={draftEditingDisabled}
+                            onClick={() => toggleQuestion(questionId)}
+                          >
+                            移除题目 ID {questionId}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {selectedSourceValidation && !missingQuestionIds.length ? (
+                    <div
+                      data-testid="report-source-validation"
+                      role="alert"
+                      className="border border-destructive/30 bg-destructive/5 px-3 py-2 text-11 leading-5 text-foreground"
+                    >
+                      {selectedSourceValidation.message}
+                    </div>
+                  ) : null}
+                  {questions.length === 0 ? (
+                    <p className="text-12 text-muted-foreground">
+                      请先在“设计问卷”中保存题目。
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="grid gap-2">
@@ -442,7 +675,7 @@ export function SurveyVersionedReportComposer({
                     className="min-h-48 resize-y text-13 leading-6"
                     maxLength={2000}
                     value={selectedCategory.requirement ?? selectedCategory.prompt}
-                    disabled={saving}
+                    disabled={draftEditingDisabled}
                     onChange={(event) => patchSelected({
                       requirement: event.target.value,
                       prompt: event.target.value,
@@ -459,7 +692,13 @@ export function SurveyVersionedReportComposer({
                     data-testid="save-report-plan"
                     type="button"
                     variant="outline"
-                    disabled={saving || generating || classifying}
+                    disabled={
+                      !canManage
+                      || saving
+                      || generating
+                      || classifying
+                      || hasSourceValidationErrors
+                    }
                     onClick={saveDraft}
                   >
                     <Save className="h-4 w-4" strokeWidth={1.7} />
@@ -468,9 +707,19 @@ export function SurveyVersionedReportComposer({
                   <Button
                     data-testid="generate-versioned-report"
                     type="button"
-                    disabled={!generationEligibility.canGenerate}
+                    disabled={
+                      !canManage
+                      || !generationEligibility.canGenerate
+                      || hasSourceValidationErrors
+                    }
                     onClick={() => {
-                      if (generationEligibility.canGenerate) onGenerateReport();
+                      if (
+                        canManage
+                        && generationEligibility.canGenerate
+                        && !hasSourceValidationErrors
+                      ) {
+                        onGenerateReport();
+                      }
                     }}
                   >
                     <RefreshCw className={generating ? "h-4 w-4 animate-spin" : "h-4 w-4"} strokeWidth={1.7} />
@@ -486,6 +735,10 @@ export function SurveyVersionedReportComposer({
                 {!generationEligibility.canGenerate && generationEligibility.message ? (
                   <p data-testid="report-generation-eligibility" className="text-11 text-muted-foreground">
                     {generationEligibility.message}
+                  </p>
+                ) : hasSourceValidationErrors ? (
+                  <p data-testid="report-generation-eligibility" className="text-11 text-destructive">
+                    {sourceValidationErrors[0]?.message}
                   </p>
                 ) : null}
               </div>
@@ -519,14 +772,26 @@ export function SurveyVersionedReportComposer({
                   {formatVersionTime(generation.latestArtifact.createdAt)}
                 </p>
               ) : null}
-              <a
-                data-testid="open-analysis-report"
-                href={`/surveys?survey=${survey.id}&step=report`}
-                className={buttonVariants({ size: "sm", variant: "outline" })}
-              >
-                <FileText className="h-4 w-4" strokeWidth={1.6} />
-                查看分析报告
-              </a>
+              {draftDirty || saving ? (
+                <Button
+                  data-testid="open-analysis-report"
+                  size="sm"
+                  variant="outline"
+                  disabled
+                >
+                  <FileText className="h-4 w-4" strokeWidth={1.6} />
+                  保存后查看报告
+                </Button>
+              ) : (
+                <a
+                  data-testid="open-analysis-report"
+                  href={`/surveys?survey=${survey.id}&step=report`}
+                  className={buttonVariants({ size: "sm", variant: "outline" })}
+                >
+                  <FileText className="h-4 w-4" strokeWidth={1.6} />
+                  查看分析报告
+                </a>
+              )}
             </div>
           </div>
 
@@ -535,6 +800,7 @@ export function SurveyVersionedReportComposer({
               <SurveyReportOutputPreview
                 category={selectedCategory}
                 responseCount={survey.responses}
+                sourceScope={selectedSourceScope}
               />
             ) : (
               <div className="grid min-h-96 place-items-center px-8 text-center">
@@ -551,6 +817,80 @@ export function SurveyVersionedReportComposer({
 
         </aside>
       </section>
+
+      <Dialog
+        open={canManage && Boolean(aiSuggestion)}
+        onClose={() => setAiSuggestion(null)}
+        title="预览 AI 模板建议"
+        description="AI 不会直接覆盖当前模板。确认后建议才会进入草稿，仍需保存才会持久化。"
+        testId="report-ai-change-preview"
+        className="max-h-[85vh] max-w-2xl overflow-y-auto"
+        footer={(
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAiSuggestion(null)}
+            >
+              保留当前模板
+            </Button>
+            <Button type="button" onClick={applyAiSuggestion}>
+              <Check className="h-4 w-4" strokeWidth={1.7} />
+              应用建议
+            </Button>
+          </>
+        )}
+      >
+        {aiSuggestion ? (
+          <div className="grid gap-4">
+            <div className="border border-border bg-secondary/30 p-4">
+              <p className="text-15 font-bold text-foreground">
+                {aiSuggestion.plan.title}
+              </p>
+              <p className="mt-1 text-12 leading-5 text-muted-foreground">
+                {aiSuggestion.plan.description}
+              </p>
+              <p className="mt-3 text-12 font-semibold text-survey">
+                {aiSuggestion.plan.categories.length} 个章节
+              </p>
+            </div>
+            <div className="grid gap-2">
+              {aiSuggestion.plan.categories
+                .slice()
+                .sort((left, right) => left.order - right.order)
+                .map((category, index) => (
+                  <div
+                    key={category.id}
+                    className="grid grid-cols-[32px_minmax(0,1fr)] gap-3 border-b border-border px-1 py-3 last:border-b-0"
+                  >
+                    <span className="grid h-8 w-8 place-items-center rounded-md bg-survey/10 text-11 font-bold text-survey">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-13 font-semibold text-foreground">
+                        {category.name}
+                      </p>
+                      <p className="mt-1 text-11 leading-5 text-muted-foreground">
+                        {category.questionIds.length} 道题 · {
+                          category.outputType === "chart"
+                            ? "图表"
+                            : category.outputType === "image"
+                              ? "图片"
+                              : "文本"
+                        }
+                      </p>
+                    </div>
+                  </div>
+                ))}
+            </div>
+            {aiSuggestion.warning ? (
+              <p className="text-12 text-muted-foreground">
+                {aiSuggestion.warning}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </Dialog>
     </div>
   );
 }

@@ -34,6 +34,7 @@ async function createSurvey(page: Page) {
 }
 
 test("survey workspace restores every source workflow step from the URL", async ({ page }) => {
+  test.setTimeout(120_000);
   await register(page);
   const survey = await createSurvey(page);
   await page.goto("/surveys?view=my");
@@ -43,18 +44,25 @@ test("survey workspace restores every source workflow step from the URL", async 
   await expect(page.getByTestId("survey-editor-screen")).toBeVisible();
   await expect(page.getByTestId("survey-workflow-shell")).toContainText("五步工作台调研");
   await expect(page.getByTestId("workflow-design")).toHaveAttribute("aria-current", "step");
-  await expect(page.locator("#workflow-category-0")).toHaveValue("需求洞察");
+  await expect(page.getByTestId("question-0")).toContainText("需求洞察", {
+    timeout: 20_000,
+  });
 
-  for (const [step, testId] of [
-    ["template", "workspace-template-workbench"],
-    ["collect", "workspace-collect-workbench"],
-    ["answer", "workspace-answer-workbench"],
-    ["report", "workspace-report-workbench"],
+  for (const [step, testId, introTestId] of [
+    ["template", "workspace-template-workbench", "template-workspace-intro"],
+    ["collect", "workspace-collect-workbench", "collect-workspace-intro"],
+    ["answer", "workspace-answer-workbench", "answer-workspace-intro"],
+    ["report", "workspace-report-workbench", "report-workspace-intro"],
   ] as const) {
     await page.goto(`/surveys?survey=${survey.id}&step=${step}`);
     await expect(page).toHaveURL(new RegExp(`step=${step}`));
     await page.reload();
     await expect(page.getByTestId(testId)).toBeVisible();
+    const workbench = page.getByTestId("survey-workflow-content").getByTestId(testId);
+    const intro = workbench.getByTestId(introTestId);
+    await expect(workbench).toBeVisible();
+    await expect(intro).toHaveCount(1);
+    await expect(intro).toBeVisible();
   }
 
   await page.goto(`/surveys?survey=${survey.id}&step=answer`);
@@ -66,12 +74,54 @@ test("survey workspace restores every source workflow step from the URL", async 
   await expect(page.getByTestId("survey-list-screen")).toBeVisible();
 });
 
+test("collect settings require explicit dates when open-ended timing is disabled", async ({ page }) => {
+  await register(page);
+  const survey = await createSurvey(page);
+  await page.goto(`/surveys?survey=${survey.id}&step=collect`);
+
+  const saveButton = page.getByTestId("save-collect-settings");
+  await page.getByLabel("立即开始").uncheck();
+  await expect(page.getByTestId("err-collect-start-time")).toHaveText("请选择开始时间");
+  await expect(saveButton).toBeDisabled();
+
+  await page.getByLabel("立即开始").check();
+  await expect(page.getByTestId("err-collect-start-time")).toHaveCount(0);
+  await page.getByLabel("长期有效").uncheck();
+  await expect(page.getByTestId("err-collect-end-time")).toHaveText("请选择结束时间");
+  await expect(saveButton).toBeDisabled();
+});
+
 test("insight report exposes the reference screen root", async ({ page }) => {
   await register(page);
   const survey = await createSurvey(page);
   await page.goto(`/surveys/${survey.id}/results`);
 
   await expect(page.getByTestId("survey-insight-report")).toBeVisible();
+});
+
+test("answer workbench lists real responses and shows every answer", async ({ page }) => {
+  await register(page);
+  const survey = await createSurvey(page);
+  expect((await page.request.patch(`/api/surveys/${survey.id}`, { data: { isActive: true } })).status()).toBe(200);
+  const answers = Object.fromEntries(survey.questions.map((question) => {
+    if (question.type === "multiple") return [question.id, ["安全"]];
+    if (question.type === "rating") return [question.id, 4];
+    if (question.type === "nps") return [question.id, 9];
+    return [question.id, "先明确数据责任，再启动小范围试点"];
+  }));
+  const submitted = await page.request.post(`/api/surveys/${survey.id}/responses`, { data: { answers } });
+  expect(submitted.status()).toBe(201);
+  const responseId = String((await submitted.json()).response.id);
+
+  await page.goto("/surveys?view=my");
+  await page.getByTestId(`open-workspace-${survey.id}`).click();
+  await page.goto(`/surveys?survey=${survey.id}&step=answer`);
+
+  await expect(page.getByTestId("individual-response-browser")).toBeVisible();
+  await expect(page.getByTestId("individual-response-list")).toContainText(`#${responseId}`);
+  await expect(page.getByTestId("selected-response-answers")).toContainText("你关注什么？");
+  await expect(page.getByTestId("selected-response-answers")).toContainText("安全");
+  await expect(page.getByTestId("selected-response-answers")).toContainText("先明确数据责任，再启动小范围试点");
 });
 
 test("insight report returns to the current survey editor route", async ({ page }) => {

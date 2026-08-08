@@ -30,10 +30,18 @@ test("report categories fall back deterministically and remain owner-only", asyn
   expect(detail.status()).toBe(200);
   const questionIds = ((await detail.json()).survey.questions as Array<{ id: number | string }>).map(({ id }) => String(id));
 
-  const classified = await page.request.post(`/api/surveys/${survey.id}/report-categories`);
+  const beforePreview = await page.request.get(`/api/surveys/${survey.id}/report-categories`);
+  const beforePayload = await beforePreview.json();
+  const classified = await page.request.post(`/api/surveys/${survey.id}/report-categories`, {
+    data: {
+      instruction: "按管理层阅读逻辑重新组织章节",
+      currentPlan: beforePayload.reportCategoryPlan,
+    },
+  });
   expect(classified.status()).toBe(200);
   const payload = await classified.json();
   expect(payload.generatedBy).toMatch(/^(llm|default)$/);
+  expect(payload.previewOnly).toBe(true);
   expect(payload.reportCategoryPlan.categories.length).toBeGreaterThan(0);
   expect(payload.reportCategoryPlan.categories.flatMap((category: { questionIds: Array<number | string> }) => category.questionIds.map(String))).toEqual(
     expect.arrayContaining(questionIds)
@@ -41,7 +49,7 @@ test("report categories fall back deterministically and remain owner-only", asyn
 
   const reloaded = await page.request.get(`/api/surveys/${survey.id}/report-categories`);
   expect(reloaded.status()).toBe(200);
-  expect((await reloaded.json()).reportCategoryPlan.categories.length).toBeGreaterThan(0);
+  expect((await reloaded.json()).updatedAt).toBeNull();
 
   await register(page, "p25_f12_outsider");
   expect((await page.request.post(`/api/surveys/${survey.id}/report-categories`)).status()).toBe(403);
@@ -62,8 +70,6 @@ test("report template exposes whole-survey requirements and a real report previe
   });
   expect(created.status()).toBe(201);
   const survey = (await created.json()).survey as { id: number };
-  expect((await page.request.post(`/api/surveys/${survey.id}/report-categories`)).status()).toBe(200);
-
   const categoryResponse = page.waitForResponse((response) =>
     response.url().includes(`/api/surveys/${survey.id}/report-categories`) &&
     response.request().method() === "GET"
@@ -75,7 +81,7 @@ test("report template exposes whole-survey requirements and a real report previe
   await expect(page.getByTestId("report-module-list")).toBeVisible();
   await expect(page.getByTestId("report-requirement-panel")).toBeVisible();
   await expect(page.getByTestId("report-preview-panel")).toBeVisible();
-  await expect(page.getByTestId("professional-report-document")).toContainText("暂无真实答卷");
+  await expect(page.getByTestId("report-preview-panel")).toContainText("当前事实库包含 0 份答卷");
   await expect(page.getByRole("heading", { name: "报告模版 · 学生成长调研" })).toBeVisible();
   await expect(page.getByText("问题来源", { exact: true })).toHaveCount(0);
   await expect(page.getByText("输出模块", { exact: true })).toHaveCount(0);
@@ -106,6 +112,10 @@ test("report composer stacks without horizontal overflow on tablet and mobile", 
   const survey = (await created.json()).survey as { id: number };
 
   await page.goto(`/surveys?survey=${survey.id}&step=template`);
+  await expect(
+    page.getByTestId("survey-workflow-content").getByTestId("workspace-template-workbench")
+  ).toBeVisible();
+  await expect(page.getByTestId("template-workspace-intro")).toBeVisible();
   const builder = page.getByTestId("report-template-builder");
   const outline = page.getByTestId("report-module-list");
   const requirement = page.getByTestId("report-requirement-panel");
@@ -152,8 +162,11 @@ test("professional report never invents evidence for an empty survey", async ({ 
   const generatedResponse = await page.request.post(`/api/surveys/${survey.id}/professional-report`, {
     data: { instruction: "生成管理层报告" },
   });
-  expect(generatedResponse.status()).toBe(200);
-  expect((await generatedResponse.json()).report.executiveSummary.claims).toEqual([]);
+  expect(generatedResponse.status()).toBe(422);
+  expect(await generatedResponse.json()).toMatchObject({
+    error: "report_requires_responses",
+    minimumResponseCount: 1,
+  });
 
   await page.goto(`/surveys?survey=${survey.id}&step=report`);
   await expect(page.getByTestId("professional-report-document")).toContainText("尚无真实答卷", { timeout: 20_000 });

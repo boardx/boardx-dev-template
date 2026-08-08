@@ -1,11 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import {
   SURVEY_REPORT_TEMPLATE_VERSION,
   buildSurveyReportSourceSnapshot,
+  ensureSurveyReportSourceSnapshot,
   hashSurveyReportRequirement,
   type SurveyReportSourceSnapshotInput,
 } from "./surveyReportVersion";
+import { query } from "./index";
+
+vi.mock("./index", () => ({
+  getPool: vi.fn(),
+  query: vi.fn(),
+}));
+
+const mockQuery = vi.mocked(query);
 
 const generatedAt = "2026-07-18T03:20:00.000Z";
 
@@ -43,9 +52,13 @@ function response(id: number, answer: string, submittedAt: string) {
 }
 
 describe("survey report source revisions", () => {
+  beforeEach(() => {
+    mockQuery.mockReset();
+  });
+
   it("keys artifacts by the template-driven report contract version", () => {
     expect(SURVEY_REPORT_TEMPLATE_VERSION).toBe(
-      "template-driven-report-v1"
+      "template-driven-report-v2"
     );
   });
 
@@ -126,6 +139,34 @@ describe("survey report source revisions", () => {
   it("normalizes whitespace before hashing requirements", () => {
     expect(hashSurveyReportRequirement("先结论  后证据"))
       .toBe(hashSurveyReportRequirement("  先结论\n后证据  "));
+  });
+
+  it("reuses a snapshot inserted concurrently under either unique key", async () => {
+    const snapshot = buildSurveyReportSourceSnapshot(
+      sourceWithResponses([response(1, "成分", "2026-07-18T01:00:00.000Z")]),
+      generatedAt
+    );
+    const persistedRow = {
+      source_revision: snapshot.sourceRevision,
+      survey_id: snapshot.surveyId,
+      content_hash: snapshot.contentHash,
+      schema_version: snapshot.schemaVersion,
+      response_count: snapshot.responseCount,
+      source_data: snapshot.sourceData,
+      created_at: snapshot.generatedAt,
+    };
+    mockQuery.mockResolvedValueOnce([]).mockResolvedValueOnce([persistedRow]);
+
+    await expect(ensureSurveyReportSourceSnapshot(snapshot)).resolves.toMatchObject({
+      sourceRevision: snapshot.sourceRevision,
+      surveyId: snapshot.surveyId,
+      contentHash: snapshot.contentHash,
+    });
+
+    expect(mockQuery).toHaveBeenCalledTimes(2);
+    expect(String(mockQuery.mock.calls[0]?.[0])).toContain("ON CONFLICT DO NOTHING");
+    expect(String(mockQuery.mock.calls[1]?.[0])).toContain("source_revision = $1");
+    expect(String(mockQuery.mock.calls[1]?.[0])).toContain("survey_id = $2 AND content_hash = $3");
   });
 });
 

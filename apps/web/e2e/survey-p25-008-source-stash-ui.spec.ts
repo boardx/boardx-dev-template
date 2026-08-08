@@ -115,7 +115,7 @@ test("home recommendation starts a survey from the selected template", async ({ 
   await page.locator('[data-testid^="survey-home-template-"]').first().click();
   await expect(page.getByTestId("survey-editor-screen")).toBeVisible();
   await expect(page.getByTestId("template-editor-shell")).toHaveCount(0);
-  await page.getByTestId("survey-editor-reference-header").scrollIntoViewIfNeeded();
+  await page.getByTestId("survey-workflow-header").scrollIntoViewIfNeeded();
   await page.screenshot({
     path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-unified-editor-viewport.png",
   });
@@ -137,7 +137,7 @@ test("new survey chooser routes each creation path", async ({ page }) => {
   await page.goto("/surveys");
   await page.getByTestId("create-with-ai").click();
   await page.getByTestId("new-survey-ai").click();
-  await expect(page.getByTestId("editor-command-bar")).toBeVisible();
+  await expect(page.getByTestId("survey-workflow-header")).toBeVisible();
 
   await page.goto("/surveys");
   await page.getByTestId("create-with-ai").click();
@@ -174,12 +174,12 @@ test("unified survey editor keeps diagnostic structure and a subordinate AI assi
   await page.getByTestId("create-with-ai").click();
   await page.getByTestId("new-survey-blank").click();
 
-  await expect(page.getByTestId("survey-editor-reference-header")).toBeVisible();
+  await expect(page.getByTestId("survey-workflow-header")).toBeVisible();
   await expect(page.getByTestId("survey-editor-stepper")).toBeVisible();
-  await expect(page.getByTestId("editor-command-bar")).toHaveCount(1);
+  await expect(page.getByTestId("editor-command-bar")).toHaveCount(0);
   await expect(page.locator('[data-testid^="workflow-"]')).toHaveCount(5);
   await expect(page.getByRole("button", { name: "预览", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "报告模版", exact: true })).toBeVisible();
+  await expect(page.getByTestId("editor-report-template")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "发布问卷", exact: true })).toBeVisible();
 
   const workspace = page.getByTestId("survey-editor-workspace");
@@ -207,14 +207,14 @@ test("unified survey editor keeps diagnostic structure and a subordinate AI assi
   expect(assistantBox).not.toBeNull();
   expect(assistantBox!.x).toBeGreaterThan(canvasBox!.x);
 
-  await page.getByTestId("survey-editor-reference-header").scrollIntoViewIfNeeded();
+  await page.getByTestId("survey-workflow-header").scrollIntoViewIfNeeded();
   await page.screenshot({
     path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-unified-editor-desktop.png",
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(workspace).toBeVisible();
-  await page.getByTestId("survey-editor-reference-header").scrollIntoViewIfNeeded();
+  await page.getByTestId("survey-workflow-header").scrollIntoViewIfNeeded();
   await page.screenshot({
     path: "../../phases/phase-p25-survey/sprints/sprint-12/evidence/survey-unified-editor-mobile.png",
     fullPage: true,

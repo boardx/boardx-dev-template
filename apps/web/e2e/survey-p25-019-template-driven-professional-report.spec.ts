@@ -111,7 +111,7 @@ test("generates one ordered artifact per saved template chapter", async ({
         name: "管理层决策摘要",
         description: "",
         requirement: "先给结论，再说明业务含义和下一步动作。",
-        questionIds: [],
+        questionIds: [survey.questions[0]!.id, survey.questions[1]!.id],
         outputType: "text",
         inputModes: ["text"],
         prompt: "先给结论，再说明业务含义和下一步动作。",
@@ -123,7 +123,7 @@ test("generates one ordered artifact per saved template chapter", async ({
         name: "安全信任结构",
         description: "",
         requirement: "选择最能体现安全关注差异的题目。",
-        questionIds: [],
+        questionIds: [survey.questions[0]!.id],
         outputType: "chart",
         inputModes: ["chart"],
         chartTemplateId: "pie-simple",
@@ -136,7 +136,7 @@ test("generates one ordered artifact per saved template chapter", async ({
         name: "购买决策场景",
         description: "",
         requirement: "生成专业、克制且不带文字数字的研究场景图。",
-        questionIds: [],
+        questionIds: [survey.questions[0]!.id, survey.questions[1]!.id],
         outputType: "image",
         inputModes: ["image"],
         prompt: "生成专业、克制且不带文字数字的研究场景图。",
@@ -145,9 +145,14 @@ test("generates one ordered artifact per saved template chapter", async ({
       },
     ],
   };
+  const currentPlanResponse = await page.request.get(
+    `/api/surveys/${survey.id}/report-categories`
+  );
+  expect(currentPlanResponse.status()).toBe(200);
+  const { updatedAt } = await currentPlanResponse.json();
   const saved = await page.request.patch(
     `/api/surveys/${survey.id}/report-categories`,
-    { data: plan }
+    { data: { ...plan, expectedUpdatedAt: updatedAt } }
   );
   expect(saved.status()).toBe(200);
 
@@ -170,7 +175,16 @@ test("generates one ordered artifact per saved template chapter", async ({
     ["decision-scenario", 3, "image"],
   ]);
   expect(payload.report).not.toHaveProperty("executiveSummary");
-  expect(payload.report).not.toHaveProperty("methodology");
+  expect(payload.report.methodology).toMatchObject({
+    statement: expect.stringContaining("份有效答卷"),
+    evidenceScope: expect.stringContaining("模板显式绑定的题目"),
+  });
+  expect(payload.report.limitations).toContain(
+    "有效样本少于 30 份，结论仅作为方向性信号。"
+  );
+  expect(payload.report.chapters.every(
+    (chapter: { limitations: string[] }) => chapter.limitations.length === 0
+  )).toBe(true);
   expect(JSON.stringify(payload.report)).not.toContain("survey-reports/");
 
   const imageChapter = payload.report.chapters[2] as {
@@ -181,9 +195,21 @@ test("generates one ordered artifact per saved template chapter", async ({
   expect(imageResponse.headers()["content-type"]).toContain("image/png");
   expect((await imageResponse.body()).byteLength).toBeGreaterThan(50);
 
+  const persistedReport = await page.request.get(
+    `/api/surveys/${survey.id}/professional-report`
+  );
+  expect(persistedReport.status()).toBe(200);
+  expect((await persistedReport.json()).report.chapters.map(
+    (chapter: { chapterId: string }) => chapter.chapterId
+  )).toEqual([
+    "management-summary",
+    "trust-structure",
+    "decision-scenario",
+  ]);
+
   await page.goto(`/surveys?survey=${survey.id}&step=report`);
   await expect(page.getByTestId("survey-professional-report-workbench"))
-    .toBeVisible();
+    .toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("professional-report-outline")).toHaveCount(0);
   await expect(page.getByTestId("professional-report-reading-surface"))
     .toBeVisible();
@@ -193,16 +219,34 @@ test("generates one ordered artifact per saved template chapter", async ({
     .toContainText("安全信任结构");
   await expect(page.getByTestId("professional-report-document"))
     .toContainText("购买决策场景");
+  const methodology = page.getByTestId("professional-report-methodology");
+  await expect(methodology).toHaveCount(1);
+  await expect(methodology).toContainText("研究方法");
+  await expect(methodology).toContainText("证据口径");
+  await expect(methodology).toContainText("解读边界");
+  await expect(page.getByText(
+    "有效样本少于 30 份，结论仅作为方向性信号。",
+    { exact: true }
+  )).toHaveCount(1);
+  await expect(page.getByTestId("professional-report-chapter-nav"))
+    .not.toHaveClass(/sticky/);
   await expect(page.getByTestId("professional-report-document"))
     .not.toContainText("执行摘要");
-  await expect(page.getByTestId("professional-report-document"))
-    .not.toContainText("研究方法");
   await expect(page.getByText("报告 AI", { exact: true })).toHaveCount(0);
   await expectNonEmptyCanvas(
     page.getByTestId("professional-echarts-trust-structure").locator("canvas")
   );
   await expect(page.getByTestId("professional-image-decision-scenario"))
     .toBeVisible();
+
+  const printPagePromise = page.waitForEvent("popup");
+  await page.getByRole("button", { name: "PDF" }).click();
+  const printPage = await printPagePromise;
+  await expect(printPage.locator("img[data-report-export-canvas]"))
+    .toHaveCount(1);
+  await expect(printPage.getByRole("heading", { name: "安全信任结构", exact: true }))
+    .toBeVisible();
+  await printPage.close();
 
   await page.screenshot({
     path:

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { SurveyReportCategoryPlanInput } from "@repo/data";
 import {
+  SurveyReportChapterValidationError,
   assembleTemplateDrivenReport,
   buildSurveyReportTemplateSnapshot,
+  countDistinctTemplateQuestions,
   materializeReportAssetUrls,
   validateTemplateDrivenReport,
   type TemplateDrivenReportChapter,
@@ -16,8 +18,10 @@ const reportPlan: SurveyReportCategoryPlanInput = {
       id: "visual",
       name: "场景视觉",
       description: "",
+      analysisObjective: "说明核心使用场景如何影响产品选择。",
+      analysisMethod: "综合开放题主题和使用场景分布生成研究视觉。",
       requirement: "生成体现核心使用场景的专业配图。",
-      questionIds: [],
+      questionIds: [3],
       outputType: "image",
       inputModes: ["image"],
       prompt: "生成体现核心使用场景的专业配图。",
@@ -28,8 +32,10 @@ const reportPlan: SurveyReportCategoryPlanInput = {
       id: "summary",
       name: "管理层摘要",
       description: "",
+      analysisObjective: "提炼最影响经营决策的结论。",
+      analysisMethod: "综合关键题目分布与高置信证据，按影响优先级归纳。",
       requirement: "先结论，再给证据和行动建议。",
-      questionIds: [],
+      questionIds: [1],
       outputType: "text",
       inputModes: ["text"],
       prompt: "先结论，再给证据和行动建议。",
@@ -40,8 +46,10 @@ const reportPlan: SurveyReportCategoryPlanInput = {
       id: "trend",
       name: "趋势对比",
       description: "",
+      analysisObjective: "识别关键维度之间的结构差异。",
+      analysisMethod: "对两个题目的选项分布进行对比分析，并标明样本边界。",
       requirement: "比较关键维度并标明样本量。",
-      questionIds: [],
+      questionIds: [1, 2],
       outputType: "chart",
       inputModes: ["chart"],
       chartTemplateId: "line-simple",
@@ -51,6 +59,14 @@ const reportPlan: SurveyReportCategoryPlanInput = {
     },
   ],
 };
+
+describe("countDistinctTemplateQuestions", () => {
+  it("counts the distinct union of chapter sources and permits reuse", () => {
+    expect(
+      countDistinctTemplateQuestions(buildSurveyReportTemplateSnapshot(reportPlan))
+    ).toBe(3);
+  });
+});
 
 const textChapter: TemplateDrivenReportChapter = {
   chapterId: "summary",
@@ -112,6 +128,15 @@ describe("template-driven survey report contract", () => {
       { id: "visual", order: 3, title: "场景视觉", outputType: "image" },
     ]);
     expect(snapshot.chapters[1]?.chartTemplateId).toBe("line-simple");
+    expect(snapshot.chapters[0]).toMatchObject({
+      analysisObjective: "提炼最影响经营决策的结论。",
+      analysisMethod: "综合关键题目分布与高置信证据，按影响优先级归纳。",
+    });
+    expect(snapshot.chapters.map((chapter) => chapter.questionIds)).toEqual([
+      [1],
+      [1, 2],
+      [3],
+    ]);
     expect(snapshot.chapters[0]).not.toHaveProperty("chartTemplateId");
   });
 
@@ -126,12 +151,20 @@ describe("template-driven survey report contract", () => {
       snapshot,
       [textChapter, chartChapter],
       allowedEvidenceRefs
-    )).toThrow("report_chapter_count_mismatch");
+    )).toThrow(new SurveyReportChapterValidationError(
+      "visual",
+      "场景视觉",
+      "report_chapter_count_mismatch"
+    ));
     expect(() => validateTemplateDrivenReport(
       snapshot,
       [textChapter, imageChapter, chartChapter],
       allowedEvidenceRefs
-    )).toThrow("report_chapter_order_mismatch");
+    )).toThrow(new SurveyReportChapterValidationError(
+      "trend",
+      "趋势对比",
+      "report_chapter_order_mismatch"
+    ));
     expect(() => validateTemplateDrivenReport(
       snapshot,
       [
@@ -140,7 +173,11 @@ describe("template-driven survey report contract", () => {
         imageChapter,
       ] as TemplateDrivenReportChapter[],
       allowedEvidenceRefs
-    )).toThrow("report_chapter_output_type_mismatch");
+    )).toThrow(new SurveyReportChapterValidationError(
+      "trend",
+      "趋势对比",
+      "report_chapter_output_type_mismatch"
+    ));
   });
 
   it("rejects evidence outside the current fact revision", () => {
@@ -150,10 +187,14 @@ describe("template-driven survey report contract", () => {
       snapshot,
       [{ ...textChapter, evidenceRefs: ["unknown-evidence"] }, chartChapter, imageChapter],
       new Set(["question-1-top", "question-1-distribution"])
-    )).toThrow("report_chapter_evidence_mismatch");
+    )).toThrow(new SurveyReportChapterValidationError(
+      "summary",
+      "管理层摘要",
+      "report_chapter_evidence_mismatch"
+    ));
   });
 
-  it("assembles only template chapters without fixed business sections", () => {
+  it("assembles template chapters with one centralized methodology section", () => {
     const report = assembleTemplateDrivenReport({
       title: "经营诊断报告",
       generatedAt: "2026-07-19T00:00:00.000Z",
@@ -169,6 +210,7 @@ describe("template-driven survey report contract", () => {
         questionCount: 8,
         confidence: "medium",
       },
+      limitations: ["有效样本少于 30 份，结论仅作为方向性信号。"],
     });
 
     expect(report.schemaVersion).toBe("template-driven-report-v1");
@@ -176,7 +218,15 @@ describe("template-driven survey report contract", () => {
     expect(report.chapters.map((chapter) => chapter.chapterId))
       .toEqual(["summary", "trend", "visual"]);
     expect(report).not.toHaveProperty("executiveSummary");
-    expect(report).not.toHaveProperty("methodology");
+    expect(report.methodology).toEqual({
+      statement: "基于 13 份有效答卷，对 8 道问卷题目的匿名聚合证据进行章节化分析。",
+      evidenceScope: "各章节仅使用模板显式绑定的题目；同一道题可在不同分析目标下重复使用，所有结论均受当前事实版本约束。",
+    });
+    expect(report.limitations).toEqual([
+      "有效样本少于 30 份，结论仅作为方向性信号。",
+    ]);
+    expect(report.chapters.every((chapter) => chapter.limitations.length === 0))
+      .toBe(true);
     expect(report).not.toHaveProperty("actions");
   });
 
@@ -196,6 +246,7 @@ describe("template-driven survey report contract", () => {
         questionCount: 8,
         confidence: "medium",
       },
+      limitations: [],
     });
 
     const publicReport = materializeReportAssetUrls(report, 59, "artifact-id");
@@ -207,5 +258,41 @@ describe("template-driven survey report contract", () => {
     });
     expect(publicReport.chapters[2]).not.toHaveProperty("assetKey");
     expect(JSON.stringify(publicReport)).not.toContain("survey-reports/");
+  });
+
+  it("hydrates centralized methodology for historical v1 artifacts", () => {
+    const report = assembleTemplateDrivenReport({
+      title: "经营诊断报告",
+      generatedAt: "2026-07-19T00:00:00.000Z",
+      sourceRevision: "source-revision-1",
+      snapshot: buildSurveyReportTemplateSnapshot(reportPlan),
+      chapters: [textChapter, chartChapter, imageChapter],
+      allowedEvidenceRefs: new Set([
+        "question-1-top",
+        "question-1-distribution",
+      ]),
+      sample: {
+        responseCount: 13,
+        questionCount: 8,
+        confidence: "medium",
+      },
+      limitations: [],
+    });
+    const historicalReport = {
+      ...report,
+      methodology: undefined,
+      limitations: undefined,
+    } as unknown as typeof report;
+
+    expect(materializeReportAssetUrls(
+      historicalReport,
+      59,
+      "artifact-id"
+    ).methodology.statement).toContain("13 份有效答卷");
+    expect(materializeReportAssetUrls(
+      historicalReport,
+      59,
+      "artifact-id"
+    ).limitations).toEqual([]);
   });
 });

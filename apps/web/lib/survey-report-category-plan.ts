@@ -5,6 +5,62 @@ import type {
   SurveyReportChartTemplateId,
   SurveyReportChartType,
 } from "@repo/data";
+import { isSurveyReportChartCompatibleQuestionType } from "./survey-report-evidence";
+
+export interface ReportCategorySourceValidationError {
+  categoryId: string;
+  message: string;
+}
+
+export function validateReportCategorySources(
+  plan: SurveyReportCategoryPlanInput,
+  questions: Array<Pick<ComposerQuestion, "id" | "title" | "type">>
+): ReportCategorySourceValidationError[] {
+  const questionById = new Map(
+    questions
+      .map((question) => [Number(question.id), question] as const)
+      .filter(([questionId]) => Number.isFinite(questionId))
+  );
+
+  return orderedReportCategories(plan).flatMap((category) => {
+    if (!category.questionIds.length) {
+      return [{
+        categoryId: category.id,
+        message: `章节「${category.name}」至少需要选择一道分析题目。`,
+      }];
+    }
+    const unavailable = category.questionIds.filter(
+      (questionId) => !questionById.has(Number(questionId))
+    );
+    if (unavailable.length) {
+      return [{
+        categoryId: category.id,
+        message: `章节「${category.name}」包含已失效的题目引用。`,
+      }];
+    }
+    if (category.outputType === "chart" || category.outputType === "image") {
+      const compatible = category.questionIds.some((questionId) => {
+        const question = questionById.get(Number(questionId));
+        return question
+          ? isSurveyReportChartCompatibleQuestionType(question.type)
+          : false;
+      });
+      if (!compatible && category.outputType === "chart") {
+        return [{
+          categoryId: category.id,
+          message: `章节「${category.name}」需要选择至少一道可生成分布图表的题目。`,
+        }];
+      }
+      if (!compatible) {
+        return [{
+          categoryId: category.id,
+          message: `章节「${category.name}」需要选择至少一道可形成匿名聚合证据的题目。`,
+        }];
+      }
+    }
+    return [];
+  });
+}
 
 export interface ComposerQuestion {
   id: number | string;
@@ -72,6 +128,8 @@ function stableCategoryFields(category: SurveyReportCategoryInput) {
     category.id,
     category.name,
     category.description,
+    category.analysisObjective ?? null,
+    category.analysisMethod ?? null,
     category.requirement ?? null,
     category.questionIds,
     category.outputType,
@@ -203,6 +261,8 @@ export function addCustomReportCategory(
         id: `custom-${Date.now()}`,
         name,
         description: "从整份问卷和全部授权答卷中自主检索证据。",
+        analysisObjective: `识别「${name}」相关反馈中最值得管理层关注的结论。`,
+        analysisMethod: "基于章节绑定题目的匿名聚合结果进行描述性分析，并结合样本边界解读。",
         requirement: `面向决策者分析「${name}」，先给结论，再展示证据、样本边界和行动建议。`,
         questionIds: [],
         outputType: "text",
@@ -237,6 +297,12 @@ export function buildReportComposerPreview(
 ): ReportComposerPreview {
   const categories = orderedReportCategories(plan);
   const sections = categories.map((category): ReportComposerPreviewSection => {
+    const selectedQuestionIds = new Set(category.questionIds.map(Number));
+    const selectedQuestions = questions.flatMap((question, index) =>
+      selectedQuestionIds.has(Number(question.id))
+        ? [{ ...question, displayIndex: index + 1 }]
+        : []
+    );
     const requirement =
       category.requirement?.trim() ||
       category.prompt?.trim() ||
@@ -248,8 +314,12 @@ export function buildReportComposerPreview(
       title: category.name,
       description: category.description || "该章节将从完整事实库中自主检索所需证据。",
       requirement,
-      sourceScope: "整份问卷与全部授权答卷",
-      questionCount: questions.length,
+      sourceScope: selectedQuestions.length
+        ? selectedQuestions
+          .map((question) => `Q${question.displayIndex} · ${question.title}`)
+          .join("；")
+        : "未选择分析题目",
+      questionCount: selectedQuestions.length,
       inputModes: [outputType],
       text: outputType === "text"
         ? buildTextPreview(category, survey, requirement)

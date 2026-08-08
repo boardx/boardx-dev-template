@@ -32,6 +32,7 @@ function renderPreview(category: SurveyReportCategoryInput) {
     React.createElement(SurveyReportOutputPreview, {
       category,
       responseCount: 12,
+      sourceScope: "Q2「购买原因」、Q5「推荐意愿」",
     })
   );
 }
@@ -56,5 +57,12 @@ describe("SurveyReportOutputPreview", () => {
     expect(markup).toContain("Simple line");
     expect(markup).toContain('data-testid="report-chart-canvas"');
     expect(markup).not.toContain("图表模板无效");
+  });
+
+  it("describes only the questions selected for the current chapter", () => {
+    const markup = renderPreview(chartCategory("line-simple"));
+
+    expect(markup).toContain("Q2「购买原因」、Q5「推荐意愿」");
+    expect(markup).not.toContain("整份问卷");
   });
 });

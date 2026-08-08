@@ -12,7 +12,10 @@ export interface SurveyReportTemplateChapterSnapshot {
   id: string;
   order: number;
   title: string;
+  questionIds: number[];
   outputType: SurveyReportOutputType;
+  analysisObjective: string;
+  analysisMethod: string;
   requirement: string;
   chartTemplateId?: SurveyReportChartTemplateId;
 }
@@ -32,11 +35,18 @@ interface TemplateChapterBase {
   limitations: string[];
 }
 
+export interface TemplateDrivenTextNarrative {
+  conclusion: string;
+  analysis: string;
+  recommendation: string;
+}
+
 export type TemplateDrivenReportChapter =
   | (TemplateChapterBase & {
       outputType: "text";
       headline: string;
       body: string;
+      narrative?: TemplateDrivenTextNarrative;
       claims: ValidatedReportClaim[];
     })
   | (TemplateChapterBase & {
@@ -67,6 +77,11 @@ export interface TemplateDrivenSurveyReport {
     questionCount: number;
     confidence: "none" | "low" | "medium" | "high";
   };
+  methodology: {
+    statement: string;
+    evidenceScope: string;
+  };
+  limitations: string[];
   chapters: TemplateDrivenReportChapter[];
 }
 
@@ -80,6 +95,17 @@ export type PublicTemplateDrivenReportChapter =
 export interface PublicTemplateDrivenSurveyReport
   extends Omit<TemplateDrivenSurveyReport, "chapters"> {
   chapters: PublicTemplateDrivenReportChapter[];
+}
+
+export class SurveyReportChapterValidationError extends Error {
+  constructor(
+    readonly chapterId: string,
+    readonly chapterTitle: string,
+    readonly reason: string
+  ) {
+    super(`report_template_chapter_validation_failed:${chapterId}:${reason}`);
+    this.name = "SurveyReportChapterValidationError";
+  }
 }
 
 function normalizedRequirement(
@@ -105,7 +131,12 @@ export function buildSurveyReportTemplateSnapshot(
           id: category.id,
           order: index + 1,
           title: category.name.trim(),
+          questionIds: [...category.questionIds],
           outputType: category.outputType,
+          analysisObjective: category.analysisObjective?.trim()
+            || `识别「${category.name.trim()}」相关反馈中最值得管理层关注的结论。`,
+          analysisMethod: category.analysisMethod?.trim()
+            || "基于章节绑定题目的匿名聚合结果进行描述性分析，并结合样本边界解读。",
           requirement: normalizedRequirement(category),
         };
         if (category.outputType === "chart") {
@@ -116,17 +147,52 @@ export function buildSurveyReportTemplateSnapshot(
   };
 }
 
+function chapterValidationError(
+  reason: string,
+  expected?: SurveyReportTemplateChapterSnapshot,
+  actual?: TemplateDrivenReportChapter
+): SurveyReportChapterValidationError {
+  return new SurveyReportChapterValidationError(
+    expected?.id ?? actual?.chapterId ?? "unknown-chapter",
+    expected?.title ?? actual?.title ?? "未知章节",
+    reason
+  );
+}
+
+function firstDuplicate<T>(items: T[], key: (item: T) => string): T | undefined {
+  const seen = new Set<string>();
+  return items.find((item) => {
+    const value = key(item);
+    if (seen.has(value)) return true;
+    seen.add(value);
+    return false;
+  });
+}
+
 function validateUniqueChapterIds(
   snapshot: SurveyReportTemplateSnapshot,
   chapters: TemplateDrivenReportChapter[]
 ): void {
-  if (
-    new Set(snapshot.chapters.map((chapter) => chapter.id)).size
-      !== snapshot.chapters.length
-    || new Set(chapters.map((chapter) => chapter.chapterId)).size
-      !== chapters.length
-  ) {
-    throw new Error("report_chapter_id_mismatch");
+  const duplicateExpected = firstDuplicate(
+    snapshot.chapters,
+    (chapter) => chapter.id
+  );
+  if (duplicateExpected) {
+    throw chapterValidationError(
+      "report_chapter_id_mismatch",
+      duplicateExpected
+    );
+  }
+  const duplicateActual = firstDuplicate(
+    chapters,
+    (chapter) => chapter.chapterId
+  );
+  if (duplicateActual) {
+    throw chapterValidationError(
+      "report_chapter_id_mismatch",
+      snapshot.chapters.find((chapter) => chapter.id === duplicateActual.chapterId),
+      duplicateActual
+    );
   }
 }
 
@@ -136,7 +202,12 @@ export function validateTemplateDrivenReport(
   allowedEvidenceRefs: ReadonlySet<string>
 ): void {
   if (chapters.length !== snapshot.chapters.length) {
-    throw new Error("report_chapter_count_mismatch");
+    const index = Math.min(chapters.length, snapshot.chapters.length);
+    throw chapterValidationError(
+      "report_chapter_count_mismatch",
+      snapshot.chapters[index] ?? snapshot.chapters.at(-1),
+      chapters[index] ?? chapters.at(-1)
+    );
   }
   validateUniqueChapterIds(snapshot, chapters);
 
@@ -148,10 +219,18 @@ export function validateTemplateDrivenReport(
       || chapter.order !== expected.order
       || chapter.title !== expected.title
     ) {
-      throw new Error("report_chapter_order_mismatch");
+      throw chapterValidationError(
+        "report_chapter_order_mismatch",
+        expected,
+        chapter
+      );
     }
     if (chapter.outputType !== expected.outputType) {
-      throw new Error("report_chapter_output_type_mismatch");
+      throw chapterValidationError(
+        "report_chapter_output_type_mismatch",
+        expected,
+        chapter
+      );
     }
     if (
       chapter.outputType === "chart"
@@ -160,22 +239,42 @@ export function validateTemplateDrivenReport(
         || !chapter.option
       )
     ) {
-      throw new Error("report_chapter_chart_mismatch");
+      throw chapterValidationError(
+        "report_chapter_chart_mismatch",
+        expected,
+        chapter
+      );
     }
     if (
       chapter.outputType === "image"
       && (!chapter.assetId.trim() || !chapter.assetKey.trim())
     ) {
-      throw new Error("report_chapter_image_mismatch");
+      throw chapterValidationError(
+        "report_chapter_image_mismatch",
+        expected,
+        chapter
+      );
     }
     if (
       chapter.evidenceRefs.some(
         (evidenceRef) => !allowedEvidenceRefs.has(evidenceRef)
       )
     ) {
-      throw new Error("report_chapter_evidence_mismatch");
+      throw chapterValidationError(
+        "report_chapter_evidence_mismatch",
+        expected,
+        chapter
+      );
     }
   });
+}
+
+export function countDistinctTemplateQuestions(
+  snapshot: SurveyReportTemplateSnapshot
+): number {
+  return new Set(
+    snapshot.chapters.flatMap((chapter) => chapter.questionIds)
+  ).size;
 }
 
 export function assembleTemplateDrivenReport(input: {
@@ -186,6 +285,7 @@ export function assembleTemplateDrivenReport(input: {
   chapters: TemplateDrivenReportChapter[];
   allowedEvidenceRefs: ReadonlySet<string>;
   sample: TemplateDrivenSurveyReport["sample"];
+  limitations: string[];
 }): TemplateDrivenSurveyReport {
   validateTemplateDrivenReport(
     input.snapshot,
@@ -205,6 +305,13 @@ export function assembleTemplateDrivenReport(input: {
           : "ready",
     templateSnapshot: input.snapshot,
     sample: input.sample,
+    methodology: {
+      statement:
+        `基于 ${input.sample.responseCount} 份有效答卷，对 ${input.sample.questionCount} 道问卷题目的匿名聚合证据进行章节化分析。`,
+      evidenceScope:
+        "各章节仅使用模板显式绑定的题目；同一道题可在不同分析目标下重复使用，所有结论均受当前事实版本约束。",
+    },
+    limitations: Array.from(new Set(input.limitations)),
     chapters: input.chapters,
   };
 }
@@ -214,8 +321,16 @@ export function materializeReportAssetUrls(
   surveyId: string | number,
   artifactId: string
 ): PublicTemplateDrivenSurveyReport {
+  const methodology = report.methodology ?? {
+    statement:
+      `基于 ${report.sample.responseCount} 份有效答卷，对 ${report.sample.questionCount} 道问卷题目的匿名聚合证据进行章节化分析。`,
+    evidenceScope:
+      "各章节仅使用模板显式绑定的题目；同一道题可在不同分析目标下重复使用，所有结论均受当前事实版本约束。",
+  };
   return {
     ...report,
+    methodology,
+    limitations: report.limitations ?? [],
     chapters: report.chapters.map((chapter) => {
       if (chapter.outputType !== "image") return chapter;
       const { assetKey: _assetKey, ...publicChapter } = chapter;
