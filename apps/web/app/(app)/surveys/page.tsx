@@ -742,20 +742,95 @@ function WorkspaceShell({
             className="sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-3 backdrop-blur"
           >
             {inSurveyWorkflow ? (
-              <div className="grid gap-3">
+              <div className="mx-auto grid w-full max-w-survey-editor gap-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <Badge variant="outline" className="bg-secondary">
-                      Survey Workflow
-                    </Badge>
-                    {currentSurvey ? (
-                      <span className="truncate text-14 font-semibold text-foreground">{currentSurvey.title}</span>
-                    ) : null}
-                  </div>
-                  <Button type="button" variant="outline" size="sm" className="h-9 gap-1.5 rounded-lg px-3 text-13" onClick={() => onNavigate("workspace")}>
-                    <ChevronLeft className="h-4 w-4" strokeWidth={1.6} />
-                    返回列表
-                  </Button>
+                  {active === "design" ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 gap-1.5 px-3 text-13"
+                        onClick={() => onNavigate("workspace")}
+                      >
+                        <ChevronLeft className="h-4 w-4" strokeWidth={1.6} />
+                        返回列表
+                      </Button>
+                      <Badge variant="outline" className="bg-secondary px-3 py-1">
+                        Survey Workflow
+                      </Badge>
+                    </div>
+                  ) : active === "report" ? (
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className="bg-secondary">Survey Workflow</Badge>
+                        {currentSurvey ? <span className="truncate text-13 text-muted-foreground">{currentSurvey.title}</span> : null}
+                      </div>
+                      <h1 className="mt-1 text-22 font-bold tracking-normal">分析报告</h1>
+                    </div>
+                  ) : (
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className="bg-secondary">
+                          Survey Workflow
+                        </Badge>
+                        {currentSurvey ? (
+                          <span className="truncate text-13 text-muted-foreground">{currentSurvey.title}</span>
+                        ) : null}
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-baseline gap-3">
+                        <h1 className="text-22 font-bold tracking-normal">{activeNav.label}</h1>
+                        <p className="text-13 text-muted-foreground">{headerCopy[active]}</p>
+                      </div>
+                    </div>
+                  )}
+                  {active === "design" ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        data-testid="design-preview"
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 gap-1.5 px-3 text-13"
+                        onClick={() => onNavigate("answer")}
+                      >
+                        <Eye className="h-4 w-4" strokeWidth={1.6} />
+                        预览
+                      </Button>
+                      <Button
+                        data-testid="design-report-template"
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 gap-1.5 px-3 text-13"
+                        onClick={() => onNavigate("template")}
+                      >
+                        <FileText className="h-4 w-4" strokeWidth={1.6} />
+                        报告模板
+                      </Button>
+                      <Button
+                        data-testid="design-publish"
+                        type="button"
+                        size="sm"
+                        className="h-9 gap-1.5 px-3 text-13"
+                        onClick={() => onNavigate("collect")}
+                      >
+                        发布问卷
+                        <Send className="h-4 w-4" strokeWidth={1.6} />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 gap-1.5 rounded-lg px-3 text-13"
+                      onClick={() => onNavigate("workspace")}
+                    >
+                      <ChevronLeft className="h-4 w-4" strokeWidth={1.6} />
+                      返回列表
+                    </Button>
+                  )}
                 </div>
 
                 <div data-testid="survey-workflow-tabs" className="grid gap-2 border-t border-border pt-3 md:grid-cols-5">
@@ -6487,11 +6562,10 @@ export default function SurveysPage() {
                   patchOption={patchOption}
                   onSave={() => void saveWorkspaceDesign()}
                   onOpenAi={() => void openSelectedSurveyEditor("questions", { withAi: true })}
-                  onOpenAnswer={openSelectedSurveyAnswer}
-                  onOpenTemplate={() => void navigateWorkspace("template")}
                   typeLabel={TYPE_LABEL}
                   typeGroups={TYPE_GROUPS}
                   choiceTypes={CHOICE_TYPES}
+                  categoryLabel={templateTagLabel}
                 />
               </div>
             ) : undefined
