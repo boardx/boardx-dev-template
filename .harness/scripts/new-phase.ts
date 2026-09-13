@@ -1,8 +1,11 @@
 // new-phase:从 roadmap scaffold 一个阶段目录(phase.md / AGENTS.md / feature_list.json / progress.md)
-import { mkdirSync, writeFileSync, existsSync } from "node:fs";
+// phase id 分配权威 = roadmap.yaml(issue #660):缺省 --id 自动取 max+1;
+// 显式 --id 撞 roadmap 条目或 phases/ 目录即报错退出,不再允许静默占号。
+import { mkdirSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { PHASES_DIR, phaseDirName } from "./lib/paths";
 import { loadRoadmap, saveRoadmap } from "./lib/roadmap";
+import { nextPhaseId, findPhaseIdConflicts } from "./lib/phase-id";
 import { renderTemplateFile, render, nowISO } from "./lib/render";
 import { refreshProgress } from "./lib/progress";
 import { parseArgs, req } from "./lib/args";
@@ -11,37 +14,51 @@ import type { Args } from "./lib/args";
 import type { RoadmapPhase } from "./lib/types";
 
 export function newPhase(args: Args): void {
-  const id = req(args, "id");
   const hasUi = args.flags["ui"] === true; // --ui：本阶段有界面，走 UI 先行确认关卡（ADR-003）
   const rm = loadRoadmap();
-  let phase = rm.phases.find((p) => p.id === id);
+  const roadmapIds = rm.phases.map((p) => p.id);
+  const phaseDirNames = existsSync(PHASES_DIR) ? readdirSync(PHASES_DIR) : [];
 
-  if (!phase) {
-    const name = req(args, "name");
-    phase = {
-      id,
-      slug: args.opts["slug"] ?? name.toLowerCase().replace(/\s+/g, "-"),
-      name,
-      goal: args.opts["goal"] ?? "",
-      status: "not_started",
-      depends_on: [],
-      ...(hasUi ? { has_ui: true } : {}),
-    } as RoadmapPhase;
-    rm.phases.push(phase);
-    saveRoadmap(rm);
-    log.ok(`已把 Phase ${id} 写入 roadmap.yaml${hasUi ? "（has_ui:true）" : ""}`);
-  } else {
-    if (hasUi && !phase.has_ui) {
-      phase.has_ui = true;
-      saveRoadmap(rm);
-      log.ok(`已把 Phase ${id} 标记为 has_ui:true`);
-    } else {
-      log.info(`Phase ${id} 已在 roadmap 中,沿用其定义`);
+  const explicitId = args.opts["id"];
+  let id: string;
+  if (explicitId !== undefined) {
+    // 显式传 --id:必须无冲突,冲突即报错(占号已登记的号不允许再占)。
+    const conflicts = findPhaseIdConflicts(explicitId, roadmapIds, phaseDirNames);
+    if (conflicts.length > 0) {
+      die(
+        [
+          `--id ${explicitId} 已被占用: ${conflicts.join("；")}`,
+          `  phase id 的分配权威是 roadmap.yaml(issue #660)。`,
+          `  缺省 --id 可自动取号,下一个可用: ${nextPhaseId(roadmapIds)}`,
+        ].join("\n")
+      );
     }
+    id = explicitId;
+  } else {
+    // 缺省 --id:从 roadmap 原子取号(max 数字部分 + 1),scaffold 前先登记占号。
+    id = nextPhaseId(roadmapIds);
+    log.info(`未传 --id,从 roadmap.yaml 自动取号: ${id}`);
   }
+
+  const name = req(args, "name");
+  const phase: RoadmapPhase = {
+    id,
+    slug: args.opts["slug"] ?? name.toLowerCase().replace(/\s+/g, "-"),
+    name,
+    goal: args.opts["goal"] ?? "",
+    status: "not_started",
+    depends_on: [],
+    ...(hasUi ? { has_ui: true } : {}),
+  } as RoadmapPhase;
 
   const dir = join(PHASES_DIR, phaseDirName(phase.id, phase.slug));
   if (existsSync(dir)) die(`阶段目录已存在: ${dir}`);
+
+  // 占号即登记:scaffold 前先把条目写进 roadmap.yaml,后到的在飞分支自然可见冲突。
+  rm.phases.push(phase);
+  saveRoadmap(rm);
+  log.ok(`已把 Phase ${id} 写入 roadmap.yaml(占号登记)${hasUi ? "（has_ui:true）" : ""}`);
+
   mkdirSync(join(dir, "sprints"), { recursive: true });
 
   const vars: Record<string, string> = {

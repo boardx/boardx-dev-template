@@ -36,6 +36,7 @@ ADR-001/003/005/009/010/011/012/013；docs/postmortems/postmortem-p23-false-pass
 4. 收尾：有新经验 → 按下方规则回流本文件。
 
 ## 踩坑与经验（append-only，最新在上）
+- 2026-07-19：phase id 撞号 4 次（p25/p26/p27/p30）后收口——`new-phase` 缺省 --id 从 roadmap.yaml 自动取号（max 数字部分+1），显式 --id 撞 roadmap 条目或 phases/ 目录即报错退出；占号即写 roadmap（在飞分支 merge 时自然冲突可见）。铁律：**共享编号类资源（phase/ADR）必须有单一分配权威，"各自挑号"必然相撞**（出处：issue #660）。
 - 2026-07-18：协调层割接 coord-gateway（p29-F10，ADR-017）——`packages/coord-service` 整目录 + `deploy-coord-service.yml` 删除，`COORD_SERVICE_URL`/`COORD_SERVICE_TOKEN` 全面退役；lock-*/module-lock-*/tick/cycle-report 一律走 `COORD_GATEWAY_URL`/`COORD_API_TOKEN`/`COORD_REPO`（参考客户端 `@repo/coord-protocol/client`）。ADR-014 权威时钟迁到 gateway `GET /api/coord/time`（cycle 计算逐行搬运，语义零变更）。D1 审计史归档 `phases/phase-p29-coord-platform/evidence/d1-final-archive/`（agents 已剥离 token_hash——public 仓不入库凭据派生物）。
 - 2026-07-17：coord-service 补了 CD（deploy-coord-service.yml，Closes andon #272/#290 根因）。此前它是**唯一没有 CD 的部署目标**，手动 wrangler deploy → 两个分支 last-write-wins 互相覆盖（#629 部署覆盖掉 #614 的 tasks 路由，线上收件箱静默消失）。CD 只从 main 部署、串行不取消，从根本消除竞争；冒烟检查带**部署漂移探针**（/time 存在 + /tasks 返 401 而非 404）。铁律推论：**协调权威绝不手动部署**，改代码走 PR 合 main 触发 CD。
 - 2026-07-10：P23 假 passing 事件——verify --phase 模式断审计链（postmortem 全文必读）。
